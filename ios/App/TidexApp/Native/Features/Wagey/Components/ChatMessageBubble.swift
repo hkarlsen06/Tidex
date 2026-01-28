@@ -16,16 +16,20 @@ struct ChatMessageBubble: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 8) {
-                // Tool calls (shown before message content for assistant messages)
-                if let toolCalls = message.toolCalls, !toolCalls.isEmpty {
-                    ForEach(toolCalls) { toolCall in
+                // Render content blocks in chronological order
+                ForEach(Array(message.contentBlocks.enumerated()), id: \.offset) { _, block in
+                    switch block {
+                    case .text(let text):
+                        if !text.isEmpty {
+                            if message.role == .user {
+                                userMessageContent(text: text)
+                            } else {
+                                assistantMessageContent(text: text)
+                            }
+                        }
+                    case .toolCall(let toolCall):
                         ToolStatusView(toolCall: toolCall)
                     }
-                }
-
-                // Message content
-                if !message.content.isEmpty {
-                    messageContentView
                 }
             }
 
@@ -35,21 +39,10 @@ struct ChatMessageBubble: View {
         }
     }
 
-    // MARK: - Message Content View
+    // MARK: - Message Content Views
 
-    @ViewBuilder
-    private var messageContentView: some View {
-        Group {
-            if message.role == .user {
-                userMessageContent
-            } else {
-                assistantMessageContent
-            }
-        }
-    }
-
-    private var userMessageContent: some View {
-        Text(message.content)
+    private func userMessageContent(text: String) -> some View {
+        Text(text)
             .font(.system(size: 16))
             .foregroundColor(.white)
             .padding(.horizontal, 16)
@@ -58,9 +51,9 @@ struct ChatMessageBubble: View {
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private var assistantMessageContent: some View {
+    private func assistantMessageContent(text: String) -> some View {
         // For assistant messages, use FormattedMessageContent for rich formatting (tables, markdown)
-        FormattedMessageContent(content: message.content)
+        FormattedMessageContent(content: text)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color.tidexSurfacePrimary)
@@ -72,23 +65,37 @@ struct ChatMessageBubble: View {
 
 /// A bubble showing the currently streaming assistant response
 struct StreamingMessageBubble: View {
-    let text: String
-    let toolCalls: [ToolCall]
+    let contentBlocks: [ContentBlock]
 
     /// Whether to show the cursor animation
     @State private var showCursor = true
 
+    /// Check if the last block is a text block (cursor should appear after it)
+    private var lastBlockIsText: Bool {
+        if case .text = contentBlocks.last {
+            return true
+        }
+        return false
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
-                // Tool calls in progress
-                ForEach(toolCalls) { toolCall in
-                    ToolStatusView(toolCall: toolCall)
+                // Render content blocks in chronological order
+                ForEach(Array(contentBlocks.enumerated()), id: \.offset) { index, block in
+                    switch block {
+                    case .text(let text):
+                        // Show cursor after the last text block
+                        let isLastBlock = index == contentBlocks.count - 1
+                        streamingTextView(text: text, showCursor: isLastBlock)
+                    case .toolCall(let toolCall):
+                        ToolStatusView(toolCall: toolCall)
+                    }
                 }
 
-                // Streaming text with cursor
-                if !text.isEmpty || toolCalls.isEmpty {
-                    streamingTextView
+                // If no blocks yet or last block isn't text, show empty text with cursor
+                if contentBlocks.isEmpty || !lastBlockIsText {
+                    streamingTextView(text: "", showCursor: true)
                 }
             }
 
@@ -99,24 +106,28 @@ struct StreamingMessageBubble: View {
         }
     }
 
-    private var streamingTextView: some View {
+    private func streamingTextView(text: String, showCursor: Bool) -> some View {
         HStack(alignment: .bottom, spacing: 0) {
             // Try to render markdown for the streaming text
-            if let attributedString = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-                Text(attributedString)
-                    .font(.system(size: 16))
-                    .foregroundColor(.tidexTextPrimary)
-            } else {
-                Text(text)
-                    .font(.system(size: 16))
-                    .foregroundColor(.tidexTextPrimary)
+            if !text.isEmpty {
+                if let attributedString = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+                    Text(attributedString)
+                        .font(.system(size: 16))
+                        .foregroundColor(.tidexTextPrimary)
+                } else {
+                    Text(text)
+                        .font(.system(size: 16))
+                        .foregroundColor(.tidexTextPrimary)
+                }
             }
 
-            // Blinking cursor
-            Text("|")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.tidexBlue)
-                .opacity(showCursor ? 1 : 0)
+            // Blinking cursor (only shown on the last text block)
+            if showCursor {
+                Text("|")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.tidexBlue)
+                    .opacity(self.showCursor ? 1 : 0)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -215,15 +226,15 @@ struct StreamingMessageBubble: View {
 
 #Preview("Streaming") {
     StreamingMessageBubble(
-        text: "I'm looking up your shifts for this week...",
-        toolCalls: [
-            ToolCall(
+        contentBlocks: [
+            .text("I'm looking up your shifts for this week..."),
+            .toolCall(ToolCall(
                 id: "call_1",
                 name: "get_shifts",
                 arguments: nil,
                 result: nil,
                 success: nil
-            )
+            ))
         ]
     )
     .padding()

@@ -3,6 +3,7 @@ import SwiftUI
 /// Parses and renders message content with support for:
 /// - Basic markdown (bold, italic)
 /// - Tab-separated tables (inside code blocks or inline)
+/// - Horizontal rules (---)
 struct FormattedMessageContent: View {
     let content: String
 
@@ -14,9 +15,20 @@ struct FormattedMessageContent: View {
                     markdownText(text)
                 case .table(let rows):
                     tableView(rows: rows)
+                case .horizontalRule:
+                    horizontalRuleView
                 }
             }
         }
+    }
+
+    // MARK: - Horizontal Rule
+
+    private var horizontalRuleView: some View {
+        Rectangle()
+            .fill(Color.tidexBorder)
+            .frame(height: 1)
+            .padding(.vertical, 4)
     }
 
     // MARK: - Text Rendering
@@ -93,6 +105,7 @@ struct FormattedMessageContent: View {
     private enum ContentSegment {
         case text(String)
         case table([[String]])
+        case horizontalRule
     }
 
     private func parseContent() -> [ContentSegment] {
@@ -150,7 +163,21 @@ struct FormattedMessageContent: View {
         return segments
     }
 
-    /// Extract inline tables from text (consecutive lines with tabs)
+    /// Check if a line is a horizontal rule (---, ***, ___)
+    private func isHorizontalRule(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        // Match 3+ of the same character (-, *, _) with optional spaces between
+        let patterns = ["^-{3,}$", "^\\*{3,}$", "^_{3,}$", "^(- ){2,}-$", "^(\\* ){2,}\\*$", "^(_ ){2,}_$"]
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern),
+               regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)) != nil {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Extract inline tables and horizontal rules from text (consecutive lines with tabs)
     private func extractInlineTables(from text: String) -> [ContentSegment] {
         let lines = text.components(separatedBy: "\n")
         var segments: [ContentSegment] = []
@@ -159,6 +186,31 @@ struct FormattedMessageContent: View {
         var inTable = false
 
         for line in lines {
+            // Check for horizontal rule first
+            if isHorizontalRule(line) {
+                // Flush any pending content
+                if inTable {
+                    if currentTableLines.count >= 2 {
+                        if let rows = parseTabSeparatedContent(currentTableLines.joined(separator: "\n")) {
+                            segments.append(.table(rows))
+                        }
+                    } else if !currentTableLines.isEmpty {
+                        currentTextLines.append(contentsOf: currentTableLines)
+                    }
+                    currentTableLines = []
+                    inTable = false
+                }
+                if !currentTextLines.isEmpty {
+                    let textContent = currentTextLines.joined(separator: "\n")
+                    if !textContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        segments.append(.text(textContent))
+                    }
+                    currentTextLines = []
+                }
+                segments.append(.horizontalRule)
+                continue
+            }
+
             let hasTab = line.contains("\t")
 
             if hasTab {

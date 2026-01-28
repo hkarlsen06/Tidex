@@ -97,7 +97,7 @@ final class MFAVerifyViewModel: ObservableObject {
         }
 
         // Dismiss keyboard immediately for smoother transition
-        await MainActor.run {
+        _ = await MainActor.run {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
                 to: nil, from: nil, for: nil

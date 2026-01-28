@@ -8,8 +8,9 @@ struct WageyView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    /// ViewModel for managing chat state
-    @State private var viewModel = WageyViewModel()
+    /// Shared ViewModel for managing chat state
+    /// Using shared instance ensures conversation persists when dismissing and reopening Wagey
+    private var viewModel: WageyViewModel { WageyViewModel.shared }
 
     /// Sidebar visibility state
     @State private var showSidebar = false
@@ -32,15 +33,18 @@ struct WageyView: View {
                     headerTitle
                 }
 
+                // Left side: history button, then new chat button
                 ToolbarItem(placement: .topBarLeading) {
-                    closeButton
+                    sidebarButton
+                }
+                ToolbarSpacer(.fixed, placement: .topBarLeading)
+                ToolbarItem(placement: .topBarLeading) {
+                    newChatButton
                 }
 
+                // Right side: close button
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        sidebarButton
-                        newChatButton
-                    }
+                    closeButton
                 }
             }
         }
@@ -79,8 +83,7 @@ struct WageyView: View {
             // Message list
             ChatMessageList(
                 messages: viewModel.messages,
-                streamingText: viewModel.currentStreamingText,
-                streamingToolCalls: viewModel.activeToolCalls,
+                streamingContentBlocks: viewModel.activeContentBlocks,
                 isStreaming: viewModel.isStreaming,
                 onSuggestionTapped: { suggestion in
                     Task {

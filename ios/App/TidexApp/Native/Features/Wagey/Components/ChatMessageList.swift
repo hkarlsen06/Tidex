@@ -3,8 +3,7 @@ import SwiftUI
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
     let messages: [ChatMessage]
-    let streamingText: String
-    let streamingToolCalls: [ToolCall]
+    let streamingContentBlocks: [ContentBlock]
     let isStreaming: Bool
 
     /// Callback when a suggestion chip is tapped
@@ -32,11 +31,8 @@ struct ChatMessageList: View {
 
                         // Streaming message
                         if isStreaming {
-                            StreamingMessageBubble(
-                                text: streamingText,
-                                toolCalls: streamingToolCalls
-                            )
-                            .id("streaming")
+                            StreamingMessageBubble(contentBlocks: streamingContentBlocks)
+                                .id("streaming")
                         }
                     }
 
@@ -51,7 +47,7 @@ struct ChatMessageList: View {
             .onChange(of: messages.count) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
-            .onChange(of: streamingText) { _, _ in
+            .onChange(of: streamingContentBlocks.count) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
             .onChange(of: isStreaming) { _, streaming in
@@ -128,8 +124,7 @@ struct ChatMessageList: View {
 #Preview("Empty State") {
     ChatMessageList(
         messages: [],
-        streamingText: "",
-        streamingToolCalls: [],
+        streamingContentBlocks: [],
         isStreaming: false
     )
     .background(Color.tidexBackground)
@@ -156,8 +151,7 @@ struct ChatMessageList: View {
                 timestamp: Date()
             )
         ],
-        streamingText: "",
-        streamingToolCalls: [],
+        streamingContentBlocks: [],
         isStreaming: false
     )
     .background(Color.tidexBackground)
@@ -175,9 +169,9 @@ struct ChatMessageList: View {
                 timestamp: Date()
             )
         ],
-        streamingText: "I'll add that shift for you...",
-        streamingToolCalls: [
-            ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil)
+        streamingContentBlocks: [
+            .text("I'll add that shift for you..."),
+            .toolCall(ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil))
         ],
         isStreaming: true
     )

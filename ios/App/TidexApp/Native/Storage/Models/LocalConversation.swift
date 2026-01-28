@@ -46,7 +46,7 @@ final class LocalConversation {
     /// Preview of the conversation (first user message content, truncated)
     var preview: String {
         let firstUserMessage = messages.first { $0.role == .user }
-        let content = firstUserMessage?.content ?? ""
+        let content = firstUserMessage?.textContent ?? ""
         if content.count > 50 {
             return String(content.prefix(47)) + "..."
         }
@@ -77,22 +77,100 @@ final class LocalConversation {
     }
 }
 
+// MARK: - Stored Content Block
+
+/// Codable version of ContentBlock for persistence
+enum StoredContentBlock: Codable, Equatable {
+    case text(String)
+    case toolCall(StoredToolCall)
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case content
+        case toolCall
+    }
+
+    private enum BlockType: String, Codable {
+        case text
+        case toolCall
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(BlockType.self, forKey: .type)
+
+        switch type {
+        case .text:
+            let content = try container.decode(String.self, forKey: .content)
+            self = .text(content)
+        case .toolCall:
+            let toolCall = try container.decode(StoredToolCall.self, forKey: .toolCall)
+            self = .toolCall(toolCall)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .text(let content):
+            try container.encode(BlockType.text, forKey: .type)
+            try container.encode(content, forKey: .content)
+        case .toolCall(let toolCall):
+            try container.encode(BlockType.toolCall, forKey: .type)
+            try container.encode(toolCall, forKey: .toolCall)
+        }
+    }
+}
+
 // MARK: - Stored Chat Message
 
 /// Codable version of ChatMessage for persistence
 struct StoredChatMessage: Codable, Identifiable, Equatable {
     let id: String
     let role: StoredMessageRole
-    let content: String
-    let toolCalls: [StoredToolCall]?
     let timestamp: Date
 
+    /// Ordered content blocks (new format)
+    let contentBlocks: [StoredContentBlock]?
+
+    /// Legacy: concatenated text content (for backward compatibility)
+    let content: String?
+
+    /// Legacy: tool calls (for backward compatibility)
+    let toolCalls: [StoredToolCall]?
+
+    init(id: String, role: StoredMessageRole, contentBlocks: [StoredContentBlock], timestamp: Date) {
+        self.id = id
+        self.role = role
+        self.contentBlocks = contentBlocks
+        self.timestamp = timestamp
+        // Set legacy fields to nil when using new format
+        self.content = nil
+        self.toolCalls = nil
+    }
+
+    /// Legacy initializer for backward compatibility
     init(id: String, role: StoredMessageRole, content: String, toolCalls: [StoredToolCall]?, timestamp: Date) {
         self.id = id
         self.role = role
         self.content = content
         self.toolCalls = toolCalls
         self.timestamp = timestamp
+        self.contentBlocks = nil
+    }
+
+    /// Returns the text content from either contentBlocks (new format) or content (legacy format)
+    var textContent: String {
+        // Try new format first
+        if let blocks = contentBlocks {
+            return blocks.compactMap { block in
+                if case .text(let text) = block { return text }
+                return nil
+            }.joined()
+        }
+        // Fall back to legacy format
+        return content ?? ""
     }
 }
 
@@ -117,21 +195,54 @@ struct StoredToolCall: Codable, Identifiable, Equatable {
 // MARK: - Conversion Extensions
 
 extension StoredChatMessage {
-    /// Convert from ChatMessage (runtime model)
+    /// Convert from ChatMessage (runtime model) - uses new contentBlocks format
     init(from message: ChatMessage) {
         self.id = message.id
         self.role = StoredMessageRole(rawValue: message.role.rawValue) ?? .user
-        self.content = message.content
-        self.toolCalls = message.toolCalls?.map { StoredToolCall(from: $0) }
         self.timestamp = message.timestamp
+
+        // Store content blocks in new format
+        self.contentBlocks = message.contentBlocks.map { block in
+            switch block {
+            case .text(let text):
+                return .text(text)
+            case .toolCall(let toolCall):
+                return .toolCall(StoredToolCall(from: toolCall))
+            }
+        }
+
+        // Set legacy fields to nil
+        self.content = nil
+        self.toolCalls = nil
     }
 
-    /// Convert to ChatMessage (runtime model)
+    /// Convert to ChatMessage (runtime model) - handles both old and new formats
     func toChatMessage() -> ChatMessage {
-        ChatMessage(
+        let messageRole = MessageRole(rawValue: role.rawValue) ?? .user
+
+        // New format: use contentBlocks if available
+        if let storedBlocks = contentBlocks, !storedBlocks.isEmpty {
+            let blocks: [ContentBlock] = storedBlocks.map { storedBlock in
+                switch storedBlock {
+                case .text(let text):
+                    return .text(text)
+                case .toolCall(let storedToolCall):
+                    return .toolCall(storedToolCall.toToolCall())
+                }
+            }
+            return ChatMessage(
+                id: id,
+                role: messageRole,
+                contentBlocks: blocks,
+                timestamp: timestamp
+            )
+        }
+
+        // Legacy format: use content and toolCalls (tool calls first, then text)
+        return ChatMessage(
             id: id,
-            role: MessageRole(rawValue: role.rawValue) ?? .user,
-            content: content,
+            role: messageRole,
+            content: content ?? "",
             toolCalls: toolCalls?.map { $0.toToolCall() },
             timestamp: timestamp
         )

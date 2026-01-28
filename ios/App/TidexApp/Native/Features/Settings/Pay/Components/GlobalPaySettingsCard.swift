@@ -126,7 +126,7 @@ struct GlobalPaySettingsCard: View {
 
             if !canChangeCurrency {
                 Text(localization.currentLocale == .norwegian
-                     ? "Valuta kan ikke endres når du har lønnstrinn-innstillinger"
+                     ? "Valuta kan ikke endres når du har tariff-lønn, siden den er bundet til norske kroner"
                      : "Currency cannot be changed when using tariff wage settings")
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)

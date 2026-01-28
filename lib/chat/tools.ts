@@ -136,7 +136,6 @@ export const getStatisticsSchema = z.object({
     "year_to_date",
     "last_6_months",
     "this_week",
-    "by_day_of_week",
     "monthly_goal",
     "supplement_breakdown",
   ]),
@@ -844,7 +843,6 @@ Available metrics:
 - year_to_date: Cumulative totals for the year
 - last_6_months: Monthly trend data (6 data points for charts)
 - this_week: Daily breakdown Monday through Sunday
-- by_day_of_week: Average earnings/hours per weekday (which days pay best?)
 - monthly_goal: Progress toward user's monthly goal (if set)
 - supplement_breakdown: How much is base pay vs evening/weekend supplements
 
@@ -860,7 +858,6 @@ Optional: year and month parameters to query specific periods (defaults to curre
             "year_to_date",
             "last_6_months",
             "this_week",
-            "by_day_of_week",
             "monthly_goal",
             "supplement_breakdown",
           ],
@@ -884,8 +881,6 @@ Optional: year and month parameters to query specific periods (defaults to curre
       { metric: "last_month" },
       // Am I on track for my monthly goal?
       { metric: "monthly_goal" },
-      // Which day of the week do I earn most?
-      { metric: "by_day_of_week" },
       // Show earnings trend over last 6 months
       { metric: "last_6_months" },
     ],
