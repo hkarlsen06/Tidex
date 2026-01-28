@@ -1,6 +1,36 @@
 import Foundation
 import SwiftUI
 import Combine
+import Supabase
+
+// MARK: - Wagey Invocations
+
+/// Wagey message usage data from the profiles table
+struct WageyInvocations: Codable {
+    let count: Int
+    let month: String?
+
+    /// Whether the stored month matches the current month
+    /// If not, the count should be considered 0 (will reset on next invocation)
+    var isCurrentMonth: Bool {
+        guard let month = month else { return false }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        let currentMonth = formatter.string(from: Date())
+        return month == currentMonth
+    }
+
+    /// Effective count considering month reset
+    /// Returns 0 if the month doesn't match current month
+    var effectiveCount: Int {
+        isCurrentMonth ? count : 0
+    }
+}
+
+/// Profile data from the profiles table
+private struct ProfileData: Codable {
+    let wagey_invocations: WageyInvocations?
+}
 
 /// ViewModel for the Wagey AI chat feature
 /// Manages conversation state, streaming, persistence, and user interactions
@@ -42,14 +72,14 @@ final class WageyViewModel {
     /// Whether the user has reached their message limit
     private(set) var limitReached: Bool = false
 
-    /// Number of messages remaining this month (nil if unknown from server)
-    private(set) var remainingMessages: Int?
-
     /// Local count of messages sent this session (used when server data unavailable)
     private(set) var localMessagesSent: Int = 0
 
     /// Days until limit resets (for showing in limit reached message)
     private(set) var resetDays: Int = 0
+
+    /// Wagey invocations from the profiles table (used to calculate usage)
+    private(set) var wageyInvocations: WageyInvocations?
 
     /// Current error if any
     private(set) var error: Error?
@@ -70,13 +100,19 @@ final class WageyViewModel {
     }
 
     /// Number of messages used this month
-    /// Uses server data when available, otherwise falls back to local session count
+    /// Uses profile data (wagey_invocations) when available, falls back to local session count
     var messagesUsed: Int {
-        if let remaining = remainingMessages {
-            return max(0, messageLimit - remaining)
+        if let invocations = wageyInvocations {
+            // Use profile data - effectiveCount handles month reset
+            return invocations.effectiveCount + localMessagesSent
         }
-        // Fall back to local session count when server data unavailable
+        // Fall back to local session count when profile data unavailable
         return localMessagesSent
+    }
+
+    /// Number of messages remaining this month
+    var remainingMessagesCount: Int {
+        max(0, messageLimit - messagesUsed)
     }
 
     /// Whether to show the showcase (free tier + hasn't seen it)
@@ -145,7 +181,7 @@ final class WageyViewModel {
                     self.limitReached = false
                     // Also reset local counter since they have new limits now
                     self.localMessagesSent = 0
-                    self.remainingMessages = nil
+                    self.wageyInvocations = nil
                 }
             }
     }
@@ -188,6 +224,37 @@ final class WageyViewModel {
         cachedUserId = userId
         conversations = conversationsRepository.getConversations(for: userId)
         loadShowcaseState()
+    }
+
+    /// Fetch wagey usage data from the profiles table
+    /// Call this when opening Wagey to get the current usage count
+    func fetchWageyUsage() async {
+        guard let userId = AppCoordinator.shared.userId else { return }
+
+        do {
+            let profile: ProfileData = try await supabase
+                .from("profiles")
+                .select("wagey_invocations")
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+
+            wageyInvocations = profile.wagey_invocations
+            // Reset local counter since we have authoritative server data
+            localMessagesSent = 0
+
+            // Check if limit is already reached based on profile data
+            if let invocations = wageyInvocations {
+                let used = invocations.effectiveCount
+                if used >= messageLimit {
+                    limitReached = true
+                }
+            }
+        } catch {
+            // Non-fatal - we can still use local counter as fallback
+            // Don't set self.error since this shouldn't block the user
+        }
     }
 
     /// Load a specific conversation
@@ -353,7 +420,7 @@ final class WageyViewModel {
     func resetLimitReached() {
         limitReached = false
         localMessagesSent = 0
-        remainingMessages = nil
+        wageyInvocations = nil
     }
 
     // MARK: - Private Helpers
@@ -428,8 +495,15 @@ final class WageyViewModel {
             }
 
         case .wageyLimit(let remaining, let days):
-            // Update remaining messages count and reset days
-            remainingMessages = remaining
+            // Update wagey invocations from API response to stay in sync
+            // The count is: limit - remaining
+            let usedCount = max(0, messageLimit - remaining)
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM"
+            let currentMonth = formatter.string(from: Date())
+            wageyInvocations = WageyInvocations(count: usedCount, month: currentMonth)
+            // Reset local counter since we have fresh server data
+            localMessagesSent = 0
             resetDays = days
             if remaining <= 0 {
                 limitReached = true
