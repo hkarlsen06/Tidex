@@ -467,8 +467,10 @@ final class AppCoordinator: ObservableObject {
     }
 
     /// Called when MFA verification is successful
+    /// Note: We don't clear pendingMFAFactor here - the .mfaChallengeVerified auth event
+    /// will clear it after setting appState. Clearing it synchronously before the state
+    /// changes causes a flash where RootView shows AuthNavigationView as a fallback.
     func handleMFASuccess() {
-        pendingMFAFactor = nil
         Task {
             // After MFA, check if terms acceptance is needed
             await checkTermsAndUpdateState()

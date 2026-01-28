@@ -62,7 +62,7 @@ struct MFAVerifyView: View {
             Spacer()
         }
         .background(Color.tidexBackground)
-        .loading(viewModel.isLoading)
+        .loadingWithSuccess(viewModel.isLoading, isSuccess: viewModel.isVerificationComplete)
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }

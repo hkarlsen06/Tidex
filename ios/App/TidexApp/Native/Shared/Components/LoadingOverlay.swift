@@ -4,6 +4,7 @@ import SwiftUI
 /// Used during async operations like login
 struct LoadingOverlay: View {
     var message: String? = nil
+    var isSuccess: Bool = false
 
     var body: some View {
         ZStack {
@@ -11,9 +12,16 @@ struct LoadingOverlay: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    .scaleEffect(1.5)
+                if isSuccess {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.tidexSuccess)
+                        .transition(.scale.combined(with: .opacity))
+                } else {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                }
 
                 if let message = message {
                     Text(message)
@@ -24,6 +32,7 @@ struct LoadingOverlay: View {
             .padding(32)
             .background(Color.tidexSurfacePrimary.opacity(0.95))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .animation(.easeInOut(duration: 0.2), value: isSuccess)
         }
     }
 }
@@ -31,21 +40,27 @@ struct LoadingOverlay: View {
 /// View modifier for applying loading overlay with smooth transitions
 struct LoadingModifier: ViewModifier {
     let isLoading: Bool
+    var isSuccess: Bool = false
     var message: String? = nil
+
+    private var showOverlay: Bool {
+        isLoading || isSuccess
+    }
 
     func body(content: Content) -> some View {
         ZStack {
             content
 
-            if isLoading {
-                LoadingOverlay(message: message)
+            if showOverlay {
+                LoadingOverlay(message: message, isSuccess: isSuccess)
                     .transition(
                         .opacity
                             .combined(with: .scale(scale: 0.95))
                     )
             }
         }
-        .animation(.easeOut(duration: 0.2), value: isLoading)
+        .animation(.easeOut(duration: 0.2), value: showOverlay)
+        .animation(.easeOut(duration: 0.2), value: isSuccess)
     }
 }
 
@@ -53,6 +68,11 @@ extension View {
     /// Apply a loading overlay to the view with smooth transitions
     func loading(_ isLoading: Bool, message: String? = nil) -> some View {
         modifier(LoadingModifier(isLoading: isLoading, message: message))
+    }
+
+    /// Apply a loading overlay that transitions to a success state
+    func loadingWithSuccess(_ isLoading: Bool, isSuccess: Bool, message: String? = nil) -> some View {
+        modifier(LoadingModifier(isLoading: isLoading, isSuccess: isSuccess, message: message))
     }
 }
 
