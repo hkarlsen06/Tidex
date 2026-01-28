@@ -85,11 +85,12 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
   useEffect(() => {
     const loadFactors = async () => {
       try {
-        // Use getClaims() for performance - parses JWT locally without network request
-        const { data: authData, error: authError } = await supabase.auth.getClaims();
+        // Use getClaims() to check for existing session
+        // During MFA flow, user has AAL1 session that needs verification
+        const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
 
-        if (authError || !authData?.claims) {
-          console.error("[MFA Verify] No session found:", authError);
+        if (claimsError || !claimsData?.claims) {
+          console.error("[MFA Verify] No session found:", claimsError);
           setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.noSession });
           setIsLoading(false);
           return;
