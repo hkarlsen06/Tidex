@@ -10,12 +10,52 @@ struct WageyView: View {
 
     /// Shared ViewModel for managing chat state
     /// Using shared instance ensures conversation persists when dismissing and reopening Wagey
-    private var viewModel: WageyViewModel { WageyViewModel.shared }
+    private let viewModel = WageyViewModel.shared
 
     /// Sidebar visibility state
     @State private var showSidebar = false
 
+    /// Whether to show the showcase for first-time free users
+    /// Initialize based on ViewModel state so it shows immediately
+    @State private var showShowcase: Bool
+
+    init() {
+        // Check if showcase should be shown at initialization time
+        _showShowcase = State(initialValue: WageyViewModel.shared.shouldShowShowcase)
+    }
+
+    /// Whether to show the paywall when limit is reached
+    @State private var showPaywall = false
+
+    /// Tier before showing paywall (to detect upgrade)
+    @State private var tierBeforePaywall: SubscriptionTier = .free
+
+    /// Pending message to send after upgrade
+    @State private var pendingMessage: String?
+
     var body: some View {
+        // Show showcase directly (no animation) or the chat interface
+        if showShowcase {
+            WageyShowcaseView(
+                onTryWagey: {
+                    viewModel.markShowcaseSeen()
+                    showShowcase = false
+                },
+                onClose: {
+                    // Close the entire Wagey flow
+                    dismiss()
+                }
+            )
+            .environmentObject(coordinator)
+            .environment(\.localization, localization)
+        } else {
+            chatInterface
+        }
+    }
+
+    // MARK: - Chat Interface
+
+    private var chatInterface: some View {
         NavigationStack {
             ZStack(alignment: .leading) {
                 // Main chat content
@@ -48,6 +88,10 @@ struct WageyView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
+            PaywallView(contextType: .wageyLimit)
+                .interactiveDismissDisabled()
+        }
         .alert(
             localization.string("wagey.error.unknown"),
             isPresented: .init(
@@ -63,16 +107,21 @@ struct WageyView: View {
                 Text(error.localizedDescription)
             }
         }
-        .alert(
-            localization.string("wagey.limitReached.title"),
-            isPresented: .init(
-                get: { viewModel.limitReached && viewModel.error == nil },
-                set: { _ in }
-            )
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(localization.string("wagey.limitReached.message", viewModel.resetDays))
+    }
+
+    /// Handle paywall dismiss - check if user upgraded
+    private func handlePaywallDismiss() {
+        let currentTier = EntitlementService.shared.effectiveTier
+
+        // If tier changed from free to paid, user successfully upgraded
+        if tierBeforePaywall == .free && currentTier != .free {
+            // Retry sending the pending message if there was one
+            if let message = pendingMessage {
+                pendingMessage = nil
+                Task {
+                    await viewModel.sendMessage(message)
+                }
+            }
         }
     }
 
@@ -80,29 +129,65 @@ struct WageyView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
+            // Usage bar (always show for free tier users)
+            if viewModel.currentTier == .free {
+                usageBar
+            }
+
             // Message list
             ChatMessageList(
                 messages: viewModel.messages,
                 streamingContentBlocks: viewModel.activeContentBlocks,
                 isStreaming: viewModel.isStreaming,
                 onSuggestionTapped: { suggestion in
-                    Task {
-                        await viewModel.sendMessage(suggestion)
-                    }
+                    handleSendMessage(suggestion)
                 }
             )
 
             // Input field
             ChatInputField(
                 onSend: { content in
-                    Task {
-                        await viewModel.sendMessage(content)
-                    }
+                    handleSendMessage(content)
                 },
                 disabled: viewModel.isStreaming || viewModel.limitReached
             )
         }
         .background(Color.tidexBackground)
+    }
+
+    // MARK: - Usage Bar
+
+    private var usageBar: some View {
+        VStack(spacing: 0) {
+            WageyUsageBar(
+                used: viewModel.messagesUsed,
+                limit: viewModel.messageLimit
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+
+            Divider()
+                .foregroundColor(.tidexBorder)
+        }
+        .background(Color.tidexSurfacePrimary)
+    }
+
+    // MARK: - Message Handling
+
+    /// Handle sending a message, showing paywall if limit reached
+    private func handleSendMessage(_ content: String) {
+        // If limit reached, show paywall instead
+        if viewModel.limitReached {
+            pendingMessage = content
+            tierBeforePaywall = EntitlementService.shared.effectiveTier
+            showPaywall = true
+            return
+        }
+
+        // Otherwise, send the message
+        Task {
+            await viewModel.sendMessage(content)
+        }
     }
 
     // MARK: - Sidebar Overlay (iPhone)
@@ -148,10 +233,19 @@ struct WageyView: View {
 
     // MARK: - Header Components
 
+    /// Localized conversation title - translates "New Conversation" to current locale
+    private var localizedConversationTitle: String {
+        let title = viewModel.currentConversationTitle
+        if title == "New Conversation" {
+            return localization.string("wagey.newConversation")
+        }
+        return title
+    }
+
     private var headerTitle: some View {
         HStack(spacing: 8) {
             VStack(spacing: 2) {
-                Text(viewModel.currentConversationTitle)
+                Text(localizedConversationTitle)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
                     .lineLimit(1)

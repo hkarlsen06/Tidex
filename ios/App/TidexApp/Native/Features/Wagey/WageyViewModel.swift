@@ -12,6 +12,15 @@ final class WageyViewModel {
     /// This ensures the current conversation is retained when dismissing and reopening Wagey
     static let shared = WageyViewModel()
 
+    // MARK: - Constants
+
+    /// Message limits per tier
+    private static let messageLimits: [SubscriptionTier: Int] = [
+        .free: 3,
+        .pro: 40,
+        .max: 90
+    ]
+
     // MARK: - Published State
 
     /// All conversations for the current user
@@ -32,14 +41,47 @@ final class WageyViewModel {
     /// Whether the user has reached their message limit
     private(set) var limitReached: Bool = false
 
-    /// Number of messages remaining this month (nil if unknown)
+    /// Number of messages remaining this month (nil if unknown from server)
     private(set) var remainingMessages: Int?
+
+    /// Local count of messages sent this session (used when server data unavailable)
+    private(set) var localMessagesSent: Int = 0
 
     /// Days until limit resets (for showing in limit reached message)
     private(set) var resetDays: Int = 0
 
     /// Current error if any
     private(set) var error: Error?
+
+    /// Whether the user has seen the showcase (per user, stored in UserDefaults)
+    private(set) var hasSeenShowcase: Bool = false
+
+    // MARK: - Computed Properties for Usage
+
+    /// The user's current subscription tier
+    var currentTier: SubscriptionTier {
+        EntitlementService.shared.effectiveTier
+    }
+
+    /// The message limit for the current tier
+    var messageLimit: Int {
+        Self.messageLimits[currentTier] ?? 3
+    }
+
+    /// Number of messages used this month
+    /// Uses server data when available, otherwise falls back to local session count
+    var messagesUsed: Int {
+        if let remaining = remainingMessages {
+            return max(0, messageLimit - remaining)
+        }
+        // Fall back to local session count when server data unavailable
+        return localMessagesSent
+    }
+
+    /// Whether to show the showcase (free tier + hasn't seen it)
+    var shouldShowShowcase: Bool {
+        currentTier == .free && !hasSeenShowcase
+    }
 
     // MARK: - Computed Properties for Streaming
 
@@ -84,6 +126,37 @@ final class WageyViewModel {
     /// Private initializer to enforce singleton pattern
     private init() {
         loadConversations()
+        loadShowcaseState()
+    }
+
+    // MARK: - Showcase State Management
+
+    /// UserDefaults key for showcase seen state (per user)
+    private func showcaseKey(for userId: String) -> String {
+        "wagey.hasSeenShowcase.\(userId)"
+    }
+
+    /// Load the showcase seen state from UserDefaults
+    private func loadShowcaseState() {
+        guard let userId = AppCoordinator.shared.userId else {
+            hasSeenShowcase = false
+            return
+        }
+        hasSeenShowcase = UserDefaults.standard.bool(forKey: showcaseKey(for: userId))
+    }
+
+    /// Mark the showcase as seen and save to UserDefaults
+    func markShowcaseSeen() {
+        guard let userId = AppCoordinator.shared.userId else { return }
+        hasSeenShowcase = true
+        UserDefaults.standard.set(true, forKey: showcaseKey(for: userId))
+    }
+
+    /// Reset the showcase state (for debugging) - clears UserDefaults and cached state
+    func resetShowcaseSeen() {
+        guard let userId = AppCoordinator.shared.userId else { return }
+        hasSeenShowcase = false
+        UserDefaults.standard.removeObject(forKey: showcaseKey(for: userId))
     }
 
     // MARK: - Conversation Management
@@ -93,6 +166,7 @@ final class WageyViewModel {
         guard let userId = AppCoordinator.shared.userId else { return }
         cachedUserId = userId
         conversations = conversationsRepository.getConversations(for: userId)
+        loadShowcaseState()
     }
 
     /// Load a specific conversation
@@ -176,6 +250,9 @@ final class WageyViewModel {
             timestamp: Date()
         )
         messages.append(userMessage)
+
+        // Increment local message counter for progress bar
+        localMessagesSent += 1
 
         // Create conversation if this is the first message
         if currentConversationId == nil {

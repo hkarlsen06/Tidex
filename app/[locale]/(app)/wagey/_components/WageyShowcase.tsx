@@ -42,11 +42,11 @@ export function WageyShowcase({ onTryWagey }: WageyShowcaseProps) {
       {/* Background gradients */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div
-          className="absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full blur-[140px]"
+          className="absolute -top-40 left-1/2 h-105 w-105 -translate-x-1/2 rounded-full blur-[140px]"
           style={{ backgroundColor: "hsla(var(--brand-gradientStart) / 0.18)" }}
         />
         <div
-          className="absolute bottom-0 right-0 h-[360px] w-[360px] translate-x-1/3 translate-y-1/3 rounded-full blur-[120px]"
+          className="absolute bottom-0 right-0 h-90 w-90 translate-x-1/3 translate-y-1/3 rounded-full blur-[120px]"
           style={{ backgroundColor: "hsla(var(--brand-gradientEnd) / 0.12)" }}
         />
       </div>

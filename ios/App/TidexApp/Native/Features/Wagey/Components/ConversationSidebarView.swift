@@ -106,6 +106,14 @@ struct ConversationRowView: View {
 
     @State private var showDeleteConfirmation = false
 
+    /// Localized title - translates "New Conversation" to current locale
+    private var localizedTitle: String {
+        if conversation.title == "New Conversation" {
+            return localization.string("wagey.newConversation")
+        }
+        return conversation.title
+    }
+
     var body: some View {
         Button {
             Haptics.play(.light)
@@ -113,7 +121,7 @@ struct ConversationRowView: View {
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(conversation.title)
+                    Text(localizedTitle)
                         .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
                         .foregroundColor(.tidexTextPrimary)
                         .lineLimit(1)

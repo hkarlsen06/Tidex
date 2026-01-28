@@ -209,11 +209,13 @@ struct PaywallView: View {
 enum PaywallContextType {
     case monthLimit
     case upgrade
+    case wageyLimit
 
     var icon: String {
         switch self {
         case .monthLimit: return "calendar.badge.exclamationmark"
         case .upgrade: return "crown.fill"
+        case .wageyLimit: return "bubble.left.and.exclamationmark.bubble.right"
         }
     }
 
@@ -221,6 +223,7 @@ enum PaywallContextType {
         switch self {
         case .monthLimit: return AuthStrings.string("paywall.shiftLimit.title", locale: locale)
         case .upgrade: return AuthStrings.string("paywall.upgrade.title", locale: locale)
+        case .wageyLimit: return AuthStrings.string("paywall.wageyLimit.title", locale: locale)
         }
     }
 
@@ -228,6 +231,7 @@ enum PaywallContextType {
         switch self {
         case .monthLimit: return AuthStrings.string("paywall.shiftLimit.message", locale: locale)
         case .upgrade: return AuthStrings.string("paywall.upgrade.message", locale: locale)
+        case .wageyLimit: return AuthStrings.string("paywall.wageyLimit.message", locale: locale)
         }
     }
 }
@@ -256,6 +260,13 @@ struct PaywallContext {
         icon: "crown.fill",
         title: "Unlock Premium Features",
         message: "Get unlimited months, advanced statistics, Wagey AI, and more."
+    )
+
+    /// Wagey limit context (for backward compatibility with previews)
+    static let wageyLimit = PaywallContext(
+        icon: "bubble.left.and.exclamationmark.bubble.right",
+        title: "Message Limit Reached",
+        message: "You've used all your messages this month. Upgrade to continue chatting with Wagey."
     )
 
     private init(icon: String, title: String, message: String) {

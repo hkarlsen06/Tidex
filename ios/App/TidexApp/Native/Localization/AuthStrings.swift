@@ -969,6 +969,13 @@ enum AuthStrings {
         "notifications.reminder.1hour": "1 time f\u{00F8}r",
         "notifications.reminder.5hours": "5 timer f\u{00F8}r",
         "notifications.reminder.1day": "1 dag f\u{00F8}r",
+        "notifications.reminders.addTime": "Legg til p\u{00E5}minnelse",
+
+        // Notification - Time Picker
+        "notifications.timePicker.addTitle": "Legg til tid",
+        "notifications.timePicker.editTitle": "Rediger tid",
+        "notifications.timePicker.description": "Velg hvor lenge f\u{00F8}r vakten du vil bli varslet",
+        "notifications.timePicker.selectTime": "Velg en tid",
 
         // Notification - Shared Shifts
         "notifications.shared.sectionTitle": "Delte vakter",
@@ -1033,7 +1040,41 @@ enum AuthStrings {
         "wagey.tool.details": "Verktøydetaljer",
         "wagey.tool.request": "Forespørsel",
         "wagey.tool.response": "Svar",
-        "wagey.tool.timedOut": "Tidsavbrudd"
+        "wagey.tool.timedOut": "Tidsavbrudd",
+        "wagey.newConversation": "Ny samtale",
+
+        // Wagey Showcase
+        "wagey.showcase.hero.title": "Møt Wagey",
+        "wagey.showcase.hero.subtitle": "Din AI-assistent for vaktadministrasjon",
+        "wagey.showcase.hero.description": "Legg til vakter, sjekk inntekten din og få svar på spørsmål – alt med naturlig språk.",
+        "wagey.showcase.hero.tryButton": "Prøv Wagey",
+        "wagey.showcase.features.title": "Hva kan Wagey gjøre?",
+        "wagey.showcase.features.naturalLanguage.title": "Naturlig språk",
+        "wagey.showcase.features.naturalLanguage.description": "Skriv som du snakker. Wagey forstår alle språk.",
+        "wagey.showcase.features.quickActions.title": "Raske handlinger",
+        "wagey.showcase.features.quickActions.description": "Legg til, rediger eller slett vakter med en enkel melding.",
+        "wagey.showcase.features.wageCalculations.title": "Lønnsberegninger",
+        "wagey.showcase.features.wageCalculations.description": "Få nøyaktige beregninger basert på dine innstillinger.",
+        "wagey.showcase.features.scheduling.title": "Smart planlegging",
+        "wagey.showcase.features.scheduling.description": "Opprett gjentagende vakter med naturlige beskrivelser.",
+        "wagey.showcase.examples.title": "Se Wagey i aksjon",
+        "wagey.showcase.examples.you": "Du",
+        "wagey.showcase.examples.wagey": "Wagey",
+        "wagey.showcase.examples.example1User": "I morgen 8-16",
+        "wagey.showcase.examples.example1Tool": "Opprettet 1 vakt",
+        "wagey.showcase.examples.example1Assistant": "Ferdig! Vakt opprettet for i morgen, 08:00–16:00 (8 timer).",
+        "wagey.showcase.examples.example2User": "Hva har jeg tjent denne måneden?",
+        "wagey.showcase.examples.example2Tool": "Statistikk hentet",
+        "wagey.showcase.examples.example2Assistant": "Så langt denne måneden: Brutto: 11 556 kr, Timer: 52,5 timer, Vakter: 7",
+
+        // Wagey Usage Bar
+        "wagey.usage.title": "Meldinger",
+        "wagey.usage.remaining": "%d av %d igjen",
+        "wagey.usage.unlimited": "Ubegrenset",
+
+        // Wagey Paywall
+        "paywall.wageyLimit.title": "Meldingsgrense nådd",
+        "paywall.wageyLimit.message": "Du har brukt alle meldingene dine denne måneden. Oppgrader for å fortsette å chatte med Wagey."
     ]
 
     // MARK: - English Strings
@@ -1993,6 +2034,13 @@ enum AuthStrings {
         "notifications.reminder.1hour": "1 hour before",
         "notifications.reminder.5hours": "5 hours before",
         "notifications.reminder.1day": "1 day before",
+        "notifications.reminders.addTime": "Add reminder",
+
+        // Notification - Time Picker
+        "notifications.timePicker.addTitle": "Add Time",
+        "notifications.timePicker.editTitle": "Edit Time",
+        "notifications.timePicker.description": "Choose how long before your shift you want to be notified",
+        "notifications.timePicker.selectTime": "Select a time",
 
         // Notification - Shared Shifts
         "notifications.shared.sectionTitle": "Shared Shifts",
@@ -2057,6 +2105,40 @@ enum AuthStrings {
         "wagey.tool.details": "Tool Call Details",
         "wagey.tool.request": "Request",
         "wagey.tool.response": "Response",
-        "wagey.tool.timedOut": "Timed out"
+        "wagey.tool.timedOut": "Timed out",
+        "wagey.newConversation": "New Conversation",
+
+        // Wagey Showcase
+        "wagey.showcase.hero.title": "Meet Wagey",
+        "wagey.showcase.hero.subtitle": "Your AI assistant for shift management",
+        "wagey.showcase.hero.description": "Add shifts, check your earnings, and get answers to questions – all with natural language.",
+        "wagey.showcase.hero.tryButton": "Try Wagey",
+        "wagey.showcase.features.title": "What can Wagey do?",
+        "wagey.showcase.features.naturalLanguage.title": "Natural Language",
+        "wagey.showcase.features.naturalLanguage.description": "Write as you speak. Wagey understands all languages.",
+        "wagey.showcase.features.quickActions.title": "Quick Actions",
+        "wagey.showcase.features.quickActions.description": "Add, edit, or delete shifts with a simple message.",
+        "wagey.showcase.features.wageCalculations.title": "Wage Calculations",
+        "wagey.showcase.features.wageCalculations.description": "Get accurate calculations based on your settings.",
+        "wagey.showcase.features.scheduling.title": "Smart Scheduling",
+        "wagey.showcase.features.scheduling.description": "Create recurring shifts with natural descriptions.",
+        "wagey.showcase.examples.title": "See Wagey in action",
+        "wagey.showcase.examples.you": "You",
+        "wagey.showcase.examples.wagey": "Wagey",
+        "wagey.showcase.examples.example1User": "Tomorrow 8-16",
+        "wagey.showcase.examples.example1Tool": "Created 1 shift",
+        "wagey.showcase.examples.example1Assistant": "Done! Shift created for tomorrow, 08:00–16:00 (8 hours).",
+        "wagey.showcase.examples.example2User": "What have I earned this month?",
+        "wagey.showcase.examples.example2Tool": "Statistics fetched",
+        "wagey.showcase.examples.example2Assistant": "So far this month: Gross: 11,556 kr, Hours: 52.5 hours, Shifts: 7",
+
+        // Wagey Usage Bar
+        "wagey.usage.title": "Messages",
+        "wagey.usage.remaining": "%d of %d left",
+        "wagey.usage.unlimited": "Unlimited",
+
+        // Wagey Paywall
+        "paywall.wageyLimit.title": "Message Limit Reached",
+        "paywall.wageyLimit.message": "You've used all your messages this month. Upgrade to continue chatting with Wagey."
     ]
 }

@@ -4,10 +4,10 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncDebugView")
 
-// MARK: - Sync Debug View
+// MARK: - Debug View
 
-/// Debug view for testing and validating offline sync functionality
-/// Accessible from Settings > Debug > Sync Debug (only in debug builds)
+/// Debug view for testing app functionality
+/// Accessible from user menu > Debug (only in debug builds)
 struct SyncDebugView: View {
     @StateObject private var testHelper = SyncTestHelper.shared
     @ObservedObject private var syncCoordinator = SyncCoordinator.shared
@@ -17,31 +17,30 @@ struct SyncDebugView: View {
     @State private var validationResults: [ValidationResult] = []
     @State private var isRunningValidation = false
     @State private var isLoadingSummary = false
+    @State private var showAdvancedSync = false
 
     @ObservedObject private var entitlementService = EntitlementService.shared
     @State private var isRefreshingEntitlement = false
 
     var body: some View {
         List {
-            // Sync Status Section
-            syncStatusSection
+            // Quick Actions (most used)
+            quickActionsSection
 
             // Entitlement Section
             entitlementSection
 
-            // State Summary Section
-            stateSummarySection
+            // Sync Status Section
+            syncStatusSection
 
-            // Validation Tests Section
-            validationSection
-
-            // Logs Section
-            logsSection
-
-            // Actions Section
-            actionsSection
+            // Advanced Sync (collapsible)
+            if showAdvancedSync {
+                stateSummarySection
+                validationSection
+                logsSection
+            }
         }
-        .navigationTitle("Sync Debug")
+        .navigationTitle("Debug")
         .task {
             await loadUserId()
         }
@@ -134,39 +133,21 @@ struct SyncDebugView: View {
 
             if let cached = entitlementService.serverEntitlement {
                 HStack {
-                    Text("Cached Tier")
-                    Spacer()
-                    Text(cached.tier.rawValue.capitalized)
-                        .foregroundColor(.secondary)
-                }
-
-                HStack {
                     Text("Valid Until")
                     Spacer()
                     Text(cached.validUntil, style: .relative)
                         .foregroundColor(cached.isExpired ? .red : .secondary)
                 }
 
-                HStack {
-                    Text("Is Grandfathered")
-                    Spacer()
-                    Text(cached.isGrandfathered ? "Yes" : "No")
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Button {
-                Task { await forceRefreshEntitlement() }
-            } label: {
-                HStack {
-                    if isRefreshingEntitlement {
-                        ProgressView()
-                            .progressViewStyle(.circular)
+                if cached.isGrandfathered {
+                    HStack {
+                        Text("Grandfathered")
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
                     }
-                    Label("Force Refresh Entitlement", systemImage: "arrow.clockwise")
                 }
             }
-            .disabled(isRefreshingEntitlement || userId == nil)
         }
     }
 
@@ -474,10 +455,16 @@ struct SyncDebugView: View {
         }
     }
 
-    // MARK: - Actions Section
+    // MARK: - Quick Actions Section
 
-    private var actionsSection: some View {
-        Section("Actions") {
+    private var quickActionsSection: some View {
+        Section("Quick Actions") {
+            Button {
+                resetWageyShowcase()
+            } label: {
+                Label("Reset Wagey Showcase", systemImage: "sparkles")
+            }
+
             Button {
                 Task { await triggerManualSync() }
             } label: {
@@ -486,12 +473,42 @@ struct SyncDebugView: View {
             .disabled(syncCoordinator.isSyncing || userId == nil)
 
             Button {
+                Task { await forceRefreshEntitlement() }
+            } label: {
+                HStack {
+                    if isRefreshingEntitlement {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                    }
+                    Label("Refresh Entitlement", systemImage: "arrow.clockwise")
+                }
+            }
+            .disabled(isRefreshingEntitlement || userId == nil)
+
+            Button {
+                withAnimation {
+                    showAdvancedSync.toggle()
+                }
+            } label: {
+                Label(
+                    showAdvancedSync ? "Hide Advanced Sync" : "Show Advanced Sync",
+                    systemImage: showAdvancedSync ? "chevron.up" : "chevron.down"
+                )
+            }
+
+            Button {
                 Task { await resetLocalData() }
             } label: {
                 Label("Reset Local Data", systemImage: "trash")
             }
             .foregroundColor(.red)
         }
+    }
+
+    /// Reset the Wagey showcase "has seen" state so it shows again
+    private func resetWageyShowcase() {
+        WageyViewModel.shared.resetShowcaseSeen()
+        logger.info("Reset Wagey showcase state")
     }
 
     // MARK: - Helper Methods
