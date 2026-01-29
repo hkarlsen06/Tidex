@@ -96,92 +96,115 @@ struct CountdownFormatter {
         return result
     }
 
+    /// Count midnight boundaries crossed between two dates (matching Next.js behavior)
+    /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
+    private static func countMidnightCrossings(from: Date, to: Date) -> Int {
+        let calendar = Calendar.current
+        let fromMidnight = calendar.startOfDay(for: from)
+        let toMidnight = calendar.startOfDay(for: to)
+        let days = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight).day ?? 0
+        return abs(days)
+    }
+
     private static func formatFutureTime(to targetDate: Date, isNorwegian: Bool) -> (String, Bool) {
         let now = Date()
         let calendar = Calendar.current
-        let components = calendar.dateComponents([.day, .hour, .minute, .second], from: now, to: targetDate)
+        let midnightDays = countMidnightCrossings(from: now, to: targetDate)
 
-        let days = components.day ?? 0
-        let hours = components.hour ?? 0
-        let minutes = components.minute ?? 0
-
-        // Tomorrow
-        if calendar.isDateInTomorrow(targetDate) {
+        // 1 midnight crossing = tomorrow
+        if midnightDays == 1 {
             return (isNorwegian ? "I morgen" : "Tomorrow", false)
         }
 
-        // Multiple days
-        if days > 1 {
-            let dayWord = days == 1 ? (isNorwegian ? "dag" : "day") : (isNorwegian ? "dager" : "days")
-            return (isNorwegian ? "om \(days) \(dayWord)" : "in \(days) \(dayWord)", false)
+        // 2+ midnight crossings = "In X days"
+        if midnightDays > 1 {
+            let dayWord = isNorwegian ? "dager" : "days"
+            return (isNorwegian ? "Om \(midnightDays) \(dayWord)" : "In \(midnightDays) \(dayWord)", false)
         }
 
-        // Same day or within 24 hours
-        if days == 1 || hours >= 24 {
-            let totalHours = days * 24 + hours
+        // Same calendar day (0 midnight crossings) - show hours/minutes/seconds
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: targetDate)
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+        let totalSeconds = Int(targetDate.timeIntervalSince(now))
+        let totalHours = totalSeconds / 3600
+
+        // Within 6 hours - show high precision with seconds
+        if totalHours < 6 {
+            let secWord = isNorwegian ? "sek" : "sec"
+
+            // Less than 1 minute - show only seconds
+            if hours == 0 && minutes == 0 {
+                return (isNorwegian ? "Om \(seconds)\(secWord)" : "In \(seconds)\(secWord)", false)
+            }
+
+            // Less than 1 hour - show minutes and seconds
+            if hours == 0 {
+                return (isNorwegian ? "Om \(minutes)min \(seconds)\(secWord)" : "In \(minutes)min \(seconds)\(secWord)", false)
+            }
+
+            // Less than 6 hours - show hours, minutes and seconds
             let hourWord = isNorwegian ? "t" : "h"
-            let minWord = isNorwegian ? "min" : "min"
-            return (isNorwegian ? "om \(totalHours)\(hourWord) \(minutes)\(minWord)" : "in \(totalHours)\(hourWord) \(minutes)\(minWord)", false)
+            return (isNorwegian ? "Om \(hours)\(hourWord) \(minutes)min \(seconds)\(secWord)" : "In \(hours)\(hourWord) \(minutes)min \(seconds)\(secWord)", false)
         }
 
-        // Less than a day
-        if hours > 0 {
-            let hourWord = isNorwegian ? "t" : "h"
-            let minWord = isNorwegian ? "min" : "min"
-            return (isNorwegian ? "om \(hours)\(hourWord) \(minutes)\(minWord)" : "in \(hours)\(hourWord) \(minutes)\(minWord)", false)
+        // 6+ hours on same day - show hours and minutes only
+        let hourWord = isNorwegian ? "t" : "h"
+        if minutes == 0 {
+            return (isNorwegian ? "Om \(hours)\(hourWord)" : "In \(hours)\(hourWord)", false)
         }
-
-        // Less than an hour
-        if minutes > 0 {
-            let minWord = isNorwegian ? "min" : "min"
-            return (isNorwegian ? "om \(minutes) \(minWord)" : "in \(minutes) \(minWord)", false)
-        }
-
-        // Less than a minute
-        return (isNorwegian ? "snart" : "soon", false)
+        return (isNorwegian ? "Om \(hours)\(hourWord) \(minutes)min" : "In \(hours)\(hourWord) \(minutes)min", false)
     }
 
     private static func formatPastTime(from pastDate: Date, isNorwegian: Bool) -> (String, Bool) {
         let now = Date()
         let calendar = Calendar.current
-        let components = calendar.dateComponents([.day, .hour, .minute], from: pastDate, to: now)
+        let midnightDays = countMidnightCrossings(from: pastDate, to: now)
 
-        let days = components.day ?? 0
-        let hours = components.hour ?? 0
-        let minutes = components.minute ?? 0
-
-        // Yesterday
-        if calendar.isDateInYesterday(pastDate) {
+        // 1 midnight crossing = yesterday
+        if midnightDays == 1 {
             return (isNorwegian ? "I går" : "Yesterday", false)
         }
 
-        // Multiple days ago
-        if days > 1 {
-            let dayWord = days == 1 ? (isNorwegian ? "dag" : "day") : (isNorwegian ? "dager" : "days")
-            return (isNorwegian ? "\(days) \(dayWord) siden" : "\(days) \(dayWord) ago", false)
+        // 2+ midnight crossings = "X days ago"
+        if midnightDays > 1 {
+            let dayWord = isNorwegian ? "dager" : "days"
+            return (isNorwegian ? "\(midnightDays) \(dayWord) siden" : "\(midnightDays) \(dayWord) ago", false)
         }
 
-        // Within the last day
-        if days == 1 || hours >= 24 {
-            let totalHours = days * 24 + hours
+        // Same calendar day (0 midnight crossings) - show hours/minutes/seconds
+        let components = calendar.dateComponents([.hour, .minute, .second], from: pastDate, to: now)
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+        let totalSeconds = Int(now.timeIntervalSince(pastDate))
+        let totalHours = totalSeconds / 3600
+
+        // Within 6 hours - show high precision with seconds
+        if totalHours < 6 {
+            let secWord = isNorwegian ? "sek" : "sec"
+
+            // Less than 1 minute - show only seconds
+            if hours == 0 && minutes == 0 {
+                return (isNorwegian ? "\(seconds)\(secWord) siden" : "\(seconds)\(secWord) ago", false)
+            }
+
+            // Less than 1 hour - show minutes and seconds
+            if hours == 0 {
+                return (isNorwegian ? "\(minutes)min \(seconds)\(secWord) siden" : "\(minutes)min \(seconds)\(secWord) ago", false)
+            }
+
+            // Less than 6 hours - show hours, minutes and seconds
             let hourWord = isNorwegian ? "t" : "h"
-            return (isNorwegian ? "\(totalHours)\(hourWord) siden" : "\(totalHours)\(hourWord) ago", false)
+            return (isNorwegian ? "\(hours)\(hourWord) \(minutes)min \(seconds)\(secWord) siden" : "\(hours)\(hourWord) \(minutes)min \(seconds)\(secWord) ago", false)
         }
 
-        // Less than a day ago
-        if hours > 0 {
-            let hourWord = isNorwegian ? "t" : "h"
-            let minWord = isNorwegian ? "min" : "min"
-            return (isNorwegian ? "\(hours)\(hourWord) \(minutes)\(minWord) siden" : "\(hours)\(hourWord) \(minutes)\(minWord) ago", false)
+        // 6+ hours on same day - show hours and minutes only
+        let hourWord = isNorwegian ? "t" : "h"
+        if minutes == 0 {
+            return (isNorwegian ? "\(hours)\(hourWord) siden" : "\(hours)\(hourWord) ago", false)
         }
-
-        // Less than an hour ago
-        if minutes > 0 {
-            let minWord = isNorwegian ? "min" : "min"
-            return (isNorwegian ? "\(minutes) \(minWord) siden" : "\(minutes) \(minWord) ago", false)
-        }
-
-        // Just now
-        return (isNorwegian ? "akkurat nå" : "just now", false)
+        return (isNorwegian ? "\(hours)\(hourWord) \(minutes)min siden" : "\(hours)\(hourWord) \(minutes)min ago", false)
     }
 }
