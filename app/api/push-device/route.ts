@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getSession } from '@/data-access/auth';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
-import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/push-device
@@ -10,8 +9,8 @@ import { createClient } from '@supabase/supabase-js';
  * Supports both FCM tokens (web/Android) and APNs tokens (iOS native).
  *
  * Authentication:
- * - Cookie-based session (web app)
- * - Bearer token in Authorization header (native iOS app)
+ * - Cookie-based session (web app) - handled by getSession
+ * - Bearer token in Authorization header (native iOS app) - handled by getSession
  *
  * Body:
  * - apnsToken?: string - APNs device token (iOS native)
@@ -23,42 +22,9 @@ import { createClient } from '@supabase/supabase-js';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Try to authenticate via Bearer token first (native apps)
-    const authHeader = request.headers.get('Authorization');
-    let user: { id: string } | null = null;
-
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-
-      // Create a Supabase client with the user's JWT to verify it
-      const supabaseWithToken = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        }
-      );
-
-      const { data, error: authError } = await supabaseWithToken.auth.getUser();
-      if (!authError && data.user) {
-        user = { id: data.user.id };
-      }
-    }
-
-    // Fall back to cookie-based session (web app)
-    if (!user) {
-      const supabase = await createSupabaseServerClient();
-      const { data, error: authError } = await supabase.auth.getUser();
-      if (!authError && data.user) {
-        user = { id: data.user.id };
-      }
-    }
-
-    if (!user) {
+    // getSession now handles both Bearer tokens (iOS) and cookies (web)
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -88,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Build the payload
     const payload: Record<string, unknown> = {
-      user_id: user.id,
+      user_id: session.user.id,
       platform,
       device_id: deviceId ?? null,
       device_model: deviceModel ?? null,
@@ -114,7 +80,7 @@ export async function POST(request: NextRequest) {
         .schema('internal')
         .from('push_devices')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .eq('device_id', deviceId)
         .maybeSingle();
 
@@ -139,7 +105,7 @@ export async function POST(request: NextRequest) {
         .schema('internal')
         .from('push_devices')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .eq('platform', platform)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -186,7 +152,7 @@ export async function POST(request: NextRequest) {
           .schema('internal')
           .from('push_devices')
           .delete()
-          .eq('user_id', user.id)
+          .eq('user_id', session.user.id)
           .eq('device_id', deviceId)
           .neq('id', existingDeviceId);
       }
