@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
-import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 
 /**
@@ -15,66 +14,34 @@ import { logger } from '@/lib/logger';
  * 3. Deletes the auth user via admin API (cascades to public tables via FK)
  *
  * Authentication:
- * - Bearer token in Authorization header (native iOS app)
- * - Cookie-based session (web app fallback)
+ * - Bearer token in Authorization header (native iOS app) - handled by createSupabaseServerClient
+ * - Cookie-based session (web app) - handled by createSupabaseServerClient
  *
  * Response:
  * - 200: { success: true }
  * - 401: { error: string } - Not authenticated
  * - 500: { error: string } - Failed to prepare or delete account
  */
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   try {
-    // Try to authenticate via Bearer token first (native apps)
-    const authHeader = request.headers.get('Authorization');
-    let userId: string | null = null;
-    let supabaseForRpc: ReturnType<typeof createClient> | Awaited<ReturnType<typeof createSupabaseServerClient>> | null = null;
+    // createSupabaseServerClient handles both Bearer tokens (iOS) and cookies (web)
+    const supabase = await createSupabaseServerClient();
+    const { data, error: authError } = await supabase.auth.getUser();
 
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-
-      // Create a Supabase client with the user's JWT to verify it
-      const supabaseWithToken = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        }
-      );
-
-      const { data, error: authError } = await supabaseWithToken.auth.getUser();
-      if (!authError && data.user) {
-        userId = data.user.id;
-        supabaseForRpc = supabaseWithToken;
-      }
-    }
-
-    // Fall back to cookie-based session (web app)
-    if (!userId) {
-      const supabase = await createSupabaseServerClient();
-      const { data, error: authError } = await supabase.auth.getUser();
-      if (!authError && data.user) {
-        userId = data.user.id;
-        supabaseForRpc = supabase;
-      }
-    }
-
-    if (!userId || !supabaseForRpc) {
+    if (authError || !data.user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
+    const userId = data.user.id;
+
     logger.info('[delete-account] Starting account deletion:', { userId });
 
     // Step 1: Call the database function to clean up internal tables
     // This also logs the deletion in admin_audit_log before the user is deleted
-    const { error: cleanupError } = await supabaseForRpc.rpc('prepare_user_for_deletion', {
+    const { error: cleanupError } = await supabase.rpc('prepare_user_for_deletion', {
       target_user_id: userId,
     });
 
