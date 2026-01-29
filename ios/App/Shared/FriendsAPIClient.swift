@@ -31,6 +31,7 @@ struct SharersResponse: Codable, Sendable {
 }
 
 /// Response from /api/sharing/previews endpoint
+/// Matches the format returned by the iOS app's SharingService
 struct PreviewsResponse: Codable, Sendable {
     let previews: [PreviewData]
 
@@ -41,12 +42,22 @@ struct PreviewsResponse: Codable, Sendable {
         let showEarnings: Bool
     }
 
+    /// Shift data matching the API's ShiftWithComputations format
+    /// Only decodes the fields we need for the Watch/Widget
     struct ShiftData: Codable, Sendable {
         let id: String
         let shift_date: String
         let start_time: String
         let end_time: String
-        let gross: Double
+        let computed: ComputedData
+
+        /// Computed payroll data - only extract what we need
+        struct ComputedData: Codable, Sendable {
+            let gross: Double
+        }
+
+        /// Convenience accessor for gross
+        var gross: Double { computed.gross }
     }
 }
 
