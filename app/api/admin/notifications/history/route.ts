@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/data-access/auth';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import { isNextInternalError } from '../../_lib/verify-admin';
@@ -56,42 +55,16 @@ interface BroadcastRecord {
  * - 403: { error: string } - Not authorized (not admin)
  * - 500: { error: string } - Server error
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    let userId: string | null = null;
-    let userAppMetadata: Record<string, unknown> | null = null;
-
-    // 1. Try Bearer token first (native iOS)
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const supabaseWithToken = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        { global: { headers: { Authorization: `Bearer ${token}` } } }
-      );
-      const { data: { user }, error } = await supabaseWithToken.auth.getUser();
-      if (user && !error) {
-        userId = user.id;
-        userAppMetadata = user.app_metadata ?? {};
-      }
-    }
-
-    // 2. Fall back to cookie session (web app)
-    if (!userId) {
-      const session = await getSession();
-      if (session) {
-        userId = session.user.id;
-        userAppMetadata = session.user.app_metadata ?? {};
-      }
-    }
-
-    if (!userId) {
+    // getSession handles both Bearer tokens (iOS) and cookies (web)
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     // Verify admin role
-    const isAdmin = (userAppMetadata?.role as string) === 'admin';
+    const isAdmin = (session.user.app_metadata?.role as string) === 'admin';
     if (!isAdmin) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }

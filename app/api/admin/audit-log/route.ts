@@ -51,7 +51,7 @@ interface AuditLogRow {
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
-    const adminResult = await verifyAdminFromRequest(request);
+    const adminResult = await verifyAdminFromRequest();
 
     if (!adminResult) {
       return NextResponse.json(

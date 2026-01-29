@@ -36,7 +36,7 @@ const MAX_RESPONSE_LENGTH = 2000;
 export async function POST(request: NextRequest) {
   try {
     // Verify admin authentication
-    const adminResult = await verifyAdminFromRequest(request);
+    const adminResult = await verifyAdminFromRequest();
 
     if (!adminResult) {
       return NextResponse.json(

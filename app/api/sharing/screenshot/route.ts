@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/data-access/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
@@ -11,45 +10,24 @@ import { logger } from "@/lib/logger";
  * Sends a push notification to the shift owner (like Snapchat).
  *
  * Authentication:
- * - iOS: Bearer token in Authorization header
- * - Web: Cookie-based session (fallback)
+ * - Bearer token in Authorization header (native iOS app) - handled by getSession
+ * - Cookie-based session (web app) - handled by getSession
  *
  * Body:
  * - sharerId: string - The ID of the user whose shifts were screenshotted
  */
 export async function POST(request: NextRequest) {
-  // Authenticate the user
-  let screenshotterId: string | null = null;
-  let screenshotterName = "Someone";
-
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const jwt = authHeader.slice(7);
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data, error } = await supabase.auth.getUser(jwt);
-    if (error || !data.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    screenshotterId = data.user.id;
-    screenshotterName =
-      (data.user.user_metadata?.full_name as string) ||
-      (data.user.user_metadata?.name as string) ||
-      "Someone";
-  } else {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    screenshotterId = session.user.id;
-    screenshotterName =
-      (session.user.user_metadata?.full_name as string) ||
-      (session.user.user_metadata?.name as string) ||
-      "Someone";
+  // getSession handles both Bearer tokens (iOS) and cookies (web)
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const screenshotterId = session.user.id;
+  const screenshotterName =
+    (session.user.user_metadata?.full_name as string) ||
+    (session.user.user_metadata?.name as string) ||
+    "Someone";
 
   // Parse request body
   let body: { sharerId: string };

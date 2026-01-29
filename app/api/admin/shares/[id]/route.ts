@@ -29,7 +29,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminResult = await verifyAdminFromRequest(request);
+    const adminResult = await verifyAdminFromRequest();
 
     if (!adminResult) {
       return NextResponse.json(
@@ -220,7 +220,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminResult = await verifyAdminFromRequest(request);
+    const adminResult = await verifyAdminFromRequest();
 
     if (!adminResult) {
       return NextResponse.json(
