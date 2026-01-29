@@ -16,5 +16,9 @@
 	<array>
 		<string>group.no.tidex.app</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)no.tidex.shared</string>
+	</array>
 </dict>
 </plist>

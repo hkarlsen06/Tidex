@@ -53,16 +53,46 @@ struct FriendEntityQuery: EntityQuery {
     private let friendSharersKey = "friend_sharers"
 
     func entities(for identifiers: [FriendEntity.ID]) async throws -> [FriendEntity] {
-        let allFriends = loadFriendsFromAppGroup()
+        let allFriends = await loadFriendsWithAPIFallback()
         return allFriends.filter { identifiers.contains($0.id) }
     }
 
     func suggestedEntities() async throws -> [FriendEntity] {
-        loadFriendsFromAppGroup()
+        await loadFriendsWithAPIFallback()
     }
 
     func defaultResult() async -> FriendEntity? {
-        loadFriendsFromAppGroup().first
+        await loadFriendsWithAPIFallback().first
+    }
+
+    /// Load friends from App Group, falling back to API if empty
+    private func loadFriendsWithAPIFallback() async -> [FriendEntity] {
+        // First try App Group (fast, cached)
+        let cachedFriends = loadFriendsFromAppGroup()
+        if !cachedFriends.isEmpty {
+            return cachedFriends
+        }
+
+        // No cached data - try to fetch from API directly
+        do {
+            let friends = try await FriendsAPIClient.fetchFriendsWithShifts()
+            let entities = friends.map { friend in
+                FriendEntity(
+                    id: friend.id,
+                    displayName: friend.displayName,
+                    initials: friend.initials,
+                    showEarnings: friend.showEarnings
+                )
+            }
+
+            // Update App Group cache for future use
+            updateAppGroupCache(friends: friends)
+
+            return entities
+        } catch {
+            // API failed - return empty (user needs to open app)
+            return []
+        }
     }
 
     private func loadFriendsFromAppGroup() -> [FriendEntity] {
@@ -83,6 +113,27 @@ struct FriendEntityQuery: EntityQuery {
             )
         }
     }
+
+    /// Update App Group with fresh friends data for future widget loads
+    private func updateAppGroupCache(friends: [FriendWithShift]) {
+        guard let userDefaults = UserDefaults(suiteName: appGroupId) else { return }
+
+        // Convert to WidgetSharer format
+        let sharers = friends.map { friend in
+            WidgetSharer(
+                id: friend.id,
+                displayName: friend.displayName,
+                initials: friend.initials,
+                showEarnings: friend.showEarnings
+            )
+        }
+
+        // Encode and save
+        if let data = try? JSONEncoder().encode(sharers),
+           let jsonString = String(data: data, encoding: .utf8) {
+            userDefaults.set(jsonString, forKey: friendSharersKey)
+        }
+    }
 }
 
 // MARK: - Widget Configuration Intent
@@ -99,6 +150,7 @@ struct FriendShiftIntent: WidgetConfigurationIntent {
 
 struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     private let appGroupId = "group.no.tidex.app"
+    private let friendSharersKey = "friend_sharers"
     private let friendShiftsKey = "friend_shifts"
     private let currencyKey = "user_currency"
 
@@ -108,7 +160,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     func snapshot(for configuration: FriendShiftIntent, in _: Context) async -> FriendShiftWidgetEntry {
         if let friend = configuration.friend {
-            return createEntry(for: friend)
+            // For snapshot, use cached data (fast)
+            return createEntry(for: friend, fromAPI: nil)
         }
         return FriendShiftWidgetEntry.placeholder()
     }
@@ -119,11 +172,76 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
             return Timeline(entries: [entry], policy: .never)
         }
 
-        let entry = createEntry(for: friend)
+        // Try to fetch fresh data from API
+        var apiFriend: FriendWithShift?
+        do {
+            let friends = try await FriendsAPIClient.fetchFriendsWithShifts()
+            apiFriend = friends.first { $0.id == friend.id }
+
+            // Update App Group cache with fresh data
+            updateAppGroupCache(friends: friends)
+        } catch {
+            // API failed - will use cached data
+        }
+
+        // Create entry (will use API data if available, otherwise cached)
+        let entry = createEntry(for: friend, fromAPI: apiFriend)
 
         // Refresh every 15 minutes
         let refreshDate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
         return Timeline(entries: [entry], policy: .after(refreshDate))
+    }
+
+    /// Update App Group cache with fresh data from API
+    private func updateAppGroupCache(friends: [FriendWithShift]) {
+        guard let userDefaults = UserDefaults(suiteName: appGroupId) else { return }
+
+        // Convert to WidgetSharer format and save
+        let sharers = friends.map { friend in
+            WidgetSharer(
+                id: friend.id,
+                displayName: friend.displayName,
+                initials: friend.initials,
+                showEarnings: friend.showEarnings
+            )
+        }
+
+        if let data = try? JSONEncoder().encode(sharers),
+           let jsonString = String(data: data, encoding: .utf8) {
+            userDefaults.set(jsonString, forKey: friendSharersKey)
+        }
+
+        // Convert to StoredFriendShift format and save
+        let locale = getAppLocale()
+        let currency = userDefaults.string(forKey: currencyKey) ?? "kr"
+
+        let shifts: [StoredFriendShift] = friends.compactMap { friend in
+            guard let shiftId = friend.shiftId,
+                  let shiftDate = friend.shiftDate,
+                  let startTime = friend.startTime,
+                  let endTime = friend.endTime
+            else {
+                return nil
+            }
+
+            return StoredFriendShift(
+                sharerId: friend.id,
+                shiftId: shiftId,
+                shiftDate: shiftDate,
+                startTime: startTime,
+                endTime: endTime,
+                gross: friend.gross ?? 0,
+                locale: locale,
+                currencySymbol: currency,
+                showEarnings: friend.showEarnings,
+                status: friend.status?.rawValue ?? "upcoming"
+            )
+        }
+
+        if let data = try? JSONEncoder().encode(shifts),
+           let jsonString = String(data: data, encoding: .utf8) {
+            userDefaults.set(jsonString, forKey: friendShiftsKey)
+        }
     }
 
     // MARK: - Private Helpers
@@ -151,11 +269,49 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         return shifts.first { $0.sharerId == friendId }
     }
 
-    private func createEntry(for friend: FriendEntity) -> FriendShiftWidgetEntry {
+    /// Create a widget entry for a friend
+    /// - Parameters:
+    ///   - friend: The friend entity from widget config
+    ///   - fromAPI: Optional fresh data from API (if available)
+    private func createEntry(for friend: FriendEntity, fromAPI: FriendWithShift?) -> FriendShiftWidgetEntry {
         let locale = getAppLocale()
         let storedCurrency = getStoredCurrency()
 
-        guard let shift = loadFriendShift(for: friend.id) else {
+        // Use API data if available, otherwise fall back to App Group cache
+        let shiftDate: String?
+        let startTime: String?
+        let endTime: String?
+        let gross: Double?
+        let showEarnings: Bool
+
+        if let apiFriend = fromAPI, apiFriend.hasShift {
+            shiftDate = apiFriend.shiftDate
+            startTime = apiFriend.startTime
+            endTime = apiFriend.endTime
+            gross = apiFriend.gross
+            showEarnings = apiFriend.showEarnings
+        } else if let cachedShift = loadFriendShift(for: friend.id) {
+            shiftDate = cachedShift.shiftDate
+            startTime = cachedShift.startTime
+            endTime = cachedShift.endTime
+            gross = cachedShift.gross
+            showEarnings = cachedShift.showEarnings
+        } else {
+            // No shift data available
+            return FriendShiftWidgetEntry.empty(
+                friendId: friend.id,
+                friendName: friend.displayName,
+                friendInitials: friend.initials,
+                locale: locale,
+                currency: storedCurrency
+            )
+        }
+
+        // Unwrap required fields
+        guard let shiftDate = shiftDate,
+              let startTime = startTime,
+              let endTime = endTime
+        else {
             return FriendShiftWidgetEntry.empty(
                 friendId: friend.id,
                 friendName: friend.displayName,
@@ -166,14 +322,14 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
 
         // Determine layout state
-        var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shift.shiftDate)
+        var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shiftDate)
 
         // Check if shift has started/ended
-        let shiftStarted = hasShiftStarted(shiftDateString: shift.shiftDate, startTime: shift.startTime)
+        let shiftStarted = hasShiftStarted(shiftDateString: shiftDate, startTime: startTime)
         let shiftEnded = hasShiftEnded(
-            shiftDateString: shift.shiftDate,
-            startTime: shift.startTime,
-            endTime: shift.endTime
+            shiftDateString: shiftDate,
+            startTime: startTime,
+            endTime: endTime
         )
 
         // Adjust layout state for active/ended shifts
@@ -182,26 +338,25 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
 
         // Format date
-        let formattedDate = formatShiftDate(shift.shiftDate, locale: locale, daysRemaining: daysRemaining)
+        let formattedDate = formatShiftDate(shiftDate, locale: locale, daysRemaining: daysRemaining)
 
         // Format earnings (or hide if not allowed)
-        let currencySymbol = shift.currencySymbol ?? storedCurrency
         let netEarnings: String
-        if friend.showEarnings, let currency = currencySymbol {
-            netEarnings = WidgetCurrencyFormatter.format(shift.gross, currency: currency)
-        } else if friend.showEarnings {
+        if showEarnings, let grossValue = gross, let currency = storedCurrency {
+            netEarnings = WidgetCurrencyFormatter.format(grossValue, currency: currency)
+        } else if showEarnings, let grossValue = gross {
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
             formatter.minimumFractionDigits = 0
             formatter.maximumFractionDigits = 0
             formatter.groupingSeparator = " "
-            netEarnings = formatter.string(from: NSNumber(value: shift.gross)) ?? "\(Int(shift.gross))"
+            netEarnings = formatter.string(from: NSNumber(value: grossValue)) ?? "\(Int(grossValue))"
         } else {
             netEarnings = "---"
         }
 
         // Build deep link (use "user" param to match AppCoordinator.handleDeepLink)
-        let deepLinkURL = URL(string: "tidex://sharing?user=\(friend.id)&dates=\(shift.shiftDate)")
+        let deepLinkURL = URL(string: "tidex://sharing?user=\(friend.id)&dates=\(shiftDate)")
 
         return FriendShiftWidgetEntry(
             date: Date(),
@@ -209,10 +364,10 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
             friendName: friend.displayName,
             friendInitials: friend.initials,
             shiftDate: formattedDate,
-            startTime: shift.startTime,
-            endTime: shift.endTime,
+            startTime: startTime,
+            endTime: endTime,
             netEarnings: netEarnings,
-            showEarnings: friend.showEarnings,
+            showEarnings: showEarnings,
             locale: locale,
             hasShift: true,
             daysRemaining: daysRemaining,

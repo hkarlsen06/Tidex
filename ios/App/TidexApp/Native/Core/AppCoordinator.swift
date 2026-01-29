@@ -516,6 +516,9 @@ final class AppCoordinator: ObservableObject {
         NativeWidgetStorage.clearWidgetStorage()
         NativeWidgetStorage.clearFriendWidgetStorage()
 
+        // Clear shared keychain (widget/watch access token)
+        AuthSessionManager.shared.clearSharedKeychain()
+
         // Stop StoreKit listener and clear entitlement cache
         StoreKitManager.shared.stopListening()
         await EntitlementService.shared.clearCache()
