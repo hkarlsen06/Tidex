@@ -49,6 +49,7 @@ final class AuthSessionManager: ObservableObject {
     /// 1. Checks if a refresh is already in progress and waits for it if so
     /// 2. Gets the current session from Supabase
     /// 3. Proactively refreshes if the token is close to expiry
+    /// 4. Stores the token in shared keychain for widget/watch access
     ///
     /// - Returns: A valid session with a fresh access token
     /// - Throws: Auth errors if session cannot be obtained or refreshed
@@ -70,6 +71,9 @@ final class AuthSessionManager: ObservableObject {
             logger.info("Token expires in \(timeUntilExpiry)s, proactively refreshing...")
             return try await performRefresh()
         }
+
+        // Store token in shared keychain for widget/watch access
+        storeTokenInSharedKeychain(session)
 
         return session
     }
@@ -126,6 +130,12 @@ final class AuthSessionManager: ObservableObject {
             do {
                 let session = try await supabase.auth.refreshSession()
                 logger.info("Token refreshed successfully, new expiry: \(session.expiresAt)")
+
+                // Store refreshed token in shared keychain
+                await MainActor.run {
+                    self?.storeTokenInSharedKeychain(session)
+                }
+
                 return session
             } catch {
                 logger.error("Token refresh failed: \(error.localizedDescription)")
@@ -135,5 +145,31 @@ final class AuthSessionManager: ObservableObject {
 
         refreshTask = task
         return try await task.value
+    }
+
+    // MARK: - Shared Keychain Storage
+
+    /// Store the access token in shared keychain for widget/watch access
+    private func storeTokenInSharedKeychain(_ session: Session) {
+        do {
+            try SharedKeychainStorage.storeAccessToken(
+                session.accessToken,
+                expiresAt: Int(session.expiresAt)
+            )
+            logger.debug("Stored access token in shared keychain (expires: \(session.expiresAt))")
+        } catch {
+            // Non-fatal: widget/watch will fall back to cached data
+            logger.warning("Failed to store token in shared keychain: \(error.localizedDescription)")
+        }
+    }
+
+    /// Clear the access token from shared keychain (called on sign out)
+    func clearSharedKeychain() {
+        do {
+            try SharedKeychainStorage.clearAccessToken()
+            logger.info("Cleared shared keychain")
+        } catch {
+            logger.warning("Failed to clear shared keychain: \(error.localizedDescription)")
+        }
     }
 }

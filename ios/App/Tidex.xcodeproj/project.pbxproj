@@ -8,12 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		114F0F692F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */; };
-		114F0F6A2F21529600B587F0 /* WatchShiftDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F672F21529600B587F0 /* WatchShiftDTO.swift */; };
-		114F0F6B2F21529600B587F0 /* WatchDataPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F662F21529600B587F0 /* WatchDataPayload.swift */; };
-		114F0F6C2F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */; };
-		114F0F6D2F21529600B587F0 /* WatchShiftDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F672F21529600B587F0 /* WatchShiftDTO.swift */; };
-		114F0F6E2F21529600B587F0 /* WatchDataPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F662F21529600B587F0 /* WatchDataPayload.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -65,9 +59,6 @@
 
 /* Begin PBXFileReference section */
 		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftPreviewStatus.swift; sourceTree = "<group>"; };
-		114F0F662F21529600B587F0 /* WatchDataPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDataPayload.swift; sourceTree = "<group>"; };
-		114F0F672F21529600B587F0 /* WatchShiftDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchShiftDTO.swift; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -94,11 +85,20 @@
 			);
 			target = 504EC3031FED79650016851F /* TidexApp */;
 		};
+		11828EBC2F2AE096008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				FriendsAPIClient.swift,
+				SharedKeychainStorage.swift,
+			);
+			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		114F0F432F2150EA00B587F0 /* TidexWatchApp */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = TidexWatchApp; sourceTree = "<group>"; };
 		11828D5E2F2828A1008A1A80 /* TidexApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828E5A2F2828A1008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexApp; sourceTree = "<group>"; };
+		11828EAF2F2AE096008A1A80 /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828EBC2F2AE096008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
 		11A5CD332F101283002BAC91 /* TidexShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (113F7F842F1017390078A6D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexShiftWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -138,16 +138,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		114F0F682F21529600B587F0 /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */,
-				114F0F662F21529600B587F0 /* WatchDataPayload.swift */,
-				114F0F672F21529600B587F0 /* WatchShiftDTO.swift */,
-			);
-			path = Shared;
-			sourceTree = "<group>";
-		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -161,7 +151,7 @@
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
-				114F0F682F21529600B587F0 /* Shared */,
+				11828EAF2F2AE096008A1A80 /* Shared */,
 				11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */,
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				958DCC732DB07C7200EA8C5F /* release.xcconfig */,
@@ -201,6 +191,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				114F0F432F2150EA00B587F0 /* TidexWatchApp */,
+				11828EAF2F2AE096008A1A80 /* Shared */,
 			);
 			name = TidexWatchApp;
 			packageProductDependencies = (
@@ -249,6 +240,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				11828D5E2F2828A1008A1A80 /* TidexApp */,
+				11828EAF2F2AE096008A1A80 /* Shared */,
 			);
 			name = TidexApp;
 			packageProductDependencies = (
@@ -364,9 +356,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				114F0F692F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */,
-				114F0F6A2F21529600B587F0 /* WatchShiftDTO.swift in Sources */,
-				114F0F6B2F21529600B587F0 /* WatchDataPayload.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -381,9 +370,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				114F0F6C2F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */,
-				114F0F6D2F21529600B587F0 /* WatchShiftDTO.swift in Sources */,
-				114F0F6E2F21529600B587F0 /* WatchDataPayload.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
