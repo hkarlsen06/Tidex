@@ -140,15 +140,16 @@ All Supabase clients MUST use cookie configuration from `lib/auth/cookie-config.
 
 When an API route IS needed (`app/api/*`):
 
-1. **Skip the Effect layer** - Use direct Supabase clients
-2. **Support Bearer token authentication** - iOS sends JWT in Authorization header (see `app/api/push-device/route.ts` for example)
-3. **Use service client for internal schema** - `createSupabaseServiceClient()` for `internal` schema
-4. **Return simple JSON responses**
+1. **Auth is automatic** - Both `getSession()` and `createSupabaseServerClient()` handle Bearer tokens (iOS) and cookies (web)
+2. **Use DAL functions when available** - They work with Bearer auth automatically
+3. **Use service client for internal schema** - `createSupabaseServiceClient()` for `internal` schema (when no DAL function exists)
+4. **Return simple JSON responses** - Keep shapes flat and Swift-Codable friendly
 
 **Current iOS API routes (all require service role):**
 - `/api/delete-account` - Needs admin API to delete auth user
 - `/api/push-device` - Needs access to `internal` schema
 - `/api/profile-picture` - Needs storage operations with user context
+- `/api/sharing/previews` - Uses DAL function with Bearer auth
 
 ### Component System
 
