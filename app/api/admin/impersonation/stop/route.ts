@@ -1,12 +1,17 @@
 /**
- * Admin Impersonation Stop Endpoint
+ * Admin Impersonation Stop Endpoint (Web Wrapper)
  *
- * Allows admins to stop impersonating and restore their original session.
- * Decrypts the stored admin refresh token and restores the admin's session.
+ * This route is the web-specific wrapper that:
+ * 1. Calls the shared Supabase Edge Function to end the impersonation session
+ * 2. Restores admin session using the decrypted refresh token
+ * 3. Clears the impersonation context cookie
+ *
+ * For iOS/native clients, call the Edge Function directly:
+ * POST /functions/v1/impersonation/stop
  *
  * Security:
  * - Verifies impersonation context cookie
- * - Validates session in database
+ * - Validates session in database (via Edge Function)
  * - Clears impersonation state on success or failure
  */
 
@@ -15,24 +20,30 @@ import { createServerClient } from "@supabase/ssr";
 import {
   readImpersonationContextFromRequest,
   clearImpersonationCookie,
-  getImpersonationSession,
-  endImpersonationSession,
-  decryptAdminRefreshToken,
 } from "@/lib/auth/impersonation";
 import { ENV } from "@/lib/env";
 import { invalidateUserCache } from "@/data-access/cache";
+
+interface EdgeFunctionStopResponse {
+  ok: boolean;
+  error?: string;
+  session?: {
+    id: string;
+    ended_at: string;
+  };
+  admin_refresh_token?: string;
+}
 
 export async function POST(request: NextRequest) {
   // Create response object
   const response = NextResponse.json({ ok: true });
 
   try {
-    // 1. Read and verify impersonation context cookie
+    // 1. Read impersonation context cookie
     const context = readImpersonationContextFromRequest(request);
 
     if (!context) {
       // No valid impersonation context - nothing to stop
-      // Still clear the cookie in case it's malformed
       clearImpersonationCookie(response, request);
       return NextResponse.json(
         { ok: false, error: "No active impersonation session" },
@@ -40,81 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Load impersonation session from database
-    let dbSession;
-    try {
-      dbSession = await getImpersonationSession(context.impersonationSessionId);
-    } catch (error) {
-      console.error("[Impersonation Stop] Failed to load session:", error);
-      // Clear cookie and fail gracefully
-      clearImpersonationCookie(response, request);
-      return NextResponse.json(
-        { ok: false, error: "Failed to load impersonation session", redirectHint: "/login" },
-        { status: 500 }
-      );
-    }
-
-    // 3. Validate session
-    if (!dbSession) {
-      console.warn("[Impersonation Stop] Session not found:", context.impersonationSessionId);
-      clearImpersonationCookie(response, request);
-      return NextResponse.json(
-        { ok: false, error: "Impersonation session not found", redirectHint: "/login" },
-        { status: 404 }
-      );
-    }
-
-    if (dbSession.ended_at) {
-      console.warn("[Impersonation Stop] Session already ended:", context.impersonationSessionId);
-      clearImpersonationCookie(response, request);
-      return NextResponse.json(
-        { ok: false, error: "Impersonation session already ended", redirectHint: "/login" },
-        { status: 400 }
-      );
-    }
-
-    const now = new Date();
-    const expiresAt = new Date(dbSession.expires_at);
-    if (expiresAt <= now) {
-      console.warn("[Impersonation Stop] Session expired:", context.impersonationSessionId);
-      clearImpersonationCookie(response, request);
-      // Mark as ended in DB
-      await endImpersonationSession(dbSession.id, dbSession.admin_user_id).catch(() => {});
-      return NextResponse.json(
-        { ok: false, error: "Impersonation session expired", redirectHint: "/login" },
-        { status: 400 }
-      );
-    }
-
-    // Verify admin user ID matches
-    if (dbSession.admin_user_id !== context.adminUserId) {
-      console.error("[Impersonation Stop] Admin ID mismatch:", {
-        cookie: context.adminUserId,
-        db: dbSession.admin_user_id,
-      });
-      clearImpersonationCookie(response, request);
-      return NextResponse.json(
-        { ok: false, error: "Session validation failed", redirectHint: "/login" },
-        { status: 400 }
-      );
-    }
-
-    // 4. Decrypt the admin refresh token
-    let adminRefreshToken: string;
-    try {
-      adminRefreshToken = decryptAdminRefreshToken(dbSession);
-    } catch (error) {
-      console.error("[Impersonation Stop] Failed to decrypt refresh token:", error);
-      clearImpersonationCookie(response, request);
-      // Mark session as ended even though restoration failed
-      await endImpersonationSession(dbSession.id, dbSession.admin_user_id).catch(() => {});
-      return NextResponse.json(
-        { ok: false, error: "Failed to restore admin session", redirectHint: "/login" },
-        { status: 500 }
-      );
-    }
-
-    // 5. Create Supabase client and refresh the admin session
+    // 2. Get current session (the impersonated user's session)
     const supabase = createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
       cookies: {
         getAll() {
@@ -128,21 +65,59 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Refresh the session using the stored admin refresh token
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+    // 3. Call the Edge Function to end the session and get admin refresh token
+    const edgeFunctionUrl = `${ENV.URL}/functions/v1/impersonation/stop`;
+
+    const edgeResponse = await fetch(edgeFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Use the impersonated user's token - Edge Function allows target user to end session
+        Authorization: `Bearer ${currentSession?.access_token || ""}`,
+        "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
+        "x-real-ip": request.headers.get("x-real-ip") || "",
+        "user-agent": request.headers.get("user-agent") || "",
+      },
+      body: JSON.stringify({
+        sessionId: context.impersonationSessionId,
+      }),
+    });
+
+    const edgeResult: EdgeFunctionStopResponse = await edgeResponse.json();
+
+    // 4. Handle Edge Function errors
+    if (!edgeResult.ok) {
+      console.error("[Impersonation Stop] Edge Function error:", edgeResult.error);
+      clearImpersonationCookie(response, request);
+      return NextResponse.json(
+        { ok: false, error: edgeResult.error || "Failed to end impersonation", redirectHint: "/login" },
+        { status: edgeResponse.status }
+      );
+    }
+
+    // 5. Restore admin session using the decrypted refresh token
+    if (!edgeResult.admin_refresh_token) {
+      console.error("[Impersonation Stop] No admin refresh token returned");
+      clearImpersonationCookie(response, request);
+      // Sign out the impersonated session
+      await supabase.auth.signOut().catch(() => {});
+      return NextResponse.json(
+        { ok: false, error: "Admin session could not be restored. Please log in again.", redirectHint: "/login" },
+        { status: 401 }
+      );
+    }
+
+    // Refresh the admin session
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
-      refresh_token: adminRefreshToken,
+      refresh_token: edgeResult.admin_refresh_token,
     });
 
     if (refreshError || !refreshData.session) {
       console.error("[Impersonation Stop] Failed to refresh admin session:", refreshError);
       clearImpersonationCookie(response, request);
-      // Mark session as ended
-      await endImpersonationSession(dbSession.id, dbSession.admin_user_id).catch(() => {});
-
-      // If refresh fails, we need to sign out and redirect to login
-      // Try to clear the current (impersonated) session
       await supabase.auth.signOut().catch(() => {});
-
       return NextResponse.json(
         { ok: false, error: "Admin session expired. Please log in again.", redirectHint: "/login" },
         { status: 401 }
@@ -158,7 +133,6 @@ export async function POST(request: NextRequest) {
     if (setSessionError) {
       console.error("[Impersonation Stop] Failed to set admin session:", setSessionError);
       clearImpersonationCookie(response, request);
-      await endImpersonationSession(dbSession.id, dbSession.admin_user_id).catch(() => {});
       return NextResponse.json(
         { ok: false, error: "Failed to restore admin session", redirectHint: "/login" },
         { status: 500 }
@@ -168,23 +142,14 @@ export async function POST(request: NextRequest) {
     // 6. Clear impersonation context cookie
     clearImpersonationCookie(response, request);
 
-    // 7. Update database to mark session as ended
-    try {
-      await endImpersonationSession(dbSession.id, dbSession.admin_user_id);
-    } catch (error) {
-      // Non-fatal - session is still effectively ended since cookie is cleared
-      console.error("[Impersonation Stop] Failed to update session record:", error);
-    }
+    // 7. Invalidate caches for both admin and target user
+    invalidateUserCache(context.adminUserId);
+    invalidateUserCache(context.targetUserId);
 
-    // 8. Invalidate caches for both admin and target user
-    // This ensures fresh data is loaded after session restoration
-    invalidateUserCache(dbSession.admin_user_id);
-    invalidateUserCache(dbSession.target_user_id);
-
-    console.log("[Impersonation Stop] Completed:", {
-      adminId: dbSession.admin_user_id,
-      targetId: dbSession.target_user_id,
-      sessionId: dbSession.id,
+    console.log("[Impersonation Stop] Completed via Edge Function:", {
+      adminId: context.adminUserId,
+      targetId: context.targetUserId,
+      sessionId: context.impersonationSessionId,
     });
 
     return response;
