@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/data-access/auth";
 import { getSharerShiftPreviewsWithViewerId } from "@/data-access/sharing";
 
-// Ensure Next.js never caches this route or its fetch calls
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
-
 /**
  * API route for fetching shift previews for all sharers
  *

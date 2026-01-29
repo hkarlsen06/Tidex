@@ -71,7 +71,7 @@ const APPLE_PRO_IDS = ['no.tidex.pro', 'no.tidex.pro.year'];
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
-    const adminResult = await verifyAdminFromRequest(request);
+    const adminResult = await verifyAdminFromRequest();
 
     if (!adminResult) {
       return NextResponse.json(

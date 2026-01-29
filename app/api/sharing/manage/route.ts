@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { getSession } from "@/data-access/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import {
@@ -51,23 +52,6 @@ interface AuthenticatedUser {
 }
 
 /**
- * Get admin Supabase client for database operations
- */
-function getAdminClient(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRoleKey) {
-    logger.error("Missing Supabase URL or service role key");
-    return null;
-  }
-
-  return createClient(url, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
-
-/**
  * POST /api/sharing/manage
  *
  * Handles sharing actions that require server-side logic:
@@ -78,56 +62,23 @@ function getAdminClient(): SupabaseClient | null {
  * directly via Supabase from the iOS app using RLS policies.
  *
  * Authentication:
- * - iOS: Bearer token in Authorization header
- * - Web: Cookie-based session (fallback)
+ * - Bearer token in Authorization header (native iOS app) - handled by getSession
+ * - Cookie-based session (web app) - handled by getSession
  */
 export async function POST(request: NextRequest) {
-  // Try to get user from Authorization header first (iOS)
-  // Fall back to cookie-based session (web)
-  let user: AuthenticatedUser | null = null;
-
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const jwt = authHeader.slice(7);
-
-    // Verify JWT and get user - uses server-side validation
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const {
-      data: { user: supabaseUser },
-      error,
-    } = await supabase.auth.getUser(jwt);
-
-    if (error || !supabaseUser) {
-      logger.warn("Auth error in /api/sharing/manage:", error?.message);
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    user = supabaseUser;
-  } else {
-    // Fall back to cookie-based session (web clients)
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-    user = session.user;
-  }
-
-  // Get admin client for database operations
-  const adminClient = getAdminClient();
-  if (!adminClient) {
+  // getSession handles both Bearer tokens (iOS) and cookies (web)
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json(
-      { success: false, error: "Server configuration error" },
-      { status: 500 }
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
     );
   }
+
+  const user: AuthenticatedUser = session.user;
+
+  // Get service client for database operations
+  const adminClient = createSupabaseServiceClient();
 
   // Parse request body
   let body: ManageRequest;

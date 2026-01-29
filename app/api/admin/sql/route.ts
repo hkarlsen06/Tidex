@@ -47,7 +47,7 @@ export async function POST(
 ): Promise<NextResponse<SqlResponse>> {
   try {
     // Verify admin authentication
-    const adminResult = await verifyAdminFromRequest(request);
+    const adminResult = await verifyAdminFromRequest();
 
     if (!adminResult) {
       return NextResponse.json(

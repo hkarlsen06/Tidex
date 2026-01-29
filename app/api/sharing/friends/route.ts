@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
 import { getSession } from "@/data-access/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
 import type { Friend, NotificationFrequency } from "@/data-access/sharing";
 
@@ -17,12 +17,9 @@ const SHARE_LIMITS = {
  * Returns the unified friends list and share capacity for the authenticated user.
  * Used by the iOS app's sharing management modal.
  *
- * This endpoint bypasses the Effect layer to avoid session verification issues
- * when called with Bearer token auth from iOS.
- *
  * Authentication:
- * - iOS: Bearer token in Authorization header
- * - Web: Cookie-based session (fallback)
+ * - Bearer token in Authorization header (native iOS app) - handled by getSession
+ * - Cookie-based session (web app) - handled by getSession
  *
  * Response:
  * {
@@ -30,54 +27,17 @@ const SHARE_LIMITS = {
  *   capacity: { canAdd: boolean, currentCount: number, limit: number }
  * }
  */
-export async function GET(request: NextRequest) {
-  // Try to get user ID from Authorization header first (iOS)
-  // Fall back to cookie-based session (web)
-  let userId: string | null = null;
-
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const jwt = authHeader.slice(7);
-
-    // Verify JWT and get user - uses server-side validation
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser(jwt);
-
-    if (error || !user) {
-      logger.warn("Auth error in /api/sharing/friends:", error?.message);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    userId = user.id;
-  } else {
-    // Fall back to cookie-based session (web clients)
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    userId = session.user.id;
+export async function GET() {
+  // getSession handles both Bearer tokens (iOS) and cookies (web)
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Create admin client for fetching user data
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const userId = session.user.id;
 
-  if (!url || !serviceRoleKey) {
-    logger.error("Missing Supabase URL or service role key");
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 }
-    );
-  }
-
-  const adminClient = createClient(url, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
+  // Service client for fetching user data
+  const adminClient = createSupabaseServiceClient();
 
   try {
     // Fetch sharers (people who share with me) - including blocked

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/data-access/auth";
 import { getSharedUserShiftsWithViewerId } from "@/data-access/sharing";
 import { getMonthStart, getMonthEnd } from "@/lib/date-utils";
@@ -11,8 +10,8 @@ import { isTaggedError } from "@/lib/errors/tagged";
  * GET: Fetch shifts for a specific month from a user who has shared with the viewer
  *
  * Authentication:
- * - iOS: Bearer token in Authorization header
- * - Web: Cookie-based session (fallback)
+ * - Bearer token in Authorization header (native iOS app) - handled by getSession
+ * - Cookie-based session (web app) - handled by getSession
  *
  * Query params:
  * - ownerId: string (UUID of the user whose shifts to fetch)
@@ -20,33 +19,13 @@ import { isTaggedError } from "@/lib/errors/tagged";
  * - month: number (1-12)
  */
 export async function GET(request: NextRequest) {
-  // Try to get user ID from Authorization header first (iOS)
-  // Fall back to cookie-based session (web)
-  let viewerId: string | null = null;
-
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const jwt = authHeader.slice(7);
-
-    // Verify JWT and get user - uses server-side validation
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: { user }, error } = await supabase.auth.getUser(jwt);
-
-    if (error || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    viewerId = user.id;
-  } else {
-    // Fall back to cookie-based session (web clients)
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    viewerId = session.user.id;
+  // getSession handles both Bearer tokens (iOS) and cookies (web)
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const viewerId = session.user.id;
 
   const { searchParams } = new URL(request.url);
   const ownerId = searchParams.get("ownerId");
