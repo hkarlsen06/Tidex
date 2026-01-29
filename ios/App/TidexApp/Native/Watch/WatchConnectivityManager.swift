@@ -125,6 +125,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
                     return
                 }
 
+                // Get the current session and include token in response
+                // Note: Keychain access groups don't work iPhone↔Watch (separate devices)
+                // so we send the token via WatchConnectivity for the Watch to store locally
+                var tokenInfo: [String: Any] = [:]
+                if let session = try? await AuthSessionManager.shared.getSession() {
+                    tokenInfo["accessToken"] = session.accessToken
+                    tokenInfo["expiresAt"] = session.expiresAt
+                }
+
                 // Trigger sync for user shifts
                 _ = await SyncCoordinator.shared.sync(reason: .watchRefresh, userId: userId)
 
@@ -133,7 +142,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
                 // Send updated data to Watch
                 self?.sendUpdatedData(userId: userId)
-                replyHandler(["success": true])
+
+                // Reply with success and token info
+                var response: [String: Any] = ["success": true]
+                if !tokenInfo.isEmpty {
+                    response["token"] = tokenInfo
+                }
+                replyHandler(response)
             }
         }
     }

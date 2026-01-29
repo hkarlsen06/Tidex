@@ -64,11 +64,16 @@ struct ShiftListView: View {
         } label: {
             if connectivity.isRefreshing {
                 ProgressView()
+            } else if connectivity.lastRefreshFailed {
+                // Show error state briefly after failed refresh
+                Image(systemName: "exclamationmark.arrow.circlepath")
+                    .foregroundStyle(.red)
             } else {
                 Image(systemName: "arrow.clockwise")
             }
         }
-        .disabled(!connectivity.isReachable || connectivity.isRefreshing)
+        // Enable when either iPhone is reachable OR we have a valid API token
+        .disabled(!connectivity.canRefresh || connectivity.isRefreshing)
     }
 }
 

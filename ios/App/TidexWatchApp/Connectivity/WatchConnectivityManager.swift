@@ -15,6 +15,12 @@ final class WatchConnectivityManager: NSObject {
 
     private(set) var isReachable = false
     private(set) var isRefreshing = false
+    private(set) var lastRefreshFailed = false
+
+    /// Whether a refresh is possible (either via API with valid token, or via iPhone)
+    var canRefresh: Bool {
+        isReachable || SharedKeychainStorage.hasValidToken
+    }
 
     private override init() {
         super.init()
@@ -36,7 +42,7 @@ final class WatchConnectivityManager: NSObject {
 
     // MARK: - Refresh Request
 
-    /// Request fresh data - tries API first, falls back to iPhone
+    /// Request fresh data - prefers iPhone (user + friends), falls back to API (friends only)
     func requestRefresh() {
         guard !isRefreshing else {
             logger.info("Refresh already in progress")
@@ -44,20 +50,43 @@ final class WatchConnectivityManager: NSObject {
         }
 
         isRefreshing = true
+        lastRefreshFailed = false
 
         Task {
-            // Try API first (standard approach)
+            // Prefer iPhone when reachable - it provides both user and friend data
+            if WCSession.default.isReachable {
+                logger.info("iPhone reachable - requesting full refresh")
+                let iphoneSuccess = await requestRefreshFromiPhone()
+
+                if iphoneSuccess {
+                    logger.info("iPhone refresh successful")
+                    isRefreshing = false
+                    return
+                }
+                // iPhone failed even though reachable - try API as fallback
+                logger.info("iPhone request failed, trying API fallback")
+            }
+
+            // iPhone not reachable or failed - use API for friends data only
+            // (preserves existing user shift data)
             let apiSuccess = await fetchFromAPI()
 
             if apiSuccess {
-                logger.info("API refresh successful")
+                logger.info("API refresh successful (friends only)")
                 isRefreshing = false
                 return
             }
 
-            // API failed - fall back to iPhone
-            logger.info("API failed, falling back to iPhone")
-            await requestRefreshFromiPhone()
+            // Both failed
+            lastRefreshFailed = true
+            isRefreshing = false
+            logger.warning("Refresh failed: iPhone not reachable and API unavailable")
+
+            // Auto-clear error state after 3 seconds
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                self.lastRefreshFailed = false
+            }
         }
     }
 
@@ -105,13 +134,14 @@ final class WatchConnectivityManager: NSObject {
             }
 
             // Create payload and update store
+            // Preserve existing user shift since the friends API doesn't include it
             let payload = WatchDataPayload(
                 timestamp: Date(),
                 lastSyncTimestamp: Date(),
-                userShift: nil, // User's own shift not available via this API
+                userShift: WatchDataStore.shared.userShift,
                 friendShifts: friendShifts,
                 locale: getWatchLocale(),
-                currencySymbol: "kr" // Default, could be stored in App Group
+                currencySymbol: WatchDataStore.shared.currencySymbol
             )
 
             WatchDataStore.shared.update(from: payload)
@@ -142,11 +172,12 @@ final class WatchConnectivityManager: NSObject {
     // MARK: - iPhone Fallback
 
     /// Request fresh data from iPhone (fallback when API fails)
-    private func requestRefreshFromiPhone() async {
+    /// - Returns: true if refresh was successful, false if iPhone not reachable or request failed
+    private func requestRefreshFromiPhone() async -> Bool {
         guard WCSession.default.isReachable else {
             logger.info("iPhone not reachable - cannot refresh from iPhone")
             isRefreshing = false
-            return
+            return false
         }
 
         return await withCheckedContinuation { continuation in
@@ -156,14 +187,28 @@ final class WatchConnectivityManager: NSObject {
                     Task { @MainActor in
                         self?.isRefreshing = false
                         logger.info("iPhone refresh response received: \(response)")
-                        continuation.resume()
+
+                        // Store token locally if iPhone sent it
+                        // This enables direct API access on subsequent refreshes
+                        if let tokenInfo = response["token"] as? [String: Any],
+                           let accessToken = tokenInfo["accessToken"] as? String,
+                           let expiresAt = tokenInfo["expiresAt"] as? Int {
+                            do {
+                                try SharedKeychainStorage.storeAccessToken(accessToken, expiresAt: expiresAt)
+                                logger.info("Stored access token from iPhone (expires: \(expiresAt))")
+                            } catch {
+                                logger.warning("Failed to store token from iPhone: \(error.localizedDescription)")
+                            }
+                        }
+
+                        continuation.resume(returning: true)
                     }
                 },
                 errorHandler: { [weak self] error in
                     Task { @MainActor in
                         self?.isRefreshing = false
                         logger.error("iPhone refresh failed: \(error.localizedDescription)")
-                        continuation.resume()
+                        continuation.resume(returning: false)
                     }
                 }
             )

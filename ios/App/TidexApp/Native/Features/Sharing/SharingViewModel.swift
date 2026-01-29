@@ -347,7 +347,13 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     /// Refresh sharers (pull-to-refresh) - forces fresh data
     /// Uses minimum refresh duration to ensure shimmer is visible
+    ///
+    /// IMPORTANT: SwiftUI's .refreshable cancels the task when the user releases the gesture.
+    /// We use an unstructured Task to ensure the network work completes regardless of cancellation.
     func refresh() async {
+        // Don't start another refresh if one is already in progress
+        guard !isRefreshing else { return }
+
         // Set refreshing state immediately
         isRefreshing = true
 
@@ -355,13 +361,23 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         let minimumDurationMs: UInt64 = 800
         let startTime = DispatchTime.now()
 
-        if selectedSharer != nil {
-            // Refresh shifts for selected sharer
-            await loadShiftsForSelectedSharer()
-        } else {
-            // Refresh sharer list and previews with forced refresh
-            await loadSharers(forceRefreshPreviews: true)
+        // Capture state needed for the task
+        let hasSelectedSharer = selectedSharer != nil
+
+        // Create an unstructured task that will complete even if the parent is cancelled
+        // This is necessary because SwiftUI's .refreshable cancels when the user releases
+        let refreshTask = Task { @MainActor [weak self] in
+            guard let self = self else { return }
+
+            if hasSelectedSharer {
+                await self.loadShiftsForSelectedSharer()
+            } else {
+                await self.loadSharers(forceRefreshPreviews: true)
+            }
         }
+
+        // Wait for the task to complete, ignoring any cancellation of our parent task
+        _ = await refreshTask.result
 
         // Calculate elapsed time and wait for minimum duration
         // Use DispatchQueue.asyncAfter which is not cancelled by SwiftUI's .refreshable
