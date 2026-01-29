@@ -98,34 +98,30 @@ struct ShiftRowCard: View {
 
                 Spacer()
 
-                // Conflict indicator + amount
-                HStack(spacing: 6) {
-                    // Conflict warning icon
-                    if hasConflict {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.tidexWarning)
-                    }
-
-                    // Net/gross amount
-                    let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-                    Text(formatCurrency(displayAmount))
-                        .font(.system(size: 22, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
-                        .strikethrough(excludedFromTotal, color: .tidexTextMuted)
-                }
+                // Net/gross amount
+                let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
+                Text(formatCurrency(displayAmount))
+                    .font(.system(size: 22, weight: .semibold))
+                    .tracking(-0.5)
+                    .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
+                    .strikethrough(excludedFromTotal, color: .tidexTextMuted)
             }
 
             // Row 2: Time range (left) and breakdown (right) - center aligned
             HStack(alignment: .center) {
                 // Time range and hours
                 HStack(spacing: 8) {
-                    // Time with clock icon
+                    // Time with clock or warning icon (warning replaces clock when conflict)
                     HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.tidexTextMuted)
+                        if hasConflict {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.tidexWarning)
+                        } else {
+                            Image(systemName: "clock")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.tidexTextMuted)
+                        }
                         Text("\(formatTime(shift.startTime))–\(formatTime(shift.endTime))")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(.tidexTextPrimary)
@@ -143,8 +139,13 @@ struct ShiftRowCard: View {
 
                 Spacer()
 
-                // Breakdown (gross - tax) when tax enabled, or excluded label
-                if showBreakdown {
+                // When excluded from total, show excluded label instead of breakdown
+                if excludedFromTotal {
+                    Text(localization.string("shifts.excludedFromTotal"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.tidexWarning)
+                } else if showBreakdown {
+                    // Breakdown (gross - tax) when tax enabled
                     HStack(spacing: 4) {
                         Text(formatPlainAmount(shift.grossPay))
                         Text("−")
@@ -152,20 +153,6 @@ struct ShiftRowCard: View {
                     }
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.tidexTextMuted)
-                } else if excludedFromTotal {
-                    Text(localization.string("shifts.excludedFromTotal"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.tidexWarning)
-                }
-            }
-
-            // Extra row for excluded label when also showing breakdown
-            if showBreakdown && excludedFromTotal {
-                HStack {
-                    Spacer()
-                    Text(localization.string("shifts.excludedFromTotal"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.tidexWarning)
                 }
             }
         }

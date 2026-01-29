@@ -113,6 +113,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     @Published private(set) var conflictingShiftIds: Set<String> = []
     /// Set of shift IDs excluded from totals (higher-earning overlapping shifts are excluded)
     @Published private(set) var excludedFromTotalIds: Set<String> = []
+    /// Set of dates (ISO strings) that have conflicts
+    @Published private(set) var conflictDates: Set<String> = []
 
     /// Direction of last navigation (for animations) - synced from SharedMonthContext
     @Published private(set) var navigationDirection: MonthNavigationDirection?
@@ -240,8 +242,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             }
         }
 
-        let gross = allSelectedShifts.reduce(0) { $0 + $1.grossPay }
-        let net = allSelectedShifts.reduce(0) { $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay) }
+        // Filter out shifts that are excluded from totals (conflicts)
+        let includedShifts = allSelectedShifts.filter { !excludedFromTotalIds.contains($0.id) }
+        let gross = includedShifts.reduce(0) { $0 + $1.grossPay }
+        let net = includedShifts.reduce(0) { $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay) }
 
         return (net: net, gross: gross)
     }
@@ -895,6 +899,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             // Use cached computed data - instant navigation!
             logger.info("📦 Using cached computed data for \(displayKey)")
 
+            // Calculate conflict detection first (needed for week totals)
+            updateConflictDetection(for: displayCache.shifts)
+
             // ATOMIC UPDATE: Set shifts and committed state together
             // This ensures the calendar structure and data update in the same render pass
             self.shifts = displayCache.shifts
@@ -1141,15 +1148,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
+            // Calculate conflict detection first (needed for week totals)
+            updateConflictDetection(for: computedShifts)
+
             // ATOMIC UPDATE: Set shifts and committed state together
             // This ensures the calendar structure and data update in the same render pass
             self.shifts = computedShifts
             self.weekGroups = groupShiftsByWeek(computedShifts)
             self.committedYear = displayYM.year
             self.committedMonth = displayYM.month
-
-            // Calculate conflict detection
-            updateConflictDetection(for: computedShifts)
 
             // Find next upcoming shift (only on current month)
             if isCurrentMonth {
@@ -1254,15 +1261,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
+            // Calculate conflict detection first (needed for week totals)
+            updateConflictDetection(for: computedShifts)
+
             // ATOMIC UPDATE: Set shifts and committed state together
             // This ensures the calendar structure and data update in the same render pass
             self.shifts = computedShifts
             self.weekGroups = groupShiftsByWeek(computedShifts)
             self.committedYear = loadYear
             self.committedMonth = loadMonth
-
-            // Calculate conflict detection
-            updateConflictDetection(for: computedShifts)
 
             // Find next upcoming shift (only on current month)
             if isCurrentMonth {
@@ -1345,10 +1352,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // MARK: - Conflict Detection
 
     /// Update conflict detection for the given shifts
-    /// Sets conflictingShiftIds and excludedFromTotalIds
+    /// Sets conflictingShiftIds, excludedFromTotalIds, and conflictDates
     private func updateConflictDetection(for shifts: [ShiftWithComputations]) {
         // Find all overlapping shifts
         var conflicting = Set<String>()
+        var datesWithConflicts = Set<String>()
 
         // Group shifts by date
         var shiftsByDate: [String: [ShiftWithComputations]] = [:]
@@ -1357,7 +1365,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         }
 
         // Check each date for overlapping shifts
-        for (_, shiftsOnDate) in shiftsByDate {
+        for (dateISO, shiftsOnDate) in shiftsByDate {
             guard shiftsOnDate.count >= 2 else { continue }
 
             // Check all pairs for overlap
@@ -1366,6 +1374,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                     if ConflictExclusion.shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j]) {
                         conflicting.insert(shiftsOnDate[i].id)
                         conflicting.insert(shiftsOnDate[j].id)
+                        datesWithConflicts.insert(dateISO)
                     }
                 }
             }
@@ -1376,9 +1385,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
         self.conflictingShiftIds = conflicting
         self.excludedFromTotalIds = excluded
+        self.conflictDates = datesWithConflicts
+
+        // Update shared context for MainTabView to show conflict indicator on list button
+        SharedMonthContext.shared.hasConflictsInMonth = !datesWithConflicts.isEmpty
 
         if !conflicting.isEmpty {
-            logger.info("⚠️ Found \(conflicting.count) conflicting shifts, \(excluded.count) excluded from totals")
+            logger.info("⚠️ Found \(conflicting.count) conflicting shifts on \(datesWithConflicts.count) dates, \(excluded.count) excluded from totals")
         }
     }
 
@@ -1491,13 +1504,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             }
         }
 
-        // Convert to WeekGroup array
+        // Convert to WeekGroup array (excluding conflicting shifts from totals)
         let groups = weekMap.map { key, value in
             WeekGroup(
                 id: key,
                 weekNumber: value.weekNumber,
                 year: value.year,
-                totalGross: value.shifts.reduce(0) { $0 + $1.grossPay },
+                totalGross: value.shifts.reduce(0) { total, shift in
+                    // Don't include excluded shifts in week totals
+                    self.excludedFromTotalIds.contains(shift.id) ? total : total + shift.grossPay
+                },
                 shifts: value.shifts.sorted { $0.shiftDate < $1.shiftDate }
             )
         }

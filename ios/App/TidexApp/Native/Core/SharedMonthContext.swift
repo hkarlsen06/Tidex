@@ -30,6 +30,10 @@ final class SharedMonthContext: ObservableObject {
     /// AddShiftViewModel consumes and clears this on load
     @Published var preselectedDate: String?
 
+    /// Whether the currently displayed month has any shift conflicts
+    /// Updated by ShiftsViewModel when conflicts are detected
+    @Published var hasConflictsInMonth: Bool = false
+
     // MARK: - Computed Properties
 
     /// Whether viewing the current (real) month

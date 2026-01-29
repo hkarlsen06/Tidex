@@ -190,14 +190,18 @@ struct MainTabView: View {
                 } label: {
                     Image(systemName: showListView ? "calendar" : "list.bullet")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.tidexBlue)
+                        .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexBlue)
                         .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .contentTransition(.symbolEffect(.replace))
-                .glassEffect(.regular, in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                .glassEffect(
+                    monthContext.hasConflictsInMonth ? .regular.tint(Color.tidexWarning.opacity(0.3)) : .regular,
+                    in: .rect(cornerRadius: MonthPickerLayout.cornerRadius)
+                )
                 .transition(.scale.combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.2), value: monthContext.hasConflictsInMonth)
             }
 
             // Month picker
