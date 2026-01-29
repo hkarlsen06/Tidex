@@ -6,6 +6,7 @@ struct DayShiftsSheet: View {
     let dateISO: String
     let shifts: [ShiftWithComputations]
     let onShiftTapped: (ShiftWithComputations) -> Void
+    var excludedFromTotalIds: Set<String> = []
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
@@ -30,12 +31,18 @@ struct DayShiftsSheet: View {
 
     private var totalEarnings: Double {
         shifts.reduce(0) { total, shift in
-            total + (shift.taxEnabled ? shift.netPay : shift.grossPay)
+            // Skip shifts excluded from totals
+            guard !excludedFromTotalIds.contains(shift.id) else { return total }
+            return total + (shift.taxEnabled ? shift.netPay : shift.grossPay)
         }
     }
 
     private var totalHours: Double {
-        shifts.reduce(0) { $0 + $1.paidHours }
+        shifts.reduce(0) { total, shift in
+            // Skip shifts excluded from totals
+            guard !excludedFromTotalIds.contains(shift.id) else { return total }
+            return total + shift.paidHours
+        }
     }
 
     // MARK: - Body

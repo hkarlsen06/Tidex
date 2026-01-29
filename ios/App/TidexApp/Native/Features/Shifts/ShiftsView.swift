@@ -334,7 +334,8 @@ struct ShiftsView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         selectedShift = shift
                     }
-                }
+                },
+                excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
@@ -732,7 +733,9 @@ struct ShiftsView: View {
                                 },
                                 isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
                                 newlyAddedDates: celebrationManager.newlyAddedDates,
-                                deepLinkHighlightDate: deepLinkHighlightDate
+                                deepLinkHighlightDate: deepLinkHighlightDate,
+                                conflictDates: viewModel.conflictDates,
+                                excludedFromTotalIds: viewModel.excludedFromTotalIds
                             )
                             .padding(.horizontal, 16)
                         }
@@ -923,7 +926,9 @@ struct ShiftsView: View {
                                 },
                                 isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
                                 newlyAddedDates: celebrationManager.newlyAddedDates,
-                                deepLinkHighlightDate: deepLinkHighlightDate
+                                deepLinkHighlightDate: deepLinkHighlightDate,
+                                conflictDates: viewModel.conflictDates,
+                                excludedFromTotalIds: viewModel.excludedFromTotalIds
                             )
                             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                             .padding(.horizontal, 16)
@@ -1009,10 +1014,11 @@ struct ShiftsView: View {
             let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
             let weekKey = "\(yearForWeek)-W\(String(format: "%02d", weekOfYear))"
 
-            // Calculate gross (only for shifts)
+            // Calculate gross (only for shifts, excluding conflicting shifts)
             let itemGross: Double
             if case .shift(let shift) = item {
-                itemGross = shift.grossPay
+                // Don't include excluded shifts in totals
+                itemGross = viewModel.excludedFromTotalIds.contains(shift.id) ? 0 : shift.grossPay
             } else {
                 itemGross = 0
             }

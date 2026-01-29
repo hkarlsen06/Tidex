@@ -122,6 +122,14 @@ final class StatsService: ObservableObject {
                 settings: settings
             )
 
+            // Build excluded IDs for conflicting shifts (lower-earning overlapping shifts)
+            let currentExcludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: currentMonthShifts)
+            let previousExcludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: previousMonthShifts)
+
+            // Filter out excluded shifts for totals calculations
+            let currentMonthIncluded = currentMonthShifts.filter { !currentExcludedIds.contains($0.id) }
+            let previousMonthIncluded = previousMonthShifts.filter { !previousExcludedIds.contains($0.id) }
+
             // Compute all shifts for the year (for employment calculation)
             // We need paidHours for each shift, so we compute them month by month
             var fullYearShifts: [ShiftWithComputations] = []
@@ -144,24 +152,24 @@ final class StatsService: ObservableObject {
                 fullYearShifts.append(contentsOf: computedShifts)
             }
 
-            // Get totals using PayrollEngine
+            // Get totals using PayrollEngine (using filtered shifts that exclude conflicts)
             let halfTaxMonth = settings.half_tax_month
             let currentTotals = PayrollEngine.summarizeShiftTotals(
-                shifts: currentMonthShifts,
+                shifts: currentMonthIncluded,
                 halfTaxMonth: halfTaxMonth,
                 earningsMonth: currentYM.month,
                 now: now
             )
             let previousTotals = PayrollEngine.summarizeShiftTotals(
-                shifts: previousMonthShifts,
+                shifts: previousMonthIncluded,
                 halfTaxMonth: halfTaxMonth,
                 earningsMonth: previousYM.month,
                 now: now
             )
 
-            // Calculate total hours
-            let currentHours = currentMonthShifts.reduce(0) { $0 + $1.paidHours }
-            let previousHours = previousMonthShifts.reduce(0) { $0 + $1.paidHours }
+            // Calculate total hours (using filtered shifts that exclude conflicts)
+            let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }
+            let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }
 
             // Get tax settings from first shift or snapshots
             let taxEnabled = currentMonthShifts.first?.taxEnabled ?? false
@@ -200,10 +208,10 @@ final class StatsService: ObservableObject {
                 )
             }
 
-            // Build cumulative data for progress chart
+            // Build cumulative data for progress chart (using filtered shifts for earnings)
             let cumulativeData = buildCumulativeData(
-                currentMonthShifts: currentMonthShifts,
-                previousMonthShifts: previousMonthShifts,
+                currentMonthShifts: currentMonthIncluded,
+                previousMonthShifts: previousMonthIncluded,
                 targetYear: targetYear,
                 targetMonth: targetMonth,
                 previousYear: previousYM.year,
@@ -215,14 +223,14 @@ final class StatsService: ObservableObject {
             let isCurrentMonth = targetYear == calendar.component(.year, from: now) &&
                                  targetMonth == calendar.component(.month, from: now)
 
-            // Build weekly data
+            // Build weekly data (using filtered shifts for earnings)
             let thisWeek: [DailyData]?
             let bestWeek: BestWeekData?
 
             if isCurrentMonth {
                 // Current month: show this week (Mon-Sun)
                 thisWeek = buildThisWeekData(
-                    shifts: currentMonthShifts,
+                    shifts: currentMonthIncluded,
                     now: now
                 )
                 bestWeek = nil
@@ -230,23 +238,27 @@ final class StatsService: ObservableObject {
                 // Past month: show best week
                 thisWeek = nil
                 bestWeek = buildBestWeekData(
-                    shifts: currentMonthShifts,
+                    shifts: currentMonthIncluded,
                     focusYear: targetYear,
                     focusMonth: targetMonth
                 )
             }
 
-            // Build employment data for the focus year
+            // Build employment data for the focus year (uses all shifts for hours worked)
             let employmentData = buildEmploymentData(
                 focusYear: targetYear,
                 shifts: fullYearShifts,
                 snapshots: snapshots
             )
 
-            // Build yearly income data (monthly breakdown for the focus year)
+            // Filter fullYearShifts for earnings calculations (exclude conflicting shifts)
+            let fullYearExcludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: fullYearShifts)
+            let fullYearIncluded = fullYearShifts.filter { !fullYearExcludedIds.contains($0.id) }
+
+            // Build yearly income data (monthly breakdown for the focus year, excluding conflicts)
             let yearlyIncomeData = buildYearlyIncomeData(
                 focusYear: targetYear,
-                shifts: fullYearShifts
+                shifts: fullYearIncluded
             )
 
             // Build stats data
@@ -275,7 +287,7 @@ final class StatsService: ObservableObject {
             )
 
             stats = statsData
-            logger.info("Computed stats: \(currentMonthShifts.count) shifts, \(Int(currentHours))h, \(Int(currentTotals.gross)) gross")
+            logger.info("Computed stats: \(currentMonthShifts.count) shifts (\(currentExcludedIds.count) excluded), \(Int(currentHours))h, \(Int(currentTotals.gross)) gross")
 
             return statsData
 

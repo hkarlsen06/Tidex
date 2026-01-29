@@ -81,6 +81,12 @@ struct ShiftsCalendarView: View {
     // Date to highlight from widget deeplink (temporary visual highlight)
     var deepLinkHighlightDate: String?
 
+    // Dates that have shift conflicts (overlapping shifts)
+    var conflictDates: Set<String> = []
+
+    // Shift IDs that should be excluded from totals (conflicting shifts)
+    var excludedFromTotalIds: Set<String> = []
+
     @Environment(\.localization) private var localization
     @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
 
@@ -112,10 +118,12 @@ struct ShiftsCalendarView: View {
 
     // MARK: - Computed Data
 
-    /// Earnings by ISO date string
+    /// Earnings by ISO date string (excludes conflicting shifts)
     private var earningsByDate: [String: Double] {
         var result: [String: Double] = [:]
         for shift in shifts {
+            // Skip shifts excluded from totals
+            guard !excludedFromTotalIds.contains(shift.id) else { continue }
             let net = shift.taxEnabled ? shift.netPay : shift.grossPay
             result[shift.shiftDate, default: 0] += net
         }
@@ -150,9 +158,11 @@ struct ShiftsCalendarView: View {
         return result
     }
 
-    /// Monthly totals (net and gross)
+    /// Monthly totals (net and gross, excludes conflicting shifts)
     private var monthlyTotals: (net: Double, gross: Double) {
         let filteredShifts = shifts.filter { shift in
+            // Skip shifts excluded from totals
+            guard !excludedFromTotalIds.contains(shift.id) else { return false }
             guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
             let components = calendar.dateComponents([.year, .month], from: date)
             return components.year == year && components.month == monthNumber
@@ -357,6 +367,7 @@ struct ShiftsCalendarView: View {
                 let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
                 let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
                 let isToday = dayInfo.dateISO == todayISO()
+                let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
 
                 CalendarDayCell(
                     dayInfo: dayInfo,
@@ -365,7 +376,8 @@ struct ShiftsCalendarView: View {
                         isSelected: isSelected,
                         isInDragPreview: isInDragPreview,
                         isNewlyAdded: isNewlyAdded,
-                        isDeepLinkHighlighted: isDeepLinkHighlighted
+                        isDeepLinkHighlighted: isDeepLinkHighlighted,
+                        hasConflict: hasConflict
                     ),
                     content: cellContent(
                         for: dayInfo,
@@ -420,9 +432,10 @@ struct ShiftsCalendarView: View {
         isSelected: Bool,
         isInDragPreview: Bool,
         isNewlyAdded: Bool,
-        isDeepLinkHighlighted: Bool
+        isDeepLinkHighlighted: Bool,
+        hasConflict: Bool
     ) -> CalendarCellStyle {
-        // Priority order: deep link > newly added > selected/drag > today > default
+        // Priority order: deep link > newly added > selected/drag > conflict > today > default
         if isDeepLinkHighlighted {
             return CalendarCellStyle(
                 backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
@@ -444,6 +457,14 @@ struct ShiftsCalendarView: View {
                 backgroundColor: Color.tidexBlue.opacity(0.15),
                 borderColor: .tidexBlue,
                 borderWidth: 2,
+                dayNumberColor: .tidexTextPrimary
+            )
+        }
+        if hasConflict {
+            return CalendarCellStyle(
+                backgroundColor: Color.tidexWarning.opacity(0.15),
+                borderColor: .clear,
+                borderWidth: 0,
                 dayNumberColor: .tidexTextPrimary
             )
         }
