@@ -69,6 +69,40 @@ final class AppCoordinator: ObservableObject {
 
     /// Current user's ID (lowercase UUID string)
     @Published private(set) var userId: String?
+
+    // MARK: - User ID Access Errors
+
+    /// Error thrown when user ID is required but not available
+    enum UserIdError: Error, LocalizedError {
+        case notAuthenticated
+
+        var errorDescription: String? {
+            switch self {
+            case .notAuthenticated:
+                return "User is not authenticated"
+            }
+        }
+    }
+
+    // MARK: - Safe User ID Access
+
+    /// Safely get the current user ID, or nil if not authenticated
+    /// Use this when the operation can gracefully handle a missing user ID
+    func getCurrentUserId() -> String? {
+        return userId
+    }
+
+    /// Get the current user ID, throwing an error if not authenticated
+    /// Use this when the operation requires a valid user ID to proceed
+    /// - Throws: `UserIdError.notAuthenticated` if no user is logged in
+    /// - Returns: The current user's ID
+    func requireUserId() throws -> String {
+        guard let currentUserId = userId else {
+            throw UserIdError.notAuthenticated
+        }
+        return currentUserId
+    }
+
     /// User's display name (for UserMenuButton)
     @Published private(set) var userDisplayName: String = ""
     /// User's profile picture URL (for UserMenuButton)
@@ -295,7 +329,15 @@ final class AppCoordinator: ObservableObject {
     /// Background check for terms version update
     /// Fetches latest version from API and transitions to termsRequired if needed
     private func checkTermsVersionInBackground(termsAcceptedAt: String?) {
+        var taskRef: Task<Void, Never>?
         let task = Task { [weak self] in
+            defer {
+                // Remove this task from the array when it completes (success, failure, or cancellation)
+                if let self = self, let task = taskRef {
+                    self.backgroundTasks.removeAll { $0 == task }
+                }
+            }
+
             // Fetch latest terms version from API (this may take time on slow networks)
             let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
 
@@ -308,6 +350,7 @@ final class AppCoordinator: ObservableObject {
                 self.appState = .termsRequired
             }
         }
+        taskRef = task
         backgroundTasks.append(task)
     }
 

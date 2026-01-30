@@ -60,6 +60,10 @@ final class ResetPasswordViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Private State
+
+    private var authTask: Task<Void, Never>?
+
     // MARK: - Computed Properties
 
     /// Detected input type based on current emailOrPhone value
@@ -111,6 +115,10 @@ final class ResetPasswordViewModel: ObservableObject {
     ) {
         self.authService = authService ?? AuthService.shared
         self.localization = localization ?? LocalizationManager.shared
+    }
+
+    deinit {
+        authTask?.cancel()
     }
 
     // MARK: - Actions

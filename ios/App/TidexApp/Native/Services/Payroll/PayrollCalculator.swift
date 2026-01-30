@@ -1,8 +1,13 @@
 import Foundation
+import OSLog
 
 /// Pure payroll calculation logic
 /// Port of lib/payroll/calc.ts
 struct PayrollCalculator {
+
+    // MARK: - Logging
+
+    private static let logger = Logger(subsystem: "com.tidex.app", category: "PayrollCalculator")
 
     // MARK: - Constants
 
@@ -85,6 +90,11 @@ struct PayrollCalculator {
             : 0
         let breakHours = Double(breakMinutes) / 60.0
 
+        // Log when using default break settings
+        if snapshot == nil {
+            logger.warning("Using default break settings - no snapshot available for shift \(shift.id)")
+        }
+
         // Apply automatic break deduction
         let afterBreak = BreakDeduction.applyBreakDeduction(
             periods: periods,
@@ -138,7 +148,9 @@ struct PayrollCalculator {
         }
 
         // Priority 2: Fallback to tariff level 1
-        return presetWageRates["1"] ?? 184.54
+        let fallbackRate = presetWageRates["1"] ?? 184.54
+        logger.warning("Using default base rate (\(fallbackRate)) - no snapshot available for shift \(shift.id)")
+        return fallbackRate
     }
 
     /// Resolve supplement rules with custom supplements
@@ -167,6 +179,7 @@ struct PayrollCalculator {
             return snapshotRules
         }
 
+        logger.warning("Using preset supplement rules - no snapshot supplements available")
         return presetSupplementRules
     }
 }

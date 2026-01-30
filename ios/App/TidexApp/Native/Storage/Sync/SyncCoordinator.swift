@@ -597,7 +597,10 @@ final class SyncCoordinator: ObservableObject {
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.timeZone = Date.localTimeZone
 
-        let shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? Date()
+        guard let shiftDate = dateFormatter.date(from: serverRow.shift_date) else {
+            logger.error("Failed to parse shift_date '\(serverRow.shift_date)' for shift \(serverRow.id)")
+            throw SyncError.dateParsingFailed(table: .userShifts, id: serverRow.id, rawValue: serverRow.shift_date)
+        }
         let supplementsData = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
 
         let snapshot = UserShiftServerSnapshot.from(
@@ -1443,7 +1446,7 @@ final class SyncCoordinator: ObservableObject {
 
             if let returnedRow = returnedRows.first {
                 // Success - update local with canonical server values
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userShifts, id: shiftId)
                 let serverSnapshot = UserShiftServerSnapshot.from(
                     shiftDate: returnedRow.shift_date,
                     startTime: returnedRow.start_time,
@@ -1529,7 +1532,7 @@ final class SyncCoordinator: ObservableObject {
 
         if let returnedRow = returnedRows.first {
             // Success - mark as deleted locally
-            let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+            let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userShifts, id: shiftId)
             let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
 
             // Get shift details from snapshot before marking deleted (for notification)
@@ -1566,7 +1569,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let serverRow = serverRows.first {
-                let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userShifts, id: shiftId)
                 let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
                 if serverDeletedAt != nil {
@@ -1632,7 +1635,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userShifts, id: shiftId)
                 let serverSnapshot = UserShiftServerSnapshot.from(
                     shiftDate: returnedRow.shift_date,
                     startTime: returnedRow.start_time,
@@ -1681,7 +1684,7 @@ final class SyncCoordinator: ObservableObject {
                     .value
 
                 if let serverRow = serverRows.first {
-                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userShifts, id: shiftId)
                     let serverSnapshot = UserShiftServerSnapshot.from(
                         shiftDate: serverRow.shift_date,
                         startTime: serverRow.start_time,
@@ -1734,7 +1737,7 @@ final class SyncCoordinator: ObservableObject {
             return .conflict
         }
 
-        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userShifts, id: shiftId)
         let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
         if serverDeletedAt != nil {
@@ -1944,7 +1947,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .recurringShifts, id: shiftId)
                 let serverSnapshot = RecurringShiftServerSnapshot.from(
                     row: returnedRow.toRecurringShiftRow(),
                     updatedAt: serverUpdatedAt,
@@ -2004,7 +2007,7 @@ final class SyncCoordinator: ObservableObject {
             .value
 
         if let returnedRow = returnedRows.first {
-            let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+            let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .recurringShifts, id: shiftId)
             let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
 
             await storeActor.markRecurringShiftDeleted(
@@ -2026,7 +2029,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let serverRow = serverRows.first {
-                let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .recurringShifts, id: shiftId)
                 let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
                 if serverDeletedAt != nil {
@@ -2101,7 +2104,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .recurringShifts, id: shiftId)
                 let serverSnapshot = RecurringShiftServerSnapshot.from(
                     row: returnedRow.toRecurringShiftRow(),
                     updatedAt: serverUpdatedAt,
@@ -2136,7 +2139,7 @@ final class SyncCoordinator: ObservableObject {
                     .value
 
                 if let serverRow = serverRows.first {
-                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .recurringShifts, id: shiftId)
                     let serverSnapshot = RecurringShiftServerSnapshot.from(
                         row: serverRow.toRecurringShiftRow(),
                         updatedAt: serverUpdatedAt,
@@ -2184,7 +2187,7 @@ final class SyncCoordinator: ObservableObject {
             return .conflict
         }
 
-        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .recurringShifts, id: shiftId)
         let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
         if serverDeletedAt != nil {
@@ -2390,7 +2393,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
                 let serverSnapshot = WageSnapshotServerSnapshot.from(
                     row: returnedRow.toWageSnapshot(),
                     updatedAt: serverUpdatedAt,
@@ -2450,7 +2453,7 @@ final class SyncCoordinator: ObservableObject {
             .value
 
         if let returnedRow = returnedRows.first {
-            let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+            let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
             let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
 
             await storeActor.markWageSnapshotDeleted(
@@ -2471,7 +2474,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let serverRow = serverRows.first {
-                let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
                 let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
                 if serverDeletedAt != nil {
@@ -2559,7 +2562,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
                 let serverSnapshot = WageSnapshotServerSnapshot.from(
                     row: returnedRow.toWageSnapshot(),
                     updatedAt: serverUpdatedAt,
@@ -2594,7 +2597,7 @@ final class SyncCoordinator: ObservableObject {
                     .value
 
                 if let serverRow = serverRows.first {
-                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
                     let serverSnapshot = WageSnapshotServerSnapshot.from(
                         row: serverRow.toWageSnapshot(),
                         updatedAt: serverUpdatedAt,
@@ -2642,7 +2645,7 @@ final class SyncCoordinator: ObservableObject {
             return .conflict
         }
 
-        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
         let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
         if serverDeletedAt != nil {
@@ -2819,7 +2822,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userSettings, id: userId)
                 let serverSnapshot = UserSettingsServerSnapshot.from(
                     row: returnedRow.toUserSettings(),
                     updatedAt: serverUpdatedAt,
@@ -2901,7 +2904,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userSettings, id: userId)
                 let serverSnapshot = UserSettingsServerSnapshot.from(
                     row: returnedRow.toUserSettings(),
                     updatedAt: serverUpdatedAt,
@@ -2935,7 +2938,7 @@ final class SyncCoordinator: ObservableObject {
                     .value
 
                 if let serverRow = serverRows.first {
-                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userSettings, id: userId)
                     let serverSnapshot = UserSettingsServerSnapshot.from(
                         row: serverRow.toUserSettings(),
                         updatedAt: serverUpdatedAt,
@@ -2980,7 +2983,7 @@ final class SyncCoordinator: ObservableObject {
             return .conflict
         }
 
-        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userSettings, id: userId)
 
         guard let lastSnapshot = UserSettingsServerSnapshot.decode(from: settings.lastSyncedSnapshot) else {
             let serverSnapshot = UserSettingsServerSnapshot.from(
@@ -3246,7 +3249,7 @@ final class SyncCoordinator: ObservableObject {
         // Apply each row to local storage using the repository
         let repository = NotificationPreferencesRepository.shared
         for row in rows {
-            let serverUpdatedAt = parseISO8601(row.updated_at) ?? Date()
+            let serverUpdatedAt = parseUpdatedAt(row.updated_at, table: .notificationPreferences, id: row.user_id)
             repository.saveFromServer(row: row.toNotificationPreferencesRow(), serverUpdatedAt: serverUpdatedAt)
         }
 
@@ -3307,7 +3310,7 @@ final class SyncCoordinator: ObservableObject {
                 .value
 
             if let returnedRow = returnedRows.first {
-                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .notificationPreferences, id: userId)
                 repository.markClean(for: userId, serverUpdatedAt: serverUpdatedAt)
                 logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
                 return TablePushResult(table: .notificationPreferences, rowsPushed: 1, newConflicts: 0, rebased: 0)
@@ -3343,6 +3346,16 @@ final class SyncCoordinator: ObservableObject {
         // Try without fractional seconds
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: string)
+    }
+
+    /// Parse ISO8601 updated_at with warning log on failure
+    /// For sync cursor timestamps where fallback to Date() is acceptable but should be visible
+    private func parseUpdatedAt(_ string: String, table: SyncTable, id: String) -> Date {
+        if let date = parseISO8601(string) {
+            return date
+        }
+        logger.warning("Failed to parse updated_at '\(string)' for \(table.displayName) \(id.prefix(8)), using current date as fallback")
+        return Date()
     }
 
     /// Parse ISO8601 date string to Date, throwing on failure
@@ -3472,7 +3485,7 @@ enum SyncError: LocalizedError {
         case .missingConflictSnapshot(let table, let id):
             return "\(table.displayName) with id \(id) has no conflict snapshot"
         case .dateParsingFailed(let table, let id, let rawValue):
-            return "\(table.displayName) with id \(id) has unparseable updated_at: '\(rawValue)'"
+            return "\(table.displayName) with id \(id) has unparseable date field: '\(rawValue)'"
         }
     }
 

@@ -82,10 +82,20 @@ final class LocalStore {
 
                 // Last resort: try with default configuration
                 // If this fails, there's a fundamental issue with the app's model definitions
-                container = try! ModelContainer(for: schema)
-                storeActor = LocalStoreActor(modelContainer: container)
-                isUsingInMemoryFallback = true
-                logger.critical("LocalStore using default container - app may be unstable")
+                do {
+                    container = try ModelContainer(for: schema)
+                    storeActor = LocalStoreActor(modelContainer: container)
+                    isUsingInMemoryFallback = true
+                    logger.critical("LocalStore using default container - app may be unstable")
+                } catch let lastResortError {
+                    fatalError("""
+                        LocalStore: All storage initialization attempts failed.
+                        Original error: \(error.localizedDescription)
+                        In-memory fallback error: \(fallbackError.localizedDescription)
+                        Default container error: \(lastResortError.localizedDescription)
+                        This indicates a fundamental issue with the app's SwiftData model definitions.
+                        """)
+                }
             }
         }
     }
