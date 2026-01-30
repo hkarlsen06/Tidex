@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -19,15 +19,21 @@ import { Separator } from '@/components/app/Separator';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import type { BreakMethod } from '@/lib/payroll/types';
 import { WageSourceCard } from '@/components/settings/pay/WageSourceCard';
-import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
-import { Calendar, AlertTriangle, Trash2, Check, X, ChevronDown } from 'lucide-react';
+import { Calendar, AlertTriangle, Trash2, Check, X, ChevronDown, Building } from 'lucide-react';
 import {
   createWageSnapshotAction,
   updateWageSnapshotAction,
   deleteWageSnapshotAction,
+  getTariffVersionForDateAction,
+  getLatestTariffVersionAction,
+  getTariffTypesAction,
 } from '@/app/[locale]/(app)/settings/pay/_actions/wage-snapshots';
 import type { WageSnapshot, SupplementRule } from '@/data-access/wage-snapshots';
+import type { TariffVersion, TariffType } from '@/data-access/tariff';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+
+// Default tariff type for HK Retail agreement
+const DEFAULT_TARIFF_TYPE = 'hk_retail';
 
 /**
  * Format date for display
@@ -48,11 +54,13 @@ interface WageHistoryModalProps {
   mode: 'create' | 'edit' | 'view';
   t: Dictionary;
   locale?: string;
+  /**
+   * Initial tariff version to use when creating new snapshots.
+   * If not provided, the modal will fetch the latest version when opened.
+   */
+  initialTariffVersion?: TariffVersion | null;
 }
 
-const TARIFF_SUPPLEMENTS_DATA: SupplementsData = {
-  rules: PRESET_SUPPLEMENT_RULES.map((rule) => ({ ...rule })),
-};
 
 export function WageHistoryModal({
   isOpen,
@@ -61,10 +69,19 @@ export function WageHistoryModal({
   mode,
   t,
   locale = 'no-NO',
+  initialTariffVersion,
 }: WageHistoryModalProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  // Tariff type and version state
+  const [tariffTypes, setTariffTypes] = useState<TariffType[]>([]);
+  const [selectedTariffTypeId, setSelectedTariffTypeId] = useState<string>(() =>
+    snapshot?.tariff_type_id ?? DEFAULT_TARIFF_TYPE
+  );
+  const [tariffVersion, setTariffVersion] = useState<TariffVersion | null>(initialTariffVersion ?? null);
+  const [loadingTariff, setLoadingTariff] = useState(false);
 
   // Form state
   const isBaseline = mode === 'edit' && snapshot?.from_date === null;
@@ -90,6 +107,65 @@ export function WageHistoryModal({
       ? snapshot.supplements
       : null
   );
+
+  // Fetch tariff types when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchTariffTypes = async () => {
+      try {
+        const types = await getTariffTypesAction();
+        setTariffTypes(types);
+        // If no tariff type selected, use default
+        if (!selectedTariffTypeId && types.length > 0) {
+          const defaultType = types.find((t) => t.is_default) ?? types[0];
+          setSelectedTariffTypeId(defaultType.id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch tariff types:', err);
+      }
+    };
+
+    fetchTariffTypes();
+  }, [isOpen, selectedTariffTypeId]);
+
+  // Fetch tariff version when modal opens, tariff type changes, or when editing a snapshot
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchTariffVersion = async () => {
+      setLoadingTariff(true);
+      try {
+        if (mode === 'edit' && snapshot?.tariff_type_id && snapshot?.from_date) {
+          // Editing a snapshot with tariff: get the version for that date
+          const version = await getTariffVersionForDateAction(
+            snapshot.tariff_type_id,
+            snapshot.from_date
+          );
+          setTariffVersion(version);
+        } else if (mode === 'create' && !initialTariffVersion) {
+          // Creating new: get the latest version for selected tariff type
+          const version = await getLatestTariffVersionAction(selectedTariffTypeId);
+          setTariffVersion(version);
+        } else if (initialTariffVersion) {
+          // Use the provided initial version
+          setTariffVersion(initialTariffVersion);
+        }
+      } catch (err) {
+        console.error('Failed to fetch tariff version:', err);
+        // tariffVersion stays null - will show loading/error state
+      } finally {
+        setLoadingTariff(false);
+      }
+    };
+
+    fetchTariffVersion();
+  }, [isOpen, mode, snapshot?.tariff_type_id, snapshot?.from_date, initialTariffVersion, selectedTariffTypeId]);
+
+  // Get the tariff supplements data from the version if available
+  const tariffSupplementsData: SupplementsData = tariffVersion?.supplements
+    ? { rules: tariffVersion.supplements.rules.map((rule) => ({ ...rule })) }
+    : { rules: [] };
 
   // Tax settings
   const [taxEnabled, setTaxEnabled] = useState(() => snapshot?.tax_enabled ?? false);
@@ -131,6 +207,8 @@ export function WageHistoryModal({
     setAffectedShiftCount(null);
     setShowSupplementsInView(false);
     setShowTariffSupplements(false);
+    setTariffVersion(initialTariffVersion ?? null);
+    setSelectedTariffTypeId(DEFAULT_TARIFF_TYPE);
     onClose();
   };
 
@@ -143,8 +221,14 @@ export function WageHistoryModal({
       return;
     }
 
+    // Tariff version is required for preset mode
+    if (usePreset && !tariffVersion) {
+      setError('Failed to load tariff rates. Please try again.');
+      return;
+    }
+
     const wage = usePreset
-      ? PRESET_WAGE_RATES[wageLevel]
+      ? tariffVersion!.rates[wageLevel]
       : parseFloat(customWage);
 
     if (!wage || wage <= 0) {
@@ -185,8 +269,10 @@ export function WageHistoryModal({
           from_date: mode === 'create' ? fromDate : (isBaseline ? null : fromDate),
           hourly_wage: wage,
           wage_level: usePreset ? parseInt(wageLevel) : null,
+          // Save tariff_type_id when using tariff-based wage
+          tariff_type_id: usePreset ? selectedTariffTypeId : null,
           supplements: usePreset
-            ? convertSupplements(TARIFF_SUPPLEMENTS_DATA)
+            ? convertSupplements(tariffSupplementsData)
             : convertSupplements(customSupplements),
           // Tax settings
           tax_enabled: taxEnabled,
@@ -277,6 +363,7 @@ export function WageHistoryModal({
               setCustomWage={() => { }}
               disabled={true}
               showCurrentWage={false}
+              tariffVersion={tariffVersion}
               labels={{
                 tariffButton: t.pages.settings.pay.wageHistory.modal.useTariff,
                 customButton: t.pages.settings.pay.wage.customButton,
@@ -286,6 +373,7 @@ export function WageHistoryModal({
                 wageLevelUnder16: t.pages.settings.pay.wage.wageLevelUnder16,
                 wageLevel16to18: t.pages.settings.pay.wage.wageLevel16to18,
                 perHour: t.common.perHour,
+                tariffVersionLabel: t.pages.settings.pay.wageHistory.modal.tariffVersionLabel,
               }}
             />
 
@@ -315,7 +403,7 @@ export function WageHistoryModal({
                   <SupplementsEditor
                     value={snapshot.supplements && snapshot.supplements.rules.length > 0
                       ? snapshot.supplements
-                      : (snapshot.wage_level !== null ? TARIFF_SUPPLEMENTS_DATA : null)}
+                      : (snapshot.wage_level !== null ? tariffSupplementsData : null)}
                     onChange={() => { }}
                     readOnly={true}
                   />
@@ -429,6 +517,48 @@ export function WageHistoryModal({
             </div>
           )}
 
+          {/* Tariff Type Selector - show in preset mode when tariff types are loaded */}
+          {usePreset && tariffTypes.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="tariffType">{t.pages.settings.pay.wageHistory.modal.tariffTypeLabel ?? 'Tariffavtale'}</Label>
+              <Select
+                value={selectedTariffTypeId}
+                onValueChange={(value) => {
+                  setSelectedTariffTypeId(value);
+                  // Reset wage level when switching tariff type
+                  setWageLevel('1');
+                }}
+                disabled={pending || loadingTariff}
+              >
+                <SelectTrigger id="tariffType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tariffTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        <span>{type.display_name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {tariffVersion && (
+                <div className="flex items-center gap-1 text-xs text-text-muted">
+                  <Calendar className="h-3 w-3" />
+                  <span>
+                    {t.pages.settings.pay.wageHistory.modal.tariffVersionLabel ?? 'Tariff fra'}{' '}
+                    {new Date(tariffVersion.effective_date + 'T00:00:00').toLocaleDateString(locale, {
+                      year: 'numeric',
+                      month: 'long',
+                    })}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           <WageSourceCard
             usePreset={usePreset}
             setUsePreset={setUsePreset}
@@ -436,8 +566,9 @@ export function WageHistoryModal({
             setWageLevel={setWageLevel}
             customWage={customWage}
             setCustomWage={setCustomWage}
-            disabled={pending}
+            disabled={pending || loadingTariff}
             showCurrentWage={false}
+            tariffVersion={tariffVersion}
             labels={{
               tariffButton: t.pages.settings.pay.wageHistory.modal.useTariff,
               customButton: t.pages.settings.pay.wage.customButton,
@@ -447,6 +578,7 @@ export function WageHistoryModal({
               wageLevelUnder16: t.pages.settings.pay.wage.wageLevelUnder16,
               wageLevel16to18: t.pages.settings.pay.wage.wageLevel16to18,
               perHour: t.common.perHour,
+              tariffVersionLabel: t.pages.settings.pay.wageHistory.modal.tariffVersionLabel,
             }}
           />
 
@@ -478,7 +610,7 @@ export function WageHistoryModal({
                   <div className="pt-2 max-w-full">
                     <SupplementsEditor
                       key="tariff"
-                      value={TARIFF_SUPPLEMENTS_DATA}
+                      value={tariffSupplementsData}
                       onChange={() => { }}
                       readOnly={true}
                     />

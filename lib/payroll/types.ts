@@ -103,6 +103,7 @@ export type WageSnapshot = {
   from_date: string | null; // ISO date (YYYY-MM-DD) or NULL for baseline
   hourly_wage: number;
   wage_level: number | null; // NULL = custom wage, NUMBER (1-9) = tariff level
+  tariff_type_id: string | null; // e.g., "hk_retail", NULL for custom wage
   supplements: { rules: SupplementRule[] };
   created_at?: string;
 

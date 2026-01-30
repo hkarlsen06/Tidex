@@ -1166,6 +1166,8 @@ export const no = {
             useTariff: 'Bruk tarifflønn',
             useTariffDescription: 'Bruk forhåndsdefinerte tariffnivåer',
             tariffLevelLabel: 'Tariffnivå',
+            tariffVersionLabel: 'Tariff fra',
+            tariffTypeLabel: 'Tariffavtale',
             customWageLabel: 'Egendefinert timelønn (kr)',
             customWageInvalid: 'Ugyldig timelønn (1-10000 kr)',
             supplementsTitle: 'Tillegg',
@@ -1690,6 +1692,8 @@ export const no = {
       description: 'Vi trenger dette for å beregne lønnen din nøyaktig.',
       preset: 'Tariff',
       custom: 'Egendefinert',
+      selectTariffType: 'Tariffavtale',
+      tariffEffectiveFrom: 'Gjeldende fra',
       selectPresetLevel: 'Velg tariff nivå',
       selectLevelPlaceholder: 'Velg nivå',
       wageLevels: {

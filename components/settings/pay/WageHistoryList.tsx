@@ -6,6 +6,7 @@ import { Button } from '@/components/app/Button';
 import { Plus, History, Pencil } from 'lucide-react';
 import { WageHistoryModal } from './WageHistoryModal';
 import type { WageSnapshot } from '@/data-access/wage-snapshots';
+import type { TariffVersion } from '@/data-access/tariff';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
 // Preset wage rates removed - no longer needed in this component
@@ -13,6 +14,11 @@ import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 interface WageHistoryListProps {
   snapshots: WageSnapshot[];
   t: Dictionary;
+  /**
+   * Initial tariff version to use when creating new snapshots.
+   * If not provided, the modal will fetch the latest version when opened.
+   */
+  initialTariffVersion?: TariffVersion | null;
 }
 
 /**
@@ -31,6 +37,7 @@ function formatDate(isoDate: string): string {
 export function WageHistoryList({
   snapshots,
   t,
+  initialTariffVersion,
 }: WageHistoryListProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -168,6 +175,7 @@ export function WageHistoryList({
         mode={modalMode}
         t={t}
         locale={t.common.currency === 'kr' ? 'no-NO' : 'en-US'}
+        initialTariffVersion={initialTariffVersion}
       />
     </div>
   );

@@ -16,6 +16,8 @@ struct WageSnapshot: Codable, Identifiable, Equatable {
     let hourly_wage: Double
     /// nil = custom wage, 1-9 = tariff level
     let wage_level: Int?
+    /// The tariff type ID (e.g., "hk_retail") or nil for custom wage
+    let tariff_type_id: String?
     /// Supplement rules for this snapshot (stored as JSONB object with "rules" key)
     /// This is NOT NULL in the database - always contains { rules: [...] }
     let supplements: SupplementRulesSnapshot

@@ -7,10 +7,72 @@ import {
   deleteWageSnapshot,
   checkExistingSnapshot,
 } from '@/data-access/wage-snapshots';
+import {
+  getTariffVersionForDate,
+  getLatestTariffVersion,
+  getTariffTypes,
+  type TariffVersion,
+  type TariffType,
+} from '@/data-access/tariff';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 import { isISODate } from '@/lib/validation/shift-validators';
 import { ERRORS } from '@/lib/errors/messages';
 import type { WageSnapshotInput } from '@/data-access/wage-snapshots';
+
+// Default tariff type for HK Retail agreement
+const DEFAULT_TARIFF_TYPE = 'hk_retail';
+
+/**
+ * Get the tariff version applicable for a specific date.
+ * Used when editing an existing snapshot to show historical rates.
+ *
+ * @param tariffTypeId - The tariff type ID (e.g., 'hk_retail')
+ * @param date - ISO date string (YYYY-MM-DD) to get version for
+ * @returns The tariff version or null if not found
+ */
+export async function getTariffVersionForDateAction(
+  tariffTypeId: string,
+  date: string
+): Promise<TariffVersion | null> {
+  // Verify authentication (read-only but still requires auth)
+  await verifySession();
+
+  // Validate date format to prevent malformed queries
+  if (!isISODate(date)) {
+    return null;
+  }
+
+  return getTariffVersionForDate(tariffTypeId, date);
+}
+
+/**
+ * Get the latest/current tariff version.
+ * Used when creating new snapshots.
+ *
+ * @param tariffTypeId - The tariff type ID (defaults to 'hk_retail')
+ * @returns The latest tariff version or null if not found
+ */
+export async function getLatestTariffVersionAction(
+  tariffTypeId: string = DEFAULT_TARIFF_TYPE
+): Promise<TariffVersion | null> {
+  // Verify authentication (read-only but still requires auth)
+  await verifySession();
+
+  return getLatestTariffVersion(tariffTypeId);
+}
+
+/**
+ * Get all available tariff types.
+ * Used for tariff type selector in settings.
+ *
+ * @returns Array of available tariff types, ordered by is_default DESC, display_name
+ */
+export async function getTariffTypesAction(): Promise<TariffType[]> {
+  // Verify authentication (read-only but still requires auth)
+  await verifySession();
+
+  return getTariffTypes();
+}
 
 /**
  * Create a new wage snapshot

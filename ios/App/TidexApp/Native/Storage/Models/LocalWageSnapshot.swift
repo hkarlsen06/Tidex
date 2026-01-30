@@ -27,6 +27,9 @@ final class LocalWageSnapshot {
     /// Wage level (nil = custom, 1-9 = tariff level)
     var wageLevel: Int?
 
+    /// Tariff type ID (e.g., "hk_retail") or nil for custom wage
+    var tariffTypeId: String?
+
     /// Supplement rules (JSON)
     var supplements: Data
 
@@ -182,6 +185,7 @@ final class LocalWageSnapshot {
         fromDate: Date? = nil,
         hourlyWage: Double,
         wageLevel: Int? = nil,
+        tariffTypeId: String? = nil,
         supplements: Data,
         taxEnabled: Bool? = nil,
         taxPercentage: Double? = nil,
@@ -203,6 +207,7 @@ final class LocalWageSnapshot {
         self.fromDate = fromDate
         self.hourlyWage = hourlyWage
         self.wageLevel = wageLevel
+        self.tariffTypeId = tariffTypeId
         self.supplements = supplements
         self.taxEnabled = taxEnabled
         self.taxPercentage = taxPercentage
@@ -233,6 +238,7 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
     let fromDate: String?
     let hourlyWage: Double
     let wageLevel: Int?
+    let tariffTypeId: String?
     let supplements: Data
     let taxEnabled: Bool?
     let taxPercentage: Double?
@@ -255,6 +261,7 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
             fromDate: row.from_date,
             hourlyWage: row.hourly_wage,
             wageLevel: row.wage_level,
+            tariffTypeId: row.tariff_type_id,
             supplements: (try? canonicalJSONEncoder.encode(row.supplements)) ?? Data(),
             taxEnabled: row.tax_enabled,
             taxPercentage: row.tax_percentage,
@@ -298,6 +305,9 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
         if wageLevel != other.wageLevel {
             changed.insert(.wageLevel)
         }
+        if tariffTypeId != other.tariffTypeId {
+            changed.insert(.tariffTypeId)
+        }
         if supplements != other.supplements {
             changed.insert(.supplements)
         }
@@ -335,6 +345,7 @@ extension LocalWageSnapshot {
             from_date: fromDateString,
             hourly_wage: hourlyWage,
             wage_level: wageLevel,
+            tariff_type_id: tariffTypeId,
             supplements: decodedSupplements,
             tax_enabled: taxEnabled,
             tax_percentage: taxPercentage,
@@ -375,6 +386,7 @@ extension LocalWageSnapshot {
             fromDate: fromDate,
             hourlyWage: serverRow.hourly_wage,
             wageLevel: serverRow.wage_level,
+            tariffTypeId: serverRow.tariff_type_id,
             supplements: (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
             taxEnabled: serverRow.tax_enabled,
             taxPercentage: serverRow.tax_percentage,

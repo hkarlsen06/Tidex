@@ -9,6 +9,7 @@ struct WageScreen: View {
     var onBack: (() -> Void)? = nil
 
     @Environment(\.localization) private var localization
+    @State private var isLoadingTariffData = false
 
     var body: some View {
         ZStack {
@@ -121,6 +122,19 @@ struct WageScreen: View {
                 data.customHourlyWage = currencyConfig.wageRangeTier.defaultValue
                 data.hasInitializedWageForLocale = true
             }
+
+            // Load tariff data if not already loaded
+            if data.availableTariffTypes.isEmpty {
+                Task {
+                    await loadTariffData()
+                }
+            }
+        }
+        .task {
+            // Ensure tariff version is loaded for the selected type
+            if data.currentTariffVersion == nil && data.wageType == .tariff {
+                await loadTariffVersion(for: data.selectedTariffTypeId)
+            }
         }
         .onChange(of: data.wageType) { _, newType in
             // Tariff uses kr (Norwegian krone) - reset currency when switching to tariff
@@ -168,21 +182,103 @@ struct WageScreen: View {
 
     // MARK: - Tariff Selector
 
+    /// Tariff levels to display - from version if available, otherwise static fallback
+    private var tariffLevels: [TariffLevel] {
+        if let version = data.currentTariffVersion {
+            return TariffLevel.from(tariffVersion: version)
+        }
+        return TariffLevel.all
+    }
+
     @ViewBuilder
     private var tariffSelector: some View {
-        VStack(spacing: 12) {
-            ForEach(TariffLevel.all) { level in
-                TariffLevelRow(
-                    level: level,
-                    isSelected: data.selectedTariffLevel == level.level,
-                    action: {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                            data.selectedTariffLevel = level.level
+        VStack(spacing: 16) {
+            // Tariff type picker (when multiple types available)
+            if !data.availableTariffTypes.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(localization.string("settings.pay.editor.tariffTypeLabel"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexTextSecondary)
+
+                    Menu {
+                        ForEach(data.availableTariffTypes) { tariffType in
+                            Button(action: {
+                                guard tariffType.id != data.selectedTariffTypeId else { return }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                data.selectedTariffTypeId = tariffType.id
+                                Task {
+                                    await loadTariffVersion(for: tariffType.id)
+                                }
+                            }) {
+                                HStack {
+                                    Text(tariffType.display_name)
+                                    if tariffType.id == data.selectedTariffTypeId {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
                         }
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(selectedTariffTypeName)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.tidexTextPrimary)
+
+                                if let version = data.currentTariffVersion {
+                                    Text("\(localization.string("settings.pay.editor.tariffEffectiveDate")): \(formatEffectiveDate(version.effective_date))")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.tidexTextSecondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 14))
+                                .foregroundColor(.tidexTextMuted)
+                        }
+                        .padding(12)
+                        .background(Color.tidexSurfaceSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.tidexBorder, lineWidth: 1)
+                        )
                     }
-                )
+                }
+            }
+
+            // Tariff level picker
+            VStack(spacing: 12) {
+                ForEach(tariffLevels) { level in
+                    TariffLevelRow(
+                        level: level,
+                        isSelected: data.selectedTariffLevel == level.level,
+                        action: {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                data.selectedTariffLevel = level.level
+                            }
+                        }
+                    )
+                }
             }
         }
+    }
+
+    private var selectedTariffTypeName: String {
+        data.availableTariffTypes.first { $0.id == data.selectedTariffTypeId }?.display_name ?? data.selectedTariffTypeId
+    }
+
+    private func formatEffectiveDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: dateString) else { return dateString }
+
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = localization.currentLocale == .norwegian ? Locale(identifier: "nb_NO") : Locale(identifier: "en_US")
+        return formatter.string(from: date)
     }
 
     // MARK: - Custom Wage Content
@@ -199,6 +295,46 @@ struct WageScreen: View {
                 currency: data.currency,
                 style: .full
             )
+        }
+    }
+
+    // MARK: - Tariff Data Loading
+
+    private func loadTariffData() async {
+        isLoadingTariffData = true
+        defer { isLoadingTariffData = false }
+
+        do {
+            // Load available tariff types
+            let types = try await TariffVersionService.shared.getTariffTypes()
+            await MainActor.run {
+                data.availableTariffTypes = types
+
+                // Set default tariff type if not already set
+                if let defaultType = types.first(where: { $0.is_default }) ?? types.first {
+                    if data.selectedTariffTypeId.isEmpty || !types.contains(where: { $0.id == data.selectedTariffTypeId }) {
+                        data.selectedTariffTypeId = defaultType.id
+                    }
+                }
+            }
+
+            // Load latest version for the selected tariff type
+            await loadTariffVersion(for: data.selectedTariffTypeId)
+        } catch {
+            // Silently fail - will use static fallback rates
+            print("Failed to load tariff data: \(error)")
+        }
+    }
+
+    private func loadTariffVersion(for tariffTypeId: String) async {
+        do {
+            let version = try await TariffVersionService.shared.getLatestTariffVersion(tariffType: tariffTypeId)
+            await MainActor.run {
+                data.currentTariffVersion = version
+            }
+        } catch {
+            // Silently fail - will use static fallback rates
+            print("Failed to load tariff version: \(error)")
         }
     }
 }

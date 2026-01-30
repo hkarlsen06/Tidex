@@ -6,11 +6,17 @@ import { Button } from '@/components/app/Button';
 import { Plus, Pencil } from 'lucide-react';
 import { WageHistoryModal } from './WageHistoryModal';
 import type { WageSnapshot } from '@/data-access/wage-snapshots';
+import type { TariffVersion } from '@/data-access/tariff';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
 interface WageHistoryTimelineProps {
   snapshots: WageSnapshot[];
   t: Dictionary;
+  /**
+   * Initial tariff version to use when creating new snapshots.
+   * If not provided, the modal will fetch the latest version when opened.
+   */
+  initialTariffVersion?: TariffVersion | null;
 }
 
 interface TimelineEntry {
@@ -249,6 +255,7 @@ function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale:
 export function WageHistoryTimeline({
   snapshots,
   t,
+  initialTariffVersion,
 }: WageHistoryTimelineProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -484,6 +491,7 @@ export function WageHistoryTimeline({
         mode={modalMode}
         t={t}
         locale={locale}
+        initialTariffVersion={initialTariffVersion}
       />
     </div>
   );

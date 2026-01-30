@@ -13,8 +13,8 @@ import {
 } from "@/components/app/Select";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
-import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
-import { Building, SlidersHorizontal, ArrowDown } from "lucide-react";
+import type { TariffVersion, TariffType } from "@/data-access/tariff";
+import { Building, SlidersHorizontal, ArrowDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
 import { CURRENCY_GROUPS, getCurrencyConfig } from "@/lib/currency/currencies";
@@ -58,6 +58,10 @@ interface WageStepProps {
   setCustomWage: (value: string) => void;
   currency: string;
   setCurrency: (value: string) => void;
+  tariffTypes: TariffType[];
+  selectedTariffTypeId: string;
+  setSelectedTariffTypeId: (value: string) => void;
+  tariffVersion: TariffVersion | null;
   onNext: () => void;
 }
 
@@ -70,11 +74,18 @@ export function WageStep({
   setCustomWage,
   currency,
   setCurrency,
+  tariffTypes,
+  selectedTariffTypeId,
+  setSelectedTariffTypeId,
+  tariffVersion,
   onNext,
 }: WageStepProps) {
   const { t } = useTranslations();
   const wageValue = parseFloat(customWage);
   const currencyConfig = getCurrencyConfig(currency);
+
+  // Tariff version is required for preset mode
+  const isLoadingTariff = wageType === "preset" && !tariffVersion;
 
   // Track if currency has been confirmed (either by clicking arrow or changing value)
   const [currencyActivated, setCurrencyActivated] = useState(false);
@@ -157,22 +168,68 @@ export function WageStep({
         </div>
 
         {wageType === "preset" && (
-          <div className="space-y-2">
-            <Label htmlFor="wage-level">{t.onboarding.wageStep.selectPresetLevel}</Label>
-            <Select value={wageLevel} onValueChange={setWageLevel}>
-              <SelectTrigger id="wage-level">
-                <SelectValue placeholder={t.onboarding.wageStep.selectLevelPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(PRESET_WAGE_RATES).map(([level, rate]) => {
-                  return (
-                    <SelectItem key={level} value={level}>
-                      {t.onboarding.wageStep.wageLevels[level as keyof typeof t.onboarding.wageStep.wageLevels]} - {rate.toFixed(2)} kr/t
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            {/* Tariff type selector */}
+            {tariffTypes.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="tariff-type">{t.onboarding.wageStep.selectTariffType ?? "Tariffavtale"}</Label>
+                <Select
+                  value={selectedTariffTypeId}
+                  onValueChange={(value) => {
+                    setSelectedTariffTypeId(value);
+                    setWageLevel("1"); // Reset wage level when changing tariff type
+                  }}
+                >
+                  <SelectTrigger id="tariff-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tariffTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4" />
+                          <span>{type.display_name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {tariffVersion && (
+                  <p className="text-xs text-text-muted">
+                    {t.onboarding.wageStep.tariffEffectiveFrom ?? "Gjeldende fra"}{" "}
+                    {new Date(tariffVersion.effective_date + "T00:00:00").toLocaleDateString("no-NO", {
+                      year: "numeric",
+                      month: "long",
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Wage level selector */}
+            <div className="space-y-2">
+              <Label htmlFor="wage-level">{t.onboarding.wageStep.selectPresetLevel}</Label>
+              {isLoadingTariff ? (
+                <div className="flex items-center justify-center h-10 rounded-md border border-border bg-surface-secondary">
+                  <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
+                </div>
+              ) : (
+                <Select value={wageLevel} onValueChange={setWageLevel}>
+                  <SelectTrigger id="wage-level">
+                    <SelectValue placeholder={t.onboarding.wageStep.selectLevelPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tariffVersion && Object.entries(tariffVersion.rates).map(([level, rate]) => {
+                      return (
+                        <SelectItem key={level} value={level}>
+                          {t.onboarding.wageStep.wageLevels[level as keyof typeof t.onboarding.wageStep.wageLevels]} - {rate.toFixed(2)} kr/t
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         )}
 

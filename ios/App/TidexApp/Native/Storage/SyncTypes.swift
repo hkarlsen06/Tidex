@@ -41,6 +41,7 @@ enum WageSnapshotField: String, Codable, CaseIterable {
     case fromDate = "from_date"
     case hourlyWage = "hourly_wage"
     case wageLevel = "wage_level"
+    case tariffTypeId = "tariff_type_id"
     case supplements = "supplements"
     case taxEnabled = "tax_enabled"
     case taxPercentage = "tax_percentage"

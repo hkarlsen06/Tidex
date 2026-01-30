@@ -13,8 +13,26 @@ struct WageSourceSelector: View {
     /// When false, only shows custom wage input (hides tariff toggle)
     /// Used when user's currency is not "kr" (Norwegian krone)
     var showTariffOption: Bool = true
+    /// Optional tariff version to use for rates (when nil, uses static fallback)
+    var tariffVersion: TariffVersion? = nil
 
     @Environment(\.localization) private var localization
+
+    /// Tariff levels to display - from version if available, otherwise static fallback
+    private var tariffLevels: [TariffLevel] {
+        if let version = tariffVersion {
+            return TariffLevel.from(tariffVersion: version)
+        }
+        return TariffLevel.all
+    }
+
+    /// Get wage rate for a specific level
+    private func wageRate(for level: Int) -> Double {
+        if let version = tariffVersion {
+            return version.rate(forLevel: level) ?? PayrollCalculator.presetWageRates[String(level)] ?? 184.54
+        }
+        return PayrollCalculator.presetWageRates[String(level)] ?? 184.54
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -72,7 +90,7 @@ struct WageSourceSelector: View {
     @ViewBuilder
     private var tariffLevelPicker: some View {
         VStack(spacing: 8) {
-            ForEach(TariffLevel.all) { level in
+            ForEach(tariffLevels) { level in
                 TariffLevelSelectionRow(
                     level: level,
                     isSelected: wageLevel == level.level,
@@ -103,7 +121,7 @@ struct WageSourceSelector: View {
     @ViewBuilder
     private var currentWageDisplay: some View {
         let currentWage = (usePreset && showTariffOption)
-            ? (PayrollCalculator.presetWageRates[String(wageLevel)] ?? 184.54)
+            ? wageRate(for: wageLevel)
             : customWage
 
         HStack {

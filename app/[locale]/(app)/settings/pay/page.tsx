@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
 import { getUserWageSnapshots } from '@/data-access/wage-snapshots';
+import { getLatestTariffVersion } from '@/data-access/tariff';
 import { PayForm } from '@components/settings/pay/PayForm';
 import { WageHistoryTimeline } from '@components/settings/pay/WageHistoryTimeline';
 import { Separator } from '@/components/app/Separator';
@@ -36,6 +37,8 @@ export default async function PayPage({
 
   const settings = await getUserSettings(user.id);
   const wageSnapshots = await getUserWageSnapshots();
+  // Fetch latest tariff version for creating new snapshots
+  const latestTariffVersion = await getLatestTariffVersion('hk_retail');
 
   return (
     <SettingsPageWrapper routeKey="settings-pay">
@@ -47,7 +50,11 @@ export default async function PayPage({
           </p>
         </div>
 
-        <WageHistoryTimeline snapshots={wageSnapshots} t={t} />
+        <WageHistoryTimeline
+          snapshots={wageSnapshots}
+          t={t}
+          initialTariffVersion={latestTariffVersion}
+        />
 
         <Separator />
 
