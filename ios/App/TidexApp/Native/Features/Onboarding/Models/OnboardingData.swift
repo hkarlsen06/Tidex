@@ -317,8 +317,8 @@ struct TariffLevel: Identifiable {
 
     /// All available tariff levels from PayrollCalculator
     static let all: [TariffLevel] = [
-        TariffLevel(level: -2, rate: 132.90, displayName: "Under 16"),
-        TariffLevel(level: -1, rate: 129.91, displayName: "16 - 18"),
+        TariffLevel(level: -1, rate: 129.91, displayName: "Under 16"),
+        TariffLevel(level: -2, rate: 132.90, displayName: "16 - 18"),
         TariffLevel(level: 1, rate: 184.54, displayName: "Lønnstrinn 1"),
         TariffLevel(level: 2, rate: 185.38, displayName: "Lønnstrinn 2"),
         TariffLevel(level: 3, rate: 187.46, displayName: "Lønnstrinn 3"),
