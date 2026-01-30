@@ -226,18 +226,27 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         guard !selectedDates.isEmpty else { return nil }
 
         // Collect all shifts from all cached months that match selected dates
+        // Use a Set to track seen IDs since months have overlapping date ranges
+        // (each month includes padding days from adjacent months for the calendar grid)
+        var seenIds = Set<String>()
         var allSelectedShifts: [ShiftWithComputations] = []
 
         for (_, cacheEntry) in monthCache {
             let matchingShifts = cacheEntry.shifts.filter { selectedDates.contains($0.shiftDate) }
-            allSelectedShifts.append(contentsOf: matchingShifts)
+            for shift in matchingShifts {
+                if !seenIds.contains(shift.id) {
+                    seenIds.insert(shift.id)
+                    allSelectedShifts.append(shift)
+                }
+            }
         }
 
         // Also check current month's shifts (may not be in cache yet)
         let currentMonthMatches = shifts.filter { selectedDates.contains($0.shiftDate) }
         for shift in currentMonthMatches {
             // Avoid duplicates (shift might already be in cache)
-            if !allSelectedShifts.contains(where: { $0.id == shift.id }) {
+            if !seenIds.contains(shift.id) {
+                seenIds.insert(shift.id)
                 allSelectedShifts.append(shift)
             }
         }
