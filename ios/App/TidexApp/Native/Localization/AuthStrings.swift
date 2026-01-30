@@ -419,6 +419,20 @@ enum AuthStrings {
         "addShift.draftRestored": "Forrige utkast gjenopprettet",
         "addShift.startFresh": "Start på nytt",
 
+        // Preview Sheet
+        "preview.title": "Forhåndsvis vakter",
+        "preview.shiftsCount": "{count} vakter",
+        "preview.shiftSingular": "1 vakt",
+        "preview.ongoingShifts": "Faste vakter",
+        "preview.ongoingHint": "Gjentas på ubestemt tid",
+        "preview.conflictBadge": "{count} ekskludert",
+        "preview.conflictWarningSingular": "1 vakt vil bli ekskludert på grunn av konflikter",
+        "preview.conflictWarningPlural": "{count} vakter vil bli ekskludert på grunn av konflikter",
+        "preview.moreShifts": "+ {count} flere vakter...",
+        "preview.continuesIndefinitely": "Fortsetter på ubestemt tid...",
+        "preview.cancel": "Avbryt",
+        "preview.confirm": "Bekreft",
+
         // MFA Screen
         "onboarding.mfa.title": "Ekstra sikkerhet",
         "onboarding.mfa.subtitle": "Beskytt kontoen din med to-faktor autentisering",
@@ -1489,6 +1503,20 @@ enum AuthStrings {
         "addShift.headerSubtitle": "Select dates and tap the plus button",
         "addShift.draftRestored": "Previous draft restored",
         "addShift.startFresh": "Start fresh",
+
+        // Preview Sheet
+        "preview.title": "Preview Shifts",
+        "preview.shiftsCount": "{count} shifts",
+        "preview.shiftSingular": "1 shift",
+        "preview.ongoingShifts": "Recurring Shifts",
+        "preview.ongoingHint": "Repeats indefinitely",
+        "preview.conflictBadge": "{count} excluded",
+        "preview.conflictWarningSingular": "1 shift will be excluded due to conflicts",
+        "preview.conflictWarningPlural": "{count} shifts will be excluded due to conflicts",
+        "preview.moreShifts": "+ {count} more shifts...",
+        "preview.continuesIndefinitely": "Continues indefinitely...",
+        "preview.cancel": "Cancel",
+        "preview.confirm": "Confirm",
 
         // MFA Screen
         "onboarding.mfa.title": "Extra security",

@@ -25,6 +25,10 @@ enum Haptics {
     /// Audio players for each sound type
     private static var soundPlayers: [SoundType: AVAudioPlayer] = [:]
 
+    /// Volume level for sound effects (0.0 to 1.0)
+    /// Adjust this to control how loud the sounds play
+    private static let soundVolume: Float = 0.3
+
     /// Preload all sounds (call at app startup)
     static func prepareSounds() {
         for soundType in [SoundType.shiftCreated, .shiftDeleted, .subscriptionSuccess] {
@@ -39,6 +43,7 @@ enum Haptics {
         }
         do {
             let player = try AVAudioPlayer(contentsOf: url)
+            player.volume = soundVolume
             player.prepareToPlay()
             soundPlayers[type] = player
         } catch {
@@ -72,6 +77,9 @@ enum Haptics {
         if soundPlayers[type] == nil {
             prepareSound(type)
         }
+
+        // Ensure volume is set (in case player was re-created)
+        soundPlayers[type]?.volume = soundVolume
 
         // Reset to beginning and play
         soundPlayers[type]?.currentTime = 0

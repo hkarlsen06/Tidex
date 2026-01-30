@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Sheet for editing a recurring shift pattern
 /// Allows editing start/end times, repeat interval, selected days, and end condition
+/// Uses a calendar view for anchor date selection (same as add flow)
 struct RecurringShiftEditorSheet: View {
     let recurringShift: RecurringShiftRow
     let onSave: ((RecurringShiftEditResult) -> Void)?
@@ -17,6 +18,11 @@ struct RecurringShiftEditorSheet: View {
     @State private var editedRepeatInterval: Int = 0
     @State private var editedSelectedDays: SelectedDays = [:]
     @State private var editedEndCondition: EndCondition? = nil
+
+    // MARK: - Calendar Display State
+
+    @State private var displayMonth: Date = Date()
+    @State private var navigationDirection: MonthNavigationDirection?
 
     // MARK: - UI State
 
@@ -39,32 +45,6 @@ struct RecurringShiftEditorSheet: View {
                editedRepeatInterval != recurringShift.repeat_interval_weeks ||
                editedSelectedDays != recurringShift.selected_days ||
                editedEndCondition != recurringShift.end_condition
-    }
-
-    /// Weekday labels (short form)
-    private var weekdayLabels: [(key: String, label: String)] {
-        let isNorwegian = localization.currentLocale == .norwegian
-        if isNorwegian {
-            return [
-                ("1", "Man"),
-                ("2", "Tir"),
-                ("3", "Ons"),
-                ("4", "Tor"),
-                ("5", "Fre"),
-                ("6", "Lør"),
-                ("0", "Søn")
-            ]
-        } else {
-            return [
-                ("1", "Mon"),
-                ("2", "Tue"),
-                ("3", "Wed"),
-                ("4", "Thu"),
-                ("5", "Fri"),
-                ("6", "Sat"),
-                ("0", "Sun")
-            ]
-        }
     }
 
     /// Repeat interval options
@@ -119,6 +99,67 @@ struct RecurringShiftEditorSheet: View {
             return Date()
         }
         return date
+    }
+
+    // MARK: - Month Navigation
+
+    /// Display year from display month
+    private var displayYear: Int {
+        Calendar.current.component(.year, from: displayMonth)
+    }
+
+    /// Display month number (1-12) from display month
+    private var displayMonthNumber: Int {
+        Calendar.current.component(.month, from: displayMonth)
+    }
+
+    /// Localized month name
+    private var displayMonthName: String {
+        CalendarGridHelper.monthName(
+            from: displayMonth,
+            locale: Locale(identifier: localization.currentLocale.localeIdentifier)
+        )
+    }
+
+    /// Month transition phase for animations
+    private var monthPhase: MonthTransitionPhase {
+        MonthTransitionPhase(
+            year: displayYear,
+            month: displayMonthNumber,
+            direction: navigationDirection
+        )
+    }
+
+    /// Navigate to previous month
+    private func goToPreviousMonth() {
+        guard let newMonth = Calendar.current.date(byAdding: .month, value: -1, to: displayMonth) else { return }
+        navigationDirection = .previous
+        displayMonth = newMonth
+    }
+
+    /// Navigate to next month
+    private func goToNextMonth() {
+        guard let newMonth = Calendar.current.date(byAdding: .month, value: 1, to: displayMonth) else { return }
+        navigationDirection = .next
+        displayMonth = newMonth
+    }
+
+    /// Navigate to a specific month
+    private func navigateToMonth(year: Int, month: Int) {
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = 1
+        guard let date = Calendar.current.date(from: components) else { return }
+
+        // Determine direction for animation
+        if date > displayMonth {
+            navigationDirection = .next
+        } else if date < displayMonth {
+            navigationDirection = .previous
+        }
+
+        displayMonth = date
     }
 
     // MARK: - Body
@@ -260,7 +301,7 @@ struct RecurringShiftEditorSheet: View {
 
     private var weekdaySection: some View {
         VStack(spacing: 16) {
-            // Section header
+            // Section header with month navigation
             HStack {
                 Image(systemName: "calendar")
                     .foregroundColor(.tidexBlue)
@@ -270,37 +311,43 @@ struct RecurringShiftEditorSheet: View {
                 Spacer()
             }
 
-            // Weekday chips
-            HStack(spacing: 8) {
-                ForEach(weekdayLabels, id: \.key) { weekday in
-                    weekdayChip(key: weekday.key, label: weekday.label)
+            // Month navigation header
+            AnimatedMonthHeader(
+                monthName: displayMonthName,
+                year: displayYear,
+                phase: monthPhase,
+                config: .compact,
+                onPrevious: goToPreviousMonth,
+                onNext: goToNextMonth,
+                onNavigateToMonth: navigateToMonth,
+                isLoading: false
+            )
+
+            // Weekday chip bar showing selected anchors
+            WeekdayChipBar(
+                selectedDays: editedSelectedDays,
+                onRemove: { weekday in
+                    // Don't allow removing the last weekday
+                    if editedSelectedDays.count > 1 {
+                        editedSelectedDays.removeValue(forKey: weekday)
+                    }
                 }
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.tidexSurfacePrimary)
+            )
+
+            // Calendar for selecting anchor dates
+            EditRecurringCalendarView(
+                displayMonth: displayMonth,
+                selectedDays: $editedSelectedDays,
+                repeatInterval: editedRepeatInterval,
+                endCondition: editedEndCondition,
+                existingShiftDates: []
             )
         }
-    }
-
-    @ViewBuilder
-    private func weekdayChip(key: String, label: String) -> some View {
-        let isSelected = editedSelectedDays[key] != nil
-
-        Button {
-            toggleWeekday(key)
-        } label: {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
-                )
-        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.tidexSurfacePrimary)
+        )
     }
 
     private var repeatIntervalSection: some View {
@@ -558,6 +605,26 @@ struct RecurringShiftEditorSheet: View {
 
         // Set end condition
         editedEndCondition = recurringShift.end_condition
+
+        // Initialize display month to the earliest anchor date
+        initializeDisplayMonth()
+    }
+
+    /// Initialize the display month to show the earliest anchor date
+    private func initializeDisplayMonth() {
+        let anchorDates = recurringShift.selected_days.values.sorted()
+        guard let earliestAnchor = anchorDates.first,
+              let anchorDate = Date.fromISODateString(earliestAnchor) else {
+            // Default to current month if no anchors
+            displayMonth = Date()
+            return
+        }
+
+        // Set display month to the month containing the earliest anchor
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month], from: anchorDate)
+        components.day = 1
+        displayMonth = calendar.date(from: components) ?? Date()
     }
 
     private func parseTimeToDate(_ timeString: String) -> Date? {
@@ -577,20 +644,6 @@ struct RecurringShiftEditorSheet: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
-    }
-
-    private func toggleWeekday(_ key: String) {
-        if editedSelectedDays[key] != nil {
-            // Don't allow removing the last weekday
-            if editedSelectedDays.count > 1 {
-                editedSelectedDays.removeValue(forKey: key)
-            }
-        } else {
-            // Add new weekday with today's date as anchor (will be adjusted on save)
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            editedSelectedDays[key] = formatter.string(from: Date())
-        }
     }
 
     private func setDurationType(_ type: DurationType) {

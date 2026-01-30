@@ -175,8 +175,12 @@ final class AddShiftViewModel: ObservableObject {
 
     // MARK: - Recurring Mode State
 
-    @Published var repeatInterval: Int = 0 {  // 0 = weekly, 1 = biweekly, etc.
-        didSet { scheduleDraftSave() }
+    @Published var repeatInterval: Int = 1 {  // 0 = weekly, 1 = biweekly, etc. Default: biweekly
+        didSet {
+            scheduleDraftSave()
+            // Update projected dates immediately when interval changes
+            updateProjectedRecurringDates()
+        }
     }
     @Published var selectedDays: [String: String] = [:] {  // weekday "0"-"6" -> anchor ISO date
         didSet {
@@ -184,8 +188,12 @@ final class AddShiftViewModel: ObservableObject {
             scheduleDraftSave()
         }
     }
-    @Published var endCondition: EndCondition? = .months(value: 6) {
-        didSet { scheduleDraftSave() }
+    @Published var endCondition: EndCondition? = nil {  // Default: indefinite
+        didSet {
+            scheduleDraftSave()
+            // Update projected dates immediately when end condition changes
+            updateProjectedRecurringDates()
+        }
     }
     @Published var showPreviewSheet = false
 
@@ -920,9 +928,9 @@ final class AddShiftViewModel: ObservableObject {
         startTime = nil
         endTime = nil
 
-        // Reset recurring options
-        repeatInterval = 0
-        endCondition = .months(value: 6)
+        // Reset recurring options to defaults (biweekly, indefinite)
+        repeatInterval = 1
+        endCondition = nil
 
         // NOTE: Do NOT reset the month context here!
         // The user should stay on the month where they just added shifts
@@ -1051,8 +1059,8 @@ final class AddShiftViewModel: ObservableObject {
         clearAnchors()
         startTime = nil
         endTime = nil
-        repeatInterval = 0
-        endCondition = .months(value: 6)
+        repeatInterval = 1
+        endCondition = nil
         error = nil
 
         // Haptic feedback

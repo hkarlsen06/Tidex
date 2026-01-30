@@ -6,6 +6,11 @@ struct RecurringPreviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.localization) private var localization
 
+    /// Whether the pattern is indefinite (endless)
+    private var isIndefinite: Bool {
+        viewModel.endCondition == nil
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -17,7 +22,8 @@ struct RecurringPreviewSheet: View {
                         totalCount: viewModel.cachedProjectedDates.count,
                         conflictCount: viewModel.cachedConflictDates.count,
                         startTime: viewModel.startTimeString,
-                        endTime: viewModel.endTimeString
+                        endTime: viewModel.endTimeString,
+                        isIndefinite: isIndefinite
                     )
 
                     // Scrollable list of projected dates
@@ -33,7 +39,8 @@ struct RecurringPreviewSheet: View {
 
                             if viewModel.cachedProjectedDates.count > 50 {
                                 MoreShiftsIndicator(
-                                    remainingCount: viewModel.cachedProjectedDates.count - 50
+                                    remainingCount: viewModel.cachedProjectedDates.count - 50,
+                                    isIndefinite: isIndefinite
                                 )
                             }
                         }
@@ -61,7 +68,7 @@ struct RecurringPreviewSheet: View {
                     }
                 }
             }
-            .navigationTitle("Preview Shifts")
+            .navigationTitle(localization.string("preview.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         }
@@ -77,16 +84,48 @@ private struct SummaryHeader: View {
     let conflictCount: Int
     let startTime: String
     let endTime: String
+    let isIndefinite: Bool
+
+    @Environment(\.localization) private var localization
+
+    /// Title text - shows "Recurring Shifts" for indefinite, count for limited
+    private var titleText: String {
+        if isIndefinite {
+            return localization.string("preview.ongoingShifts")
+        } else if totalCount == 1 {
+            return localization.string("preview.shiftSingular")
+        } else {
+            return localization.string("preview.shiftsCount")
+                .replacingOccurrences(of: "{count}", with: "\(totalCount)")
+        }
+    }
+
+    /// Subtitle text - shows "Repeats indefinitely" for indefinite, time for limited
+    private var subtitleText: String {
+        if isIndefinite {
+            return "\(startTime) - \(endTime) · " + localization.string("preview.ongoingHint")
+        } else {
+            return "\(startTime) - \(endTime)"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(totalCount) shifts")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.tidexTextPrimary)
+                    HStack(spacing: 8) {
+                        Text(titleText)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.tidexTextPrimary)
 
-                    Text("\(startTime) - \(endTime)")
+                        if isIndefinite {
+                            Image(systemName: "infinity")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.tidexBlue)
+                        }
+                    }
+
+                    Text(subtitleText)
                         .font(.system(size: 16))
                         .foregroundColor(.tidexTextSecondary)
                 }
@@ -111,13 +150,15 @@ private struct SummaryHeader: View {
 
 private struct ConflictBadge: View {
     let count: Int
+    @Environment(\.localization) private var localization
 
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 12))
 
-            Text("\(count)")
+            Text(localization.string("preview.conflictBadge")
+                .replacingOccurrences(of: "{count}", with: "\(count)"))
                 .font(.system(size: 14, weight: .semibold))
         }
         .foregroundColor(.white)
@@ -132,13 +173,23 @@ private struct ConflictBadge: View {
 
 private struct ConflictWarning: View {
     let count: Int
+    @Environment(\.localization) private var localization
+
+    private var warningText: String {
+        if count == 1 {
+            return localization.string("preview.conflictWarningSingular")
+        } else {
+            return localization.string("preview.conflictWarningPlural")
+                .replacingOccurrences(of: "{count}", with: "\(count)")
+        }
+    }
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle")
                 .foregroundColor(.tidexWarning)
 
-            Text("\(count) shift\(count == 1 ? "" : "s") will be excluded due to conflicts")
+            Text(warningText)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -155,12 +206,16 @@ private struct ProjectedShiftRow: View {
     let dateISO: String
     let time: String
     let hasConflict: Bool
+    @Environment(\.localization) private var localization
 
     private var formattedDate: String {
         guard let date = Date.fromISODateString(dateISO) else { return dateISO }
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, MMM d, yyyy"
-        return formatter.string(from: date)
+        formatter.dateFormat = "EEEE, d. MMMM yyyy"  // Full weekday name, e.g. "Mandag, 3. februar 2025"
+        formatter.locale = Locale(identifier: localization.currentLocale.localeIdentifier)
+        let formatted = formatter.string(from: date)
+        // Capitalize first letter
+        return formatted.prefix(1).uppercased() + formatted.dropFirst()
     }
 
     var body: some View {
@@ -198,15 +253,34 @@ private struct ProjectedShiftRow: View {
 
 private struct MoreShiftsIndicator: View {
     let remainingCount: Int
+    let isIndefinite: Bool
+    @Environment(\.localization) private var localization
+
+    private var displayText: String {
+        if isIndefinite {
+            return localization.string("preview.continuesIndefinitely")
+        } else {
+            return localization.string("preview.moreShifts")
+                .replacingOccurrences(of: "{count}", with: "\(remainingCount)")
+        }
+    }
 
     var body: some View {
-        Text("+ \(remainingCount) more shifts...")
-            .font(.system(size: 14))
-            .foregroundColor(.tidexTextMuted)
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        HStack(spacing: 8) {
+            if isIndefinite {
+                Image(systemName: "infinity")
+                    .font(.system(size: 14))
+                    .foregroundColor(.tidexBlue)
+            }
+
+            Text(displayText)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextMuted)
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color.tidexSurfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -216,12 +290,13 @@ private struct ActionButtons: View {
     let isLoading: Bool
     let onCancel: () -> Void
     let onConfirm: () -> Void
+    @Environment(\.localization) private var localization
 
     var body: some View {
         HStack(spacing: 16) {
             // Cancel button
             Button(action: onCancel) {
-                Text("Cancel")
+                Text(localization.string("preview.cancel"))
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
@@ -237,7 +312,7 @@ private struct ActionButtons: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                 } else {
-                    Text("Confirm")
+                    Text(localization.string("preview.confirm"))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
