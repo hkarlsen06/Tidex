@@ -23,6 +23,7 @@ final class MFAVerifyViewModel: ObservableObject {
     // MARK: - Private State
 
     private var challengeId: String?
+    private var verifyTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -36,6 +37,10 @@ final class MFAVerifyViewModel: ObservableObject {
         self.coordinator = coordinator
         self.authService = authService ?? AuthService.shared
         self.localization = localization ?? LocalizationManager.shared
+    }
+
+    deinit {
+        verifyTask?.cancel()
     }
 
     // MARK: - Computed Properties
@@ -78,7 +83,9 @@ final class MFAVerifyViewModel: ObservableObject {
 
         // Auto-submit when 6 digits entered
         if code.count == 6 {
-            Task { await verifyCode() }
+            // Cancel any existing verify task to prevent concurrent attempts
+            verifyTask?.cancel()
+            verifyTask = Task { await verifyCode() }
         }
     }
 

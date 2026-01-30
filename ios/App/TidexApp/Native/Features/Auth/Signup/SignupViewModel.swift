@@ -67,6 +67,10 @@ final class SignupViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Private State
+
+    private var authTask: Task<Void, Never>?
+
     // MARK: - Computed Properties
 
     /// Detected input type based on current emailOrPhone value
@@ -138,6 +142,10 @@ final class SignupViewModel: ObservableObject {
         self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
         self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
         self.localization = localization ?? LocalizationManager.shared
+    }
+
+    deinit {
+        authTask?.cancel()
     }
 
     // MARK: - Actions

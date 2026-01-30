@@ -596,11 +596,15 @@ final class AdminSettingsViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private let perPage = 20
 
+    deinit {
+        searchTask?.cancel()
+    }
+
     // MARK: - Common Methods
 
     func loadInitialData() async {
         do {
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             isSuperAdmin = session.normalizedUserId == SUPERADMIN_USER_ID
         } catch {
             logger.error("Failed to check superadmin status: \(error.localizedDescription)")
@@ -1218,7 +1222,7 @@ final class AdminSettingsViewModel: ObservableObject {
     // MARK: - Network Helper
 
     private func makeRequest<T: Decodable>(url: URL, method: String, body: [String: Any]? = nil) async throws -> T {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
 
         var request = URLRequest(url: url)
         request.httpMethod = method

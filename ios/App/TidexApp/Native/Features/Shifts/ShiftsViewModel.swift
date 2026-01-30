@@ -648,8 +648,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         isCopying = true
 
         do {
-            // Get current user ID
-            guard let userId = cachedUserId else {
+            // Get current user ID - use cached value or fall back to AppCoordinator
+            // This guards against race conditions if user signs out mid-operation
+            let userId = cachedUserId ?? AppCoordinator.shared.getCurrentUserId()
+            guard let userId else {
                 throw ShiftsError.notAuthenticated
             }
 
@@ -846,8 +848,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 // 2. Create a new regular shift with the edited values
                 logger.info("🔄 Converting virtual shift to regular shift")
 
+                // Get user ID - use cached value or fall back to AppCoordinator
+                // This guards against race conditions if user signs out mid-operation
+                let userId = cachedUserId ?? AppCoordinator.shared.getCurrentUserId()
                 guard let recurringId = editResult.recurringId,
-                      let userId = cachedUserId else {
+                      let userId else {
                     logger.error("Missing recurringId or userId for virtual shift conversion")
                     isUpdatingShift = false
                     return

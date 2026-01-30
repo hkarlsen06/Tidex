@@ -424,7 +424,7 @@ final class AddShiftViewModel: ObservableObject {
 
     /// Load initial data from repositories
     func loadData() async {
-        guard let userId = AppCoordinator.shared.userId else {
+        guard let userId = AppCoordinator.shared.getCurrentUserId() else {
             logger.warning("Cannot load data: no user ID")
             return
         }
@@ -491,7 +491,7 @@ final class AddShiftViewModel: ObservableObject {
     /// Reload shifts for the currently displayed month
     /// Call this when navigating to a new month
     func reloadShiftsForDisplayedMonth() {
-        guard let userId = AppCoordinator.shared.userId else { return }
+        guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
 
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month], from: displayMonth)
@@ -546,8 +546,12 @@ final class AddShiftViewModel: ObservableObject {
     /// Submit single shifts
     func submitSingleShifts() async {
         guard canSubmitSingle else { return }
-        guard let userId = AppCoordinator.shared.userId else {
-            error = "Not authenticated"
+
+        let userId: String
+        do {
+            userId = try AppCoordinator.shared.requireUserId()
+        } catch {
+            self.error = error.localizedDescription
             return
         }
 
@@ -690,8 +694,12 @@ final class AddShiftViewModel: ObservableObject {
     /// Submit recurring shift
     func submitRecurringShift() async {
         guard canSubmitRecurring else { return }
-        guard let userId = AppCoordinator.shared.userId else {
-            error = "Not authenticated"
+
+        let userId: String
+        do {
+            userId = try AppCoordinator.shared.requireUserId()
+        } catch {
+            self.error = error.localizedDescription
             return
         }
 
@@ -754,7 +762,7 @@ final class AddShiftViewModel: ObservableObject {
     /// Delete shifts in other months (when free tier user chooses this option)
     /// Returns true if successful
     func deleteShiftsInOtherMonths() async -> Bool {
-        guard let userId = AppCoordinator.shared.userId else {
+        guard let userId = AppCoordinator.shared.getCurrentUserId() else {
             logger.warning("Cannot delete shifts: no user ID")
             return false
         }
