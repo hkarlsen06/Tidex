@@ -14,8 +14,9 @@ import { PreferencesStep } from "./PreferencesStep";
 import { SecurityStep } from "./SecurityStep";
 import { CompletionStep } from "./CompletionStep";
 import { completeOnboarding } from "../actions";
-import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 import { supabase } from "@/lib/supabase/browser";
+import { getLatestTariffVersionAction, getTariffTypesAction } from "@/app/[locale]/(app)/settings/pay/_actions/wage-snapshots";
+import type { TariffVersion, TariffType } from "@/data-access/tariff";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import { HideNativeTabBar } from "@/components/app/HideNativeTabBar";
@@ -58,6 +59,46 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Tariff types and version for displaying accurate rates
+  const [tariffTypes, setTariffTypes] = useState<TariffType[]>([]);
+  const [selectedTariffTypeId, setSelectedTariffTypeId] = useState<string>("hk_retail");
+  const [tariffVersion, setTariffVersion] = useState<TariffVersion | null>(null);
+
+  // Fetch tariff types and latest version on mount
+  useEffect(() => {
+    const loadTariffData = async () => {
+      try {
+        // Load tariff types
+        const types = await getTariffTypesAction();
+        setTariffTypes(types);
+
+        // Set default tariff type
+        const defaultType = types.find((t) => t.is_default) ?? types[0];
+        if (defaultType) {
+          setSelectedTariffTypeId(defaultType.id);
+          // Load tariff version for default type
+          const version = await getLatestTariffVersionAction(defaultType.id);
+          setTariffVersion(version);
+        }
+      } catch (error) {
+        console.warn("Failed to fetch tariff data:", error);
+      }
+    };
+
+    loadTariffData();
+  }, []);
+
+  // Refetch tariff version when selected type changes
+  useEffect(() => {
+    if (selectedTariffTypeId) {
+      getLatestTariffVersionAction(selectedTariffTypeId)
+        .then(setTariffVersion)
+        .catch((error) => {
+          console.warn("Failed to fetch tariff version:", error);
+        });
+    }
+  }, [selectedTariffTypeId]);
 
   // Step 1: Currency
   const [currency, setCurrency] = useState(
@@ -159,6 +200,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
       const settings = {
         use_preset: wageType === "preset",
         current_wage_level: wageType === "preset" ? parseInt(wageLevel) : null,
+        tariff_type_id: wageType === "preset" ? selectedTariffTypeId : null,
         custom_wage: wageType === "custom" ? parseFloat(customWage) : null,
         custom_supplements: customSupplements,
         pause_deduction_enabled: breakEnabled,
@@ -187,7 +229,10 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
 
   const getWageDisplay = () => {
     if (wageType === "preset") {
-      const rate = PRESET_WAGE_RATES[wageLevel];
+      if (!tariffVersion) {
+        return "Loading...";
+      }
+      const rate = tariffVersion.rates[wageLevel];
       return `${rate?.toFixed(2) || "0"} kr/t (Tariff Nivå ${wageLevel})`;
     }
     return `${customWage} kr/t`;
@@ -220,6 +265,10 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
             setCustomWage={setCustomWage}
             currency={currency}
             setCurrency={setCurrency}
+            tariffTypes={tariffTypes}
+            selectedTariffTypeId={selectedTariffTypeId}
+            setSelectedTariffTypeId={setSelectedTariffTypeId}
+            tariffVersion={tariffVersion}
             onNext={() => setCurrentStep(2)}
           />
         )}

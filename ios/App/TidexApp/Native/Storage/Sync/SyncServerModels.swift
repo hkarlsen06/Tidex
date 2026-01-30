@@ -93,6 +93,7 @@ struct SyncWageSnapshotRow: Codable {
     let from_date: String?
     let hourly_wage: Double
     let wage_level: Int?
+    let tariff_type_id: String?
     let supplements: SupplementRulesSnapshot
     let tax_enabled: Bool?
     let tax_percentage: Double?
@@ -113,6 +114,7 @@ struct SyncWageSnapshotRow: Codable {
             from_date: from_date,
             hourly_wage: hourly_wage,
             wage_level: wage_level,
+            tariff_type_id: tariff_type_id,
             supplements: supplements,
             tax_enabled: tax_enabled,
             tax_percentage: tax_percentage,

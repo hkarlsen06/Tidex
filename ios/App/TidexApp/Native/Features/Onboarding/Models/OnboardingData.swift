@@ -27,6 +27,17 @@ final class OnboardingData {
     /// Whether wage has been initialized based on locale
     var hasInitializedWageForLocale: Bool = false
 
+    // MARK: - Tariff Type Settings
+
+    /// Selected tariff type ID (e.g., "hk_retail")
+    var selectedTariffTypeId: String = "hk_retail"
+
+    /// Available tariff types loaded from server
+    var availableTariffTypes: [TariffType] = []
+
+    /// Current tariff version for the selected tariff type
+    var currentTariffVersion: TariffVersion?
+
     // MARK: - Supplement Settings
 
     /// Custom supplement rules (only used for custom wage type)
@@ -59,12 +70,28 @@ final class OnboardingData {
 
     /// Resolved hourly wage based on wage type
     /// Returns tariff rate for tariff users, custom rate for custom users
+    /// Uses tariff version rates when available, falls back to hardcoded rates
     var resolvedHourlyWage: Double {
         switch wageType {
         case .tariff:
+            // Use version-specific rate if available, otherwise fallback to static rates
+            if let version = currentTariffVersion,
+               let rate = version.rate(forLevel: selectedTariffLevel) {
+                return rate
+            }
             return PayrollCalculator.presetWageRates[String(selectedTariffLevel)] ?? 184.54
         case .custom:
             return customHourlyWage
+        }
+    }
+
+    /// Resolved tariff type ID (nil for custom wage users)
+    var resolvedTariffTypeId: String? {
+        switch wageType {
+        case .tariff:
+            return selectedTariffTypeId
+        case .custom:
+            return nil
         }
     }
 
@@ -80,9 +107,14 @@ final class OnboardingData {
 
     /// Resolved supplement rules
     /// Returns preset rules for tariff users, custom rules for custom users
+    /// Uses tariff version supplements when available, falls back to hardcoded rules
     var resolvedSupplements: SupplementRulesSnapshot {
         switch wageType {
         case .tariff:
+            // Use version-specific supplements if available
+            if let version = currentTariffVersion {
+                return version.supplements
+            }
             return SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
         case .custom:
             let rules = supplementRules.map { $0.toSupplementRule() }
@@ -112,6 +144,7 @@ final class OnboardingData {
             selectedTariffLevel: selectedTariffLevel,
             customHourlyWage: customHourlyWage,
             hasInitializedWageForLocale: hasInitializedWageForLocale,
+            selectedTariffTypeId: selectedTariffTypeId,
             supplementRules: supplementRules.map { PersistedSupplementRule(from: $0) },
             breakEnabled: breakEnabled,
             taxEnabled: taxEnabled,
@@ -141,6 +174,7 @@ final class OnboardingData {
         self.selectedTariffLevel = persisted.selectedTariffLevel
         self.customHourlyWage = persisted.customHourlyWage
         self.hasInitializedWageForLocale = persisted.hasInitializedWageForLocale
+        self.selectedTariffTypeId = persisted.selectedTariffTypeId ?? "hk_retail"
         self.supplementRules = persisted.supplementRules.map { $0.toOnboardingSupplementRule() }
         self.breakEnabled = persisted.breakEnabled
         self.taxEnabled = persisted.taxEnabled
@@ -173,6 +207,7 @@ private struct PersistedOnboardingData: Codable {
     let selectedTariffLevel: Int
     let customHourlyWage: Double
     let hasInitializedWageForLocale: Bool
+    let selectedTariffTypeId: String?
     let supplementRules: [PersistedSupplementRule]
     let breakEnabled: Bool
     let taxEnabled: Bool
@@ -315,7 +350,7 @@ struct TariffLevel: Identifiable {
         return "\(formatted) kr/t"
     }
 
-    /// All available tariff levels from PayrollCalculator
+    /// All available tariff levels from PayrollCalculator (fallback for offline)
     static let all: [TariffLevel] = [
         TariffLevel(level: -1, rate: 129.91, displayName: "Under 16"),
         TariffLevel(level: -2, rate: 132.90, displayName: "16 - 18"),
@@ -326,4 +361,30 @@ struct TariffLevel: Identifiable {
         TariffLevel(level: 5, rate: 210.81, displayName: "Lønnstrinn 5"),
         TariffLevel(level: 6, rate: 256.14, displayName: "Lønnstrinn 6"),
     ]
+
+    /// Standard level display names by level number
+    private static let levelDisplayNames: [Int: String] = [
+        -1: "Under 16",
+        -2: "16 - 18",
+        1: "Lønnstrinn 1",
+        2: "Lønnstrinn 2",
+        3: "Lønnstrinn 3",
+        4: "Lønnstrinn 4",
+        5: "Lønnstrinn 5",
+        6: "Lønnstrinn 6",
+    ]
+
+    /// Build tariff levels dynamically from a TariffVersion
+    /// - Parameter tariffVersion: The tariff version containing rates
+    /// - Returns: Array of TariffLevel built from version rates
+    static func from(tariffVersion: TariffVersion) -> [TariffLevel] {
+        // Define the expected order of levels
+        let levelOrder = [-1, -2, 1, 2, 3, 4, 5, 6]
+
+        return levelOrder.compactMap { level in
+            guard let rate = tariffVersion.rate(forLevel: level) else { return nil }
+            let displayName = levelDisplayNames[level] ?? "Level \(level)"
+            return TariffLevel(level: level, rate: rate, displayName: displayName)
+        }
+    }
 }

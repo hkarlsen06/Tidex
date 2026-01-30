@@ -165,6 +165,11 @@ export type WageSnapshotInput = {
   from_date: string | null;
   hourly_wage: number;
   wage_level: number | null;
+  /**
+   * Tariff type ID (e.g., 'hk_retail').
+   * Set when using tariff-based wages; null for custom wage.
+   */
+  tariff_type_id?: string | null;
   supplements: { rules: SupplementRule[] };
   // Tax settings
   tax_enabled: boolean;
@@ -197,6 +202,7 @@ export async function createWageSnapshot(
         from_date: data.from_date,
         hourly_wage: data.hourly_wage,
         wage_level: data.wage_level,
+        tariff_type_id: data.tariff_type_id ?? null,
         supplements: data.supplements,
         tax_enabled: data.tax_enabled,
         tax_percentage: data.tax_percentage,
@@ -241,6 +247,7 @@ export async function updateWageSnapshot(
         from_date: data.from_date,
         hourly_wage: data.hourly_wage,
         wage_level: data.wage_level,
+        tariff_type_id: data.tariff_type_id ?? null,
         supplements: data.supplements,
         tax_enabled: data.tax_enabled,
         tax_percentage: data.tax_percentage,

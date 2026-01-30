@@ -99,6 +99,7 @@ final class OnboardingSaveManager: ObservableObject {
             fromDate: nil, // nil = baseline snapshot
             hourlyWage: data.resolvedHourlyWage,
             wageLevel: data.resolvedWageLevel,
+            tariffTypeId: data.resolvedTariffTypeId,
             supplements: data.resolvedSupplements,
             taxEnabled: data.taxEnabled,
             taxPercentage: data.taxEnabled ? data.taxPercentage : nil,

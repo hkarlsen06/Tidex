@@ -1167,6 +1167,8 @@ export const en: Dictionary = {
             useTariff: 'Use tariff wage',
             useTariffDescription: 'Use predefined tariff levels',
             tariffLevelLabel: 'Tariff level',
+            tariffVersionLabel: 'Tariff from',
+            tariffTypeLabel: 'Tariff agreement',
             customWageLabel: 'Custom hourly wage (kr)',
             customWageInvalid: 'Invalid hourly wage (1-10000 kr)',
             supplementsTitle: 'Supplements',
@@ -1691,6 +1693,8 @@ export const en: Dictionary = {
       description: 'We need this to calculate your salary accurately.',
       preset: 'Tariff',
       custom: 'Custom',
+      selectTariffType: 'Tariff agreement',
+      tariffEffectiveFrom: 'Effective from',
       selectPresetLevel: 'Select tariff level',
       selectLevelPlaceholder: 'Select level',
       wageLevels: {

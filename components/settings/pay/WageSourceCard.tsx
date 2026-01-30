@@ -6,9 +6,9 @@ import { Label } from '@/components/app/Label';
 import { Input } from '@/components/app/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/app/Select';
 import { Separator } from '@/components/app/Separator';
-import { PRESET_WAGE_RATES } from '@/lib/payroll';
-import { Building, SlidersHorizontal } from 'lucide-react';
+import { Building, SlidersHorizontal, Calendar, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { TariffVersion } from '@/data-access/tariff';
 
 interface WageSourceCardProps {
   usePreset: boolean;
@@ -19,6 +19,11 @@ interface WageSourceCardProps {
   setCustomWage: (value: string) => void;
   disabled?: boolean;
   showCurrentWage?: boolean;
+  /**
+   * Optional tariff version for version-specific rates.
+   * When provided, rates are taken from the version instead of PRESET_WAGE_RATES.
+   */
+  tariffVersion?: TariffVersion | null;
   labels?: {
     title?: string;
     description?: string;
@@ -31,6 +36,7 @@ interface WageSourceCardProps {
     wageLevelUnder16?: string;
     wageLevel16to18?: string;
     perHour?: string;
+    tariffVersionLabel?: string;
   };
 }
 
@@ -43,8 +49,13 @@ export function WageSourceCard({
   setCustomWage,
   disabled = false,
   showCurrentWage = true,
+  tariffVersion,
   labels = {},
 }: WageSourceCardProps) {
+  // Tariff version is required for preset mode to show accurate rates
+  const isLoadingTariff = usePreset && !tariffVersion;
+  const wageRates = tariffVersion?.rates ?? {};
+
   const customWageValue = parseFloat(customWage);
   const isCustomWageInvalid =
     !usePreset &&
@@ -52,7 +63,8 @@ export function WageSourceCard({
 
   const getCurrentWage = () => {
     if (usePreset) {
-      const rate = PRESET_WAGE_RATES[wageLevel];
+      if (!tariffVersion) return '...';
+      const rate = wageRates[wageLevel];
       return `${rate?.toFixed(2) || '0'} ${labels.perHour || 'kr/time'}`;
     }
     return `${customWage} ${labels.perHour || 'kr/time'}`;
@@ -112,29 +124,48 @@ export function WageSourceCard({
         {usePreset ? (
           <div className="space-y-2">
             <Label htmlFor="wageLevel">{labels.wageLevelLabel || 'Tariffsteg'}</Label>
-            <Select value={wageLevel} onValueChange={setWageLevel} disabled={disabled}>
-              <SelectTrigger id="wageLevel">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(PRESET_WAGE_RATES).map((level) => {
-                  const levelNum = parseInt(level);
-                  let label = `${labels.wageLevelPrefix || 'Steg'} ${level}`;
+            {isLoadingTariff ? (
+              <div className="flex items-center justify-center h-10 rounded-md border border-border bg-surface-secondary">
+                <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
+              </div>
+            ) : (
+              <Select value={wageLevel} onValueChange={setWageLevel} disabled={disabled}>
+                <SelectTrigger id="wageLevel">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(wageRates).map((level) => {
+                    const levelNum = parseInt(level);
+                    let label = `${labels.wageLevelPrefix || 'Steg'} ${level}`;
 
-                  if (levelNum === -1) {
-                    label = labels.wageLevelUnder16 || 'Under 16 år';
-                  } else if (levelNum === -2) {
-                    label = labels.wageLevel16to18 || '16-18 år';
-                  }
+                    if (levelNum === -1) {
+                      label = labels.wageLevelUnder16 || 'Under 16 år';
+                    } else if (levelNum === -2) {
+                      label = labels.wageLevel16to18 || '16-18 år';
+                    }
 
-                  return (
-                    <SelectItem key={level} value={level}>
-                      {label} - {PRESET_WAGE_RATES[level].toFixed(2)} {labels.perHour || 'kr/time'}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+                    return (
+                      <SelectItem key={level} value={level}>
+                        {label} - {wageRates[level].toFixed(2)} {labels.perHour || 'kr/time'}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+            {/* Show tariff version info when available */}
+            {tariffVersion && (
+              <div className="flex items-center gap-1 text-xs text-text-muted">
+                <Calendar className="h-3 w-3" />
+                <span>
+                  {labels.tariffVersionLabel || 'Tariff fra'}{' '}
+                  {new Date(tariffVersion.effective_date + 'T00:00:00').toLocaleDateString('no-NO', {
+                    year: 'numeric',
+                    month: 'long',
+                  })}
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-2">

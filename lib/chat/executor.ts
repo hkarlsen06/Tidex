@@ -48,6 +48,10 @@ import { SettingsService } from "@/lib/services/settings";
 import { SnapshotsService } from "@/lib/services/snapshots";
 import { AuthSettingsLive, AuthSnapshotsLive } from "@/lib/layers/app";
 import { Effect } from "effect";
+import { getLatestTariffVersion, getTariffVersionForDate } from "@/data-access/tariff";
+
+// Default tariff type for HK Retail agreement
+const DEFAULT_TARIFF_TYPE = "hk_retail";
 import { logger as _logger } from "@/lib/logger";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
@@ -1842,15 +1846,6 @@ async function resolveSnapshotId(
 }
 
 /**
- * Preset wage rates for tariff levels
- * Note: Must match PRESET_WAGE_RATES in lib/payroll/calc.ts
- */
-const PRESET_WAGE_RATES: Record<string, number> = {
-  "-1": 129.91, "-2": 132.90, "1": 184.54, "2": 185.38,
-  "3": 187.46, "4": 193.05, "5": 210.81, "6": 256.14,
-};
-
-/**
  * Execute manage_wage_snapshots tool
  * Allows CRUD operations on wage snapshots (wage history entries)
  */
@@ -1909,9 +1904,10 @@ async function executeManageWageSnapshots(
 
         // IMPORTANT: Ensure snapshots are dichotomous (either tariff OR custom, not both)
         // - If hourly_wage is provided → custom rate mode → wage_level must be null
-        // - If wage_level is provided → tariff mode → hourly_wage comes from preset rates
+        // - If wage_level is provided → tariff mode → hourly_wage comes from tariff version
         let hourlyWage: number;
         let wageLevel: number | null;
+        let tariffTypeId: string | null = null;
 
         if (input.hourly_wage !== undefined) {
           // User explicitly set a custom hourly rate → custom mode
@@ -1921,8 +1917,15 @@ async function executeManageWageSnapshots(
           // User explicitly set a wage level → tariff mode
           wageLevel = input.wage_level;
           if (wageLevel !== null) {
-            // Look up the tariff rate
-            hourlyWage = PRESET_WAGE_RATES[String(wageLevel)] ?? currentSnapshot?.hourly_wage ?? 200;
+            // Fetch tariff version to get accurate rate
+            const tariffVersion = await getLatestTariffVersion(DEFAULT_TARIFF_TYPE);
+            if (tariffVersion) {
+              hourlyWage = tariffVersion.rates[String(wageLevel)] ?? currentSnapshot?.hourly_wage ?? 200;
+              tariffTypeId = DEFAULT_TARIFF_TYPE;
+            } else {
+              // Fallback to current snapshot rate if tariff fetch fails
+              hourlyWage = currentSnapshot?.hourly_wage ?? 200;
+            }
           } else {
             // wage_level explicitly set to null without hourly_wage - use current or default
             hourlyWage = currentSnapshot?.hourly_wage ?? 200;
@@ -1931,12 +1934,14 @@ async function executeManageWageSnapshots(
           // Neither provided - copy from current snapshot
           hourlyWage = currentSnapshot?.hourly_wage ?? 200;
           wageLevel = currentSnapshot?.wage_level ?? null;
+          tariffTypeId = currentSnapshot?.tariff_type_id ?? null;
         }
 
         const snapshotData = {
           from_date: input.from_date,
           hourly_wage: hourlyWage,
           wage_level: wageLevel,
+          tariff_type_id: tariffTypeId,
           supplements: supplements as { rules: any[] },
           tax_enabled: input.tax_enabled ?? currentSnapshot?.tax_enabled ?? false,
           tax_percentage: input.tax_percentage ?? currentSnapshot?.tax_percentage ?? 0,
@@ -2018,23 +2023,37 @@ async function executeManageWageSnapshots(
 
         // IMPORTANT: Ensure snapshots are dichotomous (either tariff OR custom, not both)
         // - If hourly_wage is provided → custom rate mode → wage_level must be null
-        // - If wage_level is provided → tariff mode → hourly_wage comes from preset rates
+        // - If wage_level is provided → tariff mode → hourly_wage comes from tariff version
         let hourlyWage: number;
         let wageLevel: number | null;
+        let tariffTypeId: string | null = targetSnapshot.tariff_type_id ?? null;
 
         if (input.hourly_wage !== undefined) {
           // User explicitly set a custom hourly rate → custom mode
           hourlyWage = input.hourly_wage;
           wageLevel = null; // Force null to ensure dichotomy
+          tariffTypeId = null; // Custom wage has no tariff type
         } else if (input.wage_level !== undefined) {
           // User explicitly set a wage level → tariff mode
           wageLevel = input.wage_level;
           if (wageLevel !== null) {
-            // Look up the tariff rate
-            hourlyWage = PRESET_WAGE_RATES[String(wageLevel)] ?? targetSnapshot.hourly_wage;
+            // Fetch tariff version to get accurate rate
+            // Use the snapshot's from_date for historical accuracy, or latest if not set
+            const targetDate = input.from_date ?? targetSnapshot.from_date;
+            const tariffVersion = targetDate
+              ? await getTariffVersionForDate(DEFAULT_TARIFF_TYPE, targetDate)
+              : await getLatestTariffVersion(DEFAULT_TARIFF_TYPE);
+            if (tariffVersion) {
+              hourlyWage = tariffVersion.rates[String(wageLevel)] ?? targetSnapshot.hourly_wage;
+              tariffTypeId = DEFAULT_TARIFF_TYPE;
+            } else {
+              // Fallback to current snapshot rate if tariff fetch fails
+              hourlyWage = targetSnapshot.hourly_wage;
+            }
           } else {
             // wage_level explicitly set to null without hourly_wage - keep current hourly_wage
             hourlyWage = targetSnapshot.hourly_wage;
+            tariffTypeId = null;
           }
         } else {
           // Neither provided - keep current values
@@ -2046,6 +2065,7 @@ async function executeManageWageSnapshots(
           from_date: input.from_date !== undefined ? input.from_date : targetSnapshot.from_date,
           hourly_wage: hourlyWage,
           wage_level: wageLevel,
+          tariff_type_id: tariffTypeId,
           supplements: supplements as { rules: any[] },
           tax_enabled: input.tax_enabled ?? targetSnapshot.tax_enabled,
           tax_percentage: input.tax_percentage ?? targetSnapshot.tax_percentage,

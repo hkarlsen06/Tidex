@@ -167,6 +167,7 @@ final class SnapshotsRepository: ObservableObject {
     ///   - fromDate: Effective date (nil for baseline)
     ///   - hourlyWage: Hourly wage
     ///   - wageLevel: Wage level (nil for custom)
+    ///   - tariffTypeId: Tariff type ID (e.g., "hk_retail") or nil for custom wage
     ///   - supplements: Supplement rules
     ///   - taxEnabled: Tax enabled flag
     ///   - taxPercentage: Tax percentage
@@ -180,6 +181,7 @@ final class SnapshotsRepository: ObservableObject {
         fromDate: Date? = nil,
         hourlyWage: Double,
         wageLevel: Int? = nil,
+        tariffTypeId: String? = nil,
         supplements: SupplementRulesSnapshot,
         taxEnabled: Bool? = nil,
         taxPercentage: Double? = nil,
@@ -193,6 +195,7 @@ final class SnapshotsRepository: ObservableObject {
             fromDate: fromDate,
             hourlyWage: hourlyWage,
             wageLevel: wageLevel,
+            tariffTypeId: tariffTypeId,
             supplements: supplements,
             taxEnabled: taxEnabled,
             taxPercentage: taxPercentage,

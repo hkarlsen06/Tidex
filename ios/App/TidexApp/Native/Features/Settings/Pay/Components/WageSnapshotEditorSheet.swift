@@ -1,5 +1,8 @@
 import SwiftUI
 import UIKit
+import os.log
+
+private let logger = Logger(subsystem: "com.tidex.app", category: "WageSnapshotEditorSheet")
 
 // MARK: - Wage Snapshot Editor Sheet
 
@@ -36,6 +39,13 @@ struct WageSnapshotEditorSheet: View {
     @State private var showingSupplementEditor = false
     @State private var editingSupplementRule: OnboardingSupplementRule?
 
+    // Tariff versioning state
+    @State private var tariffTypes: [TariffType] = []
+    @State private var tariffVersion: TariffVersion?
+    @State private var tariffTypeName: String?
+    @State private var tariffTypeId: String?
+    @State private var isLoadingTariff = false
+
     private var isBaseline: Bool {
         snapshot?.isBaseline ?? false
     }
@@ -47,6 +57,13 @@ struct WageSnapshotEditorSheet: View {
 
     private var currency: String {
         userCurrency
+    }
+
+    /// Display name for the current tariff version (e.g., "HK Detaljhandel - 2024")
+    private var tariffVersionDisplayName: String? {
+        guard let version = tariffVersion, let typeName = tariffTypeName else { return nil }
+        let year = String(version.effective_date.prefix(4))
+        return "\(typeName) - \(year)"
     }
 
     init(
@@ -87,6 +104,8 @@ struct WageSnapshotEditorSheet: View {
             _breakDeductionMinutes = State(initialValue: snapshot.effectiveBreakDeductionMinutes)
             _taxEnabled = State(initialValue: snapshot.effectiveTaxEnabled)
             _taxPercentage = State(initialValue: snapshot.effectiveTaxPercentage)
+            // Initialize tariff type ID from snapshot
+            _tariffTypeId = State(initialValue: snapshot.tariff_type_id)
         } else if let mostRecent = mostRecentSnapshot {
             // Creating new snapshot - prefill from most recent
             _fromDate = State(initialValue: Date())
@@ -101,6 +120,8 @@ struct WageSnapshotEditorSheet: View {
             _breakDeductionMinutes = State(initialValue: mostRecent.effectiveBreakDeductionMinutes)
             _taxEnabled = State(initialValue: mostRecent.effectiveTaxEnabled)
             _taxPercentage = State(initialValue: mostRecent.effectiveTaxPercentage)
+            // Initialize tariff type ID from most recent snapshot
+            _tariffTypeId = State(initialValue: mostRecent.tariff_type_id)
         } else {
             // No existing snapshot - default to custom wage if tariff not available
             _usePreset = State(initialValue: canUseTariff)
@@ -121,13 +142,19 @@ struct WageSnapshotEditorSheet: View {
                         Divider()
                             .padding(.horizontal)
 
+                        // Tariff version indicator (when using tariff)
+                        if showTariffOption && usePreset {
+                            tariffVersionIndicator
+                        }
+
                         // Wage source selector
                         WageSourceSelector(
                             usePreset: $usePreset,
                             wageLevel: $wageLevel,
                             customWage: $customWage,
                             currency: currency,
-                            showTariffOption: showTariffOption
+                            showTariffOption: showTariffOption,
+                            tariffVersion: tariffVersion
                         )
                         .padding(.horizontal)
 
@@ -241,6 +268,90 @@ struct WageSnapshotEditorSheet: View {
                     }
                 )
             }
+            .task {
+                await loadTariffVersion()
+            }
+            .onChange(of: fromDate) { _, newDate in
+                // Reload tariff version when date changes (for historical versions)
+                Task { await loadTariffVersionForDate(newDate) }
+            }
+        }
+    }
+
+    // MARK: - Tariff Version Loading
+
+    /// Load tariff version based on mode and date
+    private func loadTariffVersion() async {
+        guard showTariffOption else { return }
+
+        isLoadingTariff = true
+        defer { isLoadingTariff = false }
+
+        do {
+            // First, load all available tariff types
+            let types = try await TariffVersionService.shared.getTariffTypes()
+            tariffTypes = types
+
+            // Get the tariff type ID to use
+            let effectiveTariffTypeId: String
+
+            if let existingTypeId = tariffTypeId {
+                // Use existing tariff type from snapshot
+                effectiveTariffTypeId = existingTypeId
+            } else {
+                // Get default tariff type
+                guard let defaultType = types.first(where: { $0.is_default }) ?? types.first else {
+                    logger.warning("No default tariff type found")
+                    return
+                }
+                effectiveTariffTypeId = defaultType.id
+                tariffTypeId = effectiveTariffTypeId
+                tariffTypeName = defaultType.display_name
+            }
+
+            // Load tariff type name if not set
+            if tariffTypeName == nil {
+                tariffTypeName = types.first { $0.id == effectiveTariffTypeId }?.display_name
+            }
+
+            // Determine the date to fetch version for
+            if mode == .edit, let snapshot = snapshot, let fromDateString = snapshot.from_date {
+                // Editing: use snapshot's from_date for historical version
+                tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
+                    tariffType: effectiveTariffTypeId,
+                    date: fromDateString
+                )
+            } else {
+                // Creating new: use latest version
+                tariffVersion = try await TariffVersionService.shared.getLatestTariffVersion(
+                    tariffType: effectiveTariffTypeId
+                )
+            }
+
+            logger.info("Loaded tariff version: \(tariffVersion?.effective_date ?? "none")")
+        } catch {
+            logger.error("Failed to load tariff version: \(error.localizedDescription)")
+            // Fall back to static rates - tariffVersion remains nil
+        }
+    }
+
+    /// Reload tariff version for a specific date (when date picker changes)
+    private func loadTariffVersionForDate(_ date: Date) async {
+        guard showTariffOption, let typeId = tariffTypeId else { return }
+
+        isLoadingTariff = true
+        defer { isLoadingTariff = false }
+
+        let isoDate = ISO8601DateFormatter.dateOnlyString(from: date)
+
+        do {
+            tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
+                tariffType: typeId,
+                date: isoDate
+            )
+            logger.info("Reloaded tariff version for date \(isoDate): \(tariffVersion?.effective_date ?? "none")")
+        } catch {
+            logger.error("Failed to reload tariff version for date: \(error.localizedDescription)")
         }
     }
 
@@ -251,6 +362,108 @@ struct WageSnapshotEditorSheet: View {
             return true // Tariff always valid
         } else {
             return customWage > 0
+        }
+    }
+
+    // MARK: - Tariff Version Indicator
+
+    @ViewBuilder
+    private var tariffVersionIndicator: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Tariff type picker - always show when tariff types are loaded
+            if !tariffTypes.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localization.string("settings.pay.editor.tariffTypeLabel"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexTextSecondary)
+
+                    Picker("", selection: Binding(
+                        get: { tariffTypeId ?? "" },
+                        set: { newValue in
+                            guard newValue != tariffTypeId else { return }
+                            tariffTypeId = newValue
+                            tariffTypeName = tariffTypes.first { $0.id == newValue }?.display_name
+                            // Reload tariff version for the new type
+                            Task { await loadTariffVersionForSelectedType() }
+                        }
+                    )) {
+                        ForEach(tariffTypes) { type in
+                            Text(type.display_name)
+                                .tag(type.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.tidexBrandPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.tidexSurfaceSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+            }
+
+            // Tariff version info (effective date)
+            if let version = tariffVersion {
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+
+                    Text(localization.string("settings.pay.editor.tariffEffectiveDate"))
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+
+                    Text(formatEffectiveDate(version.effective_date))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.tidexTextSecondary)
+
+                    Spacer()
+                }
+            } else if isLoadingTariff {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text(localization.string("settings.pay.editor.loadingTariff"))
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+                    Spacer()
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    /// Format effective date for display
+    private func formatEffectiveDate(_ isoDate: String) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let date = dateFormatter.date(from: isoDate) else { return isoDate }
+
+        let displayFormatter = DateFormatter()
+        displayFormatter.locale = localization.currentLocale == .norwegian
+            ? Locale(identifier: "nb_NO")
+            : Locale(identifier: "en_US")
+        displayFormatter.dateFormat = "MMMM yyyy"
+        return displayFormatter.string(from: date)
+    }
+
+    /// Reload tariff version when tariff type changes
+    private func loadTariffVersionForSelectedType() async {
+        guard showTariffOption, let typeId = tariffTypeId else { return }
+
+        isLoadingTariff = true
+        defer { isLoadingTariff = false }
+
+        do {
+            // Reset wage level when changing tariff type
+            wageLevel = 1
+
+            // Load latest version for the new type
+            tariffVersion = try await TariffVersionService.shared.getLatestTariffVersion(
+                tariffType: typeId
+            )
+            logger.info("Loaded tariff version for type \(typeId): \(tariffVersion?.effective_date ?? "none")")
+        } catch {
+            logger.error("Failed to load tariff version for type \(typeId): \(error.localizedDescription)")
         }
     }
 
@@ -328,13 +541,14 @@ struct WageSnapshotEditorSheet: View {
             }
 
             if usePreset {
-                // Read-only preset supplements
+                // Read-only preset supplements (from tariff version or fallback)
                 Text(localization.string("settings.pay.editor.supplementsTariff"))
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
 
-                ForEach(PayrollCalculator.presetSupplementRules.indices, id: \.self) { index in
-                    presetSupplementRow(PayrollCalculator.presetSupplementRules[index])
+                let presetRules = tariffVersion?.supplements.rules ?? PayrollCalculator.presetSupplementRules
+                ForEach(presetRules.indices, id: \.self) { index in
+                    presetSupplementRow(presetRules[index])
                 }
             } else {
                 // Editable custom supplements
@@ -507,18 +721,36 @@ struct WageSnapshotEditorSheet: View {
         // Build input - only use preset if tariff is available and selected
         let effectiveUsePreset = showTariffOption && usePreset
 
-        let resolvedHourlyWage = effectiveUsePreset
-            ? (PayrollCalculator.presetWageRates[String(wageLevel)] ?? 184.54)
-            : customWage
+        // Resolve hourly wage: use tariff version rates if available, otherwise fallback
+        let resolvedHourlyWage: Double
+        if effectiveUsePreset {
+            if let version = tariffVersion, let rate = version.rate(forLevel: wageLevel) {
+                resolvedHourlyWage = rate
+            } else {
+                // Fallback to static preset rates
+                resolvedHourlyWage = PayrollCalculator.presetWageRates[String(wageLevel)] ?? 184.54
+            }
+        } else {
+            resolvedHourlyWage = customWage
+        }
 
         let resolvedWageLevel = effectiveUsePreset ? wageLevel : nil
 
+        // Resolve supplements: use tariff version supplements if available, otherwise fallback
         let resolvedSupplements: SupplementRulesSnapshot
         if effectiveUsePreset {
-            resolvedSupplements = SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
+            if let version = tariffVersion {
+                resolvedSupplements = version.supplements
+            } else {
+                // Fallback to static preset supplements
+                resolvedSupplements = SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
+            }
         } else {
             resolvedSupplements = SupplementRulesSnapshot(rules: supplements.map { $0.toSupplementRule() })
         }
+
+        // Resolve tariff type ID: only set if using preset
+        let resolvedTariffTypeId = effectiveUsePreset ? tariffTypeId : nil
 
         let input = WageSnapshotEditorInput(
             fromDate: isBaseline ? nil : fromDate,
@@ -530,7 +762,8 @@ struct WageSnapshotEditorSheet: View {
             breakEnabled: breakEnabled,
             breakMethod: breakMethod,
             breakThresholdHours: breakThresholdHours,
-            breakDeductionMinutes: breakDeductionMinutes
+            breakDeductionMinutes: breakDeductionMinutes,
+            tariffTypeId: resolvedTariffTypeId
         )
 
         let success = await onSave(input)
@@ -577,7 +810,8 @@ extension WageSnapshotEditorInput {
         breakEnabled: Bool,
         breakMethod: BreakMethod,
         breakThresholdHours: Double,
-        breakDeductionMinutes: Int
+        breakDeductionMinutes: Int,
+        tariffTypeId: String? = nil
     ) {
         self.fromDate = fromDate
         self.hourlyWage = hourlyWage
@@ -589,6 +823,7 @@ extension WageSnapshotEditorInput {
         self.breakMethod = breakMethod
         self.breakThresholdHours = breakThresholdHours
         self.breakDeductionMinutes = breakDeductionMinutes
+        self.tariffTypeId = tariffTypeId
     }
 }
 

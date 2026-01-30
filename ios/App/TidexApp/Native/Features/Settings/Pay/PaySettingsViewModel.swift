@@ -525,6 +525,8 @@ struct WageSnapshotEditorInput {
     var breakMethod: BreakMethod
     var breakThresholdHours: Double
     var breakDeductionMinutes: Int
+    /// Tariff type ID when using tariff rates (e.g., "hk_retail")
+    var tariffTypeId: String?
 
     /// Create input from an existing snapshot
     init(from snapshot: WageSnapshot) {
@@ -542,6 +544,7 @@ struct WageSnapshotEditorInput {
         self.breakMethod = snapshot.breakMethod
         self.breakThresholdHours = snapshot.effectiveBreakThresholdHours
         self.breakDeductionMinutes = snapshot.effectiveBreakDeductionMinutes
+        self.tariffTypeId = snapshot.tariff_type_id
     }
 
     /// Create default input for new snapshot
@@ -558,6 +561,7 @@ struct WageSnapshotEditorInput {
             self.breakMethod = snapshot.breakMethod
             self.breakThresholdHours = snapshot.effectiveBreakThresholdHours
             self.breakDeductionMinutes = snapshot.effectiveBreakDeductionMinutes
+            self.tariffTypeId = snapshot.tariff_type_id
         } else {
             self.hourlyWage = 184.54
             self.wageLevel = 1
@@ -568,6 +572,7 @@ struct WageSnapshotEditorInput {
             self.breakMethod = .proportional
             self.breakThresholdHours = 5.5
             self.breakDeductionMinutes = 30
+            self.tariffTypeId = nil
         }
     }
 }

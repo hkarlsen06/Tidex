@@ -28,11 +28,11 @@ struct PayrollCalculator {
     /// Preset supplement rules (Norwegian tariff-based)
     static let presetSupplementRules: [SupplementRule] = [
         SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22, percent: nil),
-        SupplementRule(days: [1, 2, 3, 4, 5], from: "21:00", to: "23:59", rate: 45, percent: nil),
+        SupplementRule(days: [1, 2, 3, 4, 5], from: "21:00", to: "24:00", rate: 45, percent: nil),
         SupplementRule(days: [6], from: "13:00", to: "15:00", rate: 45, percent: nil),
         SupplementRule(days: [6], from: "15:00", to: "18:00", rate: 55, percent: nil),
-        SupplementRule(days: [6], from: "18:00", to: "23:59", rate: 110, percent: nil),
-        SupplementRule(days: [7], from: "00:00", to: "23:59", rate: 115, percent: nil)
+        SupplementRule(days: [6], from: "18:00", to: "24:00", rate: 110, percent: nil),
+        SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 115, percent: nil)
     ]
 
     /// Default break deduction settings
@@ -173,13 +173,14 @@ struct PayrollCalculator {
             }
         }
 
-        // Priority: snapshot > preset
-        let snapshotRules = snapshot?.effectiveSupplements ?? []
-        if !snapshotRules.isEmpty {
-            return snapshotRules
+        // Priority: snapshot supplements (even if empty) > preset fallback
+        // If snapshot exists, use its supplements - empty array means "no supplements"
+        // Only fall back to presets if there's no snapshot at all (offline fallback)
+        if let snapshot = snapshot {
+            return snapshot.effectiveSupplements
         }
 
-        logger.warning("Using preset supplement rules - no snapshot supplements available")
+        logger.warning("Using preset supplement rules - no snapshot available (offline fallback)")
         return presetSupplementRules
     }
 }
