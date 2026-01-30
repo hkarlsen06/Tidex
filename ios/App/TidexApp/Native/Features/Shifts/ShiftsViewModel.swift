@@ -975,10 +975,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         lastObservedMonth = monthContext.displayMonth
         navigationDirection = nil
 
-        // Clear all caches on full reload
+        // Clear all caches on full reload (including cachedUserId for impersonation support)
         monthCache.removeAll()
         prefetchCache.removeAll()
         prefetchTasks.removeAll()
+        cachedUserId = nil
 
         await loadShiftsFromLocal()
 
@@ -1049,9 +1050,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         logger.info("🔄 Reloading shifts from local data")
 
         // Clear all caches to pick up new data
+        // Also critical for impersonation: cachedUserId must be refreshed from current session
         monthCache.removeAll()
         prefetchCache.removeAll()
         prefetchTasks.removeAll()
+        cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
 
         // Also clear in-memory recurring shifts cache so exclusions are picked up
         recurringShifts = []

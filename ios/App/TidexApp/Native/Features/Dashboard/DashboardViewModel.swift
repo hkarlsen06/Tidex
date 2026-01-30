@@ -389,9 +389,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         lastObservedMonth = monthContext.displayMonth
         navigationDirection = nil
 
-        // Clear cache on full reload
+        // Clear cache on full reload (including cachedUserId for impersonation support)
         monthCache.removeAll()
         prefetchTasks.removeAll()
+        cachedUserId = nil
 
         await loadDashboardFromLocal()
 
@@ -475,8 +476,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
         // Clear ALL in-memory caches to pick up new data from sync
         // This is critical after initial sync completes - settings/snapshots may now exist
+        // Also critical for impersonation: cachedUserId must be refreshed from current session
         monthCache.removeAll()
         prefetchTasks.removeAll()
+        cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
         settings = nil  // Force re-read settings from repository
         snapshots = []  // Force re-read snapshots from repository
         recurringShifts = []  // Force re-read recurring shifts from repository
