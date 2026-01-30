@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AdminSettingsView: View {
     @StateObject private var viewModel = AdminSettingsViewModel()
+    @Environment(\.dismiss) private var dismiss
 
     /// Optional initial tab to select when the view appears (for deep linking)
     var initialTab: AdminTab?
@@ -53,6 +54,11 @@ struct AdminSettingsView: View {
         }
         .sheet(item: $viewModel.selectedFeedback) { feedback in
             FeedbackResponseSheet(feedback: feedback, viewModel: viewModel)
+        }
+        .onChange(of: viewModel.shouldDismissAfterImpersonation) { _, shouldDismiss in
+            if shouldDismiss {
+                dismiss()
+            }
         }
     }
 }
@@ -121,6 +127,7 @@ private struct TabContent: View {
         case .sql: SqlTabView(viewModel: viewModel)
         case .shares: SharesTabView(viewModel: viewModel)
         case .notifications: NotificationsTabView(viewModel: viewModel)
+        case .impersonation: ImpersonationTabView(viewModel: viewModel)
         }
     }
 }

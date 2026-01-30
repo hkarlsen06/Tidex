@@ -1,12 +1,16 @@
 /**
- * Admin Impersonation Start Endpoint
+ * Admin Impersonation Start Endpoint (Web Wrapper)
  *
- * Allows admins to impersonate non-admin users for support and debugging.
- * Uses Supabase Admin API to mint a session for the target user that
- * bypasses MFA requirements.
+ * This route is the web-specific wrapper that:
+ * 1. Calls the shared Supabase Edge Function to mint impersonated tokens
+ * 2. Sets session cookies for the web browser
+ * 3. Sets the impersonation context cookie for tracking
+ *
+ * For iOS/native clients, call the Edge Function directly:
+ * POST /functions/v1/impersonation/start
  *
  * Security:
- * - Admin-only access
+ * - Admin-only access (enforced by Edge Function)
  * - Rate limited (10 per hour per admin)
  * - Single active impersonation per admin
  * - No nested impersonation
@@ -16,17 +20,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
-  createImpersonationSession,
-  endImpersonationSession,
   setImpersonationCookie,
   readImpersonationContextFromRequest,
-  checkRateLimit,
-  recordAttempt,
-  validateTargetUser,
-  getActiveSessionForAdmin,
   getImpersonationSession,
+  storeAdminRefreshToken,
 } from "@/lib/auth/impersonation";
 import { ENV } from "@/lib/env";
 import { invalidateUserCache } from "@/data-access/cache";
@@ -34,6 +32,28 @@ import { invalidateUserCache } from "@/data-access/cache";
 interface StartImpersonationRequest {
   targetUserId: string;
   reason: string;
+}
+
+interface EdgeFunctionResponse {
+  ok: boolean;
+  error?: string;
+  impersonated?: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    token_type: string;
+    user: {
+      id: string;
+      email?: string;
+      user_metadata?: Record<string, unknown>;
+    };
+  };
+  session?: {
+    id: string;
+    admin_user_id: string;
+    target_user_id: string;
+    expires_at: string;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -77,25 +97,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const { data: { user: caller }, error: authError } = await supabase.auth.getUser();
+    const { data: { session: adminSession }, error: sessionError } = await supabase.auth.getSession();
 
-    if (authError || !caller) {
+    if (sessionError || !adminSession) {
       return NextResponse.json(
         { ok: false, error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    // 3. Verify caller is an admin
-    const callerIsAdmin = caller.app_metadata?.role === "admin";
-    if (!callerIsAdmin) {
-      return NextResponse.json(
-        { ok: false, error: "Admin access required" },
-        { status: 403 }
-      );
-    }
-
-    // 4. Parse and validate request body
+    // 3. Parse request body
     let body: StartImpersonationRequest;
     try {
       body = await request.json();
@@ -108,153 +119,69 @@ export async function POST(request: NextRequest) {
 
     const { targetUserId, reason } = body;
 
-    if (!targetUserId || typeof targetUserId !== "string") {
-      return NextResponse.json(
-        { ok: false, error: "targetUserId is required" },
-        { status: 400 }
-      );
-    }
+    // 4. Call the Edge Function
+    // The Edge Function handles all validation, rate limiting, and token minting
+    const edgeFunctionUrl = `${ENV.URL}/functions/v1/impersonation/start`;
 
-    if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
-      return NextResponse.json(
-        { ok: false, error: "reason is required (minimum 5 characters)" },
-        { status: 400 }
-      );
-    }
-
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(targetUserId)) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid targetUserId format" },
-        { status: 400 }
-      );
-    }
-
-    // 5. Cannot impersonate self
-    if (targetUserId === caller.id) {
-      return NextResponse.json(
-        { ok: false, error: "Cannot impersonate yourself" },
-        { status: 400 }
-      );
-    }
-
-    // 6. Check rate limit
-    const withinRateLimit = await checkRateLimit(caller.id);
-    if (!withinRateLimit) {
-      await recordAttempt(caller.id, false);
-      return NextResponse.json(
-        { ok: false, error: "Rate limit exceeded. Maximum 10 impersonation attempts per hour." },
-        { status: 429 }
-      );
-    }
-
-    // 7. Auto-end any existing active impersonation session
-    // This handles cases where the admin closed the browser without stopping
-    const activeSession = await getActiveSessionForAdmin(caller.id);
-    if (activeSession) {
-      console.log("[Impersonation] Auto-ending previous session:", activeSession.id);
-      await endImpersonationSession(activeSession.id, caller.id);
-    }
-
-    // 8. Validate target user exists and is not an admin
-    const targetValidation = await validateTargetUser(targetUserId);
-    if (!targetValidation.exists) {
-      await recordAttempt(caller.id, false);
-      return NextResponse.json(
-        { ok: false, error: "Target user not found" },
-        { status: 404 }
-      );
-    }
-
-    if (targetValidation.isAdmin) {
-      await recordAttempt(caller.id, false);
-      return NextResponse.json(
-        { ok: false, error: "Cannot impersonate admin users" },
-        { status: 403 }
-      );
-    }
-
-    // 9. Get the caller's current session (we need the refresh token)
-    const { data: sessionData } = await supabase.auth.getSession();
-    const adminRefreshToken = sessionData?.session?.refresh_token;
-
-    if (!adminRefreshToken) {
-      return NextResponse.json(
-        { ok: false, error: "Could not retrieve current session. Please re-authenticate." },
-        { status: 401 }
-      );
-    }
-
-    // 10. Mint a session for the target user using Admin API
-    // This bypasses MFA by using the admin generateLink and verifyOtp flow
-    const serviceClient = createSupabaseServiceClient();
-
-    // Generate a magic link for the target user (server-side only)
-    const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
-      type: "magiclink",
-      email: targetValidation.email!,
-      options: {
-        // Don't send the email, we just want the token
-        redirectTo: `${ENV.URL}/dashboard`,
+    const edgeResponse = await fetch(edgeFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminSession.access_token}`,
+        "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
+        "x-real-ip": request.headers.get("x-real-ip") || "",
+        "user-agent": request.headers.get("user-agent") || "",
       },
-    });
-
-    if (linkError || !linkData?.properties?.hashed_token) {
-      console.error("[Impersonation] Failed to generate link:", linkError);
-      await recordAttempt(caller.id, false);
-      return NextResponse.json(
-        { ok: false, error: "Failed to create impersonation session" },
-        { status: 500 }
-      );
-    }
-
-    // Verify the token to create a session (this bypasses MFA)
-    const { data: verifyData, error: verifyError } = await serviceClient.auth.verifyOtp({
-      token_hash: linkData.properties.hashed_token,
-      type: "magiclink",
-    });
-
-    if (verifyError || !verifyData.session) {
-      console.error("[Impersonation] Failed to verify OTP:", verifyError);
-      await recordAttempt(caller.id, false);
-      return NextResponse.json(
-        { ok: false, error: "Failed to create impersonation session" },
-        { status: 500 }
-      );
-    }
-
-    // 11. Create impersonation session record in database
-    const adminIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      null;
-    const adminUserAgent = request.headers.get("user-agent") || null;
-
-    let dbSession: { id: string; expiresAt: Date };
-    try {
-      dbSession = await createImpersonationSession({
-        adminUserId: caller.id,
+      body: JSON.stringify({
         targetUserId,
-        reason: reason.trim(),
-        adminRefreshToken,
-        adminIp,
-        adminUserAgent,
-      });
-    } catch (error) {
-      console.error("[Impersonation] Failed to create session record:", error);
-      // Try to clean up the minted session
-      await serviceClient.auth.admin.signOut(verifyData.session.access_token).catch(() => {});
-      await recordAttempt(caller.id, false);
+        reason,
+        // Note: adminRefreshToken is NOT sent to Edge Function for security
+        // We store it server-side below after the session is created
+      }),
+    });
 
-      const errorMessage = error instanceof Error ? error.message : "Failed to create session record";
+    // 5. Parse Edge Function response with error handling for non-JSON responses
+    let edgeResult: EdgeFunctionResponse;
+    try {
+      const contentType = edgeResponse.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        console.error("[Impersonation] Edge Function returned non-JSON response:", contentType);
+        return NextResponse.json(
+          { ok: false, error: "Edge Function returned an invalid response" },
+          { status: 502 }
+        );
+      }
+      edgeResult = await edgeResponse.json();
+    } catch (parseError) {
+      console.error("[Impersonation] Failed to parse Edge Function response:", parseError);
       return NextResponse.json(
-        { ok: false, error: errorMessage },
+        { ok: false, error: "Failed to parse Edge Function response" },
+        { status: 502 }
+      );
+    }
+
+    // 6. Handle Edge Function errors
+    if (!edgeResult.ok || !edgeResult.impersonated || !edgeResult.session) {
+      return NextResponse.json(
+        { ok: false, error: edgeResult.error || "Failed to start impersonation" },
+        { status: edgeResponse.status }
+      );
+    }
+
+    // 6a. Store admin refresh token server-side (encrypted in DB)
+    // This keeps the token within the Next.js server boundary
+    try {
+      await storeAdminRefreshToken(edgeResult.session.id, adminSession.refresh_token);
+    } catch (storeError) {
+      console.error("[Impersonation] Failed to store admin refresh token:", storeError);
+      // This is a critical error - we can't restore the admin session later
+      return NextResponse.json(
+        { ok: false, error: "Failed to store admin session for restoration" },
         { status: 500 }
       );
     }
 
-    // 12. Set the target user's session in the browser cookies
-    // Create a new Supabase client that writes to the response cookies
+    // 7. Set the target user's session in the browser cookies
     const targetSupabase = createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
       cookies: {
         getAll() {
@@ -268,44 +195,36 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set the session (this writes the cookies)
     const { error: setSessionError } = await targetSupabase.auth.setSession({
-      access_token: verifyData.session.access_token,
-      refresh_token: verifyData.session.refresh_token,
+      access_token: edgeResult.impersonated.access_token,
+      refresh_token: edgeResult.impersonated.refresh_token,
     });
 
     if (setSessionError) {
       console.error("[Impersonation] Failed to set session:", setSessionError);
-      // Clean up
-      await serviceClient.auth.admin.signOut(verifyData.session.access_token).catch(() => {});
-      await recordAttempt(caller.id, false);
       return NextResponse.json(
         { ok: false, error: "Failed to set impersonation session" },
         { status: 500 }
       );
     }
 
-    // 13. Set the impersonation context cookie
+    // 8. Set the impersonation context cookie
     setImpersonationCookie(response, {
-      impersonationSessionId: dbSession.id,
-      adminUserId: caller.id,
-      targetUserId,
-      expiresAt: dbSession.expiresAt,
+      impersonationSessionId: edgeResult.session.id,
+      adminUserId: edgeResult.session.admin_user_id,
+      targetUserId: edgeResult.session.target_user_id,
+      expiresAt: new Date(edgeResult.session.expires_at),
     }, request);
 
-    // 14. Record successful attempt
-    await recordAttempt(caller.id, true);
+    // 9. Invalidate caches for both admin and target user
+    invalidateUserCache(edgeResult.session.admin_user_id);
+    invalidateUserCache(edgeResult.session.target_user_id);
 
-    // 15. Invalidate caches for both admin and target user
-    // This ensures fresh data is loaded after session switch
-    invalidateUserCache(caller.id);
-    invalidateUserCache(targetUserId);
-
-    console.log("[Impersonation] Started:", {
-      adminId: caller.id,
-      targetId: targetUserId,
-      sessionId: dbSession.id,
-      expiresAt: dbSession.expiresAt.toISOString(),
+    console.log("[Impersonation] Started via Edge Function:", {
+      adminId: edgeResult.session.admin_user_id,
+      targetId: edgeResult.session.target_user_id,
+      sessionId: edgeResult.session.id,
+      expiresAt: edgeResult.session.expires_at,
     });
 
     return response;

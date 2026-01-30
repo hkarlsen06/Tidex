@@ -15,6 +15,7 @@ struct MainTabView: View {
     @Environment(\.localization) private var localization
     @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
     @ObservedObject private var monthContext = SharedMonthContext.shared
+    @ObservedObject private var impersonationManager = ImpersonationManager.shared
 
     @State private var selectedTab: Tab = .home
 
@@ -95,54 +96,70 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Background that fills entire screen including safe areas
-            // Prevents black bars from showing behind tab content
-            Color.tidexBackground
-                .ignoresSafeArea()
-
-            TabView(selection: tabSelection) {
-                DashboardView(selectedTab: $selectedTab)
-                    .tabItem {
-                        Label(localization.string(Tab.home.localizationKey), systemImage: Tab.home.icon)
+        VStack(spacing: 0) {
+            // Impersonation banner - shown when admin is impersonating another user
+            if impersonationManager.isImpersonating {
+                ImpersonationBanner(
+                    targetName: impersonationManager.impersonatedUserName ?? "Unknown",
+                    expiresAt: impersonationManager.expiresAt,
+                    onStop: {
+                        Task {
+                            try? await impersonationManager.stopImpersonation()
+                        }
                     }
-                    .tag(Tab.home)
-
-                ShiftsView(selectedTab: $selectedTab)
-                    .tabItem {
-                        Label(localization.string(Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
-                    }
-                    .tag(Tab.shifts)
-
-                AddShiftView(selectedTab: $selectedTab, isKeyboardVisible: $isKeyboardVisible)
-                    .tabItem {
-                        Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
-                    }
-                    .tag(Tab.add)
-
-                StatsView(selectedTab: $selectedTab)
-                    .tabItem {
-                        Label(localization.string(Tab.stats.localizationKey), systemImage: Tab.stats.icon)
-                    }
-                    .tag(Tab.stats)
-
-                SharingView(selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
-                    .tabItem {
-                        Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
-                    }
-                    .tag(Tab.sharing)
+                )
             }
-            .tint(.tidexBlue)
 
-            // Shared month picker overlay - floats above tab bar
-            if shouldShowMonthPicker {
-                sharedMonthPickerOverlay
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            ZStack(alignment: .bottom) {
+                // Background that fills entire screen including safe areas
+                // Prevents black bars from showing behind tab content
+                Color.tidexBackground
+                    .ignoresSafeArea()
+
+                TabView(selection: tabSelection) {
+                    DashboardView(selectedTab: $selectedTab)
+                        .tabItem {
+                            Label(localization.string(Tab.home.localizationKey), systemImage: Tab.home.icon)
+                        }
+                        .tag(Tab.home)
+
+                    ShiftsView(selectedTab: $selectedTab)
+                        .tabItem {
+                            Label(localization.string(Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
+                        }
+                        .tag(Tab.shifts)
+
+                    AddShiftView(selectedTab: $selectedTab, isKeyboardVisible: $isKeyboardVisible)
+                        .tabItem {
+                            Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
+                        }
+                        .tag(Tab.add)
+
+                    StatsView(selectedTab: $selectedTab)
+                        .tabItem {
+                            Label(localization.string(Tab.stats.localizationKey), systemImage: Tab.stats.icon)
+                        }
+                        .tag(Tab.stats)
+
+                    SharingView(selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
+                        .tabItem {
+                            Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
+                        }
+                        .tag(Tab.sharing)
+                }
+                .tint(.tidexBlue)
+
+                // Shared month picker overlay - floats above tab bar
+                if shouldShowMonthPicker {
+                    sharedMonthPickerOverlay
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedTab)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: shouldShowMonthPicker)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showListView)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedTab)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: shouldShowMonthPicker)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showListView)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: impersonationManager.isImpersonating)
         .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
             handlePendingDeepLink(deepLink)
         }
