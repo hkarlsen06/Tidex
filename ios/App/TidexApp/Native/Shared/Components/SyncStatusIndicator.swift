@@ -36,7 +36,7 @@ struct SyncStatusIndicator: View {
                     .foregroundColor(.tidexWarning)
 
                 if let lastSync = lastSync {
-                    Text(localization.string("sync.lastSynced", formatRelativeTime(lastSync)))
+                    Text(localization.string("sync.failedWithLastSync", formatRelativeTime(lastSync)))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
                 } else {

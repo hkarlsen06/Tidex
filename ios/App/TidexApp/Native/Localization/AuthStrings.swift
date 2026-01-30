@@ -989,9 +989,10 @@ enum AuthStrings {
         // Sync Status
         "sync.syncing": "Synkroniserer...",
         "sync.syncFailed": "Synkronisering feilet",
+        "sync.failedWithLastSync": "Synk feilet · Sist: %@",
         "sync.lastSynced": "Synkronisert %@",
         "sync.offline": "Frakoblet",
-        "sync.justNow": "n\u{00E5} nettopp",
+        "sync.justNow": "nå nettopp",
         "sync.minutesAgo": "%d min siden",
         "sync.hoursAgo": "%d t siden",
 
@@ -2059,6 +2060,7 @@ enum AuthStrings {
         // Sync Status
         "sync.syncing": "Syncing...",
         "sync.syncFailed": "Sync failed",
+        "sync.failedWithLastSync": "Sync failed · Last: %@",
         "sync.lastSynced": "Synced %@",
         "sync.offline": "Offline",
         "sync.justNow": "just now",
