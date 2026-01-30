@@ -232,14 +232,14 @@ final class ShiftReminderScheduler {
     ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
 
-        // Calculate hours until shift (using CEIL like server)
-        let hours = Int(ceil(Double(minutesBefore) / 60.0))
+        // Format the time remaining for the title
+        let timeText = formatTimeRemaining(minutes: minutesBefore, locale: locale)
 
-        // Title: "X timer til neste vakt" / "X hours until next shift"
+        // Title: "{time} til neste vakt" / "{time} until next shift"
         if locale == "no" {
-            content.title = hours == 1 ? "1 time til neste vakt" : "\(hours) timer til neste vakt"
+            content.title = "\(timeText) til neste vakt"
         } else {
-            content.title = hours == 1 ? "1 hour until next shift" : "\(hours) hours until next shift"
+            content.title = "\(timeText) until next shift"
         }
 
         // Body: "I dag/I morgen kl. {start}-{end}" / "Today/Tomorrow at {start}-{end}"
@@ -297,6 +297,48 @@ final class ShiftReminderScheduler {
         // Capitalize first letter
         text = text.prefix(1).uppercased() + text.dropFirst()
         return text
+    }
+
+    /// Format time remaining for notification title
+    /// Handles minutes, hours, days, and mixed values
+    private func formatTimeRemaining(minutes: Int, locale: String) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+
+        let isNorwegian = locale == "no"
+
+        // Handle special day cases
+        if minutes == 1440 { // 24 hours
+            return isNorwegian ? "1 dag" : "1 day"
+        }
+        if minutes == 2880 { // 48 hours
+            return isNorwegian ? "2 dager" : "2 days"
+        }
+
+        // Minutes only (less than 1 hour)
+        if hours == 0 {
+            if isNorwegian {
+                return mins == 1 ? "1 minutt" : "\(mins) minutter"
+            } else {
+                return mins == 1 ? "1 minute" : "\(mins) minutes"
+            }
+        }
+
+        // Hours only (no remaining minutes)
+        if mins == 0 {
+            if isNorwegian {
+                return hours == 1 ? "1 time" : "\(hours) timer"
+            } else {
+                return hours == 1 ? "1 hour" : "\(hours) hours"
+            }
+        }
+
+        // Mixed hours and minutes
+        if isNorwegian {
+            return "\(hours) t \(mins) min"
+        } else {
+            return "\(hours) h \(mins) min"
+        }
     }
 
     /// Parse shift start date from StoredShift

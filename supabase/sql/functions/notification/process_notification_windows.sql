@@ -70,10 +70,11 @@ BEGIN
       FROM jsonb_each(v_window.shift_operations);
 
       -- Build changes array for app highlighting
+      -- Note: key is now DATE, value contains {op, shift_id}
       SELECT jsonb_agg(
         jsonb_build_object(
-          'shift_id', key,
-          'date', value->>'date',
+          'shift_id', value->>'shift_id',
+          'date', key,
           'op', value->>'op'
         )
       )
@@ -118,8 +119,12 @@ BEGIN
       ss.viewer_id,
       'shared_shift_changes',
       v_window_end,
-      -- Title is owner name (same in both languages)
-      v_owner_name,
+      -- Title: "{name} - Last 15 minutes:" / "{name} - Siste 15 minutter:"
+      v_owner_name || CASE
+        WHEN COALESCE(u.raw_user_meta_data->>'locale', 'en') IN ('no', 'nb', 'nn')
+        THEN ' - Siste 15 minutter:'
+        ELSE ' - Last 15 minutes:'
+      END,
       -- Body is localized based on recipient's locale
       internal.build_batched_body(
         v_added_count,

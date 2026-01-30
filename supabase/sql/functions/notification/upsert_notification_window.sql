@@ -6,7 +6,8 @@
 -- This function aggregates non-today shift mutations into time windows for batched delivery.
 -- Windows are clock-aligned (:00, :15, :30, :45) and processed when they end.
 --
--- Net-effect state machine (when shift_id is provided):
+-- Net-effect state machine (keyed by DATE, not shift_id):
+-- If multiple operations happen on the same date, they're aggregated:
 -- | Current | + Operation | = Result |
 -- |---------|-------------|----------|
 -- | (none)  | added       | added    |
@@ -16,7 +17,7 @@
 -- | added   | deleted     | null     | (cancels out)
 -- | updated | updated     | updated  | (deduplicated)
 -- | updated | deleted     | deleted  |
--- | deleted | added       | updated  | (re-created)
+-- | deleted | added       | updated  | (re-created, e.g., delete old shift + add new shift)
 --
 -- Parameters:
 --   p_owner_id: UUID of the shift owner
@@ -85,19 +86,20 @@ BEGIN
   END IF;
 
   -- With shift_id: use state machine for net-effect tracking
-  v_shift_key := p_shift_id::text;
+  -- KEY BY DATE (not shift_id) so delete+add on same date = updated
+  v_shift_key := p_shift_date::text;
 
-  -- Get existing operation for this shift (if any)
+  -- Get existing operation for this DATE (if any)
   SELECT shift_operations->>v_shift_key INTO v_existing_op
   FROM notification_time_windows
   WHERE owner_id = p_owner_id AND window_start = p_window_start;
 
   -- Apply state machine to determine net operation
   IF v_existing_op IS NULL THEN
-    -- No existing row or no operation for this shift
+    -- No existing row or no operation for this date
     v_new_op := p_event_type;
   ELSE
-    -- Parse existing op (stored as JSON object with "op" key)
+    -- Parse existing op (stored as JSON object with "op" and "shift_id" keys)
     SELECT (shift_operations->v_shift_key->>'op') INTO v_existing_op
     FROM notification_time_windows
     WHERE owner_id = p_owner_id AND window_start = p_window_start;
@@ -130,7 +132,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- Upsert the window with new shift operation
+  -- Upsert the window with new shift operation (keyed by date)
   INSERT INTO notification_time_windows (
     owner_id, window_start,
     added_count, updated_count, deleted_count,
@@ -142,18 +144,18 @@ BEGIN
     ARRAY[p_shift_date],
     CASE
       WHEN v_new_op IS NULL THEN '{}'::jsonb
-      ELSE jsonb_build_object(v_shift_key, jsonb_build_object('op', v_new_op, 'date', p_shift_date::text))
+      ELSE jsonb_build_object(v_shift_key, jsonb_build_object('op', v_new_op, 'shift_id', p_shift_id::text))
     END
   )
   ON CONFLICT (owner_id, window_start) DO UPDATE SET
     shift_operations = CASE
       WHEN v_new_op IS NULL THEN
-        -- Remove this shift from operations (it cancelled out)
+        -- Remove this date from operations (it cancelled out)
         notification_time_windows.shift_operations - v_shift_key
       ELSE
-        -- Add or update this shift's operation
+        -- Add or update this date's operation (keeps latest shift_id for highlighting)
         notification_time_windows.shift_operations ||
-          jsonb_build_object(v_shift_key, jsonb_build_object('op', v_new_op, 'date', p_shift_date::text))
+          jsonb_build_object(v_shift_key, jsonb_build_object('op', v_new_op, 'shift_id', p_shift_id::text))
     END,
     affected_dates = CASE
       WHEN array_length(notification_time_windows.affected_dates, 1) >= 31 THEN
