@@ -270,6 +270,10 @@ final class AppCoordinator: ObservableObject {
                 self.appState = .authenticated
                 await updateUserProfile()
 
+                // Validate impersonation session if one was restored from Keychain
+                // This ensures stale/expired sessions are cleaned up on app launch
+                await ImpersonationManager.shared.validateSessionOnLaunch()
+
                 // Check in background if API has a newer terms version
                 // This handles the case where terms were updated but we're using stale cache
                 self.checkTermsVersionInBackground(termsAcceptedAt: termsAcceptedAt)
@@ -282,6 +286,9 @@ final class AppCoordinator: ObservableObject {
             self.initialSyncComplete = false
             self.appState = .authenticated
             await updateUserProfile()
+
+            // Validate impersonation session if one was restored from Keychain
+            await ImpersonationManager.shared.validateSessionOnLaunch()
         }
     }
 
@@ -509,10 +516,34 @@ final class AppCoordinator: ObservableObject {
     /// Internal sign out implementation
     /// - Parameter global: If true, signs out from all devices; if false, only this device
     private func performSignOut(global: Bool) async {
+        // Clear all cached data
+        await clearAllCachedData()
+
+        do {
+            if global {
+                try await authService.signOutGlobal()
+            } else {
+                try await authService.signOut()
+            }
+            // Auth state listener will update appState to .unauthenticated
+        } catch {
+            // Force state change even if sign out fails
+            appState = .unauthenticated
+        }
+
+        userId = nil
+        // Clear user profile data to prevent stale data showing for next user
+        userDisplayName = ""
+        userAvatarUrl = nil
+    }
+
+    /// Clear all cached data without signing out
+    /// Used during sign out and when switching user context (impersonation)
+    private func clearAllCachedData() async {
         // Cancel all tracked background tasks to prevent stale state updates
         cancelAllBackgroundTasks()
 
-        // Clear widget storage before sign out
+        // Clear widget storage
         NativeWidgetStorage.clearWidgetStorage()
         NativeWidgetStorage.clearFriendWidgetStorage()
 
@@ -533,23 +564,7 @@ final class AppCoordinator: ObservableObject {
         // This clears the interval guard so the next user's initial sync isn't blocked
         syncCoordinator.resetForUserChange()
 
-        do {
-            if global {
-                try await authService.signOutGlobal()
-            } else {
-                try await authService.signOut()
-            }
-            // Auth state listener will update appState to .unauthenticated
-        } catch {
-            // Force state change even if sign out fails
-            appState = .unauthenticated
-        }
-
         initialSyncComplete = false
-        userId = nil
-        // Clear user profile data to prevent stale data showing for next user
-        userDisplayName = ""
-        userAvatarUrl = nil
     }
 
     /// Force a session check (useful for debugging or manual refresh)
@@ -626,5 +641,79 @@ final class AppCoordinator: ObservableObject {
     /// Clear the pending deep link after it has been consumed
     func clearPendingDeepLink() {
         pendingDeepLink = nil
+    }
+
+    // MARK: - Impersonation Support
+
+    /// Prepare for user context switch (before setting new session)
+    /// Clears all cached data without signing out
+    /// Called by ImpersonationManager BEFORE setting the impersonated user's session
+    func prepareForUserSwitch() async {
+        await clearAllCachedData()
+    }
+
+    /// Complete user context switch (after setting new session)
+    /// Reloads user profile and waits for sync to complete
+    /// Called by ImpersonationManager AFTER setting the new session
+    func completeUserSwitch() async {
+        do {
+            // Use AuthSessionManager to prevent concurrent refresh race conditions
+            let session = try await AuthSessionManager.shared.getSession()
+            let user = session.user
+            let currentUserId = user.normalizedId
+
+            // Store user ID
+            self.userId = currentUserId
+
+            // Load onboarding state
+            loadOnboardingStateFromUser(user)
+
+            // Extract display name
+            if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
+                userDisplayName = fullName
+            } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
+                userDisplayName = name
+            } else if let email = user.email {
+                userDisplayName = email.components(separatedBy: "@").first ?? email
+            } else if let phone = user.phone {
+                userDisplayName = phone
+            } else {
+                userDisplayName = "User"
+            }
+
+            // Configure StoreKit and load entitlements
+            await configureStoreKitAndEntitlements(userId: currentUserId)
+
+            // Request notification permission
+            await NotificationService.shared.requestPermissionAndRegister()
+
+            // Load cached avatar
+            if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
+                userAvatarUrl = settings.profile_picture_url
+                AppearanceManager.shared.loadFromSettings(settings.theme)
+            }
+
+            // Register APNs token if available
+            if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+                await appDelegate.registerCachedAPNsTokenIfNeeded()
+            }
+
+            // Run sync and WAIT for it to complete (unlike normal flow which runs in background)
+            initialSyncComplete = false
+            _ = await syncCoordinator.sync(reason: .appLaunch, userId: currentUserId)
+            initialSyncComplete = true
+
+            // Update avatar from synced settings
+            if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
+                userAvatarUrl = settings.profile_picture_url
+                AppearanceManager.shared.loadFromSettings(settings.theme)
+            }
+
+            // Update Apple Watch
+            WatchConnectivityManager.shared.sendUpdatedData(userId: currentUserId)
+
+        } catch {
+            userDisplayName = "User"
+        }
     }
 }

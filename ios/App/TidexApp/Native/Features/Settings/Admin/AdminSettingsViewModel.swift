@@ -16,6 +16,7 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case auditLog
     case sql
     case shares
+    case impersonation
 
     var id: String { rawValue }
 
@@ -27,6 +28,7 @@ enum AdminTab: String, CaseIterable, Identifiable {
         case .auditLog: return "Audit Log"
         case .sql: return "SQL"
         case .shares: return "Shares"
+        case .impersonation: return "Impersonate"
         }
     }
 
@@ -38,6 +40,7 @@ enum AdminTab: String, CaseIterable, Identifiable {
         case .auditLog: return "list.bullet.clipboard"
         case .sql: return "terminal"
         case .shares: return "square.and.arrow.up"
+        case .impersonation: return "person.crop.circle.badge.exclamationmark"
         }
     }
 }
@@ -310,6 +313,16 @@ struct NotificationsTabState {
     var isSearchingUsers: Bool = false
 }
 
+/// Groups related impersonation tab state
+struct ImpersonationTabState {
+    var userSearch: String = ""
+    var userSearchResults: [AdminUserItem] = []
+    var selectedUser: AdminUserItem?
+    var isSearching: Bool = false
+    var reason: String = ""
+    var isStarting: Bool = false
+}
+
 // MARK: - View Model
 
 /// AdminSettingsViewModel uses grouped state structs to reduce re-renders.
@@ -324,6 +337,7 @@ final class AdminSettingsViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var successMessage: String?
     @Published var isPerformingAction: Bool = false
+    @Published var shouldDismissAfterImpersonation: Bool = false
 
     // MARK: - Grouped Tab States
 
@@ -333,6 +347,7 @@ final class AdminSettingsViewModel: ObservableObject {
     @Published var sqlState = SqlTabState()
     @Published var sharesState = SharesTabState()
     @Published var notificationsState = NotificationsTabState()
+    @Published var impersonationState = ImpersonationTabState()
 
     // MARK: - Legacy Computed Properties (for backwards compatibility with View)
 
@@ -548,6 +563,32 @@ final class AdminSettingsViewModel: ObservableObject {
         set { notificationsState.isSearchingUsers = newValue }
     }
 
+    // Impersonation
+    var impersonationUserSearch: String {
+        get { impersonationState.userSearch }
+        set { impersonationState.userSearch = newValue }
+    }
+    var impersonationUserSearchResults: [AdminUserItem] {
+        get { impersonationState.userSearchResults }
+        set { impersonationState.userSearchResults = newValue }
+    }
+    var impersonationSelectedUser: AdminUserItem? {
+        get { impersonationState.selectedUser }
+        set { impersonationState.selectedUser = newValue }
+    }
+    var isSearchingImpersonationUsers: Bool {
+        get { impersonationState.isSearching }
+        set { impersonationState.isSearching = newValue }
+    }
+    var impersonationReason: String {
+        get { impersonationState.reason }
+        set { impersonationState.reason = newValue }
+    }
+    var isStartingImpersonation: Bool {
+        get { impersonationState.isStarting }
+        set { impersonationState.isStarting = newValue }
+    }
+
     // MARK: - Private Properties
 
     /// Shared URLSession from factory (long-running timeout for admin operations)
@@ -582,6 +623,8 @@ final class AdminSettingsViewModel: ObservableObject {
             await fetchShares()
         case .notifications:
             await fetchBroadcastHistory()
+        case .impersonation:
+            break // No initial load needed - state is managed by ImpersonationManager
         }
     }
 
@@ -1097,6 +1140,79 @@ final class AdminSettingsViewModel: ObservableObject {
         }
 
         isSendingNotification = false
+    }
+
+    // MARK: - Impersonation Tab Methods
+
+    func searchImpersonationUsers() {
+        let query = impersonationUserSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 2 else {
+            impersonationUserSearchResults = []
+            return
+        }
+
+        Task {
+            isSearchingImpersonationUsers = true
+            do {
+                let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+                var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+                components.queryItems = [
+                    URLQueryItem(name: "search", value: query),
+                    URLQueryItem(name: "perPage", value: "10")
+                ]
+
+                let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+                impersonationUserSearchResults = result.users
+            } catch {
+                impersonationUserSearchResults = []
+            }
+            isSearchingImpersonationUsers = false
+        }
+    }
+
+    func selectImpersonationUser(_ user: AdminUserItem) {
+        impersonationSelectedUser = user
+        impersonationUserSearch = ""
+        impersonationUserSearchResults = []
+    }
+
+    func clearImpersonationUser() {
+        impersonationSelectedUser = nil
+        impersonationUserSearch = ""
+        impersonationUserSearchResults = []
+    }
+
+    func startImpersonation() async {
+        guard let targetUser = impersonationSelectedUser else {
+            errorMessage = "Please select a user to impersonate"
+            return
+        }
+
+        let reason = impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard reason.count >= 5 else {
+            errorMessage = "Reason must be at least 5 characters"
+            return
+        }
+
+        isStartingImpersonation = true
+        clearMessages()
+
+        do {
+            _ = try await ImpersonationManager.shared.startImpersonation(
+                targetUserId: targetUser.id,
+                reason: reason
+            )
+            successMessage = "Now impersonating \(targetUser.displayName)"
+            // Clear form
+            clearImpersonationUser()
+            impersonationReason = ""
+            // Signal that the admin view should dismiss
+            shouldDismissAfterImpersonation = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isStartingImpersonation = false
     }
 
     // MARK: - Network Helper
