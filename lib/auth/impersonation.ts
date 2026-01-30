@@ -287,6 +287,31 @@ export async function endImpersonationSession(
 }
 
 /**
+ * Store the encrypted admin refresh token for a session.
+ * Called by the Next.js route after the Edge Function creates the session.
+ * This keeps the admin refresh token server-side (never sent to Edge Function).
+ */
+export async function storeAdminRefreshToken(
+  sessionId: string,
+  adminRefreshToken: string
+): Promise<void> {
+  const supabase = createSupabaseServiceClient();
+
+  const encryptedToken = encryptAndSerialize(adminRefreshToken);
+
+  const { error } = await supabase
+    .schema("internal").from("impersonation_sessions")
+    .update({
+      admin_refresh_token_enc: encryptedToken,
+    })
+    .eq("id", sessionId);
+
+  if (error) {
+    throw new Error(`Failed to store admin refresh token: ${error.message}`);
+  }
+}
+
+/**
  * Get the active impersonation session for an admin.
  * Returns any session that hasn't been formally ended (ended_at IS NULL),
  * regardless of expiration status. This ensures we can clean up expired

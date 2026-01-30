@@ -49,8 +49,7 @@ The impersonation system provides a platform-agnostic backend primitive via Supa
 ```json
 {
   "targetUserId": "uuid",
-  "reason": "string (min 5 chars)",
-  "adminRefreshToken": "string (optional, for web session storage)"
+  "reason": "string (min 5 chars)"
 }
 ```
 
@@ -400,7 +399,9 @@ These routes handle:
 - Tracked in `internal.impersonation_rate_limits` table
 
 ### Session Security
-- Admin refresh token encrypted with AES-256-GCM before storage (web only)
+- Admin refresh token stored server-side by Next.js API (never sent to Edge Function)
+- Token encrypted with AES-256-GCM before database storage (web only)
+- iOS clients store admin session locally in Keychain (no server-side token storage)
 - Context cookie signed with HMAC-SHA256, HttpOnly
 - Sessions expire after 30 minutes (max 60 minutes)
 - Single active session per admin (unique constraint)
@@ -432,7 +433,7 @@ While impersonating, these actions are blocked:
 | ended_by_admin_user_id | uuid | Who ended it |
 | admin_ip | text | Admin's IP address |
 | admin_user_agent | text | Admin's browser/device |
-| admin_refresh_token_enc | text | Encrypted admin refresh token |
+| admin_refresh_token_enc | text | Encrypted admin refresh token (NULL for iOS) |
 
 ### `internal.impersonation_audit_log`
 | Column | Type | Description |

@@ -67,7 +67,17 @@ export async function POST(request: NextRequest) {
 
     const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-    // 3. Call the Edge Function to end the session and get admin refresh token
+    // 3. Verify we have a valid session token
+    if (!currentSession?.access_token) {
+      console.error("[Impersonation Stop] No valid session token available");
+      clearImpersonationCookie(response, request);
+      return NextResponse.json(
+        { ok: false, error: "No valid session. Please log in again.", redirectHint: "/login" },
+        { status: 401 }
+      );
+    }
+
+    // 4. Call the Edge Function to end the session and get admin refresh token
     const edgeFunctionUrl = `${ENV.URL}/functions/v1/impersonation/stop`;
 
     const edgeResponse = await fetch(edgeFunctionUrl, {
@@ -75,7 +85,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         // Use the impersonated user's token - Edge Function allows target user to end session
-        Authorization: `Bearer ${currentSession?.access_token || ""}`,
+        Authorization: `Bearer ${currentSession.access_token}`,
         "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
         "x-real-ip": request.headers.get("x-real-ip") || "",
         "user-agent": request.headers.get("user-agent") || "",
@@ -85,9 +95,29 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    const edgeResult: EdgeFunctionStopResponse = await edgeResponse.json();
+    // 5. Parse Edge Function response with error handling for non-JSON responses
+    let edgeResult: EdgeFunctionStopResponse;
+    try {
+      const contentType = edgeResponse.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        console.error("[Impersonation Stop] Edge Function returned non-JSON response:", contentType);
+        clearImpersonationCookie(response, request);
+        return NextResponse.json(
+          { ok: false, error: "Edge Function returned an invalid response", redirectHint: "/login" },
+          { status: 502 }
+        );
+      }
+      edgeResult = await edgeResponse.json();
+    } catch (parseError) {
+      console.error("[Impersonation Stop] Failed to parse Edge Function response:", parseError);
+      clearImpersonationCookie(response, request);
+      return NextResponse.json(
+        { ok: false, error: "Failed to parse Edge Function response", redirectHint: "/login" },
+        { status: 502 }
+      );
+    }
 
-    // 4. Handle Edge Function errors
+    // 6. Handle Edge Function errors
     if (!edgeResult.ok) {
       console.error("[Impersonation Stop] Edge Function error:", edgeResult.error);
       clearImpersonationCookie(response, request);
@@ -97,7 +127,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Restore admin session using the decrypted refresh token
+    // 7. Restore admin session using the decrypted refresh token
     if (!edgeResult.admin_refresh_token) {
       console.error("[Impersonation Stop] No admin refresh token returned");
       clearImpersonationCookie(response, request);
@@ -139,10 +169,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Clear impersonation context cookie
+    // 8. Clear impersonation context cookie
     clearImpersonationCookie(response, request);
 
-    // 7. Invalidate caches for both admin and target user
+    // 9. Invalidate caches for both admin and target user
     invalidateUserCache(context.adminUserId);
     invalidateUserCache(context.targetUserId);
 

@@ -43,6 +43,10 @@ import {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+// Site URL for redirects (the actual app URL, not Supabase project URL)
+// Falls back to a placeholder since redirectTo is not actually used for impersonation
+const SITE_URL = Deno.env.get("SITE_URL") ?? "https://tidex.app";
+
 // Encryption keys (same as Next.js, must be synced)
 const IMPERSONATION_ENC_KEY = Deno.env.get("IMPERSONATION_ENC_KEY") ?? "";
 const IMPERSONATION_SIGNING_KEY = Deno.env.get("IMPERSONATION_SIGNING_KEY") ?? "";
@@ -214,15 +218,17 @@ async function getActiveSessionForAdmin(adminUserId: string): Promise<Impersonat
   return data;
 }
 
-async function endImpersonationSession(sessionId: string, endedByAdminUserId: string): Promise<void> {
+async function endImpersonationSession(sessionId: string, endedByUserId: string): Promise<void> {
   if (!supabaseAdmin) return;
 
+  // Note: The column is named ended_by_admin_user_id but we store the actual caller's ID
+  // This could be the admin OR the impersonated user (target) who ended the session
   const { error } = await supabaseAdmin
     .schema("internal")
     .from("impersonation_sessions")
     .update({
       ended_at: new Date().toISOString(),
-      ended_by_admin_user_id: endedByAdminUserId,
+      ended_by_admin_user_id: endedByUserId,
     })
     .eq("id", sessionId)
     .is("ended_at", null);
@@ -236,7 +242,7 @@ async function createImpersonationSession(params: {
   adminUserId: string;
   targetUserId: string;
   reason: string;
-  adminRefreshToken: string;
+  adminRefreshToken?: string;
   adminIp: string | null;
   adminUserAgent: string | null;
   durationMs?: number;
@@ -252,8 +258,11 @@ async function createImpersonationSession(params: {
   );
   const expiresAt = new Date(now.getTime() + durationMs);
 
-  // Encrypt the admin refresh token
-  const encryptedToken = encryptAndSerialize(params.adminRefreshToken);
+  // Only encrypt and store admin refresh token if provided (web flow)
+  // iOS flow doesn't send this - they store admin session locally in Keychain
+  const encryptedToken = params.adminRefreshToken && params.adminRefreshToken.length > 0
+    ? encryptAndSerialize(params.adminRefreshToken)
+    : null;
 
   const { data, error } = await supabaseAdmin
     .schema("internal")
@@ -391,14 +400,17 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   // 4. Parse and validate request body
-  let body: { targetUserId: string; reason: string; adminRefreshToken?: string };
+  // Note: adminRefreshToken is NOT accepted here for security reasons.
+  // The Next.js wrapper stores it server-side after this call returns.
+  // iOS clients store admin session locally in Keychain.
+  let body: { targetUserId: string; reason: string };
   try {
     body = await req.json();
   } catch {
     return json({ ok: false, error: "Invalid JSON body" }, 400);
   }
 
-  const { targetUserId, reason, adminRefreshToken } = body;
+  const { targetUserId, reason } = body;
 
   if (!targetUserId || typeof targetUserId !== "string") {
     return json({ ok: false, error: "targetUserId is required" }, 400);
@@ -443,13 +455,21 @@ async function handleStart(req: Request): Promise<Response> {
     return json({ ok: false, error: "Cannot impersonate admin users" }, 403);
   }
 
-  // 9. Mint a session for the target user using Admin API
+  // 9. Verify target user has an email (required for generateLink)
+  if (!targetValidation.email) {
+    await recordAttempt(caller.id, false);
+    return json({ ok: false, error: "Target user does not have an email address" }, 400);
+  }
+
+  // 10. Mint a session for the target user using Admin API
   // Generate a magic link (server-side only, email not sent)
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: "magiclink",
-    email: targetValidation.email!,
+    email: targetValidation.email,
     options: {
-      redirectTo: `${SUPABASE_URL}/dashboard`, // Not used, just required
+      // Use the actual site URL, not the Supabase project URL
+      // This must be in the allowed redirect URLs in Supabase Auth settings
+      redirectTo: `${SITE_URL}/dashboard`,
     },
   });
 
@@ -471,23 +491,21 @@ async function handleStart(req: Request): Promise<Response> {
     return json({ ok: false, error: "Failed to create impersonation session" }, 500);
   }
 
-  // 10. Create impersonation session record in database
+  // 11. Create impersonation session record in database
   const adminIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     null;
   const adminUserAgent = req.headers.get("user-agent") || null;
 
-  // Note: adminRefreshToken is optional - iOS won't send it (stores locally in Keychain)
-  // Web will send it for server-side storage
-  const adminRefreshTokenToStore = adminRefreshToken || "";
-
+  // Note: adminRefreshToken is NOT stored here - the Next.js wrapper stores it
+  // server-side after this call returns. iOS stores admin session in Keychain.
   let dbSession: { id: string; expiresAt: Date };
   try {
     dbSession = await createImpersonationSession({
       adminUserId: caller.id,
       targetUserId,
       reason: reason.trim(),
-      adminRefreshToken: adminRefreshTokenToStore,
+      // adminRefreshToken intentionally omitted - stored by Next.js wrapper
       adminIp,
       adminUserAgent,
     });
@@ -501,7 +519,7 @@ async function handleStart(req: Request): Promise<Response> {
     return json({ ok: false, error: errorMessage }, 500);
   }
 
-  // 11. Insert audit log
+  // 12. Insert audit log
   await insertAuditLog({
     sessionId: dbSession.id,
     adminUserId: caller.id,
@@ -517,7 +535,7 @@ async function handleStart(req: Request): Promise<Response> {
     },
   });
 
-  // 12. Record successful attempt
+  // 13. Record successful attempt
   await recordAttempt(caller.id, true);
 
   console.log("[impersonation] Started:", {
@@ -527,7 +545,7 @@ async function handleStart(req: Request): Promise<Response> {
     expiresAt: dbSession.expiresAt.toISOString(),
   });
 
-  // 13. Return tokens in iOS-compatible format
+  // 14. Return tokens in iOS-compatible format
   return json({
     ok: true,
     impersonated: {
@@ -601,8 +619,8 @@ async function handleStop(req: Request): Promise<Response> {
     return json({ ok: false, error: "Session already ended" }, 400);
   }
 
-  // 6. End the session
-  await endImpersonationSession(sessionId, dbSession.admin_user_id);
+  // 6. End the session - record the actual caller who ended it (admin or target user)
+  await endImpersonationSession(sessionId, caller.id);
 
   // 7. Insert audit log
   const adminIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||

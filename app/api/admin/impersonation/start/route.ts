@@ -24,6 +24,7 @@ import {
   setImpersonationCookie,
   readImpersonationContextFromRequest,
   getImpersonationSession,
+  storeAdminRefreshToken,
 } from "@/lib/auth/impersonation";
 import { ENV } from "@/lib/env";
 import { invalidateUserCache } from "@/data-access/cache";
@@ -134,14 +135,32 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         targetUserId,
         reason,
-        // Send admin refresh token for server-side storage (web flow)
-        adminRefreshToken: adminSession.refresh_token,
+        // Note: adminRefreshToken is NOT sent to Edge Function for security
+        // We store it server-side below after the session is created
       }),
     });
 
-    const edgeResult: EdgeFunctionResponse = await edgeResponse.json();
+    // 5. Parse Edge Function response with error handling for non-JSON responses
+    let edgeResult: EdgeFunctionResponse;
+    try {
+      const contentType = edgeResponse.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        console.error("[Impersonation] Edge Function returned non-JSON response:", contentType);
+        return NextResponse.json(
+          { ok: false, error: "Edge Function returned an invalid response" },
+          { status: 502 }
+        );
+      }
+      edgeResult = await edgeResponse.json();
+    } catch (parseError) {
+      console.error("[Impersonation] Failed to parse Edge Function response:", parseError);
+      return NextResponse.json(
+        { ok: false, error: "Failed to parse Edge Function response" },
+        { status: 502 }
+      );
+    }
 
-    // 5. Handle Edge Function errors
+    // 6. Handle Edge Function errors
     if (!edgeResult.ok || !edgeResult.impersonated || !edgeResult.session) {
       return NextResponse.json(
         { ok: false, error: edgeResult.error || "Failed to start impersonation" },
@@ -149,7 +168,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Set the target user's session in the browser cookies
+    // 6a. Store admin refresh token server-side (encrypted in DB)
+    // This keeps the token within the Next.js server boundary
+    try {
+      await storeAdminRefreshToken(edgeResult.session.id, adminSession.refresh_token);
+    } catch (storeError) {
+      console.error("[Impersonation] Failed to store admin refresh token:", storeError);
+      // This is a critical error - we can't restore the admin session later
+      return NextResponse.json(
+        { ok: false, error: "Failed to store admin session for restoration" },
+        { status: 500 }
+      );
+    }
+
+    // 7. Set the target user's session in the browser cookies
     const targetSupabase = createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
       cookies: {
         getAll() {
@@ -176,7 +208,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Set the impersonation context cookie
+    // 8. Set the impersonation context cookie
     setImpersonationCookie(response, {
       impersonationSessionId: edgeResult.session.id,
       adminUserId: edgeResult.session.admin_user_id,
@@ -184,7 +216,7 @@ export async function POST(request: NextRequest) {
       expiresAt: new Date(edgeResult.session.expires_at),
     }, request);
 
-    // 8. Invalidate caches for both admin and target user
+    // 9. Invalidate caches for both admin and target user
     invalidateUserCache(edgeResult.session.admin_user_id);
     invalidateUserCache(edgeResult.session.target_user_id);
 
