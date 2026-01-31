@@ -96,7 +96,8 @@ $$;
 -- ============================================================================
 -- Build localized title for a single shift event
 -- ============================================================================
--- Returns: "{ownerName} added a shift" / "{ownerName} la til en vakt"
+-- Returns: "{firstName} added a shift" / "{firstName} la til en vakt"
+-- Note: Uses only the first word of the name for brevity in notifications
 
 CREATE OR REPLACE FUNCTION internal.build_shift_title(
   p_owner_name TEXT,
@@ -109,12 +110,15 @@ IMMUTABLE
 AS $$
 DECLARE
   v_is_norwegian BOOLEAN;
+  v_first_name TEXT;
 BEGIN
   v_is_norwegian := p_locale IN ('no', 'nb', 'nn');
+  -- Use only the first word of the name for brevity
+  v_first_name := split_part(p_owner_name, ' ', 1);
 
   IF v_is_norwegian THEN
     -- Norwegian
-    RETURN p_owner_name || CASE p_event_type
+    RETURN v_first_name || CASE p_event_type
       WHEN 'added' THEN ' la til en vakt'
       WHEN 'updated' THEN ' endret en vakt'
       WHEN 'deleted' THEN ' slettet en vakt'
@@ -122,7 +126,7 @@ BEGIN
     END;
   ELSE
     -- English (default)
-    RETURN p_owner_name || CASE p_event_type
+    RETURN v_first_name || CASE p_event_type
       WHEN 'added' THEN ' added a shift'
       WHEN 'updated' THEN ' updated a shift'
       WHEN 'deleted' THEN ' deleted a shift'

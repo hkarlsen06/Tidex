@@ -119,8 +119,9 @@ BEGIN
       ss.viewer_id,
       'shared_shift_changes',
       v_window_end,
-      -- Title: "{name} - Last 15 minutes:" / "{name} - Siste 15 minutter:"
-      v_owner_name || CASE
+      -- Title: "{first name} - Last 15 minutes:" / "{first name} - Siste 15 minutter:"
+      -- Use only the first word of the name for brevity in notifications
+      split_part(v_owner_name, ' ', 1) || CASE
         WHEN COALESCE(u.raw_user_meta_data->>'locale', 'en') IN ('no', 'nb', 'nn')
         THEN ' - Siste 15 minutter:'
         ELSE ' - Last 15 minutes:'
