@@ -126,6 +126,7 @@ struct PayrollCard: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
+        .tidexCardShadow()
         .shimmer(isActive: isLoading)
         .onChange(of: progress) { _, newValue in
             // Animate to new progress value

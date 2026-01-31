@@ -131,6 +131,7 @@ struct FeaturedShiftCard: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 24))
+            .tidexCardShadow()
             .onChange(of: progress) { _, newValue in
                 // Animate to new progress value
                 withAnimation(.linear(duration: 1.0)) {

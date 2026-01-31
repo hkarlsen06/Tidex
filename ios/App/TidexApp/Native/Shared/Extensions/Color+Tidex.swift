@@ -34,15 +34,15 @@ extension Color {
     }
 
     /// Surface primary for cards and elevated containers
-    /// Light: HSL(220, 35%, 96%) - light gray
-    /// Dark: HSL(220, 49%, 11%) - dark navy card
+    /// Light: Pure white (#FFFFFF) - maximum contrast against blue-tinted background
+    /// Dark: #142133 - lighter navy for better card separation
     static var tidexSurfacePrimary: Color {
         Color("TidexSurfacePrimary")
     }
 
     /// Surface secondary for nested elements within cards
-    /// Light: HSL(221, 30%, 94%)
-    /// Dark: HSL(221, 39%, 14%)
+    /// Light: Very light gray (#F7F8F8) - subtle distinction from primary
+    /// Dark: #1C2A3D - lighter for better contrast
     static var tidexSurfaceSecondary: Color {
         Color("TidexSurfaceSecondary")
     }
@@ -64,7 +64,7 @@ extension Color {
     }
 
     /// Muted text color for hints, placeholders, and disabled content
-    /// Light: HSL(215, 20%, 50%)
+    /// Light: #596B80 - darker for better contrast (WCAG AA compliant)
     /// Dark: HSL(215, 20%, 70%)
     static var tidexTextMuted: Color {
         Color("TidexTextMuted")
@@ -95,15 +95,15 @@ extension Color {
     // MARK: - Border Colors
 
     /// Border color for inputs, cards, and dividers
-    /// Light: HSL(217, 28%, 88%)
-    /// Dark: HSL(220, 30%, 25%)
+    /// Light: #C7D1DB - darker for better visibility
+    /// Dark: #384761 - lighter for better visibility
     static var tidexBorder: Color {
         Color("TidexBorder")
     }
 
     /// Subtle border for light dividers
-    /// Light: HSL(217, 25%, 92%)
-    /// Dark: HSL(220, 20%, 20%)
+    /// Light: #D9E0E8 - darker for better visibility
+    /// Dark: #303D52 - lighter for better visibility
     static var tidexBorderSubtle: Color {
         Color("TidexBorderSubtle")
     }
@@ -165,17 +165,17 @@ extension Color {
     /// Dark mode background - HSL(222.2, 84%, 4.9%)
     static let tidexDarkBackgroundColor = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
 
-    /// Light mode surface primary - HSL(220, 35%, 96%)
-    static let tidexLightSurfacePrimary = Color(hue: 220 / 360, saturation: 0.35, brightness: 0.96)
+    /// Light mode surface primary - Pure white for maximum contrast against blue-tinted background
+    static let tidexLightSurfacePrimary = Color.white
 
-    /// Dark mode surface primary - HSL(220, 49%, 11%)
-    static let tidexDarkSurfacePrimary = Color(hue: 220 / 360, saturation: 0.49, brightness: 0.18)
+    /// Dark mode surface primary - Lighter for better card separation (#142133)
+    static let tidexDarkSurfacePrimary = Color(red: 0.08, green: 0.13, blue: 0.20)
 
-    /// Light mode surface secondary - HSL(221, 30%, 94%)
-    static let tidexLightSurfaceSecondary = Color(hue: 221 / 360, saturation: 0.30, brightness: 0.94)
+    /// Light mode surface secondary - Very light gray (#F7F8F8)
+    static let tidexLightSurfaceSecondary = Color(red: 0.965, green: 0.969, blue: 0.973)
 
-    /// Dark mode surface secondary - HSL(221, 39%, 14%)
-    static let tidexDarkSurfaceSecondary = Color(hue: 221 / 360, saturation: 0.40, brightness: 0.14)
+    /// Dark mode surface secondary - Lighter for better contrast (#1C2A3D)
+    static let tidexDarkSurfaceSecondary = Color(red: 0.11, green: 0.165, blue: 0.24)
 
     /// Light mode text primary - HSL(222, 84%, 8%)
     static let tidexLightTextPrimary = Color(hue: 222 / 360, saturation: 0.84, brightness: 0.08)
@@ -189,8 +189,8 @@ extension Color {
     /// Dark mode text secondary - HSL(214, 32%, 85%)
     static let tidexDarkTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
 
-    /// Light mode text muted - HSL(215, 20%, 50%)
-    static let tidexLightTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.50)
+    /// Light mode text muted - Darker for better contrast (#596B80)
+    static let tidexLightTextMuted = Color(red: 0.35, green: 0.42, blue: 0.50)
 
     /// Dark mode text muted - HSL(215, 20%, 70%)
     static let tidexDarkTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
@@ -201,15 +201,169 @@ extension Color {
     /// Dark mode brand blue - HSL(217, 91%, 65%)
     static let tidexDarkBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
 
-    /// Light mode border - HSL(217, 28%, 88%)
-    static let tidexLightBorder = Color(hue: 217 / 360, saturation: 0.28, brightness: 0.88)
+    /// Light mode border - Darker for better visibility (#C7D1DB)
+    static let tidexLightBorder = Color(red: 0.78, green: 0.82, blue: 0.86)
 
-    /// Dark mode border - HSL(220, 30%, 25%)
-    static let tidexDarkBorder = Color(hue: 220 / 360, saturation: 0.30, brightness: 0.25)
+    /// Dark mode border - Lighter for better visibility (#384761)
+    static let tidexDarkBorder = Color(red: 0.22, green: 0.28, blue: 0.38)
 
-    /// Light mode border subtle - HSL(217, 25%, 92%)
-    static let tidexLightBorderSubtle = Color(hue: 217 / 360, saturation: 0.25, brightness: 0.92)
+    /// Light mode border subtle - Darker (#D9E0E8)
+    static let tidexLightBorderSubtle = Color(red: 0.85, green: 0.88, blue: 0.91)
 
-    /// Dark mode border subtle - HSL(220, 20%, 20%)
-    static let tidexDarkBorderSubtle = Color(hue: 220 / 360, saturation: 0.20, brightness: 0.20)
+    /// Dark mode border subtle - Lighter for better visibility (#303D52)
+    static let tidexDarkBorderSubtle = Color(red: 0.19, green: 0.24, blue: 0.32)
+}
+
+// MARK: - Card Shadow Colors
+//
+// Subtle shadows for elevated card surfaces in light mode
+// iOS-native approach to add depth and visual separation
+
+extension Color {
+    /// Light mode card shadow - subtle blue-gray shadow
+    static let tidexCardShadowLight = Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.12)
+
+    /// Dark mode card shadow - deeper shadow for contrast
+    static let tidexCardShadowDark = Color.black.opacity(0.4)
+}
+
+// MARK: - Card Shadow View Modifiers
+//
+// iOS-native shadow styles for elevated surfaces
+// Automatically adapts to light/dark mode:
+// - Light mode: Subtle drop shadows for depth
+// - Dark mode: Inner glow/rim effect + subtle shadow for definition
+
+/// Shadow elevation levels for cards
+enum TidexShadowLevel {
+    /// Subtle shadow for standard cards (shift cards, settings rows)
+    case card
+    /// Medium shadow for modals and popovers
+    case elevated
+    /// Strong shadow for floating action buttons
+    case floating
+}
+
+/// View modifier that applies an adaptive card shadow with dark mode glow
+struct TidexCardShadowModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    let level: TidexShadowLevel
+
+    func body(content: Content) -> some View {
+        if colorScheme == .dark {
+            // Dark mode: Add subtle inner glow overlay + shadow
+            content
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(glowOpacity),
+                                    Color.white.opacity(glowOpacity * 0.3),
+                                    Color.clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .shadow(
+                    color: shadowColor,
+                    radius: shadowRadius,
+                    x: 0,
+                    y: shadowY
+                )
+        } else {
+            // Light mode: Just shadow
+            content
+                .shadow(
+                    color: shadowColor,
+                    radius: shadowRadius,
+                    x: 0,
+                    y: shadowY
+                )
+        }
+    }
+
+    /// Corner radius for the glow overlay (matches common card radius)
+    private var cornerRadius: CGFloat {
+        switch level {
+        case .card:
+            return 24
+        case .elevated:
+            return 20
+        case .floating:
+            return 16
+        }
+    }
+
+    /// Glow opacity for dark mode rim effect
+    private var glowOpacity: Double {
+        switch level {
+        case .card:
+            return 0.08
+        case .elevated:
+            return 0.12
+        case .floating:
+            return 0.15
+        }
+    }
+
+    private var shadowColor: Color {
+        switch colorScheme {
+        case .light:
+            switch level {
+            case .card:
+                return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.10)
+            case .elevated:
+                return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.15)
+            case .floating:
+                return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.20)
+            }
+        case .dark:
+            switch level {
+            case .card:
+                return Color.black.opacity(0.30)
+            case .elevated:
+                return Color.black.opacity(0.40)
+            case .floating:
+                return Color.black.opacity(0.50)
+            }
+        @unknown default:
+            return Color.black.opacity(0.1)
+        }
+    }
+
+    private var shadowRadius: CGFloat {
+        switch level {
+        case .card:
+            return colorScheme == .light ? 8 : 6
+        case .elevated:
+            return colorScheme == .light ? 16 : 10
+        case .floating:
+            return colorScheme == .light ? 24 : 14
+        }
+    }
+
+    private var shadowY: CGFloat {
+        switch level {
+        case .card:
+            return colorScheme == .light ? 2 : 2
+        case .elevated:
+            return colorScheme == .light ? 4 : 3
+        case .floating:
+            return colorScheme == .light ? 8 : 5
+        }
+    }
+}
+
+extension View {
+    /// Applies a subtle card shadow that adapts to light/dark mode
+    /// - Light mode: Drop shadow for depth
+    /// - Dark mode: Subtle top-edge glow + shadow for definition
+    /// Use on cards, list rows, and other elevated surfaces
+    func tidexCardShadow(_ level: TidexShadowLevel = .card) -> some View {
+        modifier(TidexCardShadowModifier(level: level))
+    }
 }

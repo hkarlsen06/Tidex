@@ -84,11 +84,8 @@ struct MonthlyEarningsCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(24)
         .background(Color.tidexSurfacePrimary)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-        )
+        .cornerRadius(24)
+        .tidexCardShadow()
     }
 
     // MARK: - Formatting

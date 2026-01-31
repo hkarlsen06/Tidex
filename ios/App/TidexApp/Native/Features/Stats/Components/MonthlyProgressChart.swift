@@ -142,11 +142,8 @@ struct MonthlyProgressChart: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(Color.tidexSurfacePrimary)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-        )
+        .cornerRadius(24)
+        .tidexCardShadow()
     }
 
     // MARK: - Helpers
@@ -203,11 +200,8 @@ struct MonthlyProgressChartEmpty: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(Color.tidexSurfacePrimary)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-        )
+        .cornerRadius(24)
+        .tidexCardShadow()
     }
 }
 
