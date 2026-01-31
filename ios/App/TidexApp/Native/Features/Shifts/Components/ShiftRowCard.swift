@@ -146,6 +146,7 @@ struct ShiftRowCard: View {
                     lineWidth: isToday ? 2 : (hasConflict ? 1 : 0)
                 )
         )
+        .tidexCardShadow()
     }
 
     // MARK: - Formatting

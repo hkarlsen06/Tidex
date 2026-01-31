@@ -142,6 +142,7 @@ struct TotalCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color.tidexSurfacePrimary)
         )
+        .tidexCardShadow()
         .shimmer(isActive: isLoading)
     }
 
