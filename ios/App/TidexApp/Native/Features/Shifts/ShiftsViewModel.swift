@@ -85,6 +85,13 @@ private struct PrefetchCacheEntry {
     }
 }
 
+/// Cached selection summary for quick header rendering.
+private struct SelectionSummary {
+    let net: Double
+    let gross: Double
+    let hasTaxEnabled: Bool
+}
+
 // MARK: - Shifts View Model
 
 @MainActor
@@ -180,7 +187,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // MARK: - Selection State
 
     /// Selected dates (ISO strings). Persists across month navigation.
-    @Published var selectedDates: Set<String> = []
+    @Published var selectedDates: Set<String> = [] {
+        didSet {
+            if oldValue != selectedDates {
+                updateSelectionSummary()
+            }
+        }
+    }
+
+    /// Cached summary for the current selection to avoid recomputing on every access.
+    @Published private var selectionSummary: SelectionSummary?
 
     /// Whether selection mode is enabled (tap/drag to select vs swipe to navigate)
     @Published var isSelectionModeEnabled: Bool = false
@@ -223,66 +239,56 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Computed earnings for selected dates (for header display)
     /// Looks across ALL cached months, not just the currently displayed month
     var selectedEarnings: (net: Double, gross: Double)? {
-        guard !selectedDates.isEmpty else { return nil }
-
-        // Collect all shifts from all cached months that match selected dates
-        // Use a Set to track seen IDs since months have overlapping date ranges
-        // (each month includes padding days from adjacent months for the calendar grid)
-        var seenIds = Set<String>()
-        var allSelectedShifts: [ShiftWithComputations] = []
-
-        for (_, cacheEntry) in monthCache {
-            let matchingShifts = cacheEntry.shifts.filter { selectedDates.contains($0.shiftDate) }
-            for shift in matchingShifts {
-                if !seenIds.contains(shift.id) {
-                    seenIds.insert(shift.id)
-                    allSelectedShifts.append(shift)
-                }
-            }
-        }
-
-        // Also check current month's shifts (may not be in cache yet)
-        let currentMonthMatches = shifts.filter { selectedDates.contains($0.shiftDate) }
-        for shift in currentMonthMatches {
-            // Avoid duplicates (shift might already be in cache)
-            if !seenIds.contains(shift.id) {
-                seenIds.insert(shift.id)
-                allSelectedShifts.append(shift)
-            }
-        }
-
-        // Filter out shifts that are excluded from totals (conflicts)
-        let includedShifts = allSelectedShifts.filter { !excludedFromTotalIds.contains($0.id) }
-        let gross = includedShifts.reduce(0) { $0 + $1.grossPay }
-        let net = includedShifts.reduce(0) { $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay) }
-
-        return (net: net, gross: gross)
+        guard let summary = selectionSummary else { return nil }
+        return (net: summary.net, gross: summary.gross)
     }
 
     /// Whether any selected shift has tax enabled (for header display)
     /// Looks across ALL cached months, not just the currently displayed month
     var selectedHasTaxEnabled: Bool {
-        guard !selectedDates.isEmpty else { return false }
-
-        // Check all cached months for tax-enabled shifts
-        for (_, cacheEntry) in monthCache {
-            if cacheEntry.shifts.contains(where: { selectedDates.contains($0.shiftDate) && $0.taxEnabled }) {
-                return true
-            }
-        }
-
-        // Also check current month's shifts
-        if shifts.contains(where: { selectedDates.contains($0.shiftDate) && $0.taxEnabled }) {
-            return true
-        }
-
-        return false
+        selectionSummary?.hasTaxEnabled ?? false
     }
 
     /// Shifts for the selected date (single selection mode)
     var selectedDateShifts: [ShiftWithComputations] {
         guard selectedDates.count == 1, let dateISO = selectedDates.first else { return [] }
         return shifts.filter { $0.shiftDate == dateISO }
+    }
+
+    /// Recompute cached selection summary for header UI.
+    private func updateSelectionSummary() {
+        guard !selectedDates.isEmpty else {
+            selectionSummary = nil
+            return
+        }
+
+        var seenIds = Set<String>()
+        var gross: Double = 0
+        var net: Double = 0
+        var hasTaxEnabled = false
+
+        func consume(_ shifts: [ShiftWithComputations]) {
+            for shift in shifts where selectedDates.contains(shift.shiftDate) {
+                if seenIds.insert(shift.id).inserted {
+                    if !excludedFromTotalIds.contains(shift.id) {
+                        gross += shift.grossPay
+                        net += shift.taxEnabled ? shift.netPay : shift.grossPay
+                    }
+                    if shift.taxEnabled {
+                        hasTaxEnabled = true
+                    }
+                }
+            }
+        }
+
+        for (_, cacheEntry) in monthCache {
+            consume(cacheEntry.shifts)
+        }
+
+        // Also check current month's shifts (may not be in cache yet)
+        consume(shifts)
+
+        selectionSummary = SelectionSummary(net: net, gross: gross, hasTaxEnabled: hasTaxEnabled)
     }
 
     // MARK: - Private State
@@ -1371,45 +1377,20 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Update conflict detection for the given shifts
     /// Sets conflictingShiftIds, excludedFromTotalIds, and conflictDates
     private func updateConflictDetection(for shifts: [ShiftWithComputations]) {
-        // Find all overlapping shifts
-        var conflicting = Set<String>()
-        var datesWithConflicts = Set<String>()
+        let analysis = ConflictExclusion.analyze(shifts: shifts)
 
-        // Group shifts by date
-        var shiftsByDate: [String: [ShiftWithComputations]] = [:]
-        for shift in shifts {
-            shiftsByDate[shift.shiftDate, default: []].append(shift)
-        }
-
-        // Check each date for overlapping shifts
-        for (dateISO, shiftsOnDate) in shiftsByDate {
-            guard shiftsOnDate.count >= 2 else { continue }
-
-            // Check all pairs for overlap
-            for i in 0..<shiftsOnDate.count {
-                for j in (i + 1)..<shiftsOnDate.count {
-                    if ConflictExclusion.shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j]) {
-                        conflicting.insert(shiftsOnDate[i].id)
-                        conflicting.insert(shiftsOnDate[j].id)
-                        datesWithConflicts.insert(dateISO)
-                    }
-                }
-            }
-        }
-
-        // Build excluded set (using existing ConflictExclusion logic)
-        let excluded = ConflictExclusion.buildExcludedShiftIds(shifts: shifts)
-
-        self.conflictingShiftIds = conflicting
-        self.excludedFromTotalIds = excluded
-        self.conflictDates = datesWithConflicts
+        self.conflictingShiftIds = analysis.conflictingIds
+        self.excludedFromTotalIds = analysis.excludedIds
+        self.conflictDates = analysis.conflictDates
 
         // Update shared context for MainTabView to show conflict indicator on list button
-        SharedMonthContext.shared.hasConflictsInMonth = !datesWithConflicts.isEmpty
+        SharedMonthContext.shared.hasConflictsInMonth = !analysis.conflictDates.isEmpty
 
-        if !conflicting.isEmpty {
-            logger.info("⚠️ Found \(conflicting.count) conflicting shifts on \(datesWithConflicts.count) dates, \(excluded.count) excluded from totals")
+        if !analysis.conflictingIds.isEmpty {
+            logger.info("⚠️ Found \(analysis.conflictingIds.count) conflicting shifts on \(analysis.conflictDates.count) dates, \(analysis.excludedIds.count) excluded from totals")
         }
+
+        updateSelectionSummary()
     }
 
     // MARK: - Prefetching

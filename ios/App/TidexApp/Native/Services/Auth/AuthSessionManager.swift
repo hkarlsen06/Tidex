@@ -96,6 +96,26 @@ final class AuthSessionManager: ObservableObject {
         }
     }
 
+    /// Get the current authenticated user ID.
+    ///
+    /// Centralizes session access to avoid refresh race conditions.
+    func getUserId() async throws -> String {
+        let session = try await getSession()
+        return session.normalizedUserId
+    }
+
+    /// Get the current authenticated user ID if available.
+    ///
+    /// Returns nil instead of throwing on auth errors.
+    func getUserIdIfAvailable() async -> String? {
+        do {
+            return try await getUserId()
+        } catch {
+            logger.debug("No user ID available: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     /// Force a token refresh, serializing with any existing refresh operation.
     ///
     /// Use this when you know the token needs refreshing (e.g., after a 401 response).

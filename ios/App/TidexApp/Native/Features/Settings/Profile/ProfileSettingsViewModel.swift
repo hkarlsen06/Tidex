@@ -481,7 +481,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
         do {
             // Get the current session for auth
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             let accessToken = session.accessToken
 
             // Call the delete account API route

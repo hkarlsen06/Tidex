@@ -116,7 +116,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
         do {
             // Get current user session
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             userId = session.normalizedUserId
             userEmail = session.user.email ?? ""
 

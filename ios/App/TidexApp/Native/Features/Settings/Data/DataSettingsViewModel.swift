@@ -144,8 +144,7 @@ final class DataSettingsViewModel: ObservableObject {
     /// Load initial state
     func loadSettings() async {
         do {
-            let session = try await supabase.auth.session
-            userId = session.normalizedUserId
+            userId = try await AuthSessionManager.shared.getUserId()
         } catch {
             logger.error("Failed to get user session: \(error.localizedDescription)")
         }
@@ -225,7 +224,7 @@ final class DataSettingsViewModel: ObservableObject {
     /// Fetch export data from the API
     private func fetchExportData(from: String, to: String) async throws -> ExportResponse {
         // Get auth token
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let accessToken = session.accessToken
 
         // Build URL

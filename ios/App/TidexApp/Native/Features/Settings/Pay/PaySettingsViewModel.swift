@@ -112,8 +112,7 @@ final class PaySettingsViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let session = try await supabase.auth.session
-            userId = session.normalizedUserId
+            userId = try await AuthSessionManager.shared.getUserId()
 
             guard let userId = userId else {
                 throw PaySettingsError.notAuthenticated

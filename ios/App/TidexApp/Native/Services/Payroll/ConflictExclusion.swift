@@ -9,17 +9,22 @@ struct ConflictExclusion {
 
     // MARK: - Public API
 
-    /// Build a set of shift IDs that should be excluded from earnings totals.
+    struct ConflictAnalysis {
+        let excludedIds: Set<String>
+        let conflictingIds: Set<String>
+        let conflictDates: Set<String>
+    }
+
+    /// Analyze shifts for conflicts and exclusions.
     ///
-    /// Algorithm:
-    /// 1. Group overlapping shifts into clusters (a cluster = all shifts that overlap with each other)
-    /// 2. For each cluster, only the shift with the lowest gross earnings is kept in totals
-    /// 3. All other shifts in the cluster are marked as excluded
-    ///
-    /// - Parameter shifts: All computed shifts
-    /// - Returns: Set of shift IDs to exclude from totals
-    static func buildExcludedShiftIds(shifts: [ShiftWithComputations]) -> Set<String> {
-        var result = Set<String>()
+    /// Returns:
+    /// - excludedIds: shifts excluded from totals
+    /// - conflictingIds: shifts that overlap with at least one other shift
+    /// - conflictDates: ISO dates that contain conflicts
+    static func analyze(shifts: [ShiftWithComputations]) -> ConflictAnalysis {
+        var excludedIds = Set<String>()
+        var conflictingIds = Set<String>()
+        var conflictDates = Set<String>()
 
         // Group shifts by date
         var shiftsByDate: [String: [ShiftWithComputations]] = [:]
@@ -29,7 +34,7 @@ struct ConflictExclusion {
         }
 
         // For each date with multiple shifts, find overlapping clusters
-        for (_, shiftsOnDate) in shiftsByDate {
+        for (date, shiftsOnDate) in shiftsByDate {
             guard shiftsOnDate.count >= 2 else { continue }
 
             // Use union-find to group overlapping shifts into clusters
@@ -69,21 +74,43 @@ struct ConflictExclusion {
                 clusters[root, default: []].append(shift)
             }
 
-            // For each cluster with 2+ shifts, exclude all but the one with lowest earnings
+            // For each cluster with 2+ shifts, mark conflicts and exclusions
             for (_, cluster) in clusters {
                 guard cluster.count >= 2 else { continue }
+
+                conflictDates.insert(date)
+                for shift in cluster {
+                    conflictingIds.insert(shift.id)
+                }
 
                 // Sort by gross earnings ascending (lowest first)
                 let sorted = cluster.sorted { $0.grossPay < $1.grossPay }
 
                 // Keep only the first (lowest earning) shift, exclude the rest
                 for i in 1..<sorted.count {
-                    result.insert(sorted[i].id)
+                    excludedIds.insert(sorted[i].id)
                 }
             }
         }
 
-        return result
+        return ConflictAnalysis(
+            excludedIds: excludedIds,
+            conflictingIds: conflictingIds,
+            conflictDates: conflictDates
+        )
+    }
+
+    /// Build a set of shift IDs that should be excluded from earnings totals.
+    ///
+    /// Algorithm:
+    /// 1. Group overlapping shifts into clusters (a cluster = all shifts that overlap with each other)
+    /// 2. For each cluster, only the shift with the lowest gross earnings is kept in totals
+    /// 3. All other shifts in the cluster are marked as excluded
+    ///
+    /// - Parameter shifts: All computed shifts
+    /// - Returns: Set of shift IDs to exclude from totals
+    static func buildExcludedShiftIds(shifts: [ShiftWithComputations]) -> Set<String> {
+        analyze(shifts: shifts).excludedIds
     }
 
     // MARK: - Private Helpers
