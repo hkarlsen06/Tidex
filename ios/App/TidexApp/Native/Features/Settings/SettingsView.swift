@@ -385,6 +385,7 @@ struct SettingsMenuItem: View {
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
         .buttonStyle(.plain)
     }

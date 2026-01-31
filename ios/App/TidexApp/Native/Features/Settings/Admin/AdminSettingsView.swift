@@ -491,6 +491,7 @@ private struct NotificationsTabView: View {
                 .padding(16)
                 .background(Color.tidexSurfacePrimary)
                 .cornerRadius(12)
+                .tidexCardShadow(cornerRadius: 12)
 
                 // History section
                 VStack(alignment: .leading, spacing: 12) {
@@ -636,6 +637,7 @@ private struct UserCard: View {
             .padding(12)
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(10)
+            .tidexCardShadow(cornerRadius: 10)
         }
         .buttonStyle(.plain)
     }
@@ -669,6 +671,7 @@ private struct FeedbackCard: View {
             .padding(12)
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(10)
+            .tidexCardShadow(cornerRadius: 10)
         }
         .buttonStyle(.plain)
     }
@@ -692,6 +695,7 @@ private struct AuditLogCard: View {
         .padding(Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(8)
+        .tidexCardShadow(cornerRadius: 8)
     }
 }
 
@@ -724,6 +728,7 @@ private struct ShareCard: View {
         .padding(Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(8)
+        .tidexCardShadow(cornerRadius: 8)
     }
 }
 
@@ -746,6 +751,7 @@ private struct BroadcastCard: View {
         .padding(Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(8)
+        .tidexCardShadow(cornerRadius: 8)
     }
 
     private func statusColor(_ status: String) -> Color {
@@ -884,6 +890,7 @@ private struct FeedbackResponseSheet: View {
                 .padding()
                 .background(Color.tidexSurfacePrimary)
                 .cornerRadius(12)
+                .tidexCardShadow(cornerRadius: 12)
 
                 if let existingResponse = feedback.response {
                     VStack(alignment: .leading, spacing: 8) {

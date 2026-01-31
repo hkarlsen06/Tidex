@@ -126,6 +126,7 @@ private struct StartImpersonationSection: View {
         .padding(16)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(12)
+        .tidexCardShadow(cornerRadius: 12)
     }
 }
 

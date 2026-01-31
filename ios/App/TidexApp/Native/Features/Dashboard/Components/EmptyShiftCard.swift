@@ -46,6 +46,7 @@ struct EmptyShiftCard: View {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color.tidexSurfacePrimary)
             )
+            .tidexCardShadow()
             .shimmer(isActive: isLoading)
 
             // Footer text below the card - fixed height to match FeaturedShiftCard

@@ -6,6 +6,8 @@ struct AvatarView: View {
     let url: String?
     let initials: String
     let size: CGFloat
+    /// Optional corner radius for concentric design. When nil, uses circular shape.
+    var cornerRadius: CGFloat?
 
     /// Standard avatar sizes for consistency
     enum Size {
@@ -17,6 +19,14 @@ struct AvatarView: View {
         static let large: CGFloat = 44
     }
 
+    private var shape: some Shape {
+        if let cornerRadius {
+            AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            AnyShape(Circle())
+        }
+    }
+
     var body: some View {
         if let urlString = url, let imageUrl = URL(string: urlString) {
             CachedAsyncImage(url: imageUrl) { image in
@@ -24,7 +34,7 @@ struct AvatarView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size, height: size)
-                    .clipShape(Circle())
+                    .clipShape(shape)
             } placeholder: {
                 initialsView
             }
@@ -34,7 +44,7 @@ struct AvatarView: View {
     }
 
     private var initialsView: some View {
-        Circle()
+        shape
             .fill(Color.tidexBlue.opacity(0.2))
             .frame(width: size, height: size)
             .overlay(

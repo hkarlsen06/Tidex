@@ -126,6 +126,7 @@ struct CalendarDayCell<Content: View>: View {
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(style.borderColor, lineWidth: style.borderWidth)
         )
+        .tidexCardShadow(cornerRadius: 8)
         .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
     }
 

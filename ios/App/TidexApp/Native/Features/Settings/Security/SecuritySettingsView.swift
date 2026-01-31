@@ -169,6 +169,7 @@ struct SecuritySettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
     }
 
@@ -249,6 +250,7 @@ struct SecuritySettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
     }
 
@@ -419,6 +421,7 @@ struct SecuritySettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
 
             // Success/Error messages
             if let success = viewModel.successMessage {

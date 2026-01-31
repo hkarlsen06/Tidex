@@ -260,6 +260,7 @@ struct DataSettingsView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isSelected ? Color.tidexBlue : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
             )
+            .tidexCardShadow(cornerRadius: 12)
         }
         .buttonStyle(.plain)
     }
@@ -371,6 +372,7 @@ struct DataSettingsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.tidexSurfacePrimary)
         )
+        .tidexCardShadow(cornerRadius: 12)
     }
 
     // MARK: - About Section

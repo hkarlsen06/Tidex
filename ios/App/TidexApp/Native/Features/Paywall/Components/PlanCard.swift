@@ -93,6 +93,7 @@ struct PlanCard: View {
                     lineWidth: 2
                 )
         )
+        .tidexCardShadow(cornerRadius: 16)
     }
 
     // MARK: - Computed Properties

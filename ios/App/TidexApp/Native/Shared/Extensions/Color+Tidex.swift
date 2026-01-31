@@ -248,6 +248,7 @@ enum TidexShadowLevel {
 struct TidexCardShadowModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     let level: TidexShadowLevel
+    let customCornerRadius: CGFloat?
 
     func body(content: Content) -> some View {
         if colorScheme == .dark {
@@ -286,8 +287,11 @@ struct TidexCardShadowModifier: ViewModifier {
         }
     }
 
-    /// Corner radius for the glow overlay (matches common card radius)
+    /// Corner radius for the glow overlay
     private var cornerRadius: CGFloat {
+        if let custom = customCornerRadius {
+            return custom
+        }
         switch level {
         case .card:
             return 24
@@ -363,7 +367,10 @@ extension View {
     /// - Light mode: Drop shadow for depth
     /// - Dark mode: Subtle top-edge glow + shadow for definition
     /// Use on cards, list rows, and other elevated surfaces
-    func tidexCardShadow(_ level: TidexShadowLevel = .card) -> some View {
-        modifier(TidexCardShadowModifier(level: level))
+    /// - Parameters:
+    ///   - level: Shadow intensity level (default: .card)
+    ///   - cornerRadius: Custom corner radius for the glow overlay. If nil, uses default for the level.
+    func tidexCardShadow(_ level: TidexShadowLevel = .card, cornerRadius: CGFloat? = nil) -> some View {
+        modifier(TidexCardShadowModifier(level: level, customCornerRadius: cornerRadius))
     }
 }

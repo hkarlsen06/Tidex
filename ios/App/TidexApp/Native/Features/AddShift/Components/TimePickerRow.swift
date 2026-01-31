@@ -45,6 +45,12 @@ struct NumericTimeInput: View {
                         inputValue = ""
                     }
                 }
+                .onChange(of: isFocused) { wasFocused, nowFocused in
+                    // When focus is lost, auto-complete partial hour input
+                    if wasFocused && !nowFocused {
+                        autoCompletePartialInput()
+                    }
+                }
         }
         .padding(16)
         .frame(maxWidth: .infinity)
@@ -58,6 +64,57 @@ struct NumericTimeInput: View {
                 )
         )
         .animation(.easeInOut(duration: 0.15), value: isFocused)
+    }
+
+    /// Auto-completes partial input when user taps away
+    /// e.g., "9" → "09:00", "14" → "14:00", "930" → "09:30"
+    private func autoCompletePartialInput() {
+        let digits = inputValue.filter { $0.isNumber }
+
+        // Only process if we have 1-3 digits (incomplete input)
+        guard digits.count >= 1 && digits.count < 4 else { return }
+
+        let completed: String
+        switch digits.count {
+        case 1:
+            // Single digit: treat as hour, pad with zero and add :00
+            // "9" → "09:00"
+            completed = "0\(digits):00"
+        case 2:
+            // Two digits: treat as hour, add :00
+            // "14" → "14:00", "09" → "09:00"
+            completed = "\(digits):00"
+        case 3:
+            // Three digits: interpret based on first digits
+            // "930" → "09:30" (single-digit hour + 2-digit minutes)
+            // "143" → "14:30" (2-digit hour + partial minute, append 0)
+            let potentialHour = Int(String(digits.prefix(2))) ?? 99
+            if potentialHour <= 23 {
+                // First 2 digits are a valid hour, last digit is partial minute
+                // "143" → "14:30", "123" → "12:30"
+                let hour = String(digits.prefix(2))
+                let minute = String(digits.dropFirst(2)) + "0"
+                completed = "\(hour):\(minute)"
+            } else {
+                // First 2 digits > 23, so first digit is hour, last 2 are minutes
+                // "930" → "09:30", "253" → "02:53"
+                let hour = "0\(digits.first!)"
+                let minutes = String(digits.dropFirst())
+                completed = "\(hour):\(minutes)"
+            }
+        default:
+            return
+        }
+
+        // Validate and set the time
+        if let date = parseTime(completed) {
+            inputValue = completed
+            time = date
+
+            // Haptic feedback
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+        }
     }
 
     private func handleInputChange(_ newValue: String) {
@@ -140,6 +197,8 @@ struct TimeRangePicker: View {
     @Binding var endTime: Date?
     var scrollProxy: ScrollViewProxy?
     var scrollId: String?
+    /// Optional binding to expose/control which field is focused (for keyboard accessory)
+    var focusedFieldBinding: Binding<NumericTimeInput.TimeField?>?
     @FocusState private var focusedField: NumericTimeInput.TimeField?
     @Environment(\.localization) private var localization
 
@@ -164,6 +223,18 @@ struct TimeRangePicker: View {
             )
         }
         .id(scrollId)
+        .onChange(of: focusedField) { _, newValue in
+            // Sync internal focus state to external binding
+            if focusedFieldBinding?.wrappedValue != newValue {
+                focusedFieldBinding?.wrappedValue = newValue
+            }
+        }
+        .onChange(of: focusedFieldBinding?.wrappedValue) { _, newValue in
+            // Sync external binding to internal focus state (allows parent to control focus)
+            if focusedField != newValue {
+                focusedField = newValue
+            }
+        }
     }
 }
 

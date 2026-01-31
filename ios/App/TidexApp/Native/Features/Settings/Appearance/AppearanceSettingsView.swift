@@ -141,6 +141,7 @@ struct AppearanceSettingsView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isSelected ? Color.tidexBlue : Color.clear, lineWidth: 2)
             )
+            .tidexCardShadow(cornerRadius: 12)
         }
         .buttonStyle(.plain)
     }
