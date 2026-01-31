@@ -44,7 +44,6 @@ final class AddShiftViewModel: ObservableObject {
     private let recurringRepository: RecurringShiftsRepository
     private let settingsRepository: SettingsRepository
     private let snapshotsRepository: SnapshotsRepository
-    private let syncCoordinator: SyncCoordinator
     private let monthContext: SharedMonthContext
     private let addShiftCoordinator: AddShiftCoordinator
 
@@ -244,7 +243,6 @@ final class AddShiftViewModel: ObservableObject {
         recurringRepository: RecurringShiftsRepository? = nil,
         settingsRepository: SettingsRepository? = nil,
         snapshotsRepository: SnapshotsRepository? = nil,
-        syncCoordinator: SyncCoordinator? = nil,
         monthContext: SharedMonthContext? = nil,
         addShiftCoordinator: AddShiftCoordinator? = nil
     ) {
@@ -252,7 +250,6 @@ final class AddShiftViewModel: ObservableObject {
         self.recurringRepository = recurringRepository ?? RecurringShiftsRepository.shared
         self.settingsRepository = settingsRepository ?? SettingsRepository.shared
         self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
-        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
         self.monthContext = monthContext ?? SharedMonthContext.shared
         self.addShiftCoordinator = addShiftCoordinator ?? AddShiftCoordinator.shared
 

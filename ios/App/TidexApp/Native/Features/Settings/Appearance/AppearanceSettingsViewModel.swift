@@ -88,16 +88,13 @@ final class AppearanceSettingsViewModel: ObservableObject {
         // Apply immediately to AppearanceManager
         appearanceManager.setTheme(selectedTheme)
 
-        // Save to repository (triggers sync)
+        // Save to repository (automatically triggers sync)
         Task {
             do {
                 _ = try await settingsRepository.updateSettings(
                     for: userId,
                     theme: selectedTheme.rawValue
                 )
-
-                // Trigger sync
-                await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
 
                 logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
             } catch {

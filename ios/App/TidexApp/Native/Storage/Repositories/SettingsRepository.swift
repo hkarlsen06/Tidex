@@ -8,14 +8,26 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SettingsRepos
 
 /// Local-first repository for user settings
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
+/// Automatically triggers sync after mutations for immediate upload
 @MainActor
 final class SettingsRepository: ObservableObject {
     static let shared = SettingsRepository()
 
     private let localStore: LocalStore
+    private let syncCoordinator: SyncCoordinator
 
-    private init(localStore: LocalStore? = nil) {
+    private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
         self.localStore = localStore ?? LocalStore.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    }
+
+    // MARK: - Sync Helper
+
+    /// Trigger sync after a mutation (fire-and-forget)
+    private func triggerSync(userId: String) {
+        Task {
+            _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+        }
     }
 
     // MARK: - Read Operations (Local Only)
@@ -138,6 +150,9 @@ final class SettingsRepository: ObservableObject {
 
             logger.info("Updated local settings for user: \(userId)")
 
+            // Trigger sync to upload immediately
+            triggerSync(userId: userId)
+
             return updatedSettings
         } catch LocalStoreWriteError.notFound {
             logger.warning("Settings not found for update: \(userId)")
@@ -154,6 +169,10 @@ final class SettingsRepository: ObservableObject {
         do {
             let updatedSettings = try await localStore.storeActor.clearProfilePictureUrl(userId: userId)
             logger.info("Cleared profile picture URL for user: \(userId)")
+
+            // Trigger sync to upload immediately
+            triggerSync(userId: userId)
+
             return updatedSettings
         } catch LocalStoreWriteError.notFound {
             logger.warning("Settings not found for clearing profile picture: \(userId)")

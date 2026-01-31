@@ -210,11 +210,6 @@ final class PaySettingsViewModel: ObservableObject {
                 breakDeductionMinutes: input.breakDeductionMinutes
             )
 
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
-
             // Refresh UI
             refreshData()
             closeEditor()
@@ -230,7 +225,7 @@ final class PaySettingsViewModel: ObservableObject {
 
     /// Update an existing wage snapshot
     func updateSnapshot(id: String, input: WageSnapshotEditorInput) async -> Bool {
-        guard let userId = userId else {
+        guard userId != nil else {
             errorMessage = localization.string("settings.pay.error.notAuthenticated")
             return false
         }
@@ -257,11 +252,6 @@ final class PaySettingsViewModel: ObservableObject {
                 breakThresholdHours: input.breakThresholdHours,
                 breakDeductionMinutes: input.breakDeductionMinutes
             )
-
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
 
             // Refresh UI
             refreshData()
@@ -297,7 +287,7 @@ final class PaySettingsViewModel: ObservableObject {
 
     /// Confirm and execute deletion
     func confirmDelete() async {
-        guard let snapshot = snapshotToDelete, let userId = userId else {
+        guard let snapshot = snapshotToDelete, userId != nil else {
             showingDeleteConfirmation = false
             snapshotToDelete = nil
             return
@@ -305,11 +295,6 @@ final class PaySettingsViewModel: ObservableObject {
 
         do {
             try await snapshotsRepository.deleteSnapshot(id: snapshot.id)
-
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
 
             // Refresh UI
             refreshData()
@@ -403,11 +388,6 @@ final class PaySettingsViewModel: ObservableObject {
                 monthlyGoal: value
             )
 
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
-
             refreshData()
             logger.info("Updated monthly goal to: \(value ?? 0)")
         } catch {
@@ -440,11 +420,6 @@ final class PaySettingsViewModel: ObservableObject {
                 payrollDay: value
             )
 
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
-
             refreshData()
             logger.info("Updated payroll day to: \(value)")
         } catch {
@@ -461,11 +436,6 @@ final class PaySettingsViewModel: ObservableObject {
                 for: userId,
                 halfTaxMonth: value
             )
-
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
 
             refreshData()
             logger.info("Updated half tax month to: \(value ?? 0)")
@@ -490,11 +460,6 @@ final class PaySettingsViewModel: ObservableObject {
                 for: userId,
                 currency: value
             )
-
-            // Trigger sync
-            Task {
-                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-            }
 
             refreshData()
             logger.info("Updated currency to: \(value)")

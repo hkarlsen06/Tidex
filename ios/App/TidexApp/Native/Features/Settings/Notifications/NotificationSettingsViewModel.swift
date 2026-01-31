@@ -252,11 +252,6 @@ final class NotificationSettingsViewModel: ObservableObject {
                     await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId)
                 }
 
-                // Trigger sync
-                Task {
-                    await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-                }
-
                 logger.info("Reset shift reminders toggle after picker cancel")
             }
         }
@@ -317,11 +312,6 @@ final class NotificationSettingsViewModel: ObservableObject {
             await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId)
         }
 
-        // Trigger sync
-        Task {
-            await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-        }
-
         logger.info("Updated shift reminders: \(self.shiftRemindersEnabled)")
     }
 
@@ -342,11 +332,6 @@ final class NotificationSettingsViewModel: ObservableObject {
             await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId)
         }
 
-        // Trigger sync
-        Task {
-            await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-        }
-
         logger.info("Updated reminder times: \(minutesArray)")
     }
 
@@ -358,11 +343,6 @@ final class NotificationSettingsViewModel: ObservableObject {
             for: userId,
             sharedShiftsEnabled: sharedShiftsEnabled
         )
-
-        // Trigger sync
-        Task {
-            await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
-        }
 
         logger.info("Updated shared shifts: \(self.sharedShiftsEnabled)")
     }

@@ -23,14 +23,26 @@ enum ShiftCreationError: Error, LocalizedError {
 
 /// Local-first repository for user shifts
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
+/// Automatically triggers sync after mutations for immediate upload
 @MainActor
 final class ShiftsRepository: ObservableObject {
     static let shared = ShiftsRepository()
 
     private let localStore: LocalStore
+    private let syncCoordinator: SyncCoordinator
 
-    private init(localStore: LocalStore? = nil) {
+    private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
         self.localStore = localStore ?? LocalStore.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    }
+
+    // MARK: - Sync Helper
+
+    /// Trigger sync after a mutation (fire-and-forget)
+    private func triggerSync(userId: String) {
+        Task {
+            _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+        }
     }
 
     // MARK: - Read Operations (Local Only)
@@ -193,6 +205,9 @@ final class ShiftsRepository: ObservableObject {
         // Update Apple Watch with new shift data
         WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
 
+        // Trigger sync to upload immediately
+        triggerSync(userId: userId)
+
         return createdShift
     }
 
@@ -227,6 +242,8 @@ final class ShiftsRepository: ObservableObject {
                 NativeWidgetStorage.updateWidgetStorage(for: userId)
                 // Update Apple Watch with new shift data
                 WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+                // Trigger sync to upload immediately
+                triggerSync(userId: userId)
             }
 
             return updatedShift
@@ -252,6 +269,9 @@ final class ShiftsRepository: ObservableObject {
 
             // Update Apple Watch with new shift data
             WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+
+            // Trigger sync to upload immediately
+            triggerSync(userId: userId)
         } catch LocalStoreWriteError.notFound {
             logger.warning("Shift not found for deletion: \(id)")
         } catch {
@@ -315,6 +335,11 @@ final class ShiftsRepository: ObservableObject {
 
         // Update widget storage
         NativeWidgetStorage.updateWidgetStorage(for: userId)
+
+        // Trigger sync to upload immediately (only if we actually deleted something)
+        if deletedCount > 0 {
+            triggerSync(userId: userId)
+        }
 
         return deletedCount
     }
