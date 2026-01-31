@@ -88,6 +88,7 @@ struct TodayPlaceholderCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .strokeBorder(Color.tidexBlue, lineWidth: 2)
         )
+        .tidexCardShadow()
     }
 }
 

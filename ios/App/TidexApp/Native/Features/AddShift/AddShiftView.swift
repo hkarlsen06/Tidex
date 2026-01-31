@@ -9,6 +9,7 @@ struct AddShiftView: View {
     @StateObject private var viewModel = AddShiftViewModel()
     @Binding var selectedTab: MainTabView.Tab
     @Binding var isKeyboardVisible: Bool
+    @State private var focusedTimeField: NumericTimeInput.TimeField?
 
     /// Title for current mode
     private var modeTitle: String {
@@ -43,7 +44,7 @@ struct AddShiftView: View {
                             VStack(spacing: 0) {
                                 Spacer()
 
-                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
                                     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                                     .padding(.horizontal, 16)
 
@@ -65,7 +66,7 @@ struct AddShiftView: View {
                                         })
                                     }
 
-                                    RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                    RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
                                 }
                                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                                 .padding(.horizontal, 16)
@@ -130,8 +131,8 @@ struct AddShiftView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if isKeyboardVisible {
-                    Button(localization.string("common.done")) {
-                        hideKeyboard()
+                    Button(keyboardButtonLabel) {
+                        handleKeyboardButtonTap()
                     }
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
@@ -189,6 +190,26 @@ struct AddShiftView: View {
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+
+    /// Label for keyboard accessory button - "Next" when in start field, "Done" otherwise
+    private var keyboardButtonLabel: String {
+        if focusedTimeField == .start {
+            return localization.string("common.next")
+        }
+        return localization.string("common.done")
+    }
+
+    /// Handle keyboard button tap - advance to next field or dismiss
+    private func handleKeyboardButtonTap() {
+        if focusedTimeField == .start {
+            // Move to end time field
+            focusedTimeField = .end
+        } else {
+            // Dismiss keyboard
+            focusedTimeField = nil
+            hideKeyboard()
+        }
+    }
 }
 
 // MARK: - Single Shift Content
@@ -196,6 +217,7 @@ struct AddShiftView: View {
 private struct SingleShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
+    @Binding var focusedTimeField: NumericTimeInput.TimeField?
     @Environment(\.localization) private var localization
 
     var body: some View {
@@ -232,7 +254,8 @@ private struct SingleShiftContent: View {
                     startTime: $viewModel.startTime,
                     endTime: $viewModel.endTime,
                     scrollProxy: scrollProxy,
-                    scrollId: "singleTimePicker"
+                    scrollId: "singleTimePicker",
+                    focusedFieldBinding: $focusedTimeField
                 )
                 .padding(.top, 12)
                 .alignmentGuide(.bottom) { d in d[.top] }
@@ -245,6 +268,7 @@ private struct SingleShiftContent: View {
 private struct RecurringShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
+    @Binding var focusedTimeField: NumericTimeInput.TimeField?
     @Environment(\.localization) private var localization
 
     var body: some View {
@@ -271,7 +295,8 @@ private struct RecurringShiftContent: View {
                 startTime: $viewModel.startTime,
                 endTime: $viewModel.endTime,
                 scrollProxy: scrollProxy,
-                scrollId: "recurringTimePicker"
+                scrollId: "recurringTimePicker",
+                focusedFieldBinding: $focusedTimeField
             )
 
             Divider()

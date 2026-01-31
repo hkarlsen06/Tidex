@@ -174,6 +174,7 @@ struct ShiftSupplementRuleCard: View {
         .padding(16)
         .background(Color.tidexSurfacePrimary)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .tidexCardShadow(cornerRadius: 12)
     }
 }
 

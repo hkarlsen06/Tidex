@@ -56,7 +56,6 @@ struct AddShiftCalendarView: View {
                     dayInfo: dayInfo,
                     isToday: dayInfo.dateISO == todayISO(),
                     isSelected: dayInfo.dateISO.map { viewModel.selectedDates.contains($0) } ?? false,
-                    hasExistingShift: dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false,
                     hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
                     existingEarnings: dayInfo.dateISO.flatMap { viewModel.existingShiftEarnings[$0] },
                     previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewEarnings[$0] }
@@ -72,16 +71,8 @@ struct AddShiftCalendarView: View {
 
     // MARK: - Calendar Helpers
 
-    struct DayInfo: Identifiable {
-        let id: Int
-        let dayNumber: Int
-        let dateISO: String?
-        let weekNumber: Int?  // ISO week number (only on Mondays)
-        let isOutsideMonth: Bool
-    }
-
-    private func daysInMonth() -> [DayInfo] {
-        var days: [DayInfo] = []
+    private func daysInMonth() -> [CalendarDayInfo] {
+        var days: [CalendarDayInfo] = []
 
         // Get first day of month from viewModel's displayMonth
         let components = calendar.dateComponents([.year, .month], from: viewModel.displayMonth)
@@ -107,12 +98,11 @@ struct AddShiftCalendarView: View {
             let dateISO = date.toISODateString()
             let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
 
-            days.append(DayInfo(
+            days.append(.outsideMonth(
                 id: -1000 + i,
                 dayNumber: day,
                 dateISO: dateISO,
-                weekNumber: weekNum,
-                isOutsideMonth: true
+                weekNumber: weekNum
             ))
         }
 
@@ -123,12 +113,11 @@ struct AddShiftCalendarView: View {
             let isMonday = calendar.component(.weekday, from: date) == 2
             let weekNum = isMonday ? getIsoWeek(from: date) : nil
 
-            days.append(DayInfo(
+            days.append(.inMonth(
                 id: day,
                 dayNumber: day,
                 dateISO: dateISO,
-                weekNumber: weekNum,
-                isOutsideMonth: false
+                weekNumber: weekNum
             ))
         }
 
@@ -142,12 +131,11 @@ struct AddShiftCalendarView: View {
                 let dateISO = date.toISODateString()
                 let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
 
-                days.append(DayInfo(
+                days.append(.outsideMonth(
                     id: 1000 + i,
                     dayNumber: i + 1,
                     dateISO: dateISO,
-                    weekNumber: weekNum,
-                    isOutsideMonth: true
+                    weekNumber: weekNum
                 ))
             }
         }
@@ -165,84 +153,36 @@ struct AddShiftCalendarView: View {
 
 // MARK: - Day Cell
 
+/// Add-shift specific calendar day cell that wraps CalendarDayCell
+/// Handles multi-select, conflict detection, and preview earnings display
 private struct AddShiftCalendarDayCell: View {
-    let dayInfo: AddShiftCalendarView.DayInfo
+    let dayInfo: CalendarDayInfo
     let isToday: Bool
     let isSelected: Bool
-    let hasExistingShift: Bool
     let hasConflict: Bool
     let existingEarnings: Double?
     let previewEarnings: Double?
 
     var body: some View {
-        ZStack {
-            // Week number (top-left corner, only on Mondays)
-            if let weekNum = dayInfo.weekNumber {
-                VStack {
-                    HStack {
-                        Text("\(weekNum)")
-                            .font(.system(size: 9))
-                            .foregroundColor(.tidexTextMuted)
-                            .padding(.leading, 6)
-                            .padding(.top, 4)
-                        Spacer()
-                    }
-                    Spacer()
-                }
-            }
-
-            // Day number (top-right corner)
-            VStack {
-                HStack {
-                    Spacer()
-                    Text("\(dayInfo.dayNumber)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(dayNumberColor)
-                        .padding(.trailing, 4)
-                        .padding(.top, 3)
-                }
-                Spacer()
-            }
-
-            // Content: earnings display or indicator (centered with slight top offset)
-            if isSelected, let earnings = previewEarnings {
-                // Preview earnings for selected dates (blue)
-                Text(formatCompactCurrency(earnings))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .padding(.top, 8)
-            } else if isSelected {
-                // Selected but no preview earnings yet (need times)
-                Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                    .padding(.top, 8)
-            } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
-                // Existing shift earnings (grey)
-                Text(formatCompactCurrency(earnings))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.tidexTextMuted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .padding(.top, 8)
-            }
+        CalendarDayCell(
+            dayInfo: dayInfo,
+            style: cellStyle,
+            content: .custom
+        ) {
+            addShiftContent
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(1 / 1.3, contentMode: .fill)
-        .clipped()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(backgroundColor)
-        )
-        .overlay(
-            // Selection/today indicator ring
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(borderColor, lineWidth: borderWidth)
-        )
-        .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
         .contentShape(Rectangle())
+    }
+
+    // MARK: - Cell Style
+
+    private var cellStyle: CalendarCellStyle {
+        CalendarCellStyle(
+            backgroundColor: backgroundColor,
+            borderColor: borderColor,
+            borderWidth: isSelected ? 2 : 0,
+            dayNumberColor: dayNumberColor
+        )
     }
 
     private var backgroundColor: Color {
@@ -262,13 +202,6 @@ private struct AddShiftCalendarDayCell: View {
         return Color.clear
     }
 
-    private var borderWidth: CGFloat {
-        if isSelected {
-            return 2
-        }
-        return 0
-    }
-
     private var dayNumberColor: Color {
         if hasConflict && isSelected {
             return .tidexWarning
@@ -279,13 +212,33 @@ private struct AddShiftCalendarDayCell: View {
         return .tidexTextPrimary
     }
 
-    private func formatCompactCurrency(_ amount: Double) -> String {
-        // Compact format without currency symbol for calendar cells
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        formatter.groupingSeparator = " "
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
+    // MARK: - Content
+
+    @ViewBuilder
+    private var addShiftContent: some View {
+        if isSelected, let earnings = previewEarnings {
+            // Preview earnings for selected dates (blue or warning)
+            Text(CalendarGridHelper.formatCompactCurrency(earnings))
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .padding(.top, 8)
+        } else if isSelected {
+            // Selected but no preview earnings yet (need times)
+            Image(systemName: "checkmark")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
+                .padding(.top, 8)
+        } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
+            // Existing shift earnings (grey)
+            Text(CalendarGridHelper.formatCompactCurrency(earnings))
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.tidexTextMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .padding(.top, 8)
+        }
     }
 }
 

@@ -59,6 +59,7 @@ struct ReminderTimePickerSheet: View {
                     .padding(.vertical, 8)
                     .background(Color.tidexSurfacePrimary)
                     .cornerRadius(12)
+                    .tidexCardShadow(cornerRadius: 12)
                 }
                 .padding(.horizontal)
 

@@ -110,6 +110,7 @@ struct FeedbackSettingsView: View {
         .frame(maxWidth: .infinity)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(12)
+        .tidexCardShadow(cornerRadius: 12)
     }
 
     // MARK: - Feedback Form Section
@@ -309,6 +310,7 @@ struct FeedbackSettingsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.tidexBorder, lineWidth: 1)
         )
+        .tidexCardShadow(cornerRadius: 12)
     }
 
     // MARK: - Helpers

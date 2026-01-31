@@ -259,6 +259,7 @@ struct SubscriptionSettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
     }
 
@@ -354,6 +355,7 @@ struct SubscriptionSettingsView: View {
             .padding(16)
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
     }
 

@@ -290,6 +290,7 @@ struct ProfileSettingsView: View {
             .padding(16)
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
     }
 
@@ -547,6 +548,7 @@ struct ProfileSettingsView: View {
                     .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
             )
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
     }
 

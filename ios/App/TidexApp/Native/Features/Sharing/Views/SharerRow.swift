@@ -55,25 +55,30 @@ struct SharerRow: View {
                 }
             }
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .strokeBorder(
                         isSelected ? Color.tidexBlue : Color.clear,
                         lineWidth: 2
                     )
             )
+            .tidexCardShadow()
         }
         .buttonStyle(PlainButtonStyle())
     }
+
+    /// Corner radius for concentric design: outer (24) - padding (12) = 12
+    private static let concentricCornerRadius: CGFloat = 12
 
     private var avatarView: some View {
         AvatarView(
             url: sharer.avatarUrl,
             initials: sharer.initials,
-            size: AvatarView.Size.large
+            size: AvatarView.Size.large,
+            cornerRadius: Self.concentricCornerRadius
         )
     }
 
@@ -101,7 +106,7 @@ struct SharerRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, Spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.tidexSurfaceSecondary.opacity(0.5))
         )
         .shimmer(duration: 1.2)
@@ -143,14 +148,14 @@ private struct ShiftPreviewCard: View {
             .padding(.horizontal, 12)
             .padding(.vertical, Spacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.tidexSurfaceSecondary.opacity(0.5))
             )
             .overlay(
                 // Progress bar for active shifts
                 GeometryReader { geometry in
                     if computed.status == .active {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.green.opacity(0.1))
                             .frame(width: geometry.size.width * computed.progress / 100)
                             .animation(.linear(duration: 1), value: computed.progress)

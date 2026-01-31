@@ -62,6 +62,7 @@ struct WageHistoryTimelineView: View {
         }
         .background(Color.tidexSurfacePrimary)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .tidexCardShadow(cornerRadius: 12)
     }
 
     // MARK: - Empty State

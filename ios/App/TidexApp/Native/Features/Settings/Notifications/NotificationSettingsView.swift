@@ -117,6 +117,7 @@ struct NotificationSettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
 
             // Hint if denied
             if viewModel.notificationStatus == .denied {
@@ -283,6 +284,7 @@ struct NotificationSettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
         .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
         .disabled(viewModel.notificationStatus == .denied)
@@ -391,6 +393,7 @@ struct NotificationSettingsView: View {
             }
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
         }
         .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
         .disabled(viewModel.notificationStatus == .denied)
