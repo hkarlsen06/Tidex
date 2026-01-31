@@ -26,9 +26,12 @@ extension Color {
         Color("TidexBackgroundSecondary")
     }
 
-    /// Launch screen background - always dark for smooth transition from LaunchScreen.storyboard
-    /// This ensures no flash during app launch regardless of system appearance
-    static let tidexLaunchBackground = Color(red: 0.008, green: 0.032, blue: 0.090)
+    /// Launch screen background - adapts to light/dark mode
+    /// Light: HSL(220, 40%, 98%) - soft off-white (matches tidexBackground)
+    /// Dark: HSL(222.2, 84%, 4.9%) - deep navy (matches tidexBackground)
+    static var tidexLaunchBackground: Color {
+        Color("LaunchBackground")
+    }
 
     /// Surface primary for cards and elevated containers
     /// Light: HSL(220, 35%, 96%) - light gray

@@ -127,14 +127,14 @@ struct LoadingView: View {
                 Image("Splash")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 350, height: 350)
+                    .frame(width: 200, height: 200)
                     .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
 
                 // Spinner positioned below the logo
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                     .scaleEffect(1.2)
-                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2 + 220)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2 + 140)
             }
         }
         .ignoresSafeArea()
