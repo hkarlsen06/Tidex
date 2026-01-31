@@ -67,7 +67,7 @@ final class ImpersonationManager: ObservableObject {
         // 2. Validate the session is still active server-side
         // Try to get current session - if it fails, the impersonated session is invalid
         do {
-            _ = try await supabase.auth.session
+            _ = try await AuthSessionManager.shared.getSession()
             logger.info("Impersonation session validated successfully")
         } catch {
             logger.warning("Impersonation session validation failed: \(error.localizedDescription)")
@@ -124,7 +124,7 @@ final class ImpersonationManager: ObservableObject {
         }
 
         // 1. Get current admin session
-        let currentSession = try await supabase.auth.session
+        let currentSession = try await AuthSessionManager.shared.getSession()
         logger.info("Starting impersonation: admin=\(currentSession.user.id), target=\(targetUserId)")
 
         // 2. Store admin session in Keychain for restoration
@@ -354,4 +354,3 @@ final class ImpersonationManager: ObservableObject {
         SecItemDelete(query as CFDictionary)
     }
 }
-

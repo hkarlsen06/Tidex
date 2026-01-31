@@ -136,7 +136,7 @@ final class SubscriptionSettingsViewModel: ObservableObject {
         errorMessage = nil
 
         // Get current user ID
-        guard let userId = try? await supabase.auth.session.normalizedUserId else {
+        guard let userId = await AuthSessionManager.shared.getUserIdIfAvailable() else {
             logger.warning("No authenticated user for subscription settings")
             isLoading = false
             return

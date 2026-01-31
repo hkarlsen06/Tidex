@@ -291,7 +291,7 @@ struct SettingsView: View {
 
     private func checkAdminStatus() async {
         do {
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             // Check app_metadata for admin role
             // The role is stored in app_metadata which is set by the backend
             if let appMetadata = session.user.appMetadata["role"],

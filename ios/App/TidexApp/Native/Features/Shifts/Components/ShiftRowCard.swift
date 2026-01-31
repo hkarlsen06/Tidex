@@ -34,35 +34,11 @@ struct ShiftRowCard: View {
     }
 
     private var formattedHours: String {
-        let hoursLabel = localization.currentLocale == .norwegian ? "t" : "h"
-        if shift.paidHours == floor(shift.paidHours) {
-            return String(format: "%.0f %@", shift.paidHours, hoursLabel)
-        }
-        return String(format: "%.1f %@", shift.paidHours, hoursLabel)
+        ShiftCardFormatter.formattedHours(shift.paidHours, locale: localization.currentLocale)
     }
 
-    private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
-        guard let date = Date.fromISODateString(shift.shiftDate) else {
-            return ("", "", "")
-        }
-
-        let formatter = DateFormatter()
-        let isNorwegian = localization.currentLocale == .norwegian
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
-
-        // Get day name (full)
-        formatter.dateFormat = "EEEE"
-        let dayName = formatter.string(from: date).capitalized
-
-        // Get day number (with dot suffix for Norwegian)
-        formatter.dateFormat = "d"
-        let dayNumber = formatter.string(from: date) + (isNorwegian ? "." : "")
-
-        // Get month name (short)
-        formatter.dateFormat = "MMM"
-        let monthName = formatter.string(from: date).lowercased()
-
-        return (dayName, dayNumber, monthName)
+    private var dateParts: ShiftCardDateParts {
+        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: localization.currentLocale)
     }
 
     // MARK: - Body

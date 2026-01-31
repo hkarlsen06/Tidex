@@ -255,7 +255,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         do {
             // Get current session for access token
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             let accessToken = session.accessToken
 
             // Use OAuthWebAuthSession to show in-app browser overlay

@@ -639,8 +639,7 @@ struct SyncDebugView: View {
 
     private func loadUserId() async {
         do {
-            let session = try await supabase.auth.session
-            userId = session.normalizedUserId
+            userId = try await AuthSessionManager.shared.getUserId()
             await loadSummary()
         } catch {
             logger.error("Failed to get user ID: \(error.localizedDescription)")

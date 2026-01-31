@@ -189,6 +189,7 @@ final class SyncCoordinator: ObservableObject {
             for table in SyncTable.allCases {
                 let result = try await pullTable(table, userId: userId, syncState: syncState)
                 tableResults.append(result)
+                await Task.yield()
             }
 
             // Phase 2: Push dirty records to server
@@ -197,6 +198,7 @@ final class SyncCoordinator: ObservableObject {
             for table in SyncTable.allCases {
                 let result = try await pushTable(table, userId: userId)
                 pushResults.append(result)
+                await Task.yield()
             }
 
             // Calculate totals
@@ -347,6 +349,8 @@ final class SyncCoordinator: ObservableObject {
             if !result.hasMore {
                 break
             }
+
+            await Task.yield()
         }
 
         let finalCursor = cursor.updatedAt.map { ISO8601DateFormatter().string(from: $0) } ?? "initial"
