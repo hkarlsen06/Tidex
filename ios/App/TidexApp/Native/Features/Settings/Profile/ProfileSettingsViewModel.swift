@@ -403,7 +403,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
             profilePictureUrl = publicUrl
 
-            // Update local settings - this marks the field dirty for sync
+            // Update local settings (automatically triggers sync)
             do {
                 _ = try await settingsRepository.updateSettings(
                     for: currentUserId,
@@ -415,9 +415,6 @@ final class ProfileSettingsViewModel: ObservableObject {
 
             // Update AppCoordinator's avatar URL
             AppCoordinator.shared.updateAvatarUrl(publicUrl)
-
-            // Trigger sync - use .localChange to bypass rate limiting
-            _ = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
 
             Haptics.play(.success)
         } catch {
@@ -447,14 +444,11 @@ final class ProfileSettingsViewModel: ObservableObject {
         // Update local state immediately (optimistic UI)
         profilePictureUrl = nil
 
-        // Update local settings - this marks the field dirty for sync
+        // Update local settings (automatically triggers sync)
         _ = try? await settingsRepository.clearProfilePictureUrl(for: currentUserId)
 
         // Update AppCoordinator's avatar URL
         AppCoordinator.shared.updateAvatarUrl(nil)
-
-        // Trigger sync - use .localChange to bypass rate limiting
-        _ = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
 
         Haptics.play(.success)
         isUploadingAvatar = false

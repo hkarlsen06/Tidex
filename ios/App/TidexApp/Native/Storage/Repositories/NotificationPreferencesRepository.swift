@@ -9,14 +9,26 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "NotificationP
 /// Local-first repository for notification preferences
 /// iOS is the source of truth for notification preferences
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
+/// Automatically triggers sync after mutations for immediate upload
 @MainActor
 final class NotificationPreferencesRepository: ObservableObject {
     static let shared = NotificationPreferencesRepository()
 
     private let localStore: LocalStore
+    private let syncCoordinator: SyncCoordinator
 
-    private init(localStore: LocalStore? = nil) {
+    private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
         self.localStore = localStore ?? LocalStore.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    }
+
+    // MARK: - Sync Helper
+
+    /// Trigger sync after a mutation (fire-and-forget)
+    private func triggerSync(userId: String) {
+        Task {
+            _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+        }
     }
 
     // MARK: - Read Operations (Local Only)
@@ -142,6 +154,9 @@ final class NotificationPreferencesRepository: ObservableObject {
             do {
                 try context.save()
                 logger.info("Updated notification preferences for user: \(userId)")
+
+                // Trigger sync to upload immediately
+                triggerSync(userId: userId)
             } catch {
                 logger.error("Failed to save notification preferences: \(error.localizedDescription)")
                 return nil

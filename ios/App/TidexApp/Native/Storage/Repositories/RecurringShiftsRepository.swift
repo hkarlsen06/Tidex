@@ -8,14 +8,26 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "RecurringShif
 
 /// Local-first repository for recurring shifts
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
+/// Automatically triggers sync after mutations for immediate upload
 @MainActor
 final class RecurringShiftsRepository: ObservableObject {
     static let shared = RecurringShiftsRepository()
 
     private let localStore: LocalStore
+    private let syncCoordinator: SyncCoordinator
 
-    private init(localStore: LocalStore? = nil) {
+    private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
         self.localStore = localStore ?? LocalStore.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    }
+
+    // MARK: - Sync Helper
+
+    /// Trigger sync after a mutation (fire-and-forget)
+    private func triggerSync(userId: String) {
+        Task {
+            _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+        }
     }
 
     // MARK: - Read Operations (Local Only)
@@ -144,6 +156,9 @@ final class RecurringShiftsRepository: ObservableObject {
 
         logger.info("Created new local recurring shift: \(createdShift.id)")
 
+        // Trigger sync to upload immediately
+        triggerSync(userId: userId)
+
         return createdShift
     }
 
@@ -182,6 +197,9 @@ final class RecurringShiftsRepository: ObservableObject {
 
             logger.info("Updated local recurring shift: \(id)")
 
+            // Trigger sync to upload immediately
+            triggerSync(userId: updatedShift.user_id)
+
             return updatedShift
         } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for update: \(id)")
@@ -196,10 +214,18 @@ final class RecurringShiftsRepository: ObservableObject {
     ///   - id: Recurring shift ID
     ///   - date: Date to exclude (ISO string YYYY-MM-DD)
     func addExclusion(id: String, date: String) async throws {
+        // Get userId before mutation for sync
+        let userId = getLocalRecurringShift(id: id)?.userId
+
         do {
             let didAdd = try await localStore.storeActor.addRecurringShiftExclusion(id: id, date: date)
             if didAdd {
                 logger.info("Added exclusion \(date) to recurring shift: \(id)")
+
+                // Trigger sync to upload immediately
+                if let userId = userId {
+                    triggerSync(userId: userId)
+                }
             }
         } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for exclusion: \(id)")
@@ -211,9 +237,17 @@ final class RecurringShiftsRepository: ObservableObject {
     /// Mark a recurring shift for deletion
     /// - Parameter id: Recurring shift ID
     func deleteRecurringShift(id: String) async throws {
+        // Get userId before mutation for sync
+        let userId = getLocalRecurringShift(id: id)?.userId
+
         do {
             try await localStore.storeActor.markRecurringShiftPendingDelete(id: id)
             logger.info("Marked recurring shift for deletion: \(id)")
+
+            // Trigger sync to upload immediately
+            if let userId = userId {
+                triggerSync(userId: userId)
+            }
         } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for deletion: \(id)")
         } catch {

@@ -8,14 +8,26 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SnapshotsRepo
 
 /// Local-first repository for wage snapshots
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
+/// Automatically triggers sync after mutations for immediate upload
 @MainActor
 final class SnapshotsRepository: ObservableObject {
     static let shared = SnapshotsRepository()
 
     private let localStore: LocalStore
+    private let syncCoordinator: SyncCoordinator
 
-    private init(localStore: LocalStore? = nil) {
+    private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
         self.localStore = localStore ?? LocalStore.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    }
+
+    // MARK: - Sync Helper
+
+    /// Trigger sync after a mutation (fire-and-forget)
+    private func triggerSync(userId: String) {
+        Task {
+            _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+        }
     }
 
     // MARK: - Read Operations (Local Only)
@@ -207,6 +219,9 @@ final class SnapshotsRepository: ObservableObject {
 
         logger.info("Created new local snapshot: \(createdSnapshot.id)")
 
+        // Trigger sync to upload immediately
+        triggerSync(userId: userId)
+
         return createdSnapshot
     }
 
@@ -251,6 +266,9 @@ final class SnapshotsRepository: ObservableObject {
 
             logger.info("Updated local snapshot: \(id)")
 
+            // Trigger sync to upload immediately
+            triggerSync(userId: updatedSnapshot.user_id)
+
             return updatedSnapshot
         } catch LocalStoreWriteError.notFound {
             logger.warning("Snapshot not found for update: \(id)")
@@ -263,9 +281,17 @@ final class SnapshotsRepository: ObservableObject {
     /// Mark a snapshot for deletion
     /// - Parameter id: Snapshot ID
     func deleteSnapshot(id: String) async throws {
+        // Get userId before mutation for sync
+        let userId = getLocalSnapshot(id: id)?.userId
+
         do {
             try await localStore.storeActor.markWageSnapshotPendingDelete(id: id)
             logger.info("Marked snapshot for deletion: \(id)")
+
+            // Trigger sync to upload immediately
+            if let userId = userId {
+                triggerSync(userId: userId)
+            }
         } catch LocalStoreWriteError.notFound {
             logger.warning("Snapshot not found for deletion: \(id)")
         } catch {
