@@ -40,23 +40,24 @@ struct EmploymentPercentageChart: View {
         return data.monthlyData.first { $0.monthNumber == selected }
     }
 
-    /// Y-axis scale calculation
+    /// Y-axis scale calculation - rounds up to nearest 10
     private var yAxisScale: (domain: ClosedRange<Double>, ticks: [Double]) {
         let percentages = filteredData.map(\.averagePercentage)
-        let positivePercentages = percentages.filter { $0 > 0 }
-
-        guard !positivePercentages.isEmpty else {
-            return (0...100, [0, 25, 50, 75, 100])
-        }
-
         let maxPercentage = percentages.max() ?? 0
 
-        // Add 15% padding above max, ensure at least 80% shown
-        let upperBound = max(maxPercentage * 1.15, 80)
+        // Round up to nearest 10, minimum 20%
+        let upperBound = max(ceil(maxPercentage / 10) * 10, 20)
 
-        // Build nice scale starting from 0
-        let (niceDomain, ticks) = buildNiceScale(min: 0, max: upperBound, desiredTicks: 5)
-        return (niceDomain, ticks)
+        // Create ticks at 20% intervals, or 10% if upper bound is small
+        let tickInterval = upperBound <= 40 ? 10.0 : 20.0
+        var ticks: [Double] = []
+        var tick = 0.0
+        while tick <= upperBound {
+            ticks.append(tick)
+            tick += tickInterval
+        }
+
+        return (0...upperBound, ticks)
     }
 
     // MARK: - Body
@@ -102,9 +103,10 @@ struct EmploymentPercentageChart: View {
 
                 Spacer()
 
-                // Info button
+                // Info button - show actual hours used (37.5 or 40)
                 InfoPopoverButton(
                     message: localization.string("stats.charts.employment.info")
+                        .replacingOccurrences(of: "{hours}", with: formatHours(data.fullTimeHoursPerWeek))
                 )
             }
         }
@@ -184,49 +186,13 @@ struct EmploymentPercentageChart: View {
         return isCurrentMonth ? .tidexBlue : .tidexBlue.opacity(0.2)
     }
 
-    /// Build a nice scale for the Y-axis
-    private func buildNiceScale(min: Double, max: Double, desiredTicks: Int) -> (ClosedRange<Double>, [Double]) {
-        let span = max - min
-
-        guard span > 0 else {
-            return (0...100, [0, 25, 50, 75, 100])
-        }
-
-        let tickInterval = niceNumber(span / Double(desiredTicks - 1))
-        let niceMin = floor(min / tickInterval) * tickInterval
-        let niceMax = ceil(max / tickInterval) * tickInterval
-
-        var ticks: [Double] = []
-        var tick = niceMin
-        while tick <= niceMax + tickInterval / 2 {
-            ticks.append(tick)
-            tick += tickInterval
-        }
-
-        return (niceMin...niceMax, ticks)
-    }
-
-    /// Calculate a "nice" number for axis intervals
-    private func niceNumber(_ value: Double) -> Double {
-        guard value > 0 else { return 1 }
-
-        let exponent = floor(log10(value))
-        let fraction = value / pow(10, exponent)
-
-        let niceFraction: Double
-        if fraction <= 1 {
-            niceFraction = 1
-        } else if fraction <= 2 {
-            niceFraction = 2
-        } else if fraction <= 2.5 {
-            niceFraction = 2.5
-        } else if fraction <= 5 {
-            niceFraction = 5
+    /// Format hours for display (37.5 or 40, not 40.0)
+    private func formatHours(_ hours: Double) -> String {
+        if hours.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", hours)
         } else {
-            niceFraction = 10
+            return String(format: "%.1f", hours)
         }
-
-        return niceFraction * pow(10, exponent)
     }
 }
 
@@ -350,6 +316,8 @@ private struct InfoPopoverButton: View {
             Text(message)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding()
                 .frame(maxWidth: 280)
                 .presentationCompactAdaptation(.popover)
