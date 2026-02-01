@@ -441,7 +441,7 @@ private struct ShiftPreviewCard: View {
         case .upcoming:
             return Color.blue.opacity(0.15)
         case .past:
-            return Color.tidexSurfaceSecondary
+            return Color.tidexTextMuted.opacity(0.15)
         }
     }
 

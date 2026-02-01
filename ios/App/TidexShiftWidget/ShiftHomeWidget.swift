@@ -496,6 +496,32 @@ enum WidgetCurrencyFormatter {
             return "--- \(currency)"
         }
     }
+
+    /// Format an amount in compact form for stats (e.g., "1.5k", "15k")
+    static func formatCompact(_ amount: Double, currency: String) -> String {
+        let absAmount = abs(amount)
+        let formatted: String
+
+        if absAmount >= 1000 {
+            // Format as "Xk" or "X.Xk"
+            let thousands = amount / 1000
+            if thousands.truncatingRemainder(dividingBy: 1) == 0 {
+                formatted = "\(Int(thousands))k"
+            } else {
+                formatted = String(format: "%.1fk", thousands)
+            }
+        } else {
+            // Format as whole number
+            formatted = "\(Int(amount))"
+        }
+
+        switch display(for: currency) {
+        case .prefix:
+            return "\(currency)\(formatted)"
+        case .suffix:
+            return "\(formatted) \(currency)"
+        }
+    }
 }
 
 // MARK: - Widget Provider
