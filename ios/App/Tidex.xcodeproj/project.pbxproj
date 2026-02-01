@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3B2F2FF22700233D63 /* CropViewController */; };
+		11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3F2F2FF3F700233D63 /* TOCropViewController */; };
 		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
@@ -126,11 +128,13 @@
 				11923C282F16BB090076AFD6 /* Supabase in Frameworks */,
 				11923C262F16BB090076AFD6 /* Realtime in Frameworks */,
 				11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */,
+				11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */,
 				1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */,
 				11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */,
 				11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */,
 				11923C192F16B94B0076AFD6 /* Auth in Frameworks */,
 				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
+				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
 				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -252,6 +256,8 @@
 				11923C232F16B98A0076AFD6 /* GoogleSignInSwift */,
 				11923C252F16BB090076AFD6 /* Realtime */,
 				11923C272F16BB090076AFD6 /* Supabase */,
+				11263D3B2F2FF22700233D63 /* CropViewController */,
+				11263D3F2F2FF3F700233D63 /* TOCropViewController */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -293,6 +299,7 @@
 			packageReferences = (
 				11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -753,6 +760,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TimOliver/TOCropViewController";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.1;
+			};
+		};
 		11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -772,6 +787,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		11263D3B2F2FF22700233D63 /* CropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = CropViewController;
+		};
+		11263D3F2F2FF3F700233D63 /* TOCropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = TOCropViewController;
+		};
 		11923C182F16B94B0076AFD6 /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;

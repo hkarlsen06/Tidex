@@ -21,6 +21,10 @@ struct ProfileSettingsView: View {
     @State private var showGalleryPicker = false
     /// Whether to show the camera picker
     @State private var showCamera = false
+    /// Image pending crop (from camera or gallery)
+    @State private var pendingImage: UIImage?
+    /// Whether to show the crop sheet
+    @State private var showCropSheet = false
 
     var body: some View {
         ScrollView {
@@ -105,11 +109,28 @@ struct ProfileSettingsView: View {
         )
         .fullScreenCover(isPresented: $showCamera) {
             CameraPicker { image in
-                Task {
-                    await handleCameraImage(image)
-                }
+                pendingImage = image
+                showCropSheet = true
             }
             .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showCropSheet) {
+            if let image = pendingImage {
+                ProfileImageCropSheet(
+                    image: image,
+                    onCrop: { croppedImage in
+                        Task {
+                            await handleCroppedImage(croppedImage)
+                        }
+                        showCropSheet = false
+                        pendingImage = nil
+                    },
+                    onCancel: {
+                        showCropSheet = false
+                        pendingImage = nil
+                    }
+                )
+            }
         }
         .sheet(isPresented: $viewModel.showEmailChangeSheet) {
             emailChangeSheet
@@ -563,85 +584,35 @@ struct ProfileSettingsView: View {
                 return
             }
 
-            // Compress and resize the image
             guard let uiImage = UIImage(data: data) else {
                 return
             }
 
-            // Resize to 192x192 square (matches server's AVATAR_SIZE for 2x retina)
-            // Use "cover" fit - crop to square from center, then resize
-            let avatarSize: CGFloat = 192
-            let sourceSize = uiImage.size
-
-            // Calculate crop rect for center square
-            let shortSide = min(sourceSize.width, sourceSize.height)
-            let cropRect = CGRect(
-                x: (sourceSize.width - shortSide) / 2,
-                y: (sourceSize.height - shortSide) / 2,
-                width: shortSide,
-                height: shortSide
-            )
-
-            // Crop to square
-            guard let cgImage = uiImage.cgImage,
-                  let croppedCGImage = cgImage.cropping(to: cropRect) else {
-                return
-            }
-            let croppedImage = UIImage(cgImage: croppedCGImage, scale: uiImage.scale, orientation: uiImage.imageOrientation)
-
-            // Resize to avatar size
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: avatarSize, height: avatarSize))
-            let resizedImage = renderer.image { _ in
-                croppedImage.draw(in: CGRect(origin: .zero, size: CGSize(width: avatarSize, height: avatarSize)))
-            }
-
-            guard let compressedData = resizedImage.jpegData(compressionQuality: 0.8) else {
-                return
-            }
-
-            // Upload the image
-            await viewModel.uploadProfilePicture(compressedData)
+            // Show crop sheet with the selected image
+            pendingImage = uiImage
+            showCropSheet = true
 
             // Clear selection
             selectedPhotoItem = nil
 
         } catch {
-            logger.error("Failed to process photo: \(error.localizedDescription)")
+            logger.error("Failed to load photo: \(error.localizedDescription)")
         }
     }
 
-    /// Handle image captured from camera
-    private func handleCameraImage(_ image: UIImage) async {
+    /// Handle cropped image from crop sheet
+    /// The image is already square from the crop view, just needs resize and compression
+    private func handleCroppedImage(_ image: UIImage) async {
         // Resize to 192x192 square (matches server's AVATAR_SIZE for 2x retina)
-        // Use "cover" fit - crop to square from center, then resize
         let avatarSize: CGFloat = 192
-        let sourceSize = image.size
 
-        // Calculate crop rect for center square
-        let shortSide = min(sourceSize.width, sourceSize.height)
-        let cropRect = CGRect(
-            x: (sourceSize.width - shortSide) / 2,
-            y: (sourceSize.height - shortSide) / 2,
-            width: shortSide,
-            height: shortSide
-        )
-
-        // Crop to square
-        guard let cgImage = image.cgImage,
-              let croppedCGImage = cgImage.cropping(to: cropRect) else {
-            logger.error("Failed to crop camera image")
-            return
-        }
-        let croppedImage = UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
-
-        // Resize to avatar size
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: avatarSize, height: avatarSize))
         let resizedImage = renderer.image { _ in
-            croppedImage.draw(in: CGRect(origin: .zero, size: CGSize(width: avatarSize, height: avatarSize)))
+            image.draw(in: CGRect(origin: .zero, size: CGSize(width: avatarSize, height: avatarSize)))
         }
 
         guard let compressedData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            logger.error("Failed to compress camera image")
+            logger.error("Failed to compress cropped image")
             return
         }
 
