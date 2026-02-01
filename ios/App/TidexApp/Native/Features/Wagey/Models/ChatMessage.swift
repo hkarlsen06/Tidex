@@ -82,6 +82,30 @@ struct ChatMessage: Identifiable, Equatable {
         )
     }
 
+    /// Create a user message with an image attachment
+    static func user(_ content: String, image: ImageAttachment) -> ChatMessage {
+        var blocks: [ContentBlock] = [.image(image)]
+        if !content.isEmpty {
+            blocks.append(.text(content))
+        }
+        return ChatMessage(
+            id: UUID().uuidString,
+            role: .user,
+            contentBlocks: blocks,
+            timestamp: Date()
+        )
+    }
+
+    /// Get all image attachments from the message
+    var imageAttachments: [ImageAttachment] {
+        contentBlocks.compactMap { block in
+            if case .image(let attachment) = block {
+                return attachment
+            }
+            return nil
+        }
+    }
+
     /// Create an assistant message (typically starts empty for streaming)
     static func assistant(id: String = UUID().uuidString, content: String = "") -> ChatMessage {
         ChatMessage(
@@ -95,11 +119,12 @@ struct ChatMessage: Identifiable, Equatable {
 
 // MARK: - Content Block
 
-/// A block of content in an assistant message.
-/// Preserves the chronological order of text and tool calls as they stream in.
+/// A block of content in a message.
+/// Preserves the chronological order of text, images, and tool calls as they stream in.
 enum ContentBlock: Identifiable, Equatable {
     case text(String)
     case toolCall(ToolCall)
+    case image(ImageAttachment)
 
     var id: String {
         switch self {
@@ -108,7 +133,32 @@ enum ContentBlock: Identifiable, Equatable {
             return "text-\(content.hashValue)"
         case .toolCall(let toolCall):
             return toolCall.id
+        case .image(let attachment):
+            return attachment.id
         }
+    }
+}
+
+// MARK: - Image Attachment
+
+/// An image attached to a message.
+/// Stores the compressed image data for display and API transmission.
+struct ImageAttachment: Identifiable, Equatable {
+    let id: String
+    /// Compressed image data (JPEG format for API compatibility)
+    let data: Data
+    /// MIME type of the image (e.g., "image/jpeg")
+    let mediaType: String
+
+    init(id: String = UUID().uuidString, data: Data, mediaType: String = "image/jpeg") {
+        self.id = id
+        self.data = data
+        self.mediaType = mediaType
+    }
+
+    /// Base64 encoded image data for API transmission
+    var base64String: String {
+        data.base64EncodedString()
     }
 }
 

@@ -24,6 +24,15 @@ export type TextContent = {
   text: string;
 };
 
+export type ImageContent = {
+  type: "image";
+  source: {
+    type: "base64";
+    media_type: string;
+    data: string;
+  };
+};
+
 export type ToolUseContent = {
   type: "tool_use";
   id: string;
@@ -38,7 +47,7 @@ export type ToolResultContent = {
   is_error?: boolean;
 };
 
-export type ContentBlock = TextContent | ToolUseContent | ToolResultContent;
+export type ContentBlock = TextContent | ImageContent | ToolUseContent | ToolResultContent;
 
 /**
  * Message type (Claude format)

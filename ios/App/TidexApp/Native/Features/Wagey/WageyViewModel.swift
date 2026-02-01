@@ -332,20 +332,33 @@ final class WageyViewModel {
     /// Send a new message to Wagey
     /// - Parameter content: The message content to send
     func sendMessage(_ content: String) async {
+        await sendMessage(content, image: nil)
+    }
+
+    /// Send a new message to Wagey with an optional image attachment
+    /// - Parameters:
+    ///   - content: The message content to send
+    ///   - image: Optional image attachment
+    func sendMessage(_ content: String, image: ImageAttachment?) async {
         // Don't send if already streaming or limit reached
         guard !isStreaming && !limitReached else { return }
 
         // Clear any previous error
         error = nil
 
-        // Add user message to conversation
-        let userMessage = ChatMessage(
-            id: UUID().uuidString,
-            role: .user,
-            content: content,
-            toolCalls: nil,
-            timestamp: Date()
-        )
+        // Add user message to conversation (with or without image)
+        let userMessage: ChatMessage
+        if let image = image {
+            userMessage = ChatMessage.user(content, image: image)
+        } else {
+            userMessage = ChatMessage(
+                id: UUID().uuidString,
+                role: .user,
+                content: content,
+                toolCalls: nil,
+                timestamp: Date()
+            )
+        }
         messages.append(userMessage)
 
         // Increment local message counter for progress bar
