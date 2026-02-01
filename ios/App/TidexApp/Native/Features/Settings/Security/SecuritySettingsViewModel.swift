@@ -69,6 +69,34 @@ final class SecuritySettingsViewModel: ObservableObject {
     @Published var showUnenrollConfirmation = false
     @Published var factorToUnenroll: MFAFactor?
 
+    // MARK: - Biometric Lock
+
+    /// Biometric service for app lock
+    private let biometricService = BiometricAuthService.shared
+
+    /// Whether biometric lock is enabled
+    var isBiometricLockEnabled: Bool {
+        biometricService.isEnabled
+    }
+
+    /// Whether biometrics are available on this device
+    var isBiometricAvailable: Bool {
+        biometricService.isAvailable
+    }
+
+    /// The type of biometric (Face ID, Touch ID)
+    var biometricTypeName: String {
+        biometricService.biometricTypeName
+    }
+
+    /// SF Symbol for the biometric type
+    var biometricIconName: String {
+        biometricService.biometricIconName
+    }
+
+    /// Toggle biometric lock state
+    @Published private(set) var isTogglingBiometric = false
+
     // MARK: - Initialization
 
     init(localization: LocalizationManager? = nil) {
@@ -503,6 +531,32 @@ final class SecuritySettingsViewModel: ObservableObject {
     func clearMessages() {
         errorMessage = nil
         successMessage = nil
+    }
+
+    // MARK: - Biometric Lock Management
+
+    /// Toggle biometric lock on/off
+    func toggleBiometricLock() async {
+        isTogglingBiometric = true
+        errorMessage = nil
+
+        if isBiometricLockEnabled {
+            // Disable - no authentication required
+            biometricService.disableBiometricLock()
+            successMessage = localization.string("security.biometric.success.disabled")
+        } else {
+            // Enable - requires authentication
+            let success = await biometricService.enableBiometricLock()
+            if success {
+                successMessage = localization.string("security.biometric.success.enabled")
+            } else {
+                errorMessage = localization.string("security.biometric.errors.authFailed")
+            }
+        }
+
+        // Force UI update since we're reading from biometricService
+        objectWillChange.send()
+        isTogglingBiometric = false
     }
 }
 

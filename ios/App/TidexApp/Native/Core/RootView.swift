@@ -7,6 +7,7 @@ struct RootView: View {
     @ObservedObject private var coordinator = AppCoordinator.shared
     @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
+    @ObservedObject private var biometricService = BiometricAuthService.shared
     // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
     // Onboarding state - explicit naming for two-phase onboarding
@@ -94,6 +95,10 @@ struct RootView: View {
                             }
                         )
                         .transition(.opacity)
+                    } else if biometricService.isEnabled && biometricService.isLocked {
+                        // Show lock screen instead of main content (prevents flash)
+                        AppLockView()
+                            .transition(.opacity)
                     } else {
                         MainTabView()
                             .transition(.opacity)
@@ -104,6 +109,7 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: coordinator.appState)
         .animation(.easeInOut(duration: 0.3), value: hasCompletedPreAuthOnboarding)
         .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
+        .animation(.easeInOut(duration: 0.25), value: biometricService.isLocked)
         .environmentObject(coordinator)
         .environment(\.localization, localization)
         // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()

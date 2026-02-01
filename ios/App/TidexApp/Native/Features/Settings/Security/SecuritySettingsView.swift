@@ -57,6 +57,11 @@ struct SecuritySettingsView: View {
                     .cornerRadius(8)
                 }
 
+                // Biometric lock section (only show if available)
+                if viewModel.isBiometricAvailable {
+                    biometricLockSection
+                }
+
                 // Password section (hidden for OAuth-only users)
                 if !viewModel.isOAuthOnly {
                     passwordSection
@@ -114,6 +119,72 @@ struct SecuritySettingsView: View {
                 .foregroundColor(.tidexTextSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Biometric Lock Section
+
+    private var biometricLockSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            VStack(alignment: .leading, spacing: 4) {
+                Text(localization.string("security.biometric.sectionTitle"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.tidexTextMuted)
+                    .textCase(.uppercase)
+
+                Text(localization.string("security.biometric.sectionSubtitle"))
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexTextSecondary)
+            }
+
+            // Biometric toggle card
+            VStack(spacing: 0) {
+                HStack(spacing: Spacing.sm) {
+                    // Icon
+                    Image(systemName: viewModel.biometricIconName)
+                        .font(.system(size: 20))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: 32, height: 32)
+
+                    // Content
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localization.string("security.biometric.title", viewModel.biometricTypeName))
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.tidexTextPrimary)
+
+                        Text(viewModel.isBiometricLockEnabled
+                             ? localization.string("security.biometric.enabled")
+                             : localization.string("security.biometric.disabled"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.tidexTextSecondary)
+                    }
+
+                    Spacer()
+
+                    // Toggle
+                    if viewModel.isTogglingBiometric {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                            .scaleEffect(0.8)
+                    } else {
+                        Toggle("", isOn: Binding(
+                            get: { viewModel.isBiometricLockEnabled },
+                            set: { _ in
+                                Task {
+                                    await viewModel.toggleBiometricLock()
+                                }
+                            }
+                        ))
+                        .labelsHidden()
+                        .tint(.tidexBlue)
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color.tidexSurfacePrimary)
+            .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
+        }
     }
 
     // MARK: - Password Section

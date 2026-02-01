@@ -952,6 +952,22 @@ enum AuthStrings {
         "security.mfa.unenrollDialog.description": "Du vil ikke lenger kunne bruke denne appen for to-faktor autentisering.",
         "security.mfa.unenrollDialog.confirm": "Fjern",
 
+        // Biometric Lock
+        "security.biometric.sectionTitle": "App-l\u{00E5}s",
+        "security.biometric.sectionSubtitle": "Beskytt inntektsdataene dine mot nysgjerrige blikk",
+        "security.biometric.title": "L\u{00E5}s med %@",
+        "security.biometric.enabled": "Appen l\u{00E5}ses n\u{00E5}r du bytter bort",
+        "security.biometric.disabled": "Appen er ikke beskyttet",
+        "security.biometric.success.enabled": "App-l\u{00E5}s aktivert!",
+        "security.biometric.success.disabled": "App-l\u{00E5}s deaktivert",
+        "security.biometric.errors.authFailed": "Kunne ikke bekrefte identiteten din",
+
+        // App Lock Screen
+        "appLock.title": "Tidex er l\u{00E5}st",
+        "appLock.subtitle": "Autentiser for \u{00E5} se inntektsdataene dine",
+        "appLock.unlock": "L\u{00E5}s opp med %@",
+        "appLock.error": "Autentisering mislyktes. Pr\u{00F8}v igjen.",
+
         // Subscription Settings
         "subscription.title": "Abonnement",
         "subscription.subtitle": "Administrer abonnementet ditt",
@@ -2058,6 +2074,22 @@ enum AuthStrings {
         "security.mfa.unenrollDialog.title": "Remove authenticator app?",
         "security.mfa.unenrollDialog.description": "You will no longer be able to use this app for two-factor authentication.",
         "security.mfa.unenrollDialog.confirm": "Remove",
+
+        // Biometric Lock
+        "security.biometric.sectionTitle": "App lock",
+        "security.biometric.sectionSubtitle": "Protect your earnings data from prying eyes",
+        "security.biometric.title": "Lock with %@",
+        "security.biometric.enabled": "App locks when you switch away",
+        "security.biometric.disabled": "App is not protected",
+        "security.biometric.success.enabled": "App lock enabled!",
+        "security.biometric.success.disabled": "App lock disabled",
+        "security.biometric.errors.authFailed": "Could not verify your identity",
+
+        // App Lock Screen
+        "appLock.title": "Tidex is Locked",
+        "appLock.subtitle": "Authenticate to view your earnings data",
+        "appLock.unlock": "Unlock with %@",
+        "appLock.error": "Authentication failed. Try again.",
 
         // Subscription Settings
         "subscription.title": "Subscription",
