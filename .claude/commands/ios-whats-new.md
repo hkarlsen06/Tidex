@@ -39,18 +39,20 @@ The argument `$ARGUMENTS` is the git reference (tag, commit hash, or marker) of 
 
 ## Output Format
 
-Generate the release notes in this exact format:
+Generate the release notes in this exact format (Norwegian first, then English, using hyphens). **Output inside a code block** so hyphens are preserved when copying.
 
 ```
-## English
+## Norsk
 
-[2-4 bullet points describing user-facing changes in clear, simple language]
+- Item 1
+- Item 2
 
 ---
 
-## Norsk
+## English
 
-[Same bullet points translated to Norwegian Bokmål]
+- Item 1
+- Item 2
 ```
 
 ## Guidelines
@@ -64,17 +66,17 @@ Generate the release notes in this exact format:
 
 ## Examples
 
-### English
-- Added shift reminders with customizable notification times
-- Fixed an issue where overnight shifts displayed incorrect hours
-- Improved dashboard loading performance
-- Updated design for better accessibility
-
 ### Norsk
 - Lagt til vaktpåminnelser med tilpassbare varslingstider
 - Rettet en feil der nattevakter viste feil antall timer
 - Forbedret lastetiden for dashbordet
 - Oppdatert design for bedre tilgjengelighet
+
+### English
+- Added shift reminders with customizable notification times
+- Fixed an issue where overnight shifts displayed incorrect hours
+- Improved dashboard loading performance
+- Updated design for better accessibility
 
 ## Important
 
