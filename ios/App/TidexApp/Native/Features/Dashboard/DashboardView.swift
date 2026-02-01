@@ -104,6 +104,12 @@ struct DashboardView: View {
                 viewModel.prepareForReload()
                 Task {
                     await viewModel.reloadFromLocal()
+
+                    // Play release haptic if coming from MFA verification
+                    if coordinator.didJustCompleteMFA {
+                        Haptics.play(.release)
+                        coordinator.didJustCompleteMFA = false
+                    }
                 }
             }
         }

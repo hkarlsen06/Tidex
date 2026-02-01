@@ -10,6 +10,8 @@ enum HapticType {
     case medium      // Moderate feedback
     case heavy       // Strong feedback
     case selection   // Selection changes
+    case hold        // Firm, pronounced feedback (like pressing down)
+    case release     // Soft, gentle feedback (like releasing a press)
 }
 
 /// Sound types for audio feedback
@@ -25,6 +27,9 @@ enum Haptics {
     /// Audio players for each sound type
     private static var soundPlayers: [SoundType: AVAudioPlayer] = [:]
 
+    /// Pre-prepared generator for rapid streaming haptics (e.g., token streaming)
+    private static let streamingGenerator = UIImpactFeedbackGenerator(style: .light)
+
     /// Volume level for sound effects (0.0 to 1.0)
     /// Adjust this to control how loud the sounds play
     private static let soundVolume: Float = 0.3
@@ -34,6 +39,16 @@ enum Haptics {
         for soundType in [SoundType.shiftCreated, .shiftDeleted, .subscriptionSuccess] {
             prepareSound(soundType)
         }
+    }
+
+    /// Prepare the streaming haptic generator for rapid haptics (call before streaming starts)
+    static func prepareStreamingHaptics() {
+        streamingGenerator.prepare()
+    }
+
+    /// Play a light haptic for streaming tokens (uses pre-prepared generator for performance)
+    static func playStreamingToken() {
+        streamingGenerator.impactOccurred()
     }
 
     /// Preload a specific sound
@@ -68,6 +83,10 @@ enum Haptics {
             UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         case .selection:
             UISelectionFeedbackGenerator().selectionChanged()
+        case .hold:
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred(intensity: 1.0)
+        case .release:
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.7)
         }
     }
 
