@@ -60,13 +60,42 @@ export type ChatChunk =
     };
 
 /**
+ * Image content block schema (for multimodal messages)
+ */
+const imageContentBlockSchema = z.object({
+  type: z.literal("image"),
+  source: z.object({
+    type: z.literal("base64"),
+    media_type: z.string(),
+    data: z.string(),
+  }),
+});
+
+/**
+ * Text content block schema
+ */
+const textContentBlockSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+/**
+ * Content can be a string or array of content blocks (for multimodal messages)
+ */
+const contentSchema = z.union([
+  z.string().nullable(),
+  z.array(z.union([textContentBlockSchema, imageContentBlockSchema])),
+]);
+
+/**
  * Chat input schema (from frontend - OpenAI format for backwards compatibility)
+ * Now supports multimodal content (images) in user messages
  */
 const chatInputSchema = z.object({
   messages: z.array(
     z.object({
       role: z.enum(["system", "user", "assistant", "tool"]),
-      content: z.string().nullable(),
+      content: contentSchema,
       tool_calls: z
         .array(
           z.object({
@@ -120,7 +149,25 @@ async function verifyAuthentication(
 }
 
 /**
+ * Helper to extract text from content (handles both string and array formats)
+ */
+function extractTextContent(content: ChatInput["messages"][0]["content"]): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (content === null) {
+    return "";
+  }
+  // Array of content blocks - extract text
+  return content
+    .filter((block): block is z.infer<typeof textContentBlockSchema> => block.type === "text")
+    .map((block) => block.text)
+    .join("");
+}
+
+/**
  * Convert OpenAI-style messages from frontend to Claude format
+ * Supports multimodal messages with images
  */
 function convertToClaudeMessages(
   openAiMessages: ChatInput["messages"]
@@ -131,15 +178,48 @@ function convertToClaudeMessages(
   for (const msg of openAiMessages) {
     // Extract system prompt separately (Claude doesn't include it in messages)
     if (msg.role === "system") {
-      systemPrompt = msg.content || undefined;
+      systemPrompt = extractTextContent(msg.content) || undefined;
       continue;
     }
 
-    // Handle user messages
+    // Handle user messages (may include images)
     if (msg.role === "user") {
+      // Check if content is multimodal (array with images)
+      if (Array.isArray(msg.content)) {
+        const hasImages = msg.content.some((block) => block.type === "image");
+        if (hasImages) {
+          // Convert to Claude multimodal format
+          const claudeContent: ContentBlock[] = msg.content.map((block) => {
+            if (block.type === "image") {
+              // Claude image format
+              return {
+                type: "image" as const,
+                source: {
+                  type: "base64" as const,
+                  media_type: block.source.media_type,
+                  data: block.source.data,
+                },
+              } as unknown as ContentBlock;
+            }
+            // Text block
+            return {
+              type: "text" as const,
+              text: block.text,
+            };
+          });
+
+          claudeMessages.push({
+            role: "user",
+            content: claudeContent,
+          });
+          continue;
+        }
+      }
+
+      // Plain text message
       claudeMessages.push({
         role: "user",
-        content: msg.content || "",
+        content: extractTextContent(msg.content),
       });
       continue;
     }
@@ -149,10 +229,11 @@ function convertToClaudeMessages(
       const contentBlocks: ContentBlock[] = [];
 
       // Add text content if present
-      if (msg.content) {
+      const textContent = extractTextContent(msg.content);
+      if (textContent) {
         contentBlocks.push({
           type: "text",
-          text: msg.content,
+          text: textContent,
         });
       }
 
@@ -177,13 +258,14 @@ function convertToClaudeMessages(
 
       claudeMessages.push({
         role: "assistant",
-        content: contentBlocks.length > 0 ? contentBlocks : msg.content || "",
+        content: contentBlocks.length > 0 ? contentBlocks : textContent,
       });
       continue;
     }
 
     // Handle tool results - Claude expects them as user messages with tool_result content
     if (msg.role === "tool" && msg.tool_call_id) {
+      const resultContent = extractTextContent(msg.content);
       // Check if last message is a user message with tool results, if so append to it
       const lastMessage = claudeMessages[claudeMessages.length - 1];
       if (lastMessage?.role === "user" && Array.isArray(lastMessage.content)) {
@@ -191,7 +273,7 @@ function convertToClaudeMessages(
         (lastMessage.content as ContentBlock[]).push({
           type: "tool_result",
           tool_use_id: msg.tool_call_id,
-          content: msg.content || "",
+          content: resultContent,
         });
       } else {
         // Create new user message with tool result
@@ -201,7 +283,7 @@ function convertToClaudeMessages(
             {
               type: "tool_result",
               tool_use_id: msg.tool_call_id,
-              content: msg.content || "",
+              content: resultContent,
             },
           ],
         });

@@ -18,7 +18,8 @@ private struct ChatAPIRequest: Encodable {
 
     struct APIMessage: Encodable {
         let role: String
-        let content: String
+        /// Content can be a string or array of content blocks (for multimodal messages)
+        let content: APIMessageContent
         let toolCalls: [APIToolCall]?
         let toolCallId: String?
         let name: String?
@@ -28,6 +29,51 @@ private struct ChatAPIRequest: Encodable {
             case toolCalls = "tool_calls"
             case toolCallId = "tool_call_id"
             case name
+        }
+    }
+
+    /// Message content that can be either a string or array of content blocks
+    enum APIMessageContent: Encodable {
+        case text(String)
+        case blocks([APIContentBlock])
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .text(let text):
+                try container.encode(text)
+            case .blocks(let blocks):
+                try container.encode(blocks)
+            }
+        }
+    }
+
+    /// Content block for multimodal messages
+    enum APIContentBlock: Encodable {
+        case text(String)
+        case image(mediaType: String, base64Data: String)
+
+        private enum CodingKeys: String, CodingKey {
+            case type, text, source
+        }
+
+        private enum SourceKeys: String, CodingKey {
+            case type, mediaType = "media_type", data
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            switch self {
+            case .text(let text):
+                try container.encode("text", forKey: .type)
+                try container.encode(text, forKey: .text)
+            case .image(let mediaType, let base64Data):
+                try container.encode("image", forKey: .type)
+                var sourceContainer = container.nestedContainer(keyedBy: SourceKeys.self, forKey: .source)
+                try sourceContainer.encode("base64", forKey: .type)
+                try sourceContainer.encode(mediaType, forKey: .mediaType)
+                try sourceContainer.encode(base64Data, forKey: .data)
+            }
         }
     }
 
@@ -163,10 +209,39 @@ final class WageyService: ObservableObject {
             var apiMessages: [ChatAPIRequest.APIMessage] = []
 
             for message in messages {
+                // Check if message has images
+                let images = message.imageAttachments
+
+                // Build content - use blocks if there are images, otherwise use plain text
+                let content: ChatAPIRequest.APIMessageContent
+                if !images.isEmpty {
+                    // Multimodal message with images
+                    var blocks: [ChatAPIRequest.APIContentBlock] = []
+
+                    // Add images first (Claude best practice)
+                    for image in images {
+                        blocks.append(.image(
+                            mediaType: image.mediaType,
+                            base64Data: image.base64String
+                        ))
+                    }
+
+                    // Add text content if present
+                    let textContent = message.content
+                    if !textContent.isEmpty {
+                        blocks.append(.text(textContent))
+                    }
+
+                    content = .blocks(blocks)
+                } else {
+                    // Text-only message
+                    content = .text(message.content)
+                }
+
                 // Add the main message
                 let apiMessage = ChatAPIRequest.APIMessage(
                     role: message.role.rawValue,
-                    content: message.content,
+                    content: content,
                     toolCalls: message.toolCalls?.map { toolCall in
                         ChatAPIRequest.APIToolCall(
                             id: toolCall.id,
@@ -197,7 +272,7 @@ final class WageyService: ObservableObject {
                         }
                         let toolResultMessage = ChatAPIRequest.APIMessage(
                             role: "tool",
-                            content: resultContent,
+                            content: .text(resultContent),
                             toolCalls: nil,
                             toolCallId: toolCall.id,
                             name: toolCall.name
@@ -210,7 +285,16 @@ final class WageyService: ObservableObject {
             // Debug log the messages being sent
             logger.debug("Sending \(apiMessages.count) messages to chat API")
             for (index, msg) in apiMessages.enumerated() {
-                logger.debug("  [\(index)] role=\(msg.role), content_length=\(msg.content.count), toolCalls=\(msg.toolCalls?.count ?? 0), toolCallId=\(msg.toolCallId ?? "nil")")
+                let contentInfo: String
+                switch msg.content {
+                case .text(let text):
+                    contentInfo = "text(\(text.count) chars)"
+                case .blocks(let blocks):
+                    let imageCount = blocks.filter { if case .image = $0 { return true } else { return false } }.count
+                    let textCount = blocks.filter { if case .text = $0 { return true } else { return false } }.count
+                    contentInfo = "blocks(\(imageCount) images, \(textCount) texts)"
+                }
+                logger.debug("  [\(index)] role=\(msg.role), content=\(contentInfo), toolCalls=\(msg.toolCalls?.count ?? 0), toolCallId=\(msg.toolCallId ?? "nil")")
             }
 
             let requestBody = ChatAPIRequest(
