@@ -89,6 +89,9 @@ struct SecuritySettingsView: View {
         .sheet(isPresented: $viewModel.showMFAEnrollment) {
             mfaEnrollmentSheet
         }
+        .sheet(isPresented: $viewModel.showPhoneLinkingSheet) {
+            phoneLinkingSheet
+        }
         .alert(localization.string("security.mfa.unenrollDialog.title"), isPresented: $viewModel.showUnenrollConfirmation) {
             Button(localization.string("common.cancel"), role: .cancel) {
                 viewModel.factorToUnenroll = nil
@@ -267,14 +270,16 @@ struct SecuritySettingsView: View {
                     icon: "phone.fill",
                     title: localization.string("security.connections.phone.title"),
                     isConnected: viewModel.hasPhoneConnected,
-                    connectedText: viewModel.phoneNumber ?? localization.string("security.connections.phone.connected"),
+                    connectedText: formatPhoneForDisplay(viewModel.phoneNumber) ?? localization.string("security.connections.phone.connected"),
                     notConnectedText: localization.string("security.connections.phone.notConnected"),
                     canDisconnect: viewModel.canUnlinkPhone,
-                    onConnect: { /* Phone linking requires OTP flow - not yet implemented */ },
+                    onConnect: {
+                        viewModel.showPhoneLinkingSheet = true
+                    },
                     onDisconnect: {
                         Task { await viewModel.disconnectProvider("phone") }
                     },
-                    connectDisabled: true // Phone linking requires OTP flow
+                    connectDisabled: false
                 )
 
                 Divider()
@@ -958,6 +963,217 @@ struct SecuritySettingsView: View {
                     }
                 }
         }
+    }
+
+    // MARK: - Phone Linking Sheet
+
+    private var phoneLinkingSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Instructions
+                    Text(viewModel.phoneLinkStep == .input
+                         ? localization.string("security.phoneLinking.instructionEnter")
+                         : localization.string("security.phoneLinking.instructionVerify"))
+                        .font(.system(size: 14))
+                        .foregroundColor(.tidexTextSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if viewModel.phoneLinkStep == .input {
+                        phoneLinkInputSection
+                    } else {
+                        phoneLinkOtpSection
+                    }
+
+                    // Error message
+                    if let error = viewModel.errorMessage {
+                        Text(error)
+                            .font(.system(size: 13))
+                            .foregroundColor(.tidexError)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Success message
+                    if let success = viewModel.successMessage {
+                        Text(success)
+                            .font(.system(size: 13))
+                            .foregroundColor(.tidexSuccess)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Action button
+                    Button {
+                        Task {
+                            if viewModel.phoneLinkStep == .input {
+                                await viewModel.connectPhone()
+                            } else {
+                                await viewModel.verifyPhoneLinkOTP()
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            if viewModel.isLinkingPhone {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            }
+                            Text(viewModel.isLinkingPhone
+                                 ? (viewModel.phoneLinkStep == .input
+                                    ? localization.string("security.phoneLinking.sending")
+                                    : localization.string("security.phoneLinking.verifying"))
+                                 : (viewModel.phoneLinkStep == .input
+                                    ? localization.string("security.phoneLinking.sendCode")
+                                    : localization.string("security.phoneLinking.verify")))
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.sm)
+                        .background(canSubmitPhoneLinking ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
+                        .cornerRadius(10)
+                    }
+                    .disabled(!canSubmitPhoneLinking || viewModel.isLinkingPhone)
+                }
+                .padding(24)
+            }
+            .background(Color.tidexBackground)
+            .navigationTitle(localization.string("security.phoneLinking.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.string("common.cancel")) {
+                        viewModel.resetPhoneLinkingForm()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var phoneLinkInputSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(localization.string("security.phoneLinking.phoneLabel"))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.tidexTextSecondary)
+
+            HStack(spacing: 8) {
+                // Country code indicator
+                Text("+47")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.tidexTextPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, Spacing.sm)
+                    .background(Color.tidexSurfaceSecondary)
+                    .cornerRadius(8)
+
+                TextField("12345678", text: $viewModel.phoneLinkInput)
+                    .font(.system(size: 16))
+                    .foregroundColor(.tidexTextPrimary)
+                    .keyboardType(.numberPad)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, Spacing.sm)
+                    .background(Color.tidexSurfaceSecondary)
+                    .cornerRadius(8)
+                    .onChange(of: viewModel.phoneLinkInput) { _, newValue in
+                        // Limit to 8 digits (Norwegian phone numbers)
+                        let filtered = newValue.filter { $0.isNumber }
+                        if filtered.count > 8 {
+                            viewModel.phoneLinkInput = String(filtered.prefix(8))
+                        } else if filtered != newValue {
+                            viewModel.phoneLinkInput = filtered
+                        }
+                    }
+            }
+
+            Text(localization.string("security.phoneLinking.phoneHint"))
+                .font(.system(size: 12))
+                .foregroundColor(.tidexTextMuted)
+        }
+    }
+
+    private var phoneLinkOtpSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Show the phone number that code was sent to
+            HStack(spacing: 8) {
+                Image(systemName: "phone.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.tidexBlue)
+                Text(formatPhoneForDisplay(viewModel.phoneLinkInput) ?? "+47 \(viewModel.phoneLinkInput)")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextPrimary)
+
+                Spacer()
+
+                Button {
+                    viewModel.phoneLinkStep = .input
+                    viewModel.phoneLinkOtp = ""
+                    viewModel.errorMessage = nil
+                } label: {
+                    Text(localization.string("security.phoneLinking.changeNumber"))
+                        .font(.system(size: 13))
+                        .foregroundColor(.tidexBlue)
+                }
+            }
+            .padding(12)
+            .background(Color.tidexSurfaceSecondary)
+            .cornerRadius(8)
+
+            // OTP input
+            VStack(alignment: .leading, spacing: 6) {
+                Text(localization.string("security.phoneLinking.otpLabel"))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
+
+                TextField("123456", text: $viewModel.phoneLinkOtp)
+                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.tidexTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.numberPad)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.tidexSurfaceSecondary)
+                    .cornerRadius(8)
+                    .onChange(of: viewModel.phoneLinkOtp) { _, newValue in
+                        // Limit to 6 digits
+                        let filtered = newValue.filter { $0.isNumber }
+                        if filtered.count > 6 {
+                            viewModel.phoneLinkOtp = String(filtered.prefix(6))
+                        } else if filtered != newValue {
+                            viewModel.phoneLinkOtp = filtered
+                        }
+                    }
+            }
+        }
+    }
+
+    private var canSubmitPhoneLinking: Bool {
+        if viewModel.phoneLinkStep == .input {
+            return viewModel.phoneLinkInput.count == 8
+        } else {
+            return viewModel.phoneLinkOtp.count == 6
+        }
+    }
+
+    /// Format a phone number for display (Norwegian: nnn nn nnn)
+    private func formatPhoneForDisplay(_ phone: String?) -> String? {
+        guard let phone = phone else { return nil }
+
+        // Remove any non-digit characters and country code
+        var digits = phone.filter { $0.isNumber }
+
+        // Remove Norwegian country code if present
+        if digits.hasPrefix("47") && digits.count > 8 {
+            digits = String(digits.dropFirst(2))
+        }
+
+        // Format as "nnn nn nnn" for 8-digit Norwegian numbers
+        guard digits.count == 8 else { return phone }
+
+        let part1 = digits.prefix(3)
+        let part2 = digits.dropFirst(3).prefix(2)
+        let part3 = digits.dropFirst(5)
+
+        return "+47 \(part1) \(part2) \(part3)"
     }
 }
 
