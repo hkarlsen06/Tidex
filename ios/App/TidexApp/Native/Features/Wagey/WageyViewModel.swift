@@ -365,6 +365,9 @@ final class WageyViewModel {
         hadSuccessfulToolCalls = false
         currentAssistantMessageId = UUID().uuidString
 
+        // Prepare haptics for token streaming
+        Haptics.prepareStreamingHaptics()
+
         // Create streaming task
         streamTask = Task {
             do {
@@ -517,6 +520,9 @@ final class WageyViewModel {
                 // Create new text block
                 activeContentBlocks.append(.text(content))
             }
+
+            // Light haptic for each token
+            Haptics.playStreamingToken()
 
         case .toolStart(let toolName, let toolCallId, let toolArguments):
             // Add a new tool call in progress

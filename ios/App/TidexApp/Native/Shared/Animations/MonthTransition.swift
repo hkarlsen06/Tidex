@@ -517,7 +517,10 @@ struct AnimatedMonthHeader: View {
 
     @ViewBuilder
     private func navigationButton(icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            swipeHaptic.impactOccurred()
+            action()
+        } label: {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.tidexBlue)

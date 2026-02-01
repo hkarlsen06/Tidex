@@ -120,7 +120,10 @@ final class MFAVerifyViewModel: ObservableObject {
                 code: code
             )
 
-            // MFA verified successfully - keep overlay visible during transition
+            // MFA verified successfully - play hold haptic for satisfying feedback
+            Haptics.play(.hold)
+
+            // Keep overlay visible during transition
             isLoading = false
             isVerificationComplete = true
 

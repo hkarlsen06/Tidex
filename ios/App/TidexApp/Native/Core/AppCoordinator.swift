@@ -116,6 +116,11 @@ final class AppCoordinator: ObservableObject {
     /// Whether initial sync has completed after authentication
     @Published private(set) var initialSyncComplete = false
 
+    // MARK: - MFA Completion State
+
+    /// Flag indicating MFA was just completed - consumed by DashboardView for haptic feedback
+    @Published var didJustCompleteMFA = false
+
     // MARK: - Dependencies
 
     private let authService: AuthService
@@ -522,6 +527,8 @@ final class AppCoordinator: ObservableObject {
     /// will clear it after setting appState. Clearing it synchronously before the state
     /// changes causes a flash where RootView shows AuthNavigationView as a fallback.
     func handleMFASuccess() {
+        // Set flag for DashboardView to play release haptic when fully rendered
+        didJustCompleteMFA = true
         Task {
             // After MFA, check if terms acceptance is needed
             await checkTermsAndUpdateState()
