@@ -102,19 +102,24 @@ struct MonthTransitionPhase: Equatable {
 
 // MARK: - Card Transition Modifier
 
-/// A view modifier that applies horizontal slide transition to cards
+/// A view modifier that applies slide transition to cards
 /// Similar to the Next.js calendar grid animation
+/// Supports horizontal (left/right) or vertical (up/down) animation based on user preference
 struct CardTransitionModifier: ViewModifier {
     let phase: MonthTransitionPhase
     let index: Int
     let config: MonthTransitionConfig
 
     @State private var isAppearing = false
+    private let animationStyle = AppearanceManager.shared.calendarAnimationStyle
 
     func body(content: Content) -> some View {
         content
             .opacity(isAppearing ? 1 : 0)
-            .offset(x: isAppearing ? 0 : slideOffset)
+            .offset(
+                x: animationStyle == .horizontal ? (isAppearing ? 0 : slideOffset) : 0,
+                y: animationStyle == .vertical ? (isAppearing ? 0 : slideOffset) : 0
+            )
             .scaleEffect(isAppearing ? 1 : 0.95)
             .onAppear {
                 // Stagger the appearance of each card
@@ -147,11 +152,13 @@ struct CardTransitionModifier: ViewModifier {
 
 // MARK: - Text Transition Modifier
 
-/// A view modifier that applies horizontal slide transition to text (month/year labels)
-/// Text slides sideways in the direction of navigation
+/// A view modifier that applies slide transition to text (month/year labels)
+/// Text slides in the direction of navigation (horizontal or vertical based on user preference)
 struct TextTransitionModifier: ViewModifier {
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
+
+    private let animationStyle = AppearanceManager.shared.calendarAnimationStyle
 
     func body(content: Content) -> some View {
         content
@@ -167,22 +174,31 @@ struct TextTransitionModifier: ViewModifier {
         let direction = phase.direction
         let offset = direction == .next ? config.textOffset : -config.textOffset
 
-        return .asymmetric(
-            insertion: .offset(x: offset).combined(with: .opacity),
-            removal: .offset(x: -offset).combined(with: .opacity)
-        )
+        if animationStyle == .vertical {
+            return .asymmetric(
+                insertion: .offset(y: offset).combined(with: .opacity),
+                removal: .offset(y: -offset).combined(with: .opacity)
+            )
+        } else {
+            return .asymmetric(
+                insertion: .offset(x: offset).combined(with: .opacity),
+                removal: .offset(x: -offset).combined(with: .opacity)
+            )
+        }
     }
 }
 
 // MARK: - Staggered Cards Container
 
-/// A container wrapper for calendar content that applies horizontal slide animations
-/// when navigating between months. Slides in from right when going forward,
-/// slides in from left when going backward.
+/// A container wrapper for calendar content that applies slide animations
+/// when navigating between months. Supports horizontal or vertical animation
+/// based on user preference.
 struct StaggeredCardsContainer<Content: View>: View {
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
     @ViewBuilder let content: () -> Content
+
+    private let animationStyle = AppearanceManager.shared.calendarAnimationStyle
 
     var body: some View {
         content()
@@ -199,10 +215,17 @@ struct StaggeredCardsContainer<Content: View>: View {
     private var slideTransition: AnyTransition {
         let offset = phase.direction == .next ? config.slideOffset : -config.slideOffset
 
-        return .asymmetric(
-            insertion: .offset(x: offset).combined(with: .opacity),
-            removal: .offset(x: -offset).combined(with: .opacity)
-        )
+        if animationStyle == .vertical {
+            return .asymmetric(
+                insertion: .offset(y: offset).combined(with: .opacity),
+                removal: .offset(y: -offset).combined(with: .opacity)
+            )
+        } else {
+            return .asymmetric(
+                insertion: .offset(x: offset).combined(with: .opacity),
+                removal: .offset(x: -offset).combined(with: .opacity)
+            )
+        }
     }
 }
 
@@ -582,11 +605,19 @@ struct AnimatedMonthHeader: View {
     private var textTransition: AnyTransition {
         let direction = phase.direction
         let offset = direction == .next ? config.textOffset : -config.textOffset
+        let animationStyle = AppearanceManager.shared.calendarAnimationStyle
 
-        return .asymmetric(
-            insertion: .offset(x: offset).combined(with: .opacity),
-            removal: .offset(x: -offset).combined(with: .opacity)
-        )
+        if animationStyle == .vertical {
+            return .asymmetric(
+                insertion: .offset(y: offset).combined(with: .opacity),
+                removal: .offset(y: -offset).combined(with: .opacity)
+            )
+        } else {
+            return .asymmetric(
+                insertion: .offset(x: offset).combined(with: .opacity),
+                removal: .offset(x: -offset).combined(with: .opacity)
+            )
+        }
     }
 }
 

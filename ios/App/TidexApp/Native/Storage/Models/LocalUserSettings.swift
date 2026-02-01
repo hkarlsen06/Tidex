@@ -31,6 +31,9 @@ final class LocalUserSettings {
     /// Theme preference (NOT NULL in DB, defaults to "system")
     var theme: String
 
+    /// Calendar animation style preference (NOT NULL in DB, defaults to "horizontal")
+    var calendarAnimationStyle: String
+
     /// Month number (11=November, 12=December) for half tax deduction
     var halfTaxMonth: Int?
 
@@ -122,6 +125,7 @@ final class LocalUserSettings {
         profilePictureUrl: String? = nil,
         payrollDay: Int? = nil,
         theme: String = "system",
+        calendarAnimationStyle: String = "horizontal",
         halfTaxMonth: Int? = nil,
         currency: String? = nil,
         lastActive: Date? = nil,
@@ -140,6 +144,7 @@ final class LocalUserSettings {
         self.profilePictureUrl = profilePictureUrl
         self.payrollDay = payrollDay
         self.theme = theme
+        self.calendarAnimationStyle = calendarAnimationStyle
         self.halfTaxMonth = halfTaxMonth
         self.currency = currency
         self.lastActive = lastActive
@@ -168,6 +173,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     let profilePictureUrl: String?
     let payrollDay: Int?
     let theme: String
+    let calendarAnimationStyle: String
     let halfTaxMonth: Int?
     let currency: String?
     let lastActive: Date?
@@ -188,6 +194,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
             profilePictureUrl: row.profile_picture_url,
             payrollDay: row.payroll_day,
             theme: row.theme,
+            calendarAnimationStyle: row.calendar_animation_style,
             halfTaxMonth: row.half_tax_month,
             currency: row.currency,
             lastActive: row.last_active.flatMap { dateFormatter.date(from: $0) },
@@ -232,6 +239,9 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
         if theme != other.theme {
             changed.insert(.theme)
         }
+        if calendarAnimationStyle != other.calendarAnimationStyle {
+            changed.insert(.calendarAnimationStyle)
+        }
         if halfTaxMonth != other.halfTaxMonth {
             changed.insert(.halfTaxMonth)
         }
@@ -263,6 +273,7 @@ extension LocalUserSettings {
             profile_picture_url: profilePictureUrl,
             payroll_day: payrollDay,
             theme: theme,
+            calendar_animation_style: calendarAnimationStyle,
             half_tax_month: halfTaxMonth,
             currency: currency
         )
@@ -293,6 +304,7 @@ extension LocalUserSettings {
             profilePictureUrl: serverRow.profile_picture_url,
             payrollDay: serverRow.payroll_day,
             theme: serverRow.theme,
+            calendarAnimationStyle: serverRow.calendar_animation_style,
             halfTaxMonth: serverRow.half_tax_month,
             currency: serverRow.currency,
             lastActive: lastActive,

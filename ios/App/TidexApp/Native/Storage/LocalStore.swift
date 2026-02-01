@@ -1111,6 +1111,7 @@ actor LocalStoreActor {
         payrollDay: Int? = nil,
         currency: String? = nil,
         theme: String = "system",
+        calendarAnimationStyle: String = "horizontal",
         monthlyGoal: Int? = nil,
         defaultShiftsView: String? = nil,
         halfTaxMonth: Int? = nil
@@ -1124,6 +1125,7 @@ actor LocalStoreActor {
             profilePictureUrl: nil,
             payrollDay: payrollDay,
             theme: theme,
+            calendarAnimationStyle: calendarAnimationStyle,
             halfTaxMonth: halfTaxMonth,
             currency: currency,
             lastActive: now,
@@ -1132,7 +1134,7 @@ actor LocalStoreActor {
         )
 
         // Track all non-nil fields as dirty so they get pushed to server
-        var dirtyFields: [UserSettingsField] = [.theme, .lastActive]
+        var dirtyFields: [UserSettingsField] = [.theme, .calendarAnimationStyle, .lastActive]
         if payrollDay != nil { dirtyFields.append(.payrollDay) }
         if currency != nil { dirtyFields.append(.currency) }
         if monthlyGoal != nil { dirtyFields.append(.monthlyGoal) }
@@ -1148,6 +1150,7 @@ actor LocalStoreActor {
             profilePictureUrl: nil,
             payrollDay: payrollDay,
             theme: theme,
+            calendarAnimationStyle: calendarAnimationStyle,
             halfTaxMonth: halfTaxMonth,
             currency: currency,
             lastActive: now,
@@ -1196,6 +1199,7 @@ actor LocalStoreActor {
         profilePictureUrl: String?,
         payrollDay: Int?,
         theme: String?,
+        calendarAnimationStyle: String?,
         halfTaxMonth: Int?,
         currency: String?
     ) throws -> UserSettings {
@@ -1236,6 +1240,12 @@ actor LocalStoreActor {
         if let newTheme = theme {
             localSettings.theme = newTheme
             newDirtyFields.insert(.theme)
+        }
+
+        // Calendar animation style: Same treatment as theme
+        if let newStyle = calendarAnimationStyle {
+            localSettings.calendarAnimationStyle = newStyle
+            newDirtyFields.insert(.calendarAnimationStyle)
         }
 
         if let newHalfTax = halfTaxMonth, newHalfTax != localSettings.halfTaxMonth {
@@ -1770,6 +1780,7 @@ actor LocalStoreActor {
         existing.profilePictureUrl = serverRow.profile_picture_url
         existing.payrollDay = serverRow.payroll_day
         existing.theme = serverRow.theme
+        existing.calendarAnimationStyle = serverRow.calendar_animation_style
         existing.halfTaxMonth = serverRow.half_tax_month
         existing.currency = serverRow.currency
         existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
@@ -1831,6 +1842,9 @@ actor LocalStoreActor {
         }
         if !localDirtyFields.contains(.theme) {
             existing.theme = serverRow.theme
+        }
+        if !localDirtyFields.contains(.calendarAnimationStyle) {
+            existing.calendarAnimationStyle = serverRow.calendar_animation_style
         }
         if !localDirtyFields.contains(.halfTaxMonth) {
             existing.halfTaxMonth = serverRow.half_tax_month

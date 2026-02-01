@@ -18,6 +18,15 @@ final class AppearanceSettingsViewModel: ObservableObject {
         }
     }
 
+    /// The currently selected calendar animation style
+    @Published var selectedCalendarAnimationStyle: CalendarAnimationStyle = .horizontal {
+        didSet {
+            if oldValue != selectedCalendarAnimationStyle && !isInitialLoad {
+                updateCalendarAnimationStyle()
+            }
+        }
+    }
+
     /// Loading state
     @Published var isLoading: Bool = false
 
@@ -67,6 +76,17 @@ final class AppearanceSettingsViewModel: ObservableObject {
         } else {
             selectedTheme = .system
         }
+
+        // Load calendar animation style from settings (synced from server)
+        if let styleString = settings?.calendar_animation_style,
+           let style = CalendarAnimationStyle(rawValue: styleString) {
+            selectedCalendarAnimationStyle = style
+            // Also update AppearanceManager to match
+            appearanceManager.setCalendarAnimationStyle(style)
+        } else {
+            selectedCalendarAnimationStyle = .horizontal
+        }
+
         isInitialLoad = false
 
         isLoading = false
@@ -99,6 +119,29 @@ final class AppearanceSettingsViewModel: ObservableObject {
             } catch {
                 logger.error("Failed to save theme: \(error.localizedDescription)")
                 errorMessage = "Failed to save theme preference"
+            }
+        }
+    }
+
+    /// Update calendar animation style in repository and apply to app
+    private func updateCalendarAnimationStyle() {
+        guard !isInitialLoad, let userId = userId else { return }
+
+        // Apply immediately to AppearanceManager
+        appearanceManager.setCalendarAnimationStyle(selectedCalendarAnimationStyle)
+
+        // Save to repository (automatically triggers sync)
+        Task {
+            do {
+                _ = try await settingsRepository.updateSettings(
+                    for: userId,
+                    calendarAnimationStyle: selectedCalendarAnimationStyle.rawValue
+                )
+
+                logger.info("Updated calendar animation style to: \(self.selectedCalendarAnimationStyle.rawValue)")
+            } catch {
+                logger.error("Failed to save calendar animation style: \(error.localizedDescription)")
+                errorMessage = "Failed to save animation preference"
             }
         }
     }

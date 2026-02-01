@@ -2790,6 +2790,9 @@ final class SyncCoordinator: ObservableObject {
         if dirtyFields.contains(.theme) {
             updateData["theme"] = .string(settings.theme)
         }
+        if dirtyFields.contains(.calendarAnimationStyle) {
+            updateData["calendar_animation_style"] = .string(settings.calendarAnimationStyle)
+        }
         if dirtyFields.contains(.halfTaxMonth) {
             if let month = settings.halfTaxMonth {
                 updateData["half_tax_month"] = .integer(month)
@@ -2873,7 +2876,8 @@ final class SyncCoordinator: ObservableObject {
         // Build full insert data
         var insertData: [String: AnyJSON] = [
             "user_id": .string(userId),
-            "theme": .string(settings.theme)
+            "theme": .string(settings.theme),
+            "calendar_animation_style": .string(settings.calendarAnimationStyle)
         ]
 
         // Optional fields

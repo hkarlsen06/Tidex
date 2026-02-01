@@ -23,6 +23,8 @@ struct UserSettings: Codable, Equatable {
     let payroll_day: Int?
     /// Theme preference (NOT NULL in DB, defaults to "system")
     let theme: String
+    /// Calendar animation style preference (NOT NULL in DB, defaults to "horizontal")
+    let calendar_animation_style: String
     /// Month number (11=November, 12=December) for half tax deduction
     let half_tax_month: Int?
     /// Currency code
@@ -50,6 +52,7 @@ struct UserSettings: Codable, Equatable {
             profile_picture_url: nil,
             payroll_day: 1,
             theme: "system",
+            calendar_animation_style: "horizontal",
             half_tax_month: nil,
             currency: nil
         )

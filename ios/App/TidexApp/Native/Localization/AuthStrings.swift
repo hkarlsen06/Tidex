@@ -799,6 +799,13 @@ enum AuthStrings {
         "appearance.info.light": "lyst",
         "appearance.info.dark": "m\u{00F8}rkt",
 
+        // Calendar Animation
+        "appearance.calendarAnimation.sectionTitle": "Kalenderanimasjon",
+        "appearance.calendarAnimation.horizontal": "Horisontal",
+        "appearance.calendarAnimation.horizontalDescription": "Glir sideveis mellom måneder",
+        "appearance.calendarAnimation.vertical": "Vertikal",
+        "appearance.calendarAnimation.verticalDescription": "Glir opp og ned mellom måneder",
+
         // Feedback Settings
         "feedback.title": "Tilbakemelding",
         "feedback.subtitle": "Hjelp oss \u{00E5} bli bedre ved \u{00E5} dele dine tanker",
@@ -1941,6 +1948,13 @@ enum AuthStrings {
         "appearance.info.darkActive": "App will always appear in dark theme",
         "appearance.info.light": "light",
         "appearance.info.dark": "dark",
+
+        // Calendar Animation
+        "appearance.calendarAnimation.sectionTitle": "Calendar Animation",
+        "appearance.calendarAnimation.horizontal": "Horizontal",
+        "appearance.calendarAnimation.horizontalDescription": "Slide sideways between months",
+        "appearance.calendarAnimation.vertical": "Vertical",
+        "appearance.calendarAnimation.verticalDescription": "Slide up and down between months",
 
         // Feedback Settings
         "feedback.title": "Feedback",
