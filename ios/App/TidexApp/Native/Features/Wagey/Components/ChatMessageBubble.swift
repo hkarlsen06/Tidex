@@ -9,6 +9,10 @@ struct ChatMessageBubble: View {
     /// Maximum width ratio for message bubbles (relative to screen width)
     private let maxWidthRatio: CGFloat = 0.8
 
+    /// State for full-screen image viewer
+    @State private var selectedImage: UIImage?
+    @State private var showImageViewer = false
+
     var body: some View {
         HStack {
             if message.role == .user {
@@ -29,12 +33,19 @@ struct ChatMessageBubble: View {
                         }
                     case .toolCall(let toolCall):
                         ToolStatusView(toolCall: toolCall)
+                    case .image(let attachment):
+                        imageContent(attachment: attachment, isUser: message.role == .user)
                     }
                 }
             }
 
             if message.role == .assistant {
                 Spacer(minLength: 40)
+            }
+        }
+        .fullScreenCover(isPresented: $showImageViewer) {
+            if let image = selectedImage {
+                ImageViewerOverlay(image: image, isPresented: $showImageViewer)
             }
         }
     }
@@ -59,7 +70,132 @@ struct ChatMessageBubble: View {
             .background(Color.tidexSurfacePrimary)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
+
+    private func imageContent(attachment: ImageAttachment, isUser: Bool) -> some View {
+        Group {
+            if let uiImage = UIImage(data: attachment.data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: 200, maxHeight: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(
+                                isUser ? Color.white.opacity(0.2) : Color.tidexBorder,
+                                lineWidth: 1
+                            )
+                    )
+                    .onTapGesture {
+                        selectedImage = uiImage
+                        showImageViewer = true
+                    }
+            }
+        }
+    }
 }
+
+// MARK: - Image Viewer Overlay
+
+/// Full-screen image viewer with zoom and dismiss gestures
+struct ImageViewerOverlay: View {
+    let image: UIImage
+    @Binding var isPresented: Bool
+
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    var body: some View {
+        ZStack {
+            // Background
+            Color.black.ignoresSafeArea()
+
+            // Image with zoom
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(
+                    MagnifyGesture()
+                        .onChanged { value in
+                            let delta = value.magnification / lastScale
+                            lastScale = value.magnification
+                            scale = min(max(scale * delta, 1), 4)
+                        }
+                        .onEnded { _ in
+                            lastScale = 1.0
+                            // Reset if zoomed out
+                            if scale <= 1 {
+                                withAnimation(.spring(response: 0.3)) {
+                                    scale = 1
+                                    offset = .zero
+                                }
+                            }
+                        }
+                )
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if scale > 1 {
+                                offset = CGSize(
+                                    width: lastOffset.width + value.translation.width,
+                                    height: lastOffset.height + value.translation.height
+                                )
+                            } else {
+                                // Drag down to dismiss when not zoomed
+                                offset = CGSize(width: 0, height: max(0, value.translation.height))
+                            }
+                        }
+                        .onEnded { value in
+                            lastOffset = offset
+                            // Dismiss if dragged down far enough when not zoomed
+                            if scale <= 1 && value.translation.height > 100 {
+                                isPresented = false
+                            } else if scale <= 1 {
+                                withAnimation(.spring(response: 0.3)) {
+                                    offset = .zero
+                                }
+                                lastOffset = .zero
+                            }
+                        }
+                )
+                .onTapGesture(count: 2) {
+                    withAnimation(.spring(response: 0.3)) {
+                        if scale > 1 {
+                            scale = 1
+                            offset = .zero
+                            lastOffset = .zero
+                        } else {
+                            scale = 2
+                        }
+                    }
+                }
+
+            // Close button
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        isPresented = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white.opacity(0.8))
+                            .background(
+                                Circle()
+                                    .fill(Color.black.opacity(0.3))
+                            )
+                    }
+                    .padding(20)
+                }
+                Spacer()
+            }
+        }
+        .statusBarHidden()
+    }
 
 // MARK: - Streaming Message Bubble
 

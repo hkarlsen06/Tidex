@@ -160,10 +160,13 @@ struct WageyView: View {
                 }
             )
 
-            // Input field
+            // Input field with image support
             ChatInputField(
                 onSend: { content in
                     handleSendMessage(content)
+                },
+                onSendWithImage: { content, image in
+                    handleSendMessageWithImage(content, image: image)
                 },
                 disabled: viewModel.isStreaming
             )
@@ -228,6 +231,11 @@ struct WageyView: View {
 
     /// Handle sending a message, showing paywall if limit reached
     private func handleSendMessage(_ content: String) {
+        handleSendMessageWithImage(content, image: nil)
+    }
+
+    /// Handle sending a message with an image, showing paywall if limit reached
+    private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) {
         let currentTier = EntitlementService.shared.effectiveTier
 
         // If limit reached AND user is on free tier, show paywall
@@ -245,9 +253,9 @@ struct WageyView: View {
             viewModel.resetLimitReached()
         }
 
-        // Send the message
+        // Send the message (with or without image)
         Task {
-            await viewModel.sendMessage(content)
+            await viewModel.sendMessage(content, image: image)
         }
     }
 
