@@ -8,5 +8,7 @@ struct TidexShiftWidgetBundle: WidgetBundle {
         ShiftLockScreenWidget()
         ShiftLiveActivity()
         FriendShiftWidget()
+        TotalCardWidget()
+        FriendsWidget()
     }
 }

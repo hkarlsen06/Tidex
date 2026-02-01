@@ -373,4 +373,40 @@ extension View {
     func tidexCardShadow(_ level: TidexShadowLevel = .card, cornerRadius: CGFloat? = nil) -> some View {
         modifier(TidexCardShadowModifier(level: level, customCornerRadius: cornerRadius))
     }
+
+    /// Applies a subtle shadow for small chips and status badges
+    /// Creates consistent 3D appearance across all chip styles
+    func tidexChipShadow() -> some View {
+        modifier(TidexChipShadowModifier())
+    }
+}
+
+/// View modifier for subtle chip/badge shadows
+/// Lighter than card shadows, suitable for small UI elements
+struct TidexChipShadowModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(
+                color: shadowColor,
+                radius: shadowRadius,
+                x: 0,
+                y: shadowY
+            )
+    }
+
+    private var shadowColor: Color {
+        colorScheme == .light
+            ? Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.15)
+            : Color.black.opacity(0.35)
+    }
+
+    private var shadowRadius: CGFloat {
+        colorScheme == .light ? 3 : 2
+    }
+
+    private var shadowY: CGFloat {
+        1
+    }
 }

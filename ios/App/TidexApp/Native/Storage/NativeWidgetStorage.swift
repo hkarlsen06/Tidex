@@ -22,6 +22,7 @@ enum NativeWidgetStorage {
     private static let currencyKey = "user_currency"
     private static let friendSharersKey = "friend_sharers"
     private static let friendShiftsKey = "friend_shifts"
+    private static let monthlyTotalsKey = "monthly_totals"
 
     /// Default currency symbol if settings don't specify one
     private static let defaultCurrencySymbol = "kr"
@@ -180,6 +181,16 @@ enum NativeWidgetStorage {
         }
 
         logger.info("Widget storage updated with \(storedShifts.count) shifts")
+
+        // Also update monthly totals for TotalCard widget
+        updateMonthlyTotalsStorage(
+            for: userId,
+            settings: settings,
+            snapshots: snapshots,
+            recurringPatterns: recurringPatterns,
+            locale: locale,
+            currencySymbol: currencySymbol
+        )
     }
 
     /// Clear widget storage (e.g., on logout)
@@ -190,6 +201,7 @@ enum NativeWidgetStorage {
         }
 
         userDefaults.removeObject(forKey: shiftsKey)
+        userDefaults.removeObject(forKey: monthlyTotalsKey)
         reloadWidgetTimelines()
 
         // Cancel all scheduled shift reminders
@@ -199,6 +211,144 @@ enum NativeWidgetStorage {
         }
 
         logger.info("Widget storage cleared")
+    }
+
+    // MARK: - Monthly Totals Storage (TotalCard Widget)
+
+    /// Update widget storage with current month totals for TotalCard widget
+    /// Called automatically from updateWidgetStorage
+    @MainActor
+    private static func updateMonthlyTotalsStorage(
+        for userId: String,
+        settings: UserSettings?,
+        snapshots: [WageSnapshot],
+        recurringPatterns: [RecurringShiftRow],
+        locale: String,
+        currencySymbol: String
+    ) {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Get current month
+        let currentYear = calendar.component(.year, from: now)
+        let currentMonth = calendar.component(.month, from: now)
+
+        // Calculate current month date range
+        let currentStartDate = Date.firstDayOfMonthDate(year: currentYear, month: currentMonth)
+        let currentEndDate = Date.lastDayOfMonthDate(year: currentYear, month: currentMonth)
+
+        // Calculate previous month date range
+        let previousYM = Date.previousYearMonth(from: (year: currentYear, month: currentMonth))
+        let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+        let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+
+        // Load shifts from repository
+        let shiftsRepository = ShiftsRepository.shared
+
+        let currentMonthShifts = shiftsRepository.getShifts(
+            for: userId,
+            startDate: currentStartDate,
+            endDate: currentEndDate
+        )
+
+        let previousMonthShifts = shiftsRepository.getShifts(
+            for: userId,
+            startDate: previousStartDate,
+            endDate: previousEndDate
+        )
+
+        // Compute shifts with payroll using PayrollEngine
+        let computedCurrentShifts = PayrollEngine.computeShiftsForMonth(
+            year: currentYear,
+            month: currentMonth,
+            shifts: currentMonthShifts,
+            recurring: recurringPatterns,
+            snapshots: snapshots,
+            settings: settings
+        )
+
+        let computedPreviousShifts = PayrollEngine.computeShiftsForMonth(
+            year: previousYM.year,
+            month: previousYM.month,
+            shifts: previousMonthShifts,
+            recurring: recurringPatterns,
+            snapshots: snapshots,
+            settings: settings
+        )
+
+        // Get half-tax month from settings
+        let halfTaxMonth = settings?.half_tax_month
+
+        // Calculate totals using PayrollEngine (handles half-tax and conflict exclusion)
+        let currentTotals = PayrollEngine.summarizeShiftTotals(
+            shifts: computedCurrentShifts,
+            halfTaxMonth: halfTaxMonth,
+            earningsMonth: currentMonth,
+            now: now
+        )
+
+        let previousTotals = PayrollEngine.summarizeShiftTotals(
+            shifts: computedPreviousShifts,
+            halfTaxMonth: halfTaxMonth,
+            earningsMonth: previousYM.month,
+            now: now
+        )
+
+        // Determine if tax is enabled (from first shift or default to false)
+        let taxEnabled = computedCurrentShifts.first?.taxEnabled ?? false
+
+        // Count planned (future) shifts
+        let todayISO = now.toISODateString()
+        let plannedCount = computedCurrentShifts.filter { $0.shiftDate > todayISO }.count
+
+        // Calculate total hours worked this month
+        let totalHours = computedCurrentShifts.map(\.paidHours).reduce(0.0, +)
+
+        // Calculate percentage change vs previous month
+        let percentageChange: Double? = previousTotals.gross > 0
+            ? ((currentTotals.gross - previousTotals.gross) / previousTotals.gross) * 100
+            : nil
+
+        // Build StoredMonthlyTotals
+        let monthlyTotals = StoredMonthlyTotals(
+            gross: currentTotals.gross,
+            net: taxEnabled ? currentTotals.net : nil,
+            completedGross: currentTotals.completedGross,
+            completedNet: taxEnabled ? currentTotals.completedNet : nil,
+            shiftCount: computedCurrentShifts.count,
+            plannedCount: plannedCount,
+            totalHours: totalHours,
+            percentageChange: percentageChange,
+            yearMonth: String(format: "%04d-%02d", currentYear, currentMonth),
+            taxEnabled: taxEnabled,
+            locale: locale,
+            currencySymbol: currencySymbol,
+            updatedAt: now
+        )
+
+        // Write to App Group
+        writeMonthlyTotalsToAppGroup(monthlyTotals)
+
+        logger.info("Monthly totals updated: gross=\(currentTotals.gross), shifts=\(computedCurrentShifts.count)")
+    }
+
+    /// Write monthly totals to App Group UserDefaults
+    private static func writeMonthlyTotalsToAppGroup(_ totals: StoredMonthlyTotals) {
+        guard let userDefaults = sharedUserDefaults() else {
+            logger.warning("Unable to access App Group UserDefaults for monthly totals")
+            return
+        }
+
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(totals)
+            let jsonString = String(data: data, encoding: .utf8)
+            userDefaults.set(jsonString, forKey: monthlyTotalsKey)
+            logger.debug("Wrote monthly totals to App Group")
+        } catch {
+            logger.error("Failed to encode monthly totals for widget: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Friend Widget Storage
