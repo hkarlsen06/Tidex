@@ -23,20 +23,26 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
 
         switch self {
         case .currentMonth:
-            let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            let end = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: start)!
+            guard let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now)),
+                  let end = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: start) else {
+                return nil
+            }
             return (toISODate(start), toISODate(end))
 
         case .lastMonth:
-            let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            let start = calendar.date(byAdding: .month, value: -1, to: thisMonth)!
-            let end = calendar.date(byAdding: .day, value: -1, to: thisMonth)!
+            guard let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)),
+                  let start = calendar.date(byAdding: .month, value: -1, to: thisMonth),
+                  let end = calendar.date(byAdding: .day, value: -1, to: thisMonth) else {
+                return nil
+            }
             return (toISODate(start), toISODate(end))
 
         case .currentYear:
             let year = calendar.component(.year, from: now)
-            let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1))!
-            let end = calendar.date(from: DateComponents(year: year, month: 12, day: 31))!
+            guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+                  let end = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) else {
+                return nil
+            }
             return (toISODate(start), toISODate(end))
 
         case .custom:
@@ -228,10 +234,12 @@ final class DataSettingsViewModel: ObservableObject {
         let accessToken = session.accessToken
 
         // Build URL
-        var components = URLComponents(
+        guard var components = URLComponents(
             url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/settings/data/export"),
             resolvingAgainstBaseURL: false
-        )!
+        ) else {
+            throw ExportError.invalidURL
+        }
         components.queryItems = [
             URLQueryItem(name: "from", value: from),
             URLQueryItem(name: "to", value: to)

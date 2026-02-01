@@ -113,7 +113,7 @@ struct Friend: Codable, Identifiable, Equatable {
             }
         }
         // If email is display name, show phone if available
-        if email != nil && !email!.isEmpty {
+        if let email = email, !email.isEmpty {
             if let phone = phone, !phone.isEmpty {
                 return formatPhoneNumber(phone)
             }

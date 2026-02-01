@@ -64,10 +64,8 @@ enum ErrorTranslations {
         }
 
         // Check for partial matches
-        for (english, norwegian) in translations {
-            if message.contains(english) {
-                return message.replacingOccurrences(of: english, with: norwegian)
-            }
+        for (english, norwegian) in translations where message.contains(english) {
+            return message.replacingOccurrences(of: english, with: norwegian)
         }
 
         // Return original message if no translation found

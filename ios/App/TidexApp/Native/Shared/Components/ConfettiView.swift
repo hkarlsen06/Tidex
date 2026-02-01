@@ -69,6 +69,7 @@ struct ConfettiView: View {
         // Generate particles
         particles = (0..<Self.particleCount).map { index in
             ConfettiParticle(
+                // swiftlint:disable:next force_unwrapping
                 color: Self.colors.randomElement()!,
                 size: CGSize(
                     width: CGFloat.random(in: 6...10),

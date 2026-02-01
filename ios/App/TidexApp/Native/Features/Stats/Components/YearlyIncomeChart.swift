@@ -103,7 +103,7 @@ struct YearlyIncomeChart: View {
 
                             // Show every other month label on smaller screens
                             let index = trimmedData.firstIndex(where: { $0.month == label }) ?? 0
-                            let shouldShow = index == 0 || index % 2 == 0
+                            let shouldShow = index == 0 || index.isMultiple(of: 2)
 
                             if shouldShow {
                                 Text(label)

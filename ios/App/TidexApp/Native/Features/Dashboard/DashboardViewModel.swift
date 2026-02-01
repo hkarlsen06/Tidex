@@ -264,8 +264,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
         // Sort by last accessed time (oldest first)
         let sortedKeys = monthCache.keys.sorted { key1, key2 in
-            let entry1 = monthCache[key1]!
-            let entry2 = monthCache[key2]!
+            guard let entry1 = monthCache[key1], let entry2 = monthCache[key2] else { return false }
             return entry1.lastAccessed < entry2.lastAccessed
         }
 

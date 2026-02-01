@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+// Widget files require multiple size-specific views that cannot be easily split
 import SwiftUI
 import WidgetKit
 
@@ -307,7 +309,8 @@ struct TotalCardWidgetView: View {
         }
 
         // Show gross before tax when tax is enabled
-        let hasGross = !entry.hasFutureShifts && entry.taxEnabled && entry.gross > 0 && entry.gross != entry.mainDisplayValue
+        let hasGross = !entry.hasFutureShifts && entry.taxEnabled
+            && entry.gross > 0 && entry.gross != entry.mainDisplayValue
         if hasGross {
             return "\(formatCurrency(entry.gross)) \(beforeTaxLabel)"
         }
@@ -407,14 +410,10 @@ struct TotalCardWidgetView: View {
         .padding(.leading, 16)
     }
 
-    /// Total hours formatted (e.g., "64" or "64.5")
+    /// Total hours formatted (e.g., "64.00" or "64.50")
     private var formattedHours: String {
         guard entry.totalHours > 0 else { return "—" }
-        if entry.totalHours.truncatingRemainder(dividingBy: 1) == 0 {
-            return "\(Int(entry.totalHours))"
-        } else {
-            return String(format: "%.1f", entry.totalHours)
-        }
+        return String(format: "%.2f", entry.totalHours)
     }
 
     private func statRow(icon: String, value: String, label: String) -> some View {
@@ -644,3 +643,4 @@ private struct StoredMonthlyTotals: Codable {
     TotalCardWidgetEntry.empty()
 }
 #endif
+// swiftlint:enable file_length

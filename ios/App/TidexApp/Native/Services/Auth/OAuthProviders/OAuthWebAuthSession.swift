@@ -32,10 +32,10 @@ final class OAuthWebAuthSession: NSObject {
 
         // Construct the identity linking URL
         // Supabase identity linking endpoint: /auth/v1/user/identities/authorize
-        var components = URLComponents(
-            url: APIConfiguration.supabaseURL.appendingPathComponent("auth/v1/user/identities/authorize"),
-            resolvingAgainstBaseURL: false
-        )!
+        let identityURL = APIConfiguration.supabaseURL.appendingPathComponent("auth/v1/user/identities/authorize")
+        guard var components = URLComponents(url: identityURL, resolvingAgainstBaseURL: false) else {
+            throw OAuthWebAuthError.invalidURL
+        }
 
         components.queryItems = [
             URLQueryItem(name: "provider", value: provider),

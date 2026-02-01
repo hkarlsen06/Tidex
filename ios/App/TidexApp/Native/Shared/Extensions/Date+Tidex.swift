@@ -216,7 +216,7 @@ extension Date {
         }
 
         let timeParts = timeString.split(separator: ":")
-        let hours = timeParts.count > 0 ? Int(timeParts[0]) ?? 0 : 0
+        let hours = !timeParts.isEmpty ? Int(timeParts[0]) ?? 0 : 0
         let minutes = timeParts.count > 1 ? Int(timeParts[1]) ?? 0 : 0
 
         var components = DateComponents()

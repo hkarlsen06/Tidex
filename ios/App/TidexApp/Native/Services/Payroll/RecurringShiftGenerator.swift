@@ -26,7 +26,7 @@ struct RecurringShiftGenerator {
 
         // Check if week difference is divisible by (interval + 1)
         // interval 1 = every 2 weeks, interval 2 = every 3 weeks, etc.
-        return weeksDiff % (interval + 1) == 0
+        return weeksDiff.isMultiple(of: interval + 1)
     }
 
     /// Generate virtual shift occurrences for a specific month

@@ -58,7 +58,7 @@ struct SharedUser: Codable, Identifiable, Equatable {
     var contactInfo: String? {
         // If we have email and it's not already used as displayName
         if let email = email, !email.isEmpty {
-            if firstName != nil && !firstName!.isEmpty {
+            if let firstName = firstName, !firstName.isEmpty {
                 // firstName is used as display name, so show email
                 return email
             }
@@ -67,7 +67,7 @@ struct SharedUser: Codable, Identifiable, Equatable {
         }
         // If we have phone and it's not already used as displayName
         if let phone = phone, !phone.isEmpty {
-            if firstName != nil && !firstName!.isEmpty {
+            if let firstName = firstName, !firstName.isEmpty {
                 // firstName is used as display name, so show phone
                 return phone
             }

@@ -56,6 +56,7 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
 
 // MARK: - Preview
 
+// swiftlint:disable force_unwrapping
 #Preview {
     ProfileImageCropSheet(
         image: UIImage(systemName: "person.circle.fill")!,
@@ -63,3 +64,4 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
         onCancel: {}
     )
 }
+// swiftlint:enable force_unwrapping

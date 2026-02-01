@@ -319,7 +319,7 @@ final class StatsService: ObservableObject {
     ///   - previousMonth: Month number (1-12) of previous month
     ///   - now: Current date for determining today/future
     /// - Returns: Array of cumulative data for each day of the month
-    private func buildCumulativeData(
+    private func buildCumulativeData( // swiftlint:disable:this function_parameter_count
         currentMonthShifts: [ShiftWithComputations],
         previousMonthShifts: [ShiftWithComputations],
         targetYear: Int,

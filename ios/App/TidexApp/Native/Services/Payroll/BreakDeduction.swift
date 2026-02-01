@@ -77,10 +77,11 @@ struct BreakDeduction {
 
             case .baseOnly:
                 // Prefer periods with lowest supplement rate
-                let indexedPeriods = adjusted.enumerated()
-                    .sorted { $0.element.supplementRate < $1.element.supplementRate }
+                // Get sorted indices by supplement rate
+                let sortedIndices = adjusted.indices
+                    .sorted { adjusted[$0].supplementRate < adjusted[$1].supplementRate }
 
-                for (idx, _) in indexedPeriods {
+                for idx in sortedIndices {
                     guard remaining > 0 else { break }
                     let span = adjusted[idx].durationMinutes
                     let cut = min(span, remaining)

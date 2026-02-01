@@ -17,7 +17,7 @@ private func localizedString(_ key: String, locale: String) -> String {
         "shift": ["no": "Vakt", "en": "Shift"],
         "hours_short": ["no": "t", "en": "h"],
         "minutes_short": ["no": "m", "en": "m"],
-        "before_tax": ["no": "Før skatt:", "en": "Before tax:"],
+        "before_tax": ["no": "Før skatt:", "en": "Before tax:"]
     ]
     return strings[key]?[locale] ?? strings[key]?["en"] ?? key
 }
@@ -31,6 +31,17 @@ private func formatCurrency(_ value: Double) -> String {
     formatter.maximumFractionDigits = 0
     formatter.groupingSeparator = " "
     return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
+}
+
+// MARK: - Before Tax Helper
+
+private func beforeTaxText(
+    context: ActivityViewContext<ShiftActivityAttributes>,
+    currencySymbol: String
+) -> String {
+    let label = localizedString("before_tax", locale: context.attributes.locale)
+    let amount = formatCurrency(context.attributes.totalGrossEstimate)
+    return "\(label) \(amount) \(currencySymbol)"
 }
 
 // MARK: - Lock Screen View
@@ -86,7 +97,7 @@ struct LockScreenLiveActivityView: View {
 
                 // Before tax (only if tax is configured)
                 if showBeforeTax {
-                    Text("\(localizedString("before_tax", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
+                    Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
@@ -186,7 +197,7 @@ struct ExpandedView: View {
 
                 // Before tax (only if tax configured)
                 if showBeforeTax {
-                    Text("\(localizedString("before_tax", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
+                    Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }

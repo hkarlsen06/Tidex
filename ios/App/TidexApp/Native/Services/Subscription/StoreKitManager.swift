@@ -207,7 +207,11 @@ final class StoreKitManager: ObservableObject {
                 bestTransaction = (result, productId.tier)
             } else if isProduction == currentIsProduction {
                 // Same environment, prefer higher tier
-                if bestTransaction == nil || productId.tier > bestTransaction!.tier {
+                if let best = bestTransaction {
+                    if productId.tier > best.tier {
+                        bestTransaction = (result, productId.tier)
+                    }
+                } else {
                     bestTransaction = (result, productId.tier)
                 }
             }

@@ -27,6 +27,7 @@ enum APIConfiguration {
 
     // MARK: - Supabase Configuration
 
+    // swiftlint:disable force_unwrapping
     /// Cached Supabase URL - loaded once at app startup
     /// Falls back to production URL if Info.plist is misconfigured (should never happen in release builds)
     static let supabaseURL: URL = {
@@ -40,6 +41,7 @@ enum APIConfiguration {
         }
         return url
     }()
+    // swiftlint:enable force_unwrapping
 
     /// Cached Supabase anon key - loaded once at app startup
     /// Falls back to empty string if missing (auth will fail gracefully)
@@ -59,9 +61,8 @@ enum APIConfiguration {
 
     // MARK: - Web App Configuration
 
-    /// Base URL for the Next.js web app API
-    /// Used for endpoints that require server-side processing (e.g., sharing)
-    static let webAppBaseURL = URL(string: "https://app.tidex.no")!
+    /// Base URL for the Next.js web app API - used for endpoints that require server-side processing
+    static let webAppBaseURL = URL(string: "https://app.tidex.no")! // swiftlint:disable:this force_unwrapping
 
     // MARK: - App Configuration
 

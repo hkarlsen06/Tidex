@@ -303,7 +303,7 @@ struct PayrollEngine {
 
         // Apply half-tax if payout month matches the configured half tax month
         if let halfTax = halfTaxMonth, payoutMonth == halfTax {
-            effectiveTaxRate = effectiveTaxRate / 2
+            effectiveTaxRate /= 2
         }
 
         let netMultiplier = 1 - effectiveTaxRate / 100

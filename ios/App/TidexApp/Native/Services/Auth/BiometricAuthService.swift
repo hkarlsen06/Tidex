@@ -184,7 +184,7 @@ final class BiometricAuthService: ObservableObject {
 
     /// Called when app enters foreground - no longer triggers auth here
     /// Authentication is handled by AppLockView.task to avoid race conditions with privacy blur
-    func handleAppForeground() async {
+    func handleAppForeground() {
         // Auth is triggered by AppLockView, not here
         // This prevents race conditions where sceneWillResignActive
         // is called before isCurrentlyAuthenticating is set

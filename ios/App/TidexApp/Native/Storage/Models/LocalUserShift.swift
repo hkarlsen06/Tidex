@@ -188,7 +188,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     let deletedAt: Date?
 
     /// Create snapshot from a ShiftRow server response
-    static func from(
+    static func from( // swiftlint:disable:this function_parameter_count
         shiftDate: String,
         startTime: String,
         endTime: String,

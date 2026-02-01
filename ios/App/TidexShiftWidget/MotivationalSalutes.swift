@@ -62,7 +62,7 @@ struct MotivationalSalutes {
         "Du takler alt!",
         "Ingenting stopper deg!",
         "Vær uredd!",
-        "Du eier det!",
+        "Du eier det!"
     ]
 
     /// English salutes - short, uplifting, time-neutral
@@ -123,7 +123,7 @@ struct MotivationalSalutes {
         "You can do it!",
         "Unstoppable!",
         "Be fearless!",
-        "You own it!",
+        "You own it!"
     ]
 
     /// Returns a random salute for the given locale

@@ -1,3 +1,5 @@
+// swiftlint:disable function_body_length
+// Watch connectivity requires handling multiple delegate methods in sequence
 import Foundation
 import WatchConnectivity
 import WidgetKit
@@ -271,3 +273,4 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
 }
+// swiftlint:enable function_body_length

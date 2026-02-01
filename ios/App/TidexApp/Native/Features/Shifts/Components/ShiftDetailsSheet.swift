@@ -110,10 +110,7 @@ struct ShiftDetailsSheet: View {
 
     private var formattedHours: String {
         let hoursLabel = localization.currentLocale == .norwegian ? "timer" : "hours"
-        if shift.paidHours == floor(shift.paidHours) {
-            return String(format: "%.0f %@", shift.paidHours, hoursLabel)
-        }
-        return String(format: "%.1f %@", shift.paidHours, hoursLabel)
+        return String(format: "%.2f %@", shift.paidHours, hoursLabel)
     }
 
     private var showTaxBreakdown: Bool {
@@ -867,12 +864,9 @@ struct ShiftDetailsSheet: View {
         )
     }
 
-    /// Format hours value (e.g., "2.5 t" or "2 t")
+    /// Format hours value (e.g., "2.50 t")
     private func formatHoursValue(_ hours: Double) -> String {
-        if hours == floor(hours) {
-            return String(format: "%.0f t", hours)
-        }
-        return String(format: "%.1f t", hours)
+        return String(format: "%.2f t", hours)
     }
 
     @ViewBuilder

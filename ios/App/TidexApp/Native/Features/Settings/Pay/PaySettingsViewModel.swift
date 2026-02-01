@@ -345,7 +345,12 @@ final class PaySettingsViewModel: ObservableObject {
         return shifts.filter { shift in
             let shiftDate = shift.shift_date
             let afterStart = shiftDate >= fromDate
-            let beforeEnd = nextFromDate == nil || shiftDate < nextFromDate!
+            let beforeEnd: Bool
+            if let nextDate = nextFromDate {
+                beforeEnd = shiftDate < nextDate
+            } else {
+                beforeEnd = true
+            }
             return afterStart && beforeEnd
         }.count
     }

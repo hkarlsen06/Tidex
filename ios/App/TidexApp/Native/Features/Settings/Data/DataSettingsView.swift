@@ -177,7 +177,9 @@ struct DataSettingsView: View {
 
         switch preset {
         case .lastMonth:
-            let lastMonth = calendar.date(byAdding: .month, value: -1, to: now)!
+            guard let lastMonth = calendar.date(byAdding: .month, value: -1, to: now) else {
+                return ""
+            }
             dateFormatter.dateFormat = "MMMM"
             return dateFormatter.string(from: lastMonth).capitalized
         case .currentMonth:
@@ -305,6 +307,7 @@ struct DataSettingsView: View {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func exportCard(
         icon: String,
         iconColor: Color,

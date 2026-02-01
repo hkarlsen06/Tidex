@@ -441,7 +441,7 @@ final class AppCoordinator: ObservableObject {
 
     /// Configure StoreKit and entitlement services after authentication
     /// Called once during updateUserProfile() after successful login
-    private func configureStoreKitAndEntitlements(userId: String) async {
+    private func configureStoreKitAndEntitlements(userId: String) async { // swiftlint:disable:this async_without_await
         // 1. Configure StoreKit with user ID (required before purchases)
         StoreKitManager.shared.configure(userId: userId)
 
@@ -625,7 +625,7 @@ final class AppCoordinator: ObservableObject {
         appState = .loading
 
         do {
-            if let _ = try await authService.getSession() {
+            if try await authService.getSession() != nil {
                 await checkMFAAndUpdateState()
             } else {
                 appState = .unauthenticated

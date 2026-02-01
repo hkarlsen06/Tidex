@@ -243,7 +243,7 @@ class OrientationTracker: ObservableObject {
 /// Helper to check if running on iPad in landscape mode
 /// Use this for iPad-specific landscape layouts
 @MainActor
-struct iPadLandscapeChecker {
+struct IPadLandscapeChecker {
     static var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }

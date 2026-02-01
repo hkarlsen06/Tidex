@@ -4,9 +4,9 @@ import UIKit
 /// Industry selector for sample paycheck screen
 /// Displays different sample data based on selection
 enum SampleIndustry: String, CaseIterable, Identifiable {
-    case retail = "retail"
-    case restaurant = "restaurant"
-    case healthcare = "healthcare"
+    case retail
+    case restaurant
+    case healthcare
 
     var id: String { rawValue }
 
