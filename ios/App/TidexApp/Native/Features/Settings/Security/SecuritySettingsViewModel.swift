@@ -69,6 +69,18 @@ final class SecuritySettingsViewModel: ObservableObject {
     @Published var showUnenrollConfirmation = false
     @Published var factorToUnenroll: MFAFactor?
 
+    /// Phone linking state
+    @Published var showPhoneLinkingSheet = false
+    @Published var phoneLinkStep: PhoneLinkStep = .input
+    @Published var phoneLinkInput = ""
+    @Published var phoneLinkOtp = ""
+    @Published private(set) var isLinkingPhone = false
+
+    enum PhoneLinkStep {
+        case input
+        case otp
+    }
+
     // MARK: - Biometric Lock
 
     /// Biometric service for app lock
@@ -408,6 +420,90 @@ final class SecuritySettingsViewModel: ObservableObject {
         }
 
         isConnectingProvider = false
+    }
+
+    // MARK: - Phone Linking
+
+    /// Start phone linking by sending OTP to the phone number
+    func connectPhone() async {
+        // Validate phone number (Norwegian format: 8 digits)
+        let cleanedPhone = phoneLinkInput.filter { $0.isNumber }
+        guard cleanedPhone.count == 8 else {
+            errorMessage = localization.string("security.phoneLinking.errors.phoneInvalid")
+            return
+        }
+
+        // Format to E.164 (Norwegian: +47)
+        let phoneE164 = "+47\(cleanedPhone)"
+
+        isLinkingPhone = true
+        errorMessage = nil
+
+        do {
+            // Update user with new phone number - this sends an OTP
+            try await supabase.auth.update(user: UserAttributes(phone: phoneE164))
+
+            // Move to OTP step
+            phoneLinkStep = .otp
+            successMessage = localization.string("security.phoneLinking.codeSent")
+
+        } catch {
+            logger.error("Failed to initiate phone linking: \(error)")
+            errorMessage = localization.string("security.phoneLinking.errors.sendFailed")
+        }
+
+        isLinkingPhone = false
+    }
+
+    /// Verify the OTP and complete phone linking
+    func verifyPhoneLinkOTP() async {
+        // Validate OTP
+        guard phoneLinkOtp.count == 6, phoneLinkOtp.allSatisfy({ $0.isNumber }) else {
+            errorMessage = localization.string("security.phoneLinking.errors.otpInvalid")
+            return
+        }
+
+        // Format phone to E.164
+        let cleanedPhone = phoneLinkInput.filter { $0.isNumber }
+        let phoneE164 = "+47\(cleanedPhone)"
+
+        isLinkingPhone = true
+        errorMessage = nil
+
+        do {
+            // Verify the OTP with phone_change type
+            try await supabase.auth.verifyOTP(
+                phone: phoneE164,
+                token: phoneLinkOtp,
+                type: .phoneChange
+            )
+
+            // Refresh session
+            _ = try? await supabase.auth.refreshSession()
+
+            successMessage = localization.string("security.phoneLinking.success")
+
+            // Reset phone linking state
+            resetPhoneLinkingForm()
+
+            // Reload security info to update UI
+            await loadSecurityInfo()
+
+        } catch {
+            logger.error("Failed to verify phone OTP: \(error)")
+            errorMessage = localization.string("security.phoneLinking.errors.verifyFailed")
+        }
+
+        isLinkingPhone = false
+    }
+
+    /// Reset phone linking form state
+    func resetPhoneLinkingForm() {
+        showPhoneLinkingSheet = false
+        phoneLinkStep = .input
+        phoneLinkInput = ""
+        phoneLinkOtp = ""
+        errorMessage = nil
     }
 
     // MARK: - MFA Management

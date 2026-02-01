@@ -952,6 +952,25 @@ enum AuthStrings {
         "security.mfa.unenrollDialog.description": "Du vil ikke lenger kunne bruke denne appen for to-faktor autentisering.",
         "security.mfa.unenrollDialog.confirm": "Fjern",
 
+        // Security - Phone Linking
+        "security.phoneLinking.title": "Koble til telefon",
+        "security.phoneLinking.instructionEnter": "Skriv inn telefonnummeret ditt for å motta en bekreftelseskode.",
+        "security.phoneLinking.instructionVerify": "Skriv inn koden vi sendte til telefonen din.",
+        "security.phoneLinking.phoneLabel": "Telefonnummer",
+        "security.phoneLinking.phoneHint": "Norsk mobilnummer (8 siffer)",
+        "security.phoneLinking.otpLabel": "Bekreftelseskode",
+        "security.phoneLinking.sendCode": "Send kode",
+        "security.phoneLinking.sending": "Sender...",
+        "security.phoneLinking.verify": "Bekreft",
+        "security.phoneLinking.verifying": "Bekrefter...",
+        "security.phoneLinking.codeSent": "Kode sendt til telefonen din",
+        "security.phoneLinking.changeNumber": "Endre nummer",
+        "security.phoneLinking.success": "Telefon tilkoblet!",
+        "security.phoneLinking.errors.phoneInvalid": "Ugyldig telefonnummer. Må være 8 siffer.",
+        "security.phoneLinking.errors.sendFailed": "Kunne ikke sende kode. Prøv igjen.",
+        "security.phoneLinking.errors.otpInvalid": "Koden må være 6 siffer",
+        "security.phoneLinking.errors.verifyFailed": "Ugyldig kode. Prøv igjen.",
+
         // Biometric Lock
         "security.biometric.sectionTitle": "App-l\u{00E5}s",
         "security.biometric.sectionSubtitle": "Beskytt inntektsdataene dine mot nysgjerrige blikk",
@@ -2074,6 +2093,25 @@ enum AuthStrings {
         "security.mfa.unenrollDialog.title": "Remove authenticator app?",
         "security.mfa.unenrollDialog.description": "You will no longer be able to use this app for two-factor authentication.",
         "security.mfa.unenrollDialog.confirm": "Remove",
+
+        // Security - Phone Linking
+        "security.phoneLinking.title": "Link Phone",
+        "security.phoneLinking.instructionEnter": "Enter your phone number to receive a verification code.",
+        "security.phoneLinking.instructionVerify": "Enter the code we sent to your phone.",
+        "security.phoneLinking.phoneLabel": "Phone number",
+        "security.phoneLinking.phoneHint": "Norwegian mobile number (8 digits)",
+        "security.phoneLinking.otpLabel": "Verification code",
+        "security.phoneLinking.sendCode": "Send code",
+        "security.phoneLinking.sending": "Sending...",
+        "security.phoneLinking.verify": "Verify",
+        "security.phoneLinking.verifying": "Verifying...",
+        "security.phoneLinking.codeSent": "Code sent to your phone",
+        "security.phoneLinking.changeNumber": "Change number",
+        "security.phoneLinking.success": "Phone linked!",
+        "security.phoneLinking.errors.phoneInvalid": "Invalid phone number. Must be 8 digits.",
+        "security.phoneLinking.errors.sendFailed": "Could not send code. Please try again.",
+        "security.phoneLinking.errors.otpInvalid": "Code must be 6 digits",
+        "security.phoneLinking.errors.verifyFailed": "Invalid code. Please try again.",
 
         // Biometric Lock
         "security.biometric.sectionTitle": "App lock",
