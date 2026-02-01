@@ -325,6 +325,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             monthCache[previousKey] = previousCache
 
             self.dashboardData = buildDashboardData()
+            self.maybeTriggerCelebration()
 
             // Still prefetch neighbors in background
             prefetchNeighboringMonths()
@@ -634,6 +635,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Build dashboard data and clear loading state
             // Always clear isLoading on success since we have data to show
             self.dashboardData = buildDashboardData()
+            self.maybeTriggerCelebration()
             self.isLoading = false
 
             logger.info("📊 Loaded dashboard from local: \(displayShifts.count) shifts for \(displayKey)")
@@ -759,6 +761,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
             // Build dashboard data and clear loading state
             self.dashboardData = buildDashboardData()
+            self.maybeTriggerCelebration()
             self.isLoading = false
 
         } catch is CancellationError {
@@ -897,6 +900,23 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     /// Update user avatar URL from settings (called after settings are loaded)
     private func updateUserAvatarFromSettings() {
         self.userAvatarUrl = settings?.profile_picture_url
+    }
+
+    /// Trigger shift completion celebration for current month (if applicable)
+    private func maybeTriggerCelebration() {
+        guard let userId = cachedUserId, !userId.isEmpty else { return }
+        guard let dashboardData = dashboardData, let settings = settings else { return }
+
+        let current = Date.currentYearMonth()
+        guard displayYear == current.year && displayMonth == current.month else { return }
+
+        ShiftCompletionCelebrationManager.shared.checkForCelebration(
+            userId: userId,
+            month: current,
+            shifts: displayedMonthShifts,
+            dashboardData: dashboardData,
+            settings: settings
+        )
     }
 
     /// Build the final dashboard data from computed shifts

@@ -222,6 +222,13 @@ enum AuthStrings {
         "dashboard.noShiftsMonth": "Ingen vakter denne m\u{00E5}neden",
         "dashboard.noNextShift": "Ingen kommende vakter",
 
+        // Celebration
+        "celebration.youEarned": "Du har tjent",
+        "celebration.soFarThisMonth": "hittil denne m\u{00E5}neden",
+        "celebration.shiftsCompleted": "+%d vakter fullf\u{00F8}rt",
+        "celebration.greatJob": "Godt jobbet!",
+        "celebration.continue": "Fortsett",
+
         // Placeholders
         "placeholder.shiftsDescription": "Vaktene dine vises her",
         "placeholder.addShift": "Legg til vakt",
@@ -1311,6 +1318,13 @@ enum AuthStrings {
         "dashboard.bestShift": "Best shift",
         "dashboard.noShiftsMonth": "No shifts this month",
         "dashboard.noNextShift": "No upcoming shifts",
+
+        // Celebration
+        "celebration.youEarned": "You've earned",
+        "celebration.soFarThisMonth": "so far this month",
+        "celebration.shiftsCompleted": "+%d shifts completed",
+        "celebration.greatJob": "Great work!",
+        "celebration.continue": "Continue",
 
         // Placeholders
         "placeholder.shiftsDescription": "Your shifts will appear here",

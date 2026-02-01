@@ -1,0 +1,66 @@
+import Foundation
+
+/// Pure helpers for detecting completed shifts and celebration data.
+struct CelebrationDetector {
+    /// Return IDs for completed shifts (optionally including virtual).
+    static func completedShiftIds(
+        shifts: [ShiftWithComputations],
+        now: Date = Date(),
+        includeVirtual: Bool = false
+    ) -> Set<String> {
+        let completed = shifts.filter { shift in
+            if !includeVirtual && shift.isVirtual { return false }
+            return Date.hasShiftEnded(
+                shiftDate: shift.shiftDate,
+                startTime: shift.startTime,
+                endTime: shift.endTime,
+                referenceDate: now
+            )
+        }
+        return Set(completed.map { $0.id })
+    }
+
+    /// Find newly completed shifts since the previous completed ID set.
+    static func newlyCompletedShifts(
+        shifts: [ShiftWithComputations],
+        previousCompletedIds: Set<String>,
+        now: Date = Date()
+    ) -> [ShiftWithComputations] {
+        shifts.filter { shift in
+            if shift.isVirtual { return false }
+            guard !previousCompletedIds.contains(shift.id) else { return false }
+            return Date.hasShiftEnded(
+                shiftDate: shift.shiftDate,
+                startTime: shift.startTime,
+                endTime: shift.endTime,
+                referenceDate: now
+            )
+        }
+    }
+
+    /// Select the highest-earning shift by gross pay (earliest date wins ties).
+    static func selectHighestEarningShift(from shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
+        guard !shifts.isEmpty else { return nil }
+
+        let maxGross = shifts.map { $0.grossPay }.max() ?? 0
+        if maxGross == 0 {
+            return shifts.sorted { $0.shiftDate < $1.shiftDate }.first
+        }
+
+        return shifts
+            .filter { $0.grossPay == maxGross }
+            .sorted { $0.shiftDate < $1.shiftDate }
+            .first
+    }
+
+    /// Compute the TotalCard "earned to date" display value.
+    static func displayValue(dashboardData: DashboardData) -> (value: Double, taxEnabled: Bool) {
+        if dashboardData.currentMonthTaxEnabled {
+            return (
+                dashboardData.currentMonthCompletedNet ?? dashboardData.currentMonthCompletedGross,
+                true
+            )
+        }
+        return (dashboardData.currentMonthCompletedGross, false)
+    }
+}
