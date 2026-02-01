@@ -342,9 +342,20 @@ struct AnimatedMonthHeader: View {
     @State private var monthScale: CGFloat = 1.0
     @State private var showingMonthPicker = false
 
-    // Haptic feedback for swipe and tap
+    // Haptic feedback for swipe, tap, and long press
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
     private let tapHaptic = UIImpactFeedbackGenerator(style: .light)
+    private let longPressHaptic = UIImpactFeedbackGenerator(style: .heavy)
+
+    /// Current real month/year for long press "jump to current month"
+    private var currentMonth: (year: Int, month: Int) {
+        Date.currentYearMonth()
+    }
+
+    /// Whether we're already on the current month
+    private var isOnCurrentMonth: Bool {
+        phase.year == currentMonth.year && phase.month == currentMonth.month
+    }
 
     /// Short year format (2 digits) - e.g., "26" for 2026
     private var shortYear: String {
@@ -393,6 +404,13 @@ struct AnimatedMonthHeader: View {
                 .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
+            .highPriorityGesture(
+                LongPressGesture(minimumDuration: 0.35)
+                    .onEnded { _ in
+                        longPressHaptic.impactOccurred()
+                        jumpToCurrentMonth()
+                    }
+            )
             .onTapGesture {
                 tapHaptic.impactOccurred()
                 showMonthPicker()
@@ -406,6 +424,7 @@ struct AnimatedMonthHeader: View {
         .onAppear {
             swipeHaptic.prepare()
             tapHaptic.prepare()
+            longPressHaptic.prepare()
         }
     }
 
@@ -431,6 +450,13 @@ struct AnimatedMonthHeader: View {
                 .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
+            .highPriorityGesture(
+                LongPressGesture(minimumDuration: 0.35)
+                    .onEnded { _ in
+                        longPressHaptic.impactOccurred()
+                        jumpToCurrentMonth()
+                    }
+            )
             .onTapGesture {
                 tapHaptic.impactOccurred()
                 showMonthPicker()
@@ -446,6 +472,7 @@ struct AnimatedMonthHeader: View {
         .onAppear {
             swipeHaptic.prepare()
             tapHaptic.prepare()
+            longPressHaptic.prepare()
         }
     }
 
@@ -492,6 +519,23 @@ struct AnimatedMonthHeader: View {
             }
             // Show picker after bounce completes
             showingMonthPicker = true
+        }
+    }
+
+    /// Jump to the current month on long press
+    private func jumpToCurrentMonth() {
+        // Only navigate if not already on current month
+        guard !isOnCurrentMonth else { return }
+
+        // Bounce animation
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+            monthScale = 0.95
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                monthScale = 1.0
+            }
+            onNavigateToMonth?(currentMonth.year, currentMonth.month)
         }
     }
 
