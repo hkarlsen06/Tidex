@@ -196,6 +196,7 @@ struct ImageViewerOverlay: View {
         }
         .statusBarHidden()
     }
+}
 
 // MARK: - Streaming Message Bubble
 
