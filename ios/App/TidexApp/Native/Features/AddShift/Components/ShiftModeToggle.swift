@@ -1,32 +1,64 @@
 import SwiftUI
 
 /// Toggle between single and recurring shift modes
-/// Rounded segmented control with liquid glass styling
+/// Toolbar toggle with independent glass buttons
 struct ShiftModeToggle: View {
     @Binding var mode: AddShiftMode
     @Environment(\.localization) private var localization
-
-    private let cornerRadius: CGFloat = 22
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var namespace
+    @ScaledMetric(relativeTo: .body) private var height: CGFloat = 36
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
+    @ScaledMetric(relativeTo: .body) private var minSegmentWidth: CGFloat = 44
+    private let buttonPadding: CGFloat = Spacing.xxs
+    private let buttonSpacing: CGFloat = 8
+    private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: buttonSpacing) {
             ForEach(AddShiftMode.allCases) { modeOption in
-                ModeButton(
-                    title: localizedTitle(for: modeOption),
-                    isSelected: mode == modeOption,
-                    cornerRadius: cornerRadius - 4
-                ) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        mode = modeOption
-                    }
-                    // Haptic feedback
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
+                let isSelected = mode == modeOption
+                Button {
+                    select(modeOption)
+                } label: {
+                    Label(localizedTitle(for: modeOption), systemImage: iconName(for: modeOption))
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: iconSize, weight: .semibold))
+                        .foregroundStyle(isSelected ? .white : .tidexTextSecondary)
+                        .frame(minWidth: minSegmentWidth, minHeight: height)
+                        .contentShape(Capsule())
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(.clear)
+                                    .glassEffect(
+                                        .regular.tint(Color.tidexBlue.opacity(0.35)),
+                                        in: .capsule
+                                    )
+                                    .shadow(color: Color.black.opacity(0.18), radius: 4, x: 0, y: 2)
+                                    .matchedGeometryEffect(id: "selection", in: namespace)
+                            }
+                        }
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localizedTitle(for: modeOption))
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
-        // Fixed height prevents toolbar layout shifts on iPad
-        .iPadFixedHeight(36)
+        .padding(buttonPadding)
+        .iPadFixedHeight(height + buttonPadding * 2)
+        .onAppear {
+            toggleHaptic.prepare()
+        }
+    }
+
+    private func iconName(for mode: AddShiftMode) -> String {
+        switch mode {
+        case .single:
+            return "calendar.badge.plus"
+        case .recurring:
+            return "repeat"
+        }
     }
 
     private func localizedTitle(for mode: AddShiftMode) -> String {
@@ -37,27 +69,17 @@ struct ShiftModeToggle: View {
             return localization.string("addShift.modeRecurring")
         }
     }
-}
 
-// MARK: - Mode Button
-
-private struct ModeButton: View {
-    let title: String
-    let isSelected: Bool
-    let cornerRadius: CGFloat
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.tidexBlue : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    private func select(_ modeOption: AddShiftMode) {
+        guard mode != modeOption else { return }
+        toggleHaptic.impactOccurred()
+        if reduceMotion {
+            mode = modeOption
+        } else {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                mode = modeOption
+            }
         }
-        .buttonStyle(.plain)
     }
 }
 
