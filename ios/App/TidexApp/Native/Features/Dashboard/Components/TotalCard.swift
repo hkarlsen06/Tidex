@@ -21,6 +21,10 @@ struct TotalCard: View {
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
 
+    /// Tracks whether the launch count-up animation has already played this session.
+    /// Static so it persists across view recreations but resets on app restart.
+    private static var hasPlayedLaunchAnimation = false
+
     // MARK: - Computed Properties
 
     /// Main display value (projected total)
@@ -174,11 +178,23 @@ struct TotalCard: View {
                 .fill(Color.tidexBlue.opacity(0.3))
                 .frame(width: 200, height: 56)
         } else {
-            Text(formatCurrency(mainDisplayValue))
-                .font(.system(size: 88, weight: .bold))
-                .foregroundColor(.tidexBlue)
-                .minimumScaleFactor(0.4)
-                .lineLimit(1)
+            // Animate count-up only on app launch, not on subsequent data changes
+            let shouldAnimate = !Self.hasPlayedLaunchAnimation
+            CountUpText(
+                targetValue: mainDisplayValue,
+                duration: 0.8,
+                animateOnAppear: shouldAnimate,
+                animateChanges: false,
+                format: { CurrencyConfig.format($0, currency: currency) }
+            )
+            .font(.system(size: 88, weight: .bold))
+            .foregroundColor(.tidexBlue)
+            .minimumScaleFactor(0.4)
+            .lineLimit(1)
+            .onAppear {
+                // Mark animation as played once we show the actual amount
+                Self.hasPlayedLaunchAnimation = true
+            }
         }
     }
 
