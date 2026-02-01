@@ -1,3 +1,5 @@
+// swiftlint:disable file_length function_body_length
+// Widget files require multiple size-specific views that cannot be easily split
 import SwiftUI
 import WidgetKit
 
@@ -54,10 +56,10 @@ private struct TidexLogoShape: Shape {
         let offsetX = (rect.width - scaledWidth) / 2
         let offsetY = (rect.height - scaledHeight) / 2
 
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+        func pt(_ xPos: CGFloat, _ yPos: CGFloat) -> CGPoint {
             CGPoint(
-                x: offsetX + (x - pathMinX) * scale,
-                y: offsetY + (y - pathMinY) * scale
+                x: offsetX + (xPos - pathMinX) * scale,
+                y: offsetY + (yPos - pathMinY) * scale
             )
         }
 
@@ -205,6 +207,22 @@ struct ShiftHomeWidgetView: View {
         }
     }
 
+    /// Color for start time based on shift state
+    private var startTimeColor: Color {
+        if entry.shiftHasStarted {
+            return secondaryTextColor
+        }
+        return entry.hasShift ? primaryTextColor : mutedTextColor
+    }
+
+    /// Color for end time based on shift state
+    private var endTimeColor: Color {
+        if entry.shiftHasStarted {
+            return entry.hasShift ? primaryTextColor : mutedTextColor
+        }
+        return secondaryTextColor
+    }
+
     /// Whether to use tinted monochrome logo (for accented/vibrant modes)
     private var useTintedLogo: Bool {
         renderingMode != .fullColor
@@ -331,14 +349,14 @@ struct ShiftHomeWidgetView: View {
                 Text(entry.startTime)
                     .font(.system(size: 32, weight: entry.shiftHasStarted ? .medium : .bold, design: .default))
                     .monospacedDigit()
-                    .foregroundColor(entry.shiftHasStarted ? secondaryTextColor : (entry.hasShift ? primaryTextColor : mutedTextColor))
+                    .foregroundColor(startTimeColor)
                     .lineLimit(1)
 
                 // End time - emphasized after shift starts
                 Text(entry.endTime)
                     .font(.system(size: 32, weight: entry.shiftHasStarted ? .bold : .medium, design: .default))
                     .monospacedDigit()
-                    .foregroundColor(entry.shiftHasStarted ? (entry.hasShift ? primaryTextColor : mutedTextColor) : secondaryTextColor)
+                    .foregroundColor(endTimeColor)
                     .lineLimit(1)
             }
         }
@@ -574,10 +592,10 @@ struct ShiftWidgetProvider: TimelineProvider {
 
     /// Count midnight boundaries crossed between two dates (matching the web app's pattern)
     /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
-    private func countMidnightCrossings(from: Date, to: Date) -> Int {
+    private func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
         let calendar = Calendar.current
-        let fromMidnight = calendar.startOfDay(for: from)
-        let toMidnight = calendar.startOfDay(for: to)
+        let fromMidnight = calendar.startOfDay(for: startDate)
+        let toMidnight = calendar.startOfDay(for: endDate)
 
         let components = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight)
         return abs(components.day ?? 0)
@@ -734,7 +752,11 @@ struct ShiftWidgetProvider: TimelineProvider {
         let shiftStarted = hasShiftStarted(shiftDateString: shift.shiftDate, startTime: shift.startTime)
 
         // Check if shift has already ended (for showing "Ferdig" / "Done")
-        let shiftEnded = hasShiftEnded(shiftDateString: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+        let shiftEnded = hasShiftEnded(
+            shiftDateString: shift.shiftDate,
+            startTime: shift.startTime,
+            endTime: shift.endTime
+        )
 
         // Ensure cross-midnight or recently ended shifts don't fall into pastShift layout
         if shiftStarted || shiftEnded {
@@ -777,9 +799,9 @@ struct ShiftWidgetProvider: TimelineProvider {
         let today = Calendar.current.startOfDay(for: Date())
 
         // Sort shifts by date
-        let sortedShifts = shifts.sorted { a, b in
-            guard let dateA = parseShiftDate(a.shiftDate),
-                  let dateB = parseShiftDate(b.shiftDate)
+        let sortedShifts = shifts.sorted { lhs, rhs in
+            guard let dateA = parseShiftDate(lhs.shiftDate),
+                  let dateB = parseShiftDate(rhs.shiftDate)
             else { return false }
             return dateA < dateB
         }
@@ -787,8 +809,7 @@ struct ShiftWidgetProvider: TimelineProvider {
         // Find first future shift (including today)
         for shift in sortedShifts {
             if let shiftDate = parseShiftDate(shift.shiftDate),
-               shiftDate >= today
-            {
+               shiftDate >= today {
                 return shift
             }
         }
@@ -825,8 +846,7 @@ struct ShiftWidgetProvider: TimelineProvider {
 
         // Tomorrow
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-           calendar.isDate(shiftDay, inSameDayAs: tomorrow)
-        {
+           calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
             return locale == "no" ? "I morgen" : "Tomorrow"
         }
 
@@ -971,3 +991,4 @@ struct ShiftHomeWidget: Widget {
     ShiftWidgetEntry.empty(locale: "no")
 }
 #endif
+// swiftlint:enable file_length function_body_length

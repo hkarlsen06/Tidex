@@ -88,13 +88,15 @@ struct AddShiftCalendarView: View {
         guard let range = calendar.range(of: .day, in: .month, for: firstOfMonth) else { return days }
 
         // Get last day of previous month for "outside days"
-        let previousMonth = calendar.date(byAdding: .month, value: -1, to: firstOfMonth)!
-        let daysInPreviousMonth = calendar.range(of: .day, in: .month, for: previousMonth)!.count
+        guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: firstOfMonth),
+              let previousMonthRange = calendar.range(of: .day, in: .month, for: previousMonth)
+        else { return days }
+        let daysInPreviousMonth = previousMonthRange.count
 
         // Add days from previous month (outside days)
         for i in 0..<startOffset {
             let day = daysInPreviousMonth - startOffset + i + 1
-            let date = calendar.date(byAdding: .day, value: i - startOffset, to: firstOfMonth)!
+            guard let date = calendar.date(byAdding: .day, value: i - startOffset, to: firstOfMonth) else { continue }
             let dateISO = date.toISODateString()
             let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
 
@@ -127,7 +129,7 @@ struct AddShiftCalendarView: View {
         if remainder > 0 {
             let daysToAdd = 7 - remainder
             for i in 0..<daysToAdd {
-                let date = calendar.date(byAdding: .day, value: range.count + i, to: firstOfMonth)!
+                guard let date = calendar.date(byAdding: .day, value: range.count + i, to: firstOfMonth) else { continue }
                 let dateISO = date.toISODateString()
                 let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
 

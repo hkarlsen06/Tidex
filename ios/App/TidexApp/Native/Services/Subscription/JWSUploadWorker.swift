@@ -126,7 +126,7 @@ final class JWSUploadWorker {
 
                 // Find the earliest scheduled retry and sleep until then
                 // This ensures backoff retries happen even if app stays open
-                let earliestRetry = allPending.map(\.nextAttemptAt).min()!
+                guard let earliestRetry = allPending.map(\.nextAttemptAt).min() else { continue }
                 let sleepDuration = max(earliestRetry.timeIntervalSinceNow, 1.0)  // At least 1 second
 
                 logger.debug("No uploads ready now, sleeping \(Int(sleepDuration))s until next retry")

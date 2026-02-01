@@ -447,7 +447,7 @@ final class SyncCoordinator: ObservableObject {
             // Batch save for durability: persist partial progress every N rows
             // Cursor is NOT advanced here - only after full page success
             let rowNumber = index + 1
-            if rowNumber % pullSaveBatchSize == 0 {
+            if rowNumber.isMultiple(of: pullSaveBatchSize) {
                 try await storeActor.save()
                 logger.debug("user_shifts: saved batch at row \(rowNumber)/\(rows.count)")
             }
@@ -702,7 +702,7 @@ final class SyncCoordinator: ObservableObject {
 
             // Batch save for durability
             let rowNumber = index + 1
-            if rowNumber % pullSaveBatchSize == 0 {
+            if rowNumber.isMultiple(of: pullSaveBatchSize) {
                 try await storeActor.save()
                 logger.debug("recurring_shifts: saved batch at row \(rowNumber)/\(rows.count)")
             }
@@ -927,7 +927,7 @@ final class SyncCoordinator: ObservableObject {
 
             // Batch save for durability
             let rowNumber = index + 1
-            if rowNumber % pullSaveBatchSize == 0 {
+            if rowNumber.isMultiple(of: pullSaveBatchSize) {
                 try await storeActor.save()
                 logger.debug("wage_snapshots: saved batch at row \(rowNumber)/\(rows.count)")
             }
@@ -1163,7 +1163,7 @@ final class SyncCoordinator: ObservableObject {
 
             // Batch save for durability
             let rowNumber = index + 1
-            if rowNumber % pullSaveBatchSize == 0 {
+            if rowNumber.isMultiple(of: pullSaveBatchSize) {
                 try await storeActor.save()
                 logger.debug("user_settings: saved batch at row \(rowNumber)/\(rows.count)")
             }

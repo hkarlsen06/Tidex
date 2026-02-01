@@ -449,10 +449,12 @@ struct SubscriptionSettingsView: View {
     // MARK: - Legal Links
 
     private var termsURL: URL {
+        // swiftlint:disable:next force_unwrapping
         URL(string: "https://tidex.no/\(localization.currentLocale.rawValue)/terms")!
     }
 
     private var privacyURL: URL {
+        // swiftlint:disable:next force_unwrapping
         URL(string: "https://tidex.no/\(localization.currentLocale.rawValue)/privacy")!
     }
 

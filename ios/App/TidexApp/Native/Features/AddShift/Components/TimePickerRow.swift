@@ -111,6 +111,7 @@ struct NumericTimeInput: View {
             } else {
                 // First 2 digits > 23, so first digit is hour, last 2 are minutes
                 // "930" → "09:30", "253" → "02:53"
+                // swiftlint:disable:next force_unwrapping
                 let hour = "0\(digits.first!)"
                 let minutes = String(digits.dropFirst())
                 completed = "\(hour):\(minutes)"

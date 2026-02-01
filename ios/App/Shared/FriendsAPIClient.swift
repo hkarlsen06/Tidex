@@ -1,3 +1,5 @@
+// swiftlint:disable function_body_length
+// API client fetch methods require sequential network calls
 import Foundation
 
 // MARK: - Shift Status (local definition to avoid cross-target dependencies)
@@ -32,32 +34,40 @@ struct SharersResponse: Codable, Sendable {
 
 /// Response from /api/sharing/previews endpoint
 /// Matches the format returned by the iOS app's SharingService
+/// Computed payroll data - only extract what we need for friends shift preview
+struct PreviewShiftComputedData: Codable, Sendable {
+    let gross: Double
+}
+
+/// Shift data matching the API's ShiftWithComputations format
+/// Only decodes the fields we need for the Watch/Widget
+struct PreviewShiftData: Codable, Sendable {
+    let id: String
+    let shiftDate: String
+    let startTime: String
+    let endTime: String
+    let computed: PreviewShiftComputedData
+
+    /// Convenience accessor for gross
+    var gross: Double { computed.gross }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case shiftDate = "shift_date"
+        case startTime = "start_time"
+        case endTime = "end_time"
+        case computed
+    }
+}
+
 struct PreviewsResponse: Codable, Sendable {
     let previews: [PreviewData]
 
     struct PreviewData: Codable, Sendable {
         let sharerId: String
-        let shift: ShiftData?
+        let shift: PreviewShiftData?
         let status: String?
         let showEarnings: Bool
-    }
-
-    /// Shift data matching the API's ShiftWithComputations format
-    /// Only decodes the fields we need for the Watch/Widget
-    struct ShiftData: Codable, Sendable {
-        let id: String
-        let shift_date: String
-        let start_time: String
-        let end_time: String
-        let computed: ComputedData
-
-        /// Computed payroll data - only extract what we need
-        struct ComputedData: Codable, Sendable {
-            let gross: Double
-        }
-
-        /// Convenience accessor for gross
-        var gross: Double { computed.gross }
     }
 }
 
@@ -177,39 +187,41 @@ enum FriendsAPIClient {
             return FriendWithShift(
                 id: sharer.id,
                 displayName: sharer.firstName ?? sharer.email?.components(separatedBy: "@").first ?? "Unknown",
-                initials: makeInitials(from: sharer.firstName ?? sharer.email?.components(separatedBy: "@").first ?? "?"),
+                initials: makeInitials(
+                    from: sharer.firstName ?? sharer.email?.components(separatedBy: "@").first ?? "?"
+                ),
                 profilePictureUrl: sharer.profilePictureUrl,
                 oauthAvatarUrl: sharer.oauthAvatarUrl,
                 showEarnings: preview?.showEarnings ?? sharer.showEarnings,
                 blocked: sharer.blocked,
                 shiftId: preview?.shift?.id,
-                shiftDate: preview?.shift?.shift_date,
-                startTime: preview?.shift?.start_time,
-                endTime: preview?.shift?.end_time,
+                shiftDate: preview?.shift?.shiftDate,
+                startTime: preview?.shift?.startTime,
+                endTime: preview?.shift?.endTime,
                 gross: preview?.shift?.gross,
                 status: status
             )
         }
 
         // Sort by shift proximity: active first, then upcoming (soonest), then past (most recent), then no shifts
-        return results.sorted { a, b in
+        return results.sorted { lhs, rhs in
             let priorityOrder: [FriendShiftStatus?] = [.active, .upcoming, .past, nil]
-            let aPriority = priorityOrder.firstIndex(where: { $0 == a.status }) ?? 4
-            let bPriority = priorityOrder.firstIndex(where: { $0 == b.status }) ?? 4
+            let lhsPriority = priorityOrder.firstIndex(where: { $0 == lhs.status }) ?? 4
+            let rhsPriority = priorityOrder.firstIndex(where: { $0 == rhs.status }) ?? 4
 
-            if aPriority != bPriority {
-                return aPriority < bPriority
+            if lhsPriority != rhsPriority {
+                return lhsPriority < rhsPriority
             }
 
             // Same status - sort by date
-            guard let aDate = a.shiftDate, let bDate = b.shiftDate else {
-                return a.shiftDate != nil // Put shifts before no-shifts
+            guard let lhsDate = lhs.shiftDate, let rhsDate = rhs.shiftDate else {
+                return lhs.shiftDate != nil // Put shifts before no-shifts
             }
 
-            if a.status == .upcoming {
-                return aDate < bDate // Upcoming: soonest first
-            } else if a.status == .past {
-                return aDate > bDate // Past: most recent first
+            if lhs.status == .upcoming {
+                return lhsDate < rhsDate // Upcoming: soonest first
+            } else if lhs.status == .past {
+                return lhsDate > rhsDate // Past: most recent first
             }
 
             return false
@@ -255,8 +267,14 @@ enum FriendsAPIClient {
         }
     }
 
-    private static func fetchPreviews(sharerIds: [String], accessToken: String) async throws -> [PreviewsResponse.PreviewData] {
-        var components = URLComponents(url: baseURL.appendingPathComponent("api/sharing/previews"), resolvingAgainstBaseURL: false)!
+    private static func fetchPreviews(
+        sharerIds: [String],
+        accessToken: String
+    ) async throws -> [PreviewsResponse.PreviewData] {
+        let previewsURL = baseURL.appendingPathComponent("api/sharing/previews")
+        guard var components = URLComponents(url: previewsURL, resolvingAgainstBaseURL: false) else {
+            throw FriendsAPIError.networkError(underlying: "Invalid base URL")
+        }
         components.queryItems = [
             URLQueryItem(name: "sharerIds", value: sharerIds.joined(separator: ","))
         ]
@@ -311,3 +329,4 @@ enum FriendsAPIClient {
         return String(name.prefix(2).uppercased())
     }
 }
+// swiftlint:enable function_body_length

@@ -187,10 +187,7 @@ struct DayShiftsSheet: View {
     }
 
     private func formattedHours(_ hours: Double) -> String {
-        if hours == floor(hours) {
-            return String(format: "%.0f", hours)
-        }
-        return String(format: "%.1f", hours)
+        return String(format: "%.2f", hours)
     }
 
     private func formatCurrency(_ amount: Double) -> String {

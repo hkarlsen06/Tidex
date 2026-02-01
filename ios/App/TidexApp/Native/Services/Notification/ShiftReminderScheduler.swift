@@ -112,7 +112,7 @@ final class ShiftReminderScheduler {
                 reminderTimesToUse = reminderMinutes
             } else if daysUntil <= Self.reducedCoverageDays {
                 // Reduced coverage: only first (shortest) reminder time
-                reminderTimesToUse = reminderMinutes.prefix(1).map { $0 }
+                reminderTimesToUse = Array(reminderMinutes.prefix(1))
             } else {
                 // Skip shifts too far in the future
                 continue

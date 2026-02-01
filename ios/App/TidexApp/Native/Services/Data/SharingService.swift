@@ -241,10 +241,10 @@ final class SharingService: ObservableObject {
                 let accessToken = session.accessToken
 
                 // Build URL
-                var components = URLComponents(
-                    url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing"),
-                    resolvingAgainstBaseURL: false
-                )!
+                let sharingURL = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing")
+                guard var components = URLComponents(url: sharingURL, resolvingAgainstBaseURL: false) else {
+                    throw SharingServiceError.networkError(underlying: URLError(.badURL))
+                }
                 components.queryItems = [
                     URLQueryItem(name: "ownerId", value: ownerId),
                     URLQueryItem(name: "year", value: String(year)),
@@ -350,10 +350,10 @@ final class SharingService: ObservableObject {
             let accessToken = session.accessToken
 
             // Build URL - only fetch uncached IDs
-            var components = URLComponents(
-                url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/previews"),
-                resolvingAgainstBaseURL: false
-            )!
+            let previewsURL = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/previews")
+            guard var components = URLComponents(url: previewsURL, resolvingAgainstBaseURL: false) else {
+                throw SharingServiceError.networkError(underlying: URLError(.badURL))
+            }
             components.queryItems = [
                 URLQueryItem(name: "sharerIds", value: uncachedIds.joined(separator: ","))
             ]

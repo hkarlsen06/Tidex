@@ -1,3 +1,5 @@
+// swiftlint:disable file_length type_body_length function_body_length
+// Widget files require multiple size-specific views that cannot be easily split
 import AppIntents
 import SwiftUI
 import WidgetKit
@@ -389,10 +391,10 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         return formatter.date(from: dateString)
     }
 
-    private func countMidnightCrossings(from: Date, to: Date) -> Int {
+    private func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
         let calendar = Calendar.current
-        let fromMidnight = calendar.startOfDay(for: from)
-        let toMidnight = calendar.startOfDay(for: to)
+        let fromMidnight = calendar.startOfDay(for: startDate)
+        let toMidnight = calendar.startOfDay(for: endDate)
         let components = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight)
         return abs(components.day ?? 0)
     }
@@ -490,8 +492,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
         // Tomorrow
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-           calendar.isDate(shiftDay, inSameDayAs: tomorrow)
-        {
+           calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
             return locale == "no" ? "I morgen" : "Tomorrow"
         }
 
@@ -619,6 +620,20 @@ struct FriendShiftWidgetView: View {
         }
     }
 
+    private var startTimeColor: Color {
+        if entry.shiftHasStarted {
+            return secondaryTextColor
+        }
+        return entry.hasShift ? primaryTextColor : mutedTextColor
+    }
+
+    private var endTimeColor: Color {
+        if entry.shiftHasStarted {
+            return entry.hasShift ? primaryTextColor : mutedTextColor
+        }
+        return secondaryTextColor
+    }
+
     var body: some View {
         ZStack {
             backgroundColor
@@ -739,13 +754,13 @@ struct FriendShiftWidgetView: View {
                 Text(entry.startTime)
                     .font(.system(size: 32, weight: entry.shiftHasStarted ? .medium : .bold))
                     .monospacedDigit()
-                    .foregroundColor(entry.shiftHasStarted ? secondaryTextColor : (entry.hasShift ? primaryTextColor : mutedTextColor))
+                    .foregroundColor(startTimeColor)
                     .lineLimit(1)
 
                 Text(entry.endTime)
                     .font(.system(size: 32, weight: entry.shiftHasStarted ? .bold : .medium))
                     .monospacedDigit()
-                    .foregroundColor(entry.shiftHasStarted ? (entry.hasShift ? primaryTextColor : mutedTextColor) : secondaryTextColor)
+                    .foregroundColor(endTimeColor)
                     .lineLimit(1)
             }
         }
@@ -948,3 +963,4 @@ struct FriendShiftWidget: Widget {
     FriendShiftWidgetEntry.noFriendSelected(locale: "no")
 }
 #endif
+// swiftlint:enable file_length type_body_length function_body_length

@@ -331,6 +331,7 @@ struct SecuritySettingsView: View {
     }
 
     @ViewBuilder
+    // swiftlint:disable:next function_parameter_count
     private func connectionRow(
         icon: String,
         title: String,

@@ -1,3 +1,5 @@
+// swiftlint:disable file_length type_body_length
+// Watch views require all size variations in a single file
 import Combine
 import SwiftUI
 import UIKit
@@ -455,3 +457,4 @@ struct ShiftRowView: View {
         )
     }
 }
+// swiftlint:enable file_length type_body_length

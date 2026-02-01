@@ -44,10 +44,11 @@ struct ConflictExclusion {
             }
 
             func find(_ id: String) -> String {
-                if parent[id] != id {
-                    parent[id] = find(parent[id]!)
+                guard let currentParent = parent[id] else { return id }
+                if currentParent != id {
+                    parent[id] = find(currentParent)
                 }
-                return parent[id]!
+                return parent[id] ?? id
             }
 
             func union(_ a: String, _ b: String) {
@@ -60,10 +61,8 @@ struct ConflictExclusion {
 
             // Check all pairs for overlap and union them
             for i in 0..<shiftsOnDate.count {
-                for j in (i + 1)..<shiftsOnDate.count {
-                    if shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j]) {
-                        union(shiftsOnDate[i].id, shiftsOnDate[j].id)
-                    }
+                for j in (i + 1)..<shiftsOnDate.count where shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j]) {
+                    union(shiftsOnDate[i].id, shiftsOnDate[j].id)
                 }
             }
 

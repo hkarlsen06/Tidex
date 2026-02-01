@@ -30,10 +30,7 @@ enum ShiftCardFormatter {
 
     static func formattedHours(_ hours: Double, locale: LocalizationManager.AppLocale) -> String {
         let hoursLabel = locale == .norwegian ? "t" : "h"
-        if hours == floor(hours) {
-            return String(format: "%.0f %@", hours, hoursLabel)
-        }
-        return String(format: "%.1f %@", hours, hoursLabel)
+        return String(format: "%.2f %@", hours, hoursLabel)
     }
 }
 

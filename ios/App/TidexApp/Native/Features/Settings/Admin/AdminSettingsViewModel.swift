@@ -1,3 +1,5 @@
+// swiftlint:disable force_unwrapping
+// Admin-only file with internal API calls where URLs are guaranteed valid
 import Foundation
 import Supabase
 import os.log
@@ -1282,4 +1284,5 @@ extension AdminUserItem {
         }
     }
 }
+// swiftlint:enable force_unwrapping
 

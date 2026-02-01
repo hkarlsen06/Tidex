@@ -13,7 +13,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published private(set) var isWatchPaired = false
     @Published private(set) var isWatchAppInstalled = false
 
-    private override init() {
+    override private init() {
         super.init()
     }
 

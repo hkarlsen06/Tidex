@@ -428,7 +428,7 @@ final class AddShiftViewModel: ObservableObject {
     // MARK: - Data Loading
 
     /// Load initial data from repositories
-    func loadData() async {
+    func loadData() async { // swiftlint:disable:this async_without_await
         guard let userId = AppCoordinator.shared.getCurrentUserId() else {
             logger.warning("Cannot load data: no user ID")
             return
@@ -613,7 +613,7 @@ final class AddShiftViewModel: ObservableObject {
             existingShiftMonths = months
 
             // Calculate target month from first selected date
-            if let firstDate = selectedDates.sorted().first,
+            if let firstDate = selectedDates.min(),
                let date = Date.fromISODateString(firstDate) {
                 let calendar = Calendar.current
                 targetMonth = calendar.dateComponents([.year, .month], from: date)

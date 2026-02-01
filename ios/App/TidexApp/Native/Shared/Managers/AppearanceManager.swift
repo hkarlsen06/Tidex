@@ -7,9 +7,9 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AppearanceMan
 
 /// Theme options for the app
 enum AppTheme: String, CaseIterable {
-    case system = "system"
-    case light = "light"
-    case dark = "dark"
+    case system
+    case light
+    case dark
 
     /// Convert to SwiftUI ColorScheme for .preferredColorScheme modifier
     var colorScheme: ColorScheme? {
@@ -32,8 +32,8 @@ enum AppTheme: String, CaseIterable {
 
 /// Calendar animation style options
 enum CalendarAnimationStyle: String, CaseIterable {
-    case horizontal = "horizontal"
-    case vertical = "vertical"
+    case horizontal
+    case vertical
 }
 
 /// Manager for app-wide appearance settings

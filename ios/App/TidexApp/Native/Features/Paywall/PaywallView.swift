@@ -171,6 +171,7 @@ struct PaywallView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
+    // swiftlint:disable force_unwrapping
     private var legalLinks: some View {
         HStack(spacing: 16) {
             Link(AuthStrings.string("paywall.termsOfUse", locale: localization.currentLocale), destination: URL(string: "https://tidex.no/terms")!)
@@ -185,6 +186,7 @@ struct PaywallView: View {
                 .foregroundColor(.tidexTextMuted)
         }
     }
+    // swiftlint:enable force_unwrapping
 
     private var loadingOverlay: some View {
         ZStack {

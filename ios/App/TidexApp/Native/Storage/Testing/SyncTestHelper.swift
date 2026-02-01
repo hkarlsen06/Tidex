@@ -91,7 +91,7 @@ final class SyncTestHelper: ObservableObject {
     // MARK: - State Inspection
 
     /// Get sync state summary for a user
-    func getSyncStateSummary(userId: String) async -> SyncStateSummary {
+    func getSyncStateSummary(userId: String) -> SyncStateSummary {
         let context = localStore.mainContext
 
         // Fetch sync state
@@ -173,10 +173,10 @@ final class SyncTestHelper: ObservableObject {
 
     /// Validate Test 8.1: Local-only UI validation
     /// Checks that local data is accessible without network
-    func validateLocalOnlyUI(userId: String) async -> ValidationResult {
+    func validateLocalOnlyUI(userId: String) async -> ValidationResult { // swiftlint:disable:this async_without_await
         log(.validation, "Starting Test 8.1: Local-only UI Validation", details: "userId: \(userId.prefix(8))...")
 
-        let summary = await getSyncStateSummary(userId: userId)
+        let summary = getSyncStateSummary(userId: userId)
 
         var issues: [String] = []
 
@@ -224,10 +224,10 @@ final class SyncTestHelper: ObservableObject {
 
     /// Validate Test 8.2: Check for pending/dirty records
     /// Verifies that offline edits are properly marked
-    func validatePendingChanges(userId: String) async -> ValidationResult {
+    func validatePendingChanges(userId: String) async -> ValidationResult { // swiftlint:disable:this async_without_await
         log(.validation, "Starting Test 8.2: Pending Changes Validation", details: "userId: \(userId.prefix(8))...")
 
-        let summary = await getSyncStateSummary(userId: userId)
+        let summary = getSyncStateSummary(userId: userId)
 
         let totalDirty = summary.shiftCount.dirty +
                          summary.recurringShiftCount.dirty +
@@ -262,10 +262,10 @@ final class SyncTestHelper: ObservableObject {
 
     /// Validate Test 8.3/8.4: Check for conflicts
     /// Verifies conflict detection and resolution status
-    func validateConflicts(userId: String) async -> ValidationResult {
+    func validateConflicts(userId: String) async -> ValidationResult { // swiftlint:disable:this async_without_await
         log(.validation, "Starting Test 8.3/8.4: Conflict Validation", details: "userId: \(userId.prefix(8))...")
 
-        let summary = await getSyncStateSummary(userId: userId)
+        let summary = getSyncStateSummary(userId: userId)
 
         let totalConflicts = summary.shiftCount.conflict +
                              summary.recurringShiftCount.conflict +
@@ -305,10 +305,10 @@ final class SyncTestHelper: ObservableObject {
 
     /// Validate Test 8.5: Soft delete sync
     /// Checks that deleted records are properly tracked
-    func validateSoftDeleteSync(userId: String) async -> ValidationResult {
+    func validateSoftDeleteSync(userId: String) async -> ValidationResult { // swiftlint:disable:this async_without_await
         log(.validation, "Starting Test 8.5: Soft Delete Validation", details: "userId: \(userId.prefix(8))...")
 
-        let summary = await getSyncStateSummary(userId: userId)
+        let summary = getSyncStateSummary(userId: userId)
 
         let totalDeleted = summary.shiftCount.deleted +
                            summary.recurringShiftCount.deleted +

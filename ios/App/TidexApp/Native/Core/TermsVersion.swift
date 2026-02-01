@@ -94,6 +94,7 @@ enum TermsVersion {
             }
 
             // Return the first result (either the operation or timeout)
+            // swiftlint:disable:next force_unwrapping
             let result = try await group.next()!
             group.cancelAll()
             return result

@@ -1,3 +1,5 @@
+// swiftlint:disable file_length function_body_length cyclomatic_complexity
+// Widget files require multiple size-specific views that cannot be easily split
 import SwiftUI
 import WidgetKit
 
@@ -154,7 +156,11 @@ struct FriendsWidgetProvider: TimelineProvider {
 
             if let shift = shift {
                 // Calculate layout state
-                let (status, daysRemaining) = determineStatus(shiftDateString: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+                let (status, daysRemaining) = determineStatus(
+                    shiftDateString: shift.shiftDate,
+                    startTime: shift.startTime,
+                    endTime: shift.endTime
+                )
                 let formattedDate = formatShiftDate(shift.shiftDate, locale: locale, daysRemaining: daysRemaining)
 
                 previews.append(FriendPreview(
@@ -187,31 +193,31 @@ struct FriendsWidgetProvider: TimelineProvider {
         // 2. Upcoming shifts (soonest first)
         // 3. Past shifts (most recent first)
         // 4. No shifts (alphabetical)
-        previews.sort { a, b in
+        previews.sort { lhs, rhs in
             // Active first
-            if a.status == .active && b.status != .active { return true }
-            if b.status == .active && a.status != .active { return false }
+            if lhs.status == .active && rhs.status != .active { return true }
+            if rhs.status == .active && lhs.status != .active { return false }
 
             // Upcoming by days remaining
-            if a.status == .upcoming && b.status == .upcoming {
-                return (a.daysRemaining ?? 999) < (b.daysRemaining ?? 999)
+            if lhs.status == .upcoming && rhs.status == .upcoming {
+                return (lhs.daysRemaining ?? 999) < (rhs.daysRemaining ?? 999)
             }
 
             // Upcoming before past/none
-            if a.status == .upcoming && b.status != .upcoming { return true }
-            if b.status == .upcoming && a.status != .upcoming { return false }
+            if lhs.status == .upcoming && rhs.status != .upcoming { return true }
+            if rhs.status == .upcoming && lhs.status != .upcoming { return false }
 
             // Past by recency (closest to today first)
-            if a.status == .past && b.status == .past {
-                return abs(a.daysRemaining ?? 0) < abs(b.daysRemaining ?? 0)
+            if lhs.status == .past && rhs.status == .past {
+                return abs(lhs.daysRemaining ?? 0) < abs(rhs.daysRemaining ?? 0)
             }
 
             // Past before none
-            if a.status == .past && b.status == .none { return true }
-            if b.status == .past && a.status == .none { return false }
+            if lhs.status == .past && rhs.status == .none { return true }
+            if rhs.status == .past && lhs.status == .none { return false }
 
             // Alphabetical for none
-            return a.displayName < b.displayName
+            return lhs.displayName < rhs.displayName
         }
 
         // Take top 5
@@ -236,7 +242,11 @@ struct FriendsWidgetProvider: TimelineProvider {
         return formatter.date(from: dateString)
     }
 
-    private func determineStatus(shiftDateString: String, startTime: String, endTime: String) -> (FriendPreview.FriendShiftStatus, Int) {
+    private func determineStatus(
+        shiftDateString: String,
+        startTime: String,
+        endTime: String
+    ) -> (FriendPreview.FriendShiftStatus, Int) {
         guard let shiftDate = parseShiftDate(shiftDateString) else {
             return (.none, 0)
         }
@@ -697,3 +707,4 @@ struct FriendsWidget: Widget {
     FriendsWidgetEntry.empty()
 }
 #endif
+// swiftlint:enable file_length function_body_length cyclomatic_complexity

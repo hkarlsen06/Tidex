@@ -490,6 +490,7 @@ actor LocalStoreActor {
 
     // MARK: - Local Recurring Shift Write Operations
 
+    // swiftlint:disable:next function_parameter_count
     func createRecurringShift(
         userId: String,
         startTime: String,
@@ -549,6 +550,7 @@ actor LocalStoreActor {
         return localShift.toRecurringShiftRow()
     }
 
+    // swiftlint:disable:next function_parameter_count
     func updateRecurringShift(
         id: String,
         startTime: String?,
@@ -808,6 +810,7 @@ actor LocalStoreActor {
 
     // MARK: - Local Wage Snapshot Write Operations
 
+    // swiftlint:disable:next function_parameter_count
     func createWageSnapshot(
         userId: String,
         fromDate: Date?,
@@ -879,6 +882,7 @@ actor LocalStoreActor {
         return localSnapshot.toWageSnapshot()
     }
 
+    // swiftlint:disable:next function_parameter_count
     func updateWageSnapshot(
         id: String,
         hourlyWage: Double?,
@@ -1192,6 +1196,7 @@ actor LocalStoreActor {
         )
     }
 
+    // swiftlint:disable:next function_parameter_count
     func updateUserSettings(
         userId: String,
         monthlyGoal: Int?,
@@ -1515,7 +1520,7 @@ actor LocalStoreActor {
     }
 
     /// Auto-merge a shift (apply server changes for non-dirty fields)
-    func autoMergeShift(
+    func autoMergeShift( // swiftlint:disable:this function_parameter_count
         id: String,
         serverRow: SyncShiftRow,
         serverUpdatedAt: Date,
@@ -1605,6 +1610,7 @@ actor LocalStoreActor {
         existing.conflictServerSnapshot = serverSnapshot.encoded()
     }
 
+    // swiftlint:disable:next function_parameter_count
     func autoMergeRecurringShift(
         id: String,
         serverRow: SyncRecurringShiftRow,
@@ -1704,6 +1710,7 @@ actor LocalStoreActor {
         existing.conflictServerSnapshot = serverSnapshot.encoded()
     }
 
+    // swiftlint:disable:next function_parameter_count
     func autoMergeWageSnapshot(
         id: String,
         serverRow: SyncWageSnapshotRow,
@@ -1928,7 +1935,7 @@ actor LocalStoreActor {
     }
 
     /// Rebase a shift (update server metadata, keep local dirty fields)
-    func rebaseShift(
+    func rebaseShift( // swiftlint:disable:this function_parameter_count
         id: String,
         serverRow: SyncShiftRow,
         serverUpdatedAt: Date,
@@ -2052,6 +2059,7 @@ actor LocalStoreActor {
         existing.conflictServerSnapshot = nil
     }
 
+    // swiftlint:disable:next function_parameter_count
     func rebaseRecurringShift(
         id: String,
         serverRow: SyncRecurringShiftRow,
@@ -2176,6 +2184,7 @@ actor LocalStoreActor {
         existing.conflictServerSnapshot = nil
     }
 
+    // swiftlint:disable:next function_parameter_count
     func rebaseWageSnapshot(
         id: String,
         serverRow: SyncWageSnapshotRow,

@@ -44,13 +44,12 @@ struct CelebrationDetector {
 
         let maxGross = shifts.map { $0.grossPay }.max() ?? 0
         if maxGross == 0 {
-            return shifts.sorted { $0.shiftDate < $1.shiftDate }.first
+            return shifts.min { $0.shiftDate < $1.shiftDate }
         }
 
         return shifts
             .filter { $0.grossPay == maxGross }
-            .sorted { $0.shiftDate < $1.shiftDate }
-            .first
+            .min { $0.shiftDate < $1.shiftDate }
     }
 
     /// Compute the TotalCard "earned to date" display value.

@@ -13,10 +13,7 @@ struct SharedShiftRow: View {
 
     private var formattedHours: String {
         let hoursLabel = localization.currentLocale == .norwegian ? "t" : "h"
-        if shift.paidHours == floor(shift.paidHours) {
-            return String(format: "%.0f %@", shift.paidHours, hoursLabel)
-        }
-        return String(format: "%.1f %@", shift.paidHours, hoursLabel)
+        return String(format: "%.2f %@", shift.paidHours, hoursLabel)
     }
 
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {

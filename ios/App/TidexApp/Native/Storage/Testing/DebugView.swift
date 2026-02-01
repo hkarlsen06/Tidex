@@ -262,10 +262,11 @@ struct SyncDebugView: View {
         }
 
         if uploadedCount > 0 {
-            storeKitSyncResult = "Success: \(uploadedCount) synced"
+            var result = "Success: \(uploadedCount) synced"
             if failedCount > 0 {
-                storeKitSyncResult! += ", \(failedCount) failed"
+                result += ", \(failedCount) failed"
             }
+            storeKitSyncResult = result
         } else if failedCount > 0 {
             storeKitSyncResult = "Failed: \(lastError ?? "Unknown error")"
         } else {
@@ -653,11 +654,11 @@ struct SyncDebugView: View {
         }
     }
 
-    private func loadSummary() async {
+    private func loadSummary() async { // swiftlint:disable:this async_without_await
         guard let userId = userId else { return }
 
         isLoadingSummary = true
-        syncStateSummary = await testHelper.getSyncStateSummary(userId: userId)
+        syncStateSummary = testHelper.getSyncStateSummary(userId: userId)
         isLoadingSummary = false
     }
 

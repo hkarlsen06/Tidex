@@ -186,13 +186,9 @@ struct EmploymentPercentageChart: View {
         return isCurrentMonth ? .tidexBlue : .tidexBlue.opacity(0.2)
     }
 
-    /// Format hours for display (37.5 or 40, not 40.0)
+    /// Format hours for display (e.g., "37.50" or "40.00")
     private func formatHours(_ hours: Double) -> String {
-        if hours.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", hours)
-        } else {
-            return String(format: "%.1f", hours)
-        }
+        return String(format: "%.2f", hours)
     }
 }
 
