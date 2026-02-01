@@ -10,6 +10,7 @@ struct AddShiftView: View {
     @Binding var selectedTab: MainTabView.Tab
     @Binding var isKeyboardVisible: Bool
     @State private var focusedTimeField: NumericTimeInput.TimeField?
+    @State private var keyboardHeight: CGFloat = 0
 
     /// Title for current mode
     private var modeTitle: String {
@@ -41,6 +42,7 @@ struct AddShiftView: View {
                         switch viewModel.mode {
                         case .single:
                             // Single mode: Fixed layout with centered calendar
+                            // Uses manual offset for keyboard avoidance to handle 6-week months
                             MonthSwipeContainer(
                                 onSwipeLeft: { viewModel.goToNextMonth() },
                                 onSwipeRight: { viewModel.goToPreviousMonth() },
@@ -57,7 +59,10 @@ struct AddShiftView: View {
                                 }
                                 .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
                                 .contentShape(Rectangle())
+                                .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
+                                .animation(.easeInOut(duration: 0.25), value: focusedTimeField != nil)
                             }
+                            .ignoresSafeArea(.keyboard)
                             .onTapGesture {
                                 hideKeyboard()
                             }
@@ -66,13 +71,6 @@ struct AddShiftView: View {
                             // Recurring mode: Scrollable content (more elements)
                             ScrollView {
                                 VStack(spacing: 24) {
-                                    // Draft restored banner
-                                    if viewModel.hasDraft {
-                                        DraftRestoredBanner(onStartFresh: {
-                                            viewModel.startFresh()
-                                        })
-                                    }
-
                                     RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
                                 }
                                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -191,7 +189,10 @@ struct AddShiftView: View {
                 }
             )
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
+            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                keyboardHeight = keyboardFrame.height
+            }
             withAnimation(.easeInOut(duration: 0.25)) {
                 isKeyboardVisible = true
             }
@@ -199,6 +200,7 @@ struct AddShiftView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             withAnimation(.easeInOut(duration: 0.25)) {
                 isKeyboardVisible = false
+                keyboardHeight = 0
             }
         }
     }
@@ -250,15 +252,8 @@ private struct SingleShiftContent: View {
         AddShiftCalendarView(viewModel: viewModel)
             .overlay(alignment: .top) {
                 // Header positioned above the calendar
-                // Draft banner is included here so it stacks properly with the header
-                VStack(spacing: 12) {
-                    if viewModel.hasDraft {
-                        DraftRestoredBanner(onStartFresh: {
-                            viewModel.startFresh()
-                        })
-                    }
-
-                    VStack(spacing: 4) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(localization.string("addShift.headerTitle"))
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.tidexTextPrimary)
@@ -266,7 +261,23 @@ private struct SingleShiftContent: View {
                         Text(localization.string("addShift.headerSubtitle"))
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextSecondary)
-                            .multilineTextAlignment(.center)
+                    }
+
+                    Spacer()
+
+                    // Undo button to clear state (only show when there's content)
+                    if viewModel.hasContent {
+                        Button {
+                            viewModel.startFresh()
+                            // Dismiss keyboard when clearing
+                            if focusedTimeField != nil {
+                                focusedTimeField = nil
+                            }
+                        } label: {
+                            Image(systemName: "arrow.counterclockwise.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.tidexBlue)
+                        }
                     }
                 }
                 .padding(.bottom, 12)
@@ -297,16 +308,34 @@ private struct RecurringShiftContent: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            // Header
-            VStack(spacing: 4) {
-                Text(localization.string("addShift.headerTitle"))
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.tidexTextPrimary)
+            // Header with optional "Start fresh" button
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localization.string("addShift.headerTitle"))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("addShift.headerSubtitle"))
-                    .font(.system(size: 15))
-                    .foregroundColor(.tidexTextSecondary)
-                    .multilineTextAlignment(.center)
+                    Text(localization.string("addShift.headerSubtitle"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexTextSecondary)
+                }
+
+                Spacer()
+
+                // Undo button to clear state (only show when there's content)
+                if viewModel.hasContent {
+                    Button {
+                        viewModel.startFresh()
+                        // Dismiss keyboard when clearing
+                        if focusedTimeField != nil {
+                            focusedTimeField = nil
+                        }
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.tidexBlue)
+                    }
+                }
             }
             .padding(.bottom, 8)
 
@@ -338,39 +367,6 @@ private struct RecurringShiftContent: View {
         }
         // Extra bottom padding to clear the month picker
         .padding(.bottom, 80)
-    }
-}
-
-// MARK: - Draft Restored Banner
-
-private struct DraftRestoredBanner: View {
-    let onStartFresh: () -> Void
-    @Environment(\.localization) private var localization
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "arrow.counterclockwise.circle.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.tidexBlue)
-
-            Text(localization.string("addShift.draftRestored"))
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
-
-            Spacer()
-
-            Button {
-                onStartFresh()
-            } label: {
-                Text(localization.string("addShift.startFresh"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.tidexBlue)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.tidexBlue.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
