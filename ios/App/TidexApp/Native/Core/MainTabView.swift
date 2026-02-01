@@ -27,6 +27,9 @@ struct MainTabView: View {
     @State private var showFeedbackSheet = false
     @State private var showAdminFeedbackSheet = false
 
+    // State for Wagey AI chat sheet (home tab)
+    @State private var showWageySheet = false
+
     // View mode toggle (calendar vs list) - persisted across app launches
     // Shared with ShiftsView via @AppStorage
     @AppStorage("shiftsViewMode") private var showListView = false
@@ -176,6 +179,9 @@ struct MainTabView: View {
         .sheet(isPresented: $showAdminFeedbackSheet) {
             AdminSettingsView(initialTab: .feedback)
         }
+        .sheet(isPresented: $showWageySheet) {
+            WageyView()
+        }
     }
 
     // MARK: - Month Picker Visibility
@@ -199,6 +205,23 @@ struct MainTabView: View {
     @ViewBuilder
     private var sharedMonthPickerOverlay: some View {
         HStack(spacing: 8) {
+            // Wagey button - only on Home tab
+            if selectedTab == .home {
+                Button {
+                    Haptics.play(.light)
+                    showWageySheet = true
+                } label: {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular, in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                .transition(.scale.combined(with: .opacity))
+            }
+
             // View mode toggle button - only on Shifts tab
             if selectedTab == .shifts {
                 Button {
