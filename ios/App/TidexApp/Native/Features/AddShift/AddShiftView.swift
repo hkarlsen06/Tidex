@@ -156,6 +156,10 @@ struct AddShiftView: View {
             // Check for pre-selected date when tab becomes visible
             // (e.g., when user taps empty day in Shifts calendar)
             viewModel.checkPreselectedDate()
+            handleDeepLink(coordinator.pendingDeepLink)
+        }
+        .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+            handleDeepLink(deepLink)
         }
         .sheet(isPresented: $viewModel.showPreviewSheet) {
             RecurringPreviewSheet(viewModel: viewModel)
@@ -185,6 +189,14 @@ struct AddShiftView: View {
                 isKeyboardVisible = false
             }
         }
+    }
+
+    // MARK: - Deep Link Handling
+
+    private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
+        guard case .addShift = deepLink else { return }
+        viewModel.checkPreselectedDate()
+        coordinator.clearPendingDeepLink()
     }
 
     private func hideKeyboard() {

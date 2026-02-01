@@ -176,6 +176,7 @@ enum NativeWidgetStorage {
         // Pass shifts directly to avoid race condition with UserDefaults write
         Task {
             await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId, shifts: storedShifts)
+            await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
         }
 
         logger.info("Widget storage updated with \(storedShifts.count) shifts")
@@ -194,6 +195,7 @@ enum NativeWidgetStorage {
         // Cancel all scheduled shift reminders
         Task {
             await ShiftReminderScheduler.shared.cancelAllReminders()
+            await SmartNotificationScheduler.shared.cancelAllSmartNotifications()
         }
 
         logger.info("Widget storage cleared")

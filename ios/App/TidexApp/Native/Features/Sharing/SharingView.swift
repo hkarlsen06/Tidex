@@ -218,6 +218,10 @@ struct SharingView: View {
             // Not handled here - ShiftsView will handle this
             break
 
+        case .addShift:
+            // Not handled here - AddShiftView will handle this
+            break
+
         case .feedback, .adminFeedback:
             // Not handled here - MainTabView handles these
             break

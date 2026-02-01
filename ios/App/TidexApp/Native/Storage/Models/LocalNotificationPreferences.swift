@@ -25,6 +25,9 @@ final class LocalNotificationPreferences {
     /// Whether notifications for shared shift changes are enabled
     var sharedShiftsEnabled: Bool
 
+    /// Whether smart notifications are enabled
+    var smartNotificationsEnabled: Bool?
+
     // MARK: - Server Metadata
 
     /// Server's updated_at timestamp
@@ -57,6 +60,7 @@ final class LocalNotificationPreferences {
         shiftRemindersEnabled: Bool = true,
         shiftReminderMinutesArray: [Int] = [300],
         sharedShiftsEnabled: Bool = true,
+        smartNotificationsEnabled: Bool = true,
         serverUpdatedAt: Date = Date(),
         syncStatus: SyncStatus = .clean,
         localUpdatedAt: Date = Date()
@@ -65,6 +69,7 @@ final class LocalNotificationPreferences {
         self.shiftRemindersEnabled = shiftRemindersEnabled
         self.shiftReminderMinutesArray = shiftReminderMinutesArray
         self.sharedShiftsEnabled = sharedShiftsEnabled
+        self.smartNotificationsEnabled = smartNotificationsEnabled
         self.serverUpdatedAt = serverUpdatedAt
         self.syncStatusRaw = syncStatus.rawValue
         self.localUpdatedAt = localUpdatedAt
@@ -105,6 +110,7 @@ extension LocalNotificationPreferences {
             shiftRemindersEnabled: serverRow.shift_reminders_enabled,
             shiftReminderMinutesArray: serverRow.shift_reminder_minutes_array ?? defaultReminderMinutes,
             sharedShiftsEnabled: serverRow.shared_shifts_enabled,
+            smartNotificationsEnabled: true,
             serverUpdatedAt: serverUpdatedAt,
             syncStatus: .clean,
             localUpdatedAt: Date()

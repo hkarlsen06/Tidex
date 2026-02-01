@@ -1006,6 +1006,16 @@ enum AuthStrings {
         "notifications.timePicker.description": "Velg hvor lenge f\u{00F8}r vakten du vil bli varslet",
         "notifications.timePicker.selectTime": "Velg en tid",
 
+        // Notification - Smart Notifications
+        "notifications.smart.sectionTitle": "Smarte varsler",
+        "notifications.smart.sectionSubtitle": "Varsler basert p\u{00E5} arbeidene dine",
+        "notifications.smart.title": "Smarte varsler",
+        "notifications.smart.description": "Forslag basert p\u{00E5} n\u{00E5}r du vanligvis jobber",
+        "notifications.smart.morning.title": "Du pleier \u{00E5} jobbe p\u{00E5} %@",
+        "notifications.smart.morning.body": "Logg dagens vakt?",
+        "notifications.smart.evening.title": "Det er 2 timer etter vanlig sluttid",
+        "notifications.smart.evening.body": "La du til en vakt?",
+
         // Notification - Shared Shifts
         "notifications.shared.sectionTitle": "Delte vakter",
         "notifications.shared.sectionSubtitle": "Varsler om endringer fra venner",
@@ -2102,6 +2112,16 @@ enum AuthStrings {
         "notifications.timePicker.editTitle": "Edit Time",
         "notifications.timePicker.description": "Choose how long before your shift you want to be notified",
         "notifications.timePicker.selectTime": "Select a time",
+
+        // Notification - Smart Notifications
+        "notifications.smart.sectionTitle": "Smart Notifications",
+        "notifications.smart.sectionSubtitle": "Prompts based on your work habits",
+        "notifications.smart.title": "Smart notifications",
+        "notifications.smart.description": "Suggestions based on when you usually work",
+        "notifications.smart.morning.title": "You usually work %@s",
+        "notifications.smart.morning.body": "Log today's shift?",
+        "notifications.smart.evening.title": "It's 2 hours after your usual end time",
+        "notifications.smart.evening.body": "Did you add a shift?",
 
         // Notification - Shared Shifts
         "notifications.shared.sectionTitle": "Shared Shifts",

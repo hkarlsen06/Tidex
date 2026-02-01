@@ -19,6 +19,9 @@ struct NotificationSettingsView: View {
                 // Shift reminders section
                 shiftRemindersSection
 
+                // Smart notifications section
+                smartNotificationsSection
+
                 // Shared shifts section
                 sharedShiftsSection
             }
@@ -350,6 +353,54 @@ struct NotificationSettingsView: View {
     }
 
     // MARK: - Shared Shifts Section
+
+    private var smartNotificationsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            VStack(alignment: .leading, spacing: 4) {
+                Text(localization.string("notifications.smart.sectionTitle"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.tidexTextMuted)
+                    .textCase(.uppercase)
+
+                Text(localization.string("notifications.smart.sectionSubtitle"))
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexTextSecondary)
+            }
+
+            // Smart notifications card
+            VStack(spacing: 0) {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 20))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: 32, height: 32)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localization.string("notifications.smart.title"))
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.tidexTextPrimary)
+
+                        Text(localization.string("notifications.smart.description"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.tidexTextSecondary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $viewModel.smartNotificationsEnabled)
+                        .labelsHidden()
+                        .tint(.tidexBlue)
+                }
+                .padding(16)
+            }
+            .background(Color.tidexSurfacePrimary)
+            .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
+        }
+        .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
+        .disabled(viewModel.notificationStatus == .denied)
+    }
 
     private var sharedShiftsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
