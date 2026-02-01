@@ -31,8 +31,9 @@ final class LocalUserSettings {
     /// Theme preference (NOT NULL in DB, defaults to "system")
     var theme: String
 
-    /// Calendar animation style preference (NOT NULL in DB, defaults to "horizontal")
-    var calendarAnimationStyle: String
+    /// Calendar animation style preference (defaults to "horizontal")
+    /// Optional to support migration from older versions without this field
+    var calendarAnimationStyle: String?
 
     /// Month number (11=November, 12=December) for half tax deduction
     var halfTaxMonth: Int?
@@ -116,6 +117,11 @@ final class LocalUserSettings {
         defaultShiftsView ?? "calendar"
     }
 
+    /// Effective calendar animation style
+    var effectiveCalendarAnimationStyle: String {
+        calendarAnimationStyle ?? "horizontal"
+    }
+
     // MARK: - Initialization
 
     init(
@@ -125,7 +131,7 @@ final class LocalUserSettings {
         profilePictureUrl: String? = nil,
         payrollDay: Int? = nil,
         theme: String = "system",
-        calendarAnimationStyle: String = "horizontal",
+        calendarAnimationStyle: String? = "horizontal",
         halfTaxMonth: Int? = nil,
         currency: String? = nil,
         lastActive: Date? = nil,
@@ -273,7 +279,7 @@ extension LocalUserSettings {
             profile_picture_url: profilePictureUrl,
             payroll_day: payrollDay,
             theme: theme,
-            calendar_animation_style: calendarAnimationStyle,
+            calendar_animation_style: effectiveCalendarAnimationStyle,
             half_tax_month: halfTaxMonth,
             currency: currency
         )
