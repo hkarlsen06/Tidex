@@ -276,12 +276,14 @@ struct ShiftsView: View {
             // Handle any pending deep link on initial appearance
             handleDeepLink(coordinator.pendingDeepLink)
         }
-        // Exit selection mode when switching to list view (toggle is in shared overlay)
+        // Handle view mode switch (toggle is in shared overlay)
         .onChange(of: showListView) { _, isListView in
             if isListView {
                 viewModel.isSelectionModeEnabled = false
             }
         }
+        // Disable animations during view mode transition to prevent lag
+        .animation(.none, value: showListView)
         // Confetti overlay for celebration when shifts are added
         .overlay {
             ConfettiView(isActive: showConfetti) {

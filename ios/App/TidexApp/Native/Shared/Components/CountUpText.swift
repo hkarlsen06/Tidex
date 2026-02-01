@@ -41,7 +41,6 @@ struct CountUpText: View {
                     RollingDigit(
                         digit: digit,
                         duration: duration,
-                        delay: Double(index) * 0.02,
                         animateOnAppear: animateOnAppear,
                         animateChanges: animateChanges
                     )
@@ -55,92 +54,98 @@ struct CountUpText: View {
     }
 }
 
-/// Single digit that rolls to the target digit
-/// Uses direct animation on offset for reliable value-change animations
+/// Single digit that rolls to the target digit using TimelineView for smooth animation
 private struct RollingDigit: View {
     let digit: Int
     let duration: Double
-    let delay: Double
     let animateOnAppear: Bool
     let animateChanges: Bool
 
-    /// Tracks the displayed digit for animation
-    @State private var displayedDigit: Int?
+    /// Animation start time
+    @State private var animationStart: Date?
+    /// Starting digit for current animation
+    @State private var fromDigit: CGFloat = 0
+    /// Target digit for current animation
+    @State private var toDigit: CGFloat = 0
+    /// Whether we've completed initial setup
+    @State private var didSetup = false
 
     /// All digits 0-9 for the rolling column
     private let digits = Array(0...9)
-
-    /// Mask fade height as percentage of digit height
-    private let maskHeightRatio: CGFloat = 0.15
 
     var body: some View {
         // Hidden "0" to establish the frame size
         Text("0")
             .hidden()
             .overlay {
-                GeometryReader { geometry in
-                    let digitHeight = geometry.size.height
+                TimelineView(.animation(paused: animationStart == nil)) { timeline in
+                    GeometryReader { geometry in
+                        let progress = calculateProgress(at: timeline.date)
+                        let currentDigit = fromDigit + (toDigit - fromDigit) * progress
 
-                    // The digit column with gradient mask
-                    ZStack {
                         VStack(spacing: 0) {
                             ForEach(digits, id: \.self) { d in
                                 Text("\(d)")
-                                    .frame(height: digitHeight)
+                                    .frame(height: geometry.size.height)
                             }
                         }
-                        // Offset to show the displayed digit
-                        .offset(y: -CGFloat(displayedDigit ?? 0) * digitHeight)
+                        .offset(y: -currentDigit * geometry.size.height)
                     }
-                    // Gradient mask for top/bottom fade (matches AnimateNumber's Mask)
-                    .mask(
-                        VStack(spacing: 0) {
-                            // Top fade
-                            LinearGradient(
-                                colors: [.clear, .black],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: digitHeight * maskHeightRatio)
-
-                            // Solid middle
-                            Rectangle()
-                                .fill(.black)
-
-                            // Bottom fade
-                            LinearGradient(
-                                colors: [.black, .clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: digitHeight * maskHeightRatio)
-                        }
-                    )
                 }
                 .clipped()
             }
             .onAppear {
+                guard !didSetup else { return }
+                didSetup = true
+
                 if animateOnAppear {
-                    // Start at 0, then animate to target after delay
-                    displayedDigit = 0
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05 + delay) {
-                        withAnimation(.spring(duration: duration, bounce: 0)) {
-                            displayedDigit = digit
-                        }
+                    fromDigit = 0
+                    toDigit = CGFloat(digit)
+                    // Small delay to let app settle
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        animationStart = Date()
                     }
                 } else {
-                    displayedDigit = digit
+                    fromDigit = CGFloat(digit)
+                    toDigit = CGFloat(digit)
                 }
             }
             .onChange(of: digit) { _, newValue in
                 if animateChanges {
-                    withAnimation(.spring(duration: duration, bounce: 0)) {
-                        displayedDigit = newValue
-                    }
+                    fromDigit = toDigit
+                    toDigit = CGFloat(newValue)
+                    animationStart = Date()
                 } else {
-                    displayedDigit = newValue
+                    fromDigit = CGFloat(newValue)
+                    toDigit = CGFloat(newValue)
+                    animationStart = nil
                 }
             }
+    }
+
+    /// Calculate eased progress with critically damped spring (normalized to reach 1.0)
+    private func calculateProgress(at date: Date) -> CGFloat {
+        guard let start = animationStart else { return 1 }
+
+        let elapsed = date.timeIntervalSince(start)
+        let rawProgress = min(elapsed / duration, 1.0)
+
+        // Critically damped spring, normalized to reach exactly 1.0 at end
+        let omega: CGFloat = 6.0
+        let t = rawProgress * omega
+        let springRaw = 1 - (1 + t) * exp(-t)
+        // Normalize: at t=omega, spring reaches ~0.9826 for omega=6
+        let finalValue: CGFloat = 1 - (1 + omega) * exp(-omega)
+        let eased = springRaw / finalValue
+
+        // Stop the timeline when complete
+        if rawProgress >= 1.0 {
+            DispatchQueue.main.async {
+                animationStart = nil
+            }
+        }
+
+        return eased
     }
 }
 

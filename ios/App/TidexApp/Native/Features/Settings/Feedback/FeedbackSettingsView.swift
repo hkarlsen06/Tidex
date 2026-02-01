@@ -5,6 +5,7 @@ import SwiftUI
 struct FeedbackSettingsView: View {
     @Environment(\.localization) private var localization
     @StateObject private var viewModel = FeedbackSettingsViewModel()
+    @State private var historyAnimated = false
 
     var body: some View {
         ScrollView {
@@ -190,9 +191,19 @@ struct FeedbackSettingsView: View {
 
             // History items
             VStack(spacing: 8) {
-                ForEach(viewModel.feedbackHistory) { item in
+                ForEach(Array(viewModel.feedbackHistory.enumerated()), id: \.element.id) { index, item in
                     feedbackHistoryItem(item)
+                        .offset(y: historyAnimated ? 0 : -20)
+                        .opacity(historyAnimated ? 1 : 0)
+                        .animation(
+                            .spring(response: 0.4, dampingFraction: 0.8)
+                                .delay(Double(index) * 0.08),
+                            value: historyAnimated
+                        )
                 }
+            }
+            .onAppear {
+                historyAnimated = true
             }
         }
     }
