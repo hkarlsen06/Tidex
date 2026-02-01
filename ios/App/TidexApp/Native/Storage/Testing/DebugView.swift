@@ -626,6 +626,13 @@ struct SyncDebugView: View {
                 Label("Reset Local Data", systemImage: "trash")
             }
             .foregroundColor(.red)
+
+            Button {
+                triggerCelebrationDebug()
+            } label: {
+                Label("Trigger Shift Celebration (Next Launch)", systemImage: "party.popper")
+            }
+            .disabled(userId == nil)
         }
     }
 
@@ -677,6 +684,13 @@ struct SyncDebugView: View {
         testHelper.log(.validation, "Local data reset")
         syncStateSummary = nil
         validationResults = []
+    }
+
+    private func triggerCelebrationDebug() {
+        guard let userId = userId else { return }
+        let month = Date.currentYearMonth()
+        ShiftCompletionCelebrationManager.shared.requestDebugCelebration(userId: userId, month: month)
+        testHelper.log(.validation, "Queued celebration for \(month.year)-\(month.month)")
     }
 }
 

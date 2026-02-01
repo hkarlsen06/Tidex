@@ -6,6 +6,7 @@ struct RootView: View {
     // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
     @ObservedObject private var coordinator = AppCoordinator.shared
     @ObservedObject private var localization = LocalizationManager.shared
+    @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
     // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
     // Onboarding state - explicit naming for two-phase onboarding
@@ -82,6 +83,15 @@ struct RootView: View {
                                 hasCompletedPostAuthOnboarding = true
                             },
                             userId: coordinator.userId ?? ""
+                        )
+                        .transition(.opacity)
+                    } else if celebrationManager.shouldShowCelebration, let data = celebrationManager.celebrationData {
+                        ShiftCompletionCelebrationView(
+                            data: data,
+                            onDismiss: {
+                                guard let userId = coordinator.userId, !userId.isEmpty else { return }
+                                celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
+                            }
                         )
                         .transition(.opacity)
                     } else {
