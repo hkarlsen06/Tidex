@@ -69,11 +69,12 @@ export async function createRecurringShift(
   const conflictResolution = options?.conflictResolution || 'exclude_conflicts';
 
   if (conflictResolution === 'exclude_conflicts') {
-    // Fetch existing shifts to detect conflicts
+    // Fetch existing shifts to detect conflicts (exclude soft-deleted)
     const { data: existingShifts, error: fetchError } = await supabase
       .from('user_shifts')
       .select('shift_date, start_time, end_time')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .is('deleted_at', null);
 
     if (fetchError) {
       console.error('Failed to fetch existing shifts:', fetchError);

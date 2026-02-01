@@ -34,11 +34,12 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
 
   const isFreeTier = true;
 
-  // User is on free tier - check existing shifts
+  // User is on free tier - check existing shifts (exclude soft-deleted)
   const { data: existingShifts, error } = await supabase
     .from('user_shifts')
     .select('shift_date')
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
 
   if (error) {
     console.error('Error fetching shifts for limit check:', error);
