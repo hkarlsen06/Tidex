@@ -311,7 +311,7 @@ private struct RecurringShiftContent: View {
             // Header with optional "Start fresh" button
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("addShift.headerTitle"))
+                    Text(localization.string("addShift.headerTitleRecurring"))
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.tidexTextPrimary)
 
