@@ -49,12 +49,20 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Tidex trenger tilgang til kameraet for å ta profilbilde.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb</string>
+	<key>SUPABASE_URL</key>
+	<string>https://identity.tidex.no</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -95,13 +103,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
-	<key>SUPABASE_URL</key>
-	<string>https://identity.tidex.no</string>
-	<key>SUPABASE_ANON_KEY</key>
-	<string>sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>

@@ -8,3 +8,6 @@
 
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex trenger tilgang til kameraet for å ta profilbilde.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex bruker Face ID for å beskytte inntektsdataene dine mot nysgjerrige blikk. Bare du bør se inntekten din.";

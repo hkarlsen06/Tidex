@@ -6,6 +6,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
+    /// Privacy blur view shown when app enters background (for app switcher screenshot)
+    private var privacyBlurView: UIVisualEffectView?
+
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach the UIWindow to the provided UIWindowScene.
         guard let windowScene = (scene as? UIWindowScene) else { return }
@@ -53,10 +56,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         Task { @MainActor in
             AppearanceManager.shared.applyToWindows()
         }
+
+        // Remove privacy blur when becoming active
+        hidePrivacyBlur()
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
         // Called when the scene will move from an active state to an inactive state.
+        // Show privacy blur for app switcher screenshot (only if biometric lock is enabled)
+        showPrivacyBlur()
     }
 
     func sceneWillEnterForeground(_ scene: UIScene) {
@@ -72,6 +80,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             AppCoordinator.shared.handleAppForeground()
         }
 
+        // Note: Biometric unlock is handled by AppLockView.task, not here
+        // This avoids race conditions with the privacy blur
+
         // Check for ongoing shifts and start Live Activity if needed
         // This ensures the Live Activity starts even if BGTask didn't fire
         (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
@@ -82,6 +93,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidEnterBackground(_ scene: UIScene) {
         // Use this method to save data, release shared resources, and store scene-specific state.
+
+        // Lock app if biometric lock is enabled
+        Task { @MainActor in
+            BiometricAuthService.shared.handleAppBackground()
+        }
 
         // Start a managed background task to give time to finish pending operations
         (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
@@ -158,6 +174,38 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Parse the path and handle accordingly
         // For auth-related paths, the Supabase SDK handles automatically
         handleDeepLink(url)
+    }
+
+    // MARK: - Privacy Blur
+
+    /// Show blur overlay to hide content in app switcher (only if biometric lock is enabled)
+    private func showPrivacyBlur() {
+        // Only blur if biometric lock is enabled and not currently authenticating
+        guard BiometricAuthService.isEnabledStatic else { return }
+        guard !BiometricAuthService.isCurrentlyAuthenticating else { return }
+        guard privacyBlurView == nil, let window = window else { return }
+
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.frame = window.bounds
+        blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        blurView.tag = 999 // Tag for identification
+
+        // Add navy tint overlay to match Tidex brand color
+        let navyTint = UIView()
+        navyTint.backgroundColor = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 0.6)
+        navyTint.frame = blurView.bounds
+        navyTint.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        blurView.contentView.addSubview(navyTint)
+
+        window.addSubview(blurView)
+        privacyBlurView = blurView
+    }
+
+    /// Remove privacy blur when app becomes active
+    private func hidePrivacyBlur() {
+        privacyBlurView?.removeFromSuperview()
+        privacyBlurView = nil
     }
 
 }
