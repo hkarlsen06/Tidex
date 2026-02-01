@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sheet for editing a recurring shift pattern
 /// Allows editing start/end times, repeat interval, selected days, and end condition
-/// Uses a calendar view for anchor date selection (same as add flow)
+/// Uses the same UI layout as the add recurring shift flow
 struct RecurringShiftEditorSheet: View {
     let recurringShift: RecurringShiftRow
     let onSave: ((RecurringShiftEditResult) -> Void)?
@@ -13,8 +13,8 @@ struct RecurringShiftEditorSheet: View {
 
     // MARK: - Edit State
 
-    @State private var editedStartTime: Date = Date()
-    @State private var editedEndTime: Date = Date()
+    @State private var editedStartTime: Date? = nil
+    @State private var editedEndTime: Date? = nil
     @State private var editedRepeatInterval: Int = 0
     @State private var editedSelectedDays: SelectedDays = [:]
     @State private var editedEndCondition: EndCondition? = nil
@@ -30,6 +30,7 @@ struct RecurringShiftEditorSheet: View {
     @State private var isDeleting = false
     @State private var showDeleteConfirmation = false
     @State private var errorMessage: String?
+    @State private var focusedTimeField: NumericTimeInput.TimeField?
 
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -37,8 +38,11 @@ struct RecurringShiftEditorSheet: View {
 
     /// Whether any changes have been made
     private var hasChanges: Bool {
-        let newStartTime = formatTimeToString(editedStartTime)
-        let newEndTime = formatTimeToString(editedEndTime)
+        guard let startTime = editedStartTime, let endTime = editedEndTime else {
+            return false
+        }
+        let newStartTime = formatTimeToString(startTime)
+        let newEndTime = formatTimeToString(endTime)
 
         return newStartTime != recurringShift.cleanStartTime ||
                newEndTime != recurringShift.cleanEndTime ||
@@ -47,58 +51,9 @@ struct RecurringShiftEditorSheet: View {
                editedEndCondition != recurringShift.end_condition
     }
 
-    /// Repeat interval options
-    private var repeatIntervalOptions: [(value: Int, label: String)] {
-        let isNorwegian = localization.currentLocale == .norwegian
-        return (0...8).map { interval in
-            let weeks = interval + 1
-            if weeks == 1 {
-                return (interval, isNorwegian ? "hver uke" : "every week")
-            } else {
-                return (interval, isNorwegian ? "hver \(weeks). uke" : "every \(weeks) weeks")
-            }
-        }
-    }
-
-    /// Duration type options
-    private var durationOptions: [DurationOption] {
-        let isNorwegian = localization.currentLocale == .norwegian
-        return [
-            DurationOption(type: .indefinite, label: isNorwegian ? "Uendelig" : "Indefinite"),
-            DurationOption(type: .months, label: isNorwegian ? "Måneder" : "Months"),
-            DurationOption(type: .years, label: isNorwegian ? "År" : "Years"),
-            DurationOption(type: .endDate, label: isNorwegian ? "Sluttdato" : "End date")
-        ]
-    }
-
-    /// Current duration type
-    private var currentDurationType: DurationType {
-        guard let condition = editedEndCondition else { return .indefinite }
-        switch condition {
-        case .months: return .months
-        case .years: return .years
-        case .endDate: return .endDate
-        }
-    }
-
-    /// Current duration value (for months/years)
-    private var currentDurationValue: Int {
-        guard let condition = editedEndCondition else { return 1 }
-        switch condition {
-        case .months(let value): return value
-        case .years(let value): return value
-        case .endDate: return 1
-        }
-    }
-
-    /// Current end date (for end date type)
-    private var currentEndDate: Date {
-        guard let condition = editedEndCondition,
-              case .endDate(let dateStr) = condition,
-              let date = Date.fromISODateString(dateStr) else {
-            return Date()
-        }
-        return date
+    /// Whether form is valid for saving
+    private var canSave: Bool {
+        editedStartTime != nil && editedEndTime != nil && !editedSelectedDays.isEmpty
     }
 
     // MARK: - Month Navigation
@@ -166,32 +121,85 @@ struct RecurringShiftEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Time Section
-                    timeSection
+            GeometryReader { geometry in
+                let availableHeight = geometry.size.height - (MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
 
-                    // Weekday Selection
-                    weekdaySection
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Header with title and optional reset button
+                        headerSection
 
-                    // Repeat Interval
-                    repeatIntervalSection
+                        // Duration picker (same as add flow)
+                        DurationPicker(endCondition: $editedEndCondition)
 
-                    // Duration Section
-                    durationSection
+                        // Repeat interval picker (same as add flow)
+                        RepeatIntervalPicker(interval: $editedRepeatInterval)
 
-                    // Error message
-                    if let error = errorMessage {
-                        errorBanner(message: error)
+                        // Time picker (same as add flow)
+                        TimeRangePicker(
+                            startTime: $editedStartTime,
+                            endTime: $editedEndTime,
+                            focusedFieldBinding: $focusedTimeField
+                        )
+
+                        Divider()
+                            .background(Color.tidexBorder)
+
+                        // Month navigation header
+                        AnimatedMonthHeader(
+                            monthName: displayMonthName,
+                            year: displayYear,
+                            phase: monthPhase,
+                            config: .compact,
+                            onPrevious: goToPreviousMonth,
+                            onNext: goToNextMonth,
+                            onNavigateToMonth: navigateToMonth,
+                            isLoading: false
+                        )
+
+                        // Weekday chip bar showing selected anchors
+                        WeekdayChipBar(
+                            selectedDays: editedSelectedDays,
+                            onRemove: { weekday in
+                                // Don't allow removing the last weekday
+                                if editedSelectedDays.count > 1 {
+                                    editedSelectedDays.removeValue(forKey: weekday)
+                                }
+                            }
+                        )
+
+                        // Calendar for selecting anchor dates
+                        EditRecurringCalendarView(
+                            displayMonth: displayMonth,
+                            selectedDays: $editedSelectedDays,
+                            repeatInterval: editedRepeatInterval,
+                            endCondition: editedEndCondition,
+                            existingShiftDates: []
+                        )
+
+                        // Error message
+                        if let error = errorMessage {
+                            errorBanner(message: error)
+                        }
+
+                        // Action Buttons
+                        actionButtons
                     }
-
-                    // Action Buttons
-                    actionButtons
+                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: availableHeight, alignment: .top)
                 }
-                .padding(20)
+                .monthSwipeGesture(
+                    onSwipeLeft: goToNextMonth,
+                    onSwipeRight: goToPreviousMonth,
+                    isEnabled: true
+                )
+                .scrollDismissesKeyboard(.interactively)
+                .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
             }
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("recurring.editTitle"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -207,8 +215,8 @@ struct RecurringShiftEditorSheet: View {
                     }
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexBlue)
-                    .disabled(isSaving || !hasChanges || editedSelectedDays.isEmpty)
-                    .opacity(isSaving || !hasChanges || editedSelectedDays.isEmpty ? 0.5 : 1)
+                    .disabled(isSaving || !hasChanges || !canSave)
+                    .opacity(isSaving || !hasChanges || !canSave ? 0.5 : 1)
                 }
             }
         }
@@ -231,333 +239,60 @@ struct RecurringShiftEditorSheet: View {
 
     // MARK: - Sections
 
-    private var timeSection: some View {
-        VStack(spacing: 16) {
-            // Section header
-            HStack {
-                Image(systemName: "clock")
-                    .foregroundColor(.tidexBlue)
-                Text(localization.string("shifts.timeSection"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.tidexTextSecondary)
-                Spacer()
-            }
-
-            // Time pickers
-            VStack(spacing: 16) {
-                // Start time
-                HStack {
-                    Text(localization.string("shifts.startTime"))
-                        .font(.system(size: 15))
-                        .foregroundColor(.tidexTextSecondary)
-                    Spacer()
-                    DatePicker(
-                        "",
-                        selection: $editedStartTime,
-                        displayedComponents: .hourAndMinute
-                    )
-                    .labelsHidden()
-                    .tint(.tidexBlue)
-                }
-
-                Divider()
-
-                // End time
-                HStack {
-                    Text(localization.string("shifts.endTime"))
-                        .font(.system(size: 15))
-                        .foregroundColor(.tidexTextSecondary)
-                    Spacer()
-                    DatePicker(
-                        "",
-                        selection: $editedEndTime,
-                        displayedComponents: .hourAndMinute
-                    )
-                    .labelsHidden()
-                    .tint(.tidexBlue)
-                }
-
-                // Cross-midnight info
-                if isCrossMidnight {
-                    HStack(spacing: 8) {
-                        Image(systemName: "moon.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.tidexBlue)
-                        Text(localization.string("shifts.crossMidnightInfo"))
-                            .font(.system(size: 13))
-                            .foregroundColor(.tidexTextSecondary)
-                        Spacer()
-                    }
-                    .padding(.top, 4)
-                }
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.tidexSurfacePrimary)
-            )
-        }
-    }
-
-    private var weekdaySection: some View {
-        VStack(spacing: 16) {
-            // Section header with month navigation
-            HStack {
-                Image(systemName: "calendar")
-                    .foregroundColor(.tidexBlue)
-                Text(localization.string("recurring.weekdaysSection"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.tidexTextSecondary)
-                Spacer()
-            }
-
-            // Month navigation header
-            AnimatedMonthHeader(
-                monthName: displayMonthName,
-                year: displayYear,
-                phase: monthPhase,
-                config: .compact,
-                onPrevious: goToPreviousMonth,
-                onNext: goToNextMonth,
-                onNavigateToMonth: navigateToMonth,
-                isLoading: false
-            )
-
-            // Weekday chip bar showing selected anchors
-            WeekdayChipBar(
-                selectedDays: editedSelectedDays,
-                onRemove: { weekday in
-                    // Don't allow removing the last weekday
-                    if editedSelectedDays.count > 1 {
-                        editedSelectedDays.removeValue(forKey: weekday)
-                    }
-                }
-            )
-
-            // Calendar for selecting anchor dates
-            EditRecurringCalendarView(
-                displayMonth: displayMonth,
-                selectedDays: $editedSelectedDays,
-                repeatInterval: editedRepeatInterval,
-                endCondition: editedEndCondition,
-                existingShiftDates: []
-            )
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.tidexSurfacePrimary)
-        )
-    }
-
-    private var repeatIntervalSection: some View {
-        VStack(spacing: 16) {
-            // Section header
-            HStack {
-                Image(systemName: "repeat")
-                    .foregroundColor(.tidexBlue)
-                Text(localization.string("recurring.repeatSection"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.tidexTextSecondary)
-                Spacer()
-            }
-
-            // Repeat interval picker
-            VStack(spacing: 0) {
-                ForEach(repeatIntervalOptions, id: \.value) { option in
-                    Button {
-                        editedRepeatInterval = option.value
-                    } label: {
-                        HStack {
-                            Text(option.label)
-                                .font(.system(size: 15))
-                                .foregroundColor(.tidexTextPrimary)
-                            Spacer()
-                            if editedRepeatInterval == option.value {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.tidexBlue)
-                            }
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                    }
-
-                    if option.value < 8 {
-                        Divider()
-                            .padding(.leading, 16)
-                    }
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.tidexSurfacePrimary)
-            )
-        }
-    }
-
-    private var durationSection: some View {
-        VStack(spacing: 16) {
-            // Section header
-            HStack {
-                Image(systemName: "hourglass")
-                    .foregroundColor(.tidexBlue)
-                Text(localization.string("recurring.durationSection"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.tidexTextSecondary)
-                Spacer()
-            }
-
-            VStack(spacing: 16) {
-                // Duration type selector
-                HStack(spacing: 8) {
-                    ForEach(durationOptions, id: \.type) { option in
-                        durationTypeButton(option)
-                    }
-                }
-
-                // Value picker based on type
-                switch currentDurationType {
-                case .indefinite:
-                    HStack(spacing: 8) {
-                        Image(systemName: "infinity")
-                            .font(.system(size: 14))
-                            .foregroundColor(.tidexBlue)
-                        Text(localization.string("recurring.indefiniteHint"))
-                            .font(.system(size: 13))
-                            .foregroundColor(.tidexTextSecondary)
-                        Spacer()
-                    }
-                case .months:
-                    durationValuePicker(max: 120, unit: localization.currentLocale == .norwegian ? "måneder" : "months")
-                case .years:
-                    durationValuePicker(max: 10, unit: localization.currentLocale == .norwegian ? "år" : "years")
-                case .endDate:
-                    endDatePicker
-                }
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.tidexSurfacePrimary)
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func durationTypeButton(_ option: DurationOption) -> some View {
-        let isSelected = currentDurationType == option.type
-
-        Button {
-            setDurationType(option.type)
-        } label: {
-            Text(option.label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
-                )
-        }
-    }
-
-    @ViewBuilder
-    private func durationValuePicker(max: Int, unit: String) -> some View {
+    private var headerSection: some View {
         HStack {
-            Picker("", selection: Binding(
-                get: { currentDurationValue },
-                set: { setDurationValue($0) }
-            )) {
-                ForEach(1...max, id: \.self) { value in
-                    Text("\(value)").tag(value)
-                }
-            }
-            .pickerStyle(.wheel)
-            .frame(width: 80, height: 100)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(localization.string("recurring.editTitle"))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
 
-            Text(unit)
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextSecondary)
+                Text(localization.string("addShift.headerSubtitle"))
+                    .font(.system(size: 15))
+                    .foregroundColor(.tidexTextSecondary)
+            }
 
             Spacer()
-        }
-    }
 
-    private var endDatePicker: some View {
-        HStack {
-            Text(localization.string("recurring.endDateLabel"))
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextSecondary)
-            Spacer()
-            DatePicker(
-                "",
-                selection: Binding(
-                    get: { currentEndDate },
-                    set: { setEndDate($0) }
-                ),
-                in: Date()...,
-                displayedComponents: .date
-            )
-            .labelsHidden()
-            .tint(.tidexBlue)
-        }
-    }
-
-    private var actionButtons: some View {
-        VStack(spacing: 12) {
-            // Save button
-            Button {
-                saveChanges()
-            } label: {
-                HStack(spacing: 8) {
-                    if isSaving {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 15, weight: .medium))
-                    }
-                    Text(localization.string("common.saveChanges"))
-                        .font(.system(size: 15, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.sm)
-                .background(hasChanges && !editedSelectedDays.isEmpty ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-                .cornerRadius(12)
-            }
-            .disabled(isSaving || !hasChanges || editedSelectedDays.isEmpty)
-
-            // Delete button
+            // Delete button (replaces reset button from add flow)
             if onDelete != nil {
                 Button {
                     showDeleteConfirmation = true
                 } label: {
-                    HStack(spacing: 8) {
-                        if isDeleting {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "trash")
-                                .font(.system(size: 15, weight: .medium))
-                        }
-                        Text(localization.string("recurring.deleteButton"))
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
-                    .background(Color.tidexError)
-                    .cornerRadius(12)
+                    Image(systemName: "trash.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.tidexError)
                 }
-                .disabled(isDeleting)
             }
         }
+        .padding(.bottom, 8)
+    }
+
+    private var actionButtons: some View {
+        // Save button only - delete is in header
+        Button {
+            saveChanges()
+        } label: {
+            HStack(spacing: 8) {
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 15, weight: .medium))
+                }
+                Text(localization.string("common.saveChanges"))
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.sm)
+            .background(hasChanges && canSave ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
+            .cornerRadius(12)
+        }
+        .disabled(isSaving || !hasChanges || !canSave)
         .padding(.top, 8)
+        .padding(.bottom, 80)  // Extra bottom padding to clear the month picker
     }
 
     @ViewBuilder
@@ -580,22 +315,12 @@ struct RecurringShiftEditorSheet: View {
 
     // MARK: - Helpers
 
-    private var isCrossMidnight: Bool {
-        let startStr = formatTimeToString(editedStartTime)
-        let endStr = formatTimeToString(editedEndTime)
-        return endStr <= startStr && endStr != "00:00"
-    }
-
     private func initializeEditState() {
         // Parse start time
-        if let startTime = parseTimeToDate(recurringShift.cleanStartTime) {
-            editedStartTime = startTime
-        }
+        editedStartTime = parseTimeToDate(recurringShift.cleanStartTime)
 
         // Parse end time
-        if let endTime = parseTimeToDate(recurringShift.cleanEndTime) {
-            editedEndTime = endTime
-        }
+        editedEndTime = parseTimeToDate(recurringShift.cleanEndTime)
 
         // Set repeat interval
         editedRepeatInterval = recurringShift.repeat_interval_weeks
@@ -646,40 +371,10 @@ struct RecurringShiftEditorSheet: View {
         return formatter.string(from: date)
     }
 
-    private func setDurationType(_ type: DurationType) {
-        switch type {
-        case .indefinite:
-            editedEndCondition = nil
-        case .months:
-            editedEndCondition = .months(value: currentDurationValue)
-        case .years:
-            editedEndCondition = .years(value: currentDurationValue)
-        case .endDate:
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            editedEndCondition = .endDate(date: formatter.string(from: Date()))
-        }
-    }
-
-    private func setDurationValue(_ value: Int) {
-        switch currentDurationType {
-        case .months:
-            editedEndCondition = .months(value: value)
-        case .years:
-            editedEndCondition = .years(value: value)
-        default:
-            break
-        }
-    }
-
-    private func setEndDate(_ date: Date) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        editedEndCondition = .endDate(date: formatter.string(from: date))
-    }
-
     private func saveChanges() {
-        guard hasChanges, !editedSelectedDays.isEmpty else { return }
+        guard hasChanges, canSave,
+              let startTime = editedStartTime,
+              let endTime = editedEndTime else { return }
 
         isSaving = true
         impactHaptic.impactOccurred()
@@ -687,8 +382,8 @@ struct RecurringShiftEditorSheet: View {
 
         let result = RecurringShiftEditResult(
             recurringId: recurringShift.id,
-            startTime: formatTimeToString(editedStartTime),
-            endTime: formatTimeToString(editedEndTime),
+            startTime: formatTimeToString(startTime),
+            endTime: formatTimeToString(endTime),
             repeatIntervalWeeks: editedRepeatInterval,
             selectedDays: editedSelectedDays,
             endCondition: editedEndCondition
@@ -716,20 +411,6 @@ struct RecurringShiftEditResult {
     let repeatIntervalWeeks: Int
     let selectedDays: SelectedDays
     let endCondition: EndCondition?
-}
-
-/// Duration type options
-enum DurationType: Equatable {
-    case indefinite
-    case months
-    case years
-    case endDate
-}
-
-/// Duration option for picker
-struct DurationOption {
-    let type: DurationType
-    let label: String
 }
 
 // MARK: - Preview
