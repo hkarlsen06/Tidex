@@ -227,6 +227,9 @@ struct StreamingMessageBubble: View {
                         streamingTextView(text: text, showCursor: isLastBlock)
                     case .toolCall(let toolCall):
                         ToolStatusView(toolCall: toolCall)
+                    case .image:
+                        // Images are not expected in assistant streaming messages
+                        EmptyView()
                     }
                 }
 

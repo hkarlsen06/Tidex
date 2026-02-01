@@ -83,16 +83,19 @@ final class LocalConversation {
 enum StoredContentBlock: Codable, Equatable {
     case text(String)
     case toolCall(StoredToolCall)
+    case image(StoredImageAttachment)
 
     private enum CodingKeys: String, CodingKey {
         case type
         case content
         case toolCall
+        case image
     }
 
     private enum BlockType: String, Codable {
         case text
         case toolCall
+        case image
     }
 
     init(from decoder: Decoder) throws {
@@ -106,6 +109,9 @@ enum StoredContentBlock: Codable, Equatable {
         case .toolCall:
             let toolCall = try container.decode(StoredToolCall.self, forKey: .toolCall)
             self = .toolCall(toolCall)
+        case .image:
+            let image = try container.decode(StoredImageAttachment.self, forKey: .image)
+            self = .image(image)
         }
     }
 
@@ -119,6 +125,9 @@ enum StoredContentBlock: Codable, Equatable {
         case .toolCall(let toolCall):
             try container.encode(BlockType.toolCall, forKey: .type)
             try container.encode(toolCall, forKey: .toolCall)
+        case .image(let image):
+            try container.encode(BlockType.image, forKey: .type)
+            try container.encode(image, forKey: .image)
         }
     }
 }
@@ -192,6 +201,15 @@ struct StoredToolCall: Codable, Identifiable, Equatable {
     let success: Bool?
 }
 
+// MARK: - Stored Image Attachment
+
+/// Codable version of ImageAttachment for persistence
+struct StoredImageAttachment: Codable, Identifiable, Equatable {
+    let id: String
+    let data: Data
+    let mediaType: String
+}
+
 // MARK: - Conversion Extensions
 
 extension StoredChatMessage {
@@ -208,6 +226,8 @@ extension StoredChatMessage {
                 return .text(text)
             case .toolCall(let toolCall):
                 return .toolCall(StoredToolCall(from: toolCall))
+            case .image(let attachment):
+                return .image(StoredImageAttachment(from: attachment))
             }
         }
 
@@ -228,6 +248,8 @@ extension StoredChatMessage {
                     return .text(text)
                 case .toolCall(let storedToolCall):
                     return .toolCall(storedToolCall.toToolCall())
+                case .image(let storedImage):
+                    return .image(storedImage.toImageAttachment())
                 }
             }
             return ChatMessage(
@@ -267,6 +289,24 @@ extension StoredToolCall {
             arguments: arguments,
             result: result,
             success: success
+        )
+    }
+}
+
+extension StoredImageAttachment {
+    /// Convert from ImageAttachment (runtime model)
+    init(from attachment: ImageAttachment) {
+        self.id = attachment.id
+        self.data = attachment.data
+        self.mediaType = attachment.mediaType
+    }
+
+    /// Convert to ImageAttachment (runtime model)
+    func toImageAttachment() -> ImageAttachment {
+        ImageAttachment(
+            id: id,
+            data: data,
+            mediaType: mediaType
         )
     }
 }
