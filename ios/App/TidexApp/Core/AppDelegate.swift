@@ -537,8 +537,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         let type = userInfo["type"] as? String ?? ""
 
+        // Handle smart notification taps (prompt to add shift)
+        if type == "smart_prompt",
+           let dateISO = userInfo["date"] as? String {
+            Task { @MainActor in
+                SharedMonthContext.shared.preselectedDate = dateISO
+                AppCoordinator.shared.pendingDeepLink = .addShift
+            }
+        }
         // Handle shift reminder notification taps
-        if type == "shift_reminder",
+        else if type == "shift_reminder",
            let shiftDate = userInfo["shift_date"] as? String {
             // Navigate to shifts view with the shift highlighted
             Task { @MainActor in

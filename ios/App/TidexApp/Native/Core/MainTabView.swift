@@ -280,6 +280,11 @@ struct MainTabView: View {
             if selectedTab != .shifts {
                 selectedTab = .shifts
             }
+        case .addShift:
+            // Switch to add tab - AddShiftView will handle preselected date
+            if selectedTab != .add {
+                selectedTab = .add
+            }
         case .feedback:
             // Open feedback sheet for users viewing their feedback responses
             showFeedbackSheet = true

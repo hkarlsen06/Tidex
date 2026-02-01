@@ -59,6 +59,21 @@ final class NotificationPreferencesRepository: ObservableObject {
         let normalizedUserId = userId.uppercased()
 
         if let existing = getPreferences(for: normalizedUserId) {
+            if existing.smartNotificationsEnabled == nil {
+                existing.smartNotificationsEnabled = true
+                existing.markDirty()
+                if let context = existing.modelContext {
+                    do {
+                        try context.save()
+                        logger.info("Backfilled smart notifications preference for user: \(normalizedUserId)")
+                        triggerSync(userId: normalizedUserId)
+                    } catch {
+                        logger.error("Failed to backfill smart notifications preference: \(error.localizedDescription)")
+                    }
+                } else {
+                    logger.error("Preferences object has no model context for backfill")
+                }
+            }
             return existing
         }
 
@@ -69,6 +84,7 @@ final class NotificationPreferencesRepository: ObservableObject {
             shiftRemindersEnabled: true,
             shiftReminderMinutesArray: LocalNotificationPreferences.defaultReminderMinutes,
             sharedShiftsEnabled: true,
+            smartNotificationsEnabled: true,
             serverUpdatedAt: Date(),
             syncStatus: .dirty, // Mark as dirty so it gets pushed to server
             localUpdatedAt: Date()
@@ -115,13 +131,15 @@ final class NotificationPreferencesRepository: ObservableObject {
     ///   - remindersEnabled: Whether shift reminders are enabled (optional)
     ///   - reminderMinutes: Array of reminder times in minutes (optional)
     ///   - sharedShiftsEnabled: Whether shared shift notifications are enabled (optional)
+    ///   - smartNotificationsEnabled: Whether smart notifications are enabled (optional)
     /// - Returns: Updated preferences if successful
     @discardableResult
     func updatePreferences(
         for userId: String,
         remindersEnabled: Bool? = nil,
         reminderMinutes: [Int]? = nil,
-        sharedShiftsEnabled: Bool? = nil
+        sharedShiftsEnabled: Bool? = nil,
+        smartNotificationsEnabled: Bool? = nil
     ) -> LocalNotificationPreferences? {
         let preferences = getOrCreatePreferences(for: userId)
 
@@ -139,6 +157,13 @@ final class NotificationPreferencesRepository: ObservableObject {
 
         if let sharedShiftsEnabled = sharedShiftsEnabled, sharedShiftsEnabled != preferences.sharedShiftsEnabled {
             preferences.sharedShiftsEnabled = sharedShiftsEnabled
+            hasChanges = true
+        }
+
+        let currentSmartEnabled = preferences.smartNotificationsEnabled ?? true
+        if let smartNotificationsEnabled = smartNotificationsEnabled,
+           smartNotificationsEnabled != currentSmartEnabled {
+            preferences.smartNotificationsEnabled = smartNotificationsEnabled
             hasChanges = true
         }
 

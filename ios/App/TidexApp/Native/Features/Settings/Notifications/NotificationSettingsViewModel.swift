@@ -57,6 +57,15 @@ final class NotificationSettingsViewModel: ObservableObject {
         }
     }
 
+    /// Whether smart notifications are enabled
+    @Published var smartNotificationsEnabled: Bool = true {
+        didSet {
+            if oldValue != smartNotificationsEnabled {
+                updateSmartNotifications()
+            }
+        }
+    }
+
     /// Loading state
     @Published var isLoading: Bool = false
 
@@ -109,6 +118,7 @@ final class NotificationSettingsViewModel: ObservableObject {
         // Enable toggle only if there are reminder times
         shiftRemindersEnabled = preferences.shiftRemindersEnabled && !reminderTimes.isEmpty
         sharedShiftsEnabled = preferences.sharedShiftsEnabled
+        smartNotificationsEnabled = preferences.smartNotificationsEnabled ?? true
         isInitialLoad = false
 
         isLoading = false
@@ -344,5 +354,25 @@ final class NotificationSettingsViewModel: ObservableObject {
         )
 
         logger.info("Updated shared shifts: \(self.sharedShiftsEnabled)")
+    }
+
+    /// Update smart notifications preference
+    private func updateSmartNotifications() {
+        guard !isInitialLoad, let userId = userId else { return }
+
+        preferencesRepository.updatePreferences(
+            for: userId,
+            smartNotificationsEnabled: smartNotificationsEnabled
+        )
+
+        Task {
+            if smartNotificationsEnabled {
+                await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
+            } else {
+                await SmartNotificationScheduler.shared.cancelAllSmartNotifications()
+            }
+        }
+
+        logger.info("Updated smart notifications: \(self.smartNotificationsEnabled)")
     }
 }

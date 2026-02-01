@@ -16,7 +16,7 @@ final class ShiftReminderScheduler {
     private static let identifierPrefix = "shift-reminder-"
 
     /// Maximum scheduled notifications (iOS limit is 64)
-    private static let maxScheduledNotifications = 60
+    private static let maxScheduledNotifications = 16
 
     /// How many days ahead to schedule all reminders (full coverage)
     private static let fullCoverageDays = 14
