@@ -21,6 +21,9 @@ struct AppearanceSettingsView: View {
                 // Theme selection
                 themeSelectionSection
 
+                // Calendar animation selection
+                calendarAnimationSection
+
                 // Current theme info
                 currentThemeInfo
             }
@@ -204,6 +207,112 @@ struct AppearanceSettingsView: View {
             return localization.string("appearance.theme.lightDescription")
         case .dark:
             return localization.string("appearance.theme.darkDescription")
+        }
+    }
+
+    // MARK: - Calendar Animation Section
+
+    private var calendarAnimationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            Text(localization.string("appearance.calendarAnimation.sectionTitle"))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.tidexTextMuted)
+                .textCase(.uppercase)
+
+            // Animation style options as cards
+            VStack(spacing: 12) {
+                ForEach(CalendarAnimationStyle.allCases, id: \.self) { style in
+                    animationStyleOptionCard(style)
+                }
+            }
+        }
+    }
+
+    private func animationStyleOptionCard(_ style: CalendarAnimationStyle) -> some View {
+        let isSelected = viewModel.selectedCalendarAnimationStyle == style
+
+        return Button {
+            viewModel.selectedCalendarAnimationStyle = style
+        } label: {
+            HStack(spacing: 16) {
+                // Animation style preview
+                animationStylePreview(style)
+
+                // Style info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(animationStyleTitle(style))
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.tidexTextPrimary)
+
+                    Text(animationStyleDescription(style))
+                        .font(.system(size: 13))
+                        .foregroundColor(.tidexTextSecondary)
+                }
+
+                Spacer()
+
+                // Selection indicator
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.tidexBlue)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(.tidexTextMuted)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.tidexSurfacePrimary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.tidexBlue : Color.clear, lineWidth: 2)
+            )
+            .tidexCardShadow(cornerRadius: 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func animationStylePreview(_ style: CalendarAnimationStyle) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.tidexBlue.opacity(0.1))
+                .frame(width: 48, height: 48)
+
+            Image(systemName: animationStyleIcon(style))
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.tidexBlue)
+        }
+    }
+
+    private func animationStyleIcon(_ style: CalendarAnimationStyle) -> String {
+        switch style {
+        case .horizontal:
+            return "arrow.left.arrow.right"
+        case .vertical:
+            return "arrow.up.arrow.down"
+        }
+    }
+
+    private func animationStyleTitle(_ style: CalendarAnimationStyle) -> String {
+        switch style {
+        case .horizontal:
+            return localization.string("appearance.calendarAnimation.horizontal")
+        case .vertical:
+            return localization.string("appearance.calendarAnimation.vertical")
+        }
+    }
+
+    private func animationStyleDescription(_ style: CalendarAnimationStyle) -> String {
+        switch style {
+        case .horizontal:
+            return localization.string("appearance.calendarAnimation.horizontalDescription")
+        case .vertical:
+            return localization.string("appearance.calendarAnimation.verticalDescription")
         }
     }
 

@@ -58,6 +58,7 @@ enum UserSettingsField: String, Codable, CaseIterable {
     case profilePictureUrl = "profile_picture_url"
     case payrollDay = "payroll_day"
     case theme = "theme"
+    case calendarAnimationStyle = "calendar_animation_style"
     case halfTaxMonth = "half_tax_month"
     case currency = "currency"
     case lastActive = "last_active"

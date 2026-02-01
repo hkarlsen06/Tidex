@@ -123,6 +123,7 @@ final class SettingsRepository: ObservableObject {
     ///   - profilePictureUrl: New profile picture URL (optional)
     ///   - payrollDay: New payroll day (optional)
     ///   - theme: New theme (optional)
+    ///   - calendarAnimationStyle: New calendar animation style (optional)
     ///   - halfTaxMonth: New half tax month (optional)
     ///   - currency: New currency (optional)
     /// - Returns: Updated UserSettings if successful
@@ -133,6 +134,7 @@ final class SettingsRepository: ObservableObject {
         profilePictureUrl: String? = nil,
         payrollDay: Int? = nil,
         theme: String? = nil,
+        calendarAnimationStyle: String? = nil,
         halfTaxMonth: Int? = nil,
         currency: String? = nil
     ) async throws -> UserSettings? {
@@ -144,6 +146,7 @@ final class SettingsRepository: ObservableObject {
                 profilePictureUrl: profilePictureUrl,
                 payrollDay: payrollDay,
                 theme: theme,
+                calendarAnimationStyle: calendarAnimationStyle,
                 halfTaxMonth: halfTaxMonth,
                 currency: currency
             )

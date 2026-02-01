@@ -429,6 +429,7 @@ final class AppCoordinator: ObservableObject {
             if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
                 userAvatarUrl = settings.profile_picture_url
                 AppearanceManager.shared.loadFromSettings(settings.theme)
+                AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(settings.calendar_animation_style)
             }
 
         } catch {
@@ -480,6 +481,7 @@ final class AppCoordinator: ObservableObject {
             if let settings = SettingsRepository.shared.getSettings(for: userId) {
                 userAvatarUrl = settings.profile_picture_url
                 AppearanceManager.shared.loadFromSettings(settings.theme)
+                AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(settings.calendar_animation_style)
             }
 
             // Update Apple Watch with latest shift data after initial sync
@@ -742,6 +744,7 @@ final class AppCoordinator: ObservableObject {
             if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
                 userAvatarUrl = settings.profile_picture_url
                 AppearanceManager.shared.loadFromSettings(settings.theme)
+                AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(settings.calendar_animation_style)
             }
 
             // Register APNs token if available
@@ -758,6 +761,7 @@ final class AppCoordinator: ObservableObject {
             if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
                 userAvatarUrl = settings.profile_picture_url
                 AppearanceManager.shared.loadFromSettings(settings.theme)
+                AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(settings.calendar_animation_style)
             }
 
             // Update Apple Watch

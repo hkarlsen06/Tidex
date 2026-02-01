@@ -30,6 +30,12 @@ enum AppTheme: String, CaseIterable {
     }
 }
 
+/// Calendar animation style options
+enum CalendarAnimationStyle: String, CaseIterable {
+    case horizontal = "horizontal"
+    case vertical = "vertical"
+}
+
 /// Manager for app-wide appearance settings
 /// Handles theme persistence and provides the current color scheme to the app
 @MainActor
@@ -44,6 +50,9 @@ final class AppearanceManager: ObservableObject {
     /// The current theme preference
     @Published private(set) var theme: AppTheme = .system
 
+    /// The current calendar animation style
+    @Published private(set) var calendarAnimationStyle: CalendarAnimationStyle = .horizontal
+
     /// The color scheme to apply (nil means follow system)
     var colorScheme: ColorScheme? {
         theme.colorScheme
@@ -54,6 +63,9 @@ final class AppearanceManager: ObservableObject {
     /// UserDefaults key for caching theme locally
     private let themeKey = "cachedTheme"
     private static let themeKeyStatic = "cachedTheme"
+
+    /// UserDefaults key for calendar animation style
+    private let calendarAnimationStyleKey = "calendarAnimationStyle"
 
     // MARK: - Static Methods
 
@@ -76,6 +88,13 @@ final class AppearanceManager: ObservableObject {
             self.theme = theme
             logger.debug("Loaded cached theme: \(cachedTheme)")
         }
+
+        // Load cached calendar animation style
+        if let cachedStyle = UserDefaults.standard.string(forKey: calendarAnimationStyleKey),
+           let style = CalendarAnimationStyle(rawValue: cachedStyle) {
+            self.calendarAnimationStyle = style
+            logger.debug("Loaded cached calendar animation style: \(cachedStyle)")
+        }
     }
 
     // MARK: - Public Methods
@@ -94,6 +113,19 @@ final class AppearanceManager: ObservableObject {
         applyToWindows()
 
         logger.info("Theme updated to: \(theme.rawValue)")
+    }
+
+    /// Update the calendar animation style
+    /// - Parameter style: The new animation style to apply
+    func setCalendarAnimationStyle(_ style: CalendarAnimationStyle) {
+        guard self.calendarAnimationStyle != style else { return }
+
+        self.calendarAnimationStyle = style
+
+        // Cache in UserDefaults
+        UserDefaults.standard.set(style.rawValue, forKey: calendarAnimationStyleKey)
+
+        logger.info("Calendar animation style updated to: \(style.rawValue)")
     }
 
     /// Apply the current theme to all app windows and their root view controllers
@@ -148,5 +180,28 @@ final class AppearanceManager: ObservableObject {
 
         // Always apply to windows - the SwiftUI view hierarchy may have reset the window style
         applyToWindows()
+    }
+
+    /// Load calendar animation style from user settings
+    /// Called when settings are loaded from the repository
+    /// - Parameter styleString: The animation style string from user settings
+    func loadCalendarAnimationStyleFromSettings(_ styleString: String?) {
+        // Check if we already have a locally cached preference
+        let hasCachedPreference = UserDefaults.standard.string(forKey: calendarAnimationStyleKey) != nil
+
+        if !hasCachedPreference {
+            // No local cache - use the server value
+            let newStyle: CalendarAnimationStyle
+            if let styleString = styleString,
+               let parsed = CalendarAnimationStyle(rawValue: styleString) {
+                newStyle = parsed
+            } else {
+                newStyle = .horizontal
+            }
+
+            self.calendarAnimationStyle = newStyle
+            UserDefaults.standard.set(newStyle.rawValue, forKey: calendarAnimationStyleKey)
+            logger.info("Calendar animation style loaded from settings: \(newStyle.rawValue)")
+        }
     }
 }
