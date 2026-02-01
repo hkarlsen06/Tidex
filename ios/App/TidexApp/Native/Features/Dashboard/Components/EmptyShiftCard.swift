@@ -3,11 +3,8 @@ import SwiftUI
 /// Placeholder card displayed when there are no shifts for a month
 /// Shows dashed placeholders matching the FeaturedShiftCard layout
 struct EmptyShiftCard: View {
-    let isBestShift: Bool  // true = other month (no best shift), false = current month (no next shift)
-    /// When true, shows shimmer animation and hides footer text (for loading)
+    /// When true, shows shimmer animation (for loading)
     var isLoading: Bool = false
-
-    @Environment(\.localization) private var localization
 
     // MARK: - Body
 
@@ -49,28 +46,20 @@ struct EmptyShiftCard: View {
             .tidexCardShadow()
             .shimmer(isActive: isLoading)
 
-            // Footer text below the card - fixed height to match FeaturedShiftCard
-            // Hidden during loading state
-            Group {
-                if isLoading {
-                    Color.clear
-                } else {
-                    Text(localization.string(isBestShift ? "dashboard.noShiftsMonth" : "dashboard.noNextShift"))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
-                }
-            }
-            .frame(height: 20) // Match FeaturedShiftCard footer height
+            // Footer skeleton bar below the card - fixed height to match FeaturedShiftCard
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.tidexTextMuted.opacity(0.3))
+                .frame(width: 80, height: 14)
+                .frame(height: 20) // Match FeaturedShiftCard footer height
         }
     }
 }
 
 #Preview {
     VStack(spacing: 16) {
-        EmptyShiftCard(isBestShift: true)
-        EmptyShiftCard(isBestShift: false)
+        EmptyShiftCard()
+        EmptyShiftCard(isLoading: true)
     }
     .padding(.horizontal, 24)
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
