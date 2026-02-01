@@ -13,7 +13,7 @@ import {
   createRiverRouter,
   defaultRiverProvider,
 } from "@/lib/river";
-import type { Message, ContentBlock, ToolResultContent } from "@/lib/services/claude";
+import type { Message, ContentBlock, ImageContent, ToolResultContent } from "@/lib/services/claude";
 import { getSystemPrompt, type SystemPromptContext } from "./system-prompt";
 import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
@@ -193,13 +193,13 @@ function convertToClaudeMessages(
             if (block.type === "image") {
               // Claude image format
               return {
-                type: "image" as const,
+                type: "image",
                 source: {
-                  type: "base64" as const,
+                  type: "base64",
                   media_type: block.source.media_type,
                   data: block.source.data,
                 },
-              } as unknown as ContentBlock;
+              } satisfies ImageContent;
             }
             // Text block
             return {
