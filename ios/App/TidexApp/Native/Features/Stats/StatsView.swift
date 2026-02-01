@@ -127,6 +127,12 @@ struct StatsView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .monthSwipeGesture(
+                onSwipeLeft: { viewModel.goToNextMonth() },
+                onSwipeRight: { viewModel.goToPreviousMonth() },
+                isEnabled: true
+            )
         }
         .refreshable {
             await viewModel.refresh()
@@ -230,6 +236,12 @@ struct StatsView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .monthSwipeGesture(
+                onSwipeLeft: { viewModel.goToNextMonth() },
+                onSwipeRight: { viewModel.goToPreviousMonth() },
+                isEnabled: true
+            )
         }
         .refreshable {
             await viewModel.refresh()

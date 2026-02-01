@@ -41,16 +41,23 @@ struct AddShiftView: View {
                         switch viewModel.mode {
                         case .single:
                             // Single mode: Fixed layout with centered calendar
-                            VStack(spacing: 0) {
-                                Spacer()
+                            MonthSwipeContainer(
+                                onSwipeLeft: { viewModel.goToNextMonth() },
+                                onSwipeRight: { viewModel.goToPreviousMonth() },
+                                isEnabled: true
+                            ) {
+                                VStack(spacing: 0) {
+                                    Spacer()
 
-                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
-                                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                                    .padding(.horizontal, 16)
+                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
+                                        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                                        .padding(.horizontal, 16)
 
-                                Spacer()
+                                    Spacer()
+                                }
+                                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                                .contentShape(Rectangle())
                             }
-                            .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
                             .onTapGesture {
                                 hideKeyboard()
                             }
@@ -74,6 +81,11 @@ struct AddShiftView: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(minHeight: availableHeight, alignment: .center)
                             }
+                            .monthSwipeGesture(
+                                onSwipeLeft: { viewModel.goToNextMonth() },
+                                onSwipeRight: { viewModel.goToPreviousMonth() },
+                                isEnabled: true
+                            )
                             .scrollDismissesKeyboard(.interactively)
                             .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
                             .onTapGesture {
