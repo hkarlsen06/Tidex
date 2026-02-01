@@ -9,6 +9,7 @@ struct NumericTimeInput: View {
     let focusField: FocusState<TimeField?>.Binding
     let field: TimeField
     let nextField: TimeField?
+    let previousField: TimeField?
     let onComplete: (() -> Void)?
 
     @State private var inputValue: String = ""
@@ -23,7 +24,7 @@ struct NumericTimeInput: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
@@ -40,9 +41,20 @@ struct NumericTimeInput: View {
                     handleInputChange(newValue)
                 }
                 .onChange(of: time) { _, newTime in
-                    // Sync input when time is externally cleared
-                    if newTime == nil && !inputValue.isEmpty {
+                    // Sync input display with time value
+                    if let newTime {
+                        let formatted = formatDateToHHMM(newTime)
+                        if inputValue != formatted {
+                            inputValue = formatted
+                        }
+                    } else if !inputValue.isEmpty {
                         inputValue = ""
+                    }
+                }
+                .onAppear {
+                    // Initialize input from existing time value
+                    if let time {
+                        inputValue = formatDateToHHMM(time)
                     }
                 }
                 .onChange(of: isFocused) { wasFocused, nowFocused in
@@ -52,7 +64,8 @@ struct NumericTimeInput: View {
                     }
                 }
         }
-        .padding(16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -121,6 +134,14 @@ struct NumericTimeInput: View {
         // Remove all non-digit characters
         let digits = newValue.filter { $0.isNumber }
 
+        // Detect backspace that empties the field - move to previous field
+        // This enables continuous backspace navigation between fields
+        if digits.isEmpty && previousField != nil {
+            focusField.wrappedValue = previousField
+            time = nil
+            return
+        }
+
         // Limit to 4 digits
         guard digits.count <= 4 else {
             inputValue = formatTimeInput(String(digits.prefix(4)))
@@ -130,6 +151,12 @@ struct NumericTimeInput: View {
         // Format the input
         let formatted = formatTimeInput(digits)
         inputValue = formatted
+
+        // Only clear time when user explicitly empties the field
+        // Don't clear during mid-edit (incomplete input is handled by autoCompletePartialInput on blur)
+        if digits.isEmpty {
+            time = nil
+        }
 
         // Check if we have a complete valid time
         if digits.count == 4 {
@@ -202,23 +229,35 @@ struct TimeRangePicker: View {
     @FocusState private var focusedField: NumericTimeInput.TimeField?
     @Environment(\.localization) private var localization
 
+    /// Shortened label for start time field
+    private var startLabel: String {
+        "Start"
+    }
+
+    /// Shortened label for end time field
+    private var endLabel: String {
+        localization.currentLocale == .norwegian ? "Slutt" : "End"
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             NumericTimeInput(
                 time: $startTime,
-                label: localization.string("addShift.startTime"),
+                label: startLabel,
                 focusField: $focusedField,
                 field: .start,
                 nextField: .end,
+                previousField: nil,
                 onComplete: nil
             )
 
             NumericTimeInput(
                 time: $endTime,
-                label: localization.string("addShift.endTime"),
+                label: endLabel,
                 focusField: $focusedField,
                 field: .end,
                 nextField: nil,
+                previousField: .start,
                 onComplete: nil
             )
         }

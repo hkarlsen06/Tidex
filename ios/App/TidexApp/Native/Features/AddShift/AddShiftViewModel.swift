@@ -95,9 +95,6 @@ final class AddShiftViewModel: ObservableObject {
     /// Debounce delay for draft saving (500ms)
     private static let draftSaveDebounceDelay: UInt64 = 500_000_000
 
-    /// Whether a draft was restored (for "Start Fresh" button visibility)
-    @Published private(set) var hasDraft = false
-
     /// Display month as Date - computed from SharedMonthContext
     /// Setter updates the SharedMonthContext to sync with other tabs
     var displayMonth: Date {
@@ -366,6 +363,17 @@ final class AddShiftViewModel: ObservableObject {
     /// Whether both start and end times have been entered
     private var hasValidTimes: Bool {
         startTime != nil && endTime != nil
+    }
+
+    /// Whether the form has any content that can be cleared
+    /// Used to conditionally show the undo/clear button
+    var hasContent: Bool {
+        switch mode {
+        case .single:
+            return !selectedDates.isEmpty || startTime != nil || endTime != nil
+        case .recurring:
+            return !selectedDays.isEmpty || startTime != nil || endTime != nil
+        }
     }
 
     /// Start time as HH:mm string
@@ -1019,7 +1027,6 @@ final class AddShiftViewModel: ObservableObject {
               !draft.isExpired,
               draft.hasContent
         else {
-            hasDraft = false
             return
         }
 
@@ -1044,7 +1051,6 @@ final class AddShiftViewModel: ObservableObject {
             endCondition = draft.endCondition
         }
 
-        hasDraft = true
         logger.info("Loaded draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count), days=\(draft.selectedDays.count)")
     }
 
@@ -1053,7 +1059,6 @@ final class AddShiftViewModel: ObservableObject {
         draftSaveTask?.cancel()
         draftSaveTask = nil
         UserDefaults.standard.removeObject(forKey: ShiftDraft.userDefaultsKey)
-        hasDraft = false
         logger.debug("Cleared draft")
     }
 
