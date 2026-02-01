@@ -149,17 +149,25 @@ struct FeaturedShiftCard: View {
 
             // Footer text below the card (countdown or "Best shift")
             // Uses fixed height to prevent layout shift during transitions
-            HStack(spacing: 6) {
-                if isBestShift {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.tidexBlue)
+            Group {
+                if let text = footerText {
+                    HStack(spacing: 6) {
+                        if isBestShift {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.tidexBlue)
+                        }
+                        Text(text)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.tidexTextSecondary)
+                    }
+                } else {
+                    // Skeleton placeholder bar matching other empty states
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 80, height: 14)
                 }
-                Text(footerText ?? " ")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.tidexTextSecondary)
             }
-            .opacity(footerText != nil ? 1 : 0)
             .frame(height: 20) // Fixed height prevents vertical jerk
         }
     }

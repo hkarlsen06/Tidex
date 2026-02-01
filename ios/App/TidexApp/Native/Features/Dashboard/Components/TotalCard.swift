@@ -154,20 +154,20 @@ struct TotalCard: View {
 
     @ViewBuilder
     private var percentageIndicator: some View {
-        HStack(spacing: 4) {
-            if hasChange {
+        if showPercentageDash {
+            // Skeleton placeholder bar matching other empty states
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.tidexTextMuted.opacity(0.3))
+                .frame(width: 48, height: 14)
+        } else {
+            HStack(spacing: 4) {
                 Image(systemName: isPositive ? "arrow.up" : "arrow.down")
                     .font(.system(size: 16, weight: .semibold))
-            }
-            if showPercentageDash {
-                Text("—")
-                    .font(.system(size: 18, weight: .semibold))
-            } else {
                 Text(String(format: "%.0f%%", displayPercentage))
                     .font(.system(size: 18, weight: .semibold))
             }
+            .foregroundColor(isPositive ? .tidexBlue : .tidexTextSecondary)
         }
-        .foregroundColor(hasChange ? (isPositive ? .tidexBlue : .tidexTextSecondary) : .tidexTextMuted)
     }
 
     @ViewBuilder

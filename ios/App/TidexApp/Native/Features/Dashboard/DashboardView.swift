@@ -331,7 +331,7 @@ struct DashboardView: View {
                     progress: shiftProgress
                 )
             } else {
-                EmptyShiftCard(isBestShift: data.featuredShiftIsBestShift)
+                EmptyShiftCard()
             }
         }
     }
@@ -379,7 +379,7 @@ struct DashboardView: View {
                         )
 
                         // Featured Shift Card skeleton
-                        EmptyShiftCard(isBestShift: false, isLoading: true)
+                        EmptyShiftCard(isLoading: true)
                     }
                     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                     .padding(.horizontal, 16)
