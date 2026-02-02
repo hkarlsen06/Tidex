@@ -1,6 +1,7 @@
 {
   "name": "tidex",
   "private": true,
+  "packageManager": "pnpm@10.24.0",
   "description": "Tidex monorepo - shift tracking for web and iOS",
   "scripts": {
     "dev": "pnpm --filter next dev",

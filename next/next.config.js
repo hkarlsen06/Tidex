@@ -57,9 +57,11 @@ const nextConfig = {
     ],
   },
 
-  outputFileTracingRoot: __dirname,
+  outputFileTracingRoot: path.join(__dirname, ".."),
   // Tell Next "yes, I know I'm on Turbopack".
-  turbopack: {},
+  turbopack: {
+    root: path.join(__dirname, ".."),
+  },
 
   cacheComponents: true,
 
