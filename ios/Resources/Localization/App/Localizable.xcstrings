@@ -33628,7 +33628,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "1개월 근무"
+            "value": "한 달 분의 교대 근무"
           }
         },
         "pt-BR": {
@@ -33640,25 +33640,25 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Одна смена за месяц"
+            "value": "Один месяц смен"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Een maand diensten"
+            "value": "Eén maand diensten"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "En månad arbetspass"
+            "value": "En månad med skift"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "En måned med skift"
+            "value": "En måned med vagter"
           }
         }
       }
@@ -33669,73 +33669,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Basic statistics"
+            "value": "Share with 1 friend"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grunnleggende statistikk"
+            "value": "Del med 1 venn"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grundlegende Statistiken"
+            "value": "Mit 1 Freund teilen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estadísticas básicas"
+            "value": "Comparte con 1 amigo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Statistiques de base"
+            "value": "Partagez avec 1 ami"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "基本的な統計"
+            "value": "1人の友達と共有"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기본 통계"
+            "value": "1명의 친구와 공유"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estatísticas básicas"
+            "value": "Compartilhe com 1 amigo"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Базовая статистика"
+            "value": "Делитесь с 1 другом"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Basisstatistieken"
+            "value": "Deel met 1 vriend"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grundläggande statistik"
+            "value": "Dela med 1 vän"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grundlæggende statistik"
+            "value": "Del med 1 ven"
           }
         }
       }
@@ -33924,7 +33924,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tout en Pro"
+            "value": "Tout dans Pro"
           }
         },
         "ja": {
@@ -33942,13 +33942,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tudo no Pro"
+            "value": "Tudo do Pro"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Всё, что в Pro"
+            "value": "Всё из Pro"
           }
         },
         "nl": {
@@ -33977,73 +33977,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AI Assistant"
+            "value": "Wagey AI (90 messages/month)"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AI-assistent"
+            "value": "Wagey AI (90 meldinger/måned)"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey KI-Assistent"
+            "value": "Wagey AI (90 Nachrichten/Monat)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Asistente Wagey IA"
+            "value": "Wagey AI (90 mensajes/mes)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Assistant IA Wagey"
+            "value": "Wagey AI (90 messages/mois)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AIアシスタント"
+            "value": "Wagey AI（月90メッセージ）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AI 어시스턴트"
+            "value": "Wagey AI (월 90개 메시지)"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Assistente Wagey IA"
+            "value": "Wagey AI (90 mensagens/mês)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Помощник AI Wagey"
+            "value": "Wagey AI (90 сообщений/месяц)"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AI Assistent"
+            "value": "Wagey AI (90 berichten/maand)"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AI-assistent"
+            "value": "Wagey AI (90 meddelanden/månad)"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wagey AI-assistent"
+            "value": "Wagey AI (90 beskeder/måned)"
           }
         }
       }
@@ -34054,73 +34054,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recurring shifts"
+            "value": "Share with up to 20 friends"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gjentakende vakter"
+            "value": "Del med opptil 20 venner"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wiederkehrende Schichten"
+            "value": "Mit bis zu 20 Freunden teilen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turnos recurrentes"
+            "value": "Comparte con hasta 20 amigos"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarts récurrents"
+            "value": "Partagez avec jusqu'à 20 amis"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "定期的なシフト"
+            "value": "最大20人の友達と共有"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "반복 근무"
+            "value": "최대 20명의 친구와 공유"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turnos recorrentes"
+            "value": "Compartilhe com até 20 amigos"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Повторяющиеся смены"
+            "value": "Делитесь с 20 друзьями"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terugkerende diensten"
+            "value": "Deel met maximaal 20 vrienden"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Återkommande arbetspass"
+            "value": "Dela med upp till 20 vänner"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gentagne skift"
+            "value": "Del med op til 20 venner"
           }
         }
       }
@@ -34131,73 +34131,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shift sharing"
+            "value": "Early access to new features"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vaktdeling"
+            "value": "Tidlig tilgang til nye funksjoner"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schichtenteilung"
+            "value": "Früher Zugang zu neuen Funktionen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Compartir turnos"
+            "value": "Acceso anticipado a nuevas funciones"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Partage de quarts"
+            "value": "Accès anticipé aux nouvelles fonctionnalités"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフト共有"
+            "value": "新機能への早期アクセス"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "근무 공유"
+            "value": "새로운 기능에 대한 조기 액세스"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Compartilhamento de turnos"
+            "value": "Acesso antecipado a novos recursos"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Общие смены"
+            "value": "Ранний доступ к новым функциям"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diensten delen"
+            "value": "Vroege toegang tot nieuwe functies"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delning av arbetspass"
+            "value": "Tidig tillgång till nya funktioner"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skiftdeling"
+            "value": "Tidlig adgang til nye funktioner"
           }
         }
       }
@@ -34208,73 +34208,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premium themes"
+            "value": "Support Tidex development"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premium-temaer"
+            "value": "Støtt Tidex-utvikling"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premium-Designs"
+            "value": "Unterstütze Tidex-Entwicklung"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Temas premium"
+            "value": "Apoya el desarrollo de Tidex"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thèmes premium"
+            "value": "Soutenez le développement de Tidex"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プレミアムテーマ"
+            "value": "Tidexの開発を支援"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "프리미엄 테마"
+            "value": "Tidex 개발 지원"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Temas premium"
+            "value": "Apoie o desenvolvimento do Tidex"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Премиум-темы"
+            "value": "Поддержите разработку Tidex"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premium thema's"
+            "value": "Ondersteun Tidex-ontwikkeling"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premiumteman"
+            "value": "Stöd Tidex-utveckling"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premium-temaer"
+            "value": "Støt Tidex-udvikling"
           }
         }
       }
@@ -34593,7 +34593,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unlimited months"
+            "value": "Unlimited months of shifts"
           }
         },
         "nb": {
@@ -34670,73 +34670,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Advanced statistics"
+            "value": "Wagey AI (40 messages/month)"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avansert statistikk"
+            "value": "Wagey AI (40 meldinger/måned)"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erweiterte Statistiken"
+            "value": "Wagey AI (40 Nachrichten/Monat)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estadísticas avanzadas"
+            "value": "Wagey AI (40 mensajes/mes)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Statistiques avancées"
+            "value": "Wagey AI (40 messages/mois)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "詳細な統計"
+            "value": "Wagey AI（月40メッセージ）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "고급 통계"
+            "value": "Wagey AI (월 40개 메시지)"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estatísticas avançadas"
+            "value": "Wagey AI (40 mensagens/mês)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Расширенная статистика"
+            "value": "Wagey AI (40 сообщений/месяц)"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Geavanceerde statistieken"
+            "value": "Wagey AI (40 berichten/maand)"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avancerad statistik"
+            "value": "Wagey AI (40 meddelanden/månad)"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avanceret statistik"
+            "value": "Wagey AI (40 beskeder/måned)"
           }
         }
       }
@@ -34747,73 +34747,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Export to PDF/CSV"
+            "value": "Share with up to 10 friends"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eksporter til PDF/CSV"
+            "value": "Del med opptil 10 venner"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Als PDF/CSV exportieren"
+            "value": "Mit bis zu 10 Freunden teilen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportar a PDF/CSV"
+            "value": "Comparte con hasta 10 amigos"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exporter en PDF/CSV"
+            "value": "Partagez avec jusqu'à 10 amis"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "PDF/CSVにエクスポート"
+            "value": "最大10人の友達と共有"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "PDF/CSV로 내보내기"
+            "value": "최대 10명의 친구와 공유"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportar para PDF/CSV"
+            "value": "Compartilhe com até 10 amigos"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Экспорт в PDF/CSV"
+            "value": "Делитесь с 10 друзьями"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exporteer naar PDF/CSV"
+            "value": "Deel met maximaal 10 vrienden"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportera till PDF/CSV"
+            "value": "Dela med upp till 10 vänner"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eksporter til PDF/CSV"
+            "value": "Del med op til 10 venner"
           }
         }
       }
@@ -34836,7 +34836,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prioritätssupport"
+            "value": "Prioritäts-Support"
           }
         },
         "es": {
@@ -34878,7 +34878,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prioriteitsondersteuning"
+            "value": "Prioriteit ondersteuning"
           }
         },
         "sv": {
