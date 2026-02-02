@@ -465,6 +465,15 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
     }
 
+    /// Get formatter locale for date/number formatting based on widget locale string
+    private func formatterLocale(for locale: String) -> Locale {
+        switch locale {
+        case "no": return Locale(identifier: "nb_NO")
+        case "de": return Locale(identifier: "de_DE")
+        default: return Locale(identifier: "en_US")
+        }
+    }
+
     private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
@@ -476,10 +485,10 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         if daysRemaining < 0 {
             let daysAgo = abs(daysRemaining)
             if daysAgo == 1 {
-                return locale == "no" ? "I går" : "Yesterday"
+                return String(localized: .widgetYesterday)
             } else {
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+                weekdayFormatter.locale = formatterLocale(for: locale)
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -487,18 +496,18 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
         // Today
         if calendar.isDate(shiftDay, inSameDayAs: today) {
-            return locale == "no" ? "I dag" : "Today"
+            return String(localized: .widgetToday)
         }
 
         // Tomorrow
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
            calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
-            return locale == "no" ? "I morgen" : "Tomorrow"
+            return String(localized: .widgetTomorrow)
         }
 
         // Weekday + day
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+        weekdayFormatter.locale = formatterLocale(for: locale)
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
@@ -561,11 +570,11 @@ struct FriendShiftWidgetView: View {
     }
 
     private var daysLabel: String {
-        entry.locale == "no" ? "dager" : "days"
+        String(localized: .widgetDays)
     }
 
     private var leftLabel: String {
-        entry.locale == "no" ? "igjen" : "left"
+        String(localized: .widgetLeft)
     }
 
     /// Extract just the first name from the full display name
@@ -661,7 +670,7 @@ struct FriendShiftWidgetView: View {
                 .font(.system(size: 36))
                 .foregroundColor(mutedTextColor)
 
-            Text(entry.locale == "no" ? "Velg en venn" : "Select a friend")
+            Text(.widgetSelectAFriend)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(mutedTextColor)
         }
@@ -678,7 +687,7 @@ struct FriendShiftWidgetView: View {
                 textColor: renderingMode == .fullColor ? .white : .primary
             )
 
-            Text(entry.locale == "no" ? "Ingen vakt" : "No shifts")
+            Text(.widgetNoShifts)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(mutedTextColor)
         }
@@ -745,7 +754,7 @@ struct FriendShiftWidgetView: View {
             if entry.layoutState == .pastShift {
                 pastShiftCountupView
             } else if entry.shiftHasEnded {
-                Text(entry.locale == "no" ? "Ferdig" : "Done")
+                Text(.widgetDoneCapitalized)
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
@@ -768,10 +777,8 @@ struct FriendShiftWidgetView: View {
 
     private var pastShiftCountupView: some View {
         let daysAgo = abs(entry.daysRemaining)
-        let daysLabel = entry.locale == "no"
-            ? (daysAgo == 1 ? "dag" : "dager")
-            : (daysAgo == 1 ? "day" : "days")
-        let agoLabel = entry.locale == "no" ? "siden" : "ago"
+        let daysText = daysAgo == 1 ? String(localized: .widgetDay) : String(localized: .widgetDays)
+        let agoText = String(localized: .widgetAgo)
 
         return HStack(alignment: .center, spacing: 4) {
             Text("\(daysAgo)")
@@ -782,12 +789,12 @@ struct FriendShiftWidgetView: View {
                 .minimumScaleFactor(0.5)
 
             VStack(alignment: .leading, spacing: -4) {
-                Text(daysLabel)
+                Text(daysText)
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
 
-                Text(agoLabel)
+                Text(agoText)
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
@@ -846,21 +853,6 @@ struct FriendShiftWidgetView: View {
 struct FriendShiftWidget: Widget {
     let kind: String = "FriendShiftWidget"
 
-    private var isNorwegian: Bool {
-        let preferredLanguages = Locale.preferredLanguages
-        return preferredLanguages.first?.hasPrefix("nb") == true ||
-               preferredLanguages.first?.hasPrefix("no") == true ||
-               preferredLanguages.first?.hasPrefix("nn") == true
-    }
-
-    private var displayName: String {
-        isNorwegian ? "Venns vakt" : "Friend's Shift"
-    }
-
-    private var widgetDescription: String {
-        isNorwegian ? "Se en venns neste vakt" : "See a friend's next shift"
-    }
-
     var body: some WidgetConfiguration {
         AppIntentConfiguration(
             kind: kind,
@@ -873,8 +865,8 @@ struct FriendShiftWidget: Widget {
                     Color.clear
                 }
         }
-        .configurationDisplayName(displayName)
-        .description(widgetDescription)
+        .configurationDisplayName(String(localized: .widgetNameFriendsShift))
+        .description(String(localized: .widgetDescFriendsShift))
         .supportedFamilies([.systemSmall])
         .contentMarginsDisabled()
     }

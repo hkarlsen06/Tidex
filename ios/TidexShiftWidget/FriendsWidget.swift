@@ -309,6 +309,15 @@ struct FriendsWidgetProvider: TimelineProvider {
         return now >= shiftStartDateTime && now < shiftEndDateTime
     }
 
+    /// Get formatter locale for date/number formatting based on widget locale string
+    private func formatterLocale(for locale: String) -> Locale {
+        switch locale {
+        case "no": return Locale(identifier: "nb_NO")
+        case "de": return Locale(identifier: "de_DE")
+        default: return Locale(identifier: "en_US")
+        }
+    }
+
     private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
@@ -320,10 +329,10 @@ struct FriendsWidgetProvider: TimelineProvider {
         if daysRemaining < 0 {
             let daysAgo = abs(daysRemaining)
             if daysAgo == 1 {
-                return locale == "no" ? "I går" : "Yesterday"
+                return String(localized: .widgetYesterday)
             } else {
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+                weekdayFormatter.locale = formatterLocale(for: locale)
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -331,26 +340,26 @@ struct FriendsWidgetProvider: TimelineProvider {
 
         // Today
         if calendar.isDate(shiftDay, inSameDayAs: today) {
-            return locale == "no" ? "I dag" : "Today"
+            return String(localized: .widgetToday)
         }
 
         // Tomorrow
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
            calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
-            return locale == "no" ? "I morgen" : "Tomorrow"
+            return String(localized: .widgetTomorrow)
         }
 
         // Within a week: weekday only
         if daysRemaining <= 7 {
             let weekdayFormatter = DateFormatter()
-            weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+            weekdayFormatter.locale = formatterLocale(for: locale)
             weekdayFormatter.setLocalizedDateFormatFromTemplate("EEEE")
             return weekdayFormatter.string(from: shiftDate).capitalized
         }
 
         // Weekday + date
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+        weekdayFormatter.locale = formatterLocale(for: locale)
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
@@ -475,15 +484,15 @@ struct FriendsWidgetView: View {
     // MARK: - Localization
 
     private var headerTitle: String {
-        entry.locale == "no" ? "Venners vakter" : "Friends' Shifts"
+        String(localized: .widgetNameFriendsShifts)
     }
 
     private var noFriendsText: String {
-        entry.locale == "no" ? "Legg til venner for å se deres vakter" : "Add friends to see their shifts"
+        String(localized: .widgetAddFriendsToSeeTheirShifts)
     }
 
     private var noShiftText: String {
-        entry.locale == "no" ? "Ingen vakt" : "No shift"
+        String(localized: .widgetNoShift)
     }
 
     // MARK: - Body
@@ -572,7 +581,7 @@ struct FriendsWidgetView: View {
                         .fill(activeColor)
                         .frame(width: 8, height: 8)
 
-                    Text(entry.locale == "no" ? "Aktiv" : "Active")
+                    Text(.widgetActive)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(activeColor)
                 }
@@ -608,21 +617,6 @@ struct FriendsWidgetView: View {
 struct FriendsWidget: Widget {
     let kind: String = "FriendsWidget"
 
-    private var isNorwegian: Bool {
-        let preferredLanguages = Locale.preferredLanguages
-        return preferredLanguages.first?.hasPrefix("nb") == true ||
-               preferredLanguages.first?.hasPrefix("no") == true ||
-               preferredLanguages.first?.hasPrefix("nn") == true
-    }
-
-    private var displayName: String {
-        isNorwegian ? "Venners vakter" : "Friends' Shifts"
-    }
-
-    private var widgetDescription: String {
-        isNorwegian ? "Se dine venners kommende vakter" : "See your friends' upcoming shifts"
-    }
-
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: FriendsWidgetProvider()) { entry in
             FriendsWidgetView(entry: entry)
@@ -631,8 +625,8 @@ struct FriendsWidget: Widget {
                     Color.clear
                 }
         }
-        .configurationDisplayName(displayName)
-        .description(widgetDescription)
+        .configurationDisplayName(String(localized: .widgetNameFriendsShifts))
+        .description(String(localized: .widgetDescFriendsShifts))
         .supportedFamilies([.systemLarge])
         .contentMarginsDisabled()
     }

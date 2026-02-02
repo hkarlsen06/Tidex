@@ -204,8 +204,7 @@ struct SupplementRuleEditorSheet: View {
 
     /// Hour suffix for rate display
     private var hourRateSuffix: String {
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        let hourPart = isNorwegian ? "/t" : "/hr"
+        let hourPart = String(localized: .commonPerHourShort)
         return "\(currencyConfig.value)\(hourPart)"
     }
 

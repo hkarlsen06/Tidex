@@ -172,7 +172,7 @@ struct DataSettingsView: View {
         let now = Date()
         let calendar = Calendar.current
         let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: Locale.current.tidexIsNorwegian ? "nb_NO" : "en_US")
+        dateFormatter.locale = Locale.current.tidexLanguage.formatterLocale
 
         switch preset {
         case .lastMonth:

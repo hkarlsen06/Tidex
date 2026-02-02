@@ -14,9 +14,9 @@ struct OnboardingView: View {
     private let totalPages = 4
 
     /// Default hourly rate based on locale
-    /// Norwegian: 200 kr/hour, English: $25/hour
+    /// Norwegian: 200 kr/hour, English/German: $25/hour
     private var defaultHourlyRate: Double {
-        Locale.current.tidexIsNorwegian ? 200 : 25
+        Locale.current.tidexLanguage == .norwegian ? 200 : 25
     }
 
     var body: some View {

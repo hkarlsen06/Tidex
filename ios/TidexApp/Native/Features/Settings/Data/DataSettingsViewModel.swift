@@ -315,7 +315,7 @@ final class DataSettingsViewModel: ObservableObject {
                 .foregroundColor: UIColor.black
             ]
 
-            let title = "Tidex · " + (locale.tidexIsNorwegian ? "Vakt- og lønnsrapport" : "Shift & Wage Report")
+            let title = "Tidex · " + String(localized: .dataExportPdfDocumentTitle)
             title.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: titleAttributes)
             yPosition += 30
 
@@ -326,12 +326,12 @@ final class DataSettingsViewModel: ObservableObject {
                 .foregroundColor: UIColor.darkGray
             ]
 
-            let exportedLabel = locale.tidexIsNorwegian ? "Eksportert:" : "Exported:"
-            let periodLabel = locale.tidexIsNorwegian ? "Periode:" : "Period:"
+            let exportedLabel = String(localized: .dataExportPdfExportedLabel)
+            let periodLabel = String(localized: .dataExportPdfPeriodLabel)
 
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .short
-            dateFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+            dateFormatter.locale = locale.tidexLanguage.formatterLocale
 
             let exportDate = dateFormatter.string(from: Date())
             "\(exportedLabel) \(exportDate)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metaAttributes)
@@ -349,7 +349,7 @@ final class DataSettingsViewModel: ObservableObject {
                 .foregroundColor: UIColor.black
             ]
 
-            let summaryTitle = locale.tidexIsNorwegian ? "Sammendrag" : "Summary"
+            let summaryTitle = String(localized: .dataExportPdfSummary)
             summaryTitle.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: summaryTitleAttributes)
             yPosition += 20
 
@@ -369,20 +369,20 @@ final class DataSettingsViewModel: ObservableObject {
             let saturdayCount = data.shifts.filter { $0.type == 1 }.count
             let sundayCount = data.shifts.filter { $0.type == 2 }.count
 
-            let currencySymbol = locale.tidexIsNorwegian ? "kr" : "kr"
-            let hoursUnit = locale.tidexIsNorwegian ? "timer" : "hours"
+            let currencySymbol = "kr"
+            let hoursUnit = String(localized: .commonHours)
 
             let summaryLines = [
-                (locale.tidexIsNorwegian ? "Totalt antall vakter:" : "Total shifts:") + " \(data.shifts.count)",
-                (locale.tidexIsNorwegian ? "Totale timer:" : "Total hours:") + " \(formatNumber(totalHours, decimals: 2, locale: locale)) \(hoursUnit)",
-                (locale.tidexIsNorwegian ? "Total grunnlønn:" : "Total base pay:") + " \(formatNumber(totalBaseWage, decimals: 0, locale: locale)) \(currencySymbol)",
-                (locale.tidexIsNorwegian ? "Totale tillegg:" : "Total supplements:") + " \(formatNumber(totalSupplement, decimals: 0, locale: locale)) \(currencySymbol)",
-                (locale.tidexIsNorwegian ? "Total lønn:" : "Total pay:") + " \(formatNumber(totalWage, decimals: 0, locale: locale)) \(currencySymbol)",
+                String(localized: .dataExportPdfTotalShifts) + " \(data.shifts.count)",
+                String(localized: .dataExportPdfTotalHours) + " \(formatNumber(totalHours, decimals: 2, locale: locale)) \(hoursUnit)",
+                String(localized: .dataExportPdfTotalBasePay) + " \(formatNumber(totalBaseWage, decimals: 0, locale: locale)) \(currencySymbol)",
+                String(localized: .dataExportPdfTotalSupplements) + " \(formatNumber(totalSupplement, decimals: 0, locale: locale)) \(currencySymbol)",
+                String(localized: .dataExportPdfTotalPay) + " \(formatNumber(totalWage, decimals: 0, locale: locale)) \(currencySymbol)",
                 "",
-                (locale.tidexIsNorwegian ? "Vakter per type:" : "Shifts by type:"),
-                (locale.tidexIsNorwegian ? "  Ukedager:" : "  Weekdays:") + " \(weekdayCount)",
-                (locale.tidexIsNorwegian ? "  Lørdager:" : "  Saturdays:") + " \(saturdayCount)",
-                (locale.tidexIsNorwegian ? "  Søndager/helligdager:" : "  Sundays/holidays:") + " \(sundayCount)"
+                String(localized: .dataExportPdfShiftsByType),
+                "  " + String(localized: .dataExportPdfWeekdays) + " \(weekdayCount)",
+                "  " + String(localized: .dataExportPdfSaturdays) + " \(saturdayCount)",
+                "  " + String(localized: .dataExportPdfSundaysHolidays) + " \(sundayCount)"
             ]
 
             for line in summaryLines {
@@ -399,9 +399,16 @@ final class DataSettingsViewModel: ObservableObject {
                 .foregroundColor: UIColor.black
             ]
 
-            let headers = locale.tidexIsNorwegian
-                ? ["Dato", "Dag", "Start", "Slutt", "Timer", "Grunn", "Tillegg", "Total"]
-                : ["Date", "Day", "Start", "End", "Hours", "Base", "Suppl.", "Total"]
+            let headers = [
+                String(localized: .dataExportTableDate),
+                String(localized: .dataExportTableDay),
+                String(localized: .dataExportTableStart),
+                String(localized: .dataExportTableEnd),
+                String(localized: .dataExportTableHours),
+                String(localized: .dataExportTableBase),
+                String(localized: .dataExportTableSupplement),
+                String(localized: .dataExportTableTotal)
+            ]
 
             let columnWidths: [CGFloat] = [70, 35, 45, 45, 45, 55, 55, 55]
             var xPosition = margin
@@ -432,7 +439,7 @@ final class DataSettingsViewModel: ObservableObject {
 
             let weekdayFormatter = DateFormatter()
             weekdayFormatter.dateFormat = "EEE"
-            weekdayFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+            weekdayFormatter.locale = locale.tidexLanguage.formatterLocale
 
             for shift in data.shifts {
                 // Check if we need a new page
@@ -482,7 +489,7 @@ final class DataSettingsViewModel: ObservableObject {
                 .foregroundColor: UIColor.black
             ]
 
-            let sumLabel = locale.tidexIsNorwegian ? "Sum:" : "Total:"
+            let sumLabel = String(localized: .dataExportPdfSumLabel)
             sumLabel.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: totalAttributes)
 
             xPosition = margin + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3]
@@ -512,20 +519,27 @@ final class DataSettingsViewModel: ObservableObject {
         var csvContent = ""
 
         // Headers
-        let headers = locale.tidexIsNorwegian
-            ? ["Dato", "Dag", "Start", "Slutt", "Timer", "Grunnlonn", "Tillegg", "Total"]
-            : ["Date", "Day", "Start", "End", "Hours", "Base Pay", "Supplement", "Total"]
+        let headers = [
+            String(localized: .dataExportTableDate),
+            String(localized: .dataExportTableDay),
+            String(localized: .dataExportTableStart),
+            String(localized: .dataExportTableEnd),
+            String(localized: .dataExportTableHours),
+            String(localized: .dataExportCsvBasePay),
+            String(localized: .dataExportTableSupplement),
+            String(localized: .dataExportTableTotal)
+        ]
 
         csvContent += headers.joined(separator: ";") + "\n"
 
         // Date formatter
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .short
-        dateFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+        dateFormatter.locale = locale.tidexLanguage.formatterLocale
 
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.dateFormat = "EEE"
-        weekdayFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+        weekdayFormatter.locale = locale.tidexLanguage.formatterLocale
 
         // Data rows
         for shift in data.shifts {
@@ -553,7 +567,7 @@ final class DataSettingsViewModel: ObservableObject {
         let totalSupplement = data.shifts.reduce(0.0) { $0 + $1.calc.supplement }
         let totalWage = data.shifts.reduce(0.0) { $0 + $1.calc.total }
 
-        let sumLabel = locale.tidexIsNorwegian ? "Sum" : "Total"
+        let sumLabel = String(localized: .dataExportPdfSumLabel).replacingOccurrences(of: ":", with: "")
         let totalsRow = [
             sumLabel,
             "",
@@ -591,7 +605,7 @@ final class DataSettingsViewModel: ObservableObject {
         let calendar = Calendar.current
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMM"
-        monthFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+        monthFormatter.locale = locale.tidexLanguage.formatterLocale
 
         let isFirstOfMonth = calendar.component(.day, from: fromDate) == 1
         let isSameMonth = calendar.isDate(fromDate, equalTo: toDate, toGranularity: .month)
@@ -636,7 +650,7 @@ final class DataSettingsViewModel: ObservableObject {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = decimals
         formatter.maximumFractionDigits = decimals
-        formatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = locale.tidexLanguage.formatterLocale
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.\(decimals)f", value)
     }
 }

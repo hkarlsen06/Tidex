@@ -20,7 +20,7 @@ enum ShiftCardFormatter {
         let dayName = dayNameFormatter.string(from: date).capitalized
 
         let dayNumberFormatter = formatterCache.formatter(locale: locale, format: "d")
-        let dayNumber = dayNumberFormatter.string(from: date) + (locale.tidexIsNorwegian ? "." : "")
+        let dayNumber = dayNumberFormatter.string(from: date) + String(localized: .commonDaySuffix)
 
         let monthFormatter = formatterCache.formatter(locale: locale, format: "MMM")
         let monthName = monthFormatter.string(from: date).lowercased()
@@ -29,7 +29,7 @@ enum ShiftCardFormatter {
     }
 
     static func formattedHours(_ hours: Double, locale: Locale) -> String {
-        let hoursLabel = locale.tidexIsNorwegian ? "t" : "h"
+        let hoursLabel = String(localized: .commonHoursShort)
         return String(format: "%.2f %@", hours, hoursLabel)
     }
 }

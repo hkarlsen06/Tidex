@@ -28,8 +28,8 @@ struct OnboardingRateSlider: View {
 
     // MARK: - Currency-Aware Configuration
 
-    private var isNorwegian: Bool {
-        Locale.current.tidexIsNorwegian
+    private var tidexLang: TidexLanguage {
+        Locale.current.tidexLanguage
     }
 
     /// Get the effective currency config (from parameter or locale default)
@@ -37,7 +37,7 @@ struct OnboardingRateSlider: View {
         if let currency = currency {
             return CurrencyConfig.get(currency)
         }
-        return isNorwegian ? CurrencyConfig.defaultCurrency : CurrencyConfig.get("$")
+        return tidexLang == .norwegian ? CurrencyConfig.defaultCurrency : CurrencyConfig.get("$")
     }
 
     /// Whether currency symbol should appear before the amount
@@ -69,7 +69,7 @@ struct OnboardingRateSlider: View {
     }
 
     private var hourSuffix: String {
-        isNorwegian ? "/t" : "/hr"
+        String(localized: .commonPerHourShort)
     }
 
     // MARK: - Compact Layout (inline)
@@ -139,7 +139,7 @@ struct OnboardingRateSlider: View {
 
                         tappableValueFull(formatValueWithDecimals(value))
 
-                        Text(isNorwegian ? "per time" : "per hour")
+                        Text(.commonPerHour)
                             .font(.system(size: 14))
                             .foregroundColor(.tidexTextMuted)
                     } else {
@@ -150,7 +150,7 @@ struct OnboardingRateSlider: View {
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextSecondary)
 
-                        Text(isNorwegian ? "per time" : "per hour")
+                        Text(.commonPerHour)
                             .font(.system(size: 14))
                             .foregroundColor(.tidexTextMuted)
                     }
@@ -209,7 +209,7 @@ struct OnboardingRateSlider: View {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = 0
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale.current.tidexLanguage.formatterLocale
         return formatter.string(from: NSNumber(value: amount)) ?? "0"
     }
 
@@ -230,7 +230,7 @@ struct OnboardingRateSlider: View {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 2
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale.current.tidexLanguage.formatterLocale
         return formatter.string(from: NSNumber(value: amount)) ?? "0"
     }
 

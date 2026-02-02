@@ -125,9 +125,7 @@ struct GlobalPaySettingsCard: View {
             .disabled(!canChangeCurrency)
 
             if !canChangeCurrency {
-                Text(Locale.current.tidexIsNorwegian
-                     ? "Valuta kan ikke endres når du har tariff-lønn, siden den er bundet til norske kroner"
-                     : "Currency cannot be changed when using tariff wage settings")
+                Text(.settingsPayCurrencyTariffWarning)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -219,10 +217,12 @@ struct GlobalPaySettingsCard: View {
     }
 
     private func formatPayrollDay(_ day: Int) -> String {
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        if isNorwegian {
-            return "\(day). hver måned"
-        } else {
+        // Format ordinal based on language
+        let ordinal: String
+        switch Locale.current.tidexLanguage {
+        case .norwegian:
+            ordinal = "\(day)"
+        case .english, .german:
             let suffix: String
             switch day {
             case 1, 21, 31: suffix = "st"
@@ -230,8 +230,9 @@ struct GlobalPaySettingsCard: View {
             case 3, 23: suffix = "rd"
             default: suffix = "th"
             }
-            return "\(day)\(suffix) of each month"
+            ordinal = "\(day)\(suffix)"
         }
+        return String(localized: .settingsPayPayrollDayFormat(ordinal))
     }
 
     // MARK: - Half-Tax Month Picker

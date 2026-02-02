@@ -156,19 +156,19 @@ struct ShiftComplicationView: View {
     }
 
     private var nextShiftTitle: String {
-        entry.locale == "no" ? "Neste vakt" : "Next Shift"
+        String(localized: .watchNextShift)
     }
 
     private var activeTitle: String {
-        entry.locale == "no" ? "Aktiv vakt" : "Active Shift"
+        String(localized: .watchActiveShift)
     }
 
     private var noShiftsTitle: String {
-        entry.locale == "no" ? "Ingen vakter" : "No shifts"
+        String(localized: .watchNoShifts)
     }
 
     private var shiftLabel: String {
-        entry.locale == "no" ? "Vakt" : "Shift"
+        String(localized: .watchShift)
     }
 }
 

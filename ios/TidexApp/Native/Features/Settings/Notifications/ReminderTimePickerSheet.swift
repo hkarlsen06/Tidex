@@ -34,8 +34,7 @@ struct ReminderTimePickerSheet: View {
                         // Hours picker (0-48)
                         Picker("", selection: $hours) {
                             ForEach(0...48, id: \.self) { h in
-                                Text(Locale.current.tidexIsNorwegian
-                                    ? "\(h) t" : "\(h) h")
+                                Text("\(h) \(String(localized: .commonHoursShort))")
                                     .tag(h)
                             }
                         }
@@ -122,28 +121,18 @@ struct ReminderTimePickerSheet: View {
 
         if h == 0 {
             // Minutes only
-            return Locale.current.tidexIsNorwegian
-                ? "\(m) minutt\(m == 1 ? "" : "er") før vakt"
-                : "\(m) minute\(m == 1 ? "" : "s") before shift"
+            return String(localized: .notificationReminderMinutesBeforeShift(Int(m)))
         } else if m == 0 {
             // Hours only
             if h == 24 {
-                return Locale.current.tidexIsNorwegian
-                    ? "1 dag før vakt"
-                    : "1 day before shift"
+                return String(localized: .notificationReminderOneDayBeforeShift)
             } else if h == 48 {
-                return Locale.current.tidexIsNorwegian
-                    ? "2 dager før vakt"
-                    : "2 days before shift"
+                return String(localized: .notificationReminderTwoDaysBeforeShift)
             }
-            return Locale.current.tidexIsNorwegian
-                ? "\(h) time\(h == 1 ? "" : "r") før vakt"
-                : "\(h) hour\(h == 1 ? "" : "s") before shift"
+            return String(localized: .notificationReminderHoursBeforeShift(Int(h)))
         } else {
             // Mixed hours and minutes
-            return Locale.current.tidexIsNorwegian
-                ? "\(h) t \(m) min før vakt"
-                : "\(h) h \(m) min before shift"
+            return "\(h) \(String(localized: .commonHoursShort)) \(m) min \(String(localized: .commonBeforeShift))"
         }
     }
 

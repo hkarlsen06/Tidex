@@ -148,8 +148,7 @@ struct WageSourceSelector: View {
         let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
 
         let currencyConfig = CurrencyConfig.get(currency)
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        let perHour = isNorwegian ? "/t" : "/hr"
+        let perHour = String(localized: .commonPerHourShort)
 
         switch currencyConfig.display {
         case .prefix:

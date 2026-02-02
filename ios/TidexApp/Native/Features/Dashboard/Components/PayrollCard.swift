@@ -147,8 +147,8 @@ struct PayrollCard: View {
 
     private var formattedPayrollDate: String {
         let formatter = DateFormatter()
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        let tidexLanguage = Locale.current.tidexLanguage
+        formatter.locale = tidexLanguage.formatterLocale
 
         // Get day number and month name
         let dayFormatter = DateFormatter()
@@ -161,9 +161,11 @@ struct PayrollCard: View {
         monthFormatter.dateFormat = "MMMM"
         let month = monthFormatter.string(from: payrollDate).lowercased()
 
-        if isNorwegian {
-            return "\(day). \(month)"
-        } else {
+        let daySuffix = String(localized: .commonDaySuffix)
+        switch tidexLanguage {
+        case .norwegian:
+            return "\(day)\(daySuffix) \(month)"
+        case .english, .german:
             return "\(month.capitalized) \(day)"
         }
     }

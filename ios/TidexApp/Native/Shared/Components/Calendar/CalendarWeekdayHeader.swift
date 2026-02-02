@@ -18,7 +18,7 @@ struct CalendarWeekdayHeader: View {
     }
 
     private var weekdaySymbols: [String] {
-        CalendarGridHelper.weekdaySymbols(isNorwegian: Locale.current.tidexIsNorwegian)
+        CalendarGridHelper.weekdaySymbols()
     }
 }
 
