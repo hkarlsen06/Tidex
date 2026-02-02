@@ -9,7 +9,7 @@
 
 **Secondary:**
 - JavaScript - Build scripts, config files
-- Swift - iOS native code (`ios/App/`)
+- Swift - iOS native code (`ios/`)
 - SQL - Database migrations, functions (`supabase/sql/`)
 
 ## Runtime
@@ -27,7 +27,7 @@
 **Core:**
 - Next.js 16.1.1 - App Router with locale-based routing (`next.config.js`)
 - React 19 - UI framework (default with Next.js 16)
-- SwiftUI - Native iOS app (`ios/App/TidexApp/`)
+- SwiftUI - Native iOS app (`ios/TidexApp/`)
 
 **Testing:**
 - Vitest 4.0.17 - Unit and integration tests (`vitest.config.ts`)

@@ -160,7 +160,7 @@
 **Configuration:**
 - App ID: `no.tidex.app`
 - Deep linking: Universal Links via `.well-known/apple-app-site-association`
-- Source: `ios/App/TidexApp/` (fully native, no WebView)
+- Source: `ios/TidexApp/` (fully native, no WebView)
 
 ---
 
