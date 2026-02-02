@@ -6,13 +6,8 @@ import Combine
 struct NextShiftCountdownText: View {
     let shift: ShiftWithComputations
 
-    @Environment(\.localization) private var localization
-    @State private var countdownText: String = ""
+        @State private var countdownText: String = ""
     @State private var timer: AnyCancellable?
-
-    private var isNorwegian: Bool {
-        localization.currentLocale == .norwegian
-    }
 
     var body: some View {
         Text(countdownText)
@@ -46,8 +41,7 @@ struct NextShiftCountdownText: View {
         let (text, _, _) = CountdownFormatter.formatShiftCountdown(
             shiftDate: shift.shiftDate,
             startTime: shift.startTime,
-            endTime: shift.endTime,
-            isNorwegian: isNorwegian
+            endTime: shift.endTime
         )
         countdownText = text
     }

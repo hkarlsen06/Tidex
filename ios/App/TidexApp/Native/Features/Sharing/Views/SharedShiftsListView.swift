@@ -17,8 +17,7 @@ struct SharedShiftsListView: View {
     /// Shift IDs to highlight from notification deeplink (more precise than dates)
     var highlightShiftIds: Set<String> = []
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // Sheet state for shift details (using item-based presentation to fix first-tap bug)
     @State private var selectedShift: ShiftWithComputations?
@@ -115,7 +114,7 @@ struct SharedShiftsListView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
-            Text(localization.string("sharing.screenshotTaken"))
+            Text(.sharingScreenshotTaken)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -133,7 +132,7 @@ struct SharedShiftsListView: View {
             ProgressView()
                 .scaleEffect(1.2)
 
-            Text(localization.string("sharing.loadingShifts"))
+            Text(.sharingLoadingShifts)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -162,6 +161,5 @@ struct SharedShiftsListView: View {
         isLoading: false
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
     .environment(\.userCurrency, "kr")
 }

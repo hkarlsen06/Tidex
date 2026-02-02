@@ -4,8 +4,7 @@ import SwiftUI
 /// Shows only when sync is in progress, failed, or offline
 struct SyncStatusIndicator: View {
     @ObservedObject var syncStatusManager = SyncStatusManager.shared
-    @Environment(\.localization) private var localization
-
+    
     var onRetry: () -> Void
 
     var body: some View {
@@ -19,7 +18,7 @@ struct SyncStatusIndicator: View {
                     .progressViewStyle(CircularProgressViewStyle())
                     .scaleEffect(0.8)
 
-                Text(localization.string("sync.syncing"))
+                Text(.syncSyncing)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -36,17 +35,17 @@ struct SyncStatusIndicator: View {
                     .foregroundColor(.tidexWarning)
 
                 if let lastSync = lastSync {
-                    Text(localization.string("sync.failedWithLastSync", formatRelativeTime(lastSync)))
+                    Text(String(localized: .syncFailedWithLastSync(formatRelativeTime(lastSync))))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
                 } else {
-                    Text(localization.string("sync.syncFailed"))
+                    Text(.syncSyncFailed)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
                 }
 
                 Button(action: onRetry) {
-                    Text(localization.string("common.retry"))
+                    Text(.commonRetry)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.tidexBlue)
                 }
@@ -67,7 +66,7 @@ struct SyncStatusIndicator: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
 
-                Text(localization.string("sync.offline"))
+                Text(.syncOffline)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -86,12 +85,12 @@ struct SyncStatusIndicator: View {
         let minutes = Int(interval / 60)
 
         if minutes < 1 {
-            return localization.string("sync.justNow")
+            return String(localized: .syncJustNow)
         } else if minutes < 60 {
-            return localization.string("sync.minutesAgo", minutes)
+            return String(localized: .syncMinutesAgo(Int32(minutes)))
         } else {
             let hours = minutes / 60
-            return localization.string("sync.hoursAgo", hours)
+            return String(localized: .syncHoursAgo(Int32(hours)))
         }
     }
 }

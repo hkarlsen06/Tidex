@@ -6,8 +6,7 @@ import Charts
 struct EmploymentPercentageChart: View {
     let data: EmploymentData
 
-    @Environment(\.localization) private var localization
-
+    
     /// Currently selected month (for tooltip)
     @State private var selectedMonth: Int?
 
@@ -81,7 +80,7 @@ struct EmploymentPercentageChart: View {
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Title
-            Text(localization.string("stats.charts.employment.title"))
+            Text(.statsChartsEmploymentTitle)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -97,7 +96,7 @@ struct EmploymentPercentageChart: View {
                         .foregroundColor(.tidexTextMuted)
                 }
 
-                Text(localization.string("stats.charts.employment.yearlyAverage"))
+                Text(.statsChartsEmploymentYearlyAverage)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
 
@@ -105,8 +104,7 @@ struct EmploymentPercentageChart: View {
 
                 // Info button - show actual hours used (37.5 or 40)
                 InfoPopoverButton(
-                    message: localization.string("stats.charts.employment.info")
-                        .replacingOccurrences(of: "{hours}", with: formatHours(data.fullTimeHoursPerWeek))
+                    message: String(localized: .statsChartsEmploymentInfo(formatHours(data.fullTimeHoursPerWeek)))
                 )
             }
         }
@@ -262,8 +260,7 @@ private struct ChartOverlayContent: View {
 private struct TooltipView: View {
     let monthData: EmploymentMonthlyData
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .center, spacing: 4) {
             Text(monthData.fullMonth)
@@ -275,7 +272,7 @@ private struct TooltipView: View {
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundColor(.tidexBlue)
 
-                Text(localization.string("stats.charts.employment.employment"))
+                Text(.statsChartsEmploymentEmployment)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -325,15 +322,14 @@ private struct InfoPopoverButton: View {
 
 /// Empty state when no employment data is available
 struct EmploymentPercentageChartEmpty: View {
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("stats.charts.employment.title"))
+            Text(.statsChartsEmploymentTitle)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("stats.charts.employment.noData"))
+            Text(.statsChartsEmploymentNoData)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -356,5 +352,4 @@ struct EmploymentPercentageChartEmpty: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

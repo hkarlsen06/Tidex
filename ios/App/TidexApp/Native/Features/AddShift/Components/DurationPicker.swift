@@ -4,8 +4,7 @@ import SwiftUI
 /// Options: indefinite, X months, X years, or specific end date
 struct DurationPicker: View {
     @Binding var endCondition: EndCondition?
-    @Environment(\.localization) private var localization
-
+    
     @State private var durationType: DurationType = .months
     @State private var monthsValue: Int = 6
     @State private var yearsValue: Int = 1
@@ -19,12 +18,12 @@ struct DurationPicker: View {
 
         var id: String { rawValue }
 
-        var labelKey: String {
+        var label: String {
             switch self {
-            case .indefinite: return "addShift.duration.indefinite"
-            case .months: return "addShift.duration.months"
-            case .years: return "addShift.duration.years"
-            case .endDate: return "addShift.duration.endDate"
+            case .indefinite: return String(localized: .addShiftDurationIndefinite)
+            case .months: return String(localized: .addShiftDurationMonths)
+            case .years: return String(localized: .addShiftDurationYears)
+            case .endDate: return String(localized: .addShiftDurationEndDate)
             }
         }
     }
@@ -33,7 +32,7 @@ struct DurationPicker: View {
         VStack(spacing: 16) {
             // Duration type selector
             HStack(spacing: 8) {
-                Text(localization.string("addShift.duration"))
+                Text(String(localized: .addShiftDuration))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
@@ -46,7 +45,7 @@ struct DurationPicker: View {
                 HStack(spacing: 8) {
                     ForEach(DurationType.allCases) { type in
                         DurationTypeButton(
-                            label: localization.string(type.labelKey),
+                            label: type.label,
                             isSelected: durationType == type
                         ) {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -136,15 +135,14 @@ private struct DurationTypeButton: View {
 // MARK: - Indefinite Description
 
 private struct IndefiniteDescription: View {
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         HStack {
             Image(systemName: "infinity")
                 .font(.system(size: 20))
                 .foregroundColor(.tidexBlue)
 
-            Text(localization.string("addShift.indefiniteHint"))
+            Text(.addShiftIndefiniteHint)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -160,14 +158,13 @@ private struct IndefiniteDescription: View {
 private struct MonthsSlider: View {
     @Binding var value: Int
     let onValueChange: () -> Void
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 Text(value == 1
-                    ? localization.string("addShift.monthSingular")
-                    : localization.string("addShift.monthPlural").replacingOccurrences(of: "{n}", with: "\(value)"))
+                    ? String(localized: .addShiftMonthSingular)
+                    : String(localized: .addShiftMonthPlural(value)))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -194,14 +191,13 @@ private struct MonthsSlider: View {
 private struct YearsSlider: View {
     @Binding var value: Int
     let onValueChange: () -> Void
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 Text(value == 1
-                    ? localization.string("addShift.yearSingular")
-                    : localization.string("addShift.yearPlural").replacingOccurrences(of: "{n}", with: "\(value)"))
+                    ? String(localized: .addShiftYearSingular)
+                    : String(localized: .addShiftYearPlural(value)))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -228,11 +224,10 @@ private struct YearsSlider: View {
 private struct EndDatePicker: View {
     @Binding var date: Date
     let onDateChange: () -> Void
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("addShift.duration.endDate"))
+            Text(.addShiftDurationEndDate)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -265,5 +260,5 @@ private struct EndDatePicker: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
+

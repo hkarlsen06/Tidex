@@ -10,7 +10,6 @@ final class MFAVerifyViewModel: ObservableObject {
     let factor: AuthService.MFAFactor
     private let authService: AuthService
     private weak var coordinator: AppCoordinator?
-    private let localization: LocalizationManager
 
     // MARK: - Published State
 
@@ -31,12 +30,10 @@ final class MFAVerifyViewModel: ObservableObject {
         factor: AuthService.MFAFactor,
         coordinator: AppCoordinator,
         authService: AuthService? = nil,
-        localization: LocalizationManager? = nil
     ) {
         self.factor = factor
         self.coordinator = coordinator
         self.authService = authService ?? AuthService.shared
-        self.localization = localization ?? LocalizationManager.shared
     }
 
     deinit {
@@ -92,12 +89,12 @@ final class MFAVerifyViewModel: ObservableObject {
     /// Verify the MFA code
     func verifyCode() async {
         guard code.count == 6 else {
-            errorMessage = localization.string("mfa.errors.codeRequired")
+            errorMessage = String(localized: .mfaErrorsCodeRequired)
             return
         }
 
         guard let challengeId = challengeId else {
-            errorMessage = localization.string("mfa.errors.challengeExpired")
+            errorMessage = String(localized: .mfaErrorsChallengeExpired)
             // Try to create a new challenge
             await createChallenge()
             return

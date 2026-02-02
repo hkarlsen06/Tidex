@@ -14,8 +14,7 @@ struct PayrollCard: View {
     /// When true, shows skeleton state with shimmer animation (for loading)
     var isLoading: Bool = false
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     /// Animated progress value for smooth entrance animation
     @State private var animatedProgress: Double = 0
@@ -49,7 +48,7 @@ struct PayrollCard: View {
                 // Date display
                 if isPayrollToday {
                     HStack(spacing: 8) {
-                        Text(localization.string("dashboard.today"))
+                        Text(.dashboardToday)
                             .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
                         Image(systemName: "party.popper.fill")
@@ -148,7 +147,7 @@ struct PayrollCard: View {
 
     private var formattedPayrollDate: String {
         let formatter = DateFormatter()
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
 
         // Get day number and month name
@@ -214,5 +213,4 @@ struct PayrollCard: View {
     }
     .padding(.horizontal, 24)
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

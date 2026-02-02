@@ -7,8 +7,7 @@ struct ProfileSetupScreen: View {
     @Bindable var data: OnboardingData
     let onContinue: () -> Void
 
-    @Environment(\.localization) private var localization
-    @FocusState private var isNameFieldFocused: Bool
+        @FocusState private var isNameFieldFocused: Bool
 
     /// Whether the continue button should be enabled
     private var canContinue: Bool {
@@ -40,12 +39,12 @@ struct ProfileSetupScreen: View {
 
                         // Header
                         VStack(spacing: 12) {
-                            Text(localization.string("onboarding.profile.title"))
+                            Text(.onboardingProfileTitle)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.tidexTextPrimary)
                                 .multilineTextAlignment(.center)
 
-                            Text(localization.string("onboarding.profile.subtitle"))
+                            Text(.onboardingProfileSubtitle)
                                 .font(.system(size: 17))
                                 .foregroundColor(.tidexTextSecondary)
                                 .multilineTextAlignment(.center)
@@ -58,12 +57,12 @@ struct ProfileSetupScreen: View {
 
                         // Name input field
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(localization.string("onboarding.profile.nameLabel"))
+                            Text(.onboardingProfileNameLabel)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.tidexTextSecondary)
 
                             TextField(
-                                localization.string("onboarding.profile.namePlaceholder"),
+                                String(localized: .onboardingProfileNamePlaceholder),
                                 text: $data.displayName
                             )
                             .font(.system(size: 17))
@@ -107,7 +106,7 @@ struct ProfileSetupScreen: View {
                     .frame(height: 24)
 
                     OnboardingButton(
-                        title: localization.string("common.continue"),
+                        title: String(localized: .commonContinue),
                         isEnabled: canContinue,
                         action: {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -132,5 +131,4 @@ struct ProfileSetupScreen: View {
 
 #Preview {
     ProfileSetupScreen(data: OnboardingData(), onContinue: {})
-        .environment(\.localization, LocalizationManager.shared)
 }

@@ -8,8 +8,7 @@ struct WageScreen: View {
     let onContinue: () -> Void
     var onBack: (() -> Void)? = nil
 
-    @Environment(\.localization) private var localization
-    @State private var isLoadingTariffData = false
+        @State private var isLoadingTariffData = false
 
     var body: some View {
         ZStack {
@@ -30,7 +29,7 @@ struct WageScreen: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "chevron.left")
                                             .font(.system(size: 16, weight: .semibold))
-                                        Text(localization.string("common.back"))
+                                        Text(.commonBack)
                                             .font(.system(size: 16))
                                     }
                                     .foregroundColor(.tidexBlue)
@@ -48,12 +47,12 @@ struct WageScreen: View {
 
                         // Header
                         VStack(spacing: 12) {
-                            Text(localization.string("onboarding.wage.title"))
+                            Text(.onboardingWageTitle)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.tidexTextPrimary)
                                 .multilineTextAlignment(.center)
 
-                            Text(localization.string("onboarding.wage.subtitle"))
+                            Text(.onboardingWageSubtitle)
                                 .font(.system(size: 17))
                                 .foregroundColor(.tidexTextSecondary)
                                 .multilineTextAlignment(.center)
@@ -102,7 +101,7 @@ struct WageScreen: View {
                     .frame(height: 24)
 
                     OnboardingButton(
-                        title: localization.string("common.continue"),
+                        title: String(localized: .commonContinue),
                         action: {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                             onContinue()
@@ -159,7 +158,7 @@ struct WageScreen: View {
     private var wageTypeToggle: some View {
         HStack(spacing: 12) {
             WageTypeButton(
-                title: localization.string("onboarding.wage.custom"),
+                title: String(localized: .onboardingWageCustom),
                 isSelected: data.wageType == .custom,
                 action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -169,7 +168,7 @@ struct WageScreen: View {
             )
 
             WageTypeButton(
-                title: localization.string("onboarding.wage.tariff"),
+                title: String(localized: .onboardingWageTariff),
                 isSelected: data.wageType == .tariff,
                 action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -196,7 +195,7 @@ struct WageScreen: View {
             // Tariff type picker (when multiple types available)
             if !data.availableTariffTypes.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(localization.string("settings.pay.editor.tariffTypeLabel"))
+                    Text(.settingsPayEditorTariffTypeLabel)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
 
@@ -226,7 +225,7 @@ struct WageScreen: View {
                                     .foregroundColor(.tidexTextPrimary)
 
                                 if let version = data.currentTariffVersion {
-                                    Text("\(localization.string("settings.pay.editor.tariffEffectiveDate")): \(formatEffectiveDate(version.effective_date))")
+                                    Text("\(String(localized: .settingsPayEditorTariffEffectiveDate)): \(formatEffectiveDate(version.effective_date))")
                                         .font(.system(size: 13))
                                         .foregroundColor(.tidexTextSecondary)
                                 }
@@ -277,7 +276,7 @@ struct WageScreen: View {
 
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        formatter.locale = localization.currentLocale == .norwegian ? Locale(identifier: "nb_NO") : Locale(identifier: "en_US")
+        formatter.locale = Locale.current.tidexIsNorwegian ? Locale(identifier: "nb_NO") : Locale(identifier: "en_US")
         return formatter.string(from: date)
     }
 
@@ -419,5 +418,4 @@ private struct TariffLevelRow: View {
 
 #Preview {
     WageScreen(data: OnboardingData(), onContinue: {})
-        .environment(\.localization, LocalizationManager.shared)
 }

@@ -6,8 +6,7 @@ import SwiftUI
 /// Allows viewing/editing friends, adding new recipients, and controlling settings
 struct ManageSharingSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.localization) private var localization
-
+    
     @StateObject private var viewModel = ManageSharingViewModel()
 
     /// User ID to highlight and scroll to (from deep link)
@@ -94,11 +93,11 @@ struct ManageSharingSheet: View {
                     }
                 }
             }
-            .navigationTitle(localization.string("sharing.manageTitle"))
+            .navigationTitle(String(localized: .sharingManageTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(localization.string("common.done")) {
+                    Button(String(localized: .commonDone)) {
                         dismiss()
                     }
                     .font(.system(size: 17, weight: .semibold))
@@ -117,7 +116,7 @@ struct ManageSharingSheet: View {
             ),
             titleVisibility: .visible
         ) {
-            Button(localization.string("sharing.remove"), role: .destructive) {
+            Button(String(localized: .sharingRemove), role: .destructive) {
                 if let friend = friendToRemove, let action = removeAction {
                     Task {
                         switch action {
@@ -132,7 +131,7 @@ struct ManageSharingSheet: View {
                 friendToRemove = nil
                 removeAction = nil
             }
-            Button(localization.string("common.cancel"), role: .cancel) {
+            Button(String(localized: .commonCancel), role: .cancel) {
                 friendToRemove = nil
                 removeAction = nil
             }
@@ -152,9 +151,9 @@ struct ManageSharingSheet: View {
 
         switch action {
         case .removeShare:
-            return String(format: localization.string("sharing.stopSharingWith"), friend.displayName)
+            return String(localized: .sharingStopSharingWith(friend.displayName))
         case .removeSharer:
-            return String(format: localization.string("sharing.removeFromList"), friend.displayName)
+            return String(localized: .sharingRemoveFromList(friend.displayName))
         }
     }
 
@@ -162,7 +161,7 @@ struct ManageSharingSheet: View {
 
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("sharing.manageDescription"))
+            Text(.sharingManageDescription)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -179,7 +178,7 @@ struct ManageSharingSheet: View {
                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                 .scaleEffect(1.2)
 
-            Text(localization.string("sharing.loadingFriends"))
+            Text(.sharingLoadingFriends)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -195,11 +194,11 @@ struct ManageSharingSheet: View {
                 .font(.system(size: 40))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("sharing.noFriends"))
+            Text(.sharingNoFriends)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("sharing.noFriendsDescription"))
+            Text(.sharingNoFriendsDescription)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
@@ -215,7 +214,7 @@ struct ManageSharingSheet: View {
         // Mutual shares
         if !viewModel.mutualFriends.isEmpty {
             friendSection(
-                title: localization.string("sharing.mutual"),
+                title: String(localized: .sharingMutual),
                 friends: viewModel.mutualFriends,
                 sectionType: .mutual
             )
@@ -224,7 +223,7 @@ struct ManageSharingSheet: View {
         // Outgoing shares (I share with them)
         if !viewModel.outgoingOnlyFriends.isEmpty {
             friendSection(
-                title: localization.string("sharing.iShareWith"),
+                title: String(localized: .sharingIShareWith),
                 friends: viewModel.outgoingOnlyFriends,
                 sectionType: .outgoing
             )
@@ -233,7 +232,7 @@ struct ManageSharingSheet: View {
         // Incoming shares (they share with me)
         if !viewModel.incomingOnlyFriends.isEmpty {
             friendSection(
-                title: localization.string("sharing.sharesWithMe"),
+                title: String(localized: .sharingSharesWithMe),
                 friends: viewModel.incomingOnlyFriends,
                 sectionType: .incoming
             )
@@ -333,5 +332,4 @@ struct ManageSharingSheet: View {
 
 #Preview {
     ManageSharingSheet()
-        .environment(\.localization, LocalizationManager.shared)
 }

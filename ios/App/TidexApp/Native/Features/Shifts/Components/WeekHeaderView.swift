@@ -6,13 +6,12 @@ struct WeekHeaderView: View {
     let weekNumber: Int
     let totalGross: Double
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
     private var weekLabel: String {
-        localization.string("shifts.weekLabel")
+        String(localized: .shiftsWeekLabel)
     }
 
     // MARK: - Body

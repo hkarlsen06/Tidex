@@ -4,8 +4,7 @@ import SwiftUI
 /// Supports email/password, phone/OTP, Google, and Apple sign-in
 struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
-    @Environment(\.localization) private var localization
-
+    
     // Navigation callbacks
     var onNavigateToSignup: (() -> Void)?
     var onNavigateToResetPassword: (() -> Void)?
@@ -77,7 +76,7 @@ struct LoginView: View {
                 .frame(height: 48)
 
             // Subtitle
-            Text(localization.string("login.subtitle"))
+            Text(.loginSubtitle)
                 .font(.system(size: 17))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -117,7 +116,7 @@ struct LoginView: View {
             VStack(spacing: 0) {
                 // Email/Phone field
                 NativeTextField(
-                    placeholder: localization.string("login.emailOrPhonePlaceholder"),
+                    placeholder: String(localized: .loginEmailOrPhonePlaceholder),
                     text: $viewModel.emailOrPhone,
                     keyboardType: .emailAddress,
                     textContentType: .emailAddress
@@ -129,8 +128,8 @@ struct LoginView: View {
                 // Password field
                 NativeSecureField(
                     placeholder: viewModel.inputType == .phone
-                        ? localization.string("login.passwordOptionalLabel")
-                        : localization.string("login.passwordPlaceholder"),
+                        ? String(localized: .loginPasswordOptionalLabel)
+                        : String(localized: .loginPasswordPlaceholder),
                     text: $viewModel.password,
                     onSubmit: {
                         Task { await viewModel.signIn() }
@@ -164,7 +163,7 @@ struct LoginView: View {
                     Button(action: {
                         onNavigateToResetPassword?()
                     }) {
-                        Text(localization.string("login.forgotPassword"))
+                        Text(.loginForgotPassword)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexBlue)
                     }
@@ -174,7 +173,7 @@ struct LoginView: View {
 
             // Phone hint - password is optional for OTP flow
             if viewModel.inputType == .phone {
-                Text(localization.string("login.phonePasswordHint"))
+                Text(.loginPhonePasswordHint)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -182,7 +181,7 @@ struct LoginView: View {
 
             // Submit button
             PrimaryButton(
-                title: localization.string("login.submitButton"),
+                title: String(localized: .loginSubmitButton),
                 action: {
                     Task { await viewModel.signIn() }
                 },
@@ -202,7 +201,7 @@ struct LoginView: View {
             HStack(spacing: 8) {
                 Image(systemName: "envelope")
                     .font(.system(size: 16))
-                Text(localization.string("login.emailOrPhoneReveal"))
+                Text(.loginEmailOrPhoneReveal)
                     .font(.system(size: 16, weight: .medium))
             }
             .foregroundColor(.tidexTextSecondary)
@@ -222,7 +221,7 @@ struct LoginView: View {
                 .fill(Color.tidexBorderSubtle)
                 .frame(height: 1)
 
-            Text(localization.string("login.separator"))
+            Text(.loginSeparator)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextMuted)
 
@@ -236,14 +235,14 @@ struct LoginView: View {
 
     private var footerView: some View {
         HStack(spacing: 4) {
-            Text(localization.string("login.noAccount"))
+            Text(.loginNoAccount)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
 
             Button(action: {
                 onNavigateToSignup?()
             }) {
-                Text(localization.string("login.createAccount"))
+                Text(.loginCreateAccount)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexBlue)
             }
@@ -344,5 +343,4 @@ struct SnappyButtonStyle: ButtonStyle {
 
 #Preview {
     LoginView()
-        .environment(\.localization, LocalizationManager.shared)
 }

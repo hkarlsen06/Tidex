@@ -4,8 +4,7 @@ import SwiftUI
 /// Toolbar toggle with independent glass buttons
 struct ShiftModeToggle: View {
     @Binding var mode: AddShiftMode
-    @Environment(\.localization) private var localization
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var namespace
     @ScaledMetric(relativeTo: .body) private var height: CGFloat = 36
     @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
@@ -64,9 +63,9 @@ struct ShiftModeToggle: View {
     private func localizedTitle(for mode: AddShiftMode) -> String {
         switch mode {
         case .single:
-            return localization.string("addShift.modeSingle")
+            return String(localized: .addShiftModeSingle)
         case .recurring:
-            return localization.string("addShift.modeRecurring")
+            return String(localized: .addShiftModeRecurring)
         }
     }
 
@@ -92,5 +91,4 @@ struct ShiftModeToggle: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

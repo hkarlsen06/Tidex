@@ -5,8 +5,7 @@ import UIKit
 /// Fetches shared shifts from the Next.js API for proper payroll computation
 struct SharingView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     /// Binding to the selected tab for navigation
     @Binding var selectedTab: MainTabView.Tab
@@ -61,7 +60,7 @@ struct SharingView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 16, weight: .semibold))
-                                Text(localization.string("common.back"))
+                                Text(.commonBack)
                                     .font(.system(size: 17))
                             }
                             .foregroundColor(.tidexBlue)
@@ -249,7 +248,7 @@ struct SharingView: View {
                 // Title and manage button row
                 HStack {
                     // "Friends" / "Venner" title
-                    Text(localization.string("sharing.friendsTitle"))
+                    Text(.sharingFriendsTitle)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.tidexTextPrimary)
 
@@ -262,7 +261,7 @@ struct SharingView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "gearshape")
                                 .font(.system(size: 14))
-                            Text(localization.string("sharing.manageTitle"))
+                            Text(.sharingManageTitle)
                                 .font(.system(size: 14, weight: .medium))
                         }
                         .foregroundColor(.tidexTextPrimary)
@@ -376,7 +375,7 @@ struct SharingView: View {
         let seconds = Int(endDate.timeIntervalSince(startDate))
 
         if seconds < 5 {
-            return localization.currentLocale == .norwegian ? "Nå" : "Now"
+            return Locale.current.tidexIsNorwegian ? "Nå" : "Now"
         } else if seconds < 60 {
             return "\(seconds)s"
         } else if seconds < 3600 {
@@ -384,7 +383,7 @@ struct SharingView: View {
             return "\(minutes)m"
         } else {
             let hours = seconds / 3600
-            let hoursLabel = localization.currentLocale == .norwegian ? "t" : "h"
+            let hoursLabel = Locale.current.tidexIsNorwegian ? "t" : "h"
             return "\(hours)\(hoursLabel)"
         }
     }
@@ -501,7 +500,6 @@ private class EdgeSwipeView: UIView {
         var body: some View {
             SharingView(selectedTab: $selectedTab, hasSelectedSharer: $hasSelectedSharer)
                 .environmentObject(AppCoordinator.shared)
-                .environment(\.localization, LocalizationManager.shared)
                 .environment(\.userCurrency, "kr")
         }
     }

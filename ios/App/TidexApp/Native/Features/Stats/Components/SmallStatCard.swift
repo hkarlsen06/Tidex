@@ -41,11 +41,10 @@ struct SmallStatCard: View {
 struct HoursStatCard: View {
     let hours: Double
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         SmallStatCard(
-            title: localization.string("stats.hours"),
+            title: String(localized: .statsHours),
             value: formatHours(hours),
             icon: "clock"
         )
@@ -65,11 +64,10 @@ struct HoursStatCard: View {
 struct ShiftsStatCard: View {
     let count: Int
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         SmallStatCard(
-            title: localization.string("stats.shifts"),
+            title: String(localized: .statsShifts),
             value: "\(count)",
             icon: "calendar"
         )
@@ -83,5 +81,4 @@ struct ShiftsStatCard: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

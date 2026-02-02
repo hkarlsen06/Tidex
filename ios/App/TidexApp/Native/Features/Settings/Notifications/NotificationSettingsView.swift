@@ -4,8 +4,7 @@ import UserNotifications
 /// Notification settings view
 /// Allows users to configure shift reminders and shared shift notifications
 struct NotificationSettingsView: View {
-    @Environment(\.localization) private var localization
-    @StateObject private var viewModel = NotificationSettingsViewModel()
+        @StateObject private var viewModel = NotificationSettingsViewModel()
 
     var body: some View {
         ScrollView {
@@ -29,7 +28,7 @@ struct NotificationSettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("notifications.title"))
+        .navigationTitle(String(localized: .notificationsTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -69,12 +68,12 @@ struct NotificationSettingsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(localization.string("notifications.title"))
+            Text(.notificationsTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("notifications.subtitle"))
+            Text(.notificationsSubtitle)
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -86,7 +85,7 @@ struct NotificationSettingsView: View {
     private var systemPermissionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("notifications.permission.sectionTitle"))
+            Text(.notificationsPermissionSectionTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
@@ -102,7 +101,7 @@ struct NotificationSettingsView: View {
 
                     // Content
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(localization.string("notifications.permission.title"))
+                        Text(.notificationsPermissionTitle)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
@@ -124,7 +123,7 @@ struct NotificationSettingsView: View {
 
             // Hint if denied
             if viewModel.notificationStatus == .denied {
-                Text(localization.string("notifications.permission.deniedHint"))
+                Text(.notificationsPermissionDeniedHint)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -160,13 +159,13 @@ struct NotificationSettingsView: View {
     private var permissionStatusText: String {
         switch viewModel.notificationStatus {
         case .authorized, .provisional, .ephemeral:
-            return localization.string("notifications.permission.enabled")
+            return String(localized: .notificationsPermissionEnabled)
         case .denied:
-            return localization.string("notifications.permission.denied")
+            return String(localized: .notificationsPermissionDenied)
         case .notDetermined:
-            return localization.string("notifications.permission.notDetermined")
+            return String(localized: .notificationsPermissionNotDetermined)
         @unknown default:
-            return localization.string("notifications.permission.notDetermined")
+            return String(localized: .notificationsPermissionNotDetermined)
         }
     }
 
@@ -180,7 +179,7 @@ struct NotificationSettingsView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.tidexSuccess)
 
-                Text(localization.string("notifications.permission.active"))
+                Text(.notificationsPermissionActive)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexSuccess)
             }
@@ -190,7 +189,7 @@ struct NotificationSettingsView: View {
             Button {
                 viewModel.openSystemSettings()
             } label: {
-                Text(localization.string("notifications.permission.openSettings"))
+                Text(.notificationsPermissionOpenSettings)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexBlue)
                     .padding(.horizontal, 12)
@@ -206,7 +205,7 @@ struct NotificationSettingsView: View {
                     await viewModel.requestNotificationPermission()
                 }
             } label: {
-                Text(localization.string("notifications.permission.enable"))
+                Text(.notificationsPermissionEnable)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
@@ -226,12 +225,12 @@ struct NotificationSettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("notifications.reminders.sectionTitle"))
+                Text(.notificationsRemindersSectionTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
 
-                Text(localization.string("notifications.reminders.sectionSubtitle"))
+                Text(.notificationsRemindersSectionSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -246,11 +245,11 @@ struct NotificationSettingsView: View {
                         .frame(width: 32, height: 32)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(localization.string("notifications.reminders.title"))
+                        Text(.notificationsRemindersTitle)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("notifications.reminders.description"))
+                        Text(.notificationsRemindersDescription)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -303,7 +302,7 @@ struct NotificationSettingsView: View {
                 .frame(width: 24)
 
             // Time label
-            Text(viewModel.formatReminderTime(minutes, locale: localization.currentLocale))
+            Text(viewModel.formatReminderTime(minutes, locale: Locale.current))
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -338,7 +337,7 @@ struct NotificationSettingsView: View {
                     .font(.system(size: 16))
                     .foregroundColor(.tidexBlue)
 
-                Text(localization.string("notifications.reminders.addTime"))
+                Text(.notificationsRemindersAddTime)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexBlue)
 
@@ -358,12 +357,12 @@ struct NotificationSettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("notifications.smart.sectionTitle"))
+                Text(.notificationsSmartSectionTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
 
-                Text(localization.string("notifications.smart.sectionSubtitle"))
+                Text(.notificationsSmartSectionSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -377,11 +376,11 @@ struct NotificationSettingsView: View {
                         .frame(width: 32, height: 32)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(localization.string("notifications.smart.title"))
+                        Text(.notificationsSmartTitle)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("notifications.smart.description"))
+                        Text(.notificationsSmartDescription)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -406,12 +405,12 @@ struct NotificationSettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("notifications.shared.sectionTitle"))
+                Text(.notificationsSharedSectionTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
 
-                Text(localization.string("notifications.shared.sectionSubtitle"))
+                Text(.notificationsSharedSectionSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -425,11 +424,11 @@ struct NotificationSettingsView: View {
                         .frame(width: 32, height: 32)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(localization.string("notifications.shared.title"))
+                        Text(.notificationsSharedTitle)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("notifications.shared.description"))
+                        Text(.notificationsSharedDescription)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -457,5 +456,4 @@ struct NotificationSettingsView: View {
     NavigationStack {
         NotificationSettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

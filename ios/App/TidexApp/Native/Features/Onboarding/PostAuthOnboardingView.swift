@@ -10,8 +10,7 @@ struct PostAuthOnboardingView: View {
     let onComplete: () -> Void
     let userId: String
 
-    @Environment(\.localization) private var localization
-    @State private var currentScreen: PostAuthScreen = .loading
+        @State private var currentScreen: PostAuthScreen = .loading
     @State private var onboardingData = OnboardingData()
     @StateObject private var saveManager = OnboardingSaveManager()
     @State private var showingMFAEnrollment = false
@@ -327,8 +326,7 @@ private struct MFAEnrollmentSheet: View {
     let onComplete: () -> Void
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-    @State private var isEnrolling = false
+        @State private var isEnrolling = false
     @State private var totpUri: String?
     @State private var secret: String?
     @State private var factorId: String?
@@ -346,7 +344,7 @@ private struct MFAEnrollmentSheet: View {
                     if isEnrolling {
                         ProgressView()
                             .progressViewStyle(.circular)
-                        Text(localization.string("onboarding.mfa.enrolling"))
+                        Text(.onboardingMfaEnrolling)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextSecondary)
                     } else if totpUri != nil {
@@ -356,7 +354,7 @@ private struct MFAEnrollmentSheet: View {
                         // Waiting state before auto-start
                         ProgressView()
                             .progressViewStyle(.circular)
-                        Text(localization.string("onboarding.mfa.enrolling"))
+                        Text(.onboardingMfaEnrolling)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -370,11 +368,11 @@ private struct MFAEnrollmentSheet: View {
                     }
                 }
             }
-            .navigationTitle(localization.string("onboarding.mfa.setupTitle"))
+            .navigationTitle(String(localized: .onboardingMfaSetupTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         onCancel()
                     }
                 }
@@ -392,7 +390,7 @@ private struct MFAEnrollmentSheet: View {
     private func mfaVerificationView() -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                Text(localization.string("onboarding.mfa.scanQR"))
+                Text(.onboardingMfaScanQR)
                     .font(.system(size: 17))
                     .foregroundColor(.tidexTextPrimary)
                     .multilineTextAlignment(.center)
@@ -429,7 +427,7 @@ private struct MFAEnrollmentSheet: View {
                         HStack(spacing: 8) {
                             Image(systemName: "key.fill")
                                 .font(.system(size: 16))
-                            Text(localization.string("onboarding.mfa.addToPasswords"))
+                            Text(.onboardingMfaAddToPasswords)
                                 .font(.system(size: 15, weight: .medium))
                         }
                         .foregroundColor(.tidexBlue)
@@ -442,7 +440,7 @@ private struct MFAEnrollmentSheet: View {
 
                 if let secret = secret {
                     VStack(spacing: 4) {
-                        Text(localization.string("onboarding.mfa.manualEntry"))
+                        Text(.onboardingMfaManualEntry)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextMuted)
 
@@ -467,7 +465,7 @@ private struct MFAEnrollmentSheet: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text(localization.string("onboarding.mfa.enterCode"))
+                    Text(.onboardingMfaEnterCode)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
 
@@ -482,7 +480,7 @@ private struct MFAEnrollmentSheet: View {
                 }
 
                 Button(action: verifyCode) {
-                    Text(localization.string("onboarding.mfa.verify"))
+                    Text(.onboardingMfaVerify)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -581,5 +579,4 @@ private struct MFAEnrollmentSheet: View {
         onComplete: {},
         userId: "test-user-id"
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

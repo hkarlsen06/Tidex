@@ -3,8 +3,7 @@ import SwiftUI
 /// Feedback settings view
 /// Allows users to submit feedback and view their feedback history with responses
 struct FeedbackSettingsView: View {
-    @Environment(\.localization) private var localization
-    @StateObject private var viewModel = FeedbackSettingsViewModel()
+        @StateObject private var viewModel = FeedbackSettingsViewModel()
     @State private var historyAnimated = false
 
     var body: some View {
@@ -34,7 +33,7 @@ struct FeedbackSettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("feedback.title"))
+        .navigationTitle(String(localized: .feedbackTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -46,12 +45,12 @@ struct FeedbackSettingsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(localization.string("feedback.title"))
+            Text(.feedbackTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("feedback.subtitle"))
+            Text(.feedbackSubtitle)
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -93,7 +92,7 @@ struct FeedbackSettingsView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.tidexSuccess)
 
-            Text(localization.string("feedback.success"))
+            Text(.feedbackSuccess)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
@@ -101,7 +100,7 @@ struct FeedbackSettingsView: View {
             Button {
                 viewModel.resetSuccess()
             } label: {
-                Text(localization.string("feedback.submitAnother"))
+                Text(.feedbackSubmitAnother)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexBlue)
             }
@@ -133,7 +132,7 @@ struct FeedbackSettingsView: View {
                 )
                 .overlay(alignment: .topLeading) {
                     if viewModel.message.isEmpty {
-                        Text(localization.string("feedback.placeholder"))
+                        Text(.feedbackPlaceholder)
                             .font(.system(size: 16))
                             .foregroundColor(.tidexTextMuted)
                             .padding(.horizontal, 16)
@@ -166,8 +165,8 @@ struct FeedbackSettingsView: View {
                     }
 
                     Text(viewModel.isSubmitting
-                         ? localization.string("feedback.sending")
-                         : localization.string("feedback.submit"))
+                         ? String(localized: .feedbackSending)
+                         : String(localized: .feedbackSubmit))
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -185,7 +184,7 @@ struct FeedbackSettingsView: View {
     private var feedbackHistorySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("feedback.history.title"))
+            Text(.feedbackHistoryTitle)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -210,7 +209,7 @@ struct FeedbackSettingsView: View {
 
     private func feedbackHistoryItem(_ item: FeedbackItem) -> some View {
         let isExpanded = viewModel.expandedItemId == item.id
-        let locale = localization.currentLocale
+        let locale = Locale.current
 
         return VStack(spacing: 0) {
             // Header row (always visible)
@@ -224,7 +223,7 @@ struct FeedbackSettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         // Date and status row
                         HStack(spacing: 8) {
-                            Text("\(localization.string("feedback.history.submittedOn")) \(item.formattedDate(locale: locale))")
+                            Text("\(String(localized: .feedbackHistorySubmittedOn)) \(item.formattedDate(locale: locale))")
                                 .font(.system(size: 12))
                                 .foregroundColor(.tidexTextMuted)
 
@@ -233,7 +232,7 @@ struct FeedbackSettingsView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.system(size: 10))
-                                    Text(localization.string("feedback.history.respondedOn"))
+                                    Text(.feedbackHistoryRespondedOn)
                                         .font(.system(size: 11))
                                 }
                                 .foregroundColor(.tidexSuccess)
@@ -241,7 +240,7 @@ struct FeedbackSettingsView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "clock")
                                         .font(.system(size: 10))
-                                    Text(localization.string("feedback.history.noResponse"))
+                                    Text(.feedbackHistoryNoResponse)
                                         .font(.system(size: 11))
                                 }
                                 .foregroundColor(.tidexTextMuted)
@@ -286,7 +285,7 @@ struct FeedbackSettingsView: View {
                                     .font(.system(size: 12))
                                     .foregroundColor(.tidexSuccess)
 
-                                Text(localization.string("feedback.history.response"))
+                                Text(.feedbackHistoryResponse)
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(.tidexSuccess)
 
@@ -340,5 +339,4 @@ struct FeedbackSettingsView: View {
     NavigationStack {
         FeedbackSettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

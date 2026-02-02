@@ -3,8 +3,7 @@ import SwiftUI
 /// Appearance settings view
 /// Allows users to choose between system, light, and dark themes
 struct AppearanceSettingsView: View {
-    @Environment(\.localization) private var localization
-    @Environment(\.colorScheme) private var systemColorScheme
+        @Environment(\.colorScheme) private var systemColorScheme
     @StateObject private var viewModel = AppearanceSettingsViewModel()
 
     var body: some View {
@@ -31,7 +30,7 @@ struct AppearanceSettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("appearance.title"))
+        .navigationTitle(String(localized: .appearanceTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -43,12 +42,12 @@ struct AppearanceSettingsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(localization.string("appearance.title"))
+            Text(.appearanceTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("appearance.subtitle"))
+            Text(.appearanceSubtitle)
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -87,7 +86,7 @@ struct AppearanceSettingsView: View {
     private var themeSelectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("appearance.theme.sectionTitle"))
+            Text(.appearanceThemeSectionTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
@@ -191,22 +190,22 @@ struct AppearanceSettingsView: View {
     private func themeTitle(_ theme: AppTheme) -> String {
         switch theme {
         case .system:
-            return localization.string("appearance.theme.system")
+            return String(localized: .appearanceThemeSystem)
         case .light:
-            return localization.string("appearance.theme.light")
+            return String(localized: .appearanceThemeLight)
         case .dark:
-            return localization.string("appearance.theme.dark")
+            return String(localized: .appearanceThemeDark)
         }
     }
 
     private func themeDescription(_ theme: AppTheme) -> String {
         switch theme {
         case .system:
-            return localization.string("appearance.theme.systemDescription")
+            return String(localized: .appearanceThemeSystemDescription)
         case .light:
-            return localization.string("appearance.theme.lightDescription")
+            return String(localized: .appearanceThemeLightDescription)
         case .dark:
-            return localization.string("appearance.theme.darkDescription")
+            return String(localized: .appearanceThemeDarkDescription)
         }
     }
 
@@ -215,7 +214,7 @@ struct AppearanceSettingsView: View {
     private var calendarAnimationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("appearance.calendarAnimation.sectionTitle"))
+            Text(.appearanceCalendarAnimationSectionTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
@@ -301,18 +300,18 @@ struct AppearanceSettingsView: View {
     private func animationStyleTitle(_ style: CalendarAnimationStyle) -> String {
         switch style {
         case .horizontal:
-            return localization.string("appearance.calendarAnimation.horizontal")
+            return String(localized: .appearanceCalendarAnimationHorizontal)
         case .vertical:
-            return localization.string("appearance.calendarAnimation.vertical")
+            return String(localized: .appearanceCalendarAnimationVertical)
         }
     }
 
     private func animationStyleDescription(_ style: CalendarAnimationStyle) -> String {
         switch style {
         case .horizontal:
-            return localization.string("appearance.calendarAnimation.horizontalDescription")
+            return String(localized: .appearanceCalendarAnimationHorizontalDescription)
         case .vertical:
-            return localization.string("appearance.calendarAnimation.verticalDescription")
+            return String(localized: .appearanceCalendarAnimationVerticalDescription)
         }
     }
 
@@ -339,13 +338,13 @@ struct AppearanceSettingsView: View {
         switch viewModel.selectedTheme {
         case .system:
             let currentMode = systemColorScheme == .dark
-                ? localization.string("appearance.info.dark")
-                : localization.string("appearance.info.light")
-            return localization.string("appearance.info.systemActive").replacingOccurrences(of: "{mode}", with: currentMode)
+                ? String(localized: .appearanceInfoDark)
+                : String(localized: .appearanceInfoLight)
+            return String(localized: .appearanceInfoSystemActive(currentMode))
         case .light:
-            return localization.string("appearance.info.lightActive")
+            return String(localized: .appearanceInfoLightActive)
         case .dark:
-            return localization.string("appearance.info.darkActive")
+            return String(localized: .appearanceInfoDarkActive)
         }
     }
 }
@@ -356,5 +355,4 @@ struct AppearanceSettingsView: View {
     NavigationStack {
         AppearanceSettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

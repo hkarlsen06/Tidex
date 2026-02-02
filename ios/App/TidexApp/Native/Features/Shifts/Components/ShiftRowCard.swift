@@ -9,8 +9,7 @@ struct ShiftRowCard: View {
     let excludedFromTotal: Bool
     let onTap: (() -> Void)?
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // Convenience initializer without conflict props
     init(
@@ -34,11 +33,11 @@ struct ShiftRowCard: View {
     }
 
     private var formattedHours: String {
-        ShiftCardFormatter.formattedHours(shift.paidHours, locale: localization.currentLocale)
+        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.current)
     }
 
     private var dateParts: ShiftCardDateParts {
-        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: localization.currentLocale)
+        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.current)
     }
 
     // MARK: - Body
@@ -117,7 +116,7 @@ struct ShiftRowCard: View {
 
                 // When excluded from total, show excluded label instead of breakdown
                 if excludedFromTotal {
-                    Text(localization.string("shifts.excludedFromTotal"))
+                    Text(.shiftsExcludedFromTotal)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.tidexWarning)
                 } else if showBreakdown {

@@ -87,8 +87,7 @@ struct ShiftsCalendarView: View {
     // Shift IDs that should be excluded from totals (conflicting shifts)
     var excludedFromTotalIds: Set<String> = []
 
-    @Environment(\.localization) private var localization
-    @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+        @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
 
     // MARK: - Gesture State
 
@@ -349,7 +348,7 @@ struct ShiftsCalendarView: View {
     private var monthName: String {
         CalendarGridHelper.monthName(
             from: month,
-            locale: Locale(identifier: localization.currentLocale.localeIdentifier)
+            locale: Locale(identifier: Locale.current.identifier)
         )
     }
 
@@ -665,8 +664,8 @@ struct ShiftsCalendarView: View {
                     .frame(width: 36)
 
                 Text(isCopyMode
-                    ? localization.string("shifts.copying")
-                    : localization.string("shifts.moving"))
+                    ? String(localized: .shiftsCopying)
+                    : String(localized: .shiftsMoving))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
@@ -677,8 +676,8 @@ struct ShiftsCalendarView: View {
                     .frame(width: 36)
 
                 Text(isCopyMode
-                    ? localization.string("shifts.selectCopyTarget")
-                    : localization.string("shifts.selectMoveTarget"))
+                    ? String(localized: .shiftsSelectCopyTarget)
+                    : String(localized: .shiftsSelectMoveTarget))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
@@ -688,7 +687,7 @@ struct ShiftsCalendarView: View {
                 toggleHaptic.impactOccurred()
                 onCancelCopyMove?()
             } label: {
-                Text(localization.string("common.cancel"))
+                Text(.commonCancel)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
@@ -746,7 +745,7 @@ struct ShiftsCalendarView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.system(size: 14, weight: .medium))
-                        Text(localization.string("shifts.details"))
+                        Text(.shiftsDetails)
                             .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -762,7 +761,7 @@ struct ShiftsCalendarView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.left.arrow.right")
                             .font(.system(size: 14, weight: .medium))
-                        Text(localization.string("shifts.move"))
+                        Text(.shiftsMove)
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.orange)
@@ -792,7 +791,7 @@ struct ShiftsCalendarView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .medium))
-                        Text(localization.string("common.cancel"))
+                        Text(.commonCancel)
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.tidexTextSecondary)
@@ -829,7 +828,7 @@ struct ShiftsCalendarView: View {
                 }
 
                 if confirmingDelete {
-                    Text(localization.string("shifts.confirm"))
+                    Text(.shiftsConfirm)
                         .font(.system(size: 14, weight: .semibold))
                 }
             }
@@ -852,7 +851,7 @@ struct ShiftsCalendarView: View {
             HStack(spacing: 6) {
                 Image(systemName: "xmark")
                     .font(.system(size: 14, weight: .medium))
-                Text(localization.string("common.cancel"))
+                Text(.commonCancel)
                     .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -894,7 +893,6 @@ struct ShiftsCalendarView: View {
                 .padding()
             }
             .background(Color.tidexBackground)
-            .environment(\.localization, LocalizationManager.shared)
         }
     }
 

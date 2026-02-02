@@ -6,8 +6,7 @@ struct GetStartedScreen: View {
     let onCreateAccount: () -> Void
     let onLogin: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -28,12 +27,12 @@ struct GetStartedScreen: View {
 
             // Header and subheadline - constrained for iPad
             VStack(spacing: 12) {
-                Text(localization.string("onboarding.getstarted.title"))
+                Text(.onboardingGetstartedTitle)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
                     .multilineTextAlignment(.center)
 
-                Text(localization.string("onboarding.getstarted.subtitle"))
+                Text(.onboardingGetstartedSubtitle)
                     .font(.system(size: 17))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -46,12 +45,12 @@ struct GetStartedScreen: View {
             // CTAs - constrained for iPad
             VStack(spacing: 12) {
                 OnboardingButton(
-                    title: localization.string("onboarding.getstarted.signup"),
+                    title: String(localized: .onboardingGetstartedSignup),
                     action: onCreateAccount
                 )
 
                 OnboardingButton(
-                    title: localization.string("onboarding.getstarted.login"),
+                    title: String(localized: .onboardingGetstartedLogin),
                     action: onLogin,
                     style: .secondary
                 )
@@ -70,5 +69,4 @@ struct GetStartedScreen: View {
         onLogin: {}
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

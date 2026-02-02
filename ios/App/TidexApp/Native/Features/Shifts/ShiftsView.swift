@@ -39,8 +39,7 @@ private enum ShiftListItem: Identifiable {
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
 struct ShiftsView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-
+    
     /// Binding to the selected tab for navigation (to switch to Add tab)
     @Binding var selectedTab: MainTabView.Tab
 
@@ -246,18 +245,18 @@ struct ShiftsView: View {
         // Delete confirmation alert
         .alert(
             shiftToDelete?.isVirtual == true
-                ? localization.string("shifts.excludeConfirmTitle")
-                : localization.string("shifts.deleteConfirmTitle"),
+                ? String(localized: .shiftsExcludeConfirmTitle)
+                : String(localized: .shiftsDeleteConfirmTitle),
             isPresented: $showDeleteConfirmation,
             presenting: shiftToDelete
         ) { shift in
-            Button(localization.string("common.cancel"), role: .cancel) {
+            Button(String(localized: .commonCancel), role: .cancel) {
                 shiftToDelete = nil
             }
             Button(
                 shift.isVirtual
-                    ? localization.string("shifts.excludeButton")
-                    : localization.string("shifts.deleteButton"),
+                    ? String(localized: .shiftsExcludeButton)
+                    : String(localized: .shiftsDeleteButton),
                 role: .destructive
             ) {
                 Task {
@@ -266,8 +265,8 @@ struct ShiftsView: View {
             }
         } message: { shift in
             Text(shift.isVirtual
-                ? localization.string("shifts.excludeConfirmMessage")
-                : localization.string("shifts.deleteConfirmMessage"))
+                ? String(localized: .shiftsExcludeConfirmMessage)
+                : String(localized: .shiftsDeleteConfirmMessage))
         }
         .onAppear {
             selectionHaptic.prepare()
@@ -1085,7 +1084,7 @@ struct ShiftsView: View {
                         // Open sheet directly in edit mode
                         shiftToEditDirectly = shift
                     } label: {
-                        Label("Edit", systemImage: "pencil")
+                        Label(String(localized: .shiftsActionsEdit), systemImage: "pencil")
                     }
                     .tint(.tidexBlue)
                 }
@@ -1096,7 +1095,7 @@ struct ShiftsView: View {
                         shiftToDelete = shift
                         showDeleteConfirmation = true
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label(String(localized: .shiftsActionsDelete), systemImage: "trash")
                     }
                     .tint(.red)
                 }
@@ -1156,7 +1155,7 @@ struct ShiftsView: View {
                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                 .scaleEffect(1.2)
 
-            Text(localization.string("common.loading"))
+            Text(.commonLoading)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -1173,7 +1172,7 @@ struct ShiftsView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.tidexWarning)
 
-            Text(localization.string("shifts.loadError"))
+            Text(.shiftsLoadError)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -1185,7 +1184,7 @@ struct ShiftsView: View {
             Button {
                 Task { await viewModel.loadShifts() }
             } label: {
-                Text(localization.string("common.retry"))
+                Text(.commonRetry)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexBlue)
                     .padding(.horizontal, 20)
@@ -1209,7 +1208,6 @@ struct ShiftsView: View {
         var body: some View {
             ShiftsView(selectedTab: $selectedTab)
                 .environmentObject(AppCoordinator.shared)
-                .environment(\.localization, LocalizationManager.shared)
         }
     }
 

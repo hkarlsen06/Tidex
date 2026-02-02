@@ -19,8 +19,7 @@ struct SharedShiftsCalendarView: View {
     /// Callback when a shift is tapped (for showing details)
     var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
-    @Environment(\.localization) private var localization
-    @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+        @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
 
     /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
     private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
@@ -95,7 +94,7 @@ struct SharedShiftsCalendarView: View {
         CalendarGridHelper.monthName(
             year: year,
             month: month,
-            locale: Locale(identifier: localization.currentLocale.localeIdentifier)
+            locale: Locale(identifier: Locale.current.identifier)
         )
     }
 
@@ -268,5 +267,4 @@ struct SharedShiftsCalendarView: View {
         showEarnings: true
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

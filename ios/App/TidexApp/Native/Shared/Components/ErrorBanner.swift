@@ -23,7 +23,7 @@ struct ErrorBanner: View {
 
             if let onRetry = onRetry {
                 Button(action: onRetry) {
-                    Text(LocalizationManager.shared.string("common.retry"))
+                    Text(.commonRetry)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexBlue)
                 }

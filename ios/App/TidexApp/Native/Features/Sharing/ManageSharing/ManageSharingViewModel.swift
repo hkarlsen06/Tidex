@@ -14,7 +14,6 @@ final class ManageSharingViewModel: ObservableObject {
     // MARK: - Dependencies
 
     private let sharingService: SharingService
-    private let localization = LocalizationManager.shared
 
     // MARK: - Published State
 
@@ -101,7 +100,7 @@ final class ManageSharingViewModel: ObservableObject {
             }
         } catch {
             logger.error("Failed to load friends: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.loadFriends")
+            errorMessage = String(localized: .sharingErrorLoadFriends)
         }
 
         isLoading = false
@@ -121,7 +120,7 @@ final class ManageSharingViewModel: ObservableObject {
 
         let identifier = addIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !identifier.isEmpty else {
-            addError = localization.string("sharing.error.addFriendEmpty")
+            addError = String(localized: .sharingErrorAddFriendEmpty)
             return
         }
 
@@ -145,7 +144,7 @@ final class ManageSharingViewModel: ObservableObject {
             addError = error.localizedDescription
         } catch {
             logger.error("Failed to add friend: \(error.localizedDescription)")
-            addError = localization.string("sharing.error.addFriend")
+            addError = String(localized: .sharingErrorAddFriend)
         }
 
         isAdding = false
@@ -181,7 +180,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             applyOptimisticEarningsUpdate(friendId: friend.id, showEarnings: !newValue)
             logger.error("Failed to toggle earnings: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.updateSettings")
+            errorMessage = String(localized: .sharingErrorUpdateSettings)
             Haptics.play(.error)
         }
 
@@ -221,7 +220,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             applyOptimisticBlockedUpdate(friendId: friend.id, blocked: !newValue)
             logger.error("Failed to toggle blocked: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.updateSettings")
+            errorMessage = String(localized: .sharingErrorUpdateSettings)
             Haptics.play(.error)
         }
 
@@ -257,7 +256,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             applyOptimisticMutedUpdate(friendId: friend.id, muted: !newValue)
             logger.error("Failed to toggle muted: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.updateNotifications")
+            errorMessage = String(localized: .sharingErrorUpdateNotifications)
             Haptics.play(.error)
         }
 
@@ -293,7 +292,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             revertOptimisticRemove(originalFriend: originalFriend)
             logger.error("Failed to remove share: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.removeShare")
+            errorMessage = String(localized: .sharingErrorRemoveShare)
             Haptics.play(.error)
         }
 
@@ -335,7 +334,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             revertOptimisticRemove(originalFriend: originalFriend)
             logger.error("Failed to remove sharer: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.removePerson")
+            errorMessage = String(localized: .sharingErrorRemovePerson)
             Haptics.play(.error)
         }
 
@@ -392,7 +391,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             revertOptimisticShareBack(originalFriend: originalFriend)
             logger.error("Failed to share back: \(error.localizedDescription)")
-            errorMessage = localization.string("sharing.error.shareBack")
+            errorMessage = String(localized: .sharingErrorShareBack)
         }
 
         actionInProgress = nil

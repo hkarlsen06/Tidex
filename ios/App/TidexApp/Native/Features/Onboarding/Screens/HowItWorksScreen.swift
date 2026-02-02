@@ -7,8 +7,7 @@ import SwiftUI
 /// - Vertical connector creates flow
 /// - Outcome whisper at bottom reminds user of the payoff
 struct HowItWorksScreen: View {
-    @Environment(\.localization) private var localization
-    @State private var stepsVisible = false
+        @State private var stepsVisible = false
     @State private var outcomeVisible = false
 
     var body: some View {
@@ -17,7 +16,7 @@ struct HowItWorksScreen: View {
                 .frame(height: 60)
 
             // Header - feels like a destination
-            Text(localization.string("onboarding.how.title"))
+            Text(.onboardingHowTitle)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
@@ -31,8 +30,8 @@ struct HowItWorksScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 StepItem(
                     icon: "clock.badge.checkmark",
-                    title: localization.string("onboarding.how.step1.title"),
-                    description: localization.string("onboarding.how.step1.desc"),
+                    title: String(localized: .onboardingHowStep1Title),
+                    description: String(localized: .onboardingHowStep1Desc),
                     index: 0,
                     isVisible: stepsVisible,
                     progressState: .active,
@@ -41,8 +40,8 @@ struct HowItWorksScreen: View {
 
                 StepItem(
                     icon: "banknote",
-                    title: localization.string("onboarding.how.step2.title"),
-                    description: localization.string("onboarding.how.step2.desc"),
+                    title: String(localized: .onboardingHowStep2Title),
+                    description: String(localized: .onboardingHowStep2Desc),
                     index: 1,
                     isVisible: stepsVisible,
                     progressState: .upcoming,
@@ -51,8 +50,8 @@ struct HowItWorksScreen: View {
 
                 StepItem(
                     icon: "chart.line.uptrend.xyaxis",
-                    title: localization.string("onboarding.how.step3.title"),
-                    description: localization.string("onboarding.how.step3.desc"),
+                    title: String(localized: .onboardingHowStep3Title),
+                    description: String(localized: .onboardingHowStep3Desc),
                     index: 2,
                     isVisible: stepsVisible,
                     progressState: .future,
@@ -66,7 +65,7 @@ struct HowItWorksScreen: View {
                 .frame(height: 28)
 
             // Outcome whisper - centered under the steps
-            Text(localization.string("onboarding.how.outcome"))
+            Text(.onboardingHowOutcome)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.tidexBlue)
                 .opacity(outcomeVisible ? 0.6 : 0)
@@ -93,5 +92,4 @@ struct HowItWorksScreen: View {
 #Preview {
     HowItWorksScreen()
         .background(Color.tidexBackground)
-        .environment(\.localization, LocalizationManager.shared)
 }

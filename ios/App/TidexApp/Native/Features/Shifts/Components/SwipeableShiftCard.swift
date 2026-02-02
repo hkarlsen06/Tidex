@@ -31,7 +31,7 @@ struct SwipeableShiftCard<Content: View>: View {
     let onEdit: () -> Void
     let onDelete: (() -> Void)?
 
-    @State private var offset: CGFloat = 0
+        @State private var offset: CGFloat = 0
     @State private var hasTriggeredHaptic = false
 
     /// Threshold for triggering action (40% of action width)
@@ -104,7 +104,7 @@ struct SwipeableShiftCard<Content: View>: View {
             VStack(spacing: 4) {
                 Image(systemName: "pencil")
                     .font(.system(size: 20, weight: .medium))
-                Text("Edit")
+                Text(.shiftsActionsEdit)
                     .font(.system(size: 11, weight: .medium))
             }
             .foregroundColor(.white)
@@ -121,7 +121,7 @@ struct SwipeableShiftCard<Content: View>: View {
             VStack(spacing: 4) {
                 Image(systemName: "trash")
                     .font(.system(size: 20, weight: .medium))
-                Text("Delete")
+                Text(.shiftsActionsDelete)
                     .font(.system(size: 11, weight: .medium))
             }
             .foregroundColor(.white)

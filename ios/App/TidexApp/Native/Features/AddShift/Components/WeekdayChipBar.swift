@@ -8,8 +8,7 @@ private let chipBarHeight: CGFloat = 44
 struct WeekdayChipBar: View {
     let selectedDays: [String: String]  // weekday "0"-"6" -> anchor ISO date
     let onRemove: (String) -> Void
-    @Environment(\.localization) private var localization
-
+    
     // Sorted weekdays (Monday first: 1, 2, 3, 4, 5, 6, 0)
     private var sortedWeekdays: [String] {
         let order = ["1", "2", "3", "4", "5", "6", "0"]
@@ -25,7 +24,7 @@ struct WeekdayChipBar: View {
                     Image(systemName: "star.fill")
                         .font(.system(size: 12))
                         .foregroundColor(.tidexTextMuted.opacity(0.5))
-                    Text(localization.string("addShift.selectAnchorDates"))
+                    Text(.addShiftSelectAnchorDates)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextMuted)
                 }
@@ -57,11 +56,10 @@ private struct WeekdayChip: View {
     let weekday: String
     let anchorDate: String
     let onRemove: () -> Void
-    @Environment(\.localization) private var localization
-
+    
     private var weekdayName: String {
         var calendar = Calendar.current
-        calendar.locale = Locale(identifier: localization.currentLocale.localeIdentifier)
+        calendar.locale = Locale(identifier: Locale.current.identifier)
         let names = calendar.shortWeekdaySymbols
         guard let index = Int(weekday), index >= 0, index < 7 else { return "" }
         return names[index]
@@ -72,7 +70,7 @@ private struct WeekdayChip: View {
         guard let date = Date.fromISODateString(anchorDate) else { return anchorDate }
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
-        formatter.locale = Locale(identifier: localization.currentLocale.localeIdentifier)
+        formatter.locale = Locale(identifier: Locale.current.identifier)
         return formatter.string(from: date)
     }
 
@@ -120,5 +118,4 @@ private struct WeekdayChip: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

@@ -8,8 +8,7 @@ struct OnboardingRateSlider: View {
     var currency: String? = nil  // Optional currency override (uses locale default if nil)
     var style: Style = .compact
 
-    @Environment(\.localization) private var localization
-    @State private var showingCustomInput = false
+        @State private var showingCustomInput = false
     @State private var inputText = ""
     @FocusState private var isInputFocused: Bool
 
@@ -30,7 +29,7 @@ struct OnboardingRateSlider: View {
     // MARK: - Currency-Aware Configuration
 
     private var isNorwegian: Bool {
-        localization.currentLocale == .norwegian
+        Locale.current.tidexIsNorwegian
     }
 
     /// Get the effective currency config (from parameter or locale default)
@@ -80,7 +79,7 @@ struct OnboardingRateSlider: View {
         VStack(spacing: 12) {
             // Current value display: "Your hourly rate" on left, "200 kr/t" on right
             HStack(spacing: 4) {
-                Text(localization.string("onboarding.slider.label"))
+                Text(.onboardingSliderLabel)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -122,7 +121,7 @@ struct OnboardingRateSlider: View {
     private var fullLayout: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Label
-            Text(localization.string("onboarding.personalize.wage.label"))
+            Text(.onboardingPersonalizeWageLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -168,7 +167,7 @@ struct OnboardingRateSlider: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             // Helper text
-            Text(localization.string("onboarding.personalize.wage.helper"))
+            Text(.onboardingPersonalizeWageHelper)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -312,7 +311,7 @@ struct OnboardingRateSlider: View {
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
-                        Button(localization.string("common.done")) {
+                        Button(String(localized: .commonDone)) {
                             applyCustomValue()
                         }
                         .fontWeight(.semibold)
@@ -350,7 +349,7 @@ struct OnboardingRateSlider: View {
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
-                        Button(localization.string("common.done")) {
+                        Button(String(localized: .commonDone)) {
                             applyCustomValue()
                         }
                         .fontWeight(.semibold)
@@ -377,12 +376,10 @@ struct OnboardingRateSlider: View {
     OnboardingRateSlider(value: .constant(200), style: .compact)
         .padding()
         .background(Color.tidexBackground)
-        .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Full") {
     OnboardingRateSlider(value: .constant(280), style: .full)
         .padding()
         .background(Color.tidexBackground)
-        .environment(\.localization, LocalizationManager.shared)
 }

@@ -12,8 +12,7 @@ struct FeaturedShiftCard: View {
     /// Progress through the shift (0-100), shows a subtle progress bar when provided (for active shifts)
     var progress: Double?
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     /// Animated progress value for smooth entrance animation
     @State private var animatedProgress: Double = 0
@@ -25,17 +24,17 @@ struct FeaturedShiftCard: View {
     }
 
     private var formattedHours: String {
-        ShiftCardFormatter.formattedHours(shift.paidHours, locale: localization.currentLocale)
+        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.current)
     }
 
     private var dateParts: ShiftCardDateParts {
-        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: localization.currentLocale)
+        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.current)
     }
 
     /// Footer label shown below the card - "Best shift" or countdown text
     private var footerText: String? {
         if isBestShift {
-            return localization.string("dashboard.bestShift")
+            return String(localized: .dashboardBestShift)
         }
         return countdownText
     }

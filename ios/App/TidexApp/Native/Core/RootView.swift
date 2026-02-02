@@ -5,7 +5,6 @@ import SwiftUI
 struct RootView: View {
     // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
     @ObservedObject private var coordinator = AppCoordinator.shared
-    @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
     @ObservedObject private var biometricService = BiometricAuthService.shared
     // Theme is handled at UIKit window level - no need to observe AppearanceManager here
@@ -111,7 +110,6 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
         .animation(.easeInOut(duration: 0.25), value: biometricService.isLocked)
         .environmentObject(coordinator)
-        .environment(\.localization, localization)
         // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
         // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
         .onAppear {
@@ -120,10 +118,10 @@ struct RootView: View {
                 showStorageWarning = true
             }
         }
-        .alert("Storage Issue", isPresented: $showStorageWarning) {
-            Button("OK", role: .cancel) { }
+        .alert(String(localized: .alertsStorageIssueTitle), isPresented: $showStorageWarning) {
+            Button(String(localized: .alertsOk), role: .cancel) { }
         } message: {
-            Text("Unable to save data to device storage. Your changes will not be saved when the app closes. Please restart the app or check your device storage.")
+            Text(.alertsStorageIssueMessage)
         }
     }
 }

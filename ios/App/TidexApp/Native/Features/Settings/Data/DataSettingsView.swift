@@ -3,8 +3,7 @@ import SwiftUI
 /// Data export settings view
 /// Allows users to export their shift data as PDF or CSV
 struct DataSettingsView: View {
-    @Environment(\.localization) private var localization
-    @StateObject private var viewModel = DataSettingsViewModel()
+        @StateObject private var viewModel = DataSettingsViewModel()
 
     var body: some View {
         ScrollView {
@@ -35,7 +34,7 @@ struct DataSettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("data.title"))
+        .navigationTitle(String(localized: .dataTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -53,12 +52,12 @@ struct DataSettingsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(localization.string("data.export.title"))
+            Text(.dataExportTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("data.export.description"))
+            Text(.dataExportDescription)
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -100,7 +99,7 @@ struct DataSettingsView: View {
                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                 .scaleEffect(0.8)
 
-            Text(localization.string("data.export.syncing"))
+            Text(.dataExportSyncing)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -116,12 +115,12 @@ struct DataSettingsView: View {
     private var periodSelectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("data.export.periodLabel"))
+            Text(.dataExportPeriodLabel)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
 
-            Text(localization.string("data.export.periodDescription"))
+            Text(.dataExportPeriodDescription)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -137,7 +136,7 @@ struct DataSettingsView: View {
                 Rectangle()
                     .fill(Color.tidexBorder)
                     .frame(height: 1)
-                Text(localization.string("common.or").uppercased())
+                Text(String(localized: .commonOr).uppercased())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
                 Rectangle()
@@ -173,7 +172,7 @@ struct DataSettingsView: View {
         let now = Date()
         let calendar = Calendar.current
         let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: localization.currentLocale == .norwegian ? "nb_NO" : "en_US")
+        dateFormatter.locale = Locale(identifier: Locale.current.tidexIsNorwegian ? "nb_NO" : "en_US")
 
         switch preset {
         case .lastMonth:
@@ -188,7 +187,7 @@ struct DataSettingsView: View {
         case .currentYear:
             return String(calendar.component(.year, from: now))
         case .custom:
-            return localization.string("data.export.customPeriod")
+            return String(localized: .dataExportCustomPeriod)
         }
     }
 
@@ -199,7 +198,7 @@ struct DataSettingsView: View {
             viewModel.selectedPreset = .custom
         } label: {
             VStack(alignment: .leading, spacing: 16) {
-                Text(localization.string("data.export.customPeriod"))
+                Text(.dataExportCustomPeriod)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -207,7 +206,7 @@ struct DataSettingsView: View {
                 HStack(spacing: 12) {
                     // From date
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(localization.string("data.export.fromLabel"))
+                        Text(.dataExportFromLabel)
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.tidexTextMuted)
                             .textCase(.uppercase)
@@ -227,7 +226,7 @@ struct DataSettingsView: View {
 
                     // To date
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(localization.string("data.export.toLabel"))
+                        Text(.dataExportToLabel)
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.tidexTextMuted)
                             .textCase(.uppercase)
@@ -248,7 +247,7 @@ struct DataSettingsView: View {
 
                 // Error message for invalid range
                 if viewModel.isCustomRangeInvalid {
-                    Text(localization.string("data.export.dateRangeError"))
+                    Text(.dataExportDateRangeError)
                         .font(.system(size: 12))
                         .foregroundColor(.tidexError)
                 }
@@ -275,16 +274,16 @@ struct DataSettingsView: View {
             exportCard(
                 icon: "doc.text.fill",
                 iconColor: Color(red: 1.0, green: 0.0, blue: 0.0), // Red for PDF
-                title: localization.string("data.export.pdf.title"),
-                description: localization.string("data.export.pdf.description"),
+                title: String(localized: .dataExportPdfTitle),
+                description: String(localized: .dataExportPdfDescription),
                 buttonLabel: viewModel.isExportingPdf
-                    ? localization.string("data.export.pdf.exporting")
-                    : localization.string("data.export.pdf.button"),
+                    ? String(localized: .dataExportPdfExporting)
+                    : String(localized: .dataExportPdfButton),
                 isLoading: viewModel.isExportingPdf,
                 buttonColor: Color(red: 1.0, green: 0.0, blue: 0.0)
             ) {
                 Task {
-                    await viewModel.exportShifts(format: .pdf, locale: localization.currentLocale)
+                    await viewModel.exportShifts(format: .pdf, locale: Locale.current)
                 }
             }
 
@@ -292,16 +291,16 @@ struct DataSettingsView: View {
             exportCard(
                 icon: "tablecells.fill",
                 iconColor: .tidexBlue,
-                title: localization.string("data.export.csv.title"),
-                description: localization.string("data.export.csv.description"),
+                title: String(localized: .dataExportCsvTitle),
+                description: String(localized: .dataExportCsvDescription),
                 buttonLabel: viewModel.isExportingCsv
-                    ? localization.string("data.export.csv.exporting")
-                    : localization.string("data.export.csv.button"),
+                    ? String(localized: .dataExportCsvExporting)
+                    : String(localized: .dataExportCsvButton),
                 isLoading: viewModel.isExportingCsv,
                 buttonColor: .tidexBlue
             ) {
                 Task {
-                    await viewModel.exportShifts(format: .csv, locale: localization.currentLocale)
+                    await viewModel.exportShifts(format: .csv, locale: Locale.current)
                 }
             }
         }
@@ -382,11 +381,11 @@ struct DataSettingsView: View {
 
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("data.export.about.title"))
+            Text(.dataExportAboutTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("data.export.about.description"))
+            Text(.dataExportAboutDescription)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -418,5 +417,4 @@ struct ShareSheet: UIViewControllerRepresentable {
     NavigationStack {
         DataSettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

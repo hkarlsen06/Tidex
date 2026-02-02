@@ -5,8 +5,7 @@ struct ShiftCompletionCelebrationView: View {
     let data: CelebrationData
     let onDismiss: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     @State private var showConfetti = false
     @State private var showCard = false
     @State private var showButton = false
@@ -15,8 +14,7 @@ struct ShiftCompletionCelebrationView: View {
 
     private var badgeText: String? {
         guard data.completedShiftCount > 1 else { return nil }
-        let format = localization.string("celebration.shiftsCompleted")
-        return String(format: format, data.completedShiftCount)
+        return String(localized: .celebrationShiftsCompleted(Int32(data.completedShiftCount)))
     }
 
     private var animateFromValue: Double? {
@@ -39,7 +37,7 @@ struct ShiftCompletionCelebrationView: View {
                         Spacer(minLength: 0)
 
                         VStack(spacing: Spacing.sm) {
-                            Text(localization.string("celebration.youEarned"))
+                            Text(.celebrationYouEarned)
                                 .font(.tidexHeadline)
                                 .foregroundColor(.tidexTextSecondary)
 
@@ -55,7 +53,7 @@ struct ShiftCompletionCelebrationView: View {
                             .minimumScaleFactor(0.32)
                             .lineLimit(1)
 
-                            Text(localization.string("celebration.soFarThisMonth"))
+                            Text(.celebrationSoFarThisMonth)
                                 .font(.tidexSubheadline)
                                 .foregroundColor(.tidexTextMuted)
                         }
@@ -85,7 +83,7 @@ struct ShiftCompletionCelebrationView: View {
                             .offset(y: showCard ? 0 : 24)
                             .animation(.spring(response: 0.45, dampingFraction: 0.8), value: showCard)
 
-                            Text(localization.string("celebration.greatJob"))
+                            Text(.celebrationGreatJob)
                                 .font(.tidexHeadline)
                                 .foregroundColor(.tidexTextPrimary)
                                 .padding(.top, Spacing.sm)
@@ -101,7 +99,7 @@ struct ShiftCompletionCelebrationView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            PrimaryButton(title: localization.string("celebration.continue")) {
+            PrimaryButton(title: String(localized: .celebrationContinue)) {
                 onDismiss()
             }
             .padding(.horizontal, Spacing.cardPadding)
@@ -219,5 +217,4 @@ struct ShiftCompletionCelebrationView: View {
         ),
         onDismiss: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

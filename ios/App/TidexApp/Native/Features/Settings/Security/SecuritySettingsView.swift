@@ -4,8 +4,7 @@ import CoreImage.CIFilterBuiltins
 /// Security settings view
 /// Displays password management, connected accounts, and MFA settings
 struct SecuritySettingsView: View {
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SecuritySettingsViewModel()
 
     var body: some View {
@@ -77,7 +76,7 @@ struct SecuritySettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("security.title"))
+        .navigationTitle(String(localized: .securityTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -92,11 +91,11 @@ struct SecuritySettingsView: View {
         .sheet(isPresented: $viewModel.showPhoneLinkingSheet) {
             phoneLinkingSheet
         }
-        .alert(localization.string("security.mfa.unenrollDialog.title"), isPresented: $viewModel.showUnenrollConfirmation) {
-            Button(localization.string("common.cancel"), role: .cancel) {
+        .alert(String(localized: .securityMfaUnenrollDialogTitle), isPresented: $viewModel.showUnenrollConfirmation) {
+            Button(String(localized: .commonCancel), role: .cancel) {
                 viewModel.factorToUnenroll = nil
             }
-            Button(localization.string("security.mfa.unenrollDialog.confirm"), role: .destructive) {
+            Button(String(localized: .securityMfaUnenrollDialogConfirm), role: .destructive) {
                 if let factor = viewModel.factorToUnenroll {
                     Task {
                         await viewModel.unenrollMFA(factor)
@@ -104,7 +103,7 @@ struct SecuritySettingsView: View {
                 }
             }
         } message: {
-            Text(localization.string("security.mfa.unenrollDialog.description"))
+            Text(.securityMfaUnenrollDialogDescription)
         }
     }
 
@@ -112,12 +111,12 @@ struct SecuritySettingsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(localization.string("security.title"))
+            Text(.securityTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("security.subtitle"))
+            Text(.securitySubtitle)
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -130,12 +129,12 @@ struct SecuritySettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("security.biometric.sectionTitle"))
+                Text(.securityBiometricSectionTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
 
-                Text(localization.string("security.biometric.sectionSubtitle"))
+                Text(.securityBiometricSectionSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -151,13 +150,13 @@ struct SecuritySettingsView: View {
 
                     // Content
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(localization.string("security.biometric.title", viewModel.biometricTypeName))
+                        Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
                         Text(viewModel.isBiometricLockEnabled
-                             ? localization.string("security.biometric.enabled")
-                             : localization.string("security.biometric.disabled"))
+                             ? String(localized: .securityBiometricEnabled)
+                             : String(localized: .securityBiometricDisabled))
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -195,7 +194,7 @@ struct SecuritySettingsView: View {
     private var passwordSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("security.password.sectionTitle"))
+            Text(.securityPasswordSectionTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
@@ -211,13 +210,13 @@ struct SecuritySettingsView: View {
 
                     // Content
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(localization.string("security.password.title"))
+                        Text(.securityPasswordTitle)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
                         Text(viewModel.hasPassword
-                             ? localization.string("security.password.hasPassword")
-                             : localization.string("security.password.noPassword"))
+                             ? String(localized: .securityPasswordHasPassword)
+                             : String(localized: .securityPasswordNoPassword))
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -229,8 +228,8 @@ struct SecuritySettingsView: View {
                         viewModel.showPasswordForm = true
                     } label: {
                         Text(viewModel.hasPassword
-                             ? localization.string("security.password.change")
-                             : localization.string("security.password.set"))
+                             ? String(localized: .securityPasswordChange)
+                             : String(localized: .securityPasswordSet))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(viewModel.hasPassword ? .tidexBlue : .white)
                             .padding(.horizontal, 16)
@@ -253,12 +252,12 @@ struct SecuritySettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("security.connections.sectionTitle"))
+                Text(.securityConnectionsSectionTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
 
-                Text(localization.string("security.connections.sectionSubtitle"))
+                Text(.securityConnectionsSectionSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -268,10 +267,10 @@ struct SecuritySettingsView: View {
                 // Phone connection
                 connectionRow(
                     icon: "phone.fill",
-                    title: localization.string("security.connections.phone.title"),
+                    title: String(localized: .securityConnectionsPhoneTitle),
                     isConnected: viewModel.hasPhoneConnected,
-                    connectedText: formatPhoneForDisplay(viewModel.phoneNumber) ?? localization.string("security.connections.phone.connected"),
-                    notConnectedText: localization.string("security.connections.phone.notConnected"),
+                    connectedText: formatPhoneForDisplay(viewModel.phoneNumber) ?? String(localized: .securityConnectionsPhoneConnected),
+                    notConnectedText: String(localized: .securityConnectionsPhoneNotConnected),
                     canDisconnect: viewModel.canUnlinkPhone,
                     onConnect: {
                         viewModel.showPhoneLinkingSheet = true
@@ -289,10 +288,10 @@ struct SecuritySettingsView: View {
                 // Google connection
                 connectionRow(
                     icon: "g.circle.fill",
-                    title: localization.string("security.connections.google.title"),
+                    title: String(localized: .securityConnectionsGoogleTitle),
                     isConnected: viewModel.hasGoogleConnected,
-                    connectedText: localization.string("security.connections.google.connected"),
-                    notConnectedText: localization.string("security.connections.google.notConnected"),
+                    connectedText: String(localized: .securityConnectionsGoogleConnected),
+                    notConnectedText: String(localized: .securityConnectionsGoogleNotConnected),
                     canDisconnect: viewModel.canDisconnectGoogle,
                     onConnect: {
                         Task { await viewModel.connectGoogle() }
@@ -310,10 +309,10 @@ struct SecuritySettingsView: View {
                 // Apple connection
                 connectionRow(
                     icon: "apple.logo",
-                    title: localization.string("security.connections.apple.title"),
+                    title: String(localized: .securityConnectionsAppleTitle),
                     isConnected: viewModel.hasAppleConnected,
-                    connectedText: localization.string("security.connections.apple.connected"),
-                    notConnectedText: localization.string("security.connections.apple.notConnected"),
+                    connectedText: String(localized: .securityConnectionsAppleConnected),
+                    notConnectedText: String(localized: .securityConnectionsAppleNotConnected),
                     canDisconnect: viewModel.canDisconnectApple,
                     onConnect: {
                         Task { await viewModel.connectApple() }
@@ -361,7 +360,7 @@ struct SecuritySettingsView: View {
                     .foregroundColor(.tidexTextSecondary)
 
                 if isConnected && !canDisconnect {
-                    Text(localization.string("security.connections.addOtherMethod"))
+                    Text(.securityConnectionsAddOtherMethod)
                         .font(.system(size: 11))
                         .foregroundColor(.tidexTextMuted)
                 }
@@ -379,7 +378,7 @@ struct SecuritySettingsView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexError))
                                 .scaleEffect(0.8)
                         } else {
-                            Text(localization.string("security.connections.disconnect"))
+                            Text(.securityConnectionsDisconnect)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.tidexError)
                                 .padding(.horizontal, 12)
@@ -396,7 +395,7 @@ struct SecuritySettingsView: View {
                             .font(.system(size: 14))
                             .foregroundColor(.tidexSuccess)
 
-                        Text(localization.string("security.connections.connected"))
+                        Text(.securityConnectionsConnected)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.tidexSuccess)
                     }
@@ -408,7 +407,7 @@ struct SecuritySettingsView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                             .scaleEffect(0.8)
                     } else {
-                        Text(localization.string("security.connections.connect"))
+                        Text(.securityConnectionsConnect)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.tidexBlue)
                             .padding(.horizontal, 12)
@@ -429,12 +428,12 @@ struct SecuritySettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("security.mfa.sectionTitle"))
+                Text(.securityMfaSectionTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
 
-                Text(localization.string("security.mfa.sectionSubtitle"))
+                Text(.securityMfaSectionSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -449,7 +448,7 @@ struct SecuritySettingsView: View {
                             .foregroundColor(.tidexTextMuted)
                             .frame(width: 32, height: 32)
 
-                        Text(localization.string("security.mfa.noFactors"))
+                        Text(.securityMfaNoFactors)
                             .font(.system(size: 14))
                             .foregroundColor(.tidexTextSecondary)
 
@@ -487,7 +486,7 @@ struct SecuritySettingsView: View {
                                 .font(.system(size: 18))
                         }
 
-                        Text(localization.string("security.mfa.addFactor"))
+                        Text(.securityMfaAddFactor)
                             .font(.system(size: 15, weight: .medium))
                     }
                     .foregroundColor(.tidexBlue)
@@ -546,7 +545,7 @@ struct SecuritySettingsView: View {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("security.mfa.addedOn").replacingOccurrences(of: "{date}", with: factor.formattedDate))
+                Text(String(localized: .securityMfaAddedOn(factor.formattedDate)))
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -576,10 +575,10 @@ struct SecuritySettingsView: View {
                 VStack(spacing: 24) {
                     // Instructions
                     Text(viewModel.hasPassword
-                         ? localization.string("security.password.changeInstructions")
+                         ? String(localized: .securityPasswordChangeInstructions)
                          : viewModel.hasPhoneConnected
-                         ? localization.string("security.password.setWithPhoneInstructions")
-                         : localization.string("security.password.setInstructions"))
+                         ? String(localized: .securityPasswordSetWithPhoneInstructions)
+                         : String(localized: .securityPasswordSetInstructions))
                         .font(.system(size: 14))
                         .foregroundColor(.tidexTextSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -624,10 +623,10 @@ struct SecuritySettingsView: View {
                                         .scaleEffect(0.8)
                                 }
                                 Text(viewModel.isSettingPassword
-                                     ? localization.string("security.password.setting")
+                                     ? String(localized: .securityPasswordSetting)
                                      : viewModel.hasPassword
-                                     ? localization.string("security.password.update")
-                                     : localization.string("security.password.set"))
+                                     ? String(localized: .securityPasswordUpdate)
+                                     : String(localized: .securityPasswordSet))
                             }
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
@@ -643,12 +642,12 @@ struct SecuritySettingsView: View {
             }
             .background(Color.tidexBackground)
             .navigationTitle(viewModel.hasPassword
-                             ? localization.string("security.password.changeTitle")
-                             : localization.string("security.password.setTitle"))
+                             ? String(localized: .securityPasswordChangeTitle)
+                             : String(localized: .securityPasswordSetTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         viewModel.resetPasswordForm()
                     }
                 }
@@ -673,8 +672,8 @@ struct SecuritySettingsView: View {
                                 .scaleEffect(0.8)
                         }
                         Text(viewModel.isSettingPassword
-                             ? localization.string("security.password.sendingCode")
-                             : localization.string("security.password.requestCode"))
+                             ? String(localized: .securityPasswordSendingCode)
+                             : String(localized: .securityPasswordRequestCode))
                     }
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
@@ -687,7 +686,7 @@ struct SecuritySettingsView: View {
             } else {
                 // OTP input
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(localization.string("security.password.otpLabel"))
+                    Text(.securityPasswordOtpLabel)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
 
@@ -718,12 +717,12 @@ struct SecuritySettingsView: View {
             // New password
             VStack(alignment: .leading, spacing: 6) {
                 Text(viewModel.hasPassword
-                     ? localization.string("security.password.newPasswordLabel")
-                     : localization.string("security.password.passwordLabel"))
+                     ? String(localized: .securityPasswordNewPasswordLabel)
+                     : String(localized: .securityPasswordPasswordLabel))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
-                SecureField(localization.string("security.password.passwordPlaceholder"), text: $viewModel.newPassword)
+                SecureField(String(localized: .securityPasswordPasswordPlaceholder), text: $viewModel.newPassword)
                     .font(.system(size: 16))
                     .foregroundColor(.tidexTextPrimary)
                     .padding(.horizontal, 12)
@@ -734,11 +733,11 @@ struct SecuritySettingsView: View {
 
             // Confirm password
             VStack(alignment: .leading, spacing: 6) {
-                Text(localization.string("security.password.confirmPasswordLabel"))
+                Text(.securityPasswordConfirmPasswordLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
-                SecureField(localization.string("security.password.passwordPlaceholder"), text: $viewModel.confirmPassword)
+                SecureField(String(localized: .securityPasswordPasswordPlaceholder), text: $viewModel.confirmPassword)
                     .font(.system(size: 16))
                     .foregroundColor(.tidexTextPrimary)
                     .padding(.horizontal, 12)
@@ -748,7 +747,7 @@ struct SecuritySettingsView: View {
             }
 
             // Password hint
-            Text(localization.string("security.password.hint"))
+            Text(.securityPasswordHint)
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -801,8 +800,8 @@ struct SecuritySettingsView: View {
                                         .scaleEffect(0.8)
                                 }
                                 Text(viewModel.isVerifyingMFA
-                                     ? localization.string("security.mfa.verifying")
-                                     : localization.string("security.mfa.verify"))
+                                     ? String(localized: .securityMfaVerifying)
+                                     : String(localized: .securityMfaVerify))
                             }
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
@@ -820,7 +819,7 @@ struct SecuritySettingsView: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "arrow.up.right.square")
-                                    Text(localization.string("security.mfa.openInApp"))
+                                    Text(.securityMfaOpenInApp)
                                 }
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.tidexBlue)
@@ -831,11 +830,11 @@ struct SecuritySettingsView: View {
                 .padding(24)
             }
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("security.mfa.enrollTitle"))
+            .navigationTitle(String(localized: .securityMfaEnrollTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         Task {
                             await viewModel.cancelMFAEnrollment()
                         }
@@ -849,7 +848,7 @@ struct SecuritySettingsView: View {
     @ViewBuilder
     private func qrCodeSection(_ totpUri: String) -> some View {
         VStack(spacing: 12) {
-            Text(localization.string("security.mfa.scanQR"))
+            Text(.securityMfaScanQR)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -879,7 +878,7 @@ struct SecuritySettingsView: View {
                             .font(.system(size: 60))
                             .foregroundColor(.tidexTextMuted)
 
-                        Text(localization.string("security.mfa.useSecretBelow"))
+                        Text(.securityMfaUseSecretBelow)
                             .font(.system(size: 12))
                             .foregroundColor(.tidexTextMuted)
                             .multilineTextAlignment(.center)
@@ -911,7 +910,7 @@ struct SecuritySettingsView: View {
     @ViewBuilder
     private func manualEntrySection(_ secret: String) -> some View {
         VStack(spacing: 8) {
-            Text(localization.string("security.mfa.manualEntry"))
+            Text(.securityMfaManualEntry)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -940,7 +939,7 @@ struct SecuritySettingsView: View {
 
     private var verificationCodeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("security.mfa.verifyLabel"))
+            Text(.securityMfaVerifyLabel)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -974,8 +973,8 @@ struct SecuritySettingsView: View {
                 VStack(spacing: 24) {
                     // Instructions
                     Text(viewModel.phoneLinkStep == .input
-                         ? localization.string("security.phoneLinking.instructionEnter")
-                         : localization.string("security.phoneLinking.instructionVerify"))
+                         ? String(localized: .securityPhoneLinkingInstructionEnter)
+                         : String(localized: .securityPhoneLinkingInstructionVerify))
                         .font(.system(size: 14))
                         .foregroundColor(.tidexTextSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1020,11 +1019,11 @@ struct SecuritySettingsView: View {
                             }
                             Text(viewModel.isLinkingPhone
                                  ? (viewModel.phoneLinkStep == .input
-                                    ? localization.string("security.phoneLinking.sending")
-                                    : localization.string("security.phoneLinking.verifying"))
+                                    ? String(localized: .securityPhoneLinkingSending)
+                                    : String(localized: .securityPhoneLinkingVerifying))
                                  : (viewModel.phoneLinkStep == .input
-                                    ? localization.string("security.phoneLinking.sendCode")
-                                    : localization.string("security.phoneLinking.verify")))
+                                    ? String(localized: .securityPhoneLinkingSendCode)
+                                    : String(localized: .securityPhoneLinkingVerify)))
                         }
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
@@ -1038,11 +1037,11 @@ struct SecuritySettingsView: View {
                 .padding(24)
             }
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("security.phoneLinking.title"))
+            .navigationTitle(String(localized: .securityPhoneLinkingTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         viewModel.resetPhoneLinkingForm()
                     }
                 }
@@ -1053,7 +1052,7 @@ struct SecuritySettingsView: View {
 
     private var phoneLinkInputSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(localization.string("security.phoneLinking.phoneLabel"))
+            Text(.securityPhoneLinkingPhoneLabel)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -1086,7 +1085,7 @@ struct SecuritySettingsView: View {
                     }
             }
 
-            Text(localization.string("security.phoneLinking.phoneHint"))
+            Text(.securityPhoneLinkingPhoneHint)
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -1110,7 +1109,7 @@ struct SecuritySettingsView: View {
                     viewModel.phoneLinkOtp = ""
                     viewModel.errorMessage = nil
                 } label: {
-                    Text(localization.string("security.phoneLinking.changeNumber"))
+                    Text(.securityPhoneLinkingChangeNumber)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexBlue)
                 }
@@ -1121,7 +1120,7 @@ struct SecuritySettingsView: View {
 
             // OTP input
             VStack(alignment: .leading, spacing: 6) {
-                Text(localization.string("security.phoneLinking.otpLabel"))
+                Text(.securityPhoneLinkingOtpLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -1184,5 +1183,4 @@ struct SecuritySettingsView: View {
     NavigationStack {
         SecuritySettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

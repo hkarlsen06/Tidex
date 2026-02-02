@@ -5,6 +5,46 @@
       "name": "http://localhost:3000/",
       "request": "launch",
       "url": "http://localhost:3000/"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tidex}/ios/App/Scripts",
+      "name": "Debug convert-strings (ios/App/Scripts)",
+      "target": "convert-strings",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug convert-strings (ios/App/Scripts)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tidex}/ios/App/Scripts",
+      "name": "Release convert-strings (ios/App/Scripts)",
+      "target": "convert-strings",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release convert-strings (ios/App/Scripts)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tidex}/ios/App/Scripts",
+      "name": "Debug validate-localization (ios/App/Scripts)",
+      "target": "validate-localization",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug validate-localization (ios/App/Scripts)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tidex}/ios/App/Scripts",
+      "name": "Release validate-localization (ios/App/Scripts)",
+      "target": "validate-localization",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release validate-localization (ios/App/Scripts)"
     }
   ]
 }

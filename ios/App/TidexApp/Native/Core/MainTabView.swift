@@ -12,7 +12,6 @@ extension Notification.Name {
 /// Currently a placeholder - will be expanded with full dashboard functionality
 struct MainTabView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
     @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
     @ObservedObject private var monthContext = SharedMonthContext.shared
     @ObservedObject private var impersonationManager = ImpersonationManager.shared
@@ -59,13 +58,13 @@ struct MainTabView: View {
             }
         }
 
-        var localizationKey: String {
+        var localizationKey: LocalizedStringResource {
             switch self {
-            case .home: return "tabs.home"
-            case .shifts: return "tabs.shifts"
-            case .add: return "tabs.add"
-            case .stats: return "tabs.stats"
-            case .sharing: return "tabs.sharing"
+            case .home: return .tabsHome
+            case .shifts: return .tabsShifts
+            case .add: return .tabsAdd
+            case .stats: return .tabsStats
+            case .sharing: return .tabsSharing
             }
         }
     }
@@ -122,31 +121,31 @@ struct MainTabView: View {
                 TabView(selection: tabSelection) {
                     DashboardView(selectedTab: $selectedTab)
                         .tabItem {
-                            Label(localization.string(Tab.home.localizationKey), systemImage: Tab.home.icon)
+                            Label(String(localized: Tab.home.localizationKey), systemImage: Tab.home.icon)
                         }
                         .tag(Tab.home)
 
                     ShiftsView(selectedTab: $selectedTab)
                         .tabItem {
-                            Label(localization.string(Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
+                            Label(String(localized: Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
                         }
                         .tag(Tab.shifts)
 
                     AddShiftView(selectedTab: $selectedTab, isKeyboardVisible: $isKeyboardVisible)
                         .tabItem {
-                            Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
+                            Label(String(localized: Tab.add.localizationKey), systemImage: Tab.add.icon)
                         }
                         .tag(Tab.add)
 
                     StatsView(selectedTab: $selectedTab)
                         .tabItem {
-                            Label(localization.string(Tab.stats.localizationKey), systemImage: Tab.stats.icon)
+                            Label(String(localized: Tab.stats.localizationKey), systemImage: Tab.stats.icon)
                         }
                         .tag(Tab.stats)
 
                     SharingView(selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
                         .tabItem {
-                            Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
+                            Label(String(localized: Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
                         }
                         .tag(Tab.sharing)
                 }
@@ -327,17 +326,16 @@ struct MainTabView: View {
 /// Used for tabs that are not yet implemented
 struct PlaceholderTabView: View {
     let icon: String
-    let titleKey: String
-    let descriptionKey: String
+    let titleKey: LocalizedStringResource
+    let descriptionKey: LocalizedStringResource
     let supportsRefresh: Bool
 
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-
+    
     init(
         icon: String,
-        titleKey: String,
-        descriptionKey: String,
+        titleKey: LocalizedStringResource,
+        descriptionKey: LocalizedStringResource,
         supportsRefresh: Bool = true
     ) {
         self.icon = icon
@@ -358,8 +356,8 @@ struct PlaceholderTabView: View {
                     ScrollView {
                         PlaceholderContent(
                             icon: icon,
-                            title: localization.string(titleKey),
-                            description: localization.string(descriptionKey)
+                            title: String(localized: titleKey),
+                            description: String(localized: descriptionKey)
                         )
                         .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
                     }
@@ -409,8 +407,8 @@ struct ShiftsPlaceholderView: View {
     var body: some View {
         PlaceholderTabView(
             icon: "calendar",
-            titleKey: "tabs.shifts",
-            descriptionKey: "placeholder.shiftsDescription"
+            titleKey: .tabsShifts,
+            descriptionKey: .placeholderShiftsDescription
         )
     }
 }
@@ -419,8 +417,8 @@ struct AddShiftPlaceholderView: View {
     var body: some View {
         PlaceholderTabView(
             icon: "plus.circle.fill",
-            titleKey: "tabs.add",
-            descriptionKey: "placeholder.addShiftDescription",
+            titleKey: .tabsAdd,
+            descriptionKey: .placeholderAddShiftDescription,
             supportsRefresh: false
         )
     }
@@ -430,8 +428,8 @@ struct StatsPlaceholderView: View {
     var body: some View {
         PlaceholderTabView(
             icon: "chart.bar.xaxis",
-            titleKey: "tabs.stats",
-            descriptionKey: "placeholder.statsDescription"
+            titleKey: .tabsStats,
+            descriptionKey: .placeholderStatsDescription
         )
     }
 }
@@ -440,8 +438,8 @@ struct SharingPlaceholderView: View {
     var body: some View {
         PlaceholderTabView(
             icon: "person.2.fill",
-            titleKey: "tabs.sharing",
-            descriptionKey: "placeholder.sharingDescription"
+            titleKey: .tabsSharing,
+            descriptionKey: .placeholderSharingDescription
         )
     }
 }
@@ -449,5 +447,4 @@ struct SharingPlaceholderView: View {
 #Preview {
     MainTabView()
         .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

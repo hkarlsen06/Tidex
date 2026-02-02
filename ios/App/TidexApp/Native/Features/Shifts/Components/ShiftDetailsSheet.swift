@@ -24,8 +24,7 @@ struct ShiftDetailsSheet: View {
     /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
     let tariffRules: [SupplementRule]
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Edit Mode State
@@ -98,7 +97,7 @@ struct ShiftDetailsSheet: View {
         }
 
         let formatter = DateFormatter()
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
         formatter.dateFormat = "EEEE, d. MMMM yyyy"
         return formatter.string(from: date).capitalized
@@ -109,7 +108,7 @@ struct ShiftDetailsSheet: View {
     }
 
     private var formattedHours: String {
-        let hoursLabel = localization.currentLocale == .norwegian ? "timer" : "hours"
+        let hoursLabel = Locale.current.tidexIsNorwegian ? "timer" : "hours"
         return String(format: "%.2f %@", shift.paidHours, hoursLabel)
     }
 
@@ -232,13 +231,13 @@ struct ShiftDetailsSheet: View {
             }
             .background(Color.tidexBackground)
             .navigationTitle(isEditing
-                ? localization.string("shifts.editTitle")
-                : localization.string("shifts.detailsTitle"))
+                ? String(localized: .shiftsEditTitle)
+                : String(localized: .shiftsDetailsTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if isEditing {
-                        Button(localization.string("common.cancel")) {
+                        Button(String(localized: .commonCancel)) {
                             cancelEditing()
                         }
                         .font(.system(size: 16, weight: .medium))
@@ -247,7 +246,7 @@ struct ShiftDetailsSheet: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if isEditing {
-                        Button(localization.string("common.save")) {
+                        Button(String(localized: .commonSave)) {
                             saveChanges()
                         }
                         .font(.system(size: 16, weight: .semibold))
@@ -255,7 +254,7 @@ struct ShiftDetailsSheet: View {
                         .disabled(isSaving || !hasChanges)
                         .opacity(isSaving || !hasChanges ? 0.5 : 1)
                     } else {
-                        Button(localization.string("common.done")) {
+                        Button(String(localized: .commonDone)) {
                             dismiss()
                         }
                         .font(.system(size: 16, weight: .semibold))
@@ -431,7 +430,7 @@ struct ShiftDetailsSheet: View {
             HStack {
                 Image(systemName: "clock")
                     .foregroundColor(.tidexBlue)
-                Text(localization.string("shifts.timeSection"))
+                Text(.shiftsTimeSection)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextSecondary)
                 Spacer()
@@ -440,7 +439,7 @@ struct ShiftDetailsSheet: View {
             // Time details card
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("shifts.timeRange"))
+                    Text(.shiftsTimeRange)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextMuted)
                     Text(formattedTimeRange)
@@ -451,7 +450,7 @@ struct ShiftDetailsSheet: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(localization.string("shifts.duration"))
+                    Text(.shiftsDuration)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextMuted)
                     Text(formattedHours)
@@ -475,7 +474,7 @@ struct ShiftDetailsSheet: View {
             HStack {
                 Image(systemName: "pencil")
                     .foregroundColor(.tidexBlue)
-                Text(localization.string("shifts.editTimeSection"))
+                Text(.shiftsEditTimeSection)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextSecondary)
                 Spacer()
@@ -485,7 +484,7 @@ struct ShiftDetailsSheet: View {
             VStack(spacing: 16) {
                 // Date picker row
                 HStack {
-                    Text(localization.string("shifts.date"))
+                    Text(.shiftsDate)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexTextSecondary)
                     Spacer()
@@ -502,7 +501,7 @@ struct ShiftDetailsSheet: View {
 
                 // Start time row
                 HStack {
-                    Text(localization.string("shifts.startTime"))
+                    Text(.shiftsStartTime)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexTextSecondary)
                     Spacer()
@@ -521,7 +520,7 @@ struct ShiftDetailsSheet: View {
 
                 // End time row
                 HStack {
-                    Text(localization.string("shifts.endTime"))
+                    Text(.shiftsEndTime)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexTextSecondary)
                     Spacer()
@@ -542,7 +541,7 @@ struct ShiftDetailsSheet: View {
                         Image(systemName: "moon.fill")
                             .font(.system(size: 12))
                             .foregroundColor(.tidexBlue)
-                        Text(localization.string("shifts.crossMidnightInfo"))
+                        Text(.shiftsCrossMidnightInfo)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                         Spacer()
@@ -556,7 +555,7 @@ struct ShiftDetailsSheet: View {
                         Image(systemName: "info.circle")
                             .font(.system(size: 14))
                             .foregroundColor(.tidexBlue)
-                        Text(localization.string("shifts.virtualConversionInfo"))
+                        Text(.shiftsVirtualConversionInfo)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                         Spacer()
@@ -617,7 +616,7 @@ struct ShiftDetailsSheet: View {
                         Image(systemName: "checkmark")
                             .font(.system(size: 15, weight: .medium))
                     }
-                    Text(localization.string("common.saveChanges"))
+                    Text(.commonSaveChanges)
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -632,7 +631,7 @@ struct ShiftDetailsSheet: View {
             Button {
                 cancelEditing()
             } label: {
-                Text(localization.string("common.cancel"))
+                Text(.commonCancel)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
@@ -659,7 +658,7 @@ struct ShiftDetailsSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "pencil")
                             .font(.system(size: 15, weight: .medium))
-                        Text(localization.string("shifts.editButton"))
+                        Text(.shiftsEditButton)
                             .font(.system(size: 15, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -682,7 +681,7 @@ struct ShiftDetailsSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "repeat")
                             .font(.system(size: 15, weight: .medium))
-                        Text(localization.string("shifts.editRecurringButton"))
+                        Text(.shiftsEditRecurringButton)
                             .font(.system(size: 15, weight: .semibold))
                     }
                     .foregroundColor(.tidexBlue)
@@ -706,7 +705,7 @@ struct ShiftDetailsSheet: View {
             HStack {
                 Image(systemName: "creditcard")
                     .foregroundColor(.tidexBlue)
-                Text(localization.string("shifts.earningsSection"))
+                Text(.shiftsEarningsSection)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextSecondary)
                 Spacer()
@@ -717,7 +716,7 @@ struct ShiftDetailsSheet: View {
                 // Base Pay (only show when there are supplements)
                 if hasSupplementBreakdown {
                     earningsRow(
-                        label: localization.string("shifts.basePay"),
+                        label: String(localized: .shiftsBasePay),
                         value: formatCurrency(shift.computed.basePay)
                     )
 
@@ -731,7 +730,7 @@ struct ShiftDetailsSheet: View {
 
                 // Gross
                 earningsRow(
-                    label: localization.string("shifts.grossPay"),
+                    label: String(localized: .shiftsGrossPay),
                     value: formatCurrency(shift.grossPay),
                     isHighlighted: !showTaxBreakdown && !hasSupplementBreakdown
                 )
@@ -741,7 +740,7 @@ struct ShiftDetailsSheet: View {
 
                     // Tax deduction
                     earningsRow(
-                        label: localization.string("shifts.taxDeduction"),
+                        label: String(localized: .shiftsTaxDeduction),
                         value: "−\(formatCurrency(shift.taxAmount))",
                         valueColor: .tidexError
                     )
@@ -750,7 +749,7 @@ struct ShiftDetailsSheet: View {
 
                     // Net (highlighted)
                     earningsRow(
-                        label: localization.string("shifts.netPay"),
+                        label: String(localized: .shiftsNetPay),
                         value: formatCurrency(shift.netPay),
                         isHighlighted: true
                     )
@@ -767,7 +766,7 @@ struct ShiftDetailsSheet: View {
                         HStack(spacing: 6) {
                             Image(systemName: "slider.horizontal.3")
                                 .font(.system(size: 13))
-                            Text(localization.string("supplements.editButton"))
+                            Text(.supplementsEditButton)
                                 .font(.system(size: 14, weight: .medium))
                         }
                         .foregroundColor(.tidexBlue)
@@ -794,12 +793,12 @@ struct ShiftDetailsSheet: View {
             // Total supplement header with optional "Customized" badge
             HStack {
                 HStack(spacing: 8) {
-                    Text(localization.string("shifts.totalSupplement"))
+                    Text(.shiftsTotalSupplement)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexTextSecondary)
 
                     if hasCustomSupplements {
-                        Text(localization.string("shifts.customized"))
+                        Text(.shiftsCustomized)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.tidexBlue)
                             .padding(.horizontal, 8)
@@ -846,7 +845,7 @@ struct ShiftDetailsSheet: View {
 
             // Supplement label and amount
             HStack {
-                Text(localization.string("shifts.supplementLabel"))
+                Text(.shiftsSupplementLabel)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -896,10 +895,10 @@ struct ShiftDetailsSheet: View {
                 .foregroundColor(.tidexBlue)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(localization.string("shifts.recurringShift"))
+                Text(.shiftsRecurringShift)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextPrimary)
-                Text(localization.string("shifts.recurringShiftDescription"))
+                Text(.shiftsRecurringShiftDescription)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -920,8 +919,8 @@ struct ShiftDetailsSheet: View {
                 Image(systemName: isVirtual ? "minus.circle" : "trash")
                     .font(.system(size: 15, weight: .medium))
                 Text(isVirtual
-                    ? localization.string("shifts.excludeButton")
-                    : localization.string("shifts.deleteButton"))
+                    ? String(localized: .shiftsExcludeButton)
+                    : String(localized: .shiftsDeleteButton))
                     .font(.system(size: 15, weight: .semibold))
             }
             .foregroundColor(.white)

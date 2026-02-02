@@ -22,7 +22,6 @@ final class CountdownManager: ObservableObject {
     private var startTime: String?
     private var endTime: String?
     private var payrollDate: Date?
-    private var isNorwegian: Bool = false
 
     // MARK: - Public Methods
 
@@ -31,14 +30,12 @@ final class CountdownManager: ObservableObject {
         shiftDate: String?,
         startTime: String?,
         endTime: String?,
-        payrollDate: Date?,
-        isNorwegian: Bool
+        payrollDate: Date?
     ) {
         self.shiftDate = shiftDate
         self.startTime = startTime
         self.endTime = endTime
         self.payrollDate = payrollDate
-        self.isNorwegian = isNorwegian
 
         // Update immediately
         updateCountdowns()
@@ -74,8 +71,7 @@ final class CountdownManager: ObservableObject {
             let (text, isActive, progress) = CountdownFormatter.formatShiftCountdown(
                 shiftDate: shiftDate,
                 startTime: startTime,
-                endTime: endTime,
-                isNorwegian: isNorwegian
+                endTime: endTime
             )
             self.shiftCountdownText = text
             self.isShiftActive = isActive
@@ -89,8 +85,7 @@ final class CountdownManager: ObservableObject {
         // Update payroll countdown
         if let payrollDate = payrollDate {
             let (text, isPast, isToday) = CountdownFormatter.formatPayrollCountdown(
-                payrollDate: payrollDate,
-                isNorwegian: isNorwegian
+                payrollDate: payrollDate
             )
             self.payrollCountdownText = text
             self.isPayrollPast = isPast

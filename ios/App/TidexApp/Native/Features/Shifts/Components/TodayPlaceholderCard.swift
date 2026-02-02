@@ -7,15 +7,14 @@ struct TodayPlaceholderCard: View {
     /// Callback when the card is tapped
     let onTap: () -> Void
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
         let date = Date()
         let formatter = DateFormatter()
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
 
         // Get day name (full)

@@ -5,8 +5,7 @@ import SwiftUI
 /// Main pay settings screen displaying wage history timeline and global settings
 struct PaySettingsView: View {
     @StateObject private var viewModel = PaySettingsViewModel()
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         ZStack {
             Color.tidexBackground
@@ -20,7 +19,7 @@ struct PaySettingsView: View {
                 mainContent
             }
         }
-        .navigationTitle(localization.string("settings.pay.title"))
+        .navigationTitle(String(localized: .settingsPayTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .sheet(isPresented: $viewModel.showingEditor) {
@@ -46,32 +45,32 @@ struct PaySettingsView: View {
             )
         }
         .confirmationDialog(
-            localization.string("settings.pay.deleteConfirmTitle"),
+            String(localized: .settingsPayDeleteConfirmTitle),
             isPresented: $viewModel.showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button(role: .destructive) {
                 Task { await viewModel.confirmDelete() }
             } label: {
-                Text(localization.string("common.delete"))
+                Text(.commonDelete)
             }
 
             Button(role: .cancel) {
                 viewModel.cancelDelete()
             } label: {
-                Text(localization.string("common.cancel"))
+                Text(.commonCancel)
             }
         } message: {
             Text(deleteConfirmationMessage)
         }
         .alert(
-            localization.string("common.error"),
+            String(localized: .commonError),
             isPresented: .init(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.clearMessages() } }
             )
         ) {
-            Button(localization.string("common.ok")) {
+            Button(String(localized: .commonOk)) {
                 viewModel.clearMessages()
             }
         } message: {
@@ -92,7 +91,7 @@ struct PaySettingsView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBrandPrimary))
 
-            Text(localization.string("common.loading"))
+            Text(.commonLoading)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -152,8 +151,8 @@ struct PaySettingsView: View {
     // MARK: - Tip Box
 
     private var tipText: AttributedString {
-        let tipLabel = localization.string("settings.pay.timeline.tipLabel")
-        let infoTip = localization.string("settings.pay.timeline.infoTip")
+        let tipLabel = String(localized: .settingsPayTimelineTipLabel)
+        let infoTip = String(localized: .settingsPayTimelineInfoTip)
 
         var result = AttributedString("\(tipLabel) \(infoTip)")
 
@@ -181,12 +180,12 @@ struct PaySettingsView: View {
     @ViewBuilder
     private var headerSection: some View {
         VStack(spacing: 8) {
-            Text(localization.string("settings.pay.title"))
+            Text(.settingsPayTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("settings.pay.subtitle"))
+            Text(.settingsPaySubtitle)
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -199,7 +198,7 @@ struct PaySettingsView: View {
 
     private var deleteConfirmationMessage: String {
         let count = viewModel.affectedShiftCount
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
 
         if count == 0 {
             return isNorwegian
@@ -223,5 +222,4 @@ struct PaySettingsView: View {
     NavigationStack {
         PaySettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

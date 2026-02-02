@@ -10,7 +10,6 @@ final class ResetPasswordViewModel: ObservableObject {
     // MARK: - Dependencies
 
     private let authService: AuthService
-    private let localization: LocalizationManager
 
     // MARK: - Published State
 
@@ -111,10 +110,8 @@ final class ResetPasswordViewModel: ObservableObject {
 
     init(
         authService: AuthService? = nil,
-        localization: LocalizationManager? = nil
     ) {
         self.authService = authService ?? AuthService.shared
-        self.localization = localization ?? LocalizationManager.shared
     }
 
     deinit {
@@ -137,17 +134,17 @@ final class ResetPasswordViewModel: ObservableObject {
             switch inputType {
             case .email:
                 try await authService.sendPasswordResetEmail(email: emailOrPhone)
-                successMessage = localization.string("resetPassword.success.emailSent")
+                successMessage = String(localized: .resetPasswordSuccessEmailSent)
                 // For email, they'll receive a link - show success state
                 currentStep = .success
 
             case .phone:
                 try await authService.sendPasswordResetOTP(phone: normalizedPhone)
-                successMessage = localization.string("resetPassword.success.otpSent")
+                successMessage = String(localized: .resetPasswordSuccessOtpSent)
                 currentStep = .otp
 
             case .unknown:
-                fieldErrors.emailOrPhone = localization.string("resetPassword.errors.invalidEmailOrPhone")
+                fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
             }
         } catch {
             handleError(error)
@@ -186,7 +183,7 @@ final class ResetPasswordViewModel: ObservableObject {
 
         do {
             try await authService.updatePassword(newPassword: newPassword)
-            successMessage = localization.string("resetPassword.success.passwordUpdated")
+            successMessage = String(localized: .resetPasswordSuccessPasswordUpdated)
             currentStep = .success
         } catch {
             handleError(error)
@@ -226,7 +223,7 @@ final class ResetPasswordViewModel: ObservableObject {
 
         do {
             try await authService.sendPasswordResetOTP(phone: normalizedPhone)
-            successMessage = localization.string("resetPassword.success.otpResent")
+            successMessage = String(localized: .resetPasswordSuccessOtpResent)
         } catch {
             handleError(error)
         }
@@ -243,12 +240,12 @@ final class ResetPasswordViewModel: ObservableObject {
         let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmed.isEmpty {
-            fieldErrors.emailOrPhone = localization.string("resetPassword.errors.emailOrPhoneRequired")
+            fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsEmailOrPhoneRequired)
             return false
         }
 
         if inputType == .unknown {
-            fieldErrors.emailOrPhone = localization.string("resetPassword.errors.invalidEmailOrPhone")
+            fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
             return false
         }
 
@@ -257,12 +254,12 @@ final class ResetPasswordViewModel: ObservableObject {
 
     private func validateOTP() -> Bool {
         if otpCode.isEmpty {
-            fieldErrors.otp = localization.string("otp.errors.codeRequired")
+            fieldErrors.otp = String(localized: .otpErrorsCodeRequired)
             return false
         }
 
         if otpCode.count != 6 {
-            fieldErrors.otp = localization.string("otp.errors.codeInvalid")
+            fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
             return false
         }
 
@@ -273,18 +270,18 @@ final class ResetPasswordViewModel: ObservableObject {
         var isValid = true
 
         if newPassword.isEmpty {
-            fieldErrors.newPassword = localization.string("resetPassword.errors.passwordRequired")
+            fieldErrors.newPassword = String(localized: .resetPasswordErrorsPasswordRequired)
             isValid = false
         } else if newPassword.count < 8 {
-            fieldErrors.newPassword = localization.string("resetPassword.errors.passwordTooShort")
+            fieldErrors.newPassword = String(localized: .resetPasswordErrorsPasswordTooShort)
             isValid = false
         }
 
         if confirmPassword.isEmpty {
-            fieldErrors.confirmPassword = localization.string("resetPassword.errors.confirmPasswordRequired")
+            fieldErrors.confirmPassword = String(localized: .resetPasswordErrorsConfirmPasswordRequired)
             isValid = false
         } else if newPassword != confirmPassword {
-            fieldErrors.confirmPassword = localization.string("resetPassword.errors.passwordMismatch")
+            fieldErrors.confirmPassword = String(localized: .resetPasswordErrorsPasswordMismatch)
             isValid = false
         }
 

@@ -13,8 +13,7 @@ struct GlobalPaySettingsCard: View {
     let onUpdateHalfTaxMonth: (Int?) async -> Void
     let onUpdateCurrency: (String) async -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     @State private var currency: String = "kr"
     @State private var monthlyGoalText: String = ""
     @State private var payrollDay: Int = 1
@@ -25,7 +24,7 @@ struct GlobalPaySettingsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Section header
-            Text(localization.string("settings.pay.global.title"))
+            Text(.settingsPayGlobalTitle)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -91,7 +90,7 @@ struct GlobalPaySettingsCard: View {
     @ViewBuilder
     private var currencyInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.global.currency"))
+            Text(.settingsPayGlobalCurrency)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -126,7 +125,7 @@ struct GlobalPaySettingsCard: View {
             .disabled(!canChangeCurrency)
 
             if !canChangeCurrency {
-                Text(localization.currentLocale == .norwegian
+                Text(Locale.current.tidexIsNorwegian
                      ? "Valuta kan ikke endres når du har tariff-lønn, siden den er bundet til norske kroner"
                      : "Currency cannot be changed when using tariff wage settings")
                     .font(.system(size: 12))
@@ -140,13 +139,13 @@ struct GlobalPaySettingsCard: View {
     @ViewBuilder
     private var monthlyGoalInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.global.monthlyGoal"))
+            Text(.settingsPayGlobalMonthlyGoal)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
             HStack {
                 TextField(
-                    localization.string("settings.pay.global.monthlyGoalPlaceholder"),
+                    String(localized: .settingsPayGlobalMonthlyGoalPlaceholder),
                     text: $monthlyGoalText
                 )
                 .keyboardType(.numberPad)
@@ -175,7 +174,7 @@ struct GlobalPaySettingsCard: View {
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            Text(localization.string("settings.pay.global.monthlyGoalHelper"))
+            Text(.settingsPayGlobalMonthlyGoalHelper)
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -186,7 +185,7 @@ struct GlobalPaySettingsCard: View {
     @ViewBuilder
     private var payrollDayInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.global.payrollDay"))
+            Text(.settingsPayGlobalPayrollDay)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -213,14 +212,14 @@ struct GlobalPaySettingsCard: View {
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            Text(localization.string("settings.pay.global.payrollDayHelper"))
+            Text(.settingsPayGlobalPayrollDayHelper)
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }
     }
 
     private func formatPayrollDay(_ day: Int) -> String {
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         if isNorwegian {
             return "\(day). hver måned"
         } else {
@@ -240,16 +239,16 @@ struct GlobalPaySettingsCard: View {
     @ViewBuilder
     private var halfTaxMonthPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.global.halfTaxMonth"))
+            Text(.settingsPayGlobalHalfTaxMonth)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
             Picker("", selection: $halfTaxMonth) {
-                Text(localization.string("settings.pay.global.halfTaxMonthOff"))
+                Text(.settingsPayGlobalHalfTaxMonthOff)
                     .tag(nil as Int?)
-                Text(localization.string("settings.pay.global.halfTaxMonthNovember"))
+                Text(.settingsPayGlobalHalfTaxMonthNovember)
                     .tag(11 as Int?)
-                Text(localization.string("settings.pay.global.halfTaxMonthDecember"))
+                Text(.settingsPayGlobalHalfTaxMonthDecember)
                     .tag(12 as Int?)
             }
             .pickerStyle(.menu)
@@ -265,7 +264,7 @@ struct GlobalPaySettingsCard: View {
                 }
             }
 
-            Text(localization.string("settings.pay.global.halfTaxMonthHelper"))
+            Text(.settingsPayGlobalHalfTaxMonthHelper)
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -280,8 +279,7 @@ private struct CurrencyPickerSheet: View {
     @Binding var isPresented: Bool
     let onSelect: (String) -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -321,11 +319,11 @@ private struct CurrencyPickerSheet: View {
                     .padding(.top, 8)
                 }
             }
-            .navigationTitle(localization.string("settings.pay.global.currencyTitle"))
+            .navigationTitle(String(localized: .settingsPayGlobalCurrencyTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         isPresented = false
                     }
                 }
@@ -380,5 +378,4 @@ private struct CurrencyRow: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

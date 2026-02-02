@@ -15,14 +15,13 @@ struct AddFriendForm: View {
     let onAdd: () -> Void
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-    @FocusState private var isFocused: Bool
+        @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(spacing: 16) {
             // Header with expand button
             HStack {
-                Text(localization.string("sharing.addFriend"))
+                Text(.sharingAddFriend)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
@@ -71,7 +70,7 @@ struct AddFriendForm: View {
                     // Input field
                     VStack(alignment: .leading, spacing: 6) {
                         TextField(
-                            localization.string("sharing.emailOrPhone"),
+                            String(localized: .sharingEmailOrPhone),
                             text: $identifier
                         )
                         .textFieldStyle(TidexTextFieldStyle())
@@ -96,7 +95,7 @@ struct AddFriendForm: View {
                             .font(.system(size: 16))
                             .foregroundColor(.tidexTextMuted)
 
-                        Toggle(localization.string("sharing.showEarnings"), isOn: $showEarnings)
+                        Toggle(String(localized: .sharingShowEarnings), isOn: $showEarnings)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextPrimary)
                             .toggleStyle(SwitchToggleStyle(tint: .green))
@@ -109,7 +108,7 @@ struct AddFriendForm: View {
                         Spacer()
 
                         Button(action: onCancel) {
-                            Text(localization.string("common.cancel"))
+                            Text(.commonCancel)
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.tidexTextMuted)
                         }
@@ -123,7 +122,7 @@ struct AddFriendForm: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
                                 }
-                                Text(localization.string("sharing.add"))
+                                Text(.sharingAdd)
                                     .font(.system(size: 15, weight: .semibold))
                             }
                             .foregroundColor(.white)
@@ -223,5 +222,4 @@ struct TidexTextFieldStyle: TextFieldStyle {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

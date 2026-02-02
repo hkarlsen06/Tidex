@@ -24,6 +24,8 @@ next-env.d.ts
 .DS_Store
 *.pem
 *.log
+.build
+ios/App/Scripts/.build/
 
 # local env files
 .env

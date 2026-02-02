@@ -67,5 +67,4 @@ struct AuthNavigationView: View {
 
 #Preview {
     AuthNavigationView()
-        .environment(\.localization, LocalizationManager.shared)
 }

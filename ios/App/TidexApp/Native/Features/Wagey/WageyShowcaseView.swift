@@ -3,8 +3,7 @@ import SwiftUI
 /// Showcase view shown to free users on their first visit to Wagey
 /// Highlights features and provides a "Try Wagey" button
 struct WageyShowcaseView: View {
-    @Environment(\.localization) private var localization
-    @EnvironmentObject private var coordinator: AppCoordinator
+        @EnvironmentObject private var coordinator: AppCoordinator
 
     /// Callback when user taps "Try Wagey"
     let onTryWagey: () -> Void
@@ -15,7 +14,7 @@ struct WageyShowcaseView: View {
     /// User's display name for example conversations
     private var userName: String {
         let name = coordinator.userDisplayName
-        return name.isEmpty ? localization.string("wagey.showcase.examples.you") : name.components(separatedBy: " ").first ?? name
+        return name.isEmpty ? String(localized: .wageyShowcaseExamplesYou) : name.components(separatedBy: " ").first ?? name
     }
 
     var body: some View {
@@ -118,17 +117,17 @@ struct WageyShowcaseView: View {
                 }
 
                 // Title
-                Text(localization.string("wagey.showcase.hero.title"))
+                Text(.wageyShowcaseHeroTitle)
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
                 // Subtitle
-                Text(localization.string("wagey.showcase.hero.subtitle"))
+                Text(.wageyShowcaseHeroSubtitle)
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.white.opacity(0.9))
 
                 // Description
-                Text(localization.string("wagey.showcase.hero.description"))
+                Text(.wageyShowcaseHeroDescription)
                     .font(.system(size: 15))
                     .foregroundStyle(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
@@ -146,39 +145,39 @@ struct WageyShowcaseView: View {
 
     private var featuresSection: some View {
         VStack(spacing: 16) {
-            Text(localization.string("wagey.showcase.features.title"))
+            Text(.wageyShowcaseFeaturesTitle)
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 featureCard(
                     icon: "message.fill",
-                    titleKey: "wagey.showcase.features.naturalLanguage.title",
-                    descriptionKey: "wagey.showcase.features.naturalLanguage.description"
+                    titleKey: .wageyShowcaseFeaturesNaturalLanguageTitle,
+                    descriptionKey: .wageyShowcaseFeaturesNaturalLanguageDescription
                 )
 
                 featureCard(
                     icon: "bolt.fill",
-                    titleKey: "wagey.showcase.features.quickActions.title",
-                    descriptionKey: "wagey.showcase.features.quickActions.description"
+                    titleKey: .wageyShowcaseFeaturesQuickActionsTitle,
+                    descriptionKey: .wageyShowcaseFeaturesQuickActionsDescription
                 )
 
                 featureCard(
                     icon: "creditcard.fill",
-                    titleKey: "wagey.showcase.features.wageCalculations.title",
-                    descriptionKey: "wagey.showcase.features.wageCalculations.description"
+                    titleKey: .wageyShowcaseFeaturesWageCalculationsTitle,
+                    descriptionKey: .wageyShowcaseFeaturesWageCalculationsDescription
                 )
 
                 featureCard(
                     icon: "calendar",
-                    titleKey: "wagey.showcase.features.scheduling.title",
-                    descriptionKey: "wagey.showcase.features.scheduling.description"
+                    titleKey: .wageyShowcaseFeaturesSchedulingTitle,
+                    descriptionKey: .wageyShowcaseFeaturesSchedulingDescription
                 )
             }
         }
     }
 
-    private func featureCard(icon: String, titleKey: String, descriptionKey: String) -> some View {
+    private func featureCard(icon: String, titleKey: LocalizedStringResource, descriptionKey: LocalizedStringResource) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Icon
             ZStack {
@@ -211,11 +210,11 @@ struct WageyShowcaseView: View {
 
             // Text
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string(titleKey))
+                Text(String(localized: titleKey))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string(descriptionKey))
+                Text(String(localized: descriptionKey))
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
                     .lineLimit(3)
@@ -242,7 +241,7 @@ struct WageyShowcaseView: View {
                 ChatMessage(
                     id: "ex1-user",
                     role: .user,
-                    content: localization.string("wagey.showcase.examples.example1User"),
+                    content: String(localized: .wageyShowcaseExamplesExample1User),
                     toolCalls: nil,
                     timestamp: Date()
                 ),
@@ -257,7 +256,7 @@ struct WageyShowcaseView: View {
                             result: "{\"success\": true}",
                             success: true
                         )),
-                        .text(localization.string("wagey.showcase.examples.example1Assistant"))
+                        .text(String(localized: .wageyShowcaseExamplesExample1Assistant))
                     ],
                     timestamp: Date()
                 )
@@ -267,7 +266,7 @@ struct WageyShowcaseView: View {
                 ChatMessage(
                     id: "ex2-user",
                     role: .user,
-                    content: localization.string("wagey.showcase.examples.example2User"),
+                    content: String(localized: .wageyShowcaseExamplesExample2User),
                     toolCalls: nil,
                     timestamp: Date()
                 ),
@@ -282,7 +281,7 @@ struct WageyShowcaseView: View {
                             result: "{\"success\": true}",
                             success: true
                         )),
-                        .text(localization.string("wagey.showcase.examples.example2Assistant"))
+                        .text(String(localized: .wageyShowcaseExamplesExample2Assistant))
                     ],
                     timestamp: Date()
                 )
@@ -292,7 +291,7 @@ struct WageyShowcaseView: View {
 
     private var examplesSection: some View {
         VStack(spacing: 16) {
-            Text(localization.string("wagey.showcase.examples.title"))
+            Text(.wageyShowcaseExamplesTitle)
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -342,7 +341,7 @@ struct WageyShowcaseView: View {
                 Image(systemName: "play.fill")
                     .font(.system(size: 14, weight: .semibold))
 
-                Text(localization.string("wagey.showcase.hero.tryButton"))
+                Text(.wageyShowcaseHeroTryButton)
                     .font(.system(size: 17, weight: .semibold))
             }
             .frame(maxWidth: .infinity)
@@ -372,5 +371,4 @@ struct WageyShowcaseView: View {
         onClose: { print("Close tapped") }
     )
     .environmentObject(AppCoordinator.shared)
-    .environment(\.localization, LocalizationManager.shared)
 }

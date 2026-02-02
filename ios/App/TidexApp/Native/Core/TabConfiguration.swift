@@ -23,35 +23,35 @@ enum AppTab: String, CaseIterable, Identifiable {
     }
 
     /// Localization key for tab label
-    var localizationKey: String {
+    var localizationKey: LocalizedStringResource {
         switch self {
-        case .home: return "tabs.home"
-        case .shifts: return "tabs.shifts"
-        case .add: return "tabs.add"
-        case .stats: return "tabs.stats"
-        case .sharing: return "tabs.sharing"
+        case .home: return .tabsHome
+        case .shifts: return .tabsShifts
+        case .add: return .tabsAdd
+        case .stats: return .tabsStats
+        case .sharing: return .tabsSharing
         }
     }
 
     /// Title localization key for navigation bar
-    var titleKey: String {
+    var titleKey: LocalizedStringResource {
         switch self {
-        case .home: return "dashboard.title"
-        case .shifts: return "tabs.shifts"
-        case .add: return "placeholder.addShift"
-        case .stats: return "tabs.stats"
-        case .sharing: return "tabs.sharing"
+        case .home: return .dashboardTitle
+        case .shifts: return .tabsShifts
+        case .add: return .placeholderAddShift
+        case .stats: return .tabsStats
+        case .sharing: return .tabsSharing
         }
     }
 
     /// Description key for placeholder views
-    var descriptionKey: String {
+    var descriptionKey: LocalizedStringResource {
         switch self {
-        case .home: return "placeholder.dashboardDescription"
-        case .shifts: return "placeholder.shiftsDescription"
-        case .add: return "placeholder.addShiftDescription"
-        case .stats: return "placeholder.statsDescription"
-        case .sharing: return "placeholder.sharingDescription"
+        case .home: return .placeholderDashboardDescription
+        case .shifts: return .placeholderShiftsDescription
+        case .add: return .placeholderAddShiftDescription
+        case .stats: return .placeholderStatsDescription
+        case .sharing: return .placeholderSharingDescription
         }
     }
 

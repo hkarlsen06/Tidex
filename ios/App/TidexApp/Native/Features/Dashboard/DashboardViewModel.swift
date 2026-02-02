@@ -1038,7 +1038,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM"
-        formatter.locale = Locale(identifier: LocalizationManager.shared.currentLocale.localeIdentifier)
+        formatter.locale = Locale(identifier: Locale.current.identifier)
         return formatter.string(from: date)
     }
 

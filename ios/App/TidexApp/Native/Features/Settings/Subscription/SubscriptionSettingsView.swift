@@ -4,8 +4,7 @@ import SwiftUI
 /// Subscription settings view
 /// Displays current subscription status, plan features, and management options
 struct SubscriptionSettingsView: View {
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SubscriptionSettingsViewModel()
 
     /// URL for in-app Safari browser
@@ -54,7 +53,7 @@ struct SubscriptionSettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("subscription.title"))
+        .navigationTitle(String(localized: .subscriptionTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -85,15 +84,15 @@ struct SubscriptionSettingsView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(viewModel.hasPremiumAccess
-                 ? localization.string("subscription.title")
-                 : localization.string("subscription.choosePlan.title"))
+                 ? String(localized: .subscriptionTitle)
+                 : String(localized: .subscriptionChoosePlanTitle))
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.tidexTextPrimary)
 
             Text(viewModel.hasPremiumAccess
-                 ? localization.string("subscription.subtitle")
-                 : localization.string("subscription.choosePlan.subtitle"))
+                 ? String(localized: .subscriptionSubtitle)
+                 : String(localized: .subscriptionChoosePlanSubtitle))
                 .font(.subheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -166,11 +165,11 @@ struct SubscriptionSettingsView: View {
                 .foregroundColor(.tidexWarning)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(localization.string("subscription.earlySupporter.title"))
+                Text(.subscriptionEarlySupporterTitle)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("subscription.earlySupporter.description"))
+                Text(.subscriptionEarlySupporterDescription)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -191,7 +190,7 @@ struct SubscriptionSettingsView: View {
     private var currentPlanSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("subscription.currentPlan.sectionTitle"))
+            Text(.subscriptionCurrentPlanSectionTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
@@ -224,7 +223,7 @@ struct SubscriptionSettingsView: View {
                 if viewModel.hasActiveSubscription {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(localization.string("subscription.currentPlan.price"))
+                            Text(.subscriptionCurrentPlanPrice)
                                 .font(.system(size: 13))
                                 .foregroundColor(.tidexTextSecondary)
 
@@ -244,7 +243,7 @@ struct SubscriptionSettingsView: View {
                         // Renewal date
                         if let renewalDate = viewModel.formattedRenewalDate {
                             VStack(alignment: .trailing, spacing: 4) {
-                                Text(localization.string("subscription.currentPlan.renews"))
+                                Text(.subscriptionCurrentPlanRenews)
                                     .font(.system(size: 13))
                                     .foregroundColor(.tidexTextSecondary)
 
@@ -266,8 +265,8 @@ struct SubscriptionSettingsView: View {
     @ViewBuilder
     private func statusBadge(isActive: Bool) -> some View {
         Text(isActive
-             ? localization.string("subscription.status.active")
-             : localization.string("subscription.status.inactive"))
+             ? String(localized: .subscriptionStatusActive)
+             : String(localized: .subscriptionStatusInactive))
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(isActive ? .tidexSuccess : .tidexTextMuted)
             .padding(.horizontal, 8)
@@ -316,7 +315,7 @@ struct SubscriptionSettingsView: View {
     private var featuresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
-            Text(localization.string("subscription.features.sectionTitle"))
+            Text(.subscriptionFeaturesSectionTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
@@ -344,7 +343,7 @@ struct SubscriptionSettingsView: View {
                             .font(.system(size: 18))
                             .foregroundColor(.tidexWarning)
 
-                        Text(localization.string("subscription.features.lifetimeAccess"))
+                        Text(.subscriptionFeaturesLifetimeAccess)
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.tidexWarning)
 
@@ -360,27 +359,26 @@ struct SubscriptionSettingsView: View {
     }
 
     private var currentFeatures: [String] {
-        let locale = localization.currentLocale
         switch viewModel.effectiveTier {
         case .free:
             return [
-                AuthStrings.string("paywall.free.feature1", locale: locale),
-                AuthStrings.string("paywall.free.feature2", locale: locale)
+                String(localized: .paywallFreeFeature1),
+                String(localized: .paywallFreeFeature2)
             ]
         case .pro:
             return [
-                AuthStrings.string("paywall.pro.feature1", locale: locale),
-                AuthStrings.string("paywall.pro.feature2", locale: locale),
-                AuthStrings.string("paywall.pro.feature3", locale: locale),
-                AuthStrings.string("paywall.pro.feature4", locale: locale)
+                String(localized: .paywallProFeature1),
+                String(localized: .paywallProFeature2),
+                String(localized: .paywallProFeature3),
+                String(localized: .paywallProFeature4)
             ]
         case .max:
             return [
-                AuthStrings.string("paywall.max.feature1", locale: locale),
-                AuthStrings.string("paywall.max.feature2", locale: locale),
-                AuthStrings.string("paywall.max.feature3", locale: locale),
-                AuthStrings.string("paywall.max.feature4", locale: locale),
-                AuthStrings.string("paywall.max.feature5", locale: locale)
+                String(localized: .paywallMaxFeature1),
+                String(localized: .paywallMaxFeature2),
+                String(localized: .paywallMaxFeature3),
+                String(localized: .paywallMaxFeature4),
+                String(localized: .paywallMaxFeature5)
             ]
         }
     }
@@ -397,7 +395,7 @@ struct SubscriptionSettingsView: View {
                     HStack {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 16))
-                        Text(localization.string("subscription.actions.manage"))
+                        Text(.subscriptionActionsManage)
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundColor(.tidexBlue)
@@ -417,8 +415,8 @@ struct SubscriptionSettingsView: View {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 16))
                         Text(viewModel.effectiveTier == .free
-                             ? localization.string("subscription.actions.subscribe")
-                             : localization.string("subscription.actions.upgrade"))
+                             ? String(localized: .subscriptionActionsSubscribe)
+                             : String(localized: .subscriptionActionsUpgrade))
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -439,7 +437,7 @@ struct SubscriptionSettingsView: View {
                 await viewModel.restorePurchases()
             }
         } label: {
-            Text(localization.string("paywall.restorePurchases"))
+            Text(.paywallRestorePurchases)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.tidexBlue)
         }
@@ -450,12 +448,12 @@ struct SubscriptionSettingsView: View {
 
     private var termsURL: URL {
         // swiftlint:disable:next force_unwrapping
-        URL(string: "https://tidex.no/\(localization.currentLocale.rawValue)/terms")!
+        URL(string: "https://tidex.no/\(Locale.current.tidexLanguageCode)/terms")!
     }
 
     private var privacyURL: URL {
         // swiftlint:disable:next force_unwrapping
-        URL(string: "https://tidex.no/\(localization.currentLocale.rawValue)/privacy")!
+        URL(string: "https://tidex.no/\(Locale.current.tidexLanguageCode)/privacy")!
     }
 
     private var legalLinks: some View {
@@ -463,7 +461,7 @@ struct SubscriptionSettingsView: View {
             Button {
                 safariURL = termsURL
             } label: {
-                Text(localization.string("paywall.termsOfUse"))
+                Text(.paywallTermsOfUse)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -474,7 +472,7 @@ struct SubscriptionSettingsView: View {
             Button {
                 safariURL = privacyURL
             } label: {
-                Text(localization.string("paywall.privacyPolicy"))
+                Text(.paywallPrivacyPolicy)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -492,8 +490,8 @@ struct SubscriptionSettingsView: View {
                     .scaleEffect(1.2)
 
                 Text(viewModel.isRestoring
-                     ? localization.string("subscription.restore.loading")
-                     : localization.string("common.loading"))
+                     ? String(localized: .subscriptionRestoreLoading)
+                     : String(localized: .commonLoading))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -521,5 +519,4 @@ private struct SubscriptionSafariView: UIViewControllerRepresentable {
     NavigationStack {
         SubscriptionSettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

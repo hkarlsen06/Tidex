@@ -83,7 +83,6 @@ final class PaySettingsViewModel: ObservableObject {
     private let snapshotsRepository = SnapshotsRepository.shared
     private let settingsRepository = SettingsRepository.shared
     private let shiftsRepository = ShiftsRepository.shared
-    private let localization: LocalizationManager
 
     private var userId: String?
 
@@ -94,9 +93,7 @@ final class PaySettingsViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(localization: LocalizationManager? = nil) {
-        self.localization = localization ?? LocalizationManager.shared
-    }
+    init() {}
 
     deinit {
         // Cancel any pending debounce tasks to prevent orphaned operations
@@ -128,7 +125,7 @@ final class PaySettingsViewModel: ObservableObject {
             logger.info("Loaded \(self.snapshots.count) snapshots for pay settings")
         } catch {
             logger.error("Failed to load pay settings: \(error.localizedDescription)")
-            errorMessage = localization.string("settings.pay.error.loadFailed")
+            errorMessage = String(localized: .settingsPayErrorLoadFailed)
         }
 
         isLoading = false
@@ -148,7 +145,7 @@ final class PaySettingsViewModel: ObservableObject {
     private func processTimelineEntries() {
         timelineEntries = WageTimelineProcessor.processSnapshots(
             snapshots,
-            locale: localization.currentLocale
+            locale: Locale.current
         )
     }
 
@@ -179,7 +176,7 @@ final class PaySettingsViewModel: ObservableObject {
     /// Create a new wage snapshot
     func createSnapshot(input: WageSnapshotEditorInput) async -> Bool {
         guard let userId = userId else {
-            errorMessage = localization.string("settings.pay.error.notAuthenticated")
+            errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
             return false
         }
 
@@ -187,7 +184,7 @@ final class PaySettingsViewModel: ObservableObject {
         if let fromDate = input.fromDate {
             let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
             if hasSnapshotOnDate(isoDate, excludingId: nil) {
-                errorMessage = localization.string("settings.pay.error.dateConflict")
+                errorMessage = String(localized: .settingsPayErrorDateConflict)
                 return false
             }
         }
@@ -217,7 +214,7 @@ final class PaySettingsViewModel: ObservableObject {
             return true
         } catch {
             logger.error("Failed to create snapshot: \(error.localizedDescription)")
-            errorMessage = localization.string("settings.pay.error.createFailed")
+            errorMessage = String(localized: .settingsPayErrorCreateFailed)
             return false
         }
     }
@@ -225,7 +222,7 @@ final class PaySettingsViewModel: ObservableObject {
     /// Update an existing wage snapshot
     func updateSnapshot(id: String, input: WageSnapshotEditorInput) async -> Bool {
         guard userId != nil else {
-            errorMessage = localization.string("settings.pay.error.notAuthenticated")
+            errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
             return false
         }
 
@@ -233,7 +230,7 @@ final class PaySettingsViewModel: ObservableObject {
         if let fromDate = input.fromDate {
             let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
             if hasSnapshotOnDate(isoDate, excludingId: id) {
-                errorMessage = localization.string("settings.pay.error.dateConflict")
+                errorMessage = String(localized: .settingsPayErrorDateConflict)
                 return false
             }
         }
@@ -260,7 +257,7 @@ final class PaySettingsViewModel: ObservableObject {
             return true
         } catch {
             logger.error("Failed to update snapshot: \(error.localizedDescription)")
-            errorMessage = localization.string("settings.pay.error.updateFailed")
+            errorMessage = String(localized: .settingsPayErrorUpdateFailed)
             return false
         }
     }
@@ -273,7 +270,7 @@ final class PaySettingsViewModel: ObservableObject {
         if snapshot.isBaseline {
             let datedSnapshots = snapshots.filter { !$0.isBaseline }
             if !datedSnapshots.isEmpty {
-                errorMessage = localization.string("settings.pay.error.cannotDeleteBaseline")
+                errorMessage = String(localized: .settingsPayErrorCannotDeleteBaseline)
                 return
             }
         }
@@ -302,7 +299,7 @@ final class PaySettingsViewModel: ObservableObject {
             logger.info("Deleted wage snapshot: \(snapshot.id)")
         } catch {
             logger.error("Failed to delete snapshot: \(error.localizedDescription)")
-            errorMessage = localization.string("settings.pay.error.deleteFailed")
+            errorMessage = String(localized: .settingsPayErrorDeleteFailed)
         }
 
         showingDeleteConfirmation = false
@@ -453,7 +450,7 @@ final class PaySettingsViewModel: ObservableObject {
     func updateCurrency(_ value: String) async {
         guard let userId = userId else { return }
         guard canChangeCurrency else {
-            errorMessage = localization.currentLocale == .norwegian
+            errorMessage = Locale.current.tidexIsNorwegian
                 ? "Du kan ikke endre valuta når du har lønnstrinn-innstillinger"
                 : "Cannot change currency when using tariff wage settings"
             return

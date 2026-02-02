@@ -11,8 +11,7 @@ struct AccordionSectionView<Content: View>: View {
     let onContinue: (() -> Void)?
     @ViewBuilder let content: () -> Content
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -58,7 +57,7 @@ struct AccordionSectionView<Content: View>: View {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             onContinue()
                         }) {
-                            Text(localization.string("common.continue"))
+                            Text(.commonContinue)
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -119,5 +118,4 @@ struct AccordionSectionView<Content: View>: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

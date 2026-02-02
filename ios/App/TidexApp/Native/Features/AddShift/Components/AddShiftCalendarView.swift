@@ -6,8 +6,7 @@ import UIKit
 /// Supports tap to toggle date selection with existing shift and conflict indicators
 struct AddShiftCalendarView: View {
     @ObservedObject var viewModel: AddShiftViewModel
-    @Environment(\.localization) private var localization
-
+    
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
@@ -36,7 +35,7 @@ struct AddShiftCalendarView: View {
     }
 
     private var weekdaySymbols: [String] {
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         if isNorwegian {
             return ["MA", "TI", "ON", "TO", "FR", "LØ", "SØ"]
         } else {
@@ -252,5 +251,4 @@ private struct AddShiftCalendarDayCell: View {
             .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

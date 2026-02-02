@@ -8,8 +8,7 @@ struct MFASetupScreen: View {
     let onSkip: () -> Void
     var onBack: (() -> Void)? = nil
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         ZStack {
             // Background
@@ -27,7 +26,7 @@ struct MFASetupScreen: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 16, weight: .semibold))
-                                Text(localization.string("common.back"))
+                                Text(.commonBack)
                                     .font(.system(size: 16))
                             }
                             .foregroundColor(.tidexBlue)
@@ -56,12 +55,12 @@ struct MFASetupScreen: View {
 
                 // Header
                 VStack(spacing: 12) {
-                    Text(localization.string("onboarding.mfa.title"))
+                    Text(.onboardingMfaTitle)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.tidexTextPrimary)
                         .multilineTextAlignment(.center)
 
-                    Text(localization.string("onboarding.mfa.subtitle"))
+                    Text(.onboardingMfaSubtitle)
                         .font(.system(size: 17))
                         .foregroundColor(.tidexTextSecondary)
                         .multilineTextAlignment(.center)
@@ -82,7 +81,7 @@ struct MFASetupScreen: View {
                 // Bottom buttons
                 VStack(spacing: 12) {
                     OnboardingButton(
-                        title: localization.string("onboarding.mfa.setup"),
+                        title: String(localized: .onboardingMfaSetup),
                         action: {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                             onSetupMFA()
@@ -93,7 +92,7 @@ struct MFASetupScreen: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         onSkip()
                     }) {
-                        Text(localization.string("onboarding.mfa.skip"))
+                        Text(.onboardingMfaSkip)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -112,20 +111,20 @@ struct MFASetupScreen: View {
         VStack(alignment: .leading, spacing: 16) {
             BenefitRow(
                 icon: "lock.shield",
-                title: localization.string("onboarding.mfa.benefit1.title"),
-                description: localization.string("onboarding.mfa.benefit1.desc")
+                title: String(localized: .onboardingMfaBenefit1Title),
+                description: String(localized: .onboardingMfaBenefit1Desc)
             )
 
             BenefitRow(
                 icon: "key.horizontal",
-                title: localization.string("onboarding.mfa.benefit2.title"),
-                description: localization.string("onboarding.mfa.benefit2.desc")
+                title: String(localized: .onboardingMfaBenefit2Title),
+                description: String(localized: .onboardingMfaBenefit2Desc)
             )
 
             BenefitRow(
                 icon: "bolt.shield",
-                title: localization.string("onboarding.mfa.benefit3.title"),
-                description: localization.string("onboarding.mfa.benefit3.desc")
+                title: String(localized: .onboardingMfaBenefit3Title),
+                description: String(localized: .onboardingMfaBenefit3Desc)
             )
         }
         .padding(20)
@@ -166,5 +165,4 @@ private struct BenefitRow: View {
         onSetupMFA: {},
         onSkip: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

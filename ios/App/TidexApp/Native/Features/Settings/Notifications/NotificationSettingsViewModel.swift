@@ -268,28 +268,28 @@ final class NotificationSettingsViewModel: ObservableObject {
     }
 
     /// Format minutes as localized human-readable string
-    func formatReminderTime(_ minutes: Int, locale: LocalizationManager.AppLocale) -> String {
+    func formatReminderTime(_ minutes: Int, locale: Locale) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
 
         if hours == 0 {
             // Minutes only
-            return locale == .norwegian
+            return locale.tidexIsNorwegian
                 ? "\(mins) minutt\(mins == 1 ? "" : "er") før"
                 : "\(mins) minute\(mins == 1 ? "" : "s") before"
         } else if mins == 0 {
             // Hours only
             if hours == 24 {
-                return locale == .norwegian ? "1 dag før" : "1 day before"
+                return locale.tidexIsNorwegian ? "1 dag før" : "1 day before"
             } else if hours == 48 {
-                return locale == .norwegian ? "2 dager før" : "2 days before"
+                return locale.tidexIsNorwegian ? "2 dager før" : "2 days before"
             }
-            return locale == .norwegian
+            return locale.tidexIsNorwegian
                 ? "\(hours) time\(hours == 1 ? "" : "r") før"
                 : "\(hours) hour\(hours == 1 ? "" : "s") before"
         } else {
             // Mixed hours and minutes
-            return locale == .norwegian
+            return locale.tidexIsNorwegian
                 ? "\(hours) t \(mins) min før"
                 : "\(hours) h \(mins) min before"
         }

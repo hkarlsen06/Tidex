@@ -4,8 +4,7 @@ import SwiftUI
 /// with a dropdown menu for accessing settings and other quick actions.
 /// Inspired by the web UserMenu component.
 struct UserMenuButton: View {
-    @Environment(\.localization) private var localization
-    @Environment(\.displayScale) private var displayScale
+        @Environment(\.displayScale) private var displayScale
     // Theme is handled at UIKit window level - sheets inherit from window
 
     /// User's display name (email or name from profile)
@@ -40,7 +39,7 @@ struct UserMenuButton: View {
                 showAccount = true
             } label: {
                 Label(
-                    localization.string("settings.menu.account.label"),
+                    String(localized: .settingsMenuAccountLabel),
                     systemImage: "person.circle"
                 )
             }
@@ -50,7 +49,7 @@ struct UserMenuButton: View {
                 showSettings = true
             } label: {
                 Label(
-                    localization.string("userMenu.settings"),
+                    String(localized: .userMenuSettings),
                     systemImage: "gearshape"
                 )
             }
@@ -60,7 +59,7 @@ struct UserMenuButton: View {
                 showSubscription = true
             } label: {
                 Label(
-                    localization.string("subscription.title"),
+                    String(localized: .subscriptionTitle),
                     systemImage: "creditcard"
                 )
             }
@@ -72,7 +71,7 @@ struct UserMenuButton: View {
                 showFeedback = true
             } label: {
                 Label(
-                    localization.string("feedback.title"),
+                    String(localized: .feedbackTitle),
                     systemImage: "message"
                 )
             }
@@ -284,5 +283,4 @@ struct UserMenuButton: View {
         }
     }
     .environmentObject(AppCoordinator.shared)
-    .environment(\.localization, LocalizationManager.shared)
 }

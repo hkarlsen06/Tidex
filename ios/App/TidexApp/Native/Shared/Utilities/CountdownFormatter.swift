@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Utility for formatting countdown text for shifts and payroll
 /// Matches the behavior of useCountdown and usePayrollCountdown hooks in Next.js
@@ -11,13 +12,11 @@ struct CountdownFormatter {
     ///   - shiftDate: ISO date string (YYYY-MM-DD)
     ///   - startTime: Start time (HH:mm)
     ///   - endTime: End time (HH:mm)
-    ///   - isNorwegian: Whether to use Norwegian locale
     /// - Returns: Formatted countdown text, whether shift is active, and progress (0-100) if active
     static func formatShiftCountdown(
         shiftDate: String,
         startTime: String,
-        endTime: String,
-        isNorwegian: Bool
+        endTime: String
     ) -> (text: String, isActive: Bool, progress: Double) {
         let now = Date()
 
@@ -32,17 +31,17 @@ struct CountdownFormatter {
             let totalDuration = shiftEnd.timeIntervalSince(shiftStart)
             let elapsed = now.timeIntervalSince(shiftStart)
             let progress = totalDuration > 0 ? min(100, max(0, (elapsed / totalDuration) * 100)) : 0
-            return (isNorwegian ? "Pågår nå" : "In progress", true, progress)
+            return (String(localized: .commonInProgress), true, progress)
         }
 
         // Check if shift is in the past
         if now >= shiftEnd {
-            let (text, _) = formatPastTime(from: shiftEnd, isNorwegian: isNorwegian)
+            let (text, _) = formatPastTime(from: shiftEnd)
             return (text, false, 0)
         }
 
         // Shift is in the future
-        let (text, _) = formatFutureTime(to: shiftStart, isNorwegian: isNorwegian)
+        let (text, _) = formatFutureTime(to: shiftStart)
         return (text, false, 0)
     }
 
@@ -51,28 +50,26 @@ struct CountdownFormatter {
     /// Format countdown text for payroll date
     /// - Parameters:
     ///   - payrollDate: The payroll date
-    ///   - isNorwegian: Whether to use Norwegian locale
     /// - Returns: Formatted countdown text and whether it's past
     static func formatPayrollCountdown(
-        payrollDate: Date,
-        isNorwegian: Bool
+        payrollDate: Date
     ) -> (text: String, isPast: Bool, isToday: Bool) {
         let now = Date()
         let calendar = Calendar.current
 
         // Check if payroll is today
         if calendar.isDateInToday(payrollDate) {
-            return (isNorwegian ? "I dag" : "Today", false, true)
+            return (String(localized: .commonToday), false, true)
         }
 
         // Check if payroll has passed
         if now > payrollDate {
-            let (text, _) = formatPastTime(from: payrollDate, isNorwegian: isNorwegian)
+            let (text, _) = formatPastTime(from: payrollDate)
             return (text, true, false)
         }
 
         // Payroll is in the future
-        let (text, _) = formatFutureTime(to: payrollDate, isNorwegian: isNorwegian)
+        let (text, _) = formatFutureTime(to: payrollDate)
         return (text, false, false)
     }
 
@@ -106,20 +103,19 @@ struct CountdownFormatter {
         return abs(days)
     }
 
-    private static func formatFutureTime(to targetDate: Date, isNorwegian: Bool) -> (String, Bool) {
+    private static func formatFutureTime(to targetDate: Date) -> (String, Bool) {
         let now = Date()
         let calendar = Calendar.current
         let midnightDays = countMidnightCrossings(from: now, to: targetDate)
 
         // 1 midnight crossing = tomorrow
         if midnightDays == 1 {
-            return (isNorwegian ? "I morgen" : "Tomorrow", false)
+            return (String(localized: .commonTomorrow), false)
         }
 
         // 2+ midnight crossings = "In X days"
         if midnightDays > 1 {
-            let dayWord = isNorwegian ? "dager" : "days"
-            return (isNorwegian ? "Om \(midnightDays) \(dayWord)" : "In \(midnightDays) \(dayWord)", false)
+            return (String(localized: .commonInDays(Int32(midnightDays))), false)
         }
 
         // Same calendar day (0 midnight crossings) - show hours/minutes/seconds
@@ -130,47 +126,46 @@ struct CountdownFormatter {
         let totalSeconds = Int(targetDate.timeIntervalSince(now))
         let totalHours = totalSeconds / 3600
 
+        let secWord = String(localized: .commonSecondsShort)
+        let hourWord = String(localized: .commonHoursShort)
+        let inWord = String(localized: .commonIn)
+
         // Within 6 hours - show high precision with seconds
         if totalHours < 6 {
-            let secWord = isNorwegian ? "sek" : "sec"
-
             // Less than 1 minute - show only seconds
             if hours == 0 && minutes == 0 {
-                return (isNorwegian ? "Om \(seconds)\(secWord)" : "In \(seconds)\(secWord)", false)
+                return ("\(inWord) \(seconds)\(secWord)", false)
             }
 
             // Less than 1 hour - show minutes and seconds
             if hours == 0 {
-                return (isNorwegian ? "Om \(minutes)min \(seconds)\(secWord)" : "In \(minutes)min \(seconds)\(secWord)", false)
+                return ("\(inWord) \(minutes)min \(seconds)\(secWord)", false)
             }
 
             // Less than 6 hours - show hours, minutes and seconds
-            let hourWord = isNorwegian ? "t" : "h"
-            return (isNorwegian ? "Om \(hours)\(hourWord) \(minutes)min \(seconds)\(secWord)" : "In \(hours)\(hourWord) \(minutes)min \(seconds)\(secWord)", false)
+            return ("\(inWord) \(hours)\(hourWord) \(minutes)min \(seconds)\(secWord)", false)
         }
 
         // 6+ hours on same day - show hours and minutes only
-        let hourWord = isNorwegian ? "t" : "h"
         if minutes == 0 {
-            return (isNorwegian ? "Om \(hours)\(hourWord)" : "In \(hours)\(hourWord)", false)
+            return ("\(inWord) \(hours)\(hourWord)", false)
         }
-        return (isNorwegian ? "Om \(hours)\(hourWord) \(minutes)min" : "In \(hours)\(hourWord) \(minutes)min", false)
+        return ("\(inWord) \(hours)\(hourWord) \(minutes)min", false)
     }
 
-    private static func formatPastTime(from pastDate: Date, isNorwegian: Bool) -> (String, Bool) {
+    private static func formatPastTime(from pastDate: Date) -> (String, Bool) {
         let now = Date()
         let calendar = Calendar.current
         let midnightDays = countMidnightCrossings(from: pastDate, to: now)
 
         // 1 midnight crossing = yesterday
         if midnightDays == 1 {
-            return (isNorwegian ? "I går" : "Yesterday", false)
+            return (String(localized: .commonYesterday), false)
         }
 
         // 2+ midnight crossings = "X days ago"
         if midnightDays > 1 {
-            let dayWord = isNorwegian ? "dager" : "days"
-            return (isNorwegian ? "\(midnightDays) \(dayWord) siden" : "\(midnightDays) \(dayWord) ago", false)
+            return (String(localized: .commonDaysAgo(Int32(midnightDays))), false)
         }
 
         // Same calendar day (0 midnight crossings) - show hours/minutes/seconds
@@ -181,30 +176,30 @@ struct CountdownFormatter {
         let totalSeconds = Int(now.timeIntervalSince(pastDate))
         let totalHours = totalSeconds / 3600
 
+        let secWord = String(localized: .commonSecondsShort)
+        let hourWord = String(localized: .commonHoursShort)
+        let agoWord = String(localized: .commonAgo)
+
         // Within 6 hours - show high precision with seconds
         if totalHours < 6 {
-            let secWord = isNorwegian ? "sek" : "sec"
-
             // Less than 1 minute - show only seconds
             if hours == 0 && minutes == 0 {
-                return (isNorwegian ? "\(seconds)\(secWord) siden" : "\(seconds)\(secWord) ago", false)
+                return ("\(seconds)\(secWord) \(agoWord)", false)
             }
 
             // Less than 1 hour - show minutes and seconds
             if hours == 0 {
-                return (isNorwegian ? "\(minutes)min \(seconds)\(secWord) siden" : "\(minutes)min \(seconds)\(secWord) ago", false)
+                return ("\(minutes)min \(seconds)\(secWord) \(agoWord)", false)
             }
 
             // Less than 6 hours - show hours, minutes and seconds
-            let hourWord = isNorwegian ? "t" : "h"
-            return (isNorwegian ? "\(hours)\(hourWord) \(minutes)min \(seconds)\(secWord) siden" : "\(hours)\(hourWord) \(minutes)min \(seconds)\(secWord) ago", false)
+            return ("\(hours)\(hourWord) \(minutes)min \(seconds)\(secWord) \(agoWord)", false)
         }
 
         // 6+ hours on same day - show hours and minutes only
-        let hourWord = isNorwegian ? "t" : "h"
         if minutes == 0 {
-            return (isNorwegian ? "\(hours)\(hourWord) siden" : "\(hours)\(hourWord) ago", false)
+            return ("\(hours)\(hourWord) \(agoWord)", false)
         }
-        return (isNorwegian ? "\(hours)\(hourWord) \(minutes)min siden" : "\(hours)\(hourWord) \(minutes)min ago", false)
+        return ("\(hours)\(hourWord) \(minutes)min \(agoWord)", false)
     }
 }

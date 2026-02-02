@@ -12,7 +12,6 @@ final class LoginViewModel: ObservableObject {
     private let authService: AuthService
     private let appleAuthProvider: AppleAuthProvider
     private let googleAuthProvider: GoogleAuthProvider
-    private let localization: LocalizationManager
 
     // MARK: - Published State
 
@@ -110,12 +109,10 @@ final class LoginViewModel: ObservableObject {
         authService: AuthService? = nil,
         appleAuthProvider: AppleAuthProvider? = nil,
         googleAuthProvider: GoogleAuthProvider? = nil,
-        localization: LocalizationManager? = nil
     ) {
         self.authService = authService ?? AuthService.shared
         self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
         self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
-        self.localization = localization ?? LocalizationManager.shared
     }
 
     deinit {
@@ -147,7 +144,7 @@ final class LoginViewModel: ObservableObject {
                 }
 
             case .unknown:
-                fieldErrors.emailOrPhone = localization.string("login.errors.invalidEmailOrPhone")
+                fieldErrors.emailOrPhone = String(localized: .loginErrorsInvalidEmailOrPhone)
             }
         } catch {
             handleError(error)
@@ -160,7 +157,7 @@ final class LoginViewModel: ObservableObject {
         fieldErrors.clear()
 
         guard !otpCode.isEmpty else {
-            fieldErrors.otp = localization.string("login.errors.fillEmailOrPhone")
+            fieldErrors.otp = String(localized: .loginErrorsFillEmailOrPhone)
             return
         }
 
@@ -224,7 +221,7 @@ final class LoginViewModel: ObservableObject {
 
         do {
             try await authService.sendOTP(phone: normalizedPhone)
-            successMessage = localization.string("login.success.smsSent")
+            successMessage = String(localized: .loginSuccessSmsSent)
         } catch {
             handleError(error)
         }
@@ -244,7 +241,7 @@ final class LoginViewModel: ObservableObject {
 
     private func sendPhoneOTP() async throws {
         try await authService.sendOTP(phone: normalizedPhone)
-        successMessage = localization.string("login.success.smsSent")
+        successMessage = String(localized: .loginSuccessSmsSent)
         currentStep = .otp
     }
 
@@ -252,18 +249,18 @@ final class LoginViewModel: ObservableObject {
         let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmed.isEmpty {
-            fieldErrors.emailOrPhone = localization.string("login.errors.fillEmailOrPhone")
+            fieldErrors.emailOrPhone = String(localized: .loginErrorsFillEmailOrPhone)
             return false
         }
 
         if inputType == .unknown {
-            fieldErrors.emailOrPhone = localization.string("login.errors.invalidEmailOrPhone")
+            fieldErrors.emailOrPhone = String(localized: .loginErrorsInvalidEmailOrPhone)
             return false
         }
 
         // Password is required for email login
         if inputType == .email && password.isEmpty {
-            fieldErrors.password = localization.string("login.errors.passwordRequired")
+            fieldErrors.password = String(localized: .loginErrorsPasswordRequired)
             return false
         }
 

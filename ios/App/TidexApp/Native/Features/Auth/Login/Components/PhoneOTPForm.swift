@@ -4,17 +4,16 @@ import SwiftUI
 struct PhoneOTPForm: View {
     @ObservedObject var viewModel: LoginViewModel
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 24) {
             // Instructions
             VStack(spacing: 8) {
-                Text(localization.string("otp.title"))
+                Text(.otpTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("otp.subtitle", viewModel.normalizedPhone))
+                Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -31,7 +30,7 @@ struct PhoneOTPForm: View {
 
             // Verify button
             PrimaryButton(
-                title: localization.string("otp.submitButton"),
+                title: String(localized: .otpSubmitButton),
                 action: {
                     Task { await viewModel.verifyOTP() }
                 },
@@ -44,7 +43,7 @@ struct PhoneOTPForm: View {
                 Button(action: {
                     Task { await viewModel.resendOTP() }
                 }) {
-                    Text(localization.string("otp.resendCode"))
+                    Text(.otpResendCode)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexBlue)
                 }
@@ -57,7 +56,7 @@ struct PhoneOTPForm: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 12, weight: .medium))
-                        Text(localization.string("otp.backToLogin"))
+                        Text(.otpBackToLogin)
                             .font(.system(size: 15))
                     }
                     .foregroundColor(.tidexTextSecondary)

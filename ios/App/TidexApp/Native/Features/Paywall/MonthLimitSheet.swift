@@ -6,8 +6,7 @@ import SwiftUI
 /// Offers two options: upgrade to Pro/Max, or delete shifts in other months
 struct MonthLimitSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.localization) private var localization
-
+    
     /// Existing months that have shifts (for display and deletion)
     let existingMonths: Set<DateComponents>
 
@@ -119,13 +118,13 @@ struct MonthLimitSheet: View {
                 }
 
                 // Title
-                Text(AuthStrings.string("monthLimit.upgradeHeadline", locale: localization.currentLocale))
+                Text(.monthLimitUpgradeHeadline)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
 
                 // Subtitle
-                Text(AuthStrings.string("monthLimit.upgradeSubheadline", locale: localization.currentLocale))
+                Text(.monthLimitUpgradeSubheadline)
                     .font(.system(size: 16))
                     .foregroundStyle(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
@@ -153,7 +152,7 @@ struct MonthLimitSheet: View {
                 showPaywall = true
             }) {
                 HStack(spacing: 8) {
-                    Text(AuthStrings.string("monthLimit.viewPlansButton", locale: localization.currentLocale))
+                    Text(.monthLimitViewPlansButton)
                         .font(.system(size: 17, weight: .semibold))
 
                     Image(systemName: "arrow.right")
@@ -194,15 +193,15 @@ struct MonthLimitSheet: View {
         VStack(spacing: 16) {
             featureRow(
                 icon: "calendar.badge.plus",
-                text: AuthStrings.string("monthLimit.feature1", locale: localization.currentLocale)
+                text: String(localized: .monthLimitFeature1)
             )
             featureRow(
                 icon: "chart.bar.fill",
-                text: AuthStrings.string("monthLimit.feature2", locale: localization.currentLocale)
+                text: String(localized: .monthLimitFeature2)
             )
             featureRow(
                 icon: "square.and.arrow.up",
-                text: AuthStrings.string("monthLimit.feature3", locale: localization.currentLocale)
+                text: String(localized: .monthLimitFeature3)
             )
         }
         .padding(20)
@@ -246,7 +245,7 @@ struct MonthLimitSheet: View {
                 .fill(Color.tidexBorder.opacity(0.5))
                 .frame(height: 1)
 
-            Text(AuthStrings.string("monthLimit.or", locale: localization.currentLocale))
+            Text(.monthLimitOr)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.tidexTextMuted)
                 .textCase(.uppercase)
@@ -266,7 +265,7 @@ struct MonthLimitSheet: View {
             // Collapsed state - subtle text button
             Button(action: { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { showDeleteSection = true } }) {
                 HStack(spacing: 6) {
-                    Text(AuthStrings.string("monthLimit.deleteShiftsLink", locale: localization.currentLocale))
+                    Text(.monthLimitDeleteShiftsLink)
                         .font(.system(size: 15, weight: .medium))
 
                     Image(systemName: "chevron.down")
@@ -291,7 +290,7 @@ struct MonthLimitSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(AuthStrings.string("monthLimit.deleteTitle", locale: localization.currentLocale))
+                        Text(.monthLimitDeleteTitle)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.tidexTextPrimary)
 
@@ -326,7 +325,7 @@ struct MonthLimitSheet: View {
                             Image(systemName: "trash")
                                 .font(.system(size: 14, weight: .medium))
 
-                            Text(AuthStrings.string("monthLimit.deleteButton", locale: localization.currentLocale))
+                            Text(.monthLimitDeleteButton)
                                 .font(.system(size: 15, weight: .medium))
                         }
                         .frame(maxWidth: .infinity)
@@ -396,7 +395,7 @@ struct MonthLimitSheet: View {
             HStack(spacing: Spacing.xs) {
                 // Cancel
                 Button(action: { withAnimation(.spring(response: 0.3)) { showConfirmDelete = false } }) {
-                    Text(AuthStrings.string("monthLimit.cancelDelete", locale: localization.currentLocale))
+                    Text(.monthLimitCancelDelete)
                         .font(.system(size: 14, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }
@@ -451,23 +450,18 @@ struct MonthLimitSheet: View {
     }
 
     private var deleteExplanationText: String {
-        AuthStrings.string("monthLimit.deleteExplanation", locale: localization.currentLocale)
-            .replacingOccurrences(of: "{targetMonth}", with: formattedTargetMonth)
-            .replacingOccurrences(of: "{otherMonths}", with: formattedOtherMonths)
+        String(localized: .monthLimitDeleteExplanation(formattedTargetMonth, formattedOtherMonths))
     }
 
     private var confirmDeleteMessage: String {
-        AuthStrings.string("monthLimit.confirmDeleteMessage", locale: localization.currentLocale)
-            .replacingOccurrences(of: "{months}", with: formattedOtherMonths)
+        String(localized: .monthLimitConfirmDeleteMessage(formattedOtherMonths))
     }
 
     private var confirmDeleteButtonText: String {
         if deleteCount == 1 {
-            return AuthStrings.string("monthLimit.confirmDeleteButton", locale: localization.currentLocale)
-                .replacingOccurrences(of: "{count}", with: "1")
+            return String(localized: .monthLimitConfirmDeleteButton(deleteCount))
         } else {
-            return AuthStrings.string("monthLimit.confirmDeleteButtonPlural", locale: localization.currentLocale)
-                .replacingOccurrences(of: "{count}", with: "\(deleteCount)")
+            return String(localized: .monthLimitConfirmDeleteButtonPlural(deleteCount))
         }
     }
 
@@ -477,7 +471,7 @@ struct MonthLimitSheet: View {
         guard let year = components.year, let month = components.month else { return "" }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: localization.currentLocale == .norwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale(identifier: Locale.current.tidexIsNorwegian ? "nb_NO" : "en_US")
         formatter.dateFormat = "MMMM yyyy"
 
         var dateComponents = DateComponents()
@@ -518,7 +512,7 @@ struct MonthLimitSheet: View {
                     dismiss()
                     onDeleteComplete()
                 } else {
-                    error = AuthStrings.string("monthLimit.couldNotDeleteShifts", locale: localization.currentLocale)
+                    error = String(localized: .monthLimitCouldNotDeleteShifts)
                 }
             }
         }

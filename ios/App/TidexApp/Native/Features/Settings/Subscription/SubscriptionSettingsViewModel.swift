@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import StoreKit
 import os.log
 
@@ -64,11 +65,11 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     var tierDisplayName: String {
         switch effectiveTier {
         case .free:
-            return AuthStrings.string("paywall.tier.free", locale: LocalizationManager.shared.currentLocale)
+            return String(localized: .paywallTierFree)
         case .pro:
-            return AuthStrings.string("paywall.tier.pro", locale: LocalizationManager.shared.currentLocale)
+            return String(localized: .paywallTierPro)
         case .max:
-            return AuthStrings.string("paywall.tier.max", locale: LocalizationManager.shared.currentLocale)
+            return String(localized: .paywallTierMax)
         }
     }
 
@@ -81,10 +82,9 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
     /// Billing period display text
     var billingPeriodText: String {
-        let locale = LocalizationManager.shared.currentLocale
         return isYearlySubscription
-            ? AuthStrings.string("paywall.perYear", locale: locale)
-            : AuthStrings.string("paywall.perMonth", locale: locale)
+            ? String(localized: .paywallPerYear)
+            : String(localized: .paywallPerMonth)
     }
 
     /// Price display from current product
@@ -262,21 +262,21 @@ final class SubscriptionSettingsViewModel: ObservableObject {
             if storeKitTierAfter != .free && storeKitTierAfter != storeKitTierBefore {
                 // StoreKit found a new subscription
                 logger.info("Purchases restored from Apple, StoreKit tier: \(storeKitTierAfter.rawValue)")
-                successMessage = AuthStrings.string("subscription.restore.success", locale: LocalizationManager.shared.currentLocale)
+                successMessage = String(localized: .subscriptionRestoreSuccess)
                 Haptics.playSubscriptionSuccess()
             } else if storeKitTierAfter != .free {
                 // StoreKit already had this subscription (re-synced)
                 logger.info("Purchases synced, StoreKit tier unchanged: \(storeKitTierAfter.rawValue)")
-                successMessage = AuthStrings.string("subscription.restore.success", locale: LocalizationManager.shared.currentLocale)
+                successMessage = String(localized: .subscriptionRestoreSuccess)
                 Haptics.play(.success)
             } else {
                 // No Apple purchases found in StoreKit
                 logger.info("No Apple purchases to restore (StoreKit tier: free)")
-                successMessage = AuthStrings.string("subscription.restore.noPurchases", locale: LocalizationManager.shared.currentLocale)
+                successMessage = String(localized: .subscriptionRestoreNoPurchases)
             }
         } catch {
             logger.error("Failed to restore purchases: \(error.localizedDescription)")
-            errorMessage = AuthStrings.string("subscription.errors.restoreFailed", locale: LocalizationManager.shared.currentLocale)
+            errorMessage = String(localized: .subscriptionErrorsRestoreFailed)
             isLoading = false
         }
 

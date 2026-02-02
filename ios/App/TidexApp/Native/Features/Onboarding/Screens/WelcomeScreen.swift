@@ -3,8 +3,7 @@ import SwiftUI
 /// Screen 1: Welcome/Hero
 /// Establishes brand, creates emotional connection, sets expectation
 struct WelcomeScreen: View {
-    @Environment(\.localization) private var localization
-
+    
     // Entrance animation states - animate once, then stillness
     @State private var showLogo = false
     @State private var showCard = false
@@ -82,7 +81,7 @@ struct WelcomeScreen: View {
     }
 
     private var isNorwegian: Bool {
-        localization.currentLocale == .norwegian
+        Locale.current.tidexIsNorwegian
     }
 
     /// Sample amount for the ghosted preview (locale-aware)
@@ -179,7 +178,7 @@ struct WelcomeScreen: View {
     private var textContent: some View {
         VStack(spacing: 12) {
             // Headline - sized to never truncate on any device
-            Text(localization.string("onboarding.welcome.title"))
+            Text(.onboardingWelcomeTitle)
                 .font(.tidexLargeTitle)
                 .foregroundStyle(
                     LinearGradient(
@@ -196,7 +195,7 @@ struct WelcomeScreen: View {
                 .offset(y: showHeadline ? 0 : 8)
 
             // Subheadline
-            Text(localization.string("onboarding.welcome.subtitle"))
+            Text(.onboardingWelcomeSubtitle)
                 .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -213,5 +212,4 @@ struct WelcomeScreen: View {
 #Preview {
     WelcomeScreen()
         .background(Color.tidexBackground)
-        .environment(\.localization, LocalizationManager.shared)
 }

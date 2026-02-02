@@ -9,8 +9,7 @@ struct SupplementRuleEditor: View {
     let onSave: (OnboardingSupplementRule) -> Void
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-    @State private var editedRule: OnboardingSupplementRule
+        @State private var editedRule: OnboardingSupplementRule
     @State private var currentStep: EditorStep = .days
     @State private var hasSelectedType: Bool = false
     @State private var showingValueInput = false
@@ -56,7 +55,7 @@ struct SupplementRuleEditor: View {
 
     /// Hour suffix for rate display (e.g., "kr/t", "$/hr")
     private var hourRateSuffix: String {
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         let hourPart = isNorwegian ? "/t" : "/hr"
         return currencyConfig.display == .prefix
             ? "\(currencyConfig.value)\(hourPart)"
@@ -124,7 +123,7 @@ struct SupplementRuleEditor: View {
                     Spacer()
 
                     OnboardingButton(
-                        title: localization.string("onboarding.supplements.save"),
+                        title: String(localized: .onboardingSupplementsSave),
                         action: {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                             onSave(editedRule)
@@ -147,12 +146,12 @@ struct SupplementRuleEditor: View {
                 }
             }
             .navigationTitle(rule == nil
-                ? localization.string("onboarding.supplements.addRule")
-                : localization.string("onboarding.supplements.editRule"))
+                ? String(localized: .onboardingSupplementsAddRule)
+                : String(localized: .onboardingSupplementsEditRule))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         onCancel()
                     }
                 }
@@ -174,7 +173,7 @@ struct SupplementRuleEditor: View {
     @ViewBuilder
     private var daysSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.daysLabel"))
+            Text(.onboardingSupplementsDaysLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -206,17 +205,17 @@ struct SupplementRuleEditor: View {
 
             // Quick select buttons
             HStack(spacing: 8) {
-                QuickSelectButton(title: localization.string("onboarding.supplements.weekdays")) {
+                QuickSelectButton(title: String(localized: .onboardingSupplementsWeekdays)) {
                     editedRule.days = Set([1, 2, 3, 4, 5])
                     advanceIfNeeded()
                 }
 
-                QuickSelectButton(title: localization.string("onboarding.supplements.weekend")) {
+                QuickSelectButton(title: String(localized: .onboardingSupplementsWeekend)) {
                     editedRule.days = Set([6, 7])
                     advanceIfNeeded()
                 }
 
-                QuickSelectButton(title: localization.string("onboarding.supplements.allDays")) {
+                QuickSelectButton(title: String(localized: .onboardingSupplementsAllDays)) {
                     editedRule.days = Set(1...7)
                     advanceIfNeeded()
                 }
@@ -237,13 +236,13 @@ struct SupplementRuleEditor: View {
     @ViewBuilder
     private var timeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.timeLabel"))
+            Text(.onboardingSupplementsTimeLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
             HStack(spacing: 16) {
                 TimePickerField(
-                    label: localization.string("onboarding.supplements.from"),
+                    label: String(localized: .onboardingSupplementsFrom),
                     time: $editedRule.fromTime,
                     onChange: {
                         if currentStep == .time {
@@ -255,7 +254,7 @@ struct SupplementRuleEditor: View {
                 )
 
                 TimePickerField(
-                    label: localization.string("onboarding.supplements.to"),
+                    label: String(localized: .onboardingSupplementsTo),
                     time: $editedRule.toTime,
                     onChange: {
                         if currentStep == .time {
@@ -274,13 +273,13 @@ struct SupplementRuleEditor: View {
     @ViewBuilder
     private var typeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.typeLabel"))
+            Text(.onboardingSupplementsTypeLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
             HStack(spacing: 12) {
                 TypeButton(
-                    title: localization.string("onboarding.supplements.fixedRate"),
+                    title: String(localized: .onboardingSupplementsFixedRate),
                     subtitle: hourRateSuffix,
                     isSelected: hasSelectedType && editedRule.type == .fixed,
                     action: {
@@ -296,7 +295,7 @@ struct SupplementRuleEditor: View {
                 )
 
                 TypeButton(
-                    title: localization.string("onboarding.supplements.percentRate"),
+                    title: String(localized: .onboardingSupplementsPercentRate),
                     subtitle: "%",
                     isSelected: hasSelectedType && editedRule.type == .percent,
                     action: {
@@ -319,7 +318,7 @@ struct SupplementRuleEditor: View {
     @ViewBuilder
     private var valueSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.valueLabel"))
+            Text(.onboardingSupplementsValueLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -369,7 +368,7 @@ struct SupplementRuleEditor: View {
                                 .toolbar {
                                     ToolbarItemGroup(placement: .keyboard) {
                                         Spacer()
-                                        Button(localization.string("common.done")) {
+                                        Button(String(localized: .commonDone)) {
                                             applyValueInput()
                                         }
                                         .fontWeight(.semibold)
@@ -653,5 +652,4 @@ private struct QuickValueButton: View {
         onSave: { _ in },
         onCancel: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

@@ -6,8 +6,7 @@ import Charts
 struct MonthlyProgressChart: View {
     let data: [DailyCumulativeData]
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
@@ -65,7 +64,7 @@ struct MonthlyProgressChart: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Title
-            Text(localization.string("stats.charts.monthlyProgress.title"))
+            Text(.statsChartsMonthlyProgressTitle)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -185,15 +184,14 @@ struct MonthlyProgressChart: View {
 
 /// Empty state when no cumulative data is available
 struct MonthlyProgressChartEmpty: View {
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("stats.charts.monthlyProgress.title"))
+            Text(.statsChartsMonthlyProgressTitle)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("stats.charts.monthlyProgress.noData"))
+            Text(.statsChartsMonthlyProgressNoData)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -216,5 +214,4 @@ struct MonthlyProgressChartEmpty: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

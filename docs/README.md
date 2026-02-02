@@ -24,6 +24,10 @@ Open http://localhost:3000 in your browser to view the app.
 
 - SVG icons come from the [Tabler Icons](https://tablericons.com/) set. Local copies live in `app/src/icons`, and the project depends on `@tabler/icons` / `@tabler/icons-react` for any React usage.
 
+## iOS Localization
+
+- iOS localization workflow (string catalogs, symbols, adding languages): `ios/LOCALIZATION.md`
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

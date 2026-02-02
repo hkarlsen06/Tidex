@@ -14,7 +14,6 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     private let settingsRepository: SettingsRepository
     private let syncCoordinator: SyncCoordinator
-    private let localization: LocalizationManager
 
     // MARK: - Published State
 
@@ -69,11 +68,9 @@ final class ProfileSettingsViewModel: ObservableObject {
     init(
         settingsRepository: SettingsRepository? = nil,
         syncCoordinator: SyncCoordinator? = nil,
-        localization: LocalizationManager? = nil
     ) {
         self.settingsRepository = settingsRepository ?? SettingsRepository.shared
         self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
-        self.localization = localization ?? LocalizationManager.shared
     }
 
     // MARK: - Load Profile
@@ -119,7 +116,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             }
 
         } catch {
-            errorMessage = localization.string("profile.errors.loadFailed")
+            errorMessage = String(localized: .profileErrorsLoadFailed)
         }
 
         isLoading = false
@@ -173,7 +170,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             }
 
         } catch {
-            errorMessage = localization.string("profile.errors.saveFailed")
+            errorMessage = String(localized: .profileErrorsSaveFailed)
         }
 
         isSavingName = false
@@ -198,17 +195,17 @@ final class ProfileSettingsViewModel: ObservableObject {
         guard !isChangingEmail else { return }
 
         guard canChangeEmail else {
-            errorMessage = localization.string("profile.emailChange.errors.oauthOnly")
+            errorMessage = String(localized: .profileEmailChangeErrorsOauthOnly)
             return
         }
 
         guard isValidEmail(newEmail) else {
-            errorMessage = localization.string("profile.emailChange.errors.invalidEmail")
+            errorMessage = String(localized: .profileEmailChangeErrorsInvalidEmail)
             return
         }
 
         guard newEmail.lowercased() != email.lowercased() else {
-            errorMessage = localization.string("profile.emailChange.errors.sameEmail")
+            errorMessage = String(localized: .profileEmailChangeErrorsSameEmail)
             return
         }
 
@@ -224,7 +221,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             emailChangeSent = true
 
         } catch {
-            errorMessage = localization.string("profile.emailChange.errors.failed")
+            errorMessage = String(localized: .profileEmailChangeErrorsFailed)
         }
 
         isChangingEmail = false
@@ -418,7 +415,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
             Haptics.play(.success)
         } catch {
-            errorMessage = localization.string("profile.errors.uploadFailed")
+            errorMessage = String(localized: .profileErrorsUploadFailed)
             Haptics.play(.error)
         }
 
@@ -458,7 +455,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     /// Expected confirmation text for account deletion
     var expectedDeleteConfirmText: String {
-        localization.string("profile.dangerZone.deleteAccount.confirmText")
+        String(localized: .profileDangerZoneDeleteAccountConfirmText)
     }
 
     /// Whether the delete confirmation text matches
@@ -472,7 +469,7 @@ final class ProfileSettingsViewModel: ObservableObject {
         guard !isDeletingAccount else { return }
 
         guard canConfirmDelete else {
-            errorMessage = localization.string("profile.dangerZone.deleteAccount.errors.confirmMismatch")
+            errorMessage = String(localized: .profileDangerZoneDeleteAccountErrorsConfirmMismatch)
             return
         }
 
@@ -511,7 +508,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             }
 
         } catch {
-            errorMessage = localization.string("profile.dangerZone.deleteAccount.errors.deleteFailed")
+            errorMessage = String(localized: .profileDangerZoneDeleteAccountErrorsDeleteFailed)
             Haptics.play(.error)
             isDeletingAccount = false
         }

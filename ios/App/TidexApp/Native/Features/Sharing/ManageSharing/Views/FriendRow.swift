@@ -24,8 +24,7 @@ struct FriendRow: View {
     let onShareBack: () -> Void
     let onRemove: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
@@ -143,7 +142,7 @@ struct FriendRow: View {
 
     private var shareBackButton: some View {
         Button(action: onShareBack) {
-            Text(localization.string("sharing.shareBack"))
+            Text(.sharingShareBack)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white)
                 .padding(.horizontal, Spacing.sm)
@@ -256,5 +255,4 @@ struct FriendRow: View {
     .cornerRadius(12)
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

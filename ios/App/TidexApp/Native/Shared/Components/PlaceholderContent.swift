@@ -28,16 +28,15 @@ struct PlaceholderContent: View {
 
 /// Convenience view for placeholder screens using AppTab configuration
 struct TabPlaceholder: View {
-    @Environment(\.localization) private var localization
-
+    
     let tab: AppTab
 
     var body: some View {
         GeometryReader { geometry in
             PlaceholderContent(
                 icon: tab.icon,
-                title: localization.string(tab.titleKey),
-                description: localization.string(tab.descriptionKey)
+                title: String(localized: tab.titleKey),
+                description: String(localized: tab.descriptionKey)
             )
             .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
         }
@@ -60,5 +59,4 @@ struct TabPlaceholder: View {
         Color.tidexBackground.ignoresSafeArea()
         TabPlaceholder(tab: .shifts)
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

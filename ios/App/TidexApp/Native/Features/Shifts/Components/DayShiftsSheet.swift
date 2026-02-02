@@ -8,13 +8,8 @@ struct DayShiftsSheet: View {
     let onShiftTapped: (ShiftWithComputations) -> Void
     var excludedFromTotalIds: Set<String> = []
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
     @Environment(\.dismiss) private var dismiss
-
-    private var isNorwegian: Bool {
-        localization.currentLocale == .norwegian
-    }
 
     // MARK: - Computed Properties
 
@@ -24,7 +19,7 @@ struct DayShiftsSheet: View {
         }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale(identifier: Locale.current.identifier)
         formatter.dateFormat = "EEEE, d. MMMM"
         return formatter.string(from: date).capitalized
     }
@@ -68,7 +63,7 @@ struct DayShiftsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(localization.string("common.done")) {
+                    Button(String(localized: .commonDone)) {
                         dismiss()
                     }
                     .font(.system(size: 16, weight: .semibold))
@@ -87,7 +82,7 @@ struct DayShiftsSheet: View {
                 Text(formattedHours(totalHours))
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
-                Text(isNorwegian ? "timer" : "hours")
+                Text(.shiftsDaySheetHours)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -102,7 +97,7 @@ struct DayShiftsSheet: View {
                 Text(formatCurrency(totalEarnings))
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
-                Text(isNorwegian ? "inntekt" : "earnings")
+                Text(.shiftsDaySheetEarnings)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
             }
