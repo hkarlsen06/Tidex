@@ -115,8 +115,5 @@
     "supabase": "^2.72.8",
     "vitest": "^4.0.17"
   },
-  "optionalDependencies": {
-    "motion-plus": "https://api.motion.dev/registry.tgz?package=motion-plus&version=latest"
-  },
   "type": "module"
 }
