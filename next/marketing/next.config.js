@@ -13,7 +13,12 @@ const nextConfig = {
   trailingSlash: true,
 
   // Monorepo/workspace hint so Next traces correctly on Netlify
-  outputFileTracingRoot: path.join(__dirname, '..'),
+  outputFileTracingRoot: path.join(__dirname, '../..'),
+
+  // Set turbopack root for monorepo builds
+  turbopack: {
+    root: path.join(__dirname, '../..'),
+  },
 };
 
 module.exports = nextConfig;
