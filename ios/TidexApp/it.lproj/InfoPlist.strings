@@ -1,0 +1,13 @@
+/* Italian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex ha bisogno dell'accesso alla fotocamera per scattare una foto del profilo.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex utilizza Face ID per proteggere i tuoi dati sugli guadagni. Solo tu dovresti vedere il tuo reddito.";

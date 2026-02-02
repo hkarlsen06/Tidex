@@ -14,17 +14,46 @@ config({ path: path.join(__dirname, "../../next/.env.local") });
 const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 const TARGET_LANGUAGES = [
+  // Western Europe
   { code: "de", name: "German" },
-  { code: "nb", name: "Norwegian Bokmål" },
-  { code: "es", name: "Spanish" },
   { code: "fr", name: "French" },
-  { code: "ja", name: "Japanese" },
-  { code: "ko", name: "Korean" },
-  { code: "pt-BR", name: "Brazilian Portuguese" },
-  { code: "ru", name: "Russian" },
+  { code: "es", name: "Spanish" },
+  { code: "it", name: "Italian" },
   { code: "nl", name: "Dutch" },
+  { code: "pt-BR", name: "Brazilian Portuguese" },
+
+  // Nordic
+  { code: "nb", name: "Norwegian Bokmål" },
   { code: "sv", name: "Swedish" },
   { code: "da", name: "Danish" },
+  { code: "fi", name: "Finnish" },
+
+  // Eastern Europe
+  { code: "pl", name: "Polish" },
+  { code: "ru", name: "Russian" },
+  { code: "uk", name: "Ukrainian" },
+
+  // Asia
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "zh-Hans", name: "Chinese Simplified" },
+  { code: "th", name: "Thai" },
+  { code: "vi", name: "Vietnamese" },
+];
+
+// Path to Xcode project file
+const XCODE_PROJECT_PATH = path.join(
+  __dirname,
+  "../Tidex.xcodeproj/project.pbxproj"
+);
+
+// Path to TidexApp lproj directory (for InfoPlist.strings)
+const TIDEX_APP_PATH = path.join(__dirname, "../TidexApp");
+
+// InfoPlist.strings keys that need translation (others like CFBundleName stay as "Tidex")
+const INFO_PLIST_TRANSLATABLE_KEYS = [
+  "NSCameraUsageDescription",
+  "NSFaceIDUsageDescription",
 ];
 
 // Stats for reporting
@@ -179,11 +208,17 @@ async function translateXcstrings(filePath) {
   let idCounter = 0;
 
   for (const [key, value] of Object.entries(data.strings)) {
-    // Check for simple stringUnit
-    const enStringUnit = value.localizations?.en?.stringUnit;
-    if (enStringUnit?.value) {
-      const englishValue = enStringUnit.value;
+    // Check for plural variations first (they take precedence)
+    const enVariations = value.localizations?.en?.variations?.plural;
+    const hasPluralVariations = enVariations && Object.keys(enVariations).length > 0;
 
+    // Check for simple stringUnit
+    // In xcstrings, the key itself is the English value when no explicit en localization exists
+    // BUT only use key fallback if there are no plural variations (those need special handling)
+    const enStringUnit = value.localizations?.en?.stringUnit;
+    const englishValue = enStringUnit?.value || (hasPluralVariations ? null : key);
+
+    if (englishValue) {
       for (const targetLang of TARGET_LANGUAGES) {
         const hasTranslation =
           value.localizations?.[targetLang.code]?.stringUnit?.value;
@@ -199,8 +234,7 @@ async function translateXcstrings(filePath) {
       }
     }
 
-    // Check for plural variations
-    const enVariations = value.localizations?.en?.variations?.plural;
+    // Handle plural variations
     if (enVariations) {
       for (const [pluralForm, pluralData] of Object.entries(enVariations)) {
         const englishValue = pluralData.stringUnit?.value;
@@ -328,6 +362,233 @@ async function translateXcstrings(filePath) {
   console.log(`\nSaved: ${filePath}`);
 }
 
+// Sync languages to Xcode project's knownRegions
+async function syncXcodeProjectLanguages() {
+  console.log("\nSyncing languages to Xcode project...");
+
+  try {
+    const content = await fs.readFile(XCODE_PROJECT_PATH, "utf-8");
+
+    // Find the knownRegions section
+    const knownRegionsRegex = /knownRegions\s*=\s*\(\s*([\s\S]*?)\s*\);/;
+    const match = content.match(knownRegionsRegex);
+
+    if (!match) {
+      console.error("  ✗ Could not find knownRegions in project.pbxproj");
+      return false;
+    }
+
+    // Parse existing regions
+    const existingRegions = match[1]
+      .split(",")
+      .map((r) => r.trim().replace(/"/g, ""))
+      .filter((r) => r.length > 0);
+
+    // Build desired regions list: en + all target languages + Base
+    const desiredRegions = new Set(["en"]);
+    for (const lang of TARGET_LANGUAGES) {
+      desiredRegions.add(lang.code);
+    }
+    desiredRegions.add("Base");
+
+    // Check what's missing
+    const missingRegions = [...desiredRegions].filter(
+      (r) => !existingRegions.includes(r)
+    );
+
+    if (missingRegions.length === 0) {
+      console.log("  ✓ All languages already in Xcode project");
+      return true;
+    }
+
+    console.log(`  Adding languages: ${missingRegions.join(", ")}`);
+
+    // Build new knownRegions array
+    // Format: codes with hyphens need quotes (e.g., "pt-BR"), others don't
+    const formatRegion = (code) =>
+      code.includes("-") ? `"${code}"` : code;
+
+    const newRegions = [...desiredRegions].map(formatRegion);
+
+    // Create new knownRegions block with proper indentation
+    const newKnownRegions = `knownRegions = (\n\t\t\t\t${newRegions.join(",\n\t\t\t\t")},\n\t\t\t);`;
+
+    // Replace in content
+    const newContent = content.replace(knownRegionsRegex, newKnownRegions);
+
+    await fs.writeFile(XCODE_PROJECT_PATH, newContent);
+    console.log(`  ✓ Updated ${XCODE_PROJECT_PATH}`);
+    return true;
+  } catch (error) {
+    console.error(`  ✗ Error updating Xcode project: ${error.message}`);
+    stats.errors.push(`Xcode project sync: ${error.message}`);
+    return false;
+  }
+}
+
+// Parse InfoPlist.strings file format
+function parseInfoPlistStrings(content) {
+  const result = {};
+  // Match "key" = "value"; patterns, handling escaped quotes
+  const regex = /"([^"\\]*(?:\\.[^"\\]*)*)"\s*=\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*;/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    result[match[1]] = match[2];
+  }
+  return result;
+}
+
+// Generate InfoPlist.strings file content
+function generateInfoPlistStrings(langName, strings) {
+  const lines = [`/* ${langName} localization for Info.plist strings */`, ""];
+
+  // Always include app name keys (not translated)
+  lines.push("/* App display name */");
+  lines.push('"CFBundleDisplayName" = "Tidex";');
+  lines.push("");
+  lines.push("/* App name */");
+  lines.push('"CFBundleName" = "Tidex";');
+  lines.push("");
+
+  // Add translated keys
+  for (const [key, value] of Object.entries(strings)) {
+    const comment =
+      key === "NSCameraUsageDescription"
+        ? "/* Camera usage description */"
+        : key === "NSFaceIDUsageDescription"
+          ? "/* Face ID usage description */"
+          : `/* ${key} */`;
+    lines.push(comment);
+    // Escape any quotes in the value
+    const escapedValue = value.replace(/"/g, '\\"');
+    lines.push(`"${key}" = "${escapedValue}";`);
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+// Translate InfoPlist.strings for all languages
+async function translateInfoPlistStrings() {
+  console.log("\nTranslating InfoPlist.strings...");
+
+  try {
+    // Read English source
+    const enPath = path.join(TIDEX_APP_PATH, "en.lproj", "InfoPlist.strings");
+    const enContent = await fs.readFile(enPath, "utf-8");
+    const enStrings = parseInfoPlistStrings(enContent);
+
+    // Get translatable strings
+    const stringsToTranslate = {};
+    for (const key of INFO_PLIST_TRANSLATABLE_KEYS) {
+      if (enStrings[key]) {
+        stringsToTranslate[key] = enStrings[key];
+      }
+    }
+
+    if (Object.keys(stringsToTranslate).length === 0) {
+      console.log("  No translatable strings found in InfoPlist.strings");
+      return;
+    }
+
+    // Track what we create/update
+    let created = 0;
+    let skipped = 0;
+
+    for (const targetLang of TARGET_LANGUAGES) {
+      const lprojDir = path.join(TIDEX_APP_PATH, `${targetLang.code}.lproj`);
+      const infoPlistPath = path.join(lprojDir, "InfoPlist.strings");
+
+      // Check if file already exists with content
+      let existingStrings = {};
+      try {
+        const existingContent = await fs.readFile(infoPlistPath, "utf-8");
+        existingStrings = parseInfoPlistStrings(existingContent);
+      } catch {
+        // File doesn't exist, that's fine
+      }
+
+      // Check if all translatable keys already exist
+      const missingKeys = INFO_PLIST_TRANSLATABLE_KEYS.filter(
+        (key) => !existingStrings[key]
+      );
+
+      if (missingKeys.length === 0) {
+        skipped++;
+        continue;
+      }
+
+      console.log(`  Translating InfoPlist.strings for ${targetLang.name}...`);
+
+      // Translate missing keys
+      const items = missingKeys.map((key, idx) => ({
+        id: `ip${idx}`,
+        key,
+        english: stringsToTranslate[key],
+      }));
+
+      try {
+        const prompt = `You are a professional translator for a mobile app called "Tidex" (a work shift tracking app).
+Translate these iOS permission descriptions from English to ${targetLang.name}.
+
+CRITICAL RULES:
+1. Keep "Tidex" as-is (it's the app name)
+2. Keep the tone friendly and clear
+3. These appear in iOS permission dialogs, so be concise
+
+Strings to translate:
+${JSON.stringify(items, null, 2)}
+
+Return format (JSON only, no markdown):
+{"ip0": "translation0", "ip1": "translation1", ...}`;
+
+        const response = await withRetry(() =>
+          client.messages.create({
+            model: "claude-haiku-4-5",
+            max_tokens: 1024,
+            messages: [{ role: "user", content: prompt }],
+          })
+        );
+
+        const translations = extractJson(response.content[0].text.trim());
+
+        // Merge translations with existing
+        const mergedStrings = { ...existingStrings };
+        for (const item of items) {
+          if (translations[item.id]) {
+            mergedStrings[item.key] = translations[item.id];
+          }
+        }
+
+        // Ensure lproj directory exists
+        await fs.mkdir(lprojDir, { recursive: true });
+
+        // Write InfoPlist.strings
+        const content = generateInfoPlistStrings(targetLang.name, mergedStrings);
+        await fs.writeFile(infoPlistPath, content);
+
+        created++;
+        stats.translated += missingKeys.length;
+      } catch (error) {
+        console.error(
+          `    ✗ Error translating for ${targetLang.name}: ${error.message}`
+        );
+        stats.errors.push(`InfoPlist ${targetLang.name}: ${error.message}`);
+      }
+
+      // Small delay between languages
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    console.log(
+      `  ✓ InfoPlist.strings: ${created} created/updated, ${skipped} already complete`
+    );
+  } catch (error) {
+    console.error(`  ✗ Error processing InfoPlist.strings: ${error.message}`);
+    stats.errors.push(`InfoPlist.strings: ${error.message}`);
+  }
+}
+
 // Main
 const xcstringsFiles = [
   path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
@@ -347,6 +608,12 @@ for (const file of xcstringsFiles) {
     stats.errors.push(`File error: ${error.message}`);
   }
 }
+
+// Translate InfoPlist.strings (permission descriptions)
+await translateInfoPlistStrings();
+
+// Sync languages to Xcode project (makes them selectable in iOS Settings)
+await syncXcodeProjectLanguages();
 
 // Print summary
 console.log("\n" + "=".repeat(40));

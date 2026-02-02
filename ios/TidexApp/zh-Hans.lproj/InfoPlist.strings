@@ -1,0 +1,13 @@
+/* Chinese Simplified localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex需要访问相机来拍摄个人资料照片。";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex使用面容ID来保护您的收入数据的隐私。只有您应该看到您的收入。";

@@ -466,13 +466,10 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
     }
 
-    /// Get formatter locale for date/number formatting based on widget locale string
-    private func formatterLocale(for locale: String) -> Locale {
-        switch locale {
-        case "no": return Locale(identifier: "nb_NO")
-        case "de": return Locale(identifier: "de_DE")
-        default: return Locale(identifier: "en_US")
-        }
+    /// Get the user's current device locale for date formatting
+    /// This ensures weekday names and date formats are localized correctly
+    private func formatterLocale() -> Locale {
+        Locale.current
     }
 
     private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
@@ -489,7 +486,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
                 return String(localized: .widgetYesterday)
             } else {
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = formatterLocale(for: locale)
+                weekdayFormatter.locale = formatterLocale()
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -508,7 +505,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
         // Weekday + day
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = formatterLocale(for: locale)
+        weekdayFormatter.locale = formatterLocale()
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }

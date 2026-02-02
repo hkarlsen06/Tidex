@@ -1,0 +1,13 @@
+/* Vietnamese localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex cần quyền truy cập camera để chụp ảnh hồ sơ.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex sử dụng Face ID để bảo vệ dữ liệu thu nhập của bạn khỏi những người không được phép. Chỉ bạn mới nên xem thu nhập của mình.";

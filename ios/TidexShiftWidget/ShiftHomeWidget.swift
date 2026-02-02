@@ -817,13 +817,10 @@ struct ShiftWidgetProvider: TimelineProvider {
         return sortedShifts.last
     }
 
-    /// Get formatter locale for date/number formatting based on widget locale string
-    private func formatterLocale(for locale: String) -> Locale {
-        switch locale {
-        case "no": return Locale(identifier: "nb_NO")
-        case "de": return Locale(identifier: "de_DE")
-        default: return Locale(identifier: "en_US")
-        }
+    /// Get the user's current device locale for date formatting
+    /// This ensures weekday names and date formats are localized correctly
+    private func formatterLocale() -> Locale {
+        Locale.current
     }
 
     private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
@@ -841,7 +838,7 @@ struct ShiftWidgetProvider: TimelineProvider {
             } else {
                 // 2+ days ago: show weekday + day format (e.g., "Mon 12.")
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = formatterLocale(for: locale)
+                weekdayFormatter.locale = formatterLocale()
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -860,7 +857,7 @@ struct ShiftWidgetProvider: TimelineProvider {
 
         // Weekday + day: "Mon 12."
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = formatterLocale(for: locale)
+        weekdayFormatter.locale = formatterLocale()
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }

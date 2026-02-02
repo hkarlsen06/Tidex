@@ -127,6 +127,7 @@ struct CountdownFormatter {
         let totalHours = totalSeconds / 3600
 
         let secWord = String(localized: .commonSecondsShort)
+        let minWord = String(localized: .commonMinutesShort)
         let hourWord = String(localized: .commonHoursShort)
         let inWord = String(localized: .commonIn)
 
@@ -139,18 +140,18 @@ struct CountdownFormatter {
 
             // Less than 1 hour - show minutes and seconds
             if hours == 0 {
-                return ("\(inWord) \(minutes)min \(seconds)\(secWord)", false)
+                return ("\(inWord) \(minutes)\(minWord) \(seconds)\(secWord)", false)
             }
 
             // Less than 6 hours - show hours, minutes and seconds
-            return ("\(inWord) \(hours)\(hourWord) \(minutes)min \(seconds)\(secWord)", false)
+            return ("\(inWord) \(hours)\(hourWord) \(minutes)\(minWord) \(seconds)\(secWord)", false)
         }
 
         // 6+ hours on same day - show hours and minutes only
         if minutes == 0 {
             return ("\(inWord) \(hours)\(hourWord)", false)
         }
-        return ("\(inWord) \(hours)\(hourWord) \(minutes)min", false)
+        return ("\(inWord) \(hours)\(hourWord) \(minutes)\(minWord)", false)
     }
 
     private static func formatPastTime(from pastDate: Date) -> (String, Bool) {
@@ -177,6 +178,7 @@ struct CountdownFormatter {
         let totalHours = totalSeconds / 3600
 
         let secWord = String(localized: .commonSecondsShort)
+        let minWord = String(localized: .commonMinutesShort)
         let hourWord = String(localized: .commonHoursShort)
         let agoWord = String(localized: .commonAgo)
 
@@ -189,17 +191,17 @@ struct CountdownFormatter {
 
             // Less than 1 hour - show minutes and seconds
             if hours == 0 {
-                return ("\(minutes)min \(seconds)\(secWord) \(agoWord)", false)
+                return ("\(minutes)\(minWord) \(seconds)\(secWord) \(agoWord)", false)
             }
 
             // Less than 6 hours - show hours, minutes and seconds
-            return ("\(hours)\(hourWord) \(minutes)min \(seconds)\(secWord) \(agoWord)", false)
+            return ("\(hours)\(hourWord) \(minutes)\(minWord) \(seconds)\(secWord) \(agoWord)", false)
         }
 
         // 6+ hours on same day - show hours and minutes only
         if minutes == 0 {
             return ("\(hours)\(hourWord) \(agoWord)", false)
         }
-        return ("\(hours)\(hourWord) \(minutes)min \(agoWord)", false)
+        return ("\(hours)\(hourWord) \(minutes)\(minWord) \(agoWord)", false)
     }
 }
