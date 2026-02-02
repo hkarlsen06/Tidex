@@ -471,7 +471,6 @@ struct MonthLimitSheet: View {
         guard let year = components.year, let month = components.month else { return "" }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale.current.tidexLanguage.formatterLocale
         formatter.dateFormat = "MMMM yyyy"
 
         var dateComponents = DateComponents()

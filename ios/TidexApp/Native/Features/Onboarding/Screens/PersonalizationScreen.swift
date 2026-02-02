@@ -15,7 +15,7 @@ struct PersonalizationScreen: View {
     /// Default hourly wage based on locale
     /// Norwegian: 200 kr/hour, English/German: $25/hour
     private var defaultHourlyWage: Double {
-        Locale.current.tidexLanguage == .norwegian ? 200 : 25
+        Locale.current.isNorwegian ? 200 : 25
     }
 
     var body: some View {

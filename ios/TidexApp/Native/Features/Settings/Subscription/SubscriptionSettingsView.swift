@@ -448,12 +448,12 @@ struct SubscriptionSettingsView: View {
 
     private var termsURL: URL {
         // swiftlint:disable:next force_unwrapping
-        URL(string: "https://tidex.no/\(Locale.current.tidexLanguageCode)/terms")!
+        URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/terms")!
     }
 
     private var privacyURL: URL {
         // swiftlint:disable:next force_unwrapping
-        URL(string: "https://tidex.no/\(Locale.current.tidexLanguageCode)/privacy")!
+        URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/privacy")!
     }
 
     private var legalLinks: some View {

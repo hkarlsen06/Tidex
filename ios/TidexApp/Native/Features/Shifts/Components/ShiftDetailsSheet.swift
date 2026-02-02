@@ -97,7 +97,6 @@ struct ShiftDetailsSheet: View {
         }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale.current.tidexLanguage.formatterLocale
         formatter.dateFormat = "EEEE, d. MMMM yyyy"
         return formatter.string(from: date).capitalized
     }

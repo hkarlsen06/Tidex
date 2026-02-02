@@ -438,7 +438,6 @@ struct WageSnapshotEditorSheet: View {
         guard let date = dateFormatter.date(from: isoDate) else { return isoDate }
 
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = Locale.current.tidexLanguage.formatterLocale
         displayFormatter.dateFormat = "MMMM yyyy"
         return displayFormatter.string(from: date)
     }

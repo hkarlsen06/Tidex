@@ -21,7 +21,6 @@ struct SharedShiftRow: View {
         }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale.current.tidexLanguage.formatterLocale
 
         formatter.dateFormat = "EEEE"
         let dayName = formatter.string(from: date).capitalized

@@ -1,0 +1,20 @@
+{
+  "name": "ios",
+  "version": "1.0.0",
+  "description": "The iOS app is a native SwiftUI application for tracking work shifts and calculating wages. It uses a **local-first, sync-based architecture** with Supabase as the backend.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
+    "dotenv": "^17.2.3"
+  }
+}

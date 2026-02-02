@@ -9,7 +9,8 @@
     "start": "pnpm --filter next start",
     "lint": "pnpm --filter next lint",
     "test": "pnpm --filter next test",
-    "open-ios": "open ios/Tidex.xcodeproj"
+    "open-ios": "open ios/Tidex.xcodeproj",
+    "localization": "node ios/scripts/translate-xcstrings.mjs"
   },
   "pnpm": {
     "overrides": {

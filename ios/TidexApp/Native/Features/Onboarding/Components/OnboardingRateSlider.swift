@@ -28,16 +28,12 @@ struct OnboardingRateSlider: View {
 
     // MARK: - Currency-Aware Configuration
 
-    private var tidexLang: TidexLanguage {
-        Locale.current.tidexLanguage
-    }
-
     /// Get the effective currency config (from parameter or locale default)
     private var currencyConfig: CurrencyOption {
         if let currency = currency {
             return CurrencyConfig.get(currency)
         }
-        return tidexLang == .norwegian ? CurrencyConfig.defaultCurrency : CurrencyConfig.get("$")
+        return Locale.current.isNorwegian ? CurrencyConfig.defaultCurrency : CurrencyConfig.get("$")
     }
 
     /// Whether currency symbol should appear before the amount
@@ -209,8 +205,7 @@ struct OnboardingRateSlider: View {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = 0
-        formatter.locale = Locale.current.tidexLanguage.formatterLocale
-        return formatter.string(from: NSNumber(value: amount)) ?? "0"
+                return formatter.string(from: NSNumber(value: amount)) ?? "0"
     }
 
     /// Format with currency for min/max labels
@@ -230,8 +225,7 @@ struct OnboardingRateSlider: View {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 2
-        formatter.locale = Locale.current.tidexLanguage.formatterLocale
-        return formatter.string(from: NSNumber(value: amount)) ?? "0"
+                return formatter.string(from: NSNumber(value: amount)) ?? "0"
     }
 
     // MARK: - Tappable Value Views

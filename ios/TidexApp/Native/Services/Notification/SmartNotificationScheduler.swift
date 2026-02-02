@@ -220,7 +220,7 @@ final class SmartNotificationScheduler {
     private func localizedWeekdayName(for date: Date, locale: String) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE"
-        formatter.locale = TidexLanguage(rawValue: locale)?.formatterLocale ?? TidexLanguage.english.formatterLocale
+        formatter.locale = Locale(identifier: locale)
         let text = formatter.string(from: date)
         return text.prefix(1).uppercased() + text.dropFirst()
     }
