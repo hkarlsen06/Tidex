@@ -117,14 +117,14 @@ export async function GET() {
           ])
         );
 
-        // Fetch profile pictures from profiles table
-        const { data: profilesData } = await adminClient
-          .from("profiles")
-          .select("id, profile_picture_url")
-          .in("id", allUserIds);
+        // Fetch profile pictures from user_settings table
+        const { data: settingsData } = await adminClient
+          .from("user_settings")
+          .select("user_id, profile_picture_url")
+          .in("user_id", allUserIds);
 
         const profilePicturesMap = new Map(
-          (profilesData || []).map((p: any) => [p.id, p.profile_picture_url])
+          (settingsData || []).map((s: any) => [s.user_id, s.profile_picture_url])
         );
 
         // Combine data
