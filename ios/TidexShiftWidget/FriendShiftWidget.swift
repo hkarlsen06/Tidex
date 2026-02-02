@@ -335,7 +335,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         )
 
         // Adjust layout state for active/ended shifts
-        if shiftStarted || shiftEnded {
+        // Preserve pastShift layout for past shifts - they should show "X days ago"
+        if layoutState != .pastShift && (shiftStarted || shiftEnded) {
             layoutState = .todayOrTomorrow
         }
 
