@@ -318,7 +318,7 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
         switch type {
         case .fixed:
             let currencyConfig = CurrencyConfig.get(currency)
-            let hourPart = locale.tidexIsNorwegian ? "/t" : "/hr"
+            let hourPart = String(localized: .commonPerHourShort)
             let suffix = currencyConfig.display == .prefix
                 ? "\(currencyConfig.value)\(hourPart)"
                 : "\(currencyConfig.value)\(hourPart)"

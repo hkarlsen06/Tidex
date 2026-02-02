@@ -235,20 +235,14 @@ final class ShiftReminderScheduler {
         // Format the time remaining for the title
         let timeText = formatTimeRemaining(minutes: minutesBefore, locale: locale)
 
-        // Title: "{time} til neste vakt" / "{time} until next shift"
-        if locale == "no" {
-            content.title = "\(timeText) til neste vakt"
-        } else {
-            content.title = "\(timeText) until next shift"
-        }
+        // Title: "{time} until next shift"
+        let untilNextShift = String(localized: .notificationUntilNextShift)
+        content.title = "\(timeText) \(untilNextShift)"
 
-        // Body: "I dag/I morgen kl. {start}-{end}" / "Today/Tomorrow at {start}-{end}"
+        // Body: "Today/Tomorrow at {start}-{end}"
         let dayText = formatDayText(for: shift.shiftDate, locale: locale)
-        if locale == "no" {
-            content.body = "\(dayText) kl. \(shift.startTime)-\(shift.endTime)"
-        } else {
-            content.body = "\(dayText) at \(shift.startTime)-\(shift.endTime)"
-        }
+        let atTime = String(localized: .notificationAtTime)
+        content.body = "\(dayText) \(atTime) \(shift.startTime)-\(shift.endTime)"
 
         // Sound
         content.sound = UNNotificationSound(named: UNNotificationSoundName("tidex_notification.caf"))
@@ -280,17 +274,17 @@ final class ShiftReminderScheduler {
         let shiftDay = calendar.startOfDay(for: shiftDate)
 
         if calendar.isDate(shiftDay, inSameDayAs: today) {
-            return locale == "no" ? "I dag" : "Today"
+            return String(localized: .commonToday).capitalized
         }
 
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
            calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
-            return locale == "no" ? "I morgen" : "Tomorrow"
+            return String(localized: .commonTomorrow).capitalized
         }
 
         // Format as weekday + date
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+        displayFormatter.locale = TidexLanguage(rawValue: locale)?.formatterLocale ?? TidexLanguage.english.formatterLocale
         displayFormatter.dateFormat = "EEEE d. MMMM" // e.g., "onsdag 15. januar"
 
         var text = displayFormatter.string(from: shiftDate)
@@ -305,40 +299,26 @@ final class ShiftReminderScheduler {
         let hours = minutes / 60
         let mins = minutes % 60
 
-        let isNorwegian = locale == "no"
-
         // Handle special day cases
         if minutes == 1440 { // 24 hours
-            return isNorwegian ? "1 dag" : "1 day"
+            return String(localized: .notificationReminderOneDay)
         }
         if minutes == 2880 { // 48 hours
-            return isNorwegian ? "2 dager" : "2 days"
+            return String(localized: .notificationReminderTwoDays)
         }
 
         // Minutes only (less than 1 hour)
         if hours == 0 {
-            if isNorwegian {
-                return mins == 1 ? "1 minutt" : "\(mins) minutter"
-            } else {
-                return mins == 1 ? "1 minute" : "\(mins) minutes"
-            }
+            return String(localized: .notificationReminderMinutes(Int(Int32(mins))))
         }
 
         // Hours only (no remaining minutes)
         if mins == 0 {
-            if isNorwegian {
-                return hours == 1 ? "1 time" : "\(hours) timer"
-            } else {
-                return hours == 1 ? "1 hour" : "\(hours) hours"
-            }
+            return String(localized: .notificationReminderHours(Int(Int32(hours))))
         }
 
         // Mixed hours and minutes
-        if isNorwegian {
-            return "\(hours) t \(mins) min"
-        } else {
-            return "\(hours) h \(mins) min"
-        }
+        return "\(hours) \(String(localized: .commonHoursShort)) \(mins) min"
     }
 
     /// Parse shift start date from StoredShift

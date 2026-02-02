@@ -1,4 +1,0 @@
-Converted keys: 1074
-Missing English values: 0
-Missing Norwegian values: 0
-Keys with placeholder tokens: 0

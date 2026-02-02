@@ -80,17 +80,18 @@ struct WelcomeScreen: View {
         }
     }
 
-    private var isNorwegian: Bool {
-        Locale.current.tidexIsNorwegian
+    private var tidexLang: TidexLanguage {
+        Locale.current.tidexLanguage
     }
 
     /// Sample amount for the ghosted preview (locale-aware)
     /// Norwegian: ~24k kr (typical monthly wage)
     /// English: ~$3,200 (typical US monthly wage)
     private var ghostedAmountText: String {
-        if isNorwegian {
+        switch tidexLang {
+        case .norwegian:
             return "24 380 kr"
-        } else {
+        case .english, .german:
             return "$3,240"
         }
     }

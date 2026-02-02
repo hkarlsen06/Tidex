@@ -450,9 +450,7 @@ final class PaySettingsViewModel: ObservableObject {
     func updateCurrency(_ value: String) async {
         guard let userId = userId else { return }
         guard canChangeCurrency else {
-            errorMessage = Locale.current.tidexIsNorwegian
-                ? "Du kan ikke endre valuta når du har lønnstrinn-innstillinger"
-                : "Cannot change currency when using tariff wage settings"
+            errorMessage = String(localized: .settingsPayCurrencyChangeTariffError)
             return
         }
 

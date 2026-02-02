@@ -274,24 +274,18 @@ final class NotificationSettingsViewModel: ObservableObject {
 
         if hours == 0 {
             // Minutes only
-            return locale.tidexIsNorwegian
-                ? "\(mins) minutt\(mins == 1 ? "" : "er") før"
-                : "\(mins) minute\(mins == 1 ? "" : "s") before"
+            return String(localized: .notificationReminderMinutesBefore(Int(mins)))
         } else if mins == 0 {
             // Hours only
             if hours == 24 {
-                return locale.tidexIsNorwegian ? "1 dag før" : "1 day before"
+                return String(localized: .notificationReminderOneDayBefore)
             } else if hours == 48 {
-                return locale.tidexIsNorwegian ? "2 dager før" : "2 days before"
+                return String(localized: .notificationReminderTwoDaysBefore)
             }
-            return locale.tidexIsNorwegian
-                ? "\(hours) time\(hours == 1 ? "" : "r") før"
-                : "\(hours) hour\(hours == 1 ? "" : "s") before"
+            return String(localized: .notificationReminderHoursBefore(Int(hours)))
         } else {
             // Mixed hours and minutes
-            return locale.tidexIsNorwegian
-                ? "\(hours) t \(mins) min før"
-                : "\(hours) h \(mins) min before"
+            return "\(hours) \(String(localized: .commonHoursShort)) \(mins) min \(String(localized: .commonBefore))"
         }
     }
 

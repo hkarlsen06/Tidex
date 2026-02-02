@@ -117,12 +117,16 @@ enum CalendarGridHelper {
     // MARK: - Weekday Symbols
 
     /// Get localized weekday symbols (Monday-start)
-    static func weekdaySymbols(isNorwegian: Bool) -> [String] {
-        if isNorwegian {
-            return ["MA", "TI", "ON", "TO", "FR", "LØ", "SØ"]
-        } else {
-            return ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-        }
+    static func weekdaySymbols() -> [String] {
+        [
+            String(localized: .calendarWeekdayMonday),
+            String(localized: .calendarWeekdayTuesday),
+            String(localized: .calendarWeekdayWednesday),
+            String(localized: .calendarWeekdayThursday),
+            String(localized: .calendarWeekdayFriday),
+            String(localized: .calendarWeekdaySaturday),
+            String(localized: .calendarWeekdaySunday)
+        ]
     }
 
     // MARK: - Grid Columns

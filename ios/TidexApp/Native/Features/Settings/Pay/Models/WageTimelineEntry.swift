@@ -176,12 +176,13 @@ enum WageTimelineProcessor {
         let isCurrentYear = calendar.component(.year, from: date) == calendar.component(.year, from: Date())
 
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
+        let tidexLang = locale.tidexLanguage
+        displayFormatter.locale = tidexLang.formatterLocale
 
         if isCurrentYear {
-            displayFormatter.dateFormat = locale.tidexIsNorwegian ? "d. MMM" : "MMM d"
+            displayFormatter.dateFormat = tidexLang == .norwegian ? "d. MMM" : "MMM d"
         } else {
-            displayFormatter.dateFormat = locale.tidexIsNorwegian ? "d. MMM yyyy" : "MMM d, yyyy"
+            displayFormatter.dateFormat = tidexLang == .norwegian ? "d. MMM yyyy" : "MMM d, yyyy"
         }
 
         return displayFormatter.string(from: date)

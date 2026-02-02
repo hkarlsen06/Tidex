@@ -198,20 +198,11 @@ struct PaySettingsView: View {
 
     private var deleteConfirmationMessage: String {
         let count = viewModel.affectedShiftCount
-        let isNorwegian = Locale.current.tidexIsNorwegian
 
         if count == 0 {
-            return isNorwegian
-                ? "Er du sikker på at du vil slette denne lønnssettingen?"
-                : "Are you sure you want to delete this wage setting?"
-        } else if count == 1 {
-            return isNorwegian
-                ? "Dette vil påvirke 1 vakt. Er du sikker på at du vil slette denne lønnssettingen?"
-                : "This will affect 1 shift. Are you sure you want to delete this wage setting?"
+            return String(localized: .settingsPayDeleteConfirmation)
         } else {
-            return isNorwegian
-                ? "Dette vil påvirke \(count) vakter. Er du sikker på at du vil slette denne lønnssettingen?"
-                : "This will affect \(count) shifts. Are you sure you want to delete this wage setting?"
+            return String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
         }
     }
 }

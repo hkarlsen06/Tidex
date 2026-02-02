@@ -375,7 +375,7 @@ struct SharingView: View {
         let seconds = Int(endDate.timeIntervalSince(startDate))
 
         if seconds < 5 {
-            return Locale.current.tidexIsNorwegian ? "Nå" : "Now"
+            return String(localized: .commonNow).capitalized
         } else if seconds < 60 {
             return "\(seconds)s"
         } else if seconds < 3600 {
@@ -383,7 +383,7 @@ struct SharingView: View {
             return "\(minutes)m"
         } else {
             let hours = seconds / 3600
-            let hoursLabel = Locale.current.tidexIsNorwegian ? "t" : "h"
+            let hoursLabel = String(localized: .commonHoursShort)
             return "\(hours)\(hoursLabel)"
         }
     }

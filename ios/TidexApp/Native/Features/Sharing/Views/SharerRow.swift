@@ -238,17 +238,16 @@ private struct ShiftPreviewCard: View {
     private var formattedDate: String {
         guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
 
-        let isNorwegian = Locale.current.tidexIsNorwegian
-
         // Get day name
         let dayFormatter = DateFormatter()
-        dayFormatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        dayFormatter.locale = Locale.current.tidexLanguage.formatterLocale
         dayFormatter.dateFormat = "EEEE"
         let dayName = dayFormatter.string(from: date).capitalized
 
-        // Get day number (with dot suffix for Norwegian)
+        // Get day number (with locale-appropriate suffix)
         let dayNumber = Calendar.current.component(.day, from: date)
-        let dayString = isNorwegian ? "\(dayNumber)." : "\(dayNumber)"
+        let daySuffix = String(localized: .commonDaySuffix)
+        let dayString = "\(dayNumber)\(daySuffix)"
 
         // Get full month name for better readability in friends tab
         dayFormatter.dateFormat = "MMMM"
@@ -315,8 +314,6 @@ private struct ShiftPreviewCard: View {
     /// Format: "Om 2t 30min 45sek", "I morgen", "2t siden", etc.
     /// Includes seconds for countdowns under 12 hours
     private func computeRelativeTimeText(at now: Date, shiftStart: Date, shiftEnd: Date) -> String {
-        let isNorwegian = Locale.current.tidexIsNorwegian
-
         // For past shifts, calculate from end time (matches Next.js behavior)
         // "3min siden" means "ended 3 minutes ago", not "started X hours ago"
         let referenceTime: Date
@@ -337,6 +334,11 @@ private struct ShiftPreviewCard: View {
         // Count midnight crossings for day-based formatting
         let midnightDays = countMidnightCrossings(from: min(now, shiftStart), to: max(now, shiftStart))
 
+        // Abbreviations from String Catalog
+        let hAbbrev = String(localized: .commonHoursShort)
+        let minAbbrev = String(localized: .commonMinShort)
+        let secAbbrev = String(localized: .commonSecondsShort)
+
         // Within the same day (0 midnight crossings)
         if midnightDays == 0 {
             let h = totalMinutes / 60
@@ -346,80 +348,48 @@ private struct ShiftPreviewCard: View {
             // Under 12 hours: include seconds
             let includeSeconds = totalHours < 12
 
+            var timeStr: String
             if totalMinutes == 0 {
                 // Less than a minute - always show seconds
-                if isNorwegian {
-                    return isFuture ? "Om \(s)sek" : "\(s)sek siden"
-                } else {
-                    return isFuture ? "In \(s)s" : "\(s)s ago"
-                }
-            }
-
-            if h == 0 {
-                // Less than an hour - show minutes and seconds
+                timeStr = "\(s)\(secAbbrev)"
+            } else if h == 0 {
+                // Less than an hour
                 if includeSeconds {
-                    if isNorwegian {
-                        return isFuture ? "Om \(m)min \(s)sek" : "\(m)min \(s)sek siden"
-                    } else {
-                        return isFuture ? "In \(m)min \(s)s" : "\(m)min \(s)s ago"
-                    }
+                    timeStr = "\(m)\(minAbbrev) \(s)\(secAbbrev)"
                 } else {
-                    if isNorwegian {
-                        return isFuture ? "Om \(m)min" : "\(m)min siden"
-                    } else {
-                        return isFuture ? "In \(m)min" : "\(m)min ago"
-                    }
+                    timeStr = "\(m)\(minAbbrev)"
                 }
-            }
-
-            // Hours, minutes, and optionally seconds
-            if includeSeconds {
+            } else if includeSeconds {
                 if m == 0 {
-                    // Hours and seconds only
-                    if isNorwegian {
-                        return isFuture ? "Om \(h)t \(s)sek" : "\(h)t \(s)sek siden"
-                    } else {
-                        return isFuture ? "In \(h)h \(s)s" : "\(h)h \(s)s ago"
-                    }
+                    timeStr = "\(h)\(hAbbrev) \(s)\(secAbbrev)"
                 } else {
-                    // Hours, minutes, and seconds
-                    if isNorwegian {
-                        return isFuture ? "Om \(h)t \(m)min \(s)sek" : "\(h)t \(m)min \(s)sek siden"
-                    } else {
-                        return isFuture ? "In \(h)h \(m)min \(s)s" : "\(h)h \(m)min \(s)s ago"
-                    }
+                    timeStr = "\(h)\(hAbbrev) \(m)\(minAbbrev) \(s)\(secAbbrev)"
                 }
             } else if m == 0 {
-                // Exact hours (12+ hours away)
-                if isNorwegian {
-                    return isFuture ? "Om \(h)t" : "\(h)t siden"
-                } else {
-                    return isFuture ? "In \(h)h" : "\(h)h ago"
-                }
+                timeStr = "\(h)\(hAbbrev)"
             } else {
-                // Hours and minutes (12+ hours away)
-                if isNorwegian {
-                    return isFuture ? "Om \(h)t \(m)min" : "\(h)t \(m)min siden"
-                } else {
-                    return isFuture ? "In \(h)h \(m)min" : "\(h)h \(m)min ago"
-                }
+                timeStr = "\(h)\(hAbbrev) \(m)\(minAbbrev)"
+            }
+
+            if isFuture {
+                return String(localized: .commonInTime(timeStr))
+            } else {
+                return String(localized: .commonTimeAgo(timeStr))
             }
         }
 
         // 1 midnight crossing = tomorrow/yesterday
         if midnightDays == 1 {
-            if isNorwegian {
-                return isFuture ? "I morgen" : "I går"
-            } else {
-                return isFuture ? "Tomorrow" : "Yesterday"
-            }
+            return isFuture
+                ? String(localized: .commonTomorrow).capitalized
+                : String(localized: .commonYesterday).capitalized
         }
 
         // Multiple days
-        if isNorwegian {
-            return isFuture ? "Om \(midnightDays) dager" : "\(midnightDays) dager siden"
+        if isFuture {
+            return String(localized: .commonInDaysPlural(Int(Int32(midnightDays))))
         } else {
-            return isFuture ? "In \(midnightDays) days" : "\(midnightDays) days ago"
+            return String(localized: .commonDaysAgoPlural(Int(Int32(midnightDays))))
         }
     }
 

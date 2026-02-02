@@ -276,7 +276,7 @@ struct WageScreen: View {
 
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        formatter.locale = Locale.current.tidexIsNorwegian ? Locale(identifier: "nb_NO") : Locale(identifier: "en_US")
+        formatter.locale = Locale.current.tidexLanguage.formatterLocale
         return formatter.string(from: date)
     }
 

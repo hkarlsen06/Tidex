@@ -35,12 +35,15 @@ struct AddShiftCalendarView: View {
     }
 
     private var weekdaySymbols: [String] {
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        if isNorwegian {
-            return ["MA", "TI", "ON", "TO", "FR", "LØ", "SØ"]
-        } else {
-            return ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-        }
+        [
+            String(localized: .calendarWeekdayMonday),
+            String(localized: .calendarWeekdayTuesday),
+            String(localized: .calendarWeekdayWednesday),
+            String(localized: .calendarWeekdayThursday),
+            String(localized: .calendarWeekdayFriday),
+            String(localized: .calendarWeekdaySaturday),
+            String(localized: .calendarWeekdaySunday)
+        ]
     }
 
     // MARK: - Calendar Grid

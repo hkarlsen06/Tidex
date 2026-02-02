@@ -52,43 +52,41 @@ final class WatchDataStore {
 
     /// Localized string for "Shifts" title
     var shiftsTitle: String {
-        locale == "no" ? "Vakter" : "Shifts"
+        String(localized: .watchShifts)
     }
 
     /// Localized string for "My Shift" section
     var myShiftTitle: String {
-        locale == "no" ? "Min vakt" : "My Shift"
+        String(localized: .watchMyShift)
     }
 
     /// Localized string for "Friends" section
     var friendsTitle: String {
-        locale == "no" ? "Venner" : "Friends"
+        String(localized: .watchFriends)
     }
 
     /// Localized string for "No Shifts"
     var noShiftsTitle: String {
-        locale == "no" ? "Ingen vakter" : "No Shifts"
+        String(localized: .watchNoShifts)
     }
 
     /// Localized string for sync instruction
     var syncInstructionText: String {
-        locale == "no"
-            ? "Åpne Tidex på iPhone for å synkronisere"
-            : "Open Tidex on iPhone to sync"
+        String(localized: .watchSyncInstruction)
     }
 
     /// Localized string for "Refresh" button
     var refreshButtonTitle: String {
-        locale == "no" ? "Oppdater" : "Refresh"
+        String(localized: .watchRefresh)
     }
 
     /// Localized string for "Next Shift"
     var nextShiftTitle: String {
-        locale == "no" ? "Neste vakt" : "Next Shift"
+        String(localized: .watchNextShift)
     }
 
     /// Localized string for "Shift"
     var shiftTitle: String {
-        locale == "no" ? "Vakt" : "Shift"
+        String(localized: .watchShift)
     }
 }

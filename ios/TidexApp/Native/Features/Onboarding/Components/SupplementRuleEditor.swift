@@ -55,8 +55,7 @@ struct SupplementRuleEditor: View {
 
     /// Hour suffix for rate display (e.g., "kr/t", "$/hr")
     private var hourRateSuffix: String {
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        let hourPart = isNorwegian ? "/t" : "/hr"
+        let hourPart = String(localized: .commonPerHourShort)
         return currencyConfig.display == .prefix
             ? "\(currencyConfig.value)\(hourPart)"
             : "\(currencyConfig.value)\(hourPart)"

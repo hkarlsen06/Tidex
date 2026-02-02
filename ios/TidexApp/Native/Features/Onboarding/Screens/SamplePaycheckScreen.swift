@@ -180,8 +180,8 @@ struct SamplePaycheckScreen: View {
 
     // MARK: - Formatting
 
-    private var isNorwegian: Bool {
-        Locale.current.tidexIsNorwegian
+    private var tidexLang: TidexLanguage {
+        Locale.current.tidexLanguage
     }
 
     /// Format currency based on locale
@@ -191,16 +191,17 @@ struct SamplePaycheckScreen: View {
         let formatter = NumberFormatter()
         formatter.maximumFractionDigits = 0
 
-        if isNorwegian {
+        switch tidexLang {
+        case .norwegian:
             formatter.numberStyle = .decimal
-            formatter.locale = Locale(identifier: "nb_NO")
+            formatter.locale = tidexLang.formatterLocale
             let number = formatter.string(from: NSNumber(value: amount)) ?? "0"
             return "\(number) kr"
-        } else {
+        case .english, .german:
             formatter.numberStyle = .currency
             formatter.currencyCode = "USD"
             formatter.currencySymbol = "$"
-            formatter.locale = Locale(identifier: "en_US")
+            formatter.locale = tidexLang.formatterLocale
             return formatter.string(from: NSNumber(value: amount)) ?? "$0"
         }
     }

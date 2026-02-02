@@ -57,11 +57,11 @@ struct ShiftWidgetEntry: TimelineEntry {
     static func placeholder(locale: String = "no") -> ShiftWidgetEntry {
         ShiftWidgetEntry(
             date: Date(),
-            shiftDate: locale == "no" ? "I dag" : "Today",
+            shiftDate: String(localized: .widgetToday),
             startTime: "07:00",
             endTime: "15:00",
-            netEarnings: locale == "no" ? "892 kr" : "$156",
-            salute: locale == "no" ? "God vakt!" : "You got this!",
+            netEarnings: "892 kr",
+            salute: MotivationalSalutes.random(locale: locale),
             locale: locale,
             hasShift: true,
             daysRemaining: 0,

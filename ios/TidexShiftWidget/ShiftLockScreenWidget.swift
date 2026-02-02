@@ -19,7 +19,7 @@ struct ShiftAccessoryCircularView: View {
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .minimumScaleFactor(0.8)
 
-                        Text(entry.locale == "no" ? "dager" : "days")
+                        Text(.widgetDays)
                             .font(.system(size: 9, weight: .medium))
                             .textCase(.uppercase)
                     }
@@ -31,7 +31,7 @@ struct ShiftAccessoryCircularView: View {
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .minimumScaleFactor(0.8)
 
-                        Text(entry.locale == "no" ? "siden" : "ago")
+                        Text(.widgetAgo)
                             .font(.system(size: 9, weight: .medium))
                             .textCase(.uppercase)
                     }
@@ -41,7 +41,7 @@ struct ShiftAccessoryCircularView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 20))
 
-                        Text(entry.locale == "no" ? "ferdig" : "done")
+                        Text(.widgetDone)
                             .font(.system(size: 9, weight: .medium))
                             .textCase(.uppercase)
                     }
@@ -119,7 +119,7 @@ struct ShiftAccessoryRectangularView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                Text(entry.locale == "no" ? "Ingen vakt" : "No shifts")
+                Text(.widgetNoShifts)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -136,27 +136,25 @@ struct ShiftAccessoryInlineView: View {
         if entry.hasShift {
             if entry.layoutState == .countdown {
                 // Countdown mode: "5d 16:00-23:15"
-                let daysText = entry.locale == "no" ? "d" : "d"
-                Label("\(entry.daysRemaining)\(daysText) \(entry.startTime)-\(entry.endTime)", systemImage: "calendar")
+                Label("\(entry.daysRemaining)d \(entry.startTime)-\(entry.endTime)", systemImage: "calendar")
             } else if entry.layoutState == .pastShift {
-                // Past shift from previous day: "3d siden" / "3d ago"
+                // Past shift from previous day: "3d ago"
                 let daysAgo = abs(entry.daysRemaining)
-                let agoText = entry.locale == "no" ? "siden" : "ago"
+                let agoText = String(localized: .widgetAgo)
                 Label("\(daysAgo)d \(agoText)", systemImage: "clock.arrow.circlepath")
             } else if entry.shiftHasEnded {
-                // Shift ended today: "Ferdig" / "Done"
-                let doneText = entry.locale == "no" ? "Ferdig" : "Done"
-                Label(doneText, systemImage: "checkmark.circle")
+                // Shift ended today: "Done"
+                Label(String(localized: .widgetDoneCapitalized), systemImage: "checkmark.circle")
             } else if entry.shiftHasStarted {
-                // In progress: "Ends 15:00" / "Slutt 15:00"
-                let endsText = entry.locale == "no" ? "Slutt" : "Ends"
+                // In progress: "Ends 15:00"
+                let endsText = String(localized: .widgetEnds)
                 Label("\(endsText) \(entry.endTime)", systemImage: "clock.fill")
             } else {
                 // Today/tomorrow: "I dag 07:00"
                 Label("\(entry.shiftDate) \(entry.startTime)", systemImage: "briefcase.fill")
             }
         } else {
-            Label(entry.locale == "no" ? "Ingen vakt" : "No shift", systemImage: "briefcase")
+            Label(String(localized: .widgetNoShift), systemImage: "briefcase")
         }
     }
 }
@@ -168,24 +166,6 @@ struct ShiftAccessoryInlineView: View {
 struct ShiftLockScreenWidget: Widget {
     let kind: String = "ShiftLockScreenWidget"
 
-    /// Check if the user's preferred language is Norwegian
-    private var isNorwegian: Bool {
-        let preferredLanguages = Locale.preferredLanguages
-        return preferredLanguages.first?.hasPrefix("nb") == true ||
-            preferredLanguages.first?.hasPrefix("no") == true ||
-            preferredLanguages.first?.hasPrefix("nn") == true
-    }
-
-    /// Localized widget display name
-    private var displayName: String {
-        isNorwegian ? "Vakt" : "Shift"
-    }
-
-    /// Localized widget description
-    private var widgetDescription: String {
-        isNorwegian ? "Se neste vakt på låseskjermen" : "See your next shift on the lock screen"
-    }
-
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
             ShiftLockScreenWidgetEntryView(entry: entry)
@@ -195,8 +175,8 @@ struct ShiftLockScreenWidget: Widget {
                     Color.clear
                 }
         }
-        .configurationDisplayName(displayName)
-        .description(widgetDescription)
+        .configurationDisplayName(String(localized: .widgetNameShift))
+        .description(String(localized: .widgetDescLockScreen))
         .supportedFamilies([
             .accessoryCircular,
             .accessoryRectangular,

@@ -97,8 +97,7 @@ struct ShiftDetailsSheet: View {
         }
 
         let formatter = DateFormatter()
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale.current.tidexLanguage.formatterLocale
         formatter.dateFormat = "EEEE, d. MMMM yyyy"
         return formatter.string(from: date).capitalized
     }
@@ -108,7 +107,7 @@ struct ShiftDetailsSheet: View {
     }
 
     private var formattedHours: String {
-        let hoursLabel = Locale.current.tidexIsNorwegian ? "timer" : "hours"
+        let hoursLabel = String(localized: .commonHours)
         return String(format: "%.2f %@", shift.paidHours, hoursLabel)
     }
 

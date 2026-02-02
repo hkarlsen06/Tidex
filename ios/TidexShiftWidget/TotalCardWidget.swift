@@ -276,25 +276,25 @@ struct TotalCardWidgetView: View {
     // MARK: - Localization (matching TotalCard.swift)
 
     private var earnedToDateLabel: String {
-        entry.locale == "no" ? "hittil" : "to date"
+        String(localized: .widgetToDate)
     }
 
     private var beforeTaxLabel: String {
-        entry.locale == "no" ? "før skatt" : "before tax"
+        String(localized: .widgetBeforeTax)
     }
 
     private var shiftsPlannedLabel: String {
         if entry.plannedCount == 1 {
-            return entry.locale == "no" ? "vakt planlagt" : "shift planned"
+            return String(localized: .widgetShiftPlanned)
         }
-        return entry.locale == "no" ? "vakter planlagt" : "shifts planned"
+        return String(localized: .widgetShiftsPlanned)
     }
 
     private var shiftsLabel: String {
         if entry.shiftCount == 1 {
-            return entry.locale == "no" ? "vakt" : "shift"
+            return String(localized: .widgetShift)
         }
-        return entry.locale == "no" ? "vakter" : "shifts"
+        return String(localized: .widgetShifts)
     }
 
     // MARK: - Subtitle Logic (matching TotalCard.swift exactly)
@@ -388,21 +388,21 @@ struct TotalCardWidgetView: View {
             statRow(
                 icon: "calendar",
                 value: "\(entry.shiftCount)",
-                label: entry.locale == "no" ? "vakter" : "shifts"
+                label: String(localized: .widgetShifts)
             )
 
             // Stat 2: Completed shifts
             statRow(
                 icon: "checkmark.circle",
                 value: "\(entry.shiftCount - entry.plannedCount)",
-                label: entry.locale == "no" ? "fullført" : "done"
+                label: String(localized: .widgetDone)
             )
 
             // Stat 3: Hours worked
             statRow(
                 icon: "clock",
                 value: formattedHours,
-                label: entry.locale == "no" ? "timer" : "hours"
+                label: String(localized: .widgetHours)
             )
 
             Spacer()
@@ -517,21 +517,6 @@ struct TotalCardWidgetView: View {
 struct TotalCardWidget: Widget {
     let kind: String = "TotalCardWidget"
 
-    private var isNorwegian: Bool {
-        let preferredLanguages = Locale.preferredLanguages
-        return preferredLanguages.first?.hasPrefix("nb") == true ||
-               preferredLanguages.first?.hasPrefix("no") == true ||
-               preferredLanguages.first?.hasPrefix("nn") == true
-    }
-
-    private var displayName: String {
-        isNorwegian ? "Månedens total" : "Monthly Total"
-    }
-
-    private var widgetDescription: String {
-        isNorwegian ? "Se månedstotalen med ett blikk" : "See your monthly total at a glance"
-    }
-
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TotalCardWidgetProvider()) { entry in
             TotalCardWidgetView(entry: entry)
@@ -540,8 +525,8 @@ struct TotalCardWidget: Widget {
                     Color.clear
                 }
         }
-        .configurationDisplayName(displayName)
-        .description(widgetDescription)
+        .configurationDisplayName(String(localized: .widgetNameMonthlyTotal))
+        .description(String(localized: .widgetDescMonthlyTotal))
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }

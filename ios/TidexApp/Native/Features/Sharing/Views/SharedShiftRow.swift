@@ -11,7 +11,7 @@ struct SharedShiftRow: View {
     // MARK: - Computed Properties
 
     private var formattedHours: String {
-        let hoursLabel = Locale.current.tidexIsNorwegian ? "t" : "h"
+        let hoursLabel = String(localized: .commonHoursShort)
         return String(format: "%.2f %@", shift.paidHours, hoursLabel)
     }
 
@@ -21,8 +21,7 @@ struct SharedShiftRow: View {
         }
 
         let formatter = DateFormatter()
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale.current.tidexLanguage.formatterLocale
 
         formatter.dateFormat = "EEEE"
         let dayName = formatter.string(from: date).capitalized

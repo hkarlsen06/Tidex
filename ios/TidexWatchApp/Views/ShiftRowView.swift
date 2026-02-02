@@ -12,7 +12,14 @@ struct ShiftRowView: View {
     let locale: String
     let isRefreshing: Bool
 
-    private var isNorwegian: Bool { locale == "no" }
+    /// Get formatter locale for date/number formatting
+    private var formatterLocale: Locale {
+        switch locale {
+        case "no": return Locale(identifier: "nb_NO")
+        case "de": return Locale(identifier: "de_DE")
+        default: return Locale(identifier: "en_US")
+        }
+    }
 
     // Timer for countdown updates (under 24 hours)
     @State private var currentTime = Date()
@@ -168,7 +175,7 @@ struct ShiftRowView: View {
     private var statusText: String {
         switch shift.status {
         case .active:
-            return isNorwegian ? "Aktiv" : "Active"
+            return String(localized: .watchActive)
         case .upcoming, .past:
             return relativeTimeText
         }
@@ -202,7 +209,7 @@ struct ShiftRowView: View {
         guard let date = parseDate(shift.shiftDate) else { return shift.shiftDate }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = formatterLocale
         formatter.dateFormat = "EEE d MMM"
         return formatter.string(from: date)
     }
@@ -310,8 +317,8 @@ struct ShiftRowView: View {
 
         // For upcoming shifts under 24 hours, show countdown with seconds
         if shift.status == .upcoming && isFuture && hours < 24 {
-            let hourLabel = isNorwegian ? "t" : "h"
-            let minLabel = isNorwegian ? "m" : "m"
+            let hourLabel = String(localized: .commonHoursShort)
+            let minLabel = String(localized: .commonMinutesShort)
             let secLabel = "s"
 
             if hours > 0 {
@@ -325,14 +332,14 @@ struct ShiftRowView: View {
 
         // Tomorrow/Yesterday for shifts more than 24 hours away
         if dayDiff == 1 {
-            return isNorwegian ? "I morgen" : "Tomorrow"
+            return String(localized: .watchTomorrow)
         } else if dayDiff == -1 {
-            return isNorwegian ? "I går" : "Yesterday"
+            return String(localized: .watchYesterday)
         }
 
         // Past shifts - compact format without seconds
-        let hourLabel = isNorwegian ? "t" : "h"
-        let minLabel = isNorwegian ? "m" : "m"
+        let hourLabel = String(localized: .commonHoursShort)
+        let minLabel = String(localized: .commonMinutesShort)
 
         if hours == 0 {
             return "-\(minutes)\(minLabel)"

@@ -132,12 +132,12 @@ struct ShiftHomeWidgetView: View {
 
     /// Localized "days" label
     private var daysLabel: String {
-        entry.locale == "no" ? "dager" : "days"
+        String(localized: .widgetDays)
     }
 
     /// Localized "left" label
     private var leftLabel: String {
-        entry.locale == "no" ? "igjen" : "left"
+        String(localized: .widgetLeft)
     }
 
     /// Primary time (large) - start time before shift, end time after shift starts
@@ -256,7 +256,7 @@ struct ShiftHomeWidgetView: View {
                 .frame(width: 48, height: 48)
 
             // Simple "No shifts" message
-            Text(entry.locale == "no" ? "Ingen vakt" : "No shifts")
+            Text(.widgetNoShifts)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(mutedTextColor)
         }
@@ -338,8 +338,8 @@ struct ShiftHomeWidgetView: View {
                 // Past shift from previous day - show days ago countdown
                 pastShiftCountupView
             } else if entry.shiftHasEnded {
-                // Shift ended today - show "Ferdig" / "Done"
-                Text(entry.locale == "no" ? "Ferdig" : "Done")
+                // Shift ended today - show "Done"
+                Text(.widgetDoneCapitalized)
                     .font(.system(size: 36, weight: .bold, design: .default))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
@@ -362,13 +362,11 @@ struct ShiftHomeWidgetView: View {
         }
     }
 
-    /// Past shift countup view - shows "X dager siden" / "X days ago"
+    /// Past shift countup view - shows "X days ago"
     private var pastShiftCountupView: some View {
         let daysAgo = abs(entry.daysRemaining)
-        let daysLabel = entry.locale == "no"
-            ? (daysAgo == 1 ? "dag" : "dager")
-            : (daysAgo == 1 ? "day" : "days")
-        let agoLabel = entry.locale == "no" ? "siden" : "ago"
+        let daysText = daysAgo == 1 ? String(localized: .widgetDay) : String(localized: .widgetDays)
+        let agoText = String(localized: .widgetAgo)
 
         return HStack(alignment: .center, spacing: 4) {
             Text("\(daysAgo)")
@@ -379,12 +377,12 @@ struct ShiftHomeWidgetView: View {
                 .minimumScaleFactor(0.5)
 
             VStack(alignment: .leading, spacing: -4) {
-                Text(daysLabel)
+                Text(daysText)
                     .font(.system(size: 24, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
 
-                Text(agoLabel)
+                Text(agoText)
                     .font(.system(size: 24, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
@@ -818,6 +816,15 @@ struct ShiftWidgetProvider: TimelineProvider {
         return sortedShifts.last
     }
 
+    /// Get formatter locale for date/number formatting based on widget locale string
+    private func formatterLocale(for locale: String) -> Locale {
+        switch locale {
+        case "no": return Locale(identifier: "nb_NO")
+        case "de": return Locale(identifier: "de_DE")
+        default: return Locale(identifier: "en_US")
+        }
+    }
+
     private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
@@ -825,15 +832,15 @@ struct ShiftWidgetProvider: TimelineProvider {
         let today = calendar.startOfDay(for: Date())
         let shiftDay = calendar.startOfDay(for: shiftDate)
 
-        // Past shift - show "I går" / "Yesterday" or weekday+date for older shifts
+        // Past shift - show "Yesterday" or weekday+date for older shifts
         if daysRemaining < 0 {
             let daysAgo = abs(daysRemaining)
             if daysAgo == 1 {
-                return locale == "no" ? "I går" : "Yesterday"
+                return String(localized: .widgetYesterday)
             } else {
-                // 2+ days ago: show weekday + day format (e.g., "Man 12." / "Mon 12.")
+                // 2+ days ago: show weekday + day format (e.g., "Mon 12.")
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+                weekdayFormatter.locale = formatterLocale(for: locale)
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -841,18 +848,18 @@ struct ShiftWidgetProvider: TimelineProvider {
 
         // Today
         if calendar.isDate(shiftDay, inSameDayAs: today) {
-            return locale == "no" ? "I dag" : "Today"
+            return String(localized: .widgetToday)
         }
 
         // Tomorrow
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
            calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
-            return locale == "no" ? "I morgen" : "Tomorrow"
+            return String(localized: .widgetTomorrow)
         }
 
-        // Weekday + day: "Man 12." or "Mon 12."
+        // Weekday + day: "Mon 12."
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+        weekdayFormatter.locale = formatterLocale(for: locale)
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
@@ -862,25 +869,6 @@ struct ShiftWidgetProvider: TimelineProvider {
 
 struct ShiftHomeWidget: Widget {
     let kind: String = "ShiftHomeWidget"
-
-    /// Check if the user's preferred language is Norwegian
-    private var isNorwegian: Bool {
-        let preferredLanguages = Locale.preferredLanguages
-        // Check if Norwegian (any variant) is the preferred language
-        return preferredLanguages.first?.hasPrefix("nb") == true ||
-               preferredLanguages.first?.hasPrefix("no") == true ||
-               preferredLanguages.first?.hasPrefix("nn") == true
-    }
-
-    /// Localized widget display name
-    private var displayName: String {
-        isNorwegian ? "Neste vakt" : "Next Shift"
-    }
-
-    /// Localized widget description
-    private var widgetDescription: String {
-        isNorwegian ? "Se neste vakt med ett blikk" : "See your next shift at a glance"
-    }
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
@@ -892,8 +880,8 @@ struct ShiftHomeWidget: Widget {
                     Color.clear // Let the view handle its own background based on colorScheme
                 }
         }
-        .configurationDisplayName(displayName)
-        .description(widgetDescription)
+        .configurationDisplayName(String(localized: .widgetNameNextShift))
+        .description(String(localized: .widgetDescNextShift))
         .supportedFamilies([.systemSmall])
         .contentMarginsDisabled()
     }

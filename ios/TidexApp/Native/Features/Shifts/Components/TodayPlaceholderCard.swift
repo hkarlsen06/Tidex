@@ -14,8 +14,7 @@ struct TodayPlaceholderCard: View {
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
         let date = Date()
         let formatter = DateFormatter()
-        let isNorwegian = Locale.current.tidexIsNorwegian
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        formatter.locale = Locale.current.tidexLanguage.formatterLocale
 
         // Get day name (full)
         formatter.dateFormat = "EEEE"

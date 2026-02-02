@@ -236,7 +236,7 @@ struct TimeRangePicker: View {
 
     /// Shortened label for end time field
     private var endLabel: String {
-        Locale.current.tidexIsNorwegian ? "Slutt" : "End"
+        String(localized: .commonEnd)
     }
 
     var body: some View {
