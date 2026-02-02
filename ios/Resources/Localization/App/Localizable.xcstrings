@@ -64887,73 +64887,73 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Duration"
+            "value": "Paid hours"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Varighet"
+            "value": "Betalte timer"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dauer"
+            "value": "Bezahlte Stunden"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Duración"
+            "value": "Horas pagadas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Durée"
+            "value": "Heures payées"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "期間"
+            "value": "有給時間"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기간"
+            "value": "유급 시간"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Duração"
+            "value": "Horas pagas"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Продолжительность"
+            "value": "Оплачиваемые часы"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Duur"
+            "value": "Betaalde uren"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Varaktighet"
+            "value": "Betalda timmar"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Varighed"
+            "value": "Betalte timer"
           }
         }
       }
