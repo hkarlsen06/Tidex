@@ -1,10 +1,4 @@
 packages:
-  - marketing
-  - dev-site
-
-onlyBuiltDependencies:
-  - '@vercel/speed-insights'
-  - esbuild
-  - sharp
-  - supabase
-  - unrs-resolver
+  - next
+  - next/marketing
+  - next/dev-site

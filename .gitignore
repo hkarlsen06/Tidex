@@ -1,24 +1,24 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules
 .pnpm-store
 
 # testing
-/coverage
-/playwright-report/
-/test-results/
+/next/coverage
+/next/playwright-report/
+/next/test-results/
 
 # next.js
-/.next/
-/out/
+/next/.next/
+/next/out/
 next-env.d.ts
 
 # vercel
 .vercel
 
 # production
-/build
+/next/build
 
 # misc
 .DS_Store
@@ -30,17 +30,19 @@ ios/App/Scripts/.build/
 # local env files
 .env
 .env.*
+!.env.local.example
 
 # npm config with tokens
 .npmrc
-!.env.local.example
 
 # typescript
 *.tsbuildinfo
 
 # PWA service worker (generated)
-/public/workbox-*.js
-/public/workbox-*.js.map
-/public/sw.js
-/public/sw.js.map
+/next/public/workbox-*.js
+/next/public/workbox-*.js.map
+/next/public/sw.js
+/next/public/sw.js.map
+
+# certificates
 certificates

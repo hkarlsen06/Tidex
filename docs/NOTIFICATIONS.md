@@ -537,4 +537,4 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 | `supabase/functions/send-push-notifications/index.ts` | Main delivery edge function |
 | `supabase/functions/process-shift-reminders/index.ts` | Reminder processing |
 | `lib/notifications/push-service.ts` | Web app push handling |
-| `ios/App/TidexApp/Native/Services/NotificationService.swift` | iOS push handling |
+| `ios/TidexApp/Native/Services/NotificationService.swift` | iOS push handling |

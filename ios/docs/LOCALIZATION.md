@@ -4,7 +4,7 @@ This document covers how Tidex iOS localization works and how to add a new langu
 
 ## Source of truth
 
-- String catalog: `ios/App/TidexApp/Localizable.xcstrings`
+- String catalog: `ios/TidexApp/Localizable.xcstrings`
 - Symbols are generated automatically by Xcode when `STRING_CATALOG_GENERATE_SYMBOLS = YES`.
 - Runtime access: Xcode-generated `LocalizedStringResource` symbols and `String(localized:)`.
 
@@ -42,7 +42,7 @@ them for the new language. These are not automatically covered by adding to the 
 Useful ripgrep queries:
 
 ```bash
-rg -n "tidexIsNorwegian|nb_NO|en_US|localeIdentifier" ios/App/TidexApp/Native
+rg -n "tidexIsNorwegian|nb_NO|en_US|localeIdentifier" ios/TidexApp/Native
 ```
 
 Common areas that currently contain Norwegian/English-only logic:
@@ -62,7 +62,7 @@ Ensure the backend/site supports the new language path or add a fallback.
 Run the localization validator (requires Swift toolchain):
 
 ```bash
-swift run --package-path ios/App/Scripts validate-localization
+swift run --package-path ios/Scripts validate-localization
 ```
 
 ## Notes

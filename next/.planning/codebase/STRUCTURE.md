@@ -189,7 +189,7 @@ tidex/
 - Purpose: Native SwiftUI iOS app
 - Source: Custom native implementation
 - Committed: Yes
-- Key directories: `ios/App/TidexApp/Native/` (Services, Features, Core, Shared)
+- Key directories: `ios/TidexApp/Native/` (Services, Features, Core, Shared)
 
 **.next/:**
 - Purpose: Next.js build output
