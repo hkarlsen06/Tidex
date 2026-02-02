@@ -4,8 +4,7 @@ import SwiftUI
 /// Step 1: Enter email/phone -> Step 2: OTP verification (phone only) -> Step 3: New password
 struct ResetPasswordView: View {
     @StateObject private var viewModel = ResetPasswordViewModel()
-    @Environment(\.localization) private var localization
-    var onNavigateToLogin: (() -> Void)?
+        var onNavigateToLogin: (() -> Void)?
 
     var body: some View {
         GeometryReader { geometry in
@@ -98,11 +97,11 @@ struct ResetPasswordView: View {
         VStack(spacing: 24) {
             // Instructions
             VStack(spacing: 8) {
-                Text(localization.string("resetPassword.title"))
+                Text(.resetPasswordTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("resetPassword.subtitle"))
+                Text(.resetPasswordSubtitle)
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -112,7 +111,7 @@ struct ResetPasswordView: View {
                 // Email/Phone field in grouped style
                 VStack(spacing: 0) {
                     NativeTextField(
-                        placeholder: localization.string("resetPassword.emailOrPhonePlaceholder"),
+                        placeholder: String(localized: .resetPasswordEmailOrPhonePlaceholder),
                         text: $viewModel.emailOrPhone,
                         keyboardType: .emailAddress,
                         textContentType: .emailAddress
@@ -131,14 +130,14 @@ struct ResetPasswordView: View {
                 }
 
                 // Hint text
-                Text(localization.string("resetPassword.hint"))
+                Text(.resetPasswordHint)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Submit button
                 PrimaryButton(
-                    title: localization.string("resetPassword.submitButton"),
+                    title: String(localized: .resetPasswordSubmitButton),
                     action: {
                         Task { await viewModel.sendResetCode() }
                     },
@@ -154,11 +153,11 @@ struct ResetPasswordView: View {
         VStack(spacing: 24) {
             // Instructions
             VStack(spacing: 8) {
-                Text(localization.string("otp.title"))
+                Text(.otpTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("otp.subtitle", viewModel.normalizedPhone))
+                Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -175,7 +174,7 @@ struct ResetPasswordView: View {
 
             // Verify button
             PrimaryButton(
-                title: localization.string("otp.submitButton"),
+                title: String(localized: .otpSubmitButton),
                 action: {
                     Task { await viewModel.verifyOTP() }
                 },
@@ -188,7 +187,7 @@ struct ResetPasswordView: View {
                 Button(action: {
                     Task { await viewModel.resendOTP() }
                 }) {
-                    Text(localization.string("otp.resendCode"))
+                    Text(.otpResendCode)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexBlue)
                 }
@@ -206,11 +205,11 @@ struct ResetPasswordView: View {
         VStack(spacing: 24) {
             // Instructions
             VStack(spacing: 8) {
-                Text(localization.string("resetPassword.newPassword.title"))
+                Text(.resetPasswordNewPasswordTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("resetPassword.newPassword.subtitle"))
+                Text(.resetPasswordNewPasswordSubtitle)
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -220,7 +219,7 @@ struct ResetPasswordView: View {
                 // Password fields in grouped style
                 VStack(spacing: 0) {
                     NativeSecureField(
-                        placeholder: localization.string("resetPassword.newPasswordPlaceholder"),
+                        placeholder: String(localized: .resetPasswordNewPasswordPlaceholder),
                         text: $viewModel.newPassword
                     )
 
@@ -228,7 +227,7 @@ struct ResetPasswordView: View {
                         .background(Color.tidexBorderSubtle)
 
                     NativeSecureField(
-                        placeholder: localization.string("resetPassword.confirmPasswordPlaceholder"),
+                        placeholder: String(localized: .resetPasswordConfirmPasswordPlaceholder),
                         text: $viewModel.confirmPassword,
                         onSubmit: {
                             Task { await viewModel.updatePassword() }
@@ -256,14 +255,14 @@ struct ResetPasswordView: View {
                 }
 
                 // Password hint
-                Text(localization.string("resetPassword.passwordHint"))
+                Text(.resetPasswordPasswordHint)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Submit button
                 PrimaryButton(
-                    title: localization.string("resetPassword.updatePasswordButton"),
+                    title: String(localized: .resetPasswordUpdatePasswordButton),
                     action: {
                         Task { await viewModel.updatePassword() }
                     },
@@ -293,7 +292,7 @@ struct ResetPasswordView: View {
 
             // Instructions
             VStack(spacing: 8) {
-                Text(localization.string("resetPassword.success.title"))
+                Text(.resetPasswordSuccessTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -305,7 +304,7 @@ struct ResetPasswordView: View {
 
             // Back to login button
             PrimaryButton(
-                title: localization.string("resetPassword.backToLogin"),
+                title: String(localized: .resetPasswordBackToLogin),
                 action: { onNavigateToLogin?() }
             )
         }
@@ -313,9 +312,9 @@ struct ResetPasswordView: View {
 
     private var successMessage: String {
         if viewModel.inputType == .email {
-            return localization.string("resetPassword.success.emailInstructions")
+            return String(localized: .resetPasswordSuccessEmailInstructions)
         } else {
-            return localization.string("resetPassword.success.passwordUpdatedInstructions")
+            return String(localized: .resetPasswordSuccessPasswordUpdatedInstructions)
         }
     }
 
@@ -328,7 +327,7 @@ struct ResetPasswordView: View {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 12, weight: .medium))
-                Text(localization.string("common.back"))
+                Text(.commonBack)
                     .font(.system(size: 15))
             }
             .foregroundColor(.tidexTextSecondary)
@@ -345,7 +344,7 @@ struct ResetPasswordView: View {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 12, weight: .medium))
-                Text(localization.string("resetPassword.backToLogin"))
+                Text(.resetPasswordBackToLogin)
                     .font(.system(size: 15))
             }
             .foregroundColor(.tidexTextSecondary)
@@ -356,5 +355,4 @@ struct ResetPasswordView: View {
 
 #Preview {
     ResetPasswordView()
-        .environment(\.localization, LocalizationManager.shared)
 }

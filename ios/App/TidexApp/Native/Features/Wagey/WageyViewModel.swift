@@ -464,10 +464,7 @@ final class WageyViewModel {
             logger.info("Entitlement sync completed successfully")
 
             // Show brief success feedback
-            entitlementSyncMessage = AuthStrings.string(
-                "wagey.entitlementSync.success",
-                locale: LocalizationManager.shared.currentLocale
-            )
+            entitlementSyncMessage = String(localized: .wageyEntitlementSyncSuccess)
 
             // Auto-dismiss after 3 seconds
             Task {
@@ -482,10 +479,7 @@ final class WageyViewModel {
             logger.error("Entitlement sync failed: \(error.localizedDescription)")
 
             // Show error with suggestion to restore manually
-            entitlementSyncMessage = AuthStrings.string(
-                "wagey.entitlementSync.failed",
-                locale: LocalizationManager.shared.currentLocale
-            )
+            entitlementSyncMessage = String(localized: .wageyEntitlementSyncFailed)
         }
 
         isSyncingEntitlement = false

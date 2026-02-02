@@ -7,8 +7,7 @@ struct OnboardingView: View {
     let onNavigateToSignup: () -> Void
     let onNavigateToLogin: () -> Void
 
-    @Environment(\.localization) private var localization
-    @State private var currentPage = 0
+        @State private var currentPage = 0
     @State private var hourlyRate: Double = 0  // Set on appear based on locale
     @State private var hasInitializedRate = false
 
@@ -17,7 +16,7 @@ struct OnboardingView: View {
     /// Default hourly rate based on locale
     /// Norwegian: 200 kr/hour, English: $25/hour
     private var defaultHourlyRate: Double {
-        localization.currentLocale == .norwegian ? 200 : 25
+        Locale.current.tidexIsNorwegian ? 200 : 25
     }
 
     var body: some View {
@@ -68,7 +67,7 @@ struct OnboardingView: View {
 
                     if currentPage < totalPages - 1 {
                         OnboardingButton(
-                            title: localization.string("common.continue"),
+                            title: String(localized: .commonContinue),
                             action: {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                     currentPage += 1
@@ -93,7 +92,7 @@ struct OnboardingView: View {
                                 currentPage = totalPages - 1
                             }
                         } label: {
-                            Text(localization.string("onboarding.skip"))
+                            Text(.onboardingSkip)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.tidexTextSecondary)
                                 .padding(.horizontal, 16)
@@ -125,5 +124,4 @@ struct OnboardingView: View {
         onNavigateToSignup: {},
         onNavigateToLogin: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

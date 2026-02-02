@@ -289,8 +289,8 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
         )
     }
 
-    /// Human-readable summary of days with localization
-    func daysDescription(locale: LocalizationManager.AppLocale) -> String {
+    /// Human-readable summary of days
+    var daysDescription: String {
         if days.isEmpty { return "" }
 
         let dayNames = ["M", "T", "O", "T", "F", "L", "S"]
@@ -298,11 +298,11 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
 
         // Check for consecutive ranges
         if sortedDays == [1, 2, 3, 4, 5] {
-            return AuthStrings.string("onboarding.supplements.weekdaysLong", locale: locale)
+            return String(localized: .onboardingSupplementsWeekdaysLong)
         } else if sortedDays == [6, 7] {
-            return AuthStrings.string("onboarding.supplements.weekendLong", locale: locale)
+            return String(localized: .onboardingSupplementsWeekendLong)
         } else if sortedDays == Array(1...7) {
-            return AuthStrings.string("onboarding.supplements.allDaysLong", locale: locale)
+            return String(localized: .onboardingSupplementsAllDaysLong)
         }
 
         return sortedDays.map { dayNames[$0 - 1] }.joined(separator: ", ")
@@ -314,11 +314,11 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
     }
 
     /// Human-readable value with localization and currency
-    func valueDescription(locale: LocalizationManager.AppLocale, currency: String = "kr") -> String {
+    func valueDescription(locale: Locale, currency: String = "kr") -> String {
         switch type {
         case .fixed:
             let currencyConfig = CurrencyConfig.get(currency)
-            let hourPart = locale == .norwegian ? "/t" : "/hr"
+            let hourPart = locale.tidexIsNorwegian ? "/t" : "/hr"
             let suffix = currencyConfig.display == .prefix
                 ? "\(currencyConfig.value)\(hourPart)"
                 : "\(currencyConfig.value)\(hourPart)"

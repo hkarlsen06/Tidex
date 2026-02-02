@@ -4,8 +4,7 @@ import SwiftUI
 /// Supports email/password, phone/OTP, Google, and Apple sign-up
 struct SignupView: View {
     @StateObject private var viewModel = SignupViewModel()
-    @Environment(\.localization) private var localization
-    var onNavigateToLogin: (() -> Void)?
+        var onNavigateToLogin: (() -> Void)?
 
     var body: some View {
         GeometryReader { geometry in
@@ -77,7 +76,7 @@ struct SignupView: View {
                 .frame(height: 48)
 
             // Subtitle
-            Text(localization.string("signup.subtitle"))
+            Text(.signupSubtitle)
                 .font(.system(size: 17))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -120,7 +119,7 @@ struct SignupView: View {
             HStack(spacing: 8) {
                 Image(systemName: "envelope")
                     .font(.system(size: 16))
-                Text(localization.string("signup.emailOrPhoneReveal"))
+                Text(.signupEmailOrPhoneReveal)
                     .font(.system(size: 16, weight: .medium))
             }
             .foregroundColor(.tidexTextSecondary)
@@ -140,7 +139,7 @@ struct SignupView: View {
                 .fill(Color.tidexBorderSubtle)
                 .frame(height: 1)
 
-            Text(localization.string("login.separator"))
+            Text(.loginSeparator)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextMuted)
 
@@ -154,14 +153,14 @@ struct SignupView: View {
 
     private var footerView: some View {
         HStack(spacing: 4) {
-            Text(localization.string("signup.hasAccount"))
+            Text(.signupHasAccount)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
 
             Button(action: {
                 onNavigateToLogin?()
             }) {
-                Text(localization.string("signup.login"))
+                Text(.signupLogin)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexBlue)
             }
@@ -175,15 +174,14 @@ struct SignupView: View {
 /// Email/phone, password, and terms form for signup with native iOS styling
 struct SignupForm: View {
     @ObservedObject var viewModel: SignupViewModel
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 16) {
             // Name fields side by side
             HStack(spacing: 12) {
                 // First name
                 VStack(spacing: 0) {
-                    TextField(localization.string("signup.firstNamePlaceholder"), text: $viewModel.firstName)
+                    TextField(String(localized: .signupFirstNamePlaceholder), text: $viewModel.firstName)
                         .font(.system(size: 17))
                         .foregroundColor(.tidexTextPrimary)
                         .textContentType(.givenName)
@@ -197,7 +195,7 @@ struct SignupForm: View {
 
                 // Last name
                 VStack(spacing: 0) {
-                    TextField(localization.string("signup.lastNamePlaceholder"), text: $viewModel.lastName)
+                    TextField(String(localized: .signupLastNamePlaceholder), text: $viewModel.lastName)
                         .font(.system(size: 17))
                         .foregroundColor(.tidexTextPrimary)
                         .textContentType(.familyName)
@@ -231,7 +229,7 @@ struct SignupForm: View {
             VStack(spacing: 0) {
                 // Email/Phone field
                 NativeTextField(
-                    placeholder: localization.string("signup.emailOrPhonePlaceholder"),
+                    placeholder: String(localized: .signupEmailOrPhonePlaceholder),
                     text: $viewModel.emailOrPhone,
                     keyboardType: .emailAddress,
                     textContentType: .emailAddress
@@ -242,7 +240,7 @@ struct SignupForm: View {
 
                 // Password field
                 NativeSecureField(
-                    placeholder: localization.string("signup.passwordPlaceholder"),
+                    placeholder: String(localized: .signupPasswordPlaceholder),
                     text: $viewModel.password,
                     onSubmit: {
                         Task { await viewModel.signUp() }
@@ -270,14 +268,14 @@ struct SignupForm: View {
             }
 
             // Password hint
-            Text(localization.string("signup.passwordHint"))
+            Text(.signupPasswordHint)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Submit button
             PrimaryButton(
-                title: localization.string("signup.submitButton"),
+                title: String(localized: .signupSubmitButton),
                 action: {
                     Task { await viewModel.signUp() }
                 },
@@ -292,17 +290,16 @@ struct SignupForm: View {
 /// OTP verification form for phone signup with native iOS styling
 struct SignupOTPForm: View {
     @ObservedObject var viewModel: SignupViewModel
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 24) {
             // OTP explanation
             VStack(spacing: 8) {
-                Text(localization.string("otp.title"))
+                Text(.otpTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("otp.subtitle", viewModel.normalizedPhone))
+                Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -316,7 +313,7 @@ struct SignupOTPForm: View {
 
             // Verify button
             PrimaryButton(
-                title: localization.string("otp.submitButton"),
+                title: String(localized: .otpSubmitButton),
                 action: {
                     Task { await viewModel.verifyOTP() }
                 },
@@ -328,7 +325,7 @@ struct SignupOTPForm: View {
                 Button(action: {
                     Task { await viewModel.resendOTP() }
                 }) {
-                    Text(localization.string("otp.resendCode"))
+                    Text(.otpResendCode)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexBlue)
                 }
@@ -341,7 +338,7 @@ struct SignupOTPForm: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 12, weight: .medium))
-                        Text(localization.string("signup.backToSignup"))
+                        Text(.signupBackToSignup)
                             .font(.system(size: 15))
                     }
                     .foregroundColor(.tidexTextSecondary)
@@ -354,5 +351,4 @@ struct SignupOTPForm: View {
 
 #Preview {
     SignupView()
-        .environment(\.localization, LocalizationManager.shared)
 }

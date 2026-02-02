@@ -24,8 +24,7 @@ enum WatchDataConverter {
         let settings = SettingsRepository.shared.getSettings(for: userId)
         let currencySymbol = settings?.currency ?? "kr"
 
-        // Get locale from LocalizationManager
-        let locale = LocalizationManager.shared.currentLocale.rawValue
+        let locale = Locale.current.tidexLanguageCode
 
         // Get last sync timestamp
         let lastSyncTimestamp = SyncCoordinator.shared.lastSyncedAt

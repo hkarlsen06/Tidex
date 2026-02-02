@@ -9,13 +9,12 @@ struct WageHistoryTimelineView: View {
     let onAddNew: () -> Void
     let onEdit: (WageSnapshot) -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header with add button
             HStack {
-                Text(localization.string("settings.pay.timeline.title"))
+                Text(.settingsPayTimelineTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -29,7 +28,7 @@ struct WageHistoryTimelineView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 14, weight: .semibold))
 
-                        Text(localization.string("settings.pay.timeline.addNew"))
+                        Text(.settingsPayTimelineAddNew)
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.tidexBlue)
@@ -74,7 +73,7 @@ struct WageHistoryTimelineView: View {
                 .font(.system(size: 32))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("settings.pay.timeline.empty"))
+            Text(.settingsPayTimelineEmpty)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -144,8 +143,7 @@ private struct TimelineEntryRow: View {
     let shouldHighlightWage: Bool
     let onEdit: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     /// Non-wage changes (excludes wage changes from the list)
     private var nonWageChanges: [WageChange] {
         entry.changes.filter { $0.type != .wage }
@@ -410,5 +408,4 @@ private struct DashedLineRect: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

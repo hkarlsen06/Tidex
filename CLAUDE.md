@@ -42,6 +42,18 @@ Use these skills for specialized tasks:
 - ✅ API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
 - ❌ No API route: Subscription/entitlement data, settings, shifts - use Supabase client directly or RPC functions
 
+### iOS Localization (String Catalogs)
+
+- Use Xcode-generated `LocalizedStringResource` symbols (auto from `Localizable.xcstrings`), not raw string keys.
+  - Example: `Text(.statsMonthlyGoalRemaining)` or `String(localized: .statsMonthlyGoalRemaining)`
+  - For formatted strings: `String(localized: .commonInDays(Int32(days)))` - format symbols become functions
+  - Note: `%lld` format specifiers generate `Int32` parameters, so wrap `Int` values with `Int32()`
+- Use system locale; do not override `.environment(\.locale, ...)`.
+- Prefer `FormatStyle` for numbers/dates/currency instead of `String(format:)`; use `String(focusYear)` when you must avoid locale grouping (e.g., years).
+- Catalog source of truth: `ios/App/TidexApp/Localizable.xcstrings`
+- Scripts:
+  - Validate: `swift run --package-path ios/App/Scripts validate-localization`
+
 ### iOS Color System
 
 **ALWAYS use semantic Tidex colors** from `Color+Tidex.swift`. Never use hardcoded colors or non-existent color names.

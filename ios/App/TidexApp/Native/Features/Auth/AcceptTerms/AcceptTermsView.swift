@@ -11,19 +11,18 @@ struct AcceptTermsView: View {
     let isUpdate: Bool
     let coordinator: AppCoordinator
 
-    @Environment(\.localization) private var localization
-    @State private var isProcessing = false
+        @State private var isProcessing = false
     @State private var error: String?
     @State private var safariURL: URL?
 
     /// Terms URL - uses locale-specific path for proper language display
     private var termsURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(localization.currentLocale.rawValue)/terms")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/terms")
     }
 
     /// Privacy URL - uses locale-specific path for proper language display
     private var privacyURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(localization.currentLocale.rawValue)/privacy")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/privacy")
     }
 
     var body: some View {
@@ -97,22 +96,22 @@ struct AcceptTermsView: View {
     private var instructionsSection: some View {
         VStack(spacing: 8) {
             Text(isUpdate
-                 ? localization.string("acceptTerms.updated.title")
-                 : localization.string("acceptTerms.title"))
+                 ? String(localized: .acceptTermsUpdatedTitle)
+                 : String(localized: .acceptTermsTitle))
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
             Text(isUpdate
-                 ? localization.string("acceptTerms.updated.description")
-                 : localization.string("acceptTerms.description"))
+                 ? String(localized: .acceptTermsUpdatedDescription)
+                 : String(localized: .acceptTermsDescription))
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
 
             Text(isUpdate
-                 ? localization.string("acceptTerms.updated.explanation")
-                 : localization.string("acceptTerms.explanation"))
+                 ? String(localized: .acceptTermsUpdatedExplanation)
+                 : String(localized: .acceptTermsExplanation))
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
@@ -132,7 +131,7 @@ struct AcceptTermsView: View {
                 HStack {
                     Image(systemName: "doc.text")
                         .font(.system(size: 16))
-                    Text(localization.string("acceptTerms.viewTerms"))
+                    Text(.acceptTermsViewTerms)
                         .font(.system(size: 17))
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -156,7 +155,7 @@ struct AcceptTermsView: View {
                 HStack {
                     Image(systemName: "shield")
                         .font(.system(size: 16))
-                    Text(localization.string("acceptTerms.viewPrivacy"))
+                    Text(.acceptTermsViewPrivacy)
                         .font(.system(size: 17))
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -179,7 +178,7 @@ struct AcceptTermsView: View {
         VStack(spacing: 16) {
             // Accept button
             PrimaryButton(
-                title: localization.string("acceptTerms.acceptButton"),
+                title: String(localized: .acceptTermsAcceptButton),
                 action: { acceptTerms() },
                 isLoading: isProcessing
             )
@@ -188,7 +187,7 @@ struct AcceptTermsView: View {
             Button {
                 declineTerms()
             } label: {
-                Text(localization.string("acceptTerms.declineButton"))
+                Text(.acceptTermsDeclineButton)
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -217,7 +216,7 @@ struct AcceptTermsView: View {
                 }
             } catch {
                 await MainActor.run {
-                    self.error = localization.string("acceptTerms.errors.updateFailed")
+                    self.error = String(localized: .acceptTermsErrorsUpdateFailed)
                     self.isProcessing = false
                 }
                 logger.error("Failed to update terms acceptance: \(error.localizedDescription)")
@@ -249,10 +248,8 @@ private struct SafariViewAcceptTerms: UIViewControllerRepresentable {
 
 #Preview("Accept Terms - Initial") {
     AcceptTermsView(isUpdate: false, coordinator: AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Accept Terms - Update") {
     AcceptTermsView(isUpdate: true, coordinator: AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

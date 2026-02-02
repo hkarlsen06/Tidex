@@ -17,8 +17,7 @@ struct WageSnapshotEditorSheet: View {
     let onDelete: (WageSnapshot) -> Void
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     // Form state
     @State private var fromDate: Date = Date()
     @State private var usePreset: Bool = true
@@ -227,18 +226,18 @@ struct WageSnapshotEditorSheet: View {
             }
             .navigationTitle(
                 mode == .create
-                    ? localization.string("settings.pay.editor.createTitle")
-                    : localization.string("settings.pay.editor.editTitle")
+                    ? String(localized: .settingsPayEditorCreateTitle)
+                    : String(localized: .settingsPayEditorEditTitle)
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         onCancel()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.string("common.save")) {
+                    Button(String(localized: .commonSave)) {
                         Task { await save() }
                     }
                     .disabled(!canSave || isSaving)
@@ -373,7 +372,7 @@ struct WageSnapshotEditorSheet: View {
             // Tariff type picker - always show when tariff types are loaded
             if !tariffTypes.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("settings.pay.editor.tariffTypeLabel"))
+                    Text(.settingsPayEditorTariffTypeLabel)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
 
@@ -408,7 +407,7 @@ struct WageSnapshotEditorSheet: View {
                         .font(.system(size: 12))
                         .foregroundColor(.tidexTextMuted)
 
-                    Text(localization.string("settings.pay.editor.tariffEffectiveDate"))
+                    Text(.settingsPayEditorTariffEffectiveDate)
                         .font(.system(size: 12))
                         .foregroundColor(.tidexTextMuted)
 
@@ -422,7 +421,7 @@ struct WageSnapshotEditorSheet: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.7)
-                    Text(localization.string("settings.pay.editor.loadingTariff"))
+                    Text(.settingsPayEditorLoadingTariff)
                         .font(.system(size: 12))
                         .foregroundColor(.tidexTextMuted)
                     Spacer()
@@ -439,7 +438,7 @@ struct WageSnapshotEditorSheet: View {
         guard let date = dateFormatter.date(from: isoDate) else { return isoDate }
 
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = localization.currentLocale == .norwegian
+        displayFormatter.locale = Locale.current.tidexIsNorwegian
             ? Locale(identifier: "nb_NO")
             : Locale(identifier: "en_US")
         displayFormatter.dateFormat = "MMMM yyyy"
@@ -472,7 +471,7 @@ struct WageSnapshotEditorSheet: View {
     @ViewBuilder
     private var dateSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("settings.pay.editor.fromDateLabel"))
+            Text(.settingsPayEditorFromDateLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -482,7 +481,7 @@ struct WageSnapshotEditorSheet: View {
                     Image(systemName: "star.fill")
                         .foregroundColor(.tidexWarning)
 
-                    Text(localization.string("settings.pay.editor.baselineIndicator"))
+                    Text(.settingsPayEditorBaselineIndicator)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexTextPrimary)
 
@@ -492,7 +491,7 @@ struct WageSnapshotEditorSheet: View {
                 .background(Color.tidexWarning.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                Text(localization.string("settings.pay.editor.baselineHelp"))
+                Text(.settingsPayEditorBaselineHelp)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             } else {
@@ -508,7 +507,7 @@ struct WageSnapshotEditorSheet: View {
                 .background(Color.tidexSurfaceSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                Text(localization.string("settings.pay.editor.fromDateHelp"))
+                Text(.settingsPayEditorFromDateHelp)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -522,7 +521,7 @@ struct WageSnapshotEditorSheet: View {
     private var supplementsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(localization.string("settings.pay.editor.supplementsTitle"))
+                Text(.settingsPayEditorSupplementsTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -542,7 +541,7 @@ struct WageSnapshotEditorSheet: View {
 
             if usePreset {
                 // Read-only preset supplements (from tariff version or fallback)
-                Text(localization.string("settings.pay.editor.supplementsTariff"))
+                Text(.settingsPayEditorSupplementsTariff)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -553,7 +552,7 @@ struct WageSnapshotEditorSheet: View {
             } else {
                 // Editable custom supplements
                 if supplements.isEmpty {
-                    Text(localization.string("settings.pay.editor.supplementsEmpty"))
+                    Text(.settingsPayEditorSupplementsEmpty)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextMuted)
                         .padding(12)
@@ -598,7 +597,7 @@ struct WageSnapshotEditorSheet: View {
     private func customSupplementRow(_ rule: OnboardingSupplementRule) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(rule.daysDescription(locale: localization.currentLocale))
+                Text(rule.daysDescription)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -609,7 +608,7 @@ struct WageSnapshotEditorSheet: View {
 
             Spacer()
 
-            Text(rule.valueDescription(locale: localization.currentLocale, currency: currency))
+            Text(rule.valueDescription(locale: Locale.current, currency: currency))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexBrandPrimary)
 
@@ -641,20 +640,25 @@ struct WageSnapshotEditorSheet: View {
     }
 
     private func formatDays(_ days: [Int]) -> String {
-        let isNorwegian = localization.currentLocale == .norwegian
         let sortedDays = days.sorted()
 
         if sortedDays == [1, 2, 3, 4, 5] {
-            return isNorwegian ? "Hverdager" : "Weekdays"
+            return String(localized: .daysWeekdays)
         } else if sortedDays == [6, 7] || sortedDays == [0, 6] {
-            return isNorwegian ? "Helg" : "Weekend"
+            return String(localized: .daysWeekend)
         } else if sortedDays == Array(1...7) || sortedDays == Array(0...6) {
-            return isNorwegian ? "Alle dager" : "All days"
+            return String(localized: .daysAllDays)
         }
 
-        let dayNames = isNorwegian
-            ? ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"]
-            : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let dayNames = [
+            String(localized: .daysShortSun),
+            String(localized: .daysShortMon),
+            String(localized: .daysShortTue),
+            String(localized: .daysShortWed),
+            String(localized: .daysShortThu),
+            String(localized: .daysShortFri),
+            String(localized: .daysShortSat)
+        ]
 
         return sortedDays.map { dayNames[$0 % 7] }.joined(separator: ", ")
     }
@@ -701,7 +705,7 @@ struct WageSnapshotEditorSheet: View {
                 Image(systemName: "trash")
                     .font(.system(size: 16))
 
-                Text(localization.string("settings.pay.editor.delete"))
+                Text(.settingsPayEditorDelete)
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -838,5 +842,4 @@ extension WageSnapshotEditorInput {
         onDelete: { _ in },
         onCancel: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

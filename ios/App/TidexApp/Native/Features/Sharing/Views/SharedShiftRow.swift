@@ -6,13 +6,12 @@ struct SharedShiftRow: View {
     let isToday: Bool
     let showEarnings: Bool
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
     private var formattedHours: String {
-        let hoursLabel = localization.currentLocale == .norwegian ? "t" : "h"
+        let hoursLabel = Locale.current.tidexIsNorwegian ? "t" : "h"
         return String(format: "%.2f %@", shift.paidHours, hoursLabel)
     }
 
@@ -22,7 +21,7 @@ struct SharedShiftRow: View {
         }
 
         let formatter = DateFormatter()
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
 
         formatter.dateFormat = "EEEE"
@@ -128,7 +127,7 @@ struct SharedShiftRow: View {
         HStack(spacing: 6) {
             Image(systemName: "eye.slash.fill")
                 .font(.system(size: 14))
-            Text(localization.string("sharing.hidden"))
+            Text(.sharingHidden)
                 .font(.system(size: 14, weight: .medium))
         }
         .foregroundColor(.tidexTextMuted)
@@ -207,6 +206,5 @@ struct SharedShiftRow: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
     .environment(\.userCurrency, "kr")
 }

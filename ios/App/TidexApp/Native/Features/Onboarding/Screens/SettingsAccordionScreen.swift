@@ -8,7 +8,6 @@ struct SettingsAccordionScreen: View {
     let onContinue: () -> Void
     var onBack: (() -> Void)? = nil
 
-    @Environment(\.localization) private var localization
     @State private var currentSection: SettingsSection = .breakDeduction
     @State private var completedSections: Set<SettingsSection> = []
     @State private var showingTaxInput = false
@@ -46,7 +45,7 @@ struct SettingsAccordionScreen: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "chevron.left")
                                             .font(.system(size: 16, weight: .semibold))
-                                        Text(localization.string("common.back"))
+                                        Text(.commonBack)
                                             .font(.system(size: 16))
                                     }
                                     .foregroundColor(.tidexBlue)
@@ -64,12 +63,12 @@ struct SettingsAccordionScreen: View {
 
                         // Header
                         VStack(spacing: 12) {
-                            Text(localization.string("onboarding.settings.title"))
+                            Text(.onboardingSettingsTitle)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.tidexTextPrimary)
                                 .multilineTextAlignment(.center)
 
-                            Text(localization.string("onboarding.settings.subtitle"))
+                            Text(.onboardingSettingsSubtitle)
                                 .font(.system(size: 17))
                                 .foregroundColor(.tidexTextSecondary)
                                 .multilineTextAlignment(.center)
@@ -102,7 +101,7 @@ struct SettingsAccordionScreen: View {
                 // Final continue button (visible when all sections complete)
                 if allSectionsComplete {
                     OnboardingButton(
-                        title: localization.string("common.continue"),
+                        title: String(localized: .commonContinue),
                         action: {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                             onContinue()
@@ -128,7 +127,7 @@ struct SettingsAccordionScreen: View {
     @ViewBuilder
     private var breakSection: some View {
         AccordionSectionView(
-            title: localization.string("onboarding.settings.break.title"),
+            title: String(localized: .onboardingSettingsBreakTitle),
             summary: breakSummary,
             isExpanded: currentSection == .breakDeduction,
             isComplete: completedSections.contains(.breakDeduction),
@@ -139,11 +138,11 @@ struct SettingsAccordionScreen: View {
             VStack(alignment: .leading, spacing: 16) {
                 Toggle(isOn: $data.breakEnabled) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(localization.string("onboarding.settings.break.enable"))
+                        Text(.onboardingSettingsBreakEnable)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("onboarding.settings.break.hint"))
+                        Text(.onboardingSettingsBreakHint)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextMuted)
                     }
@@ -151,7 +150,7 @@ struct SettingsAccordionScreen: View {
                 .tint(.tidexBrandPrimary)
 
                 if data.breakEnabled {
-                    Text(localization.string("onboarding.settings.break.default"))
+                    Text(.onboardingSettingsBreakDefault)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextSecondary)
                         .padding(12)
@@ -173,9 +172,9 @@ struct SettingsAccordionScreen: View {
 
     private var breakSummary: String {
         if data.breakEnabled {
-            return localization.string("onboarding.settings.break.enabledSummary")
+            return String(localized: .onboardingSettingsBreakEnabledSummary)
         } else {
-            return localization.string("onboarding.settings.break.disabledSummary")
+            return String(localized: .onboardingSettingsBreakDisabledSummary)
         }
     }
 
@@ -184,7 +183,7 @@ struct SettingsAccordionScreen: View {
     @ViewBuilder
     private var taxSection: some View {
         AccordionSectionView(
-            title: localization.string("onboarding.settings.tax.title"),
+            title: String(localized: .onboardingSettingsTaxTitle),
             summary: taxSummary,
             isExpanded: currentSection == .tax,
             isComplete: completedSections.contains(.tax),
@@ -195,11 +194,11 @@ struct SettingsAccordionScreen: View {
             VStack(alignment: .leading, spacing: 16) {
                 Toggle(isOn: $data.taxEnabled) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(localization.string("onboarding.settings.tax.enable"))
+                        Text(.onboardingSettingsTaxEnable)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("onboarding.settings.tax.hint"))
+                        Text(.onboardingSettingsTaxHint)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextMuted)
                     }
@@ -208,7 +207,7 @@ struct SettingsAccordionScreen: View {
 
                 if data.taxEnabled {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(localization.string("onboarding.settings.tax.percentage"))
+                        Text(.onboardingSettingsTaxPercentage)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.tidexTextSecondary)
 
@@ -255,7 +254,7 @@ struct SettingsAccordionScreen: View {
                                         .toolbar {
                                             ToolbarItemGroup(placement: .keyboard) {
                                                 Spacer()
-                                                Button(localization.string("common.done")) {
+                                                Button(String(localized: .commonDone)) {
                                                     applyTaxInput()
                                                 }
                                                 .fontWeight(.semibold)
@@ -325,7 +324,7 @@ struct SettingsAccordionScreen: View {
         if data.taxEnabled {
             return "\(Int(data.taxPercentage))%"
         } else {
-            return localization.string("onboarding.settings.tax.disabledSummary")
+            return String(localized: .onboardingSettingsTaxDisabledSummary)
         }
     }
 
@@ -334,7 +333,7 @@ struct SettingsAccordionScreen: View {
     @ViewBuilder
     private var paydaySection: some View {
         AccordionSectionView(
-            title: localization.string("onboarding.settings.payday.title"),
+            title: String(localized: .onboardingSettingsPaydayTitle),
             summary: paydaySummary,
             isExpanded: currentSection == .payday,
             isComplete: completedSections.contains(.payday),
@@ -343,7 +342,7 @@ struct SettingsAccordionScreen: View {
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(localization.string("onboarding.settings.payday.hint"))
+                Text(.onboardingSettingsPaydayHint)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextMuted)
 
@@ -357,7 +356,6 @@ struct SettingsAccordionScreen: View {
                                     day: day,
                                     isLast: day == 28,
                                     isSelected: data.payrollDay == day && !showingPaydayInput,
-                                    localization: localization,
                                     action: {
                                         showingPaydayInput = false
                                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -392,7 +390,7 @@ struct SettingsAccordionScreen: View {
                                         .toolbar {
                                             ToolbarItemGroup(placement: .keyboard) {
                                                 Spacer()
-                                                Button(localization.string("common.done")) {
+                                                Button(String(localized: .commonDone)) {
                                                     applyPaydayInput()
                                                 }
                                                 .fontWeight(.semibold)
@@ -412,7 +410,7 @@ struct SettingsAccordionScreen: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "pencil")
                                             .font(.system(size: 12))
-                                        Text(localization.string("onboarding.settings.payday.other"))
+                                        Text(.onboardingSettingsPaydayOther)
                                     }
                                     .font(.system(size: 14, weight: !payrollDayOptions.contains(data.payrollDay) ? .semibold : .medium))
                                     .foregroundColor(!payrollDayOptions.contains(data.payrollDay) ? .white : .tidexTextSecondary)
@@ -443,8 +441,7 @@ struct SettingsAccordionScreen: View {
 
                 // Show current custom value if not a preset
                 if !payrollDayOptions.contains(data.payrollDay) && !showingPaydayInput {
-                    Text(localization.string("onboarding.settings.payday.customValue")
-                        .replacingOccurrences(of: "{day}", with: "\(data.payrollDay)"))
+                    Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
                         .font(.system(size: 13))
                         .foregroundColor(.tidexBlue)
                 }
@@ -463,7 +460,7 @@ struct SettingsAccordionScreen: View {
 
     private var paydaySummary: String {
         if data.payrollDay == 28 {
-            return localization.string("onboarding.personalize.payday.lastDay")
+            return String(localized: .onboardingPersonalizePaydayLastDay)
         } else {
             return "\(data.payrollDay)."
         }
@@ -555,7 +552,6 @@ private struct PaydayButton: View {
     let day: Int
     let isLast: Bool
     let isSelected: Bool
-    let localization: LocalizationManager
     let action: () -> Void
 
     var body: some View {
@@ -563,7 +559,7 @@ private struct PaydayButton: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             action()
         }) {
-            Text(isLast ? localization.string("onboarding.personalize.payday.lastDay") : "\(day)")
+            Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
                 .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
                 .foregroundColor(isSelected ? .white : .tidexTextSecondary)
                 .frame(minWidth: 56, minHeight: 44)
@@ -580,5 +576,4 @@ private struct PaydayButton: View {
 
 #Preview {
     SettingsAccordionScreen(data: OnboardingData(), onContinue: {})
-        .environment(\.localization, LocalizationManager.shared)
 }

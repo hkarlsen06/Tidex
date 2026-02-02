@@ -15,8 +15,7 @@ struct SharerListView: View {
     let isRefreshing: Bool
     let onSelectSharer: (SharedUser) -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
     /// Sorting is deferred until previews finish loading to prevent layout jumps
     private var sortedSharers: [SharedUser] {
@@ -112,7 +111,7 @@ struct SharerListView: View {
             ProgressView()
                 .scaleEffect(1.2)
 
-            Text(localization.string("sharing.loading"))
+            Text(.sharingLoading)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -176,5 +175,4 @@ struct SharerListView: View {
         onSelectSharer: { _ in }
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

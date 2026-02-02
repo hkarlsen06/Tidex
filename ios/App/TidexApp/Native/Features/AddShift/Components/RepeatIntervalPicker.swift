@@ -4,22 +4,20 @@ import SwiftUI
 /// Shows "Repeat every [X] week(s)" format
 struct RepeatIntervalPicker: View {
     @Binding var interval: Int  // 0-8 (0 = weekly, 1 = biweekly, etc.)
-    @Environment(\.localization) private var localization
-
+    
     // Get localized ordinal label for interval
     private func ordinalLabel(_ index: Int) -> String {
         let weeks = index + 1
         if weeks == 1 {
-            return localization.string("addShift.everyWeek")
+            return String(localized: .addShiftEveryWeek)
         } else {
-            return localization.string("addShift.everyNWeeks")
-                .replacingOccurrences(of: "{n}", with: "\(weeks)")
+            return String(localized: .addShiftEveryNWeeks(weeks))
         }
     }
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(localization.string("addShift.repeat"))
+            Text(.addShiftRepeat)
                 .font(.system(size: 16))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -66,5 +64,4 @@ struct RepeatIntervalPicker: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

@@ -9,19 +9,17 @@ struct BreakDeductionSection: View {
     @Binding var method: BreakMethod
     @Binding var thresholdHours: Double
     @Binding var deductionMinutes: Int
-
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section header with toggle
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("settings.pay.editor.breakTitle"))
+                    Text(.settingsPayEditorBreakTitle)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.tidexTextPrimary)
 
-                    Text(localization.string("settings.pay.editor.breakDescription"))
+                    Text(.settingsPayEditorBreakDescription)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextSecondary)
                 }
@@ -59,7 +57,7 @@ struct BreakDeductionSection: View {
     @ViewBuilder
     private var breakMethodPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.editor.breakMethod"))
+            Text(.settingsPayEditorBreakMethod)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -68,7 +66,6 @@ struct BreakDeductionSection: View {
                     BreakMethodRow(
                         method: breakMethod,
                         isSelected: method == breakMethod,
-                        localization: localization,
                         action: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
@@ -86,7 +83,7 @@ struct BreakDeductionSection: View {
     @ViewBuilder
     private var thresholdInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.editor.breakThreshold"))
+            Text(.settingsPayEditorBreakThreshold)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -107,17 +104,16 @@ struct BreakDeductionSection: View {
     }
 
     private func formatThreshold(_ hours: Double) -> String {
-        let isNorwegian = localization.currentLocale == .norwegian
         if hours == floor(hours) {
-            return isNorwegian ? "\(Int(hours)) timer" : "\(Int(hours)) hours"
+            return String(localized: .settingsPayBreakHours(Int32(Int(hours))))
         } else {
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
             formatter.minimumFractionDigits = 1
             formatter.maximumFractionDigits = 1
-            formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+            formatter.locale = Locale(identifier: Locale.current.identifier)
             let formatted = formatter.string(from: NSNumber(value: hours)) ?? "\(hours)"
-            return isNorwegian ? "\(formatted) timer" : "\(formatted) hours"
+            return String(localized: .settingsPayBreakHoursDecimal(formatted))
         }
     }
 
@@ -126,7 +122,7 @@ struct BreakDeductionSection: View {
     @ViewBuilder
     private var deductionInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.editor.breakDeduction"))
+            Text(.settingsPayEditorBreakDeduction)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -147,8 +143,7 @@ struct BreakDeductionSection: View {
     }
 
     private func formatDeduction(_ minutes: Int) -> String {
-        let isNorwegian = localization.currentLocale == .norwegian
-        return isNorwegian ? "\(minutes) minutter" : "\(minutes) minutes"
+        return String(localized: .settingsPayBreakMinutes(Int32(minutes)))
     }
 }
 
@@ -157,7 +152,6 @@ struct BreakDeductionSection: View {
 private struct BreakMethodRow: View {
     let method: BreakMethod
     let isSelected: Bool
-    let localization: LocalizationManager
     let action: () -> Void
 
     var body: some View {
@@ -197,38 +191,28 @@ private struct BreakMethodRow: View {
     }
 
     private var methodTitle: String {
-        let isNorwegian = localization.currentLocale == .norwegian
         switch method {
         case .proportional:
-            return isNorwegian ? "Proporsjonalt" : "Proportional"
+            return String(localized: .settingsPayBreakMethodProportional)
         case .baseOnly:
-            return isNorwegian ? "Kun grunnlønn" : "Base Only"
+            return String(localized: .settingsPayBreakMethodBaseOnly)
         case .endOfShift:
-            return isNorwegian ? "Slutten av vakten" : "End of Shift"
+            return String(localized: .settingsPayBreakMethodEndOfShift)
         case .none:
-            return isNorwegian ? "Ingen" : "None"
+            return String(localized: .settingsPayBreakMethodNone)
         }
     }
 
     private var methodDescription: String {
-        let isNorwegian = localization.currentLocale == .norwegian
         switch method {
         case .proportional:
-            return isNorwegian
-                ? "Trekker pause proporsjonalt fra alle tillegg"
-                : "Deducts break proportionally from all supplements"
+            return String(localized: .settingsPayBreakMethodDescProportional)
         case .baseOnly:
-            return isNorwegian
-                ? "Trekker pause kun fra grunnlønn"
-                : "Deducts break only from base wage"
+            return String(localized: .settingsPayBreakMethodDescBaseOnly)
         case .endOfShift:
-            return isNorwegian
-                ? "Trekker pause fra slutten av vakten"
-                : "Deducts break from end of shift"
+            return String(localized: .settingsPayBreakMethodDescEndOfShift)
         case .none:
-            return isNorwegian
-                ? "Ingen automatisk pausetrekk"
-                : "No automatic break deduction"
+            return String(localized: .settingsPayBreakMethodDescNone)
         }
     }
 }
@@ -246,5 +230,4 @@ private struct BreakMethodRow: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

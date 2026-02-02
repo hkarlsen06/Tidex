@@ -8,8 +8,7 @@ struct RecurringShiftEditorSheet: View {
     let onSave: ((RecurringShiftEditResult) -> Void)?
     let onDelete: (() -> Void)?
 
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
 
     // MARK: - Edit State
 
@@ -72,7 +71,7 @@ struct RecurringShiftEditorSheet: View {
     private var displayMonthName: String {
         CalendarGridHelper.monthName(
             from: displayMonth,
-            locale: Locale(identifier: localization.currentLocale.localeIdentifier)
+            locale: Locale(identifier: Locale.current.identifier)
         )
     }
 
@@ -203,14 +202,14 @@ struct RecurringShiftEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         dismiss()
                     }
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(localization.string("common.save")) {
+                    Button(String(localized: .commonSave)) {
                         saveChanges()
                     }
                     .font(.system(size: 16, weight: .semibold))
@@ -225,15 +224,15 @@ struct RecurringShiftEditorSheet: View {
         }
         .interactiveDismissDisabled(hasChanges)
         .alert(
-            localization.string("recurring.deleteConfirmTitle"),
+            String(localized: .recurringDeleteConfirmTitle),
             isPresented: $showDeleteConfirmation
         ) {
-            Button(localization.string("common.cancel"), role: .cancel) {}
-            Button(localization.string("recurring.deleteConfirmButton"), role: .destructive) {
+            Button(String(localized: .commonCancel), role: .cancel) {}
+            Button(String(localized: .recurringDeleteConfirmButton), role: .destructive) {
                 deleteRecurringShift()
             }
         } message: {
-            Text(localization.string("recurring.deleteConfirmMessage"))
+            Text(.recurringDeleteConfirmMessage)
         }
     }
 
@@ -242,11 +241,11 @@ struct RecurringShiftEditorSheet: View {
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(localization.string("recurring.editTitle"))
+                Text(.recurringEditTitle)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("addShift.headerSubtitle"))
+                Text(.addShiftHeaderSubtitle)
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -281,7 +280,7 @@ struct RecurringShiftEditorSheet: View {
                     Image(systemName: "checkmark")
                         .font(.system(size: 15, weight: .medium))
                 }
-                Text(localization.string("common.saveChanges"))
+                Text(.commonSaveChanges)
                     .font(.system(size: 15, weight: .semibold))
             }
             .foregroundColor(.white)

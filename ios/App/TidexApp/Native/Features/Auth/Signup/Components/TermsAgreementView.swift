@@ -6,15 +6,14 @@ struct TermsAgreementView: View {
     @Binding var isAgreed: Bool
     var error: String?
 
-    @Environment(\.localization) private var localization
-    @State private var safariURL: URL?
+        @State private var safariURL: URL?
 
     private var termsURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(localization.currentLocale.rawValue)/terms")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/terms")
     }
 
     private var privacyURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(localization.currentLocale.rawValue)/privacy")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/privacy")
     }
 
     var body: some View {
@@ -78,10 +77,10 @@ struct TermsAgreementView: View {
     }
 
     private var termsAttributedString: AttributedString {
-        let prefix = localization.string("signup.terms.prefix")
-        let termsLinkText = localization.string("signup.terms.termsLink")
-        let andText = localization.string("signup.terms.and")
-        let privacyLinkText = localization.string("signup.terms.privacyLink")
+        let prefix = String(localized: .signupTermsPrefix)
+        let termsLinkText = String(localized: .signupTermsTermsLink)
+        let andText = String(localized: .signupTermsAnd)
+        let privacyLinkText = String(localized: .signupTermsPrivacyLink)
 
         var result = AttributedString()
 
@@ -142,7 +141,6 @@ extension URL: @retroactive Identifiable {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Terms Agreement - Checked") {
@@ -151,7 +149,6 @@ extension URL: @retroactive Identifiable {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Terms Agreement - Error") {
@@ -160,5 +157,4 @@ extension URL: @retroactive Identifiable {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

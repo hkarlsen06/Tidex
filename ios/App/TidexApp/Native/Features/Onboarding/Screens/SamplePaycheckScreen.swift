@@ -6,8 +6,7 @@ import UIKit
 struct SamplePaycheckScreen: View {
     @Binding var hourlyRate: Double
 
-    @Environment(\.localization) private var localization
-    @State private var showHeader = false
+        @State private var showHeader = false
     @State private var showAmount = false
     @State private var showBreakdown = false
     @State private var showSampleLabel = false
@@ -39,7 +38,7 @@ struct SamplePaycheckScreen: View {
                 .frame(height: 40)
 
             // Header with entrance animation
-            Text(localization.string("onboarding.paycheck.title"))
+            Text(.onboardingPaycheckTitle)
                 .font(.system(size: 20, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -70,7 +69,7 @@ struct SamplePaycheckScreen: View {
                 .frame(height: 16)
 
             // Sample label with entrance animation
-            Text(localization.string("onboarding.paycheck.sample_label"))
+            Text(.onboardingPaycheckSampleLabel)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
@@ -103,7 +102,7 @@ struct SamplePaycheckScreen: View {
     private var breakdownCard: some View {
         VStack(spacing: 0) {
             breakdownRow(
-                label: localization.string("onboarding.paycheck.base_pay"),
+                label: String(localized: .onboardingPaycheckBasePay),
                 amount: sampleData.basePay,
                 isPositive: true
             )
@@ -112,7 +111,7 @@ struct SamplePaycheckScreen: View {
                 .background(Color.tidexBorderSubtle)
 
             breakdownRow(
-                label: localization.string("onboarding.paycheck.evening"),
+                label: String(localized: .onboardingPaycheckEvening),
                 amount: sampleData.eveningSupplements,
                 isPositive: true
             )
@@ -121,7 +120,7 @@ struct SamplePaycheckScreen: View {
                 .background(Color.tidexBorderSubtle)
 
             breakdownRow(
-                label: localization.string("onboarding.paycheck.weekend"),
+                label: String(localized: .onboardingPaycheckWeekend),
                 amount: sampleData.weekendBonus,
                 isPositive: true
             )
@@ -130,7 +129,7 @@ struct SamplePaycheckScreen: View {
                 .background(Color.tidexBorderSubtle)
 
             breakdownRow(
-                label: localization.string("onboarding.paycheck.tax"),
+                label: String(localized: .onboardingPaycheckTax),
                 amount: sampleData.taxDeducted,
                 isPositive: false
             )
@@ -141,7 +140,7 @@ struct SamplePaycheckScreen: View {
 
             // Net pay row (highlighted)
             HStack {
-                Text(localization.string("onboarding.paycheck.net"))
+                Text(.onboardingPaycheckNet)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -182,7 +181,7 @@ struct SamplePaycheckScreen: View {
     // MARK: - Formatting
 
     private var isNorwegian: Bool {
-        localization.currentLocale == .norwegian
+        Locale.current.tidexIsNorwegian
     }
 
     /// Format currency based on locale
@@ -210,5 +209,4 @@ struct SamplePaycheckScreen: View {
 #Preview {
     SamplePaycheckScreen(hourlyRate: .constant(200))
         .background(Color.tidexBackground)
-        .environment(\.localization, LocalizationManager.shared)
 }

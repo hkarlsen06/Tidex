@@ -5,14 +5,13 @@ struct EmailPasswordForm: View {
     @ObservedObject var viewModel: LoginViewModel
     var onForgotPassword: (() -> Void)?
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 16) {
             // Email/Phone field
             TidexTextField(
-                label: localization.string("login.emailOrPhoneLabel"),
-                placeholder: localization.string("login.emailOrPhonePlaceholder"),
+                label: String(localized: .loginEmailOrPhoneLabel),
+                placeholder: String(localized: .loginEmailOrPhonePlaceholder),
                 text: $viewModel.emailOrPhone,
                 error: viewModel.fieldErrors.emailOrPhone,
                 keyboardType: .emailAddress,
@@ -24,9 +23,9 @@ struct EmailPasswordForm: View {
             // Password field (always visible for AutoFill, optional for phone login)
             SecureTextField(
                 label: viewModel.inputType == .phone
-                    ? localization.string("login.passwordOptionalLabel")
-                    : localization.string("login.passwordLabel"),
-                placeholder: localization.string("login.passwordPlaceholder"),
+                    ? String(localized: .loginPasswordOptionalLabel)
+                    : String(localized: .loginPasswordLabel),
+                placeholder: String(localized: .loginPasswordPlaceholder),
                 text: $viewModel.password,
                 error: viewModel.fieldErrors.password,
                 onSubmit: {
@@ -41,7 +40,7 @@ struct EmailPasswordForm: View {
                     Button(action: {
                         onForgotPassword?()
                     }) {
-                        Text(localization.string("login.forgotPassword"))
+                        Text(.loginForgotPassword)
                             .font(.system(size: 14))
                             .foregroundColor(.tidexBlue)
                     }
@@ -51,7 +50,7 @@ struct EmailPasswordForm: View {
 
             // Phone hint - password is optional for OTP flow
             if viewModel.inputType == .phone {
-                Text(localization.string("login.phonePasswordHint"))
+                Text(.loginPhonePasswordHint)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -59,7 +58,7 @@ struct EmailPasswordForm: View {
 
             // Submit button
             PrimaryButton(
-                title: localization.string("login.submitButton"),
+                title: String(localized: .loginSubmitButton),
                 action: {
                     Task { await viewModel.signIn() }
                 },

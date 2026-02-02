@@ -16,8 +16,7 @@ struct WageSourceSelector: View {
     /// Optional tariff version to use for rates (when nil, uses static fallback)
     var tariffVersion: TariffVersion? = nil
 
-    @Environment(\.localization) private var localization
-
+    
     /// Tariff levels to display - from version if available, otherwise static fallback
     private var tariffLevels: [TariffLevel] {
         if let version = tariffVersion {
@@ -37,7 +36,7 @@ struct WageSourceSelector: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section header
-            Text(localization.string("settings.pay.editor.wageSource"))
+            Text(.settingsPayEditorWageSource)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -45,7 +44,7 @@ struct WageSourceSelector: View {
             if showTariffOption {
                 HStack(spacing: 12) {
                     WageTypeToggleButton(
-                        title: localization.string("onboarding.wage.tariff"),
+                        title: String(localized: .onboardingWageTariff),
                         icon: "building.2",
                         isSelected: usePreset,
                         action: {
@@ -57,7 +56,7 @@ struct WageSourceSelector: View {
                     )
 
                     WageTypeToggleButton(
-                        title: localization.string("onboarding.wage.custom"),
+                        title: String(localized: .onboardingWageCustom),
                         icon: "slider.horizontal.3",
                         isSelected: !usePreset,
                         action: {
@@ -125,7 +124,7 @@ struct WageSourceSelector: View {
             : customWage
 
         HStack {
-            Text(localization.string("settings.pay.editor.currentWage"))
+            Text(.settingsPayEditorCurrentWage)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -149,7 +148,7 @@ struct WageSourceSelector: View {
         let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
 
         let currencyConfig = CurrencyConfig.get(currency)
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         let perHour = isNorwegian ? "/t" : "/hr"
 
         switch currencyConfig.display {
@@ -253,5 +252,4 @@ private struct TariffLevelSelectionRow: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

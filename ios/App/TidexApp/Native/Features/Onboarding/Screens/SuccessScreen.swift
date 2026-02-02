@@ -10,8 +10,7 @@ struct SuccessScreen: View {
     let onComplete: () -> Void
     var onRetry: (() -> Void)?
 
-    @Environment(\.localization) private var localization
-    @State private var checkmarkScale: CGFloat = 0.0
+        @State private var checkmarkScale: CGFloat = 0.0
     @State private var checkmarkOpacity: Double = 0.0
     @State private var contentVisible = false
 
@@ -47,7 +46,7 @@ struct SuccessScreen: View {
                             .frame(height: 8)
 
                         // Reassurance line
-                        Text(localization.string("onboarding.success.reassurance"))
+                        Text(.onboardingSuccessReassurance)
                             .font(.system(size: 14))
                             .foregroundColor(.tidexTextMuted)
                             .multilineTextAlignment(.center)
@@ -75,7 +74,7 @@ struct SuccessScreen: View {
                 VStack(spacing: 12) {
                     // Go to Dashboard button
                     OnboardingButton(
-                        title: localization.string("onboarding.success.button"),
+                        title: String(localized: .onboardingSuccessButton),
                         action: {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             onComplete()
@@ -90,7 +89,7 @@ struct SuccessScreen: View {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             onRetry()
                         }) {
-                            Text(localization.string("common.retry"))
+                            Text(.commonRetry)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.tidexBlue)
                         }
@@ -163,22 +162,22 @@ struct SuccessScreen: View {
     private var statusTitle: String {
         switch saveStatus {
         case .idle, .success:
-            return localization.string("onboarding.success.title")
+            return String(localized: .onboardingSuccessTitle)
         case .saving:
-            return localization.string("onboarding.success.savingTitle")
+            return String(localized: .onboardingSuccessSavingTitle)
         case .error:
-            return localization.string("onboarding.success.errorTitle")
+            return String(localized: .onboardingSuccessErrorTitle)
         }
     }
 
     private var statusSubtitle: String {
         switch saveStatus {
         case .idle, .success:
-            return localization.string("onboarding.success.subtitle")
+            return String(localized: .onboardingSuccessSubtitle)
         case .saving:
-            return localization.string("onboarding.success.saving")
+            return String(localized: .onboardingSuccessSaving)
         case .error:
-            return localization.string("onboarding.success.errorSubtitle")
+            return String(localized: .onboardingSuccessErrorSubtitle)
         }
     }
 
@@ -238,7 +237,6 @@ struct SuccessScreen: View {
         onComplete: {},
         onRetry: nil
     )
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Saving") {
@@ -247,7 +245,6 @@ struct SuccessScreen: View {
         onComplete: {},
         onRetry: nil
     )
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Error") {
@@ -257,5 +254,4 @@ struct SuccessScreen: View {
         onComplete: {},
         onRetry: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

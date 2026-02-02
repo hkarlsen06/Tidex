@@ -5,14 +5,13 @@ import SwiftUI
 ///
 /// Usage:
 /// ```swift
-/// TabScreenContainer(title: localization.string("tabs.shifts")) {
+/// TabScreenContainer(title: String(localized: .tabsShifts)) {
 ///     // Your tab content here
 /// }
 /// ```
 struct TabScreenContainer<Content: View, PrincipalContent: View, LeadingContent: View, TrailingContent: View>: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-
+    
     let title: String
     let showsUserMenu: Bool
     @ViewBuilder let content: () -> Content
@@ -126,8 +125,7 @@ extension TabScreenContainer where PrincipalContent == EmptyView {
 /// Use for tabs that need refresh functionality
 struct RefreshableTabScreenContainer<Content: View>: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-
+    
     let title: String
     let showsUserMenu: Bool
     let onRefresh: () async -> Void
@@ -177,5 +175,4 @@ struct RefreshableTabScreenContainer<Content: View>: View {
             .foregroundColor(.tidexTextPrimary)
     }
     .environmentObject(AppCoordinator.shared)
-    .environment(\.localization, LocalizationManager.shared)
 }

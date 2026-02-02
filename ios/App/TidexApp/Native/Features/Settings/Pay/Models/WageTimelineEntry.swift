@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Wage Timeline Entry
 
@@ -49,7 +50,7 @@ enum WageTimelineProcessor {
     /// - Returns: Timeline entries ready for display
     static func processSnapshots(
         _ snapshots: [WageSnapshot],
-        locale: LocalizationManager.AppLocale
+        locale: Locale
     ) -> [WageTimelineEntry] {
         guard !snapshots.isEmpty else { return [] }
 
@@ -137,10 +138,9 @@ enum WageTimelineProcessor {
         endDate: String?,
         isCurrent: Bool,
         isPast: Bool,
-        locale: LocalizationManager.AppLocale
+        locale: Locale
     ) -> String {
-        let isNorwegian = locale == .norwegian
-        let nowText = isNorwegian ? "nå" : "now"
+        let nowText = String(localized: .commonNow)
 
         // Baseline with no date
         guard let fromDate = fromDate else {
@@ -166,7 +166,7 @@ enum WageTimelineProcessor {
     }
 
     /// Format a single date, hiding year if it's the current year
-    private static func formatDate(_ isoDate: String, locale: LocalizationManager.AppLocale) -> String {
+    private static func formatDate(_ isoDate: String, locale: Locale) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -176,12 +176,12 @@ enum WageTimelineProcessor {
         let isCurrentYear = calendar.component(.year, from: date) == calendar.component(.year, from: Date())
 
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = Locale(identifier: locale == .norwegian ? "nb_NO" : "en_US")
+        displayFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
 
         if isCurrentYear {
-            displayFormatter.dateFormat = locale == .norwegian ? "d. MMM" : "MMM d"
+            displayFormatter.dateFormat = locale.tidexIsNorwegian ? "d. MMM" : "MMM d"
         } else {
-            displayFormatter.dateFormat = locale == .norwegian ? "d. MMM yyyy" : "MMM d, yyyy"
+            displayFormatter.dateFormat = locale.tidexIsNorwegian ? "d. MMM yyyy" : "MMM d, yyyy"
         }
 
         return displayFormatter.string(from: date)
@@ -191,11 +191,10 @@ enum WageTimelineProcessor {
     private static func detectChanges(
         current: WageSnapshot,
         previous: WageSnapshot?,
-        locale: LocalizationManager.AppLocale
+        locale: Locale
     ) -> [WageChange] {
         guard let previous = previous else { return [] }
 
-        let isNorwegian = locale == .norwegian
         var changes: [WageChange] = []
 
         // Wage change
@@ -204,7 +203,7 @@ enum WageTimelineProcessor {
             formatter.numberStyle = .decimal
             formatter.minimumFractionDigits = 2
             formatter.maximumFractionDigits = 2
-            formatter.locale = Locale(identifier: "nb_NO")
+            formatter.locale = Locale(identifier: locale.identifier)
 
             let oldWage = formatter.string(from: NSNumber(value: previous.hourly_wage)) ?? "\(previous.hourly_wage)"
             let newWage = formatter.string(from: NSNumber(value: current.hourly_wage)) ?? "\(current.hourly_wage)"
@@ -219,19 +218,17 @@ enum WageTimelineProcessor {
         if current.wage_level != previous.wage_level {
             if current.wage_level == nil && previous.wage_level != nil {
                 changes.append(WageChange(
-                    description: isNorwegian ? "Byttet til egendefinert lønn" : "Switched to custom wage",
+                    description: String(localized: .timelineSwitchedToCustom),
                     type: .tariffLevel
                 ))
             } else if current.wage_level != nil && previous.wage_level == nil {
                 changes.append(WageChange(
-                    description: isNorwegian ? "Byttet til tariff" : "Switched to tariff",
+                    description: String(localized: .timelineSwitchedToTariff),
                     type: .tariffLevel
                 ))
             } else if let currentLevel = current.wage_level, let previousLevel = previous.wage_level {
                 changes.append(WageChange(
-                    description: isNorwegian
-                        ? "Lønnstrinn \(previousLevel) \u{2192} \(currentLevel)"
-                        : "Level \(previousLevel) \u{2192} \(currentLevel)",
+                    description: String(localized: .timelineLevelChange(Int32(previousLevel), Int32(currentLevel))),
                     type: .tariffLevel
                 ))
             }
@@ -241,15 +238,13 @@ enum WageTimelineProcessor {
         if current.effectiveTaxEnabled != previous.effectiveTaxEnabled {
             changes.append(WageChange(
                 description: current.effectiveTaxEnabled
-                    ? (isNorwegian ? "Skatt aktivert" : "Tax enabled")
-                    : (isNorwegian ? "Skatt deaktivert" : "Tax disabled"),
+                    ? String(localized: .timelineTaxEnabled)
+                    : String(localized: .timelineTaxDisabled),
                 type: .tax
             ))
         } else if current.effectiveTaxEnabled && current.effectiveTaxPercentage != previous.effectiveTaxPercentage {
             changes.append(WageChange(
-                description: isNorwegian
-                    ? "Skatt \(Int(previous.effectiveTaxPercentage))% \u{2192} \(Int(current.effectiveTaxPercentage))%"
-                    : "Tax \(Int(previous.effectiveTaxPercentage))% \u{2192} \(Int(current.effectiveTaxPercentage))%",
+                description: String(localized: .timelineTaxChange(Int32(previous.effectiveTaxPercentage), Int32(current.effectiveTaxPercentage))),
                 type: .tax
             ))
         }
@@ -258,13 +253,13 @@ enum WageTimelineProcessor {
         if current.effectiveBreakEnabled != previous.effectiveBreakEnabled {
             changes.append(WageChange(
                 description: current.effectiveBreakEnabled
-                    ? (isNorwegian ? "Pause aktivert" : "Break enabled")
-                    : (isNorwegian ? "Pause deaktivert" : "Break disabled"),
+                    ? String(localized: .timelineBreakEnabled)
+                    : String(localized: .timelineBreakDisabled),
                 type: .breaks
             ))
         } else if current.effectiveBreakEnabled && current.breakMethod != previous.breakMethod {
             changes.append(WageChange(
-                description: isNorwegian ? "Pausemetode endret" : "Break method changed",
+                description: String(localized: .timelineBreakMethodChanged),
                 type: .breaks
             ))
         }
@@ -274,16 +269,12 @@ enum WageTimelineProcessor {
             let diff = current.supplements.rules.count - previous.supplements.rules.count
             if diff > 0 {
                 changes.append(WageChange(
-                    description: isNorwegian
-                        ? "+\(diff) tillegg"
-                        : "+\(diff) supplement\(diff > 1 ? "s" : "")",
+                    description: String(localized: .timelineSupplementsAdded(Int32(diff))),
                     type: .supplements
                 ))
             } else {
                 changes.append(WageChange(
-                    description: isNorwegian
-                        ? "\(diff) tillegg"
-                        : "\(diff) supplement\(diff < -1 ? "s" : "")",
+                    description: String(localized: .timelineSupplementsRemoved(Int32(abs(diff)))),
                     type: .supplements
                 ))
             }

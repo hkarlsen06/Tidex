@@ -229,7 +229,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
 extension FeedbackItem {
     /// Format the created_at date for display
-    func formattedDate(locale: LocalizationManager.AppLocale) -> String {
+    func formattedDate(locale: Locale) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
@@ -246,7 +246,7 @@ extension FeedbackItem {
     }
 
     /// Format the responded_at date for display
-    func formattedResponseDate(locale: LocalizationManager.AppLocale) -> String? {
+    func formattedResponseDate(locale: Locale) -> String? {
         guard let respondedAt = respondedAt else { return nil }
 
         let formatter = ISO8601DateFormatter()
@@ -263,11 +263,11 @@ extension FeedbackItem {
         return formatDate(date, locale: locale)
     }
 
-    private func formatDate(_ date: Date, locale: LocalizationManager.AppLocale) -> String {
+    private func formatDate(_ date: Date, locale: Locale) -> String {
         let displayFormatter = DateFormatter()
         displayFormatter.dateStyle = .medium
         displayFormatter.timeStyle = .none
-        displayFormatter.locale = Locale(identifier: locale == .norwegian ? "nb_NO" : "en_US")
+        displayFormatter.locale = Locale(identifier: locale.tidexIsNorwegian ? "nb_NO" : "en_US")
         return displayFormatter.string(from: date)
     }
 }

@@ -4,8 +4,7 @@ import SwiftUI
 /// Displays payroll, total earnings, and featured shift cards
 struct DashboardView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-
+    
     /// Binding to the selected tab for navigation
     @Binding var selectedTab: MainTabView.Tab
 
@@ -120,18 +119,18 @@ struct DashboardView: View {
             }
         }
         .alert(
-            localization.string("push.failure.title"),
+            String(localized: .pushFailureTitle),
             isPresented: $showPushFailureAlert
         ) {
-            Button(localization.string("push.failure.settingsButton")) {
+            Button(String(localized: .pushFailureSettingsButton)) {
                 pushManager.openSettings()
                 pushManager.dismissAlert()
             }
-            Button(localization.string("push.failure.laterButton"), role: .cancel) {
+            Button(String(localized: .pushFailureLaterButton), role: .cancel) {
                 pushManager.dismissAlert()
             }
         } message: {
-            Text(localization.string("push.failure.message"))
+            Text(.pushFailureMessage)
         }
     }
 
@@ -142,8 +141,6 @@ struct DashboardView: View {
             countdownManager.stop()
             return
         }
-
-        let isNorwegian = localization.currentLocale == .norwegian
 
         // Only show shift countdown for current month with a next shift
         let shiftDate: String?
@@ -166,8 +163,7 @@ struct DashboardView: View {
             shiftDate: shiftDate,
             startTime: startTime,
             endTime: endTime,
-            payrollDate: data.payrollDate,
-            isNorwegian: isNorwegian
+            payrollDate: data.payrollDate
         )
     }
 
@@ -234,10 +230,12 @@ struct DashboardView: View {
         // Determine payroll label based on whether viewing current month
         let payrollLabel: String = {
             if viewModel.isCurrentMonth {
-                return localization.string(data.payrollHasPassed ? "dashboard.previousPayout" : "dashboard.nextPayout")
+                return data.payrollHasPassed
+                    ? String(localized: .dashboardPreviousPayout)
+                    : String(localized: .dashboardNextPayout)
             } else {
                 // For non-current months, show generic "Payroll" label
-                return localization.string("dashboard.payroll")
+                return String(localized: .dashboardPayroll)
             }
         }()
 
@@ -357,7 +355,7 @@ struct DashboardView: View {
                         // Payroll Card skeleton
                         PayrollCard(
                             payrollDate: Date(),
-                            label: localization.string("dashboard.nextPayout"),
+                            label: String(localized: .dashboardNextPayout),
                             gross: 0,
                             net: nil,
                             tax: nil,
@@ -405,7 +403,7 @@ struct DashboardView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.tidexWarning)
 
-            Text(localization.string("dashboard.loadError"))
+            Text(.dashboardLoadError)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -417,7 +415,7 @@ struct DashboardView: View {
             Button {
                 Task { await viewModel.loadDashboard() }
             } label: {
-                Text(localization.string("common.retry"))
+                Text(.commonRetry)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexBlue)
                     .padding(.horizontal, 20)
@@ -438,7 +436,6 @@ struct DashboardView: View {
         var body: some View {
             DashboardView(selectedTab: $selectedTab)
                 .environmentObject(AppCoordinator.shared)
-                .environment(\.localization, LocalizationManager.shared)
         }
     }
 

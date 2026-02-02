@@ -2,8 +2,7 @@ import SwiftUI
 
 /// Sidebar view for displaying and managing Wagey conversations
 struct ConversationSidebarView: View {
-    @Environment(\.localization) private var localization
-
+    
     let conversations: [LocalConversation]
     let currentConversationId: String?
     let onSelectConversation: (String) -> Void
@@ -32,7 +31,7 @@ struct ConversationSidebarView: View {
 
     private var sidebarHeader: some View {
         HStack {
-            Text(localization.string("wagey.conversations.title"))
+            Text(.wageyConversationsTitle)
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -61,7 +60,7 @@ struct ConversationSidebarView: View {
                 .font(.system(size: 40))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("wagey.conversations.empty"))
+            Text(.wageyConversationsEmpty)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -97,8 +96,7 @@ struct ConversationSidebarView: View {
 // MARK: - Conversation Row
 
 struct ConversationRowView: View {
-    @Environment(\.localization) private var localization
-
+    
     let conversation: LocalConversation
     let isSelected: Bool
     let onSelect: () -> Void
@@ -109,7 +107,7 @@ struct ConversationRowView: View {
     /// Localized title - translates "New Conversation" to current locale
     private var localizedTitle: String {
         if conversation.title == "New Conversation" {
-            return localization.string("wagey.newConversation")
+            return String(localized: .wageyNewConversation)
         }
         return conversation.title
     }
@@ -149,18 +147,18 @@ struct ConversationRowView: View {
             Button(role: .destructive) {
                 showDeleteConfirmation = true
             } label: {
-                Label(localization.string("common.delete"), systemImage: "trash")
+                Label(String(localized: .commonDelete), systemImage: "trash")
             }
         }
         .confirmationDialog(
-            localization.string("wagey.conversations.deleteConfirm"),
+            String(localized: .wageyConversationsDeleteConfirm),
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button(localization.string("common.delete"), role: .destructive) {
+            Button(String(localized: .commonDelete), role: .destructive) {
                 onDelete()
             }
-            Button(localization.string("common.cancel"), role: .cancel) {}
+            Button(String(localized: .commonCancel), role: .cancel) {}
         }
     }
 
@@ -204,7 +202,6 @@ struct ConversationRowView: View {
         onDeleteConversation: { _ in }
     )
     .frame(width: 280)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Empty") {
@@ -216,5 +213,4 @@ struct ConversationRowView: View {
         onDeleteConversation: { _ in }
     )
     .frame(width: 280)
-    .environment(\.localization, LocalizationManager.shared)
 }

@@ -10,12 +10,12 @@ enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 
     /// Localization key for the mode title
-    var titleKey: String {
+    var titleKey: LocalizedStringResource {
         switch self {
         case .single:
-            return "addShift.modeSingle"
+            return .addShiftModeSingle
         case .recurring:
-            return "addShift.modeRecurring"
+            return .addShiftModeRecurring
         }
     }
 }

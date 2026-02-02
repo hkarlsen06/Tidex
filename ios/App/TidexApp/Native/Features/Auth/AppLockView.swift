@@ -2,8 +2,7 @@ import SwiftUI
 
 /// Full-screen lock overlay shown when biometric lock is enabled and app is locked
 struct AppLockView: View {
-    @Environment(\.localization) private var localization
-    @ObservedObject private var biometricService = BiometricAuthService.shared
+        @ObservedObject private var biometricService = BiometricAuthService.shared
 
     @State private var isAuthenticating = false
 
@@ -28,12 +27,12 @@ struct AppLockView: View {
                             .font(.system(size: 44))
                             .foregroundColor(.tidexBlue)
 
-                        Text(localization.string("appLock.title"))
+                        Text(.appLockTitle)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("appLock.subtitle"))
+                        Text(.appLockSubtitle)
                             .font(.subheadline)
                             .foregroundColor(.tidexTextSecondary)
                             .multilineTextAlignment(.center)
@@ -57,7 +56,7 @@ struct AppLockView: View {
                                 Image(systemName: biometricService.biometricIconName)
                                     .font(.system(size: 20))
                             }
-                            Text(localization.string("appLock.unlock", biometricService.biometricTypeName))
+                            Text(String(localized: .appLockUnlock(biometricService.biometricTypeName)))
                         }
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
@@ -90,5 +89,4 @@ struct AppLockView: View {
 
 #Preview {
     AppLockView()
-        .environment(\.localization, LocalizationManager.shared)
 }

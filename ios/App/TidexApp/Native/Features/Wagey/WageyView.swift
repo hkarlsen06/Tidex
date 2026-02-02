@@ -4,8 +4,7 @@ import SwiftUI
 /// Composes the header, message list, input field, and conversation sidebar
 struct WageyView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     /// Shared ViewModel for managing chat state
@@ -47,7 +46,6 @@ struct WageyView: View {
                 }
             )
             .environmentObject(coordinator)
-            .environment(\.localization, localization)
         } else {
             chatInterface
         }
@@ -93,7 +91,7 @@ struct WageyView: View {
                 .interactiveDismissDisabled()
         }
         .alert(
-            localization.string("wagey.error.unknown"),
+            String(localized: .wageyErrorUnknown),
             isPresented: .init(
                 get: { viewModel.error != nil },
                 set: { if !$0 { viewModel.dismissError() } }
@@ -306,7 +304,7 @@ struct WageyView: View {
     private var localizedConversationTitle: String {
         let title = viewModel.currentConversationTitle
         if title == "New Conversation" {
-            return localization.string("wagey.newConversation")
+            return String(localized: .wageyNewConversation)
         }
         return title
     }
@@ -320,7 +318,7 @@ struct WageyView: View {
                     .lineLimit(1)
 
                 if viewModel.wageyInvocations != nil || viewModel.messagesUsed > 0 {
-                    Text(localization.string("wagey.messagesRemaining", viewModel.remainingMessagesCount))
+                    Text(String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount))))
                         .font(.system(size: 11))
                         .foregroundColor(.tidexTextSecondary)
                 }
@@ -370,7 +368,6 @@ struct WageyView: View {
 #Preview("Empty") {
     WageyView()
         .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("With Messages") {
@@ -378,5 +375,4 @@ struct WageyView: View {
     // as we can't inject state into @State property from preview
     WageyView()
         .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

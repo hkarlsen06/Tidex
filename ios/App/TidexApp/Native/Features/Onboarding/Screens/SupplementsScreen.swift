@@ -9,8 +9,7 @@ struct SupplementsScreen: View {
     let onSkip: () -> Void
     var onBack: (() -> Void)? = nil
 
-    @Environment(\.localization) private var localization
-    @State private var showingRuleEditor = false
+        @State private var showingRuleEditor = false
     @State private var editingRule: OnboardingSupplementRule?
 
     var body: some View {
@@ -32,7 +31,7 @@ struct SupplementsScreen: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "chevron.left")
                                             .font(.system(size: 16, weight: .semibold))
-                                        Text(localization.string("common.back"))
+                                        Text(.commonBack)
                                             .font(.system(size: 16))
                                     }
                                     .foregroundColor(.tidexBlue)
@@ -50,12 +49,12 @@ struct SupplementsScreen: View {
 
                         // Header
                         VStack(spacing: 12) {
-                            Text(localization.string("onboarding.supplements.title"))
+                            Text(.onboardingSupplementsTitle)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.tidexTextPrimary)
                                 .multilineTextAlignment(.center)
 
-                            Text(localization.string("onboarding.supplements.subtitle"))
+                            Text(.onboardingSupplementsSubtitle)
                                 .font(.system(size: 17))
                                 .foregroundColor(.tidexTextSecondary)
                                 .multilineTextAlignment(.center)
@@ -72,7 +71,7 @@ struct SupplementsScreen: View {
                                 ForEach(data.supplementRules) { rule in
                                     SupplementRuleCard(
                                         rule: rule,
-                                        locale: localization.currentLocale,
+                                        locale: Locale.current,
                                         currency: data.currency,
                                         onEdit: {
                                             editingRule = rule
@@ -102,7 +101,7 @@ struct SupplementsScreen: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 20))
-                                Text(localization.string("onboarding.supplements.addRule"))
+                                Text(.onboardingSupplementsAddRule)
                                     .font(.system(size: 16, weight: .medium))
                             }
                             .foregroundColor(.tidexBlue)
@@ -124,7 +123,7 @@ struct SupplementsScreen: View {
                             Spacer()
                                 .frame(height: 24)
 
-                            Text(localization.string("onboarding.supplements.hint"))
+                            Text(.onboardingSupplementsHint)
                                 .font(.system(size: 14))
                                 .foregroundColor(.tidexTextMuted)
                                 .multilineTextAlignment(.center)
@@ -140,7 +139,7 @@ struct SupplementsScreen: View {
                 // Bottom buttons
                 VStack(spacing: 12) {
                     OnboardingButton(
-                        title: localization.string("common.continue"),
+                        title: String(localized: .commonContinue),
                         action: {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                             onContinue()
@@ -151,7 +150,7 @@ struct SupplementsScreen: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         onSkip()
                     }) {
-                        Text(localization.string("onboarding.supplements.skip"))
+                        Text(.onboardingSupplementsSkip)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -185,7 +184,7 @@ struct SupplementsScreen: View {
 
 private struct SupplementRuleCard: View {
     let rule: OnboardingSupplementRule
-    let locale: LocalizationManager.AppLocale
+    let locale: Locale
     let currency: String
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -193,7 +192,7 @@ private struct SupplementRuleCard: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(rule.daysDescription(locale: locale))
+                Text(rule.daysDescription)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -258,5 +257,4 @@ private struct SupplementRuleCard: View {
         onContinue: {},
         onSkip: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

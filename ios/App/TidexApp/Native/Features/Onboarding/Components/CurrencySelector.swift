@@ -4,14 +4,13 @@ import SwiftUI
 /// Shows current currency with a dropdown to select from available options
 struct CurrencySelector: View {
     @Binding var selectedCurrency: String
-    @Environment(\.localization) private var localization
-
+    
     @State private var showingPicker = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Label
-            Text(localization.string("onboarding.currency.label"))
+            Text(.onboardingCurrencyLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -58,8 +57,7 @@ struct CurrencySelector: View {
 private struct CurrencyPickerSheet: View {
     @Binding var selectedCurrency: String
     @Binding var isPresented: Bool
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -98,11 +96,11 @@ private struct CurrencyPickerSheet: View {
                     .padding(.top, 8)
                 }
             }
-            .navigationTitle(localization.string("onboarding.currency.title"))
+            .navigationTitle(String(localized: .onboardingCurrencyTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         isPresented = false
                     }
                 }
@@ -148,5 +146,4 @@ private struct CurrencyRow: View {
             .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

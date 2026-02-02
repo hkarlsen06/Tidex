@@ -228,8 +228,7 @@ struct TimeRangePicker: View {
     /// Optional binding to expose/control which field is focused (for keyboard accessory)
     var focusedFieldBinding: Binding<NumericTimeInput.TimeField?>?
     @FocusState private var focusedField: NumericTimeInput.TimeField?
-    @Environment(\.localization) private var localization
-
+    
     /// Shortened label for start time field
     private var startLabel: String {
         "Start"
@@ -237,7 +236,7 @@ struct TimeRangePicker: View {
 
     /// Shortened label for end time field
     private var endLabel: String {
-        localization.currentLocale == .norwegian ? "Slutt" : "End"
+        Locale.current.tidexIsNorwegian ? "Slutt" : "End"
     }
 
     var body: some View {
@@ -327,5 +326,4 @@ struct TimePickerRow: View {
         .padding()
         .background(Color.tidexBackground)
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

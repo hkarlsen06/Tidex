@@ -10,8 +10,7 @@ struct ToolStatusView: View {
     /// Timeout in seconds before showing error state
     private let timeoutSeconds: Double = 30
 
-    @Environment(\.localization) private var localization
-
+    
     /// Track when the view appeared (for timeout calculation)
     @State private var appearedAt: Date = Date()
 
@@ -49,24 +48,24 @@ struct ToolStatusView: View {
     private var toolNameMapping: [String: String] {
         [
             // Shift management
-            "manage_shift": localization.string("wagey.tool.manageShift"),
-            "query_shifts": localization.string("wagey.tool.queryShifts"),
-            "calculate_wages": localization.string("wagey.tool.calculateWages"),
+            "manage_shift": String(localized: .wageyToolManageShift),
+            "query_shifts": String(localized: .wageyToolQueryShifts),
+            "calculate_wages": String(localized: .wageyToolCalculateWages),
 
             // Recurring shifts
-            "draft_recurring_shift": localization.string("wagey.tool.draftRecurring"),
-            "confirm_recurring_shift": localization.string("wagey.tool.confirmRecurring"),
-            "manage_recurring_shift": localization.string("wagey.tool.manageRecurring"),
-            "manage_recurring_exclusion": localization.string("wagey.tool.manageExclusion"),
+            "draft_recurring_shift": String(localized: .wageyToolDraftRecurring),
+            "confirm_recurring_shift": String(localized: .wageyToolConfirmRecurring),
+            "manage_recurring_shift": String(localized: .wageyToolManageRecurring),
+            "manage_recurring_exclusion": String(localized: .wageyToolManageExclusion),
 
             // Statistics and settings
-            "get_statistics": localization.string("wagey.tool.getStatistics"),
-            "manage_settings": localization.string("wagey.tool.manageSettings"),
-            "get_wage_info": localization.string("wagey.tool.getWageInfo"),
-            "calculate_earnings": localization.string("wagey.tool.calculateEarnings"),
+            "get_statistics": String(localized: .wageyToolGetStatistics),
+            "manage_settings": String(localized: .wageyToolManageSettings),
+            "get_wage_info": String(localized: .wageyToolGetWageInfo),
+            "calculate_earnings": String(localized: .wageyToolCalculateEarnings),
 
             // Wage snapshots
-            "manage_wage_snapshots": localization.string("wagey.tool.manageWageSnapshots")
+            "manage_wage_snapshots": String(localized: .wageyToolManageWageSnapshots)
         ]
     }
 
@@ -106,14 +105,14 @@ struct ToolStatusView: View {
 
                     // Arguments (if present)
                     if let arguments = toolCall.arguments, !arguments.isEmpty {
-                        detailSection(label: localization.string("wagey.tool.request"), content: formatJSON(arguments))
+                        detailSection(label: String(localized: .wageyToolRequest), content: formatJSON(arguments))
                     }
 
                     // Result (if present)
                     if let result = toolCall.result {
-                        detailSection(label: localization.string("wagey.tool.response"), content: formatJSON(result))
+                        detailSection(label: String(localized: .wageyToolResponse), content: formatJSON(result))
                     } else if isTimedOut {
-                        detailSection(label: localization.string("wagey.tool.response"), content: localization.string("wagey.tool.timedOut"))
+                        detailSection(label: String(localized: .wageyToolResponse), content: String(localized: .wageyToolTimedOut))
                     }
                 }
                 .padding(.horizontal, 12)
@@ -233,7 +232,6 @@ struct ToolStatusView: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Completed - Success") {
@@ -258,7 +256,6 @@ struct ToolStatusView: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Completed - Failed") {
@@ -283,5 +280,4 @@ struct ToolStatusView: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

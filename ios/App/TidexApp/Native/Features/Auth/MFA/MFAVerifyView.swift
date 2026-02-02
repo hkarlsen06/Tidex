@@ -4,8 +4,7 @@ import SwiftUI
 /// Displays a 6-digit code input for TOTP verification
 struct MFAVerifyView: View {
     @StateObject private var viewModel: MFAVerifyViewModel
-    @Environment(\.localization) private var localization
-
+    
     init(factor: AuthService.MFAFactor, coordinator: AppCoordinator) {
         _viewModel = StateObject(wrappedValue: MFAVerifyViewModel(
             factor: factor,
@@ -46,7 +45,7 @@ struct MFAVerifyView: View {
 
                 // Verify button
                 PrimaryButton(
-                    title: localization.string("mfa.submitButton"),
+                    title: String(localized: .mfaSubmitButton),
                     action: {
                         Task { await viewModel.verifyCode() }
                     },
@@ -97,11 +96,11 @@ struct MFAVerifyView: View {
 
     private var instructionsSection: some View {
         VStack(spacing: 8) {
-            Text(localization.string("mfa.title"))
+            Text(.mfaTitle)
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("mfa.subtitle"))
+            Text(.mfaSubtitle)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -128,7 +127,7 @@ struct MFAVerifyView: View {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 12, weight: .medium))
-                Text(localization.string("mfa.backToLogin"))
+                Text(.mfaBackToLogin)
                     .font(.system(size: 15))
             }
             .foregroundColor(.tidexTextSecondary)
@@ -146,5 +145,4 @@ struct MFAVerifyView: View {
     )
 
     return MFAVerifyView(factor: factor, coordinator: AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

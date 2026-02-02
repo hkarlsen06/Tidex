@@ -93,8 +93,7 @@ struct ShiftSupplementRuleCard: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     /// Currency configuration for display
     private var currencyConfig: CurrencyOption {
         CurrencyConfig.get(currency)
@@ -107,8 +106,8 @@ struct ShiftSupplementRuleCard: View {
                 // Badge
                 HStack(spacing: 8) {
                     Text(rule.isCustom
-                        ? localization.string("supplements.custom")
-                        : localization.string("supplements.tariff"))
+                        ? String(localized: .supplementsCustom)
+                        : String(localized: .supplementsTariff))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(rule.isCustom ? .tidexBlue : .tidexTextSecondary)
                         .padding(.horizontal, 8)
@@ -188,8 +187,7 @@ struct SupplementRuleEditorSheet: View {
     let onSave: (CustomSupplementRuleWithId) -> Void
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-    @State private var fromTime: Date = Date()
+        @State private var fromTime: Date = Date()
     @State private var toTime: Date = Date()
     @State private var supplementType: CustomSupplementRuleWithId.SupplementType = .fixed
     @State private var value: Double = 45
@@ -206,7 +204,7 @@ struct SupplementRuleEditorSheet: View {
 
     /// Hour suffix for rate display
     private var hourRateSuffix: String {
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
         let hourPart = isNorwegian ? "/t" : "/hr"
         return "\(currencyConfig.value)\(hourPart)"
     }
@@ -284,17 +282,17 @@ struct SupplementRuleEditorSheet: View {
             }
             .background(Color.tidexBackground)
             .navigationTitle(isEditing
-                ? localization.string("onboarding.supplements.editRule")
-                : localization.string("onboarding.supplements.addRule"))
+                ? String(localized: .onboardingSupplementsEditRule)
+                : String(localized: .onboardingSupplementsAddRule))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         onCancel()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.string("common.save")) {
+                    Button(String(localized: .commonSave)) {
                         saveRule()
                     }
                     .fontWeight(.semibold)
@@ -309,14 +307,14 @@ struct SupplementRuleEditorSheet: View {
     @ViewBuilder
     private var timeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.timeLabel"))
+            Text(.onboardingSupplementsTimeLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
             HStack(spacing: 16) {
                 // From time
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("onboarding.supplements.from"))
+                    Text(.onboardingSupplementsFrom)
                         .font(.system(size: 12))
                         .foregroundColor(.tidexTextMuted)
 
@@ -335,7 +333,7 @@ struct SupplementRuleEditorSheet: View {
 
                 // To time
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("onboarding.supplements.to"))
+                    Text(.onboardingSupplementsTo)
                         .font(.system(size: 12))
                         .foregroundColor(.tidexTextMuted)
 
@@ -360,7 +358,7 @@ struct SupplementRuleEditorSheet: View {
     @ViewBuilder
     private var typeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.typeLabel"))
+            Text(.onboardingSupplementsTypeLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -374,7 +372,7 @@ struct SupplementRuleEditorSheet: View {
                     }
                 } label: {
                     VStack(spacing: 4) {
-                        Text(localization.string("onboarding.supplements.fixedRate"))
+                        Text(.onboardingSupplementsFixedRate)
                             .font(.system(size: 14, weight: supplementType == .fixed ? .semibold : .medium))
                             .foregroundColor(supplementType == .fixed ? .tidexTextPrimary : .tidexTextSecondary)
 
@@ -402,7 +400,7 @@ struct SupplementRuleEditorSheet: View {
                     }
                 } label: {
                     VStack(spacing: 4) {
-                        Text(localization.string("onboarding.supplements.percentRate"))
+                        Text(.onboardingSupplementsPercentRate)
                             .font(.system(size: 14, weight: supplementType == .percent ? .semibold : .medium))
                             .foregroundColor(supplementType == .percent ? .tidexTextPrimary : .tidexTextSecondary)
 
@@ -429,7 +427,7 @@ struct SupplementRuleEditorSheet: View {
     @ViewBuilder
     private var valueSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("onboarding.supplements.valueLabel"))
+            Text(.onboardingSupplementsValueLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -487,7 +485,7 @@ struct SupplementRuleEditorSheet: View {
                                 .toolbar {
                                     ToolbarItemGroup(placement: .keyboard) {
                                         Spacer()
-                                        Button(localization.string("common.done")) {
+                                        Button(String(localized: .commonDone)) {
                                             applyValueInput()
                                         }
                                         .fontWeight(.semibold)

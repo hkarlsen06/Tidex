@@ -205,8 +205,7 @@ struct CustomSupplementsEditorSheet: View {
     /// Callback when editing is cancelled
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
 
     /// Current list of supplement rules (with IDs for list management)
     @State private var rules: [CustomSupplementRuleWithId] = []
@@ -280,16 +279,16 @@ struct CustomSupplementsEditorSheet: View {
                 .padding(20)
             }
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("supplements.editTitle"))
+            .navigationTitle(String(localized: .supplementsEditTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         onCancel()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.string("common.save")) {
+                    Button(String(localized: .commonSave)) {
                         saveChanges()
                     }
                     .fontWeight(.semibold)
@@ -310,23 +309,23 @@ struct CustomSupplementsEditorSheet: View {
                 )
             }
             .alert(
-                localization.string("supplements.deleteRuleTitle"),
+                String(localized: .supplementsDeleteRuleTitle),
                 isPresented: .init(
                     get: { ruleToDelete != nil },
                     set: { if !$0 { ruleToDelete = nil } }
                 )
             ) {
-                Button(localization.string("common.cancel"), role: .cancel) {
+                Button(String(localized: .commonCancel), role: .cancel) {
                     ruleToDelete = nil
                 }
-                Button(localization.string("supplements.deleteRule"), role: .destructive) {
+                Button(String(localized: .supplementsDeleteRule), role: .destructive) {
                     if let rule = ruleToDelete {
                         deleteRule(rule)
                     }
                     ruleToDelete = nil
                 }
             } message: {
-                Text(localization.string("supplements.deleteRuleMessage"))
+                Text(.supplementsDeleteRuleMessage)
             }
             .onAppear {
                 initializeRules()
@@ -381,7 +380,7 @@ struct CustomSupplementsEditorSheet: View {
                 .font(.system(size: 16))
                 .foregroundColor(.tidexBlue)
 
-            Text(localization.string("supplements.editorHint"))
+            Text(.supplementsEditorHint)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -401,11 +400,11 @@ struct CustomSupplementsEditorSheet: View {
                 .font(.system(size: 40))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("supplements.noRules"))
+            Text(.supplementsNoRules)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
-            Text(localization.string("supplements.noRulesHint"))
+            Text(.supplementsNoRulesHint)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
@@ -444,7 +443,7 @@ struct CustomSupplementsEditorSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 16))
-                Text(localization.string("supplements.addRule"))
+                Text(.supplementsAddRule)
                     .font(.system(size: 15, weight: .medium))
             }
             .foregroundColor(.tidexBlue)
@@ -467,7 +466,7 @@ struct CustomSupplementsEditorSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 14))
-                Text(localization.string("supplements.resetToStandard"))
+                Text(.supplementsResetToStandard)
                     .font(.system(size: 14, weight: .medium))
             }
             .foregroundColor(.tidexTextSecondary)

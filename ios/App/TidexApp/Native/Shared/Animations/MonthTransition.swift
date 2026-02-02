@@ -233,8 +233,7 @@ struct StaggeredCardsContainer<Content: View>: View {
 
 /// A sheet with wheel pickers for selecting month and year
 struct MonthYearPickerSheet: View {
-    @Environment(\.localization) private var localization
-    @Binding var isPresented: Bool
+        @Binding var isPresented: Bool
     let currentYear: Int
     let currentMonth: Int
     let onSelect: (Int, Int) -> Void
@@ -251,7 +250,7 @@ struct MonthYearPickerSheet: View {
     // Month names (localized)
     private var monthNames: [String] {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: LocalizationManager.shared.currentLocale.localeIdentifier)
+        formatter.locale = Locale(identifier: Locale.current.identifier)
         return formatter.monthSymbols.map { $0.capitalized }
     }
 
@@ -307,7 +306,7 @@ struct MonthYearPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         isPresented = false
                     }
                     .foregroundColor(.tidexBlue)
@@ -318,7 +317,7 @@ struct MonthYearPickerSheet: View {
                         onSelect(realMonth.year, realMonth.month)
                         isPresented = false
                     } label: {
-                        Text(localization.string("common.thisMonth"))
+                        Text(.commonThisMonth)
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(isShowingCurrentMonth ? .tidexTextMuted : .tidexBlue)
@@ -333,7 +332,7 @@ struct MonthYearPickerSheet: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.string("common.done")) {
+                    Button(String(localized: .commonDone)) {
                         onSelect(selectedYear, selectedMonth)
                         isPresented = false
                     }

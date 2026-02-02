@@ -9,8 +9,7 @@ struct OAuthButtonsView: View {
     var isLoading: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 12) {
             // Native Apple Sign-In Button
@@ -19,7 +18,7 @@ struct OAuthButtonsView: View {
 
             // Google Sign-In Button
             GoogleSignInButton(
-                title: localization.string("oauth.continueWithGoogle"),
+                title: String(localized: .oauthContinueWithGoogle),
                 action: onGoogleTap,
                 isLoading: isLoading
             )

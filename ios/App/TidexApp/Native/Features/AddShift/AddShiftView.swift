@@ -5,8 +5,7 @@ import UIKit
 /// Supports both single shifts and recurring shift patterns
 struct AddShiftView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-    @StateObject private var viewModel = AddShiftViewModel()
+        @StateObject private var viewModel = AddShiftViewModel()
     @Binding var selectedTab: MainTabView.Tab
     @Binding var isKeyboardVisible: Bool
     @State private var focusedTimeField: NumericTimeInput.TimeField?
@@ -16,9 +15,9 @@ struct AddShiftView: View {
     private var modeTitle: String {
         switch viewModel.mode {
         case .single:
-            return localization.string("addShift.singleTitle")
+            return String(localized: .addShiftSingleTitle)
         case .recurring:
-            return localization.string("addShift.recurringTitle")
+            return String(localized: .addShiftRecurringTitle)
         }
     }
 
@@ -220,9 +219,9 @@ struct AddShiftView: View {
     /// Label for keyboard accessory button - "Next" when in start field, "Done" otherwise
     private var keyboardButtonLabel: String {
         if focusedTimeField == .start {
-            return localization.string("common.next")
+            return String(localized: .commonNext)
         }
-        return localization.string("common.done")
+        return String(localized: .commonDone)
     }
 
     /// Handle keyboard button tap - advance to next field or dismiss
@@ -244,8 +243,7 @@ private struct SingleShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
     @Binding var focusedTimeField: NumericTimeInput.TimeField?
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         // Calendar is the anchor - header and time picker positioned relative to it
         // Using overlay with alignment guides to position content outside calendar bounds
@@ -254,11 +252,11 @@ private struct SingleShiftContent: View {
                 // Header positioned above the calendar
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(localization.string("addShift.headerTitle"))
+                        Text(.addShiftHeaderTitle)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("addShift.headerSubtitle"))
+                        Text(.addShiftHeaderSubtitle)
                             .font(.system(size: 15))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -304,18 +302,17 @@ private struct RecurringShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
     @Binding var focusedTimeField: NumericTimeInput.TimeField?
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 20) {
             // Header with optional "Start fresh" button
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("addShift.headerTitleRecurring"))
+                    Text(.addShiftHeaderTitleRecurring)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.tidexTextPrimary)
 
-                    Text(localization.string("addShift.headerSubtitle"))
+                    Text(.addShiftHeaderSubtitle)
                         .font(.system(size: 15))
                         .foregroundColor(.tidexTextSecondary)
                 }
@@ -375,5 +372,4 @@ private struct RecurringShiftContent: View {
 #Preview {
     AddShiftView(selectedTab: .constant(.add), isKeyboardVisible: .constant(false))
         .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

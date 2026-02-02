@@ -4,8 +4,7 @@ import SwiftUI
 /// Shows monthly earnings, hours, shifts, and goal progress
 struct StatsView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-
+    
     /// Binding to the selected tab for navigation
     @Binding var selectedTab: MainTabView.Tab
 
@@ -149,20 +148,19 @@ struct StatsView: View {
             if hasData {
                 WeeklyBarChart(
                     data: thisWeek,
-                    title: localization.string("stats.charts.weeklyChart.thisWeek"),
+                    title: String(localized: .statsChartsWeeklyChartThisWeek),
                     highlightToday: true
                 )
             } else {
                 WeeklyBarChartEmpty(
-                    title: localization.string("stats.charts.weeklyChart.thisWeek")
+                    title: String(localized: .statsChartsWeeklyChartThisWeek)
                 )
             }
         } else if let bestWeek = stats.bestWeek {
             // Past month: show "Best Week"
             let hasData = bestWeek.weekData.contains { $0.earnings > 0 }
             if hasData {
-                let title = localization.string("stats.charts.weeklyChart.bestWeek")
-                    .replacingOccurrences(of: "{week}", with: "\(bestWeek.weekNumber)")
+                let title = String(localized: .statsChartsWeeklyChartBestWeek(bestWeek.weekNumber))
                 WeeklyBarChart(
                     data: bestWeek.weekData,
                     title: title,
@@ -171,13 +169,13 @@ struct StatsView: View {
             } else {
                 // Past month with no shifts in best week (shouldn't happen, but handle gracefully)
                 WeeklyBarChartEmpty(
-                    title: localization.string("stats.charts.weeklyChart.thisWeek")
+                    title: String(localized: .statsChartsWeeklyChartThisWeek)
                 )
             }
         } else {
             // No weekly data available (past month with no shifts)
             WeeklyBarChartEmpty(
-                title: localization.string("stats.charts.weeklyChart.thisWeek")
+                title: String(localized: .statsChartsWeeklyChartThisWeek)
             )
         }
     }
@@ -269,7 +267,7 @@ struct StatsView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("stats.errors.couldNotUpdate"))
+            Text(.statsErrorsCouldNotUpdate)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
@@ -279,7 +277,7 @@ struct StatsView: View {
                     await viewModel.refresh()
                 }
             } label: {
-                Text(localization.string("common.retry"))
+                Text(.commonRetry)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
@@ -297,5 +295,4 @@ struct StatsView: View {
 #Preview {
     StatsView(selectedTab: .constant(.stats))
         .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

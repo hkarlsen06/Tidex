@@ -9,8 +9,7 @@ struct SharerRow: View {
     let isRefreshing: Bool
     let onTap: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 0) {
@@ -122,8 +121,7 @@ private struct ShiftPreviewCard: View {
     let shift: SharedShiftData
     let status: ShiftPreviewStatus
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let computed = computeStatus(at: context.date)
@@ -240,7 +238,7 @@ private struct ShiftPreviewCard: View {
     private var formattedDate: String {
         guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
 
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
 
         // Get day name
         let dayFormatter = DateFormatter()
@@ -307,7 +305,7 @@ private struct ShiftPreviewCard: View {
     private func statusText(computed: ComputedStatus) -> String {
         switch computed.status {
         case .active:
-            return localization.string("sharing.statusActive")
+            return String(localized: .sharingStatusActive)
         case .upcoming, .past:
             return computed.relativeText
         }
@@ -317,7 +315,7 @@ private struct ShiftPreviewCard: View {
     /// Format: "Om 2t 30min 45sek", "I morgen", "2t siden", etc.
     /// Includes seconds for countdowns under 12 hours
     private func computeRelativeTimeText(at now: Date, shiftStart: Date, shiftEnd: Date) -> String {
-        let isNorwegian = localization.currentLocale == .norwegian
+        let isNorwegian = Locale.current.tidexIsNorwegian
 
         // For past shifts, calculate from end time (matches Next.js behavior)
         // "3min siden" means "ended 3 minutes ago", not "started X hours ago"
@@ -461,19 +459,18 @@ private struct ShiftPreviewCard: View {
 
 /// Shown when no one has shared shifts with the user
 struct SharerListEmptyState: View {
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.2.slash")
                 .font(.system(size: 48))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("sharing.noSharers"))
+            Text(.sharingNoSharers)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("sharing.noSharersDescription"))
+            Text(.sharingNoSharersDescription)
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
@@ -524,5 +521,4 @@ struct SharerListEmptyState: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

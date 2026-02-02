@@ -13,8 +13,7 @@ struct ChatInputField: View {
     /// Whether the input should be disabled
     let disabled: Bool
 
-    @Environment(\.localization) private var localization
-
+    
     /// Current input text
     @State private var inputText: String = ""
 
@@ -83,7 +82,7 @@ struct ChatInputField: View {
 
                 // Text input
                 TextField(
-                    localization.string("wagey.placeholder"),
+                    String(localized: .wageyPlaceholder),
                     text: $inputText,
                     axis: .vertical
                 )
@@ -233,7 +232,7 @@ struct ChatInputField: View {
                 }
             } catch {
                 await MainActor.run {
-                    imageError = localization.string("wagey.imageError")
+                    imageError = String(localized: .wageyImageError)
                     isProcessingImage = false
                     selectedPhotoItem = nil
                     Haptics.play(.error)
@@ -291,7 +290,6 @@ struct ChatInputField: View {
         )
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("With Image Support") {
@@ -308,7 +306,6 @@ struct ChatInputField: View {
         )
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Disabled") {
@@ -322,5 +319,4 @@ struct ChatInputField: View {
         )
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

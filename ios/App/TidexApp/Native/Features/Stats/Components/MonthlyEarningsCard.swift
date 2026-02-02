@@ -8,8 +8,7 @@ struct MonthlyEarningsCard: View {
     let taxEnabled: Bool
     let percentageChange: Double?
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
@@ -40,7 +39,7 @@ struct MonthlyEarningsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             // Title, amount, and after tax label grouped tightly
             VStack(alignment: .leading, spacing: 2) {
-                Text(localization.string("stats.monthlyEarnings"))
+                Text(.statsMonthlyEarnings)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -51,7 +50,7 @@ struct MonthlyEarningsCard: View {
                     .lineLimit(1)
 
                 if taxEnabled {
-                    Text(localization.string("stats.afterTax").lowercased())
+                    Text(String(localized: .statsAfterTax).lowercased())
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
                 }
@@ -59,7 +58,7 @@ struct MonthlyEarningsCard: View {
 
             // Before tax subtitle
             if taxEnabled && showTaxSubtitle {
-                Text("\(localization.string("stats.beforeTax")): \(formatCurrency(grossEarnings))")
+                Text("\(String(localized: .statsBeforeTax)): \(formatCurrency(grossEarnings))")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -73,7 +72,7 @@ struct MonthlyEarningsCard: View {
                     }
 
                     if hasChange {
-                        Text("\(isPositive ? "+" : "-")\(displayPercentage)% \(localization.string("stats.fromPreviousMonth"))")
+                        Text("\(isPositive ? "+" : "-")\(displayPercentage)% \(String(localized: .statsFromPreviousMonth))")
                             .font(.system(size: 14, weight: .semibold))
                     }
                 }
@@ -123,5 +122,4 @@ struct MonthlyEarningsCard: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

@@ -8,8 +8,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "SettingsView")
 /// Displays a list of settings options matching the web app's settings navigation
 struct SettingsView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
 
     /// Whether the current user is an admin
     @State private var isAdmin = false
@@ -42,11 +41,11 @@ struct SettingsView: View {
                     // Menu items grouped by category
                     VStack(spacing: 24) {
                         // Account & Security group
-                        SettingsMenuGroup(title: localization.string("settings.group.accountSecurity")) {
+                        SettingsMenuGroup(title: String(localized: .settingsGroupAccountSecurity)) {
                             SettingsMenuItem(
                                 icon: "person.circle",
-                                title: localization.string("settings.menu.account.label"),
-                                description: localization.string("settings.menu.account.description"),
+                                title: String(localized: .settingsMenuAccountLabel),
+                                description: String(localized: .settingsMenuAccountDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.profile)
                                 }
@@ -54,8 +53,8 @@ struct SettingsView: View {
 
                             SettingsMenuItem(
                                 icon: "lock.shield",
-                                title: localization.string("settings.menu.security.label"),
-                                description: localization.string("settings.menu.security.description"),
+                                title: String(localized: .settingsMenuSecurityLabel),
+                                description: String(localized: .settingsMenuSecurityDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.security)
                                 }
@@ -63,8 +62,8 @@ struct SettingsView: View {
 
                             SettingsMenuItem(
                                 icon: "creditcard",
-                                title: localization.string("settings.menu.subscription.label"),
-                                description: localization.string("settings.menu.subscription.description"),
+                                title: String(localized: .settingsMenuSubscriptionLabel),
+                                description: String(localized: .settingsMenuSubscriptionDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.subscription)
                                 }
@@ -72,11 +71,11 @@ struct SettingsView: View {
                         }
 
                         // Preferences group
-                        SettingsMenuGroup(title: localization.string("settings.group.preferences")) {
+                        SettingsMenuGroup(title: String(localized: .settingsGroupPreferences)) {
                             SettingsMenuItem(
                                 icon: "bell",
-                                title: localization.string("settings.menu.notifications.label"),
-                                description: localization.string("settings.menu.notifications.description"),
+                                title: String(localized: .settingsMenuNotificationsLabel),
+                                description: String(localized: .settingsMenuNotificationsDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.notifications)
                                 }
@@ -84,8 +83,8 @@ struct SettingsView: View {
 
                             SettingsMenuItem(
                                 icon: "paintpalette",
-                                title: localization.string("settings.menu.appearance.label"),
-                                description: localization.string("settings.menu.appearance.description"),
+                                title: String(localized: .settingsMenuAppearanceLabel),
+                                description: String(localized: .settingsMenuAppearanceDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.appearance)
                                 }
@@ -93,11 +92,11 @@ struct SettingsView: View {
                         }
 
                         // App Settings group
-                        SettingsMenuGroup(title: localization.string("settings.group.appSettings")) {
+                        SettingsMenuGroup(title: String(localized: .settingsGroupAppSettings)) {
                             SettingsMenuItem(
                                 icon: "banknote",
-                                title: localization.string("settings.menu.pay.label"),
-                                description: localization.string("settings.menu.pay.description"),
+                                title: String(localized: .settingsMenuPayLabel),
+                                description: String(localized: .settingsMenuPayDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.pay)
                                 }
@@ -105,11 +104,11 @@ struct SettingsView: View {
                         }
 
                         // Data & Support group
-                        SettingsMenuGroup(title: localization.string("settings.group.dataSupport")) {
+                        SettingsMenuGroup(title: String(localized: .settingsGroupDataSupport)) {
                             SettingsMenuItem(
                                 icon: "externaldrive",
-                                title: localization.string("settings.menu.data.label"),
-                                description: localization.string("settings.menu.data.description"),
+                                title: String(localized: .settingsMenuDataLabel),
+                                description: String(localized: .settingsMenuDataDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.data)
                                 }
@@ -117,8 +116,8 @@ struct SettingsView: View {
 
                             SettingsMenuItem(
                                 icon: "message",
-                                title: localization.string("settings.menu.feedback.label"),
-                                description: localization.string("settings.menu.feedback.description"),
+                                title: String(localized: .settingsMenuFeedbackLabel),
+                                description: String(localized: .settingsMenuFeedbackDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.feedback)
                                 }
@@ -127,11 +126,11 @@ struct SettingsView: View {
 
                         // Admin section (only visible for admins)
                         if isAdmin {
-                            SettingsMenuGroup(title: localization.string("settings.group.admin")) {
+                            SettingsMenuGroup(title: String(localized: .settingsGroupAdmin)) {
                                 SettingsMenuItem(
                                     icon: "shield.lefthalf.filled.badge.checkmark",
-                                    title: localization.string("settings.menu.admin.label"),
-                                    description: localization.string("settings.menu.admin.description"),
+                                    title: String(localized: .settingsMenuAdminLabel),
+                                    description: String(localized: .settingsMenuAdminDescription),
                                     iconColor: .tidexWarning,
                                     action: {
                                         navigationPath.append(SettingsDestination.admin)
@@ -157,11 +156,11 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 2) {
-                        Text(localization.string("settings.title"))
+                        Text(.settingsTitle)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("settings.subtitle"))
+                        Text(.settingsSubtitle)
                             .font(.system(size: 12))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -207,17 +206,17 @@ struct SettingsView: View {
             await checkAdminStatus()
         }
         .alert(
-            localization.string("userMenu.logoutEverywhereConfirmTitle"),
+            String(localized: .userMenuLogoutEverywhereConfirmTitle),
             isPresented: $showSignOutEverywhereAlert
         ) {
-            Button(localization.string("userMenu.logoutEverywhereConfirmCancel"), role: .cancel) {}
-            Button(localization.string("userMenu.logoutEverywhereConfirmAction"), role: .destructive) {
+            Button(String(localized: .userMenuLogoutEverywhereConfirmCancel), role: .cancel) {}
+            Button(String(localized: .userMenuLogoutEverywhereConfirmAction), role: .destructive) {
                 Task {
                     await signOutGlobal()
                 }
             }
         } message: {
-            Text(localization.string("userMenu.logoutEverywhereConfirmDescription"))
+            Text(.userMenuLogoutEverywhereConfirmDescription)
         }
     }
 
@@ -241,8 +240,8 @@ struct SettingsView: View {
                 }
 
                 Text(isSigningOut
-                     ? localization.string("userMenu.loggingOut")
-                     : localization.string("userMenu.logout"))
+                     ? String(localized: .userMenuLoggingOut)
+                     : String(localized: .userMenuLogout))
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -270,8 +269,8 @@ struct SettingsView: View {
                 }
 
                 Text(isSigningOutGlobal
-                     ? localization.string("userMenu.logoutEverywhereLoading")
-                     : localization.string("userMenu.logoutEverywhere"))
+                     ? String(localized: .userMenuLogoutEverywhereLoading)
+                     : String(localized: .userMenuLogoutEverywhere))
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.tidexTextSecondary)
@@ -396,5 +395,4 @@ struct SettingsMenuItem: View {
 #Preview {
     SettingsView()
         .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
 }

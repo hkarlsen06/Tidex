@@ -43,8 +43,9 @@ enum SampleIndustry: String, CaseIterable, Identifiable {
     }
 
     @MainActor
-    func localizedName(_ localization: LocalizationManager) -> String {
-        localization.string("onboarding.paycheck.industry.\(rawValue)")
+    func localizedName() -> String {
+        let key = "onboarding.paycheck.industry.\(rawValue)"
+        return String(localized: String.LocalizationValue(key), table: "Localizable")
     }
 }
 
@@ -61,7 +62,6 @@ struct SamplePaycheckData {
 /// Segmented control for industry selection
 struct IndustryPicker: View {
     @Binding var selection: SampleIndustry
-    @Environment(\.localization) private var localization
 
     var body: some View {
         HStack(spacing: 0) {
@@ -72,7 +72,7 @@ struct IndustryPicker: View {
                         selection = industry
                     }
                 } label: {
-                    Text(industry.localizedName(localization))
+                    Text(industry.localizedName())
                         .font(.system(size: 14, weight: selection == industry ? .semibold : .medium))
                         .foregroundColor(selection == industry ? .tidexTextPrimary : .tidexTextMuted)
                         .frame(maxWidth: .infinity)
@@ -101,5 +101,4 @@ struct IndustryPicker: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

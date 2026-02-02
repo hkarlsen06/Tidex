@@ -4,8 +4,7 @@ import SwiftUI
 struct RecurringPreviewSheet: View {
     @ObservedObject var viewModel: AddShiftViewModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.localization) private var localization
-
+    
     /// Whether the pattern is indefinite (endless)
     private var isIndefinite: Bool {
         viewModel.endCondition == nil
@@ -68,7 +67,7 @@ struct RecurringPreviewSheet: View {
                     }
                 }
             }
-            .navigationTitle(localization.string("preview.title"))
+            .navigationTitle(String(localized: .previewTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         }
@@ -86,24 +85,22 @@ private struct SummaryHeader: View {
     let endTime: String
     let isIndefinite: Bool
 
-    @Environment(\.localization) private var localization
-
+    
     /// Title text - shows "Recurring Shifts" for indefinite, count for limited
     private var titleText: String {
         if isIndefinite {
-            return localization.string("preview.ongoingShifts")
+            return String(localized: .previewOngoingShifts)
         } else if totalCount == 1 {
-            return localization.string("preview.shiftSingular")
+            return String(localized: .previewShiftSingular)
         } else {
-            return localization.string("preview.shiftsCount")
-                .replacingOccurrences(of: "{count}", with: "\(totalCount)")
+            return String(localized: .previewShiftsCount(totalCount))
         }
     }
 
     /// Subtitle text - shows "Repeats indefinitely" for indefinite, time for limited
     private var subtitleText: String {
         if isIndefinite {
-            return "\(startTime) - \(endTime) · " + localization.string("preview.ongoingHint")
+            return "\(startTime) - \(endTime) · " + String(localized: .previewOngoingHint)
         } else {
             return "\(startTime) - \(endTime)"
         }
@@ -150,15 +147,13 @@ private struct SummaryHeader: View {
 
 private struct ConflictBadge: View {
     let count: Int
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 12))
 
-            Text(localization.string("preview.conflictBadge")
-                .replacingOccurrences(of: "{count}", with: "\(count)"))
+            Text(String(localized: .previewConflictBadge(count)))
                 .font(.system(size: 14, weight: .semibold))
         }
         .foregroundColor(.white)
@@ -173,14 +168,12 @@ private struct ConflictBadge: View {
 
 private struct ConflictWarning: View {
     let count: Int
-    @Environment(\.localization) private var localization
-
+    
     private var warningText: String {
         if count == 1 {
-            return localization.string("preview.conflictWarningSingular")
+            return String(localized: .previewConflictWarningSingular)
         } else {
-            return localization.string("preview.conflictWarningPlural")
-                .replacingOccurrences(of: "{count}", with: "\(count)")
+            return String(localized: .previewConflictWarningPlural(count))
         }
     }
 
@@ -206,13 +199,12 @@ private struct ProjectedShiftRow: View {
     let dateISO: String
     let time: String
     let hasConflict: Bool
-    @Environment(\.localization) private var localization
-
+    
     private var formattedDate: String {
         guard let date = Date.fromISODateString(dateISO) else { return dateISO }
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, d. MMMM yyyy"  // Full weekday name, e.g. "Mandag, 3. februar 2025"
-        formatter.locale = Locale(identifier: localization.currentLocale.localeIdentifier)
+        formatter.locale = Locale(identifier: Locale.current.identifier)
         let formatted = formatter.string(from: date)
         // Capitalize first letter
         return formatted.prefix(1).uppercased() + formatted.dropFirst()
@@ -254,14 +246,12 @@ private struct ProjectedShiftRow: View {
 private struct MoreShiftsIndicator: View {
     let remainingCount: Int
     let isIndefinite: Bool
-    @Environment(\.localization) private var localization
-
+    
     private var displayText: String {
         if isIndefinite {
-            return localization.string("preview.continuesIndefinitely")
+            return String(localized: .previewContinuesIndefinitely)
         } else {
-            return localization.string("preview.moreShifts")
-                .replacingOccurrences(of: "{count}", with: "\(remainingCount)")
+            return String(localized: .previewMoreShifts(remainingCount))
         }
     }
 
@@ -290,13 +280,12 @@ private struct ActionButtons: View {
     let isLoading: Bool
     let onCancel: () -> Void
     let onConfirm: () -> Void
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         HStack(spacing: 16) {
             // Cancel button
             Button(action: onCancel) {
-                Text(localization.string("preview.cancel"))
+                Text(.previewCancel)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
@@ -312,7 +301,7 @@ private struct ActionButtons: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                 } else {
-                    Text(localization.string("preview.confirm"))
+                    Text(.previewConfirm)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -332,5 +321,4 @@ private struct ActionButtons: View {
 
 #Preview {
     RecurringPreviewSheet(viewModel: AddShiftViewModel())
-        .environment(\.localization, LocalizationManager.shared)
 }

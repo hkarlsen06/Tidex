@@ -70,10 +70,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneWillEnterForeground(_ scene: UIScene) {
         // Called as part of the transition from the background to the active state.
 
-        // Refresh locale in case user changed language in iOS Settings
-        Task { @MainActor in
-            LocalizationManager.shared.refreshLocale()
-        }
+        // Locale is now handled by system - no manual refresh needed
 
         // Trigger sync on foreground (interval-guarded by SyncCoordinator)
         Task { @MainActor in

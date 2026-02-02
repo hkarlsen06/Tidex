@@ -6,8 +6,7 @@ import UIKit
 struct PersonalizationScreen: View {
     let onComplete: (Double, Int) -> Void
 
-    @Environment(\.localization) private var localization
-    @State private var hourlyWage: Double = 0  // Set on appear based on locale
+        @State private var hourlyWage: Double = 0  // Set on appear based on locale
     @State private var hasInitializedWage = false
     @State private var payrollDay: Int = 15
 
@@ -16,7 +15,7 @@ struct PersonalizationScreen: View {
     /// Default hourly wage based on locale
     /// Norwegian: 200 kr/hour, English: $25/hour
     private var defaultHourlyWage: Double {
-        localization.currentLocale == .norwegian ? 200 : 25
+        Locale.current.tidexIsNorwegian ? 200 : 25
     }
 
     var body: some View {
@@ -32,12 +31,12 @@ struct PersonalizationScreen: View {
 
                     // Header - constrained for iPad
                     VStack(spacing: 12) {
-                        Text(localization.string("onboarding.personalize.title"))
+                        Text(.onboardingPersonalizeTitle)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.tidexTextPrimary)
                             .multilineTextAlignment(.center)
 
-                        Text(localization.string("onboarding.personalize.subtitle"))
+                        Text(.onboardingPersonalizeSubtitle)
                             .font(.system(size: 17))
                             .foregroundColor(.tidexTextSecondary)
                             .multilineTextAlignment(.center)
@@ -64,7 +63,7 @@ struct PersonalizationScreen: View {
 
                     // Continue button - constrained for iPad
                     OnboardingButton(
-                        title: localization.string("common.continue"),
+                        title: String(localized: .commonContinue),
                         action: validateAndContinue
                     )
                     .padding(.horizontal, 24)
@@ -90,7 +89,7 @@ struct PersonalizationScreen: View {
     @ViewBuilder
     private var payrollDayPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("onboarding.personalize.payday.label"))
+            Text(.onboardingPersonalizePaydayLabel)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -104,7 +103,7 @@ struct PersonalizationScreen: View {
                                 payrollDay = day
                             }
                         } label: {
-                            Text(day == 28 ? localization.string("onboarding.personalize.payday.lastDay") : "\(day)")
+                            Text(day == 28 ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
                                 .font(.system(size: 16, weight: payrollDay == day ? .semibold : .medium))
                                 .foregroundColor(payrollDay == day ? .white : .tidexTextSecondary)
                                 .frame(minWidth: 56, minHeight: 44)
@@ -120,7 +119,7 @@ struct PersonalizationScreen: View {
                 }
             }
 
-            Text(localization.string("onboarding.personalize.payday.helper"))
+            Text(.onboardingPersonalizePaydayHelper)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -139,5 +138,4 @@ struct PersonalizationScreen: View {
     PersonalizationScreen { wage, payrollDay in
         print("Wage: \(wage), Payroll day: \(payrollDay)")
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

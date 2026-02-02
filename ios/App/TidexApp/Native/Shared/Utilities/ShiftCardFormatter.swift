@@ -11,7 +11,7 @@ struct ShiftCardDateParts {
 enum ShiftCardFormatter {
     private static let formatterCache = ShiftCardFormatterCache()
 
-    static func dateParts(for isoDate: String, locale: LocalizationManager.AppLocale) -> ShiftCardDateParts {
+    static func dateParts(for isoDate: String, locale: Locale) -> ShiftCardDateParts {
         guard let date = Date.fromISODateString(isoDate) else {
             return ShiftCardDateParts(dayName: "", dayNumber: "", monthName: "")
         }
@@ -20,7 +20,7 @@ enum ShiftCardFormatter {
         let dayName = dayNameFormatter.string(from: date).capitalized
 
         let dayNumberFormatter = formatterCache.formatter(locale: locale, format: "d")
-        let dayNumber = dayNumberFormatter.string(from: date) + (locale == .norwegian ? "." : "")
+        let dayNumber = dayNumberFormatter.string(from: date) + (locale.tidexIsNorwegian ? "." : "")
 
         let monthFormatter = formatterCache.formatter(locale: locale, format: "MMM")
         let monthName = monthFormatter.string(from: date).lowercased()
@@ -28,8 +28,8 @@ enum ShiftCardFormatter {
         return ShiftCardDateParts(dayName: dayName, dayNumber: dayNumber, monthName: monthName)
     }
 
-    static func formattedHours(_ hours: Double, locale: LocalizationManager.AppLocale) -> String {
-        let hoursLabel = locale == .norwegian ? "t" : "h"
+    static func formattedHours(_ hours: Double, locale: Locale) -> String {
+        let hoursLabel = locale.tidexIsNorwegian ? "t" : "h"
         return String(format: "%.2f %@", hours, hoursLabel)
     }
 }
@@ -38,8 +38,8 @@ private final class ShiftCardFormatterCache {
     private var formatters: [String: DateFormatter] = [:]
     private let lock = NSLock()
 
-    func formatter(locale: LocalizationManager.AppLocale, format: String) -> DateFormatter {
-        let key = "\(locale.rawValue)|\(format)"
+    func formatter(locale: Locale, format: String) -> DateFormatter {
+        let key = "\(locale.identifier)|\(format)"
 
         lock.lock()
         defer { lock.unlock() }
@@ -49,7 +49,7 @@ private final class ShiftCardFormatterCache {
         }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: locale.localeIdentifier)
+        formatter.locale = Locale(identifier: locale.identifier)
         formatter.dateFormat = format
         formatters[key] = formatter
         return formatter

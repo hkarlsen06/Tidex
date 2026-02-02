@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import os.log
+import SwiftUI
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SmartNotificationScheduler")
 
@@ -186,8 +187,8 @@ final class SmartNotificationScheduler {
         let content = UNMutableNotificationContent()
         let weekday = localizedWeekdayName(for: date, locale: locale)
 
-        content.title = LocalizationManager.shared.string("notifications.smart.morning.title", weekday)
-        content.body = LocalizationManager.shared.string("notifications.smart.morning.body")
+        content.title = String(localized: .notificationsSmartMorningTitle(weekday))
+        content.body = String(localized: .notificationsSmartMorningBody)
 
         content.sound = UNNotificationSound(named: UNNotificationSoundName("tidex_notification.caf"))
         content.userInfo = [
@@ -202,8 +203,8 @@ final class SmartNotificationScheduler {
 
     private func buildEveningContent(dateISO: String) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = LocalizationManager.shared.string("notifications.smart.evening.title")
-        content.body = LocalizationManager.shared.string("notifications.smart.evening.body")
+        content.title = String(localized: .notificationsSmartEveningTitle)
+        content.body = String(localized: .notificationsSmartEveningBody)
 
         content.sound = UNNotificationSound(named: UNNotificationSoundName("tidex_notification.caf"))
         content.userInfo = [

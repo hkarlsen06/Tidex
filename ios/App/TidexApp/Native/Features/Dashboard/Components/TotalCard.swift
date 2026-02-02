@@ -18,8 +18,7 @@ struct TotalCard: View {
     /// When true, shows skeleton state with shimmer animation (for loading)
     var isLoading: Bool = false
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     /// Tracks whether the launch count-up animation has already played this session.
     /// Static so it persists across view recreations but resets on app restart.
@@ -80,29 +79,29 @@ struct TotalCard: View {
 
         // When there are future shifts AND real earnings, show "earned to date" amount
         if hasRealEarned {
-            return "\(formatCurrency(earnedToDateValue)) \(localization.string("dashboard.earnedToDate"))"
+            return "\(formatCurrency(earnedToDateValue)) \(String(localized: .dashboardEarnedToDate))"
         }
 
         // Show gross before tax when tax is enabled (only when NOT showing earned to date)
         let hasGross = !hasFutureShifts && taxEnabled && gross > 0 && gross != mainDisplayValue
         if hasGross {
-            return "\(formatCurrency(gross)) \(localization.string("dashboard.beforeTax"))"
+            return "\(formatCurrency(gross)) \(String(localized: .dashboardBeforeTax))"
         }
 
         // When there are future/planned shifts but no real earnings yet, show planned count
         let showPlanned = hasFutureShifts && !hasRealEarned && plannedCount > 0
         if showPlanned {
             let plannedLabel = plannedCount == 1
-                ? localization.string("dashboard.shiftPlanned")
-                : localization.string("dashboard.shiftsPlanned")
+                ? String(localized: .dashboardShiftPlanned)
+                : String(localized: .dashboardShiftsPlanned)
             return "\(plannedCount) \(plannedLabel)"
         }
 
         // Show total shift count as fallback
         if shiftCount > 0 {
             let shiftsLabel = shiftCount == 1
-                ? localization.string("dashboard.shift")
-                : localization.string("dashboard.shifts")
+                ? String(localized: .dashboardShift)
+                : String(localized: .dashboardShifts)
             return "\(shiftCount) \(shiftsLabel)"
         }
 
@@ -269,5 +268,4 @@ struct TotalCard: View {
     }
     .padding(.horizontal, 24)
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

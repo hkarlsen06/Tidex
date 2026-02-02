@@ -11,8 +11,7 @@ struct PlanCard: View {
     let isPurchasing: Bool
     let onSubscribe: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     /// Local state to provide immediate feedback on tap, preventing double-tap issues
     @State private var isSubscribeTapped = false
 
@@ -31,7 +30,7 @@ struct PlanCard: View {
                         .foregroundColor(.tidexTextPrimary)
 
                     if isCurrentPlan {
-                        Text(AuthStrings.string("paywall.currentPlan", locale: localization.currentLocale))
+                        Text(.paywallCurrentPlan)
                             .font(.tidexCaption)
                             .foregroundColor(.tidexSuccess)
                     }
@@ -64,7 +63,7 @@ struct PlanCard: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .frame(maxWidth: .infinity)
                     } else {
-                        Text(product != nil ? AuthStrings.string("paywall.subscribe", locale: localization.currentLocale) : AuthStrings.string("paywall.loadingButton", locale: localization.currentLocale))
+                        Text(product != nil ? String(localized: .paywallSubscribe) : String(localized: .paywallLoadingButton))
                             .font(.tidexButton)
                             .frame(maxWidth: .infinity)
                     }
@@ -100,9 +99,9 @@ struct PlanCard: View {
 
     private var tierName: String {
         switch tier {
-        case .pro: return AuthStrings.string("paywall.tier.pro", locale: localization.currentLocale)
-        case .max: return AuthStrings.string("paywall.tier.max", locale: localization.currentLocale)
-        case .free: return AuthStrings.string("paywall.tier.free", locale: localization.currentLocale)
+        case .pro: return String(localized: .paywallTierPro)
+        case .max: return String(localized: .paywallTierMax)
+        case .free: return String(localized: .paywallTierFree)
         }
     }
 
@@ -143,9 +142,9 @@ struct PlanCard: View {
     private func periodLabel(for product: Product) -> String {
         // Determine period from product ID
         if product.id.contains(".year") {
-            return AuthStrings.string("paywall.perYear", locale: localization.currentLocale)
+            return String(localized: .paywallPerYear)
         } else {
-            return AuthStrings.string("paywall.perMonth", locale: localization.currentLocale)
+            return String(localized: .paywallPerMonth)
         }
     }
 }

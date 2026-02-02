@@ -7,8 +7,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSetting
 /// Profile settings view
 /// Displays profile picture, name, email, and danger zone (delete account)
 struct ProfileSettingsView: View {
-    @Environment(\.localization) private var localization
-    @Environment(\.dismiss) private var dismiss
+        @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileSettingsViewModel()
 
     /// Photo picker selection
@@ -47,7 +46,7 @@ struct ProfileSettingsView: View {
             .padding(.vertical, 24)
         }
         .background(Color.tidexBackground)
-        .navigationTitle(localization.string("profile.title"))
+        .navigationTitle(String(localized: .profileTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.tidexBackground, for: .navigationBar)
         .task {
@@ -58,48 +57,48 @@ struct ProfileSettingsView: View {
                 await handlePhotoSelection(newItem)
             }
         }
-        .alert(localization.string("profile.dangerZone.deleteAccount.dialogTitle"), isPresented: $viewModel.showDeleteConfirmation) {
+        .alert(String(localized: .profileDangerZoneDeleteAccountDialogTitle), isPresented: $viewModel.showDeleteConfirmation) {
             TextField(viewModel.expectedDeleteConfirmText, text: $viewModel.deleteConfirmText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
 
-            Button(localization.string("common.cancel"), role: .cancel) {
+            Button(String(localized: .commonCancel), role: .cancel) {
                 viewModel.deleteConfirmText = ""
             }
 
-            Button(localization.string("profile.dangerZone.deleteAccount.button"), role: .destructive) {
+            Button(String(localized: .profileDangerZoneDeleteAccountButton), role: .destructive) {
                 Task {
                     await viewModel.deleteAccount()
                 }
             }
             .disabled(!viewModel.canConfirmDelete)
         } message: {
-            Text(localization.string("profile.dangerZone.deleteAccount.dialogDescription"))
+            Text(.profileDangerZoneDeleteAccountDialogDescription)
         }
         .confirmationDialog(
-            localization.string("profile.personalInfo.removeImageConfirm"),
+            String(localized: .profilePersonalInfoRemoveImageConfirm),
             isPresented: $showRemoveAvatarConfirmation,
             titleVisibility: .visible
         ) {
-            Button(localization.string("profile.personalInfo.removeImage"), role: .destructive) {
+            Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
                 Task {
                     await viewModel.removeProfilePicture()
                 }
             }
-            Button(localization.string("common.cancel"), role: .cancel) {}
+            Button(String(localized: .commonCancel), role: .cancel) {}
         }
         .confirmationDialog(
-            localization.string("profile.personalInfo.chooseImageSource"),
+            String(localized: .profilePersonalInfoChooseImageSource),
             isPresented: $showImageSourcePicker,
             titleVisibility: .visible
         ) {
-            Button(localization.string("profile.personalInfo.takePhoto")) {
+            Button(String(localized: .profilePersonalInfoTakePhoto)) {
                 showCamera = true
             }
-            Button(localization.string("profile.personalInfo.chooseFromLibrary")) {
+            Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
                 showGalleryPicker = true
             }
-            Button(localization.string("common.cancel"), role: .cancel) {}
+            Button(String(localized: .commonCancel), role: .cancel) {}
         }
         .photosPicker(
             isPresented: $showGalleryPicker,
@@ -154,11 +153,11 @@ struct ProfileSettingsView: View {
             }
             .padding(24)
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("profile.emailChange.title"))
+            .navigationTitle(String(localized: .profileEmailChangeTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         viewModel.resetEmailChangeState()
                     }
                 }
@@ -170,13 +169,13 @@ struct ProfileSettingsView: View {
     private var emailChangeInputView: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Instructions
-            Text(localization.string("profile.emailChange.instructions"))
+            Text(.profileEmailChangeInstructions)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
 
             // Current email (read-only)
             VStack(alignment: .leading, spacing: 6) {
-                Text(localization.string("profile.emailChange.currentEmailLabel"))
+                Text(.profileEmailChangeCurrentEmailLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -192,11 +191,11 @@ struct ProfileSettingsView: View {
 
             // New email input
             VStack(alignment: .leading, spacing: 6) {
-                Text(localization.string("profile.emailChange.newEmailLabel"))
+                Text(.profileEmailChangeNewEmailLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
-                TextField(localization.string("profile.emailChange.newEmailPlaceholder"), text: $viewModel.newEmail)
+                TextField(String(localized: .profileEmailChangeNewEmailPlaceholder), text: $viewModel.newEmail)
                     .font(.system(size: 16))
                     .foregroundColor(.tidexTextPrimary)
                     .keyboardType(.emailAddress)
@@ -228,8 +227,8 @@ struct ProfileSettingsView: View {
                             .scaleEffect(0.8)
                     }
                     Text(viewModel.isChangingEmail
-                         ? localization.string("profile.emailChange.sending")
-                         : localization.string("profile.emailChange.sendConfirmation"))
+                         ? String(localized: .profileEmailChangeSending)
+                         : String(localized: .profileEmailChangeSendConfirmation))
                 }
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.white)
@@ -257,11 +256,11 @@ struct ProfileSettingsView: View {
 
             // Success message
             VStack(spacing: 8) {
-                Text(localization.string("profile.emailChange.confirmationSent"))
+                Text(.profileEmailChangeConfirmationSent)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("profile.emailChange.confirmationMessage"))
+                Text(.profileEmailChangeConfirmationMessage)
                     .font(.system(size: 14))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -271,7 +270,7 @@ struct ProfileSettingsView: View {
             Button {
                 viewModel.resetEmailChangeState()
             } label: {
-                Text(localization.string("common.done"))
+                Text(.commonDone)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -287,7 +286,7 @@ struct ProfileSettingsView: View {
     private var personalInfoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section header
-            Text(localization.string("profile.personalInfo.title"))
+            Text(.profilePersonalInfoTitle)
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.tidexTextPrimary)
@@ -320,11 +319,11 @@ struct ProfileSettingsView: View {
     /// Button text for the photo picker - computed to avoid main actor issues in closure
     private var uploadButtonText: String {
         if viewModel.isUploadingAvatar {
-            return localization.string("profile.personalInfo.uploadingImage")
+            return String(localized: .profilePersonalInfoUploadingImage)
         } else if viewModel.profilePictureUrl != nil {
-            return localization.string("profile.personalInfo.changeImage")
+            return String(localized: .profilePersonalInfoChangeImage)
         } else {
-            return localization.string("profile.personalInfo.uploadImage")
+            return String(localized: .profilePersonalInfoUploadImage)
         }
     }
 
@@ -371,7 +370,7 @@ struct ProfileSettingsView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "trash")
                                 .font(.system(size: 12, weight: .medium))
-                            Text(localization.string("profile.personalInfo.removeImage"))
+                            Text(.profilePersonalInfoRemoveImage)
                                 .font(.system(size: 14, weight: .medium))
                         }
                         .foregroundColor(.tidexError)
@@ -429,7 +428,7 @@ struct ProfileSettingsView: View {
     private var nameField: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(localization.string("profile.personalInfo.nameLabel"))
+                Text(.profilePersonalInfoNameLabel)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -440,14 +439,14 @@ struct ProfileSettingsView: View {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
                             .scaleEffect(0.6)
-                        Text(localization.string("common.saving"))
+                        Text(.commonSaving)
                             .font(.system(size: 12))
                             .foregroundColor(.tidexTextMuted)
                     }
                 }
             }
 
-            TextField(localization.string("profile.personalInfo.namePlaceholder"), text: $viewModel.displayName)
+            TextField(String(localized: .profilePersonalInfoNamePlaceholder), text: $viewModel.displayName)
                 .font(.system(size: 16))
                 .foregroundColor(.tidexTextPrimary)
                 .padding(.horizontal, 12)
@@ -465,7 +464,7 @@ struct ProfileSettingsView: View {
     private var emailField: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(localization.string("profile.personalInfo.emailLabel"))
+                Text(.profilePersonalInfoEmailLabel)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -475,7 +474,7 @@ struct ProfileSettingsView: View {
                     Button {
                         viewModel.showEmailChangeSheet = true
                     } label: {
-                        Text(localization.string("profile.emailChange.changeButton"))
+                        Text(.profileEmailChangeChangeButton)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.tidexBlue)
                     }
@@ -502,15 +501,15 @@ struct ProfileSettingsView: View {
 
             // Show appropriate hint based on user's auth type
             if viewModel.isOAuthOnly {
-                Text(localization.string("profile.emailChange.oauthOnlyHint"))
+                Text(.profileEmailChangeOauthOnlyHint)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             } else if viewModel.canChangeEmail {
-                Text(localization.string("profile.emailChange.canChangeHint"))
+                Text(.profileEmailChangeCanChangeHint)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             } else {
-                Text(localization.string("profile.personalInfo.emailHint"))
+                Text(.profilePersonalInfoEmailHint)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
             }
@@ -522,12 +521,12 @@ struct ProfileSettingsView: View {
     private var dangerZoneSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section header
-            Text(localization.string("profile.dangerZone.title"))
+            Text(.profileDangerZoneTitle)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexError)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text(localization.string("profile.dangerZone.subtitle"))
+                Text(.profileDangerZoneSubtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -537,11 +536,11 @@ struct ProfileSettingsView: View {
                 // Delete account row
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(localization.string("profile.dangerZone.deleteAccount.title"))
+                        Text(.profileDangerZoneDeleteAccountTitle)
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
-                        Text(localization.string("profile.dangerZone.deleteAccount.description"))
+                        Text(.profileDangerZoneDeleteAccountDescription)
                             .font(.system(size: 13))
                             .foregroundColor(.tidexTextSecondary)
                     }
@@ -551,7 +550,7 @@ struct ProfileSettingsView: View {
                     Button {
                         viewModel.showDeleteConfirmation = true
                     } label: {
-                        Text(localization.string("profile.dangerZone.deleteAccount.button"))
+                        Text(.profileDangerZoneDeleteAccountButton)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -627,5 +626,4 @@ struct ProfileSettingsView: View {
     NavigationStack {
         ProfileSettingsView()
     }
-    .environment(\.localization, LocalizationManager.shared)
 }

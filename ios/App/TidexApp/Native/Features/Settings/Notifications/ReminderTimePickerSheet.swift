@@ -9,8 +9,7 @@ struct ReminderTimePickerSheet: View {
     let onDelete: (() -> Void)?
     let onCancel: () -> Void
 
-    @Environment(\.localization) private var localization
-
+    
     private var totalMinutes: Int {
         (hours * 60) + minutes
     }
@@ -25,7 +24,7 @@ struct ReminderTimePickerSheet: View {
                 // Picker section with description
                 VStack(spacing: 12) {
                     // Description label
-                    Text(localization.string("notifications.timePicker.description"))
+                    Text(.notificationsTimePickerDescription)
                         .font(.system(size: 14))
                         .foregroundColor(.tidexTextSecondary)
                         .multilineTextAlignment(.center)
@@ -35,7 +34,7 @@ struct ReminderTimePickerSheet: View {
                         // Hours picker (0-48)
                         Picker("", selection: $hours) {
                             ForEach(0...48, id: \.self) { h in
-                                Text(localization.currentLocale == .norwegian
+                                Text(Locale.current.tidexIsNorwegian
                                     ? "\(h) t" : "\(h) h")
                                     .tag(h)
                             }
@@ -77,17 +76,17 @@ struct ReminderTimePickerSheet: View {
             .padding(.bottom, 24)
             .background(Color.tidexBackground)
             .navigationTitle(isEditing
-                ? localization.string("notifications.timePicker.editTitle")
-                : localization.string("notifications.timePicker.addTitle"))
+                ? String(localized: .notificationsTimePickerEditTitle)
+                : String(localized: .notificationsTimePickerAddTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.string("common.cancel")) {
+                    Button(String(localized: .commonCancel)) {
                         onCancel()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.string("common.save")) {
+                    Button(String(localized: .commonSave)) {
                         onSave()
                     }
                     .disabled(!canSave)
@@ -115,7 +114,7 @@ struct ReminderTimePickerSheet: View {
 
     private func formatPreview() -> String {
         guard totalMinutes >= 1 else {
-            return localization.string("notifications.timePicker.selectTime")
+            return String(localized: .notificationsTimePickerSelectTime)
         }
 
         let h = hours
@@ -123,26 +122,26 @@ struct ReminderTimePickerSheet: View {
 
         if h == 0 {
             // Minutes only
-            return localization.currentLocale == .norwegian
+            return Locale.current.tidexIsNorwegian
                 ? "\(m) minutt\(m == 1 ? "" : "er") før vakt"
                 : "\(m) minute\(m == 1 ? "" : "s") before shift"
         } else if m == 0 {
             // Hours only
             if h == 24 {
-                return localization.currentLocale == .norwegian
+                return Locale.current.tidexIsNorwegian
                     ? "1 dag før vakt"
                     : "1 day before shift"
             } else if h == 48 {
-                return localization.currentLocale == .norwegian
+                return Locale.current.tidexIsNorwegian
                     ? "2 dager før vakt"
                     : "2 days before shift"
             }
-            return localization.currentLocale == .norwegian
+            return Locale.current.tidexIsNorwegian
                 ? "\(h) time\(h == 1 ? "" : "r") før vakt"
                 : "\(h) hour\(h == 1 ? "" : "s") before shift"
         } else {
             // Mixed hours and minutes
-            return localization.currentLocale == .norwegian
+            return Locale.current.tidexIsNorwegian
                 ? "\(h) t \(m) min før vakt"
                 : "\(h) h \(m) min before shift"
         }
@@ -157,7 +156,7 @@ struct ReminderTimePickerSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "trash")
                     .font(.system(size: 16))
-                Text(localization.string("common.delete"))
+                Text(.commonDelete)
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -182,7 +181,6 @@ struct ReminderTimePickerSheet: View {
         onDelete: nil,
         onCancel: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Edit Mode") {
@@ -194,5 +192,4 @@ struct ReminderTimePickerSheet: View {
         onDelete: {},
         onCancel: {}
     )
-    .environment(\.localization, LocalizationManager.shared)
 }

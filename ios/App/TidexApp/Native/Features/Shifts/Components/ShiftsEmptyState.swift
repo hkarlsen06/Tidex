@@ -18,12 +18,7 @@ struct ShiftsEmptyState: View {
     /// Callback when user taps "Add Shift" button
     let onAddShift: () -> Void
 
-    @Environment(\.localization) private var localization
-
-    private var isNorwegian: Bool {
-        localization.currentLocale == .norwegian
-    }
-
+    
     // Convenience init for backward compatibility
     init(isCurrentMonth: Bool, onAddShift: @escaping () -> Void) {
         self.isCurrentMonth = isCurrentMonth
@@ -100,14 +95,14 @@ struct ShiftsEmptyState: View {
     private var title: String {
         switch monthPeriod {
         case .past:
-            return isNorwegian ? "Ingen vakter" : "No shifts"
+            return String(localized: .shiftsEmptyNoShifts)
         case .current:
-            return isNorwegian ? "Ingen vakter denne måneden" : "No shifts this month"
+            return String(localized: .shiftsEmptyNoShiftsThisMonth)
         case .future:
             if let name = monthName {
-                return isNorwegian ? "Ingen vakter i \(name)" : "No shifts in \(name)"
+                return String(localized: .shiftsEmptyNoShiftsInMonth(name))
             }
-            return isNorwegian ? "Ingen vakter planlagt" : "No shifts planned"
+            return String(localized: .shiftsEmptyNoShiftsPlanned)
         }
     }
 
@@ -115,21 +110,13 @@ struct ShiftsEmptyState: View {
         switch monthPeriod {
         case .past:
             if let name = monthName {
-                return isNorwegian
-                    ? "Du hadde ingen registrerte vakter i \(name.lowercased())."
-                    : "You had no recorded shifts in \(name.lowercased())."
+                return String(localized: .shiftsEmptyNoPastRecords(name.lowercased()))
             }
-            return isNorwegian
-                ? "Ingen vakter ble registrert denne måneden."
-                : "No shifts were recorded for this month."
+            return String(localized: .shiftsEmptyNoRecordsMonth)
         case .current:
-            return isNorwegian
-                ? "Legg til din første vakt for å begynne å spore inntektene dine."
-                : "Add your first shift to start tracking your earnings."
+            return String(localized: .shiftsEmptyStartTracking)
         case .future:
-            return isNorwegian
-                ? "Du kan planlegge vakter på forhånd, eller sette opp gjentakende vakter."
-                : "You can plan shifts ahead, or set up recurring shifts."
+            return String(localized: .shiftsEmptyPlanAhead)
         }
     }
 
@@ -144,7 +131,7 @@ struct ShiftsEmptyState: View {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .semibold))
-                    Text(isNorwegian ? "Legg til vakt" : "Add shift")
+                    Text(.shiftsEmptyAddShift)
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundColor(.white)

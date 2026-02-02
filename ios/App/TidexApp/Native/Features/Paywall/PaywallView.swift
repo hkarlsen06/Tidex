@@ -6,8 +6,7 @@ import SwiftUI
 /// Presented as a sheet when user needs to upgrade
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.localization) private var localization
-    @StateObject private var viewModel = PaywallViewModel()
+        @StateObject private var viewModel = PaywallViewModel()
 
     /// Optional context type about why the paywall is being shown
     /// Use this for localized context headers
@@ -16,10 +15,10 @@ struct PaywallView: View {
     /// Legacy: Optional pre-built context (for backward compatibility with previews)
     var context: PaywallContext?
 
-    /// Computed context that uses locale when contextType is provided
+    /// Computed context when contextType is provided
     private var localizedContext: PaywallContext? {
         if let contextType = contextType {
-            return PaywallContext(type: contextType, locale: localization.currentLocale)
+            return PaywallContext(type: contextType)
         }
         return context
     }
@@ -84,7 +83,7 @@ struct PaywallView: View {
                     Button(action: {
                         Task { await viewModel.restorePurchases() }
                     }) {
-                        Text(AuthStrings.string("paywall.restorePurchases", locale: localization.currentLocale))
+                        Text(.paywallRestorePurchases)
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.tidexBlue)
                     }
@@ -99,7 +98,7 @@ struct PaywallView: View {
                 .padding(.top, 24)
             }
             .background(Color.tidexBackground)
-            .navigationTitle(AuthStrings.string("paywall.title", locale: localization.currentLocale))
+            .navigationTitle(String(localized: .paywallTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -174,14 +173,14 @@ struct PaywallView: View {
     // swiftlint:disable force_unwrapping
     private var legalLinks: some View {
         HStack(spacing: 16) {
-            Link(AuthStrings.string("paywall.termsOfUse", locale: localization.currentLocale), destination: URL(string: "https://tidex.no/terms")!)
+            Link(String(localized: .paywallTermsOfUse), destination: URL(string: "https://tidex.no/terms")!)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
 
             Text("•")
                 .foregroundColor(.tidexTextMuted)
 
-            Link(AuthStrings.string("paywall.privacyPolicy", locale: localization.currentLocale), destination: URL(string: "https://tidex.no/privacy")!)
+            Link(String(localized: .paywallPrivacyPolicy), destination: URL(string: "https://tidex.no/privacy")!)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -196,7 +195,7 @@ struct PaywallView: View {
                 ProgressView()
                     .scaleEffect(1.2)
 
-                Text(AuthStrings.string("paywall.loading", locale: localization.currentLocale))
+                Text(.paywallLoading)
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -221,19 +220,19 @@ enum PaywallContextType {
         }
     }
 
-    func title(locale: LocalizationManager.AppLocale) -> String {
+    var title: String {
         switch self {
-        case .monthLimit: return AuthStrings.string("paywall.shiftLimit.title", locale: locale)
-        case .upgrade: return AuthStrings.string("paywall.upgrade.title", locale: locale)
-        case .wageyLimit: return AuthStrings.string("paywall.wageyLimit.title", locale: locale)
+        case .monthLimit: return String(localized: .paywallShiftLimitTitle)
+        case .upgrade: return String(localized: .paywallUpgradeTitle)
+        case .wageyLimit: return String(localized: .paywallWageyLimitTitle)
         }
     }
 
-    func message(locale: LocalizationManager.AppLocale) -> String {
+    var message: String {
         switch self {
-        case .monthLimit: return AuthStrings.string("paywall.shiftLimit.message", locale: locale)
-        case .upgrade: return AuthStrings.string("paywall.upgrade.message", locale: locale)
-        case .wageyLimit: return AuthStrings.string("paywall.wageyLimit.message", locale: locale)
+        case .monthLimit: return String(localized: .paywallShiftLimitMessage)
+        case .upgrade: return String(localized: .paywallUpgradeMessage)
+        case .wageyLimit: return String(localized: .paywallWageyLimitMessage)
         }
     }
 }
@@ -244,10 +243,10 @@ struct PaywallContext {
     let title: String
     let message: String
 
-    init(type: PaywallContextType, locale: LocalizationManager.AppLocale) {
+    init(type: PaywallContextType) {
         self.icon = type.icon
-        self.title = type.title(locale: locale)
-        self.message = type.message(locale: locale)
+        self.title = type.title
+        self.message = type.message
     }
 
     /// Month limit reached context (for backward compatibility with previews)

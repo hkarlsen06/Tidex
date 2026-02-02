@@ -8,8 +8,7 @@ struct TaxDeductionSection: View {
     @Binding var enabled: Bool
     @Binding var percentage: Double
 
-    @Environment(\.localization) private var localization
-    @State private var showingPercentageInput = false
+        @State private var showingPercentageInput = false
     @State private var percentageInputText = ""
     @FocusState private var isPercentageInputFocused: Bool
 
@@ -18,11 +17,11 @@ struct TaxDeductionSection: View {
             // Section header with toggle
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("settings.pay.editor.taxTitle"))
+                    Text(.settingsPayEditorTaxTitle)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.tidexTextPrimary)
 
-                    Text(localization.string("settings.pay.editor.taxDescription"))
+                    Text(.settingsPayEditorTaxDescription)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextSecondary)
                 }
@@ -51,7 +50,7 @@ struct TaxDeductionSection: View {
     @ViewBuilder
     private var percentageInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("settings.pay.editor.taxPercentage"))
+            Text(.settingsPayEditorTaxPercentage)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
@@ -100,7 +99,7 @@ struct TaxDeductionSection: View {
                                 .toolbar {
                                     ToolbarItemGroup(placement: .keyboard) {
                                         Spacer()
-                                        Button(localization.string("common.done")) {
+                                        Button(String(localized: .commonDone)) {
                                             applyPercentageInput()
                                         }
                                         .fontWeight(.semibold)
@@ -215,5 +214,4 @@ private struct QuickPercentageButton: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

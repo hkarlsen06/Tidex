@@ -7,7 +7,6 @@ struct YearlyIncomeChart: View {
     let data: [MonthlyIncomeData]
     let focusYear: Int
 
-    @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
 
     /// Currently selected month (for tooltip)
@@ -68,8 +67,7 @@ struct YearlyIncomeChart: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Title
-            Text(localization.string("stats.charts.yearlyIncome.title")
-                .replacingOccurrences(of: "{year}", with: "\(focusYear)"))
+            Text(String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
@@ -312,16 +310,13 @@ private struct YearlyTooltipView: View {
 struct YearlyIncomeChartEmpty: View {
     let focusYear: Int
 
-    @Environment(\.localization) private var localization
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.string("stats.charts.yearlyIncome.title")
-                .replacingOccurrences(of: "{year}", with: "\(focusYear)"))
+            Text(String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("stats.charts.yearlyIncome.noData"))
+            Text(.statsChartsYearlyIncomeNoData)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -348,5 +343,4 @@ struct YearlyIncomeChartEmpty: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

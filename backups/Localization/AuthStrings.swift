@@ -1163,7 +1163,110 @@ enum AuthStrings {
 
         // Wagey Paywall
         "paywall.wageyLimit.title": "Meldingsgrense nådd",
-        "paywall.wageyLimit.message": "Du har brukt alle meldingene dine denne måneden. Oppgrader for å fortsette å chatte med Wagey."
+        "paywall.wageyLimit.message": "Du har brukt alle meldingene dine denne måneden. Oppgrader for å fortsette å chatte med Wagey.",
+
+        // MARK: - Common Time/Date Strings
+        "common.inProgress": "Pågår nå",
+        "common.today": "I dag",
+        "common.yesterday": "I går",
+        "common.tomorrow": "I morgen",
+        "common.inDays": "Om %d dager",
+        "common.daysAgo": "%d dager siden",
+        "common.days": "dager",
+        "common.hours": "timer",
+        "common.minutes": "minutter",
+        "common.seconds.short": "sek",
+        "common.hours.short": "t",
+        "common.min.short": "min",
+        "common.perHour.short": "/t",
+        "common.perHour": "per time",
+        "common.ago": "siden",
+        "common.now": "nå",
+        "common.in": "Om",
+        "common.inSeconds": "Om %d%@",
+        "common.inMinutesSeconds": "Om %dmin %d%@",
+        "common.inHoursMinutesSeconds": "Om %d%@ %dmin %d%@",
+        "common.inHours": "Om %d%@",
+        "common.inHoursMinutes": "Om %d%@ %dmin",
+        "common.secondsAgo": "%d%@ siden",
+        "common.minutesSecondsAgo": "%dmin %d%@ siden",
+        "common.hoursMinutesSecondsAgo": "%d%@ %dmin %d%@ siden",
+        "common.hoursAgo": "%d%@ siden",
+        "common.hoursMinutesAgo": "%d%@ %dmin siden",
+
+        // MARK: - Shift Actions
+        "shifts.actions.edit": "Rediger",
+        "shifts.actions.delete": "Slett",
+
+        // MARK: - Empty States
+        "shifts.empty.noShifts": "Ingen vakter",
+        "shifts.empty.noShiftsThisMonth": "Ingen vakter denne måneden",
+        "shifts.empty.noShiftsInMonth": "Ingen vakter i %@",
+        "shifts.empty.noShiftsPlanned": "Ingen vakter planlagt",
+        "shifts.empty.noPastRecords": "Du hadde ingen registrerte vakter i %@.",
+        "shifts.empty.noRecordsMonth": "Ingen vakter ble registrert denne måneden.",
+        "shifts.empty.startTracking": "Legg til din første vakt for å begynne å spore inntektene dine.",
+        "shifts.empty.planAhead": "Du kan planlegge vakter på forhånd, eller sette opp gjentakende vakter.",
+        "shifts.empty.addShift": "Legg til vakt",
+
+        // MARK: - Recurring Shifts
+        "recurring.everyWeek": "hver uke",
+        "recurring.everyNWeeks": "hver %d. uke",
+        "recurring.duration.indefinite": "Uendelig",
+        "recurring.duration.months": "Måneder",
+        "recurring.duration.years": "År",
+        "recurring.duration.endDate": "Sluttdato",
+
+        // MARK: - Break Settings
+        "settings.pay.break.hours": "%d timer",
+        "settings.pay.break.hoursDecimal": "%@ timer",
+        "settings.pay.break.minutes": "%d minutter",
+        "settings.pay.break.method.proportional": "Proporsjonalt",
+        "settings.pay.break.method.baseOnly": "Kun grunnlønn",
+        "settings.pay.break.method.endOfShift": "Slutten av vakten",
+        "settings.pay.break.method.none": "Ingen",
+        "settings.pay.break.methodDesc.proportional": "Trekker pause proporsjonalt fra alle tillegg",
+        "settings.pay.break.methodDesc.baseOnly": "Trekker pause kun fra grunnlønn",
+        "settings.pay.break.methodDesc.endOfShift": "Trekker pause fra slutten av vakten",
+        "settings.pay.break.methodDesc.none": "Ingen automatisk pausetrekk",
+
+        // MARK: - Days
+        "days.weekdays": "Hverdager",
+        "days.weekend": "Helg",
+        "days.allDays": "Alle dager",
+        "days.short.sun": "Søn",
+        "days.short.mon": "Man",
+        "days.short.tue": "Tir",
+        "days.short.wed": "Ons",
+        "days.short.thu": "Tor",
+        "days.short.fri": "Fre",
+        "days.short.sat": "Lør",
+
+        // MARK: - Day Sheet
+        "shifts.daySheet.hours": "timer",
+        "shifts.daySheet.earnings": "inntekt",
+
+        // MARK: - Timeline/History
+        "timeline.switchedToCustom": "Byttet til egendefinert lønn",
+        "timeline.switchedToTariff": "Byttet til tariff",
+        "timeline.levelChange": "Lønnstrinn %d → %d",
+        "timeline.taxEnabled": "Skatt aktivert",
+        "timeline.taxDisabled": "Skatt deaktivert",
+        "timeline.taxChange": "Skatt %d%% → %d%%",
+        "timeline.breakEnabled": "Pause aktivert",
+        "timeline.breakDisabled": "Pause deaktivert",
+        "timeline.breakMethodChanged": "Pausemetode endret",
+        "timeline.supplementsAdded": "+%d tillegg",
+        "timeline.supplementsRemoved": "-%d tillegg",
+
+        // MARK: - Notification Reminders
+        "notifications.reminder.1dayLabel": "1 dag",
+        "notifications.reminder.2daysLabel": "2 dager",
+
+        // MARK: - Alerts
+        "alerts.storageIssue.title": "Lagringsproblem",
+        "alerts.storageIssue.message": "Kan ikke lagre data til enhetslagring. Endringene dine blir ikke lagret når appen lukkes. Start appen på nytt eller sjekk enhetslagringen.",
+        "alerts.ok": "OK"
     ]
 
     // MARK: - English Strings
@@ -2317,6 +2420,109 @@ enum AuthStrings {
 
         // Wagey Paywall
         "paywall.wageyLimit.title": "Message Limit Reached",
-        "paywall.wageyLimit.message": "You've used all your messages this month. Upgrade to continue chatting with Wagey."
+        "paywall.wageyLimit.message": "You've used all your messages this month. Upgrade to continue chatting with Wagey.",
+
+        // MARK: - Common Time/Date Strings
+        "common.inProgress": "In progress",
+        "common.today": "Today",
+        "common.yesterday": "Yesterday",
+        "common.tomorrow": "Tomorrow",
+        "common.inDays": "In %d days",
+        "common.daysAgo": "%d days ago",
+        "common.days": "days",
+        "common.hours": "hours",
+        "common.minutes": "minutes",
+        "common.seconds.short": "sec",
+        "common.hours.short": "h",
+        "common.min.short": "min",
+        "common.perHour.short": "/hr",
+        "common.perHour": "per hour",
+        "common.ago": "ago",
+        "common.now": "now",
+        "common.in": "In",
+        "common.inSeconds": "In %d%@",
+        "common.inMinutesSeconds": "In %dmin %d%@",
+        "common.inHoursMinutesSeconds": "In %d%@ %dmin %d%@",
+        "common.inHours": "In %d%@",
+        "common.inHoursMinutes": "In %d%@ %dmin",
+        "common.secondsAgo": "%d%@ ago",
+        "common.minutesSecondsAgo": "%dmin %d%@ ago",
+        "common.hoursMinutesSecondsAgo": "%d%@ %dmin %d%@ ago",
+        "common.hoursAgo": "%d%@ ago",
+        "common.hoursMinutesAgo": "%d%@ %dmin ago",
+
+        // MARK: - Shift Actions
+        "shifts.actions.edit": "Edit",
+        "shifts.actions.delete": "Delete",
+
+        // MARK: - Empty States
+        "shifts.empty.noShifts": "No shifts",
+        "shifts.empty.noShiftsThisMonth": "No shifts this month",
+        "shifts.empty.noShiftsInMonth": "No shifts in %@",
+        "shifts.empty.noShiftsPlanned": "No shifts planned",
+        "shifts.empty.noPastRecords": "You had no recorded shifts in %@.",
+        "shifts.empty.noRecordsMonth": "No shifts were recorded for this month.",
+        "shifts.empty.startTracking": "Add your first shift to start tracking your earnings.",
+        "shifts.empty.planAhead": "You can plan shifts ahead, or set up recurring shifts.",
+        "shifts.empty.addShift": "Add shift",
+
+        // MARK: - Recurring Shifts
+        "recurring.everyWeek": "every week",
+        "recurring.everyNWeeks": "every %d weeks",
+        "recurring.duration.indefinite": "Indefinite",
+        "recurring.duration.months": "Months",
+        "recurring.duration.years": "Years",
+        "recurring.duration.endDate": "End date",
+
+        // MARK: - Break Settings
+        "settings.pay.break.hours": "%d hours",
+        "settings.pay.break.hoursDecimal": "%@ hours",
+        "settings.pay.break.minutes": "%d minutes",
+        "settings.pay.break.method.proportional": "Proportional",
+        "settings.pay.break.method.baseOnly": "Base Only",
+        "settings.pay.break.method.endOfShift": "End of Shift",
+        "settings.pay.break.method.none": "None",
+        "settings.pay.break.methodDesc.proportional": "Deducts break proportionally from all supplements",
+        "settings.pay.break.methodDesc.baseOnly": "Deducts break only from base wage",
+        "settings.pay.break.methodDesc.endOfShift": "Deducts break from end of shift",
+        "settings.pay.break.methodDesc.none": "No automatic break deduction",
+
+        // MARK: - Days
+        "days.weekdays": "Weekdays",
+        "days.weekend": "Weekend",
+        "days.allDays": "All days",
+        "days.short.sun": "Sun",
+        "days.short.mon": "Mon",
+        "days.short.tue": "Tue",
+        "days.short.wed": "Wed",
+        "days.short.thu": "Thu",
+        "days.short.fri": "Fri",
+        "days.short.sat": "Sat",
+
+        // MARK: - Day Sheet
+        "shifts.daySheet.hours": "hours",
+        "shifts.daySheet.earnings": "earnings",
+
+        // MARK: - Timeline/History
+        "timeline.switchedToCustom": "Switched to custom wage",
+        "timeline.switchedToTariff": "Switched to tariff",
+        "timeline.levelChange": "Level %d → %d",
+        "timeline.taxEnabled": "Tax enabled",
+        "timeline.taxDisabled": "Tax disabled",
+        "timeline.taxChange": "Tax %d%% → %d%%",
+        "timeline.breakEnabled": "Break enabled",
+        "timeline.breakDisabled": "Break disabled",
+        "timeline.breakMethodChanged": "Break method changed",
+        "timeline.supplementsAdded": "+%d supplement(s)",
+        "timeline.supplementsRemoved": "-%d supplement(s)",
+
+        // MARK: - Notification Reminders
+        "notifications.reminder.1dayLabel": "1 day",
+        "notifications.reminder.2daysLabel": "2 days",
+
+        // MARK: - Alerts
+        "alerts.storageIssue.title": "Storage Issue",
+        "alerts.storageIssue.message": "Unable to save data to device storage. Your changes will not be saved when the app closes. Please restart the app or check your device storage.",
+        "alerts.ok": "OK"
     ]
 }

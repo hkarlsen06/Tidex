@@ -13,7 +13,6 @@ final class SecuritySettingsViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let localization: LocalizationManager
 
     // MARK: - Published State
 
@@ -111,9 +110,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(localization: LocalizationManager? = nil) {
-        self.localization = localization ?? LocalizationManager.shared
-    }
+    init() {}
 
     // MARK: - Load Security Info
 
@@ -154,7 +151,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to load security info: \(error)")
-            errorMessage = localization.string("security.errors.loadFailed")
+            errorMessage = String(localized: .securityErrorsLoadFailed)
         }
 
         isLoading = false
@@ -193,10 +190,10 @@ final class SecuritySettingsViewModel: ObservableObject {
             // Request reauthentication via phone OTP
             try await supabase.auth.signInWithOTP(phone: phone)
             otpSent = true
-            successMessage = localization.string("security.password.codeSent")
+            successMessage = String(localized: .securityPasswordCodeSent)
         } catch {
             logger.error("Failed to request OTP: \(error)")
-            errorMessage = localization.string("security.password.errors.otpFailed")
+            errorMessage = String(localized: .securityPasswordErrorsOtpFailed)
         }
 
         isSettingPassword = false
@@ -206,29 +203,29 @@ final class SecuritySettingsViewModel: ObservableObject {
     func setPassword() async {
         // Validate password
         guard !newPassword.isEmpty else {
-            errorMessage = localization.string("security.password.errors.required")
+            errorMessage = String(localized: .securityPasswordErrorsRequired)
             return
         }
 
         guard newPassword.count >= 8 else {
-            errorMessage = localization.string("security.password.errors.tooShort")
+            errorMessage = String(localized: .securityPasswordErrorsTooShort)
             return
         }
 
         guard newPassword == confirmPassword else {
-            errorMessage = localization.string("security.password.errors.mismatch")
+            errorMessage = String(localized: .securityPasswordErrorsMismatch)
             return
         }
 
         // For phone-only users, verify OTP first
         if !hasPassword && hasPhoneConnected {
             guard !phoneOtp.isEmpty else {
-                errorMessage = localization.string("security.password.errors.otpRequired")
+                errorMessage = String(localized: .securityPasswordErrorsOtpRequired)
                 return
             }
 
             guard phoneOtp.count == 6, phoneOtp.allSatisfy({ $0.isNumber }) else {
-                errorMessage = localization.string("security.password.errors.otpInvalid")
+                errorMessage = String(localized: .securityPasswordErrorsOtpInvalid)
                 return
             }
         }
@@ -249,8 +246,8 @@ final class SecuritySettingsViewModel: ObservableObject {
             _ = try? await supabase.auth.refreshSession()
 
             successMessage = hasPassword
-                ? localization.string("security.password.success.updated")
-                : localization.string("security.password.success.set")
+                ? String(localized: .securityPasswordSuccessUpdated)
+                : String(localized: .securityPasswordSuccessSet)
 
             // Reset form
             resetPasswordForm()
@@ -260,7 +257,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to set password: \(error)")
-            errorMessage = localization.string("security.password.errors.failed")
+            errorMessage = String(localized: .securityPasswordErrorsFailed)
         }
 
         isSettingPassword = false
@@ -351,11 +348,11 @@ final class SecuritySettingsViewModel: ObservableObject {
             }
 
             if linkingSucceeded {
-                successMessage = localization.string("security.connections.success.connected")
+                successMessage = String(localized: .securityConnectionsSuccessConnected)
             } else {
                 // No tokens or code found - something went wrong
                 logger.warning("No tokens or code in callback URL")
-                errorMessage = localization.string("security.connections.errors.linkFailed")
+                errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
             }
 
             // Reload to update state
@@ -367,10 +364,10 @@ final class SecuritySettingsViewModel: ObservableObject {
         } catch OAuthWebAuthError.stateMismatch {
             // State validation failed - potential CSRF attack
             logger.error("OAuth state validation failed for \(provider.rawValue) - possible CSRF attack")
-            errorMessage = localization.string("security.connections.errors.linkFailed")
+            errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
         } catch {
             logger.error("Failed to link \(provider.rawValue): \(error)")
-            errorMessage = localization.string("security.connections.errors.linkFailed")
+            errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
         }
 
         isConnectingProvider = false
@@ -401,7 +398,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             let user = try await supabase.auth.user()
             guard let identities = user.identities,
                   let identity = identities.first(where: { $0.provider == provider }) else {
-                errorMessage = localization.string("security.connections.errors.notFound")
+                errorMessage = String(localized: .securityConnectionsErrorsNotFound)
                 isConnectingProvider = false
                 return
             }
@@ -409,14 +406,14 @@ final class SecuritySettingsViewModel: ObservableObject {
             // Unlink the identity
             try await supabase.auth.unlinkIdentity(identity)
 
-            successMessage = localization.string("security.connections.success.disconnected")
+            successMessage = String(localized: .securityConnectionsSuccessDisconnected)
 
             // Reload to update state
             await loadSecurityInfo()
 
         } catch {
             logger.error("Failed to unlink \(provider): \(error)")
-            errorMessage = localization.string("security.connections.errors.unlinkFailed")
+            errorMessage = String(localized: .securityConnectionsErrorsUnlinkFailed)
         }
 
         isConnectingProvider = false
@@ -429,7 +426,7 @@ final class SecuritySettingsViewModel: ObservableObject {
         // Validate phone number (Norwegian format: 8 digits)
         let cleanedPhone = phoneLinkInput.filter { $0.isNumber }
         guard cleanedPhone.count == 8 else {
-            errorMessage = localization.string("security.phoneLinking.errors.phoneInvalid")
+            errorMessage = String(localized: .securityPhoneLinkingErrorsPhoneInvalid)
             return
         }
 
@@ -445,11 +442,11 @@ final class SecuritySettingsViewModel: ObservableObject {
 
             // Move to OTP step
             phoneLinkStep = .otp
-            successMessage = localization.string("security.phoneLinking.codeSent")
+            successMessage = String(localized: .securityPhoneLinkingCodeSent)
 
         } catch {
             logger.error("Failed to initiate phone linking: \(error)")
-            errorMessage = localization.string("security.phoneLinking.errors.sendFailed")
+            errorMessage = String(localized: .securityPhoneLinkingErrorsSendFailed)
         }
 
         isLinkingPhone = false
@@ -459,7 +456,7 @@ final class SecuritySettingsViewModel: ObservableObject {
     func verifyPhoneLinkOTP() async {
         // Validate OTP
         guard phoneLinkOtp.count == 6, phoneLinkOtp.allSatisfy({ $0.isNumber }) else {
-            errorMessage = localization.string("security.phoneLinking.errors.otpInvalid")
+            errorMessage = String(localized: .securityPhoneLinkingErrorsOtpInvalid)
             return
         }
 
@@ -481,7 +478,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             // Refresh session
             _ = try? await supabase.auth.refreshSession()
 
-            successMessage = localization.string("security.phoneLinking.success")
+            successMessage = String(localized: .securityPhoneLinkingSuccess)
 
             // Reset phone linking state
             resetPhoneLinkingForm()
@@ -491,7 +488,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to verify phone OTP: \(error)")
-            errorMessage = localization.string("security.phoneLinking.errors.verifyFailed")
+            errorMessage = String(localized: .securityPhoneLinkingErrorsVerifyFailed)
         }
 
         isLinkingPhone = false
@@ -528,7 +525,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to start MFA enrollment: \(error)")
-            errorMessage = localization.string("security.mfa.errors.enrollFailed")
+            errorMessage = String(localized: .securityMfaErrorsEnrollFailed)
         }
 
         isEnrollingMFA = false
@@ -537,12 +534,12 @@ final class SecuritySettingsViewModel: ObservableObject {
     /// Verify MFA enrollment with code
     func verifyMFAEnrollment() async {
         guard let factorId = pendingFactorId else {
-            errorMessage = localization.string("security.mfa.errors.noFactor")
+            errorMessage = String(localized: .securityMfaErrorsNoFactor)
             return
         }
 
         guard mfaVerifyCode.count == 6 else {
-            errorMessage = localization.string("security.mfa.errors.codeRequired")
+            errorMessage = String(localized: .securityMfaErrorsCodeRequired)
             return
         }
 
@@ -558,7 +555,7 @@ final class SecuritySettingsViewModel: ObservableObject {
                 )
             )
 
-            successMessage = localization.string("security.mfa.success.enrolled")
+            successMessage = String(localized: .securityMfaSuccessEnrolled)
 
             // Reset enrollment state
             resetMFAEnrollment()
@@ -568,7 +565,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to verify MFA: \(error)")
-            errorMessage = localization.string("security.mfa.errors.invalidCode")
+            errorMessage = String(localized: .securityMfaErrorsInvalidCode)
         }
 
         isVerifyingMFA = false
@@ -608,7 +605,7 @@ final class SecuritySettingsViewModel: ObservableObject {
         do {
             try await supabase.auth.mfa.unenroll(params: MFAUnenrollParams(factorId: factor.id))
 
-            successMessage = localization.string("security.mfa.success.unenrolled")
+            successMessage = String(localized: .securityMfaSuccessUnenrolled)
             showUnenrollConfirmation = false
             factorToUnenroll = nil
 
@@ -617,7 +614,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to unenroll MFA: \(error)")
-            errorMessage = localization.string("security.mfa.errors.unenrollFailed")
+            errorMessage = String(localized: .securityMfaErrorsUnenrollFailed)
         }
 
         isUnenrollingMFA = false
@@ -639,14 +636,14 @@ final class SecuritySettingsViewModel: ObservableObject {
         if isBiometricLockEnabled {
             // Disable - no authentication required
             biometricService.disableBiometricLock()
-            successMessage = localization.string("security.biometric.success.disabled")
+            successMessage = String(localized: .securityBiometricSuccessDisabled)
         } else {
             // Enable - requires authentication
             let success = await biometricService.enableBiometricLock()
             if success {
-                successMessage = localization.string("security.biometric.success.enabled")
+                successMessage = String(localized: .securityBiometricSuccessEnabled)
             } else {
-                errorMessage = localization.string("security.biometric.errors.authFailed")
+                errorMessage = String(localized: .securityBiometricErrorsAuthFailed)
             }
         }
 

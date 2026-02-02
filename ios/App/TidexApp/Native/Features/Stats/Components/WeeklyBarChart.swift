@@ -10,8 +10,7 @@ struct WeeklyBarChart: View {
     /// Whether to highlight today (true for "This Week", false for "Best Week")
     let highlightToday: Bool
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     /// Currently selected day (for tooltip)
     @State private var selectedDay: String?
@@ -299,15 +298,14 @@ private struct TooltipView: View {
 struct WeeklyBarChartEmpty: View {
     let title: String
 
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text(localization.string("stats.charts.weeklyChart.noData"))
+            Text(.statsChartsWeeklyChartNoData)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -346,5 +344,4 @@ struct WeeklyBarChartEmpty: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

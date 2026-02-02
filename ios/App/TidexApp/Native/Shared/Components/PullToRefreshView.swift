@@ -45,8 +45,7 @@ struct PullToRefreshContainer<Content: View>: View {
 
     // MARK: - Environment
 
-    @Environment(\.localization) private var localization
-
+    
     // MARK: - State
 
     @State private var state: PullToRefreshState = .idle
@@ -171,12 +170,12 @@ struct PullToRefreshContainer<Content: View>: View {
             return ""
         case .pulling(let progress):
             return progress >= 1
-                ? localization.string("pullToRefresh.release")
-                : localization.string("pullToRefresh.pullDown")
+                ? String(localized: .pullToRefreshRelease)
+                : String(localized: .pullToRefreshPullDown)
         case .triggered:
-            return localization.string("pullToRefresh.release")
+            return String(localized: .pullToRefreshRelease)
         case .refreshing:
-            return localization.string("pullToRefresh.refreshing")
+            return String(localized: .pullToRefreshRefreshing)
         }
     }
 

@@ -19,8 +19,7 @@ struct EditRecurringCalendarView: View {
     /// Existing shift dates to show as occupied
     let existingShiftDates: Set<String>
 
-    @Environment(\.localization) private var localization
-
+    
     /// Projected dates based on current settings
     private var projectedDates: [String] {
         RecurringShiftProjector.generateDatesForCalendarDisplay(
@@ -188,20 +187,19 @@ struct EditRecurringCalendarView: View {
 // MARK: - Calendar Instructions
 
 private struct CalendarInstructions: View {
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 24))
                 .foregroundColor(.tidexTextMuted)
 
-            Text(localization.string("addShift.tapToSetAnchors"))
+            Text(.addShiftTapToSetAnchors)
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
 
-            Text(localization.string("addShift.oneAnchorPerWeekday"))
+            Text(.addShiftOneAnchorPerWeekday)
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -229,5 +227,4 @@ private struct CalendarInstructions: View {
         .padding()
     }
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

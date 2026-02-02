@@ -9,8 +9,7 @@ struct ChatMessageList: View {
     /// Callback when a suggestion chip is tapped
     var onSuggestionTapped: ((String) -> Void)?
 
-    @Environment(\.localization) private var localization
-
+    
     /// Namespace for scroll-to-bottom animation
     @Namespace private var bottomID
 
@@ -73,11 +72,11 @@ struct ChatMessageList: View {
                 .foregroundColor(.tidexBlue)
 
             VStack(spacing: 8) {
-                Text(localization.string("wagey.emptyState.title"))
+                Text(.wageyEmptyStateTitle)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("wagey.emptyState.subtitle"))
+                Text(.wageyEmptyStateSubtitle)
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -85,9 +84,9 @@ struct ChatMessageList: View {
 
             // Suggestion chips
             VStack(spacing: 12) {
-                suggestionChip(localization.string("wagey.emptyState.suggestion1"))
-                suggestionChip(localization.string("wagey.emptyState.suggestion2"))
-                suggestionChip(localization.string("wagey.emptyState.suggestion3"))
+                suggestionChip(String(localized: .wageyEmptyStateSuggestion1))
+                suggestionChip(String(localized: .wageyEmptyStateSuggestion2))
+                suggestionChip(String(localized: .wageyEmptyStateSuggestion3))
             }
             .padding(.top, 8)
         }
@@ -128,7 +127,6 @@ struct ChatMessageList: View {
         isStreaming: false
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("With Messages") {
@@ -155,7 +153,6 @@ struct ChatMessageList: View {
         isStreaming: false
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }
 
 #Preview("Streaming") {
@@ -176,5 +173,4 @@ struct ChatMessageList: View {
         isStreaming: true
     )
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

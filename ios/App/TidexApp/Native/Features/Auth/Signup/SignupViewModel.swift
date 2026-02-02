@@ -12,7 +12,6 @@ final class SignupViewModel: ObservableObject {
     private let authService: AuthService
     private let appleAuthProvider: AppleAuthProvider
     private let googleAuthProvider: GoogleAuthProvider
-    private let localization: LocalizationManager
 
     // MARK: - Published State
 
@@ -136,12 +135,10 @@ final class SignupViewModel: ObservableObject {
         authService: AuthService? = nil,
         appleAuthProvider: AppleAuthProvider? = nil,
         googleAuthProvider: GoogleAuthProvider? = nil,
-        localization: LocalizationManager? = nil
     ) {
         self.authService = authService ?? AuthService.shared
         self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
         self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
-        self.localization = localization ?? LocalizationManager.shared
     }
 
     deinit {
@@ -169,7 +166,7 @@ final class SignupViewModel: ObservableObject {
                 try await signUpWithPhone()
 
             case .unknown:
-                fieldErrors.emailOrPhone = localization.string("signup.errors.invalidEmailOrPhone")
+                fieldErrors.emailOrPhone = String(localized: .signupErrorsInvalidEmailOrPhone)
             }
         } catch {
             handleError(error)
@@ -182,12 +179,12 @@ final class SignupViewModel: ObservableObject {
         fieldErrors.clear()
 
         guard !otpCode.isEmpty else {
-            fieldErrors.otp = localization.string("otp.errors.codeRequired")
+            fieldErrors.otp = String(localized: .otpErrorsCodeRequired)
             return
         }
 
         guard otpCode.count == 6 else {
-            fieldErrors.otp = localization.string("otp.errors.codeInvalid")
+            fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
             return
         }
 
@@ -251,7 +248,7 @@ final class SignupViewModel: ObservableObject {
 
         do {
             try await authService.signUpWithPhone(phone: normalizedPhone, password: password, fullName: fullName)
-            successMessage = localization.string("signup.success.otpResent")
+            successMessage = String(localized: .signupSuccessOtpResent)
         } catch {
             handleError(error)
         }
@@ -272,7 +269,7 @@ final class SignupViewModel: ObservableObject {
 
     private func signUpWithPhone() async throws {
         try await authService.signUpWithPhone(phone: normalizedPhone, password: password, fullName: fullName)
-        successMessage = localization.string("signup.success.otpSent")
+        successMessage = String(localized: .signupSuccessOtpSent)
         currentStep = .otp
     }
 
@@ -282,37 +279,37 @@ final class SignupViewModel: ObservableObject {
 
         // First name required
         if firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            fieldErrors.firstName = localization.string("signup.errors.firstNameRequired")
+            fieldErrors.firstName = String(localized: .signupErrorsFirstNameRequired)
             isValid = false
         }
 
         // Last name required
         if lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            fieldErrors.lastName = localization.string("signup.errors.lastNameRequired")
+            fieldErrors.lastName = String(localized: .signupErrorsLastNameRequired)
             isValid = false
         }
 
         // Email/phone required
         if trimmed.isEmpty {
-            fieldErrors.emailOrPhone = localization.string("signup.errors.emailOrPhoneRequired")
+            fieldErrors.emailOrPhone = String(localized: .signupErrorsEmailOrPhoneRequired)
             isValid = false
         } else if inputType == .unknown {
-            fieldErrors.emailOrPhone = localization.string("signup.errors.invalidEmailOrPhone")
+            fieldErrors.emailOrPhone = String(localized: .signupErrorsInvalidEmailOrPhone)
             isValid = false
         }
 
         // Password required and minimum length
         if password.isEmpty {
-            fieldErrors.password = localization.string("signup.errors.passwordRequired")
+            fieldErrors.password = String(localized: .signupErrorsPasswordRequired)
             isValid = false
         } else if password.count < 8 {
-            fieldErrors.password = localization.string("signup.errors.passwordTooShort")
+            fieldErrors.password = String(localized: .signupErrorsPasswordTooShort)
             isValid = false
         }
 
         // Confirm password must match (if visible)
         if !confirmPassword.isEmpty && password != confirmPassword {
-            fieldErrors.confirmPassword = localization.string("signup.errors.passwordMismatch")
+            fieldErrors.confirmPassword = String(localized: .signupErrorsPasswordMismatch)
             isValid = false
         }
 

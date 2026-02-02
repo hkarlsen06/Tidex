@@ -5,8 +5,7 @@ import SwiftUI
 struct MonthlyGoalCard: View {
     let goal: MonthlyGoal
 
-    @Environment(\.localization) private var localization
-    @Environment(\.userCurrency) private var currency
+        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
@@ -31,7 +30,7 @@ struct MonthlyGoalCard: View {
         VStack(alignment: .leading, spacing: 16) {
             // Header row with title and settings icon
             HStack {
-                Text(localization.string("stats.monthlyGoal.title"))
+                Text(.statsMonthlyGoalTitle)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -44,7 +43,7 @@ struct MonthlyGoalCard: View {
 
             // Goal target display
             HStack(spacing: 4) {
-                Text("\(localization.string("stats.monthlyGoal.goalLabel")):")
+                Text("\(String(localized: .statsMonthlyGoalGoalLabel)):")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.tidexTextSecondary)
 
@@ -103,20 +102,18 @@ struct MonthlyGoalCard: View {
         if goalReached {
             if overAmount > 0 {
                 // Over target
-                Text(localization.string("stats.monthlyGoal.overTarget")
-                    .replacingOccurrences(of: "{amount}", with: formatCurrency(overAmount)))
+                Text(String(localized: .statsMonthlyGoalOverTarget(formatCurrency(overAmount))))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexSuccess)
             } else {
                 // Exactly at goal
-                Text(localization.string("stats.monthlyGoal.goalReached"))
+                Text(.statsMonthlyGoalGoalReached)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexSuccess)
             }
         } else {
             // Still working towards goal
-            Text(localization.string("stats.monthlyGoal.remaining")
-                .replacingOccurrences(of: "{amount}", with: formatCurrency(goal.remaining)))
+            Text(String(localized: .statsMonthlyGoalRemaining(formatCurrency(goal.remaining))))
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -131,12 +128,11 @@ struct MonthlyGoalCard: View {
 
 /// Empty state for when monthly goal is not enabled
 struct MonthlyGoalEmptyCard: View {
-    @Environment(\.localization) private var localization
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(localization.string("stats.monthlyGoal.title"))
+                Text(.statsMonthlyGoalTitle)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
@@ -147,7 +143,7 @@ struct MonthlyGoalEmptyCard: View {
                     .foregroundColor(.tidexTextMuted)
             }
 
-            Text(localization.string("stats.monthlyGoal.notEnabled"))
+            Text(.statsMonthlyGoalNotEnabled)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
         }
@@ -188,5 +184,4 @@ struct MonthlyGoalEmptyCard: View {
     }
     .padding()
     .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
 }

@@ -13,22 +13,22 @@ extension Color {
     // MARK: - Background Colors
 
     /// Main app background - adapts to light/dark mode
-    /// Light: HSL(220, 40%, 98%) - soft off-white
-    /// Dark: HSL(222.2, 84%, 4.9%) - deep navy
+    /// Light: HSlocalized(220, 40%, 98%) - soft off-white
+    /// Dark: HSlocalized(222.2, 84%, 4.9%) - deep navy
     static var tidexBackground: Color {
         Color("TidexBackground")
     }
 
     /// Secondary background for nested containers
-    /// Light: HSL(220, 35%, 95%)
-    /// Dark: HSL(222.2, 84%, 4.9%)
+    /// Light: HSlocalized(220, 35%, 95%)
+    /// Dark: HSlocalized(222.2, 84%, 4.9%)
     static var tidexBackgroundSecondary: Color {
         Color("TidexBackgroundSecondary")
     }
 
     /// Launch screen background - adapts to light/dark mode
-    /// Light: HSL(220, 40%, 98%) - soft off-white (matches tidexBackground)
-    /// Dark: HSL(222.2, 84%, 4.9%) - deep navy (matches tidexBackground)
+    /// Light: HSlocalized(220, 40%, 98%) - soft off-white (matches tidexBackground)
+    /// Dark: HSlocalized(222.2, 84%, 4.9%) - deep navy (matches tidexBackground)
     static var tidexLaunchBackground: Color {
         Color("LaunchBackground")
     }
@@ -50,29 +50,29 @@ extension Color {
     // MARK: - Text Colors
 
     /// Primary text color for headings and important content
-    /// Light: HSL(222, 84%, 8%) - near black
-    /// Dark: HSL(210, 40%, 98%) - near white
+    /// Light: HSlocalized(222, 84%, 8%) - near black
+    /// Dark: HSlocalized(210, 40%, 98%) - near white
     static var tidexTextPrimary: Color {
         Color("TidexTextPrimary")
     }
 
     /// Secondary text color for body text and descriptions
-    /// Light: HSL(214, 28%, 35%)
-    /// Dark: HSL(214, 32%, 85%)
+    /// Light: HSlocalized(214, 28%, 35%)
+    /// Dark: HSlocalized(214, 32%, 85%)
     static var tidexTextSecondary: Color {
         Color("TidexTextSecondary")
     }
 
     /// Muted text color for hints, placeholders, and disabled content
     /// Light: #596B80 - darker for better contrast (WCAG AA compliant)
-    /// Dark: HSL(215, 20%, 70%)
+    /// Dark: HSlocalized(215, 20%, 70%)
     static var tidexTextMuted: Color {
         Color("TidexTextMuted")
     }
 
     /// Inverse text color (light on dark surfaces or vice versa)
-    /// Light: HSL(210, 40%, 98%)
-    /// Dark: HSL(222, 47%, 11%)
+    /// Light: HSlocalized(210, 40%, 98%)
+    /// Dark: HSlocalized(222, 47%, 11%)
     static var tidexTextInverse: Color {
         Color("TidexTextInverse")
     }
@@ -80,8 +80,8 @@ extension Color {
     // MARK: - Brand Colors
 
     /// Tidex brand highlight color - accent blue
-    /// Light: HSL(221, 83%, 53%) - vibrant blue
-    /// Dark: HSL(217, 91%, 65%) - bright blue
+    /// Light: HSlocalized(221, 83%, 53%) - vibrant blue
+    /// Dark: HSlocalized(217, 91%, 65%) - bright blue
     static var tidexBlue: Color {
         Color("TidexBlue")
     }
@@ -111,22 +111,22 @@ extension Color {
     // MARK: - Status Colors
 
     /// Error/destructive color - red
-    /// Light: HSL(0, 84%, 44%)
-    /// Dark: HSL(0, 91%, 60%)
+    /// Light: HSlocalized(0, 84%, 44%)
+    /// Dark: HSlocalized(0, 91%, 60%)
     static var tidexError: Color {
         Color("TidexError")
     }
 
     /// Success color - green
-    /// Light: HSL(142, 76%, 28%)
-    /// Dark: HSL(142, 71%, 50%)
+    /// Light: HSlocalized(142, 76%, 28%)
+    /// Dark: HSlocalized(142, 71%, 50%)
     static var tidexSuccess: Color {
         Color("TidexSuccess")
     }
 
     /// Warning color - amber/orange
-    /// Light: HSL(30, 100%, 35%)
-    /// Dark: HSL(38, 100%, 55%)
+    /// Light: HSlocalized(30, 100%, 35%)
+    /// Dark: HSlocalized(38, 100%, 55%)
     static var tidexWarning: Color {
         Color("TidexWarning")
     }
@@ -137,7 +137,7 @@ extension Color {
     }
 
     /// Purple color for Max tier branding
-    /// HSL(258, 70%, 60%) - vibrant purple
+    /// HSlocalized(258, 70%, 60%) - vibrant purple
     static var tidexPurple: Color {
         Color(hue: 258 / 360, saturation: 0.70, brightness: 0.75)
     }
@@ -159,10 +159,10 @@ extension Color {
 // These are used as fallbacks and for the widget (which can't access main app assets)
 
 extension Color {
-    /// Light mode background - HSL(220, 40%, 98%)
+    /// Light mode background - HSlocalized(220, 40%, 98%)
     static let tidexLightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
 
-    /// Dark mode background - HSL(222.2, 84%, 4.9%)
+    /// Dark mode background - HSlocalized(222.2, 84%, 4.9%)
     static let tidexDarkBackgroundColor = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
 
     /// Light mode surface primary - Pure white for maximum contrast against blue-tinted background
@@ -177,28 +177,28 @@ extension Color {
     /// Dark mode surface secondary - Lighter for better contrast (#1C2A3D)
     static let tidexDarkSurfaceSecondary = Color(red: 0.11, green: 0.165, blue: 0.24)
 
-    /// Light mode text primary - HSL(222, 84%, 8%)
+    /// Light mode text primary - HSlocalized(222, 84%, 8%)
     static let tidexLightTextPrimary = Color(hue: 222 / 360, saturation: 0.84, brightness: 0.08)
 
-    /// Dark mode text primary - HSL(210, 40%, 98%)
+    /// Dark mode text primary - HSlocalized(210, 40%, 98%)
     static let tidexDarkTextPrimary = Color(hue: 210 / 360, saturation: 0.40, brightness: 0.98)
 
-    /// Light mode text secondary - HSL(214, 28%, 35%)
+    /// Light mode text secondary - HSlocalized(214, 28%, 35%)
     static let tidexLightTextSecondary = Color(hue: 214 / 360, saturation: 0.28, brightness: 0.35)
 
-    /// Dark mode text secondary - HSL(214, 32%, 85%)
+    /// Dark mode text secondary - HSlocalized(214, 32%, 85%)
     static let tidexDarkTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
 
     /// Light mode text muted - Darker for better contrast (#596B80)
     static let tidexLightTextMuted = Color(red: 0.35, green: 0.42, blue: 0.50)
 
-    /// Dark mode text muted - HSL(215, 20%, 70%)
+    /// Dark mode text muted - HSlocalized(215, 20%, 70%)
     static let tidexDarkTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
 
-    /// Light mode brand blue - HSL(221, 83%, 53%)
+    /// Light mode brand blue - HSlocalized(221, 83%, 53%)
     static let tidexLightBlue = Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
 
-    /// Dark mode brand blue - HSL(217, 91%, 65%)
+    /// Dark mode brand blue - HSlocalized(217, 91%, 65%)
     static let tidexDarkBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
 
     /// Light mode border - Darker for better visibility (#C7D1DB)
