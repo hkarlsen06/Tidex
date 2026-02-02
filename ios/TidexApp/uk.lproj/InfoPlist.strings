@@ -1,0 +1,13 @@
+/* Ukrainian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex потребує доступ до камери, щоб зробити фото профілю.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex використовує Face ID для захисту ваших даних про доходи. Тільки ви повинні бачити свій заробіток.";

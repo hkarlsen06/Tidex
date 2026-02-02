@@ -1,0 +1,13 @@
+/* Thai localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex ต้องการสิทธิ์การเข้าถึงกล้องเพื่อถ่ายรูปโปรไฟล์ของคุณ";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex ใช้ Face ID เพื่อปกป้องข้อมูลรายได้ของคุณจากสายตาของคนอื่น มีเพียงคุณเท่านั้นที่ควรเห็นรายได้ของคุณ";

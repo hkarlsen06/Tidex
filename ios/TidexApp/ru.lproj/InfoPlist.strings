@@ -1,0 +1,13 @@
+/* Russian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex требует доступ к камере для создания фотографии профиля.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex использует Face ID для защиты данных о ваших заработках. Только вы должны видеть вашу информацию о доходах.";

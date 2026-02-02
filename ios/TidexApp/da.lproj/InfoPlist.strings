@@ -1,0 +1,13 @@
+/* Danish localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex skal have adgang til kameraet for at tage et profilbillede.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex bruger Face ID til at beskytte dine indtjeningsdata mod uvedkommende. Kun du skal se dine indkomster.";

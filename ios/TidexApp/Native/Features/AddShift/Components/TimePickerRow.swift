@@ -231,7 +231,7 @@ struct TimeRangePicker: View {
     
     /// Shortened label for start time field
     private var startLabel: String {
-        "Start"
+        String(localized: .commonStart)
     }
 
     /// Shortened label for end time field

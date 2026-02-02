@@ -1,0 +1,13 @@
+/* Finnish localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex tarvitsee kamera-oikeuden profiilikuvan ottamiseen.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex käyttää Face ID:tä ansiotietojesi suojaamiseen. Vain sinä näet tulosi.";

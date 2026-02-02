@@ -1,0 +1,13 @@
+/* Japanese localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidexはプロフィール写真を撮るためにカメラへのアクセスが必要です。";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidexはあなたの収入データを保護するためにFace IDを使用します。あなたの収入情報を見ることができるのはあなただけです。";
