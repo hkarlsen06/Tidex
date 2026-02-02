@@ -22,8 +22,8 @@ function CustomXAxisTick({
   payload,
   data
 }: {
-  x: number;
-  y: number;
+  x: string | number;
+  y: string | number;
   payload: any;
   data: DailyCumulativeData[];
 }) {
@@ -31,7 +31,7 @@ function CustomXAxisTick({
   const isToday = dayData?.isToday;
 
   return (
-    <g transform={`translate(${x},${y})`}>
+    <g transform={`translate(${Number(x)},${Number(y)})`}>
       <text
         x={0}
         y={0}
