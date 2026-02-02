@@ -756,8 +756,9 @@ struct ShiftWidgetProvider: TimelineProvider {
             endTime: shift.endTime
         )
 
-        // Ensure cross-midnight or recently ended shifts don't fall into pastShift layout
-        if shiftStarted || shiftEnded {
+        // Adjust layout state for active/ended shifts
+        // Preserve pastShift layout for past shifts - they should show "X days ago"
+        if layoutState != .pastShift && (shiftStarted || shiftEnded) {
             layoutState = .todayOrTomorrow
         }
 
