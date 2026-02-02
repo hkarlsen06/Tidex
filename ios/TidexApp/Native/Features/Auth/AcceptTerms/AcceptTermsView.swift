@@ -17,12 +17,12 @@ struct AcceptTermsView: View {
 
     /// Terms URL - uses locale-specific path for proper language display
     private var termsURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/terms")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
     }
 
     /// Privacy URL - uses locale-specific path for proper language display
     private var privacyURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/privacy")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
     }
 
     var body: some View {

@@ -331,7 +331,7 @@ final class DataSettingsViewModel: ObservableObject {
 
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .short
-            dateFormatter.locale = locale.tidexLanguage.formatterLocale
+            dateFormatter.locale = locale
 
             let exportDate = dateFormatter.string(from: Date())
             "\(exportedLabel) \(exportDate)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metaAttributes)
@@ -439,7 +439,7 @@ final class DataSettingsViewModel: ObservableObject {
 
             let weekdayFormatter = DateFormatter()
             weekdayFormatter.dateFormat = "EEE"
-            weekdayFormatter.locale = locale.tidexLanguage.formatterLocale
+            weekdayFormatter.locale = locale
 
             for shift in data.shifts {
                 // Check if we need a new page
@@ -535,11 +535,11 @@ final class DataSettingsViewModel: ObservableObject {
         // Date formatter
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .short
-        dateFormatter.locale = locale.tidexLanguage.formatterLocale
+        dateFormatter.locale = locale
 
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.dateFormat = "EEE"
-        weekdayFormatter.locale = locale.tidexLanguage.formatterLocale
+        weekdayFormatter.locale = locale
 
         // Data rows
         for shift in data.shifts {
@@ -605,7 +605,7 @@ final class DataSettingsViewModel: ObservableObject {
         let calendar = Calendar.current
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMM"
-        monthFormatter.locale = locale.tidexLanguage.formatterLocale
+        monthFormatter.locale = locale
 
         let isFirstOfMonth = calendar.component(.day, from: fromDate) == 1
         let isSameMonth = calendar.isDate(fromDate, equalTo: toDate, toGranularity: .month)
@@ -650,7 +650,7 @@ final class DataSettingsViewModel: ObservableObject {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = decimals
         formatter.maximumFractionDigits = decimals
-        formatter.locale = locale.tidexLanguage.formatterLocale
+        formatter.locale = locale
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.\(decimals)f", value)
     }
 }

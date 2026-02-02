@@ -180,28 +180,21 @@ struct SamplePaycheckScreen: View {
 
     // MARK: - Formatting
 
-    private var tidexLang: TidexLanguage {
-        Locale.current.tidexLanguage
-    }
-
     /// Format currency based on locale
     /// Norwegian: "24 380 kr" (number + kr)
-    /// English: "$24,380" ($ + number)
+    /// Others: "$24,380" ($ + number)
     private func formatCurrency(_ amount: Double) -> String {
         let formatter = NumberFormatter()
         formatter.maximumFractionDigits = 0
 
-        switch tidexLang {
-        case .norwegian:
+        if Locale.current.isNorwegian {
             formatter.numberStyle = .decimal
-            formatter.locale = tidexLang.formatterLocale
             let number = formatter.string(from: NSNumber(value: amount)) ?? "0"
             return "\(number) kr"
-        case .english, .german:
+        } else {
             formatter.numberStyle = .currency
             formatter.currencyCode = "USD"
             formatter.currencySymbol = "$"
-            formatter.locale = tidexLang.formatterLocale
             return formatter.string(from: NSNumber(value: amount)) ?? "$0"
         }
     }

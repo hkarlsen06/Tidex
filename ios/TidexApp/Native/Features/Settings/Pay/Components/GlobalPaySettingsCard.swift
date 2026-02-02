@@ -219,10 +219,10 @@ struct GlobalPaySettingsCard: View {
     private func formatPayrollDay(_ day: Int) -> String {
         // Format ordinal based on language
         let ordinal: String
-        switch Locale.current.tidexLanguage {
-        case .norwegian:
+        if Locale.current.isNorwegian {
             ordinal = "\(day)"
-        case .english, .german:
+        } else {
+            // English ordinal suffixes
             let suffix: String
             switch day {
             case 1, 21, 31: suffix = "st"

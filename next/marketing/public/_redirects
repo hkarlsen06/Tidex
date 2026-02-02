@@ -1,0 +1,15 @@
+# Redirect unsupported locales to English for legal and marketing pages
+# These only apply when the requested file doesn't exist (i.e., non-no/en locales)
+# Netlify serves existing static files before applying redirects, so /no/* and /en/* paths
+# will serve their static files, while /de/*, /fr/*, etc. will redirect to English
+
+# Legal pages
+/:locale/terms/* /en/terms/ 302
+/:locale/terms /en/terms/ 302
+/:locale/privacy/* /en/privacy/ 302
+/:locale/privacy /en/privacy/ 302
+/:locale/security/* /en/security/ 302
+/:locale/security /en/security/ 302
+
+# Root landing page
+/:locale/ /en/ 302

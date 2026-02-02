@@ -267,7 +267,7 @@ extension FeedbackItem {
         let displayFormatter = DateFormatter()
         displayFormatter.dateStyle = .medium
         displayFormatter.timeStyle = .none
-        displayFormatter.locale = locale.tidexLanguage.formatterLocale
+        displayFormatter.locale = locale
         return displayFormatter.string(from: date)
     }
 }

@@ -9,11 +9,11 @@ struct TermsAgreementView: View {
         @State private var safariURL: URL?
 
     private var termsURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/terms")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
     }
 
     private var privacyURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.tidexLanguageCode)/privacy")
+        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
     }
 
     var body: some View {

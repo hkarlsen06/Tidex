@@ -147,27 +147,24 @@ struct PayrollCard: View {
 
     private var formattedPayrollDate: String {
         let formatter = DateFormatter()
-        let tidexLanguage = Locale.current.tidexLanguage
-        formatter.locale = tidexLanguage.formatterLocale
+        formatter.dateFormat = "d MMMM" // Will be localized automatically
+        let formatted = formatter.string(from: payrollDate)
 
-        // Get day number and month name
-        let dayFormatter = DateFormatter()
-        dayFormatter.locale = formatter.locale
-        dayFormatter.dateFormat = "d"
-        let day = dayFormatter.string(from: payrollDate)
-
-        let monthFormatter = DateFormatter()
-        monthFormatter.locale = formatter.locale
-        monthFormatter.dateFormat = "MMMM"
-        let month = monthFormatter.string(from: payrollDate).lowercased()
-
+        // Add day suffix for languages that use it (e.g., Norwegian: "10. februar")
         let daySuffix = String(localized: .commonDaySuffix)
-        switch tidexLanguage {
-        case .norwegian:
+        if !daySuffix.isEmpty {
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "d"
+            let day = dayFormatter.string(from: payrollDate)
+
+            let monthFormatter = DateFormatter()
+            monthFormatter.dateFormat = "MMMM"
+            let month = monthFormatter.string(from: payrollDate).lowercased()
+
             return "\(day)\(daySuffix) \(month)"
-        case .english, .german:
-            return "\(month.capitalized) \(day)"
         }
+
+        return formatted.capitalized
     }
 
     private func formatCurrency(_ amount: Double) -> String {

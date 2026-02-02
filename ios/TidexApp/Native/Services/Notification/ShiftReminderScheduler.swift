@@ -284,8 +284,8 @@ final class ShiftReminderScheduler {
 
         // Format as weekday + date
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = TidexLanguage(rawValue: locale)?.formatterLocale ?? TidexLanguage.english.formatterLocale
-        displayFormatter.dateFormat = "EEEE d. MMMM" // e.g., "onsdag 15. januar"
+        displayFormatter.locale = Locale(identifier: locale)
+        displayFormatter.dateFormat = "EEEE d MMMM" // e.g., "onsdag 15 januar"
 
         var text = displayFormatter.string(from: shiftDate)
         // Capitalize first letter

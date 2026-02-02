@@ -240,7 +240,6 @@ private struct ShiftPreviewCard: View {
 
         // Get day name
         let dayFormatter = DateFormatter()
-        dayFormatter.locale = Locale.current.tidexLanguage.formatterLocale
         dayFormatter.dateFormat = "EEEE"
         let dayName = dayFormatter.string(from: date).capitalized
 
