@@ -42,8 +42,8 @@ function CustomXAxisTick({
   index,
   isMobile,
 }: {
-  x: number;
-  y: number;
+  x: string | number;
+  y: string | number;
   payload: { value: string };
   data: MonthlyData[];
   currentMonth: number;
@@ -60,7 +60,7 @@ function CustomXAxisTick({
   if (!shouldShow) return null;
 
   return (
-    <g transform={`translate(${x},${y})`}>
+    <g transform={`translate(${Number(x)},${Number(y)})`}>
       <text
         x={0}
         y={0}
