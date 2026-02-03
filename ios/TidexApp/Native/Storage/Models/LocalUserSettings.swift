@@ -267,7 +267,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
 extension LocalUserSettings {
     /// Convert to UserSettings for use with existing code
     func toUserSettings() -> UserSettings {
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = FormatterCache.iso8601Formatter()
 
         return UserSettings(
             user_id: userId,
@@ -292,7 +292,7 @@ extension LocalUserSettings {
         serverRevision: Int64,
         context: ModelContext
     ) -> LocalUserSettings {
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = FormatterCache.iso8601Formatter()
 
         let lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
         let createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }

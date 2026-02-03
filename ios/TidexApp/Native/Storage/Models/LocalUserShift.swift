@@ -109,12 +109,7 @@ final class LocalUserShift {
 
     /// Shift date as ISO string (YYYY-MM-DD)
     var shiftDateString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = Date.localTimeZone
-        return formatter.string(from: shiftDate)
+        FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: shiftDate)
     }
 
     /// Whether this shift is soft-deleted
@@ -274,13 +269,9 @@ extension LocalUserShift {
         serverDeletedAt: Date?,
         context: ModelContext
     ) -> LocalUserShift {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.calendar = Calendar(identifier: .gregorian)
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.timeZone = Date.localTimeZone
-
-        let shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? Date()
+        let shiftDate = FormatterCache
+            .isoDateFormatter(timeZone: Date.localTimeZone)
+            .date(from: serverRow.shift_date) ?? Date()
         let supplementsData = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
 
         let snapshot = UserShiftServerSnapshot.from(

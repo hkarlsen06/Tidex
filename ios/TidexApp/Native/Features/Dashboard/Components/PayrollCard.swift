@@ -13,8 +13,10 @@ struct PayrollCard: View {
     var progress: Double?
     /// When true, shows skeleton state with shimmer animation (for loading)
     var isLoading: Bool = false
+    /// When true, prewarms view graph without triggering animations or side effects
+    var prewarm: Bool = false
 
-        @Environment(\.userCurrency) private var currency
+    @Environment(\.userCurrency) private var currency
 
     /// Animated progress value for smooth entrance animation
     @State private var animatedProgress: Double = 0
@@ -135,7 +137,7 @@ struct PayrollCard: View {
         }
         .onAppear {
             // Animate from 0 to current progress on appear (matches CSS animation)
-            if let progress = progress, progress >= 1, progress <= 100 {
+            if !prewarm, let progress = progress, progress >= 1, progress <= 100 {
                 withAnimation(.linear(duration: 1.0)) {
                     animatedProgress = progress
                 }
@@ -146,21 +148,15 @@ struct PayrollCard: View {
     // MARK: - Formatting
 
     private var formattedPayrollDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMMM" // Will be localized automatically
-        let formatted = formatter.string(from: payrollDate)
+        let formatted = FormatterCache.dayMonthFormatter(locale: .current).string(from: payrollDate)
 
         // Add day suffix for languages that use it (e.g., Norwegian: "10. februar")
         let daySuffix = String(localized: .commonDaySuffix)
         if !daySuffix.isEmpty {
-            let dayFormatter = DateFormatter()
-            dayFormatter.dateFormat = "d"
-            let day = dayFormatter.string(from: payrollDate)
-
-            let monthFormatter = DateFormatter()
-            monthFormatter.dateFormat = "MMMM"
-            let month = monthFormatter.string(from: payrollDate).lowercased()
-
+            let day = FormatterCache.dayFormatter(locale: .current).string(from: payrollDate)
+            let month = FormatterCache.monthNameFormatter(locale: .current)
+                .string(from: payrollDate)
+                .lowercased()
             return "\(day)\(daySuffix) \(month)"
         }
 

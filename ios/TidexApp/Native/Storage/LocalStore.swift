@@ -120,14 +120,7 @@ final class LocalStore {
 /// All sync operations should use this actor to prevent data races
 @ModelActor
 actor LocalStoreActor {
-    private func isoDateFormatter() -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = Date.localTimeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }
+    private let isoDateFormatter: DateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     /// Delete all data from all tables
     func resetAllData() {
@@ -151,6 +144,79 @@ actor LocalStoreActor {
     /// Save changes to the context
     func save() throws {
         try modelContext.save()
+    }
+
+    // MARK: - Read Operations (Local Only)
+
+    func fetchUserSettings(userId: String) -> UserSettings? {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        do {
+            guard let localSettings = try modelContext.fetch(descriptor).first else {
+                return nil
+            }
+            return localSettings.toUserSettings()
+        } catch {
+            logger.error("Failed to fetch settings: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func fetchSnapshots(userId: String) -> [WageSnapshot] {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.userId == userId },
+            sortBy: [SortDescriptor(\LocalWageSnapshot.localUpdatedAt, order: .reverse)]
+        )
+
+        do {
+            let localSnapshots = try modelContext.fetch(descriptor)
+            return localSnapshots.map { $0.toWageSnapshot() }
+        } catch {
+            logger.error("Failed to fetch snapshots: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    func fetchRecurringShifts(userId: String) -> [RecurringShiftRow] {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { shift in
+                shift.userId == userId &&
+                shift.serverDeletedAt == nil &&
+                shift.syncStatusRaw != "pendingDelete"
+            },
+            sortBy: [SortDescriptor(\LocalRecurringShift.localUpdatedAt, order: .reverse)]
+        )
+
+        do {
+            let localRecurring = try modelContext.fetch(descriptor)
+            return localRecurring.map { $0.toRecurringShiftRow() }
+        } catch {
+            logger.error("Failed to fetch recurring shifts: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    func fetchShifts(userId: String, startDate: Date, endDate: Date) -> [ShiftRow] {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { shift in
+                shift.userId == userId &&
+                shift.serverDeletedAt == nil &&
+                shift.syncStatusRaw != "pendingDelete" &&
+                shift.shiftDate >= startDate &&
+                shift.shiftDate <= endDate
+            },
+            sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
+        )
+
+        do {
+            let localShifts: [LocalUserShift] = try modelContext.fetch(descriptor)
+            return localShifts.map { $0.toShiftRow() }
+        } catch {
+            logger.error("Failed to fetch shifts: \(error.localizedDescription)")
+            return []
+        }
     }
 
     // MARK: - Sync State Operations
@@ -254,7 +320,7 @@ actor LocalStoreActor {
 
         let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
         let shiftDateString = dateFormatter.string(from: shiftDate)
 
         let snapshot = UserShiftServerSnapshot(
@@ -406,7 +472,7 @@ actor LocalStoreActor {
             throw LocalStoreWriteError.missingConflictSnapshot
         }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         localShift.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? localShift.shiftDate
         localShift.startTime = serverSnapshot.startTime
@@ -830,7 +896,7 @@ actor LocalStoreActor {
 
         let supplementsData = (try? canonicalJSONEncoder.encode(supplements)) ?? Data()
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
         let fromDateString = fromDate.map { dateFormatter.string(from: $0) }
 
         let serverSnapshot = WageSnapshotServerSnapshot(
@@ -1026,7 +1092,7 @@ actor LocalStoreActor {
             throw LocalStoreWriteError.missingConflictSnapshot
         }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         localSnapshot.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
         localSnapshot.hourlyWage = serverSnapshot.hourlyWage
@@ -1483,7 +1549,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
         existing.startTime = serverRow.start_time
@@ -1535,7 +1601,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         // Apply server changes only for non-dirty fields
         if !localDirtyFields.contains(.shiftDate) {
@@ -1670,7 +1736,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
         existing.hourlyWage = serverRow.hourly_wage
@@ -1726,7 +1792,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         if !localDirtyFields.contains(.fromDate) {
             existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
@@ -1884,7 +1950,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         // Update with canonical server values
         existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
@@ -1964,7 +2030,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         // Overwrite local with server snapshot
         existing.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? existing.shiftDate
@@ -2131,7 +2197,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
         existing.hourlyWage = serverRow.hourly_wage
@@ -2212,7 +2278,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = isoDateFormatter()
+        let dateFormatter = isoDateFormatter
 
         existing.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
         existing.hourlyWage = serverSnapshot.hourlyWage
