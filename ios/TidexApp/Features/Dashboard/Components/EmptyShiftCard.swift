@@ -5,6 +5,8 @@ import SwiftUI
 struct EmptyShiftCard: View {
     /// When true, shows shimmer animation (for loading)
     var isLoading: Bool = false
+    /// Optional action for a small footer CTA
+    var onAddShift: (() -> Void)? = nil
 
     // MARK: - Body
 
@@ -46,18 +48,42 @@ struct EmptyShiftCard: View {
             .tidexCardShadow()
             .shimmer(isActive: isLoading)
 
-            // Footer skeleton bar below the card - fixed height to match FeaturedShiftCard
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.tidexTextMuted.opacity(0.3))
-                .frame(width: 80, height: 14)
-                .frame(height: 20) // Match FeaturedShiftCard footer height
+            // Footer area below the card - fixed height to match FeaturedShiftCard
+            Group {
+                if isLoading {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 80, height: 14)
+                } else if let onAddShift {
+                    Button {
+                        Haptics.play(.light)
+                        onAddShift()
+                    } label: {
+                        Text(.dashboardAddShiftButton)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.tidexBlue)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                        .background(Color.tidexBlue.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 80, height: 14)
+                }
+            }
+            .frame(height: 20) // Match FeaturedShiftCard footer height
         }
     }
 }
 
 #Preview {
     VStack(spacing: 16) {
-        EmptyShiftCard()
+        EmptyShiftCard(onAddShift: {})
         EmptyShiftCard(isLoading: true)
     }
     .padding(.horizontal, 24)
