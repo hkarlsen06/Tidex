@@ -59,6 +59,15 @@ struct ShiftDetailsSheet: View {
     /// Whether showing the supplements editor sheet
     @State private var showingSupplementsEditor = false
 
+    /// Whether showing the share options dialog
+    @State private var showingShareOptions = false
+
+    /// Image to share (rendered from ShareableShiftCard)
+    @State private var shareImage: UIImage?
+
+    /// URL of the temporary image file for sharing
+    @State private var shareImageURL: URL?
+
     /// Haptic feedback generator
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -240,6 +249,15 @@ struct ShiftDetailsSheet: View {
                         }
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
+                    } else {
+                        Button {
+                            impactHaptic.impactOccurred()
+                            showingShareOptions = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.tidexBlue)
+                        }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -268,6 +286,29 @@ struct ShiftDetailsSheet: View {
             }
         }
         .interactiveDismissDisabled(isEditing && hasChanges)
+        .sheet(isPresented: $showingShareOptions, onDismiss: {
+            // Check if we have a pending share action
+            if let url = shareImageURL {
+                presentShareSheet(with: [url])
+            } else if let image = shareImage {
+                presentShareSheet(with: [image])
+            }
+        }) {
+            ShareOptionsSheet(
+                onShowEarnings: {
+                    // Prepare the image first, then dismiss - share sheet shows on dismiss
+                    prepareShiftImage(includeEarnings: true)
+                    showingShareOptions = false
+                },
+                onHideEarnings: {
+                    // Prepare the image first, then dismiss - share sheet shows on dismiss
+                    prepareShiftImage(includeEarnings: false)
+                    showingShareOptions = false
+                }
+            )
+            .presentationDetents([.height(260)])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingSupplementsEditor) {
             CustomSupplementsEditorSheet(
                 shift: shift,
@@ -370,6 +411,67 @@ struct ShiftDetailsSheet: View {
         errorMessage = nil
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             isEditing = false
+        }
+    }
+
+    /// Prepare the shift image for sharing (called before dismissing options sheet)
+    @MainActor
+    private func prepareShiftImage(includeEarnings: Bool) {
+        // Create the shareable card view
+        let shareableCard = ShareableShiftCard(
+            shift: shift,
+            currency: currency,
+            includeEarnings: includeEarnings
+        )
+
+        // Render to image and save to temp file for better share sheet compatibility
+        guard let image = shareableCard.renderAsImage(),
+              let pngData = image.pngData() else {
+            shareImage = nil
+            shareImageURL = nil
+            return
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("shift-\(shift.id).png")
+
+        do {
+            try pngData.write(to: tempURL)
+            shareImage = image
+            shareImageURL = tempURL
+        } catch {
+            // Fallback to sharing image directly
+            shareImage = image
+            shareImageURL = nil
+        }
+    }
+
+    /// Present the share sheet with the given items (called after options sheet dismisses)
+    @MainActor
+    private func presentShareSheet(with activityItems: [Any]) {
+        // Clear the pending share state
+        defer {
+            shareImage = nil
+            shareImageURL = nil
+        }
+
+        let activityVC = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+
+        // Get the root view controller and present
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            // Find the topmost presented view controller
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController {
+                topVC = presented
+            }
+            // iPad requires popover configuration
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = topVC.view
+                popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 100, width: 0, height: 0)
+                popover.permittedArrowDirections = .up
+            }
+            topVC.present(activityVC, animated: true)
         }
     }
 
@@ -938,6 +1040,79 @@ struct ShiftDetailsSheet: View {
 
     private func formatCurrency(_ amount: Double) -> String {
         CurrencyConfig.format(amount, currency: currency)
+    }
+}
+
+// MARK: - Share Options Sheet
+
+/// Bottom sheet for selecting share options
+private struct ShareOptionsSheet: View {
+    let onShowEarnings: () -> Void
+    let onHideEarnings: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Title
+            Text(.shiftsShareTitle)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+                .padding(.top, 16)
+
+            VStack(spacing: 12) {
+                // Show earnings option
+                Button {
+                    onShowEarnings()
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "eye")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.tidexBlue)
+                            .frame(width: 28)
+                        Text(.shiftsShareShowEarnings)
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.tidexTextPrimary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.tidexSurfacePrimary)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                // Hide earnings option
+                Button {
+                    onHideEarnings()
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "eye.slash")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.tidexBlue)
+                            .frame(width: 28)
+                        Text(.shiftsShareHideEarnings)
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.tidexTextPrimary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.tidexSurfacePrimary)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color.tidexBackground)
     }
 }
 

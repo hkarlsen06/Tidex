@@ -68,6 +68,15 @@ struct ShiftsView: View {
     @State private var deepLinkAction: AppCoordinator.ShiftDeepLinkAction = .open
     @State private var deepLinkHighlightDate: String?  // Date to visually highlight (for widget deeplinks)
 
+    // Share functionality state
+    @State private var showingShareOptions = false
+    @State private var shareImage: UIImage?
+    @State private var shareImageURL: URL?
+    @Environment(\.colorScheme) private var colorScheme
+
+    // Screenshot detection state
+    @State private var showScreenshotPrompt = false
+
     // View mode toggle (calendar vs list) - persisted across app launches
     @AppStorage("shiftsViewMode") private var showListView = false
 
@@ -136,20 +145,18 @@ struct ShiftsView: View {
                             .frame(height: 22)
                     }
                 }
-                // Refresh button
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        Task {
-                            AppearanceTracker.shared.reset()
-                            await viewModel.refresh()
+                // Share button (only in calendar view, not list view)
+                if !showListView {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            impactHaptic.impactOccurred()
+                            showingShareOptions = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.tidexTextPrimary)
                         }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.tidexTextPrimary)
                     }
-                    .disabled(viewModel.isLoading)
-                    .opacity(viewModel.isLoading ? 0.5 : 1.0)
                 }
                 // Selection mode toggle (only in calendar view)
                 if !showListView {
@@ -170,6 +177,13 @@ struct ShiftsView: View {
         }
         .task {
             await viewModel.loadShifts()
+        }
+        // Screenshot detection - prompt user to use share button instead
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)) { _ in
+            // Only show prompt in calendar view (where share button is visible)
+            if !showListView {
+                showScreenshotPrompt = true
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
             // Reload shifts when they change (e.g., after adding a shift)
@@ -291,6 +305,20 @@ struct ShiftsView: View {
             }
             .allowsHitTesting(false)
         }
+        // Screenshot share prompt overlay (fullScreenCover to appear above tab bar)
+        .fullScreenCover(isPresented: $showScreenshotPrompt) {
+            ScreenshotSharePromptOverlay(
+                onDismiss: {
+                    showScreenshotPrompt = false
+                },
+                onUseShareButton: {
+                    showScreenshotPrompt = false
+                    showingShareOptions = true
+                }
+            )
+            .presentationBackground(.clear)
+            .interactiveDismissDisabled()
+        }
         // Trigger celebration when shifts are added (check on view appear and when month matches)
         .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
             if shouldShow && celebrationManager.shouldShowConfetti(forYear: viewModel.committedYear, month: viewModel.committedMonth) {
@@ -361,6 +389,96 @@ struct ShiftsView: View {
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        // Calendar share options sheet
+        .sheet(isPresented: $showingShareOptions, onDismiss: {
+            // Check if we have a pending share action
+            if let url = shareImageURL {
+                presentShareSheet(with: [url])
+            } else if let image = shareImage {
+                presentShareSheet(with: [image])
+            }
+        }) {
+            CalendarShareOptionsSheet(
+                onShowEarnings: {
+                    // Prepare the image first, then dismiss - share sheet shows on dismiss
+                    prepareCalendarImage(includeEarnings: true)
+                    showingShareOptions = false
+                },
+                onHideEarnings: {
+                    // Prepare the image first, then dismiss - share sheet shows on dismiss
+                    prepareCalendarImage(includeEarnings: false)
+                    showingShareOptions = false
+                }
+            )
+            .presentationDetents([.height(260)])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Calendar Share
+
+    /// Prepare the calendar image for sharing (called before dismissing options sheet)
+    @MainActor
+    private func prepareCalendarImage(includeEarnings: Bool) {
+        let shareableCalendar = ShareableCalendarView(
+            shifts: viewModel.shifts,
+            year: viewModel.committedYear,
+            month: viewModel.committedMonth,
+            currency: viewModel.currency,
+            includeEarnings: includeEarnings,
+            excludedFromTotalIds: viewModel.excludedFromTotalIds,
+            colorScheme: colorScheme
+        )
+
+        // Render to image and save to temp file for better share sheet compatibility
+        guard let image = shareableCalendar.renderAsImage(),
+              let pngData = image.pngData() else {
+            shareImage = nil
+            shareImageURL = nil
+            return
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("calendar-\(viewModel.committedYear)-\(viewModel.committedMonth).png")
+
+        do {
+            try pngData.write(to: tempURL)
+            shareImage = image
+            shareImageURL = tempURL
+        } catch {
+            // Fallback to sharing image directly
+            shareImage = image
+            shareImageURL = nil
+        }
+    }
+
+    /// Present the share sheet with the given items (called after options sheet dismisses)
+    @MainActor
+    private func presentShareSheet(with activityItems: [Any]) {
+        // Clear the pending share state
+        defer {
+            shareImage = nil
+            shareImageURL = nil
+        }
+
+        let activityVC = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+
+        // Get the root view controller and present
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            // Find the topmost presented view controller
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController {
+                topVC = presented
+            }
+            // iPad requires popover configuration
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = topVC.view
+                popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 100, width: 0, height: 0)
+                popover.permittedArrowDirections = .up
+            }
+            topVC.present(activityVC, animated: true)
         }
     }
 

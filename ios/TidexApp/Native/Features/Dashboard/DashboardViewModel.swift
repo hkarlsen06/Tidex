@@ -1025,6 +1025,102 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         )
     }
 
+    // MARK: - Shift Operations
+
+    /// Whether a shift update is in progress
+    @Published private(set) var isUpdatingShift = false
+
+    /// Get tariff supplement rules for a specific shift date
+    /// Used by ShiftDetailsSheet to show applicable tariff rules
+    /// - Parameter shiftDate: ISO date string (YYYY-MM-DD)
+    /// - Returns: Array of supplement rules from the applicable snapshot
+    func getTariffRules(for shiftDate: String) -> [SupplementRule] {
+        guard let snapshot = SnapshotsService.snapshotForDate(shiftDate, from: snapshots) else {
+            return []
+        }
+        return snapshot.effectiveSupplements
+    }
+
+    /// Get a recurring shift by ID
+    /// - Parameter id: The recurring shift ID
+    /// - Returns: The recurring shift if found
+    func getRecurringShift(id: String) -> RecurringShiftRow? {
+        recurringShiftsRepository.getRecurringShift(id: id)
+    }
+
+    /// Update a shift with new date/time values
+    /// - Parameter editResult: The result from the shift edit form
+    func updateShift(_ editResult: ShiftEditResult) async {
+        // Prevent duplicate taps
+        guard !isUpdatingShift else { return }
+
+        isUpdatingShift = true
+        logger.info("📝 Updating shift \(editResult.shiftId)")
+
+        do {
+            // Parse the new date
+            guard let newDate = Date.fromISODateString(editResult.shiftDate) else {
+                logger.error("Invalid date format: \(editResult.shiftDate)")
+                isUpdatingShift = false
+                return
+            }
+
+            if editResult.isVirtualShiftConversion {
+                // Virtual shift conversion:
+                // 1. Add exclusion to the recurring shift for the original date
+                // 2. Create a new regular shift with the edited values
+                logger.info("🔄 Converting virtual shift to regular shift")
+
+                // Get user ID
+                guard let recurringId = editResult.recurringId,
+                      let userId = cachedUserId else {
+                    logger.error("Missing recurringId or userId for virtual shift conversion")
+                    isUpdatingShift = false
+                    return
+                }
+
+                // Step 1: Add exclusion for the original date
+                try await RecurringShiftsRepository.shared.addExclusion(
+                    id: recurringId,
+                    date: editResult.originalDate
+                )
+                logger.info("✅ Added exclusion for \(editResult.originalDate)")
+
+                // Step 2: Create a new regular shift with the edited values
+                _ = try await shiftsRepository.createShift(
+                    userId: userId,
+                    shiftDate: newDate,
+                    startTime: editResult.startTime,
+                    endTime: editResult.endTime,
+                    customSupplements: editResult.customSupplements
+                )
+                logger.info("✅ Created new shift on \(editResult.shiftDate)")
+
+            } else {
+                // Regular shift update - just update the existing shift
+                _ = try await shiftsRepository.updateShift(
+                    id: editResult.shiftId,
+                    shiftDate: newDate,
+                    startTime: editResult.startTime,
+                    endTime: editResult.endTime,
+                    customSupplements: editResult.customSupplements
+                )
+                logger.info("✅ Updated shift \(editResult.shiftId)")
+            }
+
+            // Reload to show the changes
+            await reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            logger.error("❌ Failed to update shift: \(error.localizedDescription)")
+        }
+
+        isUpdatingShift = false
+    }
+
     // MARK: - Helper Methods
 
     /// Calculate the adjusted payroll date for a given month

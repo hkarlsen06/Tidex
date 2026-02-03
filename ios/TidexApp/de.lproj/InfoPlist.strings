@@ -6,8 +6,17 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex benötigt Kamerazugriff, um ein Profilbild aufzunehmen.";
 
 /* Face ID usage description */
 "NSFaceIDUsageDescription" = "Tidex nutzt Face ID, um deine Einkommensdaten zu schützen. Nur du solltest dein Einkommen sehen.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex benötigt Zugriff, um geteilte Kalender- und Schicht-Bilder in deiner Fotobibliothek zu speichern.";

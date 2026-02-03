@@ -57,6 +57,8 @@
 	<string>Tidex trenger tilgang til kameraet for å ta profilbilde.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>SUPABASE_ANON_KEY</key>

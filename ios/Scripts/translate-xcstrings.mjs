@@ -54,6 +54,7 @@ const TIDEX_APP_PATH = path.join(__dirname, "../TidexApp");
 const INFO_PLIST_TRANSLATABLE_KEYS = [
   "NSCameraUsageDescription",
   "NSFaceIDUsageDescription",
+  "NSPhotoLibraryAddUsageDescription",
 ];
 
 // Stats for reporting
@@ -131,13 +132,77 @@ function extractJson(text) {
 
   let jsonText = text.slice(firstBrace, lastBrace + 1);
 
-  // Fix common issues
-  jsonText = jsonText
-    .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
-    .replace(/[\u201C\u201D]/g, '"') // Replace smart quotes
-    .replace(/[\u2018\u2019]/g, "'"); // Replace smart single quotes
+  // Try parsing as-is first
+  try {
+    return JSON.parse(jsonText);
+  } catch {
+    // Continue with fixes
+  }
 
-  return JSON.parse(jsonText);
+  // Apply progressive fixes
+  const fixes = [
+    // 1. Replace smart quotes
+    (s) => s.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'"),
+
+    // 2. Remove trailing commas
+    (s) => s.replace(/,(\s*[}\]])/g, "$1"),
+
+    // 3. Fix unescaped newlines inside string values
+    (s) =>
+      s.replace(/"([^"]*?)"/g, (match, content) =>
+        `"${content.replace(/\n/g, "\\n").replace(/\r/g, "\\r")}"`
+      ),
+
+    // 4. Fix missing commas between properties: "value""key" -> "value","key"
+    (s) => s.replace(/"\s*\n\s*"/g, '",\n"'),
+
+    // 5. Fix unescaped quotes inside values (heuristic: quote followed by lowercase letter)
+    (s) =>
+      s.replace(/"([^"]*?)"/g, (match, content) => {
+        // Don't modify if it looks like a clean value
+        if (!content.includes('"')) return match;
+        // Escape internal quotes that aren't already escaped
+        const fixed = content.replace(/(?<!\\)"/g, '\\"');
+        return `"${fixed}"`;
+      }),
+
+    // 6. Remove control characters that break JSON
+    (s) => s.replace(/[\x00-\x1F\x7F]/g, (char) => {
+      if (char === "\n" || char === "\r" || char === "\t") return char;
+      return "";
+    }),
+  ];
+
+  // Apply fixes cumulatively and try parsing after each
+  for (let i = 0; i < fixes.length; i++) {
+    jsonText = fixes[i](jsonText);
+    try {
+      return JSON.parse(jsonText);
+    } catch {
+      // Continue applying more fixes
+    }
+  }
+
+  // Last resort: try to extract key-value pairs manually
+  try {
+    const result = {};
+    // Match "key": "value" patterns more flexibly
+    const kvRegex = /"(s\d+|ip\d+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+    let match;
+    while ((match = kvRegex.exec(jsonText)) !== null) {
+      result[match[1]] = match[2].replace(/\\"/g, '"').replace(/\\n/g, "\n");
+    }
+    if (Object.keys(result).length > 0) {
+      return result;
+    }
+  } catch {
+    // Fall through to error
+  }
+
+  // If all else fails, throw with context
+  throw new Error(
+    `Failed to parse JSON after all fixes. First 200 chars: ${jsonText.slice(0, 200)}`
+  );
 }
 
 // Translate a batch using KEY-BASED mapping to avoid context collision
@@ -457,7 +522,9 @@ function generateInfoPlistStrings(langName, strings) {
         ? "/* Camera usage description */"
         : key === "NSFaceIDUsageDescription"
           ? "/* Face ID usage description */"
-          : `/* ${key} */`;
+          : key === "NSPhotoLibraryAddUsageDescription"
+            ? "/* Photo library save description */"
+            : `/* ${key} */`;
     lines.push(comment);
     // Escape any quotes in the value
     const escapedValue = value.replace(/"/g, '\\"');
