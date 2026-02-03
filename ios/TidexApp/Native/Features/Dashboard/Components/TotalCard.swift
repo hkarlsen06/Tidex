@@ -66,78 +66,69 @@ struct TotalCard: View {
 
     // MARK: - Subtitle Text
 
-    /// Subtitle logic matches Next.js TotalCard exactly:
+    /// Subtitle type for determining which content to show
+    private enum SubtitleType {
+        case earnedToDate(Double)
+        case beforeTax(Double)
+        case plannedCount(Int)
+        case shiftCount(Int)
+        case none
+    }
+
+    /// Determine which subtitle to show
+    /// Logic matches Next.js TotalCard exactly:
     /// 1. If showing dashes (loading/zero) → no subtitle (skeleton shown instead)
     /// 2. If has future shifts AND has real earned amount → show "[earned] hittil/to date"
     /// 3. If no future with real earnings, but tax enabled with different gross → show "[gross] før skatt/before tax"
     /// 4. If has future shifts but no real earnings yet → show "[count] vakter planlagt/shifts planned"
     /// 5. Otherwise if has any shifts → show "[count] vakter/shifts"
-    private var subtitleText: String? {
-        // Don't return text when showing placeholder - we'll show a skeleton line instead
-        if showDashes { return nil }
+    private var subtitleType: SubtitleType {
+        // Don't show subtitle when showing placeholder - skeleton shown instead
+        if showDashes { return .none }
 
         // Check if we have real earnings to date (not zero)
         let hasRealEarned = hasFutureShifts && earnedToDateValue > 0
 
         // When there are future shifts AND real earnings, show "earned to date" amount
         if hasRealEarned {
-            return "\(formatCurrency(earnedToDateValue)) \(String(localized: .dashboardEarnedToDate))"
+            return .earnedToDate(earnedToDateValue)
         }
 
         // Show gross before tax when tax is enabled (only when NOT showing earned to date)
         let hasGross = !hasFutureShifts && taxEnabled && gross > 0 && gross != mainDisplayValue
         if hasGross {
-            return "\(formatCurrency(gross)) \(String(localized: .dashboardBeforeTax))"
+            return .beforeTax(gross)
         }
 
         // When there are future/planned shifts but no real earnings yet, show planned count
         let showPlanned = hasFutureShifts && !hasRealEarned && plannedCount > 0
         if showPlanned {
-            let plannedLabel = plannedCount == 1
-                ? String(localized: .dashboardShiftPlanned)
-                : String(localized: .dashboardShiftsPlanned)
-            return "\(plannedCount) \(plannedLabel)"
+            return .plannedCount(plannedCount)
         }
 
         // Show total shift count as fallback
         if shiftCount > 0 {
-            let shiftsLabel = shiftCount == 1
-                ? String(localized: .dashboardShift)
-                : String(localized: .dashboardShifts)
-            return "\(shiftCount) \(shiftsLabel)"
+            return .shiftCount(shiftCount)
         }
 
-        return nil
+        return .none
     }
 
     // MARK: - Body
 
     var body: some View {
         VStack(spacing: 4) {
-            // Percentage change indicator (top)
+            // Percentage change indicator (top) - fixed height for consistent card size
             percentageIndicator
+                .frame(height: 22) // Match the 18pt font line height
 
             // Main total display (large centered) - fixed height for consistency
             mainAmountDisplay
                 .frame(height: 88) // Match the 88pt font line height
 
             // Subtitle row - fixed height for consistent card size
-            Group {
-                if showDashes {
-                    // Skeleton placeholder line
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.tidexTextMuted.opacity(0.3))
-                        .frame(width: 120, height: 16)
-                } else if let subtitle = subtitleText {
-                    Text(subtitle)
-                        .font(.system(size: 18, weight: .regular))
-                        .foregroundColor(.tidexTextSecondary)
-                } else {
-                    // Empty spacer to maintain height
-                    Color.clear
-                }
-            }
-            .frame(height: 24) // Fixed height for subtitle area
+            subtitleContent
+                .frame(height: 24) // Fixed height for subtitle area
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
@@ -164,10 +155,76 @@ struct TotalCard: View {
             HStack(spacing: 4) {
                 Image(systemName: isPositive ? "arrow.up" : "arrow.down")
                     .font(.system(size: 16, weight: .semibold))
+                    .contentTransition(.symbolEffect(.replace))
                 Text(String(format: "%.0f%%", displayPercentage))
                     .font(.system(size: 18, weight: .semibold))
+                    .contentTransition(.numericText(value: displayPercentage))
             }
             .foregroundColor(isPositive ? .tidexBlue : .tidexTextSecondary)
+            .animation(.spring(duration: 0.8, bounce: 0), value: displayPercentage)
+            .animation(.spring(duration: 0.8, bounce: 0), value: isPositive)
+        }
+    }
+
+    @ViewBuilder
+    private var subtitleContent: some View {
+        switch subtitleType {
+        case .earnedToDate(let amount):
+            HStack(spacing: 4) {
+                CurrencyCountUpText(
+                    amount: amount,
+                    duration: 0.8,
+                    animateOnAppear: !prewarm,
+                    animateChanges: true
+                )
+                Text(String(localized: .dashboardEarnedToDate))
+            }
+            .font(.system(size: 18, weight: .regular))
+            .foregroundColor(.tidexTextSecondary)
+
+        case .beforeTax(let amount):
+            HStack(spacing: 4) {
+                CurrencyCountUpText(
+                    amount: amount,
+                    duration: 0.8,
+                    animateOnAppear: !prewarm,
+                    animateChanges: true
+                )
+                Text(String(localized: .dashboardBeforeTax))
+            }
+            .font(.system(size: 18, weight: .regular))
+            .foregroundColor(.tidexTextSecondary)
+
+        case .plannedCount(let count):
+            let plannedLabel = count == 1
+                ? String(localized: .dashboardShiftPlanned)
+                : String(localized: .dashboardShiftsPlanned)
+            Text("\(count) \(plannedLabel)")
+                .font(.system(size: 18, weight: .regular))
+                .foregroundColor(.tidexTextSecondary)
+                .contentTransition(.numericText(value: Double(count)))
+                .animation(.spring(duration: 0.8, bounce: 0), value: count)
+
+        case .shiftCount(let count):
+            let shiftsLabel = count == 1
+                ? String(localized: .dashboardShift)
+                : String(localized: .dashboardShifts)
+            Text("\(count) \(shiftsLabel)")
+                .font(.system(size: 18, weight: .regular))
+                .foregroundColor(.tidexTextSecondary)
+                .contentTransition(.numericText(value: Double(count)))
+                .animation(.spring(duration: 0.8, bounce: 0), value: count)
+
+        case .none:
+            if showDashes {
+                // Skeleton placeholder line
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.tidexTextMuted.opacity(0.3))
+                    .frame(width: 120, height: 16)
+            } else {
+                // Empty spacer to maintain height
+                Color.clear
+            }
         }
     }
 
@@ -179,13 +236,13 @@ struct TotalCard: View {
                 .fill(Color.tidexBlue.opacity(0.3))
                 .frame(width: 200, height: 56)
         } else {
-            // Animate count-up only on app launch, not on subsequent data changes
-            let shouldAnimate = !prewarm && !Self.hasPlayedLaunchAnimation
+            // Animate count-up on app launch AND on month changes
+            let shouldAnimateOnAppear = !prewarm && !Self.hasPlayedLaunchAnimation
             CountUpText(
                 targetValue: mainDisplayValue,
                 duration: 0.8,
-                animateOnAppear: shouldAnimate,
-                animateChanges: false,
+                animateOnAppear: shouldAnimateOnAppear,
+                animateChanges: true,
                 format: { CurrencyConfig.format($0, currency: currency) }
             )
             .font(.system(size: 88, weight: .bold))

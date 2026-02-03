@@ -58,9 +58,17 @@ struct PayrollCard: View {
                             .foregroundColor(.tidexBlue)
                     }
                 } else {
-                    Text(formattedPayrollDate)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.tidexTextPrimary)
+                    // Separate day number for animation
+                    HStack(spacing: 0) {
+                        Text(payrollDay)
+                            .contentTransition(.numericText())
+                        Text(payrollDaySuffix)
+                        Text(" ")
+                        Text(payrollMonth)
+                    }
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.tidexTextPrimary)
+                    .animation(.spring(duration: 0.8, bounce: 0), value: payrollDay)
                 }
 
                 Spacer()
@@ -68,10 +76,15 @@ struct PayrollCard: View {
                 // Right side: amount
                 if hasPayout {
                     let primaryAmount = taxEnabled ? (net ?? gross) : gross
-                    Text(formatCurrency(primaryAmount))
-                        .font(.system(size: 22, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(.tidexTextPrimary)
+                    CurrencyCountUpText(
+                        amount: primaryAmount,
+                        duration: 0.8,
+                        animateOnAppear: !prewarm,
+                        animateChanges: true
+                    )
+                    .font(.system(size: 22, weight: .semibold))
+                    .tracking(-0.5)
+                    .foregroundColor(.tidexTextPrimary)
                 } else {
                     // Skeleton for amount
                     RoundedRectangle(cornerRadius: 6)
@@ -98,11 +111,15 @@ struct PayrollCard: View {
                 if hasPayout && showBreakdown {
                     HStack(spacing: 4) {
                         Text(formatPlainAmount(gross))
+                            .contentTransition(.numericText(value: gross))
                         Text("−")
                         Text(formatPlainAmount(tax ?? 0))
+                            .contentTransition(.numericText(value: tax ?? 0))
                     }
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.tidexTextMuted)
+                    .animation(.spring(duration: 0.8, bounce: 0), value: gross)
+                    .animation(.spring(duration: 0.8, bounce: 0), value: tax)
                 } else if !hasPayout {
                     // Skeleton for breakdown
                     RoundedRectangle(cornerRadius: 4)
@@ -147,20 +164,21 @@ struct PayrollCard: View {
 
     // MARK: - Formatting
 
-    private var formattedPayrollDate: String {
-        let formatted = FormatterCache.dayMonthFormatter(locale: .current).string(from: payrollDate)
+    /// Day number (e.g., "10")
+    private var payrollDay: String {
+        FormatterCache.dayFormatter(locale: .current).string(from: payrollDate)
+    }
 
-        // Add day suffix for languages that use it (e.g., Norwegian: "10. februar")
-        let daySuffix = String(localized: .commonDaySuffix)
-        if !daySuffix.isEmpty {
-            let day = FormatterCache.dayFormatter(locale: .current).string(from: payrollDate)
-            let month = FormatterCache.monthNameFormatter(locale: .current)
-                .string(from: payrollDate)
-                .lowercased()
-            return "\(day)\(daySuffix) \(month)"
-        }
+    /// Day suffix for languages that use it (e.g., "." for Norwegian)
+    private var payrollDaySuffix: String {
+        String(localized: .commonDaySuffix)
+    }
 
-        return formatted.capitalized
+    /// Month name (e.g., "februar")
+    private var payrollMonth: String {
+        FormatterCache.monthNameFormatter(locale: .current)
+            .string(from: payrollDate)
+            .lowercased()
     }
 
     private func formatCurrency(_ amount: Double) -> String {

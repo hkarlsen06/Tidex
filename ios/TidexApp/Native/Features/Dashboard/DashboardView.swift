@@ -334,17 +334,6 @@ struct DashboardView: View {
         )
     }
 
-    // MARK: - Transition Phase
-
-    /// Current transition phase for animations
-    private var transitionPhase: MonthTransitionPhase {
-        MonthTransitionPhase(
-            year: viewModel.displayYear,
-            month: viewModel.displayMonth,
-            direction: viewModel.navigationDirection
-        )
-    }
-
     // MARK: - Card Content
 
     /// Card content with pull-to-refresh and swipe gestures
@@ -435,45 +424,41 @@ struct DashboardView: View {
             return max(1, min(100, progress))
         }()
 
-        // Use StaggeredCardsContainer for smooth horizontal slide animation
-        // Cards are stacked with TotalCard as the visual anchor (centered in available space)
-        // Other cards position themselves above/below with consistent spacing
-        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
-            VStack(spacing: 12) {
-                // Payroll countdown text - fixed height to prevent layout shift
-                Text(countdownManager.payrollCountdownText ?? " ")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.tidexTextSecondary)
-                    .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
-                    .frame(height: 20)
+        // Cards stay in place - only numbers animate on month change (like Next.js)
+        VStack(spacing: 12) {
+            // Payroll countdown text - fixed height to prevent layout shift
+            Text(countdownManager.payrollCountdownText ?? " ")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.tidexTextSecondary)
+                .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
+                .frame(height: 20)
 
-                // Payroll Card (Previous Month relative to displayed month)
-                PayrollCard(
-                    payrollDate: data.payrollDate,
-                    label: payrollLabel,
-                    gross: data.previousMonthGross,
-                    net: data.previousMonthNet,
-                    tax: data.previousMonthTax,
-                    taxEnabled: data.previousMonthTaxEnabled,
-                    progress: payrollProgress
-                )
+            // Payroll Card (Previous Month relative to displayed month)
+            PayrollCard(
+                payrollDate: data.payrollDate,
+                label: payrollLabel,
+                gross: data.previousMonthGross,
+                net: data.previousMonthNet,
+                tax: data.previousMonthTax,
+                taxEnabled: data.previousMonthTaxEnabled,
+                progress: payrollProgress
+            )
 
-                // Total Card (Displayed Month) - THE ANCHOR
-                // This card's position should remain stable during transitions
-                TotalCard(
-                    gross: data.currentMonthGross,
-                    net: data.currentMonthNet,
-                    completedGross: data.currentMonthCompletedGross,
-                    completedNet: data.currentMonthCompletedNet,
-                    shiftCount: data.currentMonthShiftCount,
-                    plannedCount: data.currentMonthPlannedCount,
-                    percentageChange: data.percentageChangeVsPrevious,
-                    taxEnabled: data.currentMonthTaxEnabled
-                )
+            // Total Card (Displayed Month) - THE ANCHOR
+            // Numbers animate smoothly when values change
+            TotalCard(
+                gross: data.currentMonthGross,
+                net: data.currentMonthNet,
+                completedGross: data.currentMonthCompletedGross,
+                completedNet: data.currentMonthCompletedNet,
+                shiftCount: data.currentMonthShiftCount,
+                plannedCount: data.currentMonthPlannedCount,
+                percentageChange: data.percentageChangeVsPrevious,
+                taxEnabled: data.currentMonthTaxEnabled
+            )
 
-                // Featured Shift Card - fixed height container to prevent layout shift
-                featuredShiftSection(data: data)
-            }
+            // Featured Shift Card - fixed height container to prevent layout shift
+            featuredShiftSection(data: data)
         }
     }
 
@@ -488,18 +473,18 @@ struct DashboardView: View {
             if let featuredShift = data.featuredShift {
                 // Only show progress bar for active shifts (matching Next.js behavior)
                 let shiftProgress: Double? = countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
-                Button {
+                FeaturedShiftCard(
+                    shift: featuredShift,
+                    isToday: data.isFeaturedShiftToday,
+                    isBestShift: data.featuredShiftIsBestShift,
+                    countdownText: countdownManager.shiftCountdownText,
+                    progress: shiftProgress
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    impactHaptic.impactOccurred()
                     selectedShift = featuredShift
-                } label: {
-                    FeaturedShiftCard(
-                        shift: featuredShift,
-                        isToday: data.isFeaturedShiftToday,
-                        isBestShift: data.featuredShiftIsBestShift,
-                        countdownText: countdownManager.shiftCountdownText,
-                        progress: shiftProgress
-                    )
                 }
-                .buttonStyle(.plain)
             } else {
                 EmptyShiftCard()
             }
