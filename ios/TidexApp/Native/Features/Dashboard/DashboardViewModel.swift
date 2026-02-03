@@ -909,12 +909,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let current = Date.currentYearMonth()
         guard displayYear == current.year && displayMonth == current.month else { return }
 
+        let display = CelebrationDetector.displayValue(dashboardData: dashboardData)
+        let currency = settings.currency ?? dashboardData.currency
+
         ShiftCompletionCelebrationManager.shared.checkForCelebration(
             userId: userId,
             month: current,
             shifts: displayedMonthShifts,
-            dashboardData: dashboardData,
-            settings: settings
+            displayValue: display.value,
+            displayTaxEnabled: display.taxEnabled,
+            currency: currency,
+            includeVirtual: true
         )
     }
 

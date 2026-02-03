@@ -4,7 +4,7 @@ import SwiftUI
 /// Displays payroll, total earnings, and featured shift cards
 struct DashboardView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    
+
     /// Binding to the selected tab for navigation
     @Binding var selectedTab: MainTabView.Tab
 
@@ -53,6 +53,7 @@ struct DashboardView: View {
                     .padding(.top, 8)
                     Spacer()
                 }
+
             }
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)

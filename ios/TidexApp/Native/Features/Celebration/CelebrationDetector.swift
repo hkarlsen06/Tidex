@@ -24,10 +24,11 @@ struct CelebrationDetector {
     static func newlyCompletedShifts(
         shifts: [ShiftWithComputations],
         previousCompletedIds: Set<String>,
-        now: Date = Date()
+        now: Date = Date(),
+        includeVirtual: Bool = false
     ) -> [ShiftWithComputations] {
         shifts.filter { shift in
-            if shift.isVirtual { return false }
+            if !includeVirtual && shift.isVirtual { return false }
             guard !previousCompletedIds.contains(shift.id) else { return false }
             return Date.hasShiftEnded(
                 shiftDate: shift.shiftDate,

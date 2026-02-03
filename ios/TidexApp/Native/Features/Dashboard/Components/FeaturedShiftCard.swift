@@ -11,6 +11,8 @@ struct FeaturedShiftCard: View {
     let countdownText: String?  // Countdown text shown below the card
     /// Progress through the shift (0-100), shows a subtle progress bar when provided (for active shifts)
     var progress: Double?
+    /// When true, shows a "+" prefix and uses blue color for the amount (used in celebration overlay)
+    var showIncreaseHighlight: Bool = false
 
         @Environment(\.userCurrency) private var currency
 
@@ -70,10 +72,18 @@ struct FeaturedShiftCard: View {
 
                     // Net/gross amount
                     let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-                    Text(formatCurrency(displayAmount))
-                        .font(.system(size: 22, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(.tidexTextPrimary)
+                    HStack(spacing: 2) {
+                        if showIncreaseHighlight {
+                            Text("+")
+                                .font(.system(size: 22, weight: .semibold))
+                                .tracking(-0.5)
+                                .foregroundColor(.tidexBlue)
+                        }
+                        Text(formatCurrency(displayAmount))
+                            .font(.system(size: 22, weight: .semibold))
+                            .tracking(-0.5)
+                            .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
+                    }
                 }
 
                 // Row 2: Time range (left) and breakdown (right) - center aligned

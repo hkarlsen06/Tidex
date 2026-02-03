@@ -5,7 +5,6 @@ struct ShiftCompletionCelebrationView: View {
     let data: CelebrationData
     let onDismiss: () -> Void
 
-    
     @State private var showConfetti = false
     @State private var showCard = false
     @State private var showButton = false
@@ -18,7 +17,13 @@ struct ShiftCompletionCelebrationView: View {
     }
 
     private var animateFromValue: Double? {
-        data.animateFrom ?? data.previousDisplayValue
+        if let animateFrom = data.animateFrom {
+            return animateFrom
+        }
+        if abs(data.previousDisplayValue - data.newDisplayValue) <= 0.01 {
+            return 0
+        }
+        return data.previousDisplayValue
     }
 
     private var shouldAnimateNumber: Bool {
@@ -41,12 +46,10 @@ struct ShiftCompletionCelebrationView: View {
                                 .font(.tidexHeadline)
                                 .foregroundColor(.tidexTextSecondary)
 
-                            CurrencyCountUpText(
-                                amount: data.newDisplayValue,
-                                duration: 1.0,
-                                animateOnAppear: true,
-                                animateChanges: false,
-                                animateFrom: animateFromValue
+                            CelebrationCountUpText(
+                                startValue: animateFromValue ?? data.newDisplayValue,
+                                endValue: data.newDisplayValue,
+                                duration: 1.0
                             )
                             .font(.system(size: 104, weight: .bold))
                             .foregroundColor(.tidexBlue)
@@ -77,7 +80,8 @@ struct ShiftCompletionCelebrationView: View {
                                 isToday: false,
                                 isBestShift: true,
                                 countdownText: nil,
-                                progress: nil
+                                progress: nil,
+                                showIncreaseHighlight: true
                             )
                             .opacity(showCard ? 1 : 0)
                             .offset(y: showCard ? 0 : 24)
@@ -179,6 +183,66 @@ struct ShiftCompletionCelebrationView: View {
             showCard = true
             showButton = true
         }
+    }
+}
+
+
+private struct CelebrationCountUpText: View {
+    let startValue: Double
+    let endValue: Double
+    let duration: Double
+
+    @Environment(\.userCurrency) private var currency
+    @State private var currentValue: Double
+    @State private var animationTask: Task<Void, Never>?
+
+    init(startValue: Double, endValue: Double, duration: Double) {
+        self.startValue = startValue
+        self.endValue = endValue
+        self.duration = duration
+        _currentValue = State(initialValue: startValue)
+    }
+
+    var body: some View {
+        CountUpText(
+            targetValue: currentValue,
+            duration: 0.12,
+            animateOnAppear: false,
+            animateChanges: true,
+            format: { CurrencyConfig.format($0, currency: currency) }
+        )
+        .accessibilityLabel(CurrencyConfig.format(endValue, currency: currency))
+        .onAppear {
+            startAnimation()
+        }
+        .onDisappear {
+            animationTask?.cancel()
+            animationTask = nil
+        }
+    }
+
+    private func startAnimation() {
+        animationTask?.cancel()
+        currentValue = startValue
+
+        let steps = max(12, min(60, Int(duration * 30)))
+        let stepDuration = duration / Double(steps)
+
+        animationTask = Task { @MainActor in
+            for step in 1...steps {
+                if Task.isCancelled { return }
+                let progress = Double(step) / Double(steps)
+                let eased = easeOutCubic(progress)
+                currentValue = startValue + (endValue - startValue) * eased
+                try? await Task.sleep(nanoseconds: UInt64(stepDuration * 1_000_000_000))
+            }
+            currentValue = endValue
+        }
+    }
+
+    private func easeOutCubic(_ t: Double) -> Double {
+        let p = max(0.0, min(1.0, t))
+        return 1 - pow(1 - p, 3)
     }
 }
 
