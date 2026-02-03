@@ -53,8 +53,8 @@ const XCODE_PROJECT_PATH = path.join(
   "../Tidex.xcodeproj/project.pbxproj"
 );
 
-// Path to TidexApp lproj directory (for InfoPlist.strings)
-const TIDEX_APP_PATH = path.join(__dirname, "../TidexApp");
+// Path to TidexApp Resources lproj directory (for InfoPlist.strings)
+const TIDEX_APP_PATH = path.join(__dirname, "../TidexApp/Resources");
 
 // InfoPlist.strings keys that need translation (others like CFBundleName stay as "Tidex")
 const INFO_PLIST_TRANSLATABLE_KEYS = [

@@ -89,7 +89,7 @@ struct CalendarDayCell<Content: View>: View {
                 VStack {
                     HStack {
                         Text("\(weekNum)")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                             .foregroundColor(.tidexTextMuted)
                             .padding(.leading, 6)
                             .padding(.top, 4)
@@ -104,7 +104,7 @@ struct CalendarDayCell<Content: View>: View {
                 HStack {
                     Spacer()
                     Text("\(dayInfo.dayNumber)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundColor(style.dayNumberColor)
                         .padding(.trailing, 4)
                         .padding(.top, 3)
@@ -139,9 +139,9 @@ struct CalendarDayCell<Content: View>: View {
         case .hours(let hoursData):
             VStack(spacing: 1) {
                 Text(hoursData.start)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.footnote.weight(.bold))
                 Text(hoursData.end + (hoursData.crossesMidnight ? "*" : ""))
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.footnote.weight(.bold))
             }
             .foregroundColor(.tidexTextPrimary)
             .lineLimit(1)
@@ -150,7 +150,7 @@ struct CalendarDayCell<Content: View>: View {
 
         case .earnings(let amount, let color):
             Text(CalendarGridHelper.formatCompactCurrency(amount))
-                .font(.system(size: 15, weight: .bold))
+                .font(.callout.weight(.bold))
                 .foregroundColor(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -160,7 +160,7 @@ struct CalendarDayCell<Content: View>: View {
             VStack {
                 Spacer()
                 Image(systemName: "star.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.footnote.weight(.bold))
                     .foregroundColor(color)
                     .padding(.bottom, 8)
             }

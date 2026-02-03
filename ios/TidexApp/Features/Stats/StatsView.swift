@@ -76,6 +76,8 @@ struct StatsView: View {
     private func statsContent(stats: StatsData) -> some View {
         ScrollView {
             VStack(spacing: 16) {
+                sectionHeader(.statsSectionOverview)
+
                 // Monthly Earnings Card (large)
                 MonthlyEarningsCard(
                     grossEarnings: stats.currentMonth.totalEarnings,
@@ -96,6 +98,8 @@ struct StatsView: View {
                 } else {
                     MonthlyGoalEmptyCard()
                 }
+
+                sectionHeader(.statsSectionCharts)
 
                 // Weekly Chart (This Week or Best Week)
                 weeklyChartSection(stats: stats)
@@ -120,7 +124,7 @@ struct StatsView: View {
 
                 // Bottom spacing for floating month picker
                 Spacer()
-                    .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
+                    .frame(height: MonthPickerLayout.totalBottomInset + 24)
             }
             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, 16)
@@ -136,6 +140,14 @@ struct StatsView: View {
         .refreshable {
             await viewModel.refresh()
         }
+    }
+
+    private func sectionHeader(_ title: LocalizedStringResource) -> some View {
+        Text(title)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexTextSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
     }
 
     // MARK: - Weekly Chart Section
@@ -228,7 +240,7 @@ struct StatsView: View {
 
                 // Bottom spacing for floating month picker
                 Spacer()
-                    .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
+                    .frame(height: MonthPickerLayout.totalBottomInset + 24)
             }
             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, 16)

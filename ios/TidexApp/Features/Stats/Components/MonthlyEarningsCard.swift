@@ -40,18 +40,18 @@ struct MonthlyEarningsCard: View {
             // Title, amount, and after tax label grouped tightly
             VStack(alignment: .leading, spacing: 2) {
                 Text(.statsMonthlyEarnings)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.tidexLabel)
                     .foregroundColor(.tidexTextSecondary)
 
                 CurrencyCountUpText(amount: mainDisplayValue)
-                    .font(.system(size: 56, weight: .bold))
+                    .font(.tidexStat)
                     .foregroundColor(.tidexTextPrimary)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
 
                 if taxEnabled {
                     Text(String(localized: .statsAfterTax).lowercased())
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.tidexSubheadline)
                         .foregroundColor(.tidexTextSecondary)
                 }
             }
@@ -59,7 +59,7 @@ struct MonthlyEarningsCard: View {
             // Before tax subtitle
             if taxEnabled && showTaxSubtitle {
                 Text("\(String(localized: .statsBeforeTax)): \(formatCurrency(grossEarnings))")
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexTextMuted)
             }
 
@@ -68,12 +68,12 @@ struct MonthlyEarningsCard: View {
                 HStack(spacing: 4) {
                     if hasChange {
                         Image(systemName: isPositive ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.tidexCaptionStrong)
                     }
 
                     if hasChange {
                         Text("\(isPositive ? "+" : "-")\(displayPercentage)% \(String(localized: .statsFromPreviousMonth))")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.tidexSubheadline)
                     }
                 }
                 .foregroundColor(hasChange ? (isPositive ? .tidexSuccess : .tidexError) : .tidexTextMuted)

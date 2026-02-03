@@ -269,7 +269,7 @@ struct SharingView: View {
                         .padding(.vertical, 8)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .glassEffect(.regular.interactive(), in: .capsule)
+                    .tidexGlass(shape: .capsule, interactive: true)
                 }
                 .padding(.horizontal, 16)
 

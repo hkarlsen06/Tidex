@@ -48,13 +48,13 @@ struct ShiftsEmptyState: View {
 
             // Title
             Text(title)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.tidexTitle2)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
             // Subtitle - context-aware message
             Text(subtitle)
-                .font(.system(size: 15))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -130,9 +130,9 @@ struct ShiftsEmptyState: View {
             Button(action: onAddShift) {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.tidexCaptionStrong)
                     Text(.shiftsEmptyAddShift)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.tidexButton)
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 24)

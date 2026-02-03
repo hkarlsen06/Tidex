@@ -3,6 +3,7 @@ import SwiftUI
 /// A modifier that applies a shimmer animation to skeleton loading states
 /// Creates a subtle left-to-right gradient sweep effect
 struct ShimmerModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var phase: CGFloat = -1
 
     /// Duration of one complete shimmer cycle
@@ -17,9 +18,10 @@ struct ShimmerModifier: ViewModifier {
     }
 
     func body(content: Content) -> some View {
+        let shouldAnimate = isActive && !reduceMotion
         content
             .overlay {
-                if isActive {
+                if shouldAnimate {
                     GeometryReader { geometry in
                         LinearGradient(
                             gradient: Gradient(colors: [
@@ -38,7 +40,7 @@ struct ShimmerModifier: ViewModifier {
                 }
             }
             .onAppear {
-                guard isActive else { return }
+                guard shouldAnimate else { return }
                 withAnimation(
                     .linear(duration: duration)
                     .repeatForever(autoreverses: false)

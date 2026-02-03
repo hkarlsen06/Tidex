@@ -121,7 +121,7 @@ struct RecurringShiftEditorSheet: View {
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
-                let availableHeight = geometry.size.height - (MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -196,7 +196,7 @@ struct RecurringShiftEditorSheet: View {
                     isEnabled: true
                 )
                 .scrollDismissesKeyboard(.interactively)
-                .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+                .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
             }
             .background(Color.tidexBackground)
             .navigationBarTitleDisplayMode(.inline)

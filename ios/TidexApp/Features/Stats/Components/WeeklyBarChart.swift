@@ -55,7 +55,7 @@ struct WeeklyBarChart: View {
         VStack(alignment: .leading, spacing: 16) {
             // Title
             Text(title)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.tidexHeadline)
                 .foregroundColor(.tidexTextPrimary)
 
             // Chart
@@ -86,7 +86,7 @@ struct WeeklyBarChart: View {
                             let isSelected = selectedDay == label
 
                             Text(label)
-                                .font(.system(size: 14, weight: (isHighlighted || isSelected) ? .semibold : .regular))
+                                .font((isHighlighted || isSelected) ? .tidexCaptionStrong : .tidexCaptionRegular)
                                 .foregroundColor((isHighlighted || isSelected) ? .tidexBlue : .tidexTextPrimary)
                         }
                     }
@@ -99,7 +99,7 @@ struct WeeklyBarChart: View {
                     AxisValueLabel(anchor: .trailing) {
                         if let amount = value.as(Double.self) {
                             Text(formatAxisValue(amount))
-                                .font(.system(size: 14))
+                                .font(.tidexCaptionRegular)
                                 .foregroundColor(.tidexTextPrimary)
                         }
                     }
@@ -302,11 +302,11 @@ struct WeeklyBarChartEmpty: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.tidexHeadline)
                 .foregroundColor(.tidexTextPrimary)
 
             Text(.statsChartsWeeklyChartNoData)
-                .font(.system(size: 14, weight: .regular))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

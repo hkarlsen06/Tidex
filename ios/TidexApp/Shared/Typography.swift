@@ -13,73 +13,96 @@ import SwiftUI
 /// ```
 extension Font {
     // MARK: - Display (Large Numbers)
+    // These use scaled fonts to maintain visual impact while respecting Dynamic Type
 
-    /// 72pt bold - Extra large currency displays
-    static let tidexDisplay = Font.system(size: 72, weight: .bold)
+    /// 56pt bold - Extra large currency displays (scales with Dynamic Type)
+    static var tidexDisplay: Font {
+        scaledFont(baseSize: 56, weight: .bold, relativeTo: .largeTitle)
+    }
 
-    /// 48pt bold - Dashboard stat values
-    static let tidexStat = Font.system(size: 48, weight: .bold)
+    /// 56pt bold - Dashboard stat values (scales with Dynamic Type)
+    static var tidexStat: Font {
+        scaledFont(baseSize: 56, weight: .bold, relativeTo: .largeTitle)
+    }
 
-    /// 40pt bold - Secondary stat values
-    static let tidexStatSecondary = Font.system(size: 40, weight: .bold)
+    /// 40pt bold - Secondary stat values (scales with Dynamic Type)
+    static var tidexStatSecondary: Font {
+        scaledFont(baseSize: 40, weight: .bold, relativeTo: .title)
+    }
 
-    /// 32pt bold rounded - Large amounts (e.g., paycheck preview)
-    static let tidexAmountLarge = Font.system(size: 32, weight: .bold, design: .rounded)
+    /// 32pt bold rounded - Large amounts (scales with Dynamic Type)
+    static var tidexAmountLarge: Font {
+        scaledFont(baseSize: 32, weight: .bold, relativeTo: .title2, design: .rounded)
+    }
+
+    // MARK: - Scaled Font Helper
+
+    /// Creates a font that scales with Dynamic Type while maintaining a custom base size.
+    private static func scaledFont(
+        baseSize: CGFloat,
+        weight: Font.Weight,
+        relativeTo textStyle: Font.TextStyle,
+        design: Font.Design = .default
+    ) -> Font {
+        let metrics = UIFontMetrics(forTextStyle: textStyle.uiKit)
+        let scaledSize = metrics.scaledValue(for: baseSize)
+        return Font.system(size: scaledSize, weight: weight, design: design)
+    }
 
     // MARK: - Headings
 
     /// 24pt bold - Screen titles, primary headings
-    static let tidexLargeTitle = Font.system(size: 24, weight: .bold)
+    static let tidexLargeTitle = Font.system(.title2, design: .default).weight(.bold)
 
     /// 22pt bold - Card headers, secondary titles
-    static let tidexTitle = Font.system(size: 22, weight: .bold)
+    static let tidexTitle = Font.system(.title3, design: .default).weight(.bold)
 
     /// 20pt bold - Tertiary titles
-    static let tidexTitle2 = Font.system(size: 20, weight: .bold)
+    static let tidexTitle2 = Font.system(.headline, design: .default).weight(.bold)
 
     /// 18pt semibold - Section headers, emphasis
-    static let tidexHeadline = Font.system(size: 18, weight: .semibold)
+    static let tidexHeadline = Font.system(.headline, design: .default)
 
     // MARK: - Body
 
     /// 16pt regular - Default body text
-    static let tidexBody = Font.system(size: 16, weight: .regular)
+    static let tidexBody = Font.system(.body, design: .default)
 
     /// 16pt medium - Emphasized body text
-    static let tidexBodyMedium = Font.system(size: 16, weight: .medium)
+    static let tidexBodyMedium = Font.system(.body, design: .default).weight(.medium)
 
     /// 16pt semibold - Button text, strong emphasis
-    static let tidexButton = Font.system(size: 16, weight: .semibold)
+    static let tidexButton = Font.system(.callout, design: .default).weight(.semibold)
 
     // MARK: - Labels
 
     /// 14pt medium - Form labels, secondary emphasis
-    static let tidexLabel = Font.system(size: 14, weight: .medium)
+    static let tidexLabel = Font.system(.subheadline, design: .default).weight(.medium)
 
     /// 14pt regular - Secondary body text, descriptions
-    static let tidexSubheadline = Font.system(size: 14, weight: .regular)
+    static let tidexSubheadline = Font.system(.subheadline, design: .default)
 
     /// 14pt semibold - Emphasized labels, action links
-    static let tidexLabelStrong = Font.system(size: 14, weight: .semibold)
+    static let tidexLabelStrong = Font.system(.subheadline, design: .default).weight(.semibold)
 
     // MARK: - Captions
 
     /// 12pt medium - Small labels, badges
-    static let tidexCaption = Font.system(size: 12, weight: .medium)
+    static let tidexCaption = Font.system(.caption, design: .default).weight(.medium)
 
     /// 12pt regular - Error messages, muted text
-    static let tidexCaptionRegular = Font.system(size: 12, weight: .regular)
+    static let tidexCaptionRegular = Font.system(.caption, design: .default)
 
     /// 12pt semibold - Badge text, strong captions
-    static let tidexCaptionStrong = Font.system(size: 12, weight: .semibold)
+    static let tidexCaptionStrong = Font.system(.caption, design: .default).weight(.semibold)
 
     // MARK: - Prices
 
     /// 22pt bold - Primary price display
-    static let tidexPrice = Font.system(size: 22, weight: .bold)
+    static let tidexPrice = Font.system(.title3, design: .default).weight(.bold)
 
     /// 12pt regular - Price period labels (e.g., "/month")
-    static let tidexPricePeriod = Font.system(size: 12, weight: .regular)
+    static let tidexPricePeriod = Font.system(.caption, design: .default)
 }
 
 // MARK: - Text Style Modifiers
@@ -101,5 +124,27 @@ extension View {
     func tidexMutedStyle() -> some View {
         self.font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
+    }
+}
+
+// MARK: - TextStyle UIKit Bridge
+
+extension Font.TextStyle {
+    /// Converts SwiftUI Font.TextStyle to UIKit UIFont.TextStyle for UIFontMetrics scaling.
+    var uiKit: UIFont.TextStyle {
+        switch self {
+        case .largeTitle: return .largeTitle
+        case .title: return .title1
+        case .title2: return .title2
+        case .title3: return .title3
+        case .headline: return .headline
+        case .subheadline: return .subheadline
+        case .body: return .body
+        case .callout: return .callout
+        case .footnote: return .footnote
+        case .caption: return .caption1
+        case .caption2: return .caption2
+        @unknown default: return .body
+        }
     }
 }

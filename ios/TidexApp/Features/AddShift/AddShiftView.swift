@@ -35,7 +35,7 @@ struct AddShiftView: View {
 
                 // Content area - different layouts for single vs recurring mode
                 GeometryReader { geometry in
-                    let availableHeight = geometry.size.height - (MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                    let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
 
                     ScrollViewReader { scrollProxy in
                         switch viewModel.mode {
@@ -56,7 +56,7 @@ struct AddShiftView: View {
 
                                     Spacer()
                                 }
-                                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                                .padding(.bottom, MonthPickerLayout.totalBottomInset)
                                 .contentShape(Rectangle())
                                 .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
                                 .animation(.easeInOut(duration: 0.25), value: focusedTimeField != nil)
@@ -84,7 +84,7 @@ struct AddShiftView: View {
                                 isEnabled: true
                             )
                             .scrollDismissesKeyboard(.interactively)
-                            .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+                            .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
                             .onTapGesture {
                                 hideKeyboard()
                             }
@@ -110,7 +110,7 @@ struct AddShiftView: View {
                     )
                     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 8)
+                    .padding(.bottom, MonthPickerLayout.totalBottomInset + 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
@@ -143,11 +143,11 @@ struct AddShiftView: View {
                     Button(keyboardButtonLabel) {
                         handleKeyboardButtonTap()
                     }
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.tidexLabelStrong)
                     .foregroundColor(.tidexTextPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .glassEffect(.regular.tint(.tidexBlue.opacity(0.3)))
+                    .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.3))
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
                 }

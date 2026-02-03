@@ -12,19 +12,19 @@ struct SmallStatCard: View {
             // Header row with title and icon
             HStack {
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tidexLabel)
                     .foregroundColor(.tidexTextSecondary)
 
                 Spacer()
 
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.tidexBody)
                     .foregroundColor(.tidexTextMuted)
             }
 
             // Value
             Text(value)
-                .font(.system(size: 40, weight: .bold))
+                .font(.tidexStatSecondary)
                 .foregroundColor(.tidexTextPrimary)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
