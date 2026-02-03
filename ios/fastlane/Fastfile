@@ -1,0 +1,105 @@
+# frozen_string_literal: true
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload App Store metadata (no binary or screenshots)"
+  lane :metadata do
+    # Validate required environment variables
+    required_env_vars = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH]
+    missing_vars = required_env_vars.reject { |var| ENV[var] && !ENV[var].empty? }
+
+    unless missing_vars.empty?
+      UI.user_error!(
+        "Missing required environment variables: #{missing_vars.join(', ')}\n" \
+        "See fastlane/README.md for setup instructions."
+      )
+    end
+
+    # Validate API key file exists
+    key_path = ENV["ASC_KEY_PATH"]
+    unless File.exist?(key_path)
+      UI.user_error!("App Store Connect API key file not found at: #{key_path}")
+    end
+
+    # Generate localized metadata files from source JSON
+    UI.message("Generating localized metadata files...")
+    sh("node", "../Scripts/generate-appstore-metadata.mjs")
+
+    # Configure App Store Connect API authentication
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: key_path,
+      in_house: false
+    )
+
+    # Upload metadata only (no binary, no screenshots)
+    deliver(
+      api_key: api_key,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      force: true,
+      metadata_path: "fastlane/metadata",
+      precheck_include_in_app_purchases: false
+    )
+
+    UI.success("Metadata uploaded successfully!")
+  end
+
+  desc "Generate metadata files without uploading"
+  lane :generate_metadata do
+    UI.message("Generating localized metadata files...")
+    sh("node", "../Scripts/generate-appstore-metadata.mjs")
+    UI.success("Metadata files generated in fastlane/metadata/")
+  end
+
+  desc "Upload existing metadata files (no generation)"
+  lane :upload_metadata do
+    # Validate required environment variables
+    required_env_vars = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH]
+    missing_vars = required_env_vars.reject { |var| ENV[var] && !ENV[var].empty? }
+
+    unless missing_vars.empty?
+      UI.user_error!(
+        "Missing required environment variables: #{missing_vars.join(', ')}\n" \
+        "See fastlane/README.md for setup instructions."
+      )
+    end
+
+    # Validate API key file exists
+    key_path = ENV["ASC_KEY_PATH"]
+    unless File.exist?(key_path)
+      UI.user_error!("App Store Connect API key file not found at: #{key_path}")
+    end
+
+    # Configure App Store Connect API authentication
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: key_path,
+      in_house: false
+    )
+
+    # Upload metadata only (no binary, no screenshots)
+    deliver(
+      api_key: api_key,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      force: true,
+      metadata_path: "fastlane/metadata",
+      precheck_include_in_app_purchases: false
+    )
+
+    UI.success("Metadata uploaded successfully!")
+  end
+
+  desc "Validate metadata files (check lengths and required files)"
+  lane :validate_metadata do
+    UI.message("Validating metadata files...")
+    sh("node", "../Scripts/generate-appstore-metadata.mjs", "--validate-only")
+    UI.success("Metadata validation passed!")
+  end
+end
