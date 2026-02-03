@@ -134,6 +134,12 @@
             "state": "translated",
             "value": "0"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0"
+          }
         }
       }
     },
@@ -266,6 +272,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " "
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": " "
@@ -406,6 +418,12 @@
             "state": "translated",
             "value": "---"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
         }
       }
     },
@@ -538,6 +556,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---- %@"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "---- %@"
@@ -678,6 +702,12 @@
             "state": "translated",
             "value": "--:--"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--:--"
+          }
         }
       }
     },
@@ -810,6 +840,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "-%@"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "-%@"
@@ -950,6 +986,12 @@
             "state": "translated",
             "value": "–"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "–"
+          }
         }
       }
     },
@@ -1082,6 +1124,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "—"
@@ -1222,6 +1270,12 @@
             "state": "translated",
             "value": "·"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
         }
       }
     },
@@ -1354,6 +1408,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(%@)"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "(%@)"
@@ -1494,6 +1554,12 @@
             "state": "translated",
             "value": "(inițial)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(initial)"
+          }
         }
       }
     },
@@ -1630,6 +1696,12 @@
             "state": "translated",
             "value": "(necesar pentru audit)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(required for audit)"
+          }
         }
       }
     },
@@ -1762,6 +1834,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[%@]"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "[%@]"
@@ -1902,6 +1980,12 @@
             "state": "translated",
             "value": "%"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%"
+          }
         }
       }
     },
@@ -2034,6 +2118,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@"
@@ -2600,6 +2690,12 @@
             "state": "translated",
             "value": "%@ lei/h"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kr/h"
+          }
         }
       }
     },
@@ -2732,6 +2828,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ min"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ min"
@@ -3014,6 +3116,12 @@
             "state": "translated",
             "value": "%@ partajări"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ shares"
+          }
         }
       }
     },
@@ -3149,6 +3257,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ utilizatori"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ users"
           }
         }
       }
@@ -3424,6 +3538,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@:"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@:"
@@ -3990,6 +4110,12 @@
             "state": "translated",
             "value": "%@%%"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@%%"
+          }
         }
       }
     },
@@ -4122,6 +4248,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "•"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "•"
@@ -4262,6 +4394,12 @@
             "state": "translated",
             "value": "→ %@"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "→ %@"
+          }
         }
       }
     },
@@ -4394,6 +4532,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "+"
@@ -4535,6 +4679,12 @@
             "state": "translated",
             "value": "+47"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+47"
+          }
         }
       }
     },
@@ -4667,6 +4817,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "|"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "|"
@@ -4807,6 +4963,12 @@
             "state": "translated",
             "value": "−"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−"
+          }
         }
       }
     },
@@ -4939,6 +5101,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "👋"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "👋"
@@ -5079,6 +5247,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Despre Impersonare"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Impersonation"
           }
         }
       }
@@ -6932,6 +7106,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impersonare activă"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active Impersonation"
           }
         }
       }
@@ -18510,6 +18690,12 @@
             "state": "translated",
             "value": "Corp"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Body text"
+          }
         }
       }
     },
@@ -18646,6 +18832,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "de %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "by %@"
           }
         }
       }
@@ -20500,6 +20692,12 @@
             "state": "translated",
             "value": "Curat"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean"
+          }
         }
       }
     },
@@ -22215,7 +22413,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": ""
+            "value": "."
           }
         },
         "nb": {
@@ -28768,6 +28966,12 @@
             "state": "translated",
             "value": "Conflict"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflict"
+          }
         }
       }
     },
@@ -28905,6 +29109,12 @@
             "state": "translated",
             "value": "Conflicte"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflicts"
+          }
         }
       }
     },
@@ -29041,6 +29251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Creează o partajare nouă între doi utilizatori. Schimburile proprietarului vor fi vizibile pentru vizualizator."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new share between two users. The owner's shifts will be visible to the viewer."
           }
         }
       }
@@ -41477,6 +41693,12 @@
             "state": "translated",
             "value": "Deeplink (opțional)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deeplink (optional)"
+          }
         }
       }
     },
@@ -41613,6 +41835,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Murdar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dirty"
           }
         }
       }
@@ -41751,6 +41979,12 @@
             "state": "translated",
             "value": "Nivel efectiv"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effective Tier"
+          }
         }
       }
     },
@@ -41887,6 +42121,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Execută SQL"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Execute SQL"
           }
         }
       }
@@ -42025,6 +42265,12 @@
             "state": "translated",
             "value": "Expirat"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expired"
+          }
         }
       }
     },
@@ -42161,6 +42407,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Expiră: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expires: %@"
           }
         }
       }
@@ -44587,6 +44839,12 @@
             "state": "translated",
             "value": "De la: %@"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From: %@"
+          }
         }
       }
     },
@@ -44723,6 +44981,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Moștenit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grandfathered"
           }
         }
       }
@@ -44861,6 +45125,12 @@
             "state": "translated",
             "value": "Inactiv"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idle"
+          }
         }
       }
     },
@@ -44998,6 +45268,12 @@
             "state": "translated",
             "value": "Impersonare utilizator"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impersonate User"
+          }
         }
       }
     },
@@ -45134,6 +45410,12 @@
             "state": "translated",
             "value": "Impersonare: **%@**"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impersonating: **%@**"
+          }
         }
       }
     },
@@ -45269,6 +45551,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impersonare: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impersonating: %@"
           }
         }
       }
@@ -45407,6 +45695,12 @@
             "state": "translated",
             "value": "Ultima eroare"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Error"
+          }
         }
       }
     },
@@ -45543,6 +45837,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ultima autentificare"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last login"
           }
         }
       }
@@ -45681,6 +45981,12 @@
             "state": "translated",
             "value": "Ultima sincronizare"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Synced"
+          }
         }
       }
     },
@@ -45817,6 +46123,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Revizii moștenite (depanare)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy Revisions (debug)"
           }
         }
       }
@@ -46527,6 +46839,12 @@
             "state": "translated",
             "value": "Se încarcă rezumatul..."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading summary..."
+          }
         }
       }
     },
@@ -46663,6 +46981,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezumatul stării locale"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local State Summary"
           }
         }
       }
@@ -53665,6 +53989,12 @@
             "state": "translated",
             "value": "Niciodată"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
+          }
         }
       }
     },
@@ -53801,6 +54131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicio transmisie încă"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No broadcasts yet"
           }
         }
       }
@@ -53939,6 +54275,12 @@
             "state": "translated",
             "value": "Nicio dată încărcată"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No data loaded"
+          }
         }
       }
     },
@@ -54076,6 +54418,12 @@
             "state": "translated",
             "value": "Niciun jurnal încă"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No logs yet"
+          }
         }
       }
     },
@@ -54212,6 +54560,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Niciun test de validare executat încă"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No validation tests run yet"
           }
         }
       }
@@ -81031,6 +81385,12 @@
             "state": "translated",
             "value": "Proprietar (își împărtășește schimburile)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Owner (shares their shifts)"
+          }
         }
       }
     },
@@ -81167,6 +81527,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Proprietar: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Owner: %@"
           }
         }
       }
@@ -86024,6 +86390,12 @@
             "state": "translated",
             "value": "În așteptarea ștergerii"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending Delete"
+          }
         }
       }
     },
@@ -88734,6 +89106,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Răspunsul anterior"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous Response"
           }
         }
       }
@@ -96594,6 +96972,12 @@
             "state": "translated",
             "value": "Cod QR indisponibil"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR Code unavailable"
+          }
         }
       }
     },
@@ -96730,6 +97114,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Motiv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reason"
           }
         }
       }
@@ -96868,6 +97258,12 @@
             "state": "translated",
             "value": "Motivul trebuie să aibă cel puțin 5 caractere"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reason must be at least 5 characters"
+          }
         }
       }
     },
@@ -97005,6 +97401,12 @@
             "state": "translated",
             "value": "Transmisiuni recente"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent Broadcasts"
+          }
         }
       }
     },
@@ -97141,6 +97543,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jurnal recent (%@)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent Logs (%@)"
           }
         }
       }
@@ -103856,6 +104264,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Se execută teste de validare..."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running validation tests..."
           }
         }
       }
@@ -119152,6 +119566,12 @@
             "state": "translated",
             "value": "Trimite notificare"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Notification"
+          }
         }
       }
     },
@@ -119431,6 +119851,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status cache server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server Cache Status"
           }
         }
       }
@@ -157597,6 +158023,12 @@
             "state": "translated",
             "value": "Status"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
         }
       }
     },
@@ -157733,6 +158165,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Oprire"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
           }
         }
       }
@@ -157871,6 +158309,12 @@
             "state": "translated",
             "value": "Produs StoreKit"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "StoreKit Product"
+          }
         }
       }
     },
@@ -158007,6 +158451,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nivel StoreKit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "StoreKit Tier"
           }
         }
       }
@@ -162721,6 +163171,12 @@
             "state": "translated",
             "value": "Cursori de sincronizare (updated_at)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync Cursors (updated_at)"
+          }
         }
       }
     },
@@ -164002,6 +164458,12 @@
             "state": "translated",
             "value": "Se sincronizează..."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Syncing..."
+          }
         }
       }
     },
@@ -164854,6 +165316,12 @@
             "state": "translated",
             "value": "Utilizator țintă"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target User"
+          }
         }
       }
     },
@@ -164990,6 +165458,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Țintă: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target: %@"
           }
         }
       }
@@ -165128,6 +165602,12 @@
             "state": "translated",
             "value": "Testele verifică funcționalitatea de sincronizare offline în conformitate cu planul de testare din faza 8."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tests verify offline sync functionality according to Phase 8 test plan."
+          }
         }
       }
     },
@@ -165265,6 +165745,12 @@
             "state": "translated",
             "value": "Tidex"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex"
+          }
         }
       }
     },
@@ -165398,6 +165884,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tieId: %@..."
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "tieId: %@..."
@@ -167112,6 +167604,12 @@
             "state": "translated",
             "value": "Titlu"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title"
+          }
         }
       }
     },
@@ -167248,6 +167746,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Setări utilizator"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User Settings"
           }
         }
       }
@@ -168673,6 +169177,12 @@
             "state": "translated",
             "value": "Valabil"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valid"
+          }
         }
       }
     },
@@ -168810,6 +169320,12 @@
             "state": "translated",
             "value": "Valabil până la"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valid Until"
+          }
         }
       }
     },
@@ -168946,6 +169462,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Teste de validare"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validation Tests"
           }
         }
       }
@@ -169942,6 +170464,12 @@
             "state": "translated",
             "value": "Vizualizator (poate vedea vactele proprietarului)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viewer (can see owner's shifts)"
+          }
         }
       }
     },
@@ -170078,6 +170606,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vizualizator: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viewer: %@"
           }
         }
       }

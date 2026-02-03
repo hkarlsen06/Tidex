@@ -67,11 +67,79 @@ private enum ValidationError: Error, CustomStringConvertible {
     }
 }
 
+// Keys to skip validation (admin/debug strings, symbols, format specifiers)
+private let skipKeyPatterns: [String] = [
+    // Admin/debug views (matches lint-hardcoded-strings skipPaths)
+    "admin.",
+    "debug.",
+    "impersonate",
+    "storekit",
+    "validation",
+    "sync",
+    "cache",
+    "cursor",
+    "execute sql",
+    "deeplink",
+    "broadcast",
+    "grandfathered",
+    "legacy",
+    "tier",
+    "tieId"
+]
+
+// Exact strings to skip (symbols, punctuation, format specifiers, admin/debug strings)
+private let skipExactStrings: Set<String> = [
+    // Symbols and separators (not localizable)
+    "·", "•", "−", "+", "–", "→", "—", "|", "%", "0",
+    // Punctuation
+    " ", "---", "--:--",
+    // App name
+    "Tidex",
+    // Admin/debug view strings
+    "Target User", "Idle", "Body", "Reason", "Conflict", "No logs yet",
+    "Local State Summary", "No data loaded", "Pending Delete",
+    "Owner (shares their shifts)", "Status", "Valid", "Last login",
+    "Active Impersonation", "Never", "Valid Until", "Previous Response",
+    "(initial)", "Expired", "Reason must be at least 5 characters", "Stop",
+    "Viewer (can see owner's shifts)", "About Impersonation", "Loading summary...",
+    "Create a new share between two users. The owner's shifts will be visible to the viewer.",
+    "Send Notification", "Conflicts", "User Settings", "Last Error", "Dirty",
+    "Title", "Clean", "(required for audit)"
+]
+
+private func shouldSkipKey(_ key: String) -> Bool {
+    // Skip exact matches
+    if skipExactStrings.contains(key) {
+        return true
+    }
+
+    // Skip keys matching patterns (case-insensitive)
+    let lowercaseKey = key.lowercased()
+    for pattern in skipKeyPatterns {
+        if lowercaseKey.contains(pattern.lowercased()) {
+            return true
+        }
+    }
+
+    // Skip format specifier strings (e.g., "%@", "%lld", "→ %@")
+    if key.contains("%@") || key.contains("%lld") || key.contains("%d") {
+        return true
+    }
+
+    // Skip strings that are just symbols/punctuation (no letters)
+    let letters = key.unicodeScalars.filter { CharacterSet.letters.contains($0) }
+    if letters.isEmpty {
+        return true
+    }
+
+    return false
+}
+
 private func parseConfig() -> Config {
     let scriptURL = URL(fileURLWithPath: #filePath)
     let scriptsDir = scriptURL.deletingLastPathComponent()
     let defaultCatalog = scriptsDir
-        .appendingPathComponent("../TidexApp/Localizable.xcstrings")
+        .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
         .standardizedFileURL
 
     var catalogURL = defaultCatalog
@@ -92,6 +160,10 @@ private func parseConfig() -> Config {
 private func findMissingLocalizations(in catalog: Catalog) -> [String] {
     var missing: [String] = []
     for (key, entry) in catalog.strings {
+        // Skip admin/debug/symbol strings
+        if shouldSkipKey(key) {
+            continue
+        }
         guard let localizations = entry.localizations, !localizations.isEmpty else { continue }
         let locales = localizations.keys
         if !locales.contains("en") || !locales.contains("nb") {

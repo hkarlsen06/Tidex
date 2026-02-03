@@ -293,6 +293,50 @@ Return format (JSON only, no markdown, no explanation):
   return extractJson(text);
 }
 
+// Translate a batch FROM Norwegian TO English
+async function translateBatchToEnglish(items) {
+  const stringsToTranslate = items.map((item) => ({
+    id: item.id,
+    norwegian: item.norwegian,
+    context: item.key,
+  }));
+
+  const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
+Translate the following strings from Norwegian (Bokmål) to English.
+
+CRITICAL RULES - FOLLOW EXACTLY:
+1. PRESERVE ALL FORMAT SPECIFIERS EXACTLY AS THEY APPEAR:
+   - %@ stays as %@
+   - %lld stays as %lld (NOT %d)
+   - %ld stays as %ld
+   - %1$@ stays as %1$@
+   - %d stays as %d
+   - %.2f stays as %.2f
+   - DO NOT change any format specifier types!
+   - Format specifiers are placeholders for dynamic values passed by code - NEVER hardcode what they represent
+2. Keep translations concise (mobile UI has limited space)
+3. Preserve leading/trailing whitespace exactly
+4. The "context" field hints at usage - use it to disambiguate meanings
+5. Return a JSON object mapping each "id" to its English translation
+
+Strings to translate:
+${JSON.stringify(stringsToTranslate, null, 2)}
+
+Return format (JSON only, no markdown, no explanation):
+{"id1": "translation1", "id2": "translation2", ...}`;
+
+  const response = await withRetry(() =>
+    client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    })
+  );
+
+  const text = response.content[0].text.trim();
+  return extractJson(text);
+}
+
 // Deep-set a value at a path without overwriting siblings
 function deepSet(obj, path, value) {
   let current = obj;
@@ -318,23 +362,36 @@ async function translateXcstrings(filePath) {
 
   // Collect ALL strings that need translation with unique IDs
   const stringsToTranslate = [];
+  const stringsNeedingEnglish = []; // Strings with Norwegian but missing English
   let idCounter = 0;
 
   for (const [key, value] of Object.entries(data.strings)) {
     // Check for plural variations first (they take precedence)
     const enVariations = value.localizations?.en?.variations?.plural;
+    const nbVariations = value.localizations?.nb?.variations?.plural;
     const hasPluralVariations = enVariations && Object.keys(enVariations).length > 0;
+    const hasNbPluralVariations = nbVariations && Object.keys(nbVariations).length > 0;
 
     // Check for simple stringUnit
+    const enStringUnit = value.localizations?.en?.stringUnit;
+    const nbStringUnit = value.localizations?.nb?.stringUnit;
+
     // In xcstrings, the key itself is the English value when no explicit en localization exists
     // BUT only use key fallback if there are no plural variations (those need special handling)
-    const enStringUnit = value.localizations?.en?.stringUnit;
     const englishValue = enStringUnit?.value ?? (hasPluralVariations ? null : key);
+    const norwegianValue = nbStringUnit?.value;
+
+    // Check if English is missing but Norwegian exists (for simple strings)
+    if (!enStringUnit?.value && norwegianValue && !hasPluralVariations && !shouldSkipString(key, norwegianValue)) {
+      stringsNeedingEnglish.push({
+        id: `en${idCounter++}`,
+        key,
+        norwegian: norwegianValue,
+        type: "simple",
+      });
+    }
 
     if (englishValue !== null) {
-      // Get Norwegian translation as reference (manually verified)
-      const norwegianValue = value.localizations?.nb?.stringUnit?.value;
-
       for (const targetLang of TARGET_LANGUAGES) {
         const hasTranslation =
           value.localizations?.[targetLang.code]?.stringUnit?.value !== undefined;
@@ -362,7 +419,7 @@ async function translateXcstrings(filePath) {
         if (!englishValue) continue;
 
         // Get Norwegian plural variation as reference
-        const norwegianValue =
+        const nbPluralValue =
           value.localizations?.nb?.variations?.plural?.[pluralForm]?.stringUnit?.value;
 
         for (const targetLang of TARGET_LANGUAGES) {
@@ -379,20 +436,100 @@ async function translateXcstrings(filePath) {
               type: "plural",
               pluralForm,
             };
-            if (norwegianValue !== undefined) {
-              item.norwegian = norwegianValue;
+            if (nbPluralValue !== undefined) {
+              item.norwegian = nbPluralValue;
             }
             stringsToTranslate.push(item);
           }
         }
       }
     }
+
+    // Check for Norwegian plural variations missing English equivalents
+    if (hasNbPluralVariations && !hasPluralVariations) {
+      for (const [pluralForm, pluralData] of Object.entries(nbVariations)) {
+        const nbPluralValue = pluralData.stringUnit?.value;
+        if (!nbPluralValue || shouldSkipString(key, nbPluralValue)) continue;
+
+        stringsNeedingEnglish.push({
+          id: `en${idCounter++}`,
+          key,
+          norwegian: nbPluralValue,
+          type: "plural",
+          pluralForm,
+        });
+      }
+    }
   }
 
-  console.log(`Found ${stringsToTranslate.length} strings needing translation`);
+  // First, translate Norwegian to English for strings missing English
+  if (stringsNeedingEnglish.length > 0) {
+    console.log(`Found ${stringsNeedingEnglish.length} strings needing English translation (from Norwegian)`);
+
+    const BATCH_SIZE = 30;
+    const batches = [];
+    for (let i = 0; i < stringsNeedingEnglish.length; i += BATCH_SIZE) {
+      batches.push(stringsNeedingEnglish.slice(i, i + BATCH_SIZE));
+    }
+
+    for (const batch of batches) {
+      try {
+        const translations = await translateBatchToEnglish(batch);
+
+        for (const item of batch) {
+          const translation = translations[item.id];
+          if (!translation) {
+            stats.skippedNoTranslation++;
+            continue;
+          }
+
+          // Validate format specifiers
+          if (!validateFormatSpecifiers(item.norwegian, translation)) {
+            console.log(`  ⚠ Format mismatch for "${item.key}": nb="${item.norwegian}" -> en="${translation}"`);
+            stats.skippedFormatMismatch++;
+            continue;
+          }
+
+          // Apply English translation
+          if (item.type === "simple") {
+            deepSet(
+              data.strings[item.key],
+              ["localizations", "en", "stringUnit"],
+              { state: "translated", value: translation }
+            );
+          } else if (item.type === "plural") {
+            deepSet(
+              data.strings[item.key],
+              ["localizations", "en", "variations", "plural", item.pluralForm, "stringUnit"],
+              { state: "translated", value: translation }
+            );
+          }
+
+          stats.translated++;
+        }
+      } catch (error) {
+        console.error(`  ✗ Error translating to English: ${error.message}`);
+        stats.errors.push(`Norwegian->English: ${error.message}`);
+      }
+    }
+
+    // Save progress after English translations
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+    console.log(`✓ Added ${stringsNeedingEnglish.length} English translations from Norwegian`);
+  }
+
+  console.log(`Found ${stringsToTranslate.length} strings needing translation to other languages`);
+
+  if (stringsToTranslate.length === 0 && stringsNeedingEnglish.length === 0) {
+    console.log("Nothing to translate!");
+    return;
+  }
 
   if (stringsToTranslate.length === 0) {
-    console.log("Nothing to translate!");
+    // Only had English translations to add, we're done
+    currentFileData = null;
+    currentFilePath = null;
+    console.log(`\n✓ Completed: ${filePath}`);
     return;
   }
 

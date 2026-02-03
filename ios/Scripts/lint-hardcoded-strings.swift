@@ -70,8 +70,9 @@ private let uiPatterns: [(regex: NSRegularExpression, name: String)] = {
 // Patterns that are OK (not violations)
 private let allowedPatterns: [NSRegularExpression] = {
     let patterns = [
-        // Empty strings
+        // Empty strings and whitespace-only
         #"Text\(\s*""\s*\)"#,
+        #"Text\(\s*"\s+"\s*\)"#,
 
         // String interpolation (likely dynamic)
         #"Text\(\s*".*\\.*""#,
@@ -104,7 +105,26 @@ private let allowedPatterns: [NSRegularExpression] = {
         #"String\(localized:"#,
 
         // LocalizedStringKey
-        #"LocalizedStringKey"#
+        #"LocalizedStringKey"#,
+
+        // Universal symbols and separators (not localizable)
+        #"Text\(\s*"[·•−+–→—|%]"\s*\)"#,
+
+        // Time/number format hints in TextFields (e.g., "00:00", "000000", "123456")
+        #"TextField\(\s*"[0-9:]+""#,
+
+        // Country codes (e.g., "+47")
+        #"Text\(\s*"\+\d+""#,
+
+        // System button labels (OK, Cancel - handled by iOS)
+        #"Button\(\s*"OK""#,
+
+        // Em dash for "no value" placeholder
+        #"Text\(\s*"—"\s*\)"#,
+        #"Text\(\s*"---"\s*\)"#,
+
+        // Time placeholder format
+        #"Text\(\s*"--:--"\s*\)"#
     ]
 
     return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: [.caseInsensitive]) }
@@ -117,7 +137,9 @@ private let skipPaths = [
     "Tests.swift",
     "Mock",
     ".build/",
-    "DerivedData/"
+    "DerivedData/",
+    "/Admin/",
+    "DebugView.swift"
 ]
 
 // MARK: - Main
@@ -222,8 +244,30 @@ private func scanFile(_ path: String) -> [Violation] {
     var violations: [Violation] = []
     let lines = content.components(separatedBy: .newlines)
 
+    // Track #Preview blocks to skip them
+    var inPreviewBlock = false
+    var previewBraceDepth = 0
+
     for (index, line) in lines.enumerated() {
         let lineNumber = index + 1
+
+        // Check if entering a #Preview block
+        if line.contains("#Preview") {
+            inPreviewBlock = true
+            previewBraceDepth = 0
+        }
+
+        // Track brace depth when in preview block
+        if inPreviewBlock {
+            previewBraceDepth += line.filter { $0 == "{" }.count
+            previewBraceDepth -= line.filter { $0 == "}" }.count
+
+            // Exit preview block when braces balance (and we've seen at least one open brace)
+            if previewBraceDepth <= 0 && line.contains("}") {
+                inPreviewBlock = false
+            }
+            continue // Skip all lines in preview blocks
+        }
 
         // Skip allowed patterns
         if isAllowedLine(line) {
@@ -286,7 +330,7 @@ private func run() {
     print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
     print("")
     print("To add a new string:")
-    print("  swift run --package-path ios/Scripts add-string --key \"feature.key\" --en \"English\" --nb \"Norwegian\"")
+    print("  add-string --key \"feature.key\" --en \"English\" --nb \"Norwegian\"")
 
     if config.strict {
         exit(1)

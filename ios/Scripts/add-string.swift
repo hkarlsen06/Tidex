@@ -17,6 +17,16 @@ private struct CatalogEntry: Codable {
 
 private struct CatalogLocalization: Codable {
     var stringUnit: CatalogStringUnit?
+    var variations: CatalogVariations?
+}
+
+private struct CatalogVariations: Codable {
+    var plural: [String: CatalogPluralForm]?
+    var device: [String: CatalogPluralForm]?
+}
+
+private struct CatalogPluralForm: Codable {
+    var stringUnit: CatalogStringUnit?
 }
 
 private struct CatalogStringUnit: Codable {
@@ -125,24 +135,50 @@ private func run() throws {
     var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
     // Check if key already exists
-    if catalog.strings[config.key] != nil {
-        throw AddStringError.keyAlreadyExists(config.key)
-    }
+    if var existingEntry = catalog.strings[config.key] {
+        // Key exists - check if we need to add missing translations
+        var localizations = existingEntry.localizations ?? [:]
+        var added: [String] = []
 
-    // Create new entry with en and nb translations
-    let newEntry = CatalogEntry(
-        extractionState: "manual",
-        localizations: [
-            "en": CatalogLocalization(
+        if localizations["en"] == nil {
+            localizations["en"] = CatalogLocalization(
                 stringUnit: CatalogStringUnit(state: "translated", value: config.englishValue)
-            ),
-            "nb": CatalogLocalization(
+            )
+            added.append("en")
+        }
+
+        if localizations["nb"] == nil {
+            localizations["nb"] = CatalogLocalization(
                 stringUnit: CatalogStringUnit(state: "translated", value: config.norwegianValue)
             )
-        ]
-    )
+            added.append("nb")
+        }
 
-    catalog.strings[config.key] = newEntry
+        if added.isEmpty {
+            throw AddStringError.keyAlreadyExists(config.key)
+        }
+
+        existingEntry.localizations = localizations
+        catalog.strings[config.key] = existingEntry
+
+        print("✓ Added missing translations (\(added.joined(separator: ", "))) to '\(config.key)'")
+    } else {
+        // Create new entry with en and nb translations
+        let newEntry = CatalogEntry(
+            extractionState: "manual",
+            localizations: [
+                "en": CatalogLocalization(
+                    stringUnit: CatalogStringUnit(state: "translated", value: config.englishValue)
+                ),
+                "nb": CatalogLocalization(
+                    stringUnit: CatalogStringUnit(state: "translated", value: config.norwegianValue)
+                )
+            ]
+        )
+
+        catalog.strings[config.key] = newEntry
+        print("✓ Added '\(config.key)' to string catalog")
+    }
 
     // Write back (pretty printed)
     let encoder = JSONEncoder()
@@ -158,7 +194,6 @@ private func run() throws {
     // Generate symbol name (convert key.like.this to keyLikeThis)
     let symbolName = generateSymbolName(from: config.key)
 
-    print("✓ Added '\(config.key)' to string catalog")
     print("")
     print("Usage in code:")
     print("  Text(.\(symbolName))")
