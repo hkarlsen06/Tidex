@@ -1,0 +1,11 @@
+Urmărește-ți schimburile de muncă și calculează salariul cu Tidex.
+
+Funcții:
+• Înregistrare ușoară a schimburilor cu ore de început și sfârșit
+• Calcul automat al salariului
+• Vizualizare calendar a tuturor schimburilor
+• Prezentare generale și statistici de câștiguri
+• Widget pentru acces rapid
+• Sincronizare pe dispozitive
+
+Perfect pentru angajați care doresc să urmărească orele de muncă și câștigurile.

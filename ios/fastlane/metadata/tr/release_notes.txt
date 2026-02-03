@@ -1,0 +1,10 @@
+- TotalCard ve Arkadaşlar ana ekran widget'ları eklendi
+- Face ID ve Touch ID ile biyometrik uygulama kilidi eklendi
+- Ekran görüntüsü yakalama ile vardiya ve takvim paylaşımı eklendi
+- Wagey AI sohbetinde görüntü desteği eklendi
+- Dil desteği 17 dile genişletildi
+- Geliştirilmiş klavye işleme ile saat girişi yeniden tasarlandı
+- Ayları değiştirmek için kaydırma hareketleri eklendi
+- Panoda yumuşak sayı animasyonları eklendi
+- Performans ve başlangıç hızı iyileştirildi
+- Hata düzeltmeleri ve diğer iyileştirmeler

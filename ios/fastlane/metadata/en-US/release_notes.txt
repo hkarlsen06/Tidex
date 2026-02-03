@@ -1,1 +1,10 @@
-Bug fixes and performance improvements.
+- Added TotalCard and Friends home screen widgets
+- Added biometric app lock with Face ID and Touch ID
+- Added shift and calendar sharing with screenshot capture
+- Added image support in Wagey AI chat
+- Expanded language support to 17 languages
+- Redesigned time inputs with improved keyboard handling
+- Added swipe gestures to change months
+- Added smooth number animations to dashboard
+- Improved performance and launch speed
+- Bug fixes and other improvements

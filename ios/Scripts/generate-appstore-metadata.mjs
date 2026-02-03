@@ -47,12 +47,14 @@ const PRIMARY_LOCALE = "en";
 // Maps Xcode locale codes to Fastlane/ASC folder names
 const ASC_FOLDER_MAP = {
   en: "en-US",
-  nb: "nb-NO",
+  "en-GB": "en-GB",
+  nb: "no",
   nn: "no",
   de: "de-DE",
   fr: "fr-FR",
   es: "es-ES",
-  it: "it-IT",
+  "es-MX": "es-MX",
+  it: "it",
   nl: "nl-NL",
   "pt-BR": "pt-BR",
   sv: "sv",
@@ -72,11 +74,16 @@ const ASC_FOLDER_MAP = {
   Base: null, // Skip Base locale
 };
 
+// Norwegian uses short name "Tidex", all others get translated "Tidex – [Payroll & Shifts]"
+const LOCALES_WITH_SHORT_NAME = new Set(["no"]);
+
 // Language names for translation prompts
 const LANGUAGE_NAMES = {
   de: "German",
   fr: "French",
-  es: "Spanish",
+  es: "Spanish (Spain)",
+  "es-MX": "Spanish (Mexico)",
+  "en-GB": "British English",
   it: "Italian",
   nl: "Dutch",
   "pt-BR": "Brazilian Portuguese",
@@ -201,6 +208,17 @@ async function metadataExists(folderName) {
 }
 
 /**
+ * Get the appropriate app name for a locale
+ * Norwegian uses "Tidex", all others use translated names from metadata
+ */
+function getAppNameForLocale(folderName, translatedName) {
+  if (LOCALES_WITH_SHORT_NAME.has(folderName)) {
+    return "Tidex";
+  }
+  return translatedName; // Use the translated name from metadata
+}
+
+/**
  * Write metadata files for a locale
  */
 async function writeMetadataFiles(folderName, metadata) {
@@ -210,7 +228,13 @@ async function writeMetadataFiles(folderName, metadata) {
 
   for (const field of FIELDS) {
     const filePath = path.join(localeDir, `${field}.txt`);
-    const content = metadata[field] || "";
+    let content = metadata[field] || "";
+
+    // Apply locale-specific app name override (Norwegian uses short name)
+    if (field === "name") {
+      content = getAppNameForLocale(folderName, content);
+    }
+
     await fs.writeFile(filePath, content + "\n", "utf-8");
   }
 }
@@ -267,7 +291,7 @@ async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale
 Translate the following App Store metadata to ${languageName}.
 
 CRITICAL RULES:
-1. Keep the app name "Tidex" unchanged
+1. For the app name: Keep "Tidex – " prefix unchanged, translate "Payroll & Shifts" to ${languageName}. Format: "Tidex – [translated phrase]". CRITICAL: Must be UNDER 30 characters total. If translation is too long, use shorter synonyms or abbreviations.
 2. Maintain the same structure and formatting (bullet points, line breaks)
 3. Keep keywords comma-separated WITHOUT spaces after commas
 4. Make translations natural and idiomatic for ${languageName} speakers
@@ -294,6 +318,31 @@ No markdown, no explanation, just the JSON object.`;
 }
 
 /**
+ * Validate character limits and throw error if exceeded
+ */
+function enforceCharacterLimits(metadata, locale) {
+  const errors = [];
+
+  if (metadata.name && metadata.name.length > FIELD_LIMITS.name) {
+    errors.push(`name is ${metadata.name.length}/${FIELD_LIMITS.name} chars: "${metadata.name}"`);
+  }
+
+  if (metadata.subtitle && metadata.subtitle.length > FIELD_LIMITS.subtitle) {
+    errors.push(`subtitle is ${metadata.subtitle.length}/${FIELD_LIMITS.subtitle} chars: "${metadata.subtitle}"`);
+  }
+
+  if (metadata.keywords && metadata.keywords.length > FIELD_LIMITS.keywords) {
+    errors.push(`keywords is ${metadata.keywords.length}/${FIELD_LIMITS.keywords} chars`);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`[${locale}] Character limits exceeded:\n  - ${errors.join("\n  - ")}`);
+  }
+
+  return metadata;
+}
+
+/**
  * Process a single locale translation
  */
 async function processLocale(locale, folderName, sourceMetadata, norwegianMetadata, client) {
@@ -311,7 +360,7 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
   }
 
   try {
-    const translated = await translateMetadata(
+    let translated = await translateMetadata(
       sourceMetadata,
       norwegianMetadata,
       locale,
@@ -319,10 +368,12 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
       client
     );
 
-    // Validate
+    // Enforce character limits
+    translated = enforceCharacterLimits(translated, locale);
+
+    // Validate (should pass now after enforcement)
     const errors = validateMetadata(translated, locale);
     if (errors.length > 0) {
-      // Log warnings but still write (truncation is ASC's problem)
       stats.errors.push(...errors.map((e) => `Warning: ${e}`));
     }
 

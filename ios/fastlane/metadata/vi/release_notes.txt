@@ -1,0 +1,10 @@
+- Thêm widget TotalCard và Bạn bè trên màn hình chính
+- Thêm khóa ứng dụng sinh học với Face ID và Touch ID
+- Thêm chia sẻ ca làm việc và lịch với chụp ảnh màn hình
+- Thêm hỗ trợ hình ảnh trong trò chuyện Wagey AI
+- Mở rộng hỗ trợ ngôn ngữ đến 17 ngôn ngữ
+- Thiết kế lại nhập liệu thời gian với xử lý bàn phím cải tiến
+- Thêm cử chỉ vuốt để thay đổi tháng
+- Thêm hoạt ảnh số mượt mà trên bảng điều khiển
+- Cải thiện hiệu suất và tốc độ khởi động
+- Sửa lỗi và cải tiến khác

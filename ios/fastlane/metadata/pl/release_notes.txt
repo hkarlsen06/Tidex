@@ -1,0 +1,10 @@
+- Dodane widgety TotalCard i Znajomi na ekran główny
+- Dodana biometryczna blokada aplikacji z Face ID i Touch ID
+- Dodany udostępnianie zmian i kalendarza z przechwytywaniem ekranu
+- Dodana obsługa obrazów w czacie Wagey AI
+- Rozszerzona obsługa języków do 17 języków
+- Przeprojektowane wprowadzanie czasu z ulepszoną obsługą klawiatury
+- Dodane gesty przesuwania do zmiany miesiąca
+- Dodane płynne animacje liczb na pulpicie
+- Ulepszona wydajność i szybkość uruchamiania
+- Poprawki błędów i inne ulepszenia

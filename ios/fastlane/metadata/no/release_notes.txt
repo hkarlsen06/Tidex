@@ -1,0 +1,10 @@
+- Lagt til TotalCard- og Vener-widgetar til heimeskjermen
+- Lagt til biometrisk app-lås med Face ID og Touch ID
+- Lagt til deling av vakter og kalender med skjermbilete
+- Lagt til bildestøtte i Wagey AI-chat
+- Utvidd språkstøtte til 17 språk
+- Redesigna tidsinntasting med forbetrad tastaturhåndtering
+- Lagt til sveipebevegelser for å byta månad
+- Lagt til myke tallanimerasjonar på dashbordet
+- Forbetrad yting og oppstartstid
+- Feilrettingar og andre forbetringer

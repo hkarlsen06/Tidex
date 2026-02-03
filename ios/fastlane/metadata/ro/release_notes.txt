@@ -1,0 +1,10 @@
+- Adăugate widgeturi TotalCard și Prieteni pe ecranul principal
+- Adăugat blocare aplicație biometrică cu Face ID și Touch ID
+- Adăugată partajare schimburi și calendar cu captură ecran
+- Adăugat suport imagini în chat-ul Wagey AI
+- Extins suportul limbii la 17 limbi
+- Redesignate intrări de timp cu gestionare îmbunătățită a tastaturii
+- Adăugate gesturi de glisare pentru schimbarea lunii
+- Adăugate animații netede de numere pe panou de control
+- Performanță și viteză de pornire îmbunătățite
+- Corecturi de erori și alte îmbunătățiri

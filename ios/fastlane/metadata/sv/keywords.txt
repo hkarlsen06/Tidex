@@ -1,0 +1,1 @@
+skift,spårare,lön,lönekalkylator,arbete,timmar,tid,klockslag,schema,inkomst

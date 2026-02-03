@@ -1,0 +1,10 @@
+- Añadidos widgets TotalCard y Amigos en la pantalla de inicio
+- Añadido bloqueo biométrico con Face ID y Touch ID
+- Añadida opción de compartir turnos y calendario con captura
+- Añadido soporte de imágenes en chat de Wagey AI
+- Ampliado soporte a 17 idiomas
+- Rediseñados inputs de tiempo con mejor manejo del teclado
+- Añadidos gestos de deslizamiento para cambiar mes
+- Añadidas animaciones suaves en el panel
+- Mejorado rendimiento y velocidad de inicio
+- Correcciones de errores y otras mejoras

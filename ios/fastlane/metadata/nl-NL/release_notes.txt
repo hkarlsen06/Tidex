@@ -1,0 +1,10 @@
+- TotalCard- en Vrienden-widgets voor startscherm toegevoegd
+- Biometrische app-vergrendeling met Face ID en Touch ID toegevoegd
+- Diensten- en kalenderdeling met schermafbeelding toegevoegd
+- Afbeeldingsondersteuning in Wagey AI-chat toegevoegd
+- Taalondersteuning uitgebreid tot 17 talen
+- Tijdinvoer opnieuw ontworpen met verbeterde toetsenbordafhandeling
+- Veegbewegingen om maanden te wijzigen toegevoegd
+- Vloeiende getalanimaties op dashboard toegevoegd
+- Prestaties en opstartsnelheid verbeterd
+- Bugfixes en andere verbeteringen
