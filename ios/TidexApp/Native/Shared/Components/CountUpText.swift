@@ -47,9 +47,11 @@ struct CountUpText: View {
                 } else {
                     // Non-digit characters (currency symbols, separators, spaces)
                     Text(String(character))
+                        .monospacedDigit()  // Ensures consistent spacing
                 }
             }
         }
+        .monospacedDigit()  // Apply tabular figures for consistent digit widths
         .accessibilityLabel(formattedText)
     }
 }
@@ -74,8 +76,9 @@ private struct RollingDigit: View {
     private let digits = Array(0...9)
 
     var body: some View {
-        // Hidden "0" to establish the frame size
+        // Hidden "0" to establish the frame size (with monospaced digits for consistent width)
         Text("0")
+            .monospacedDigit()
             .hidden()
             .overlay {
                 TimelineView(.animation(paused: animationStart == nil)) { timeline in
@@ -86,6 +89,7 @@ private struct RollingDigit: View {
                         VStack(spacing: 0) {
                             ForEach(digits, id: \.self) { d in
                                 Text("\(d)")
+                                    .monospacedDigit()
                                     .frame(height: geometry.size.height)
                             }
                         }

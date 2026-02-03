@@ -11,7 +11,8 @@
     "lint": "pnpm --filter next lint",
     "test": "pnpm --filter next test",
     "open-ios": "open ios/Tidex.xcodeproj",
-    "localization": "node ios/scripts/translate-xcstrings.mjs"
+    "localization": "node ios/scripts/translate-xcstrings.mjs",
+    "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh"
   },
   "pnpm": {
     "overrides": {

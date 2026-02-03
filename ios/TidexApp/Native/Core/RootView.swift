@@ -5,7 +5,6 @@ import SwiftUI
 struct RootView: View {
     // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
     @ObservedObject private var coordinator = AppCoordinator.shared
-    @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
     @ObservedObject private var biometricService = BiometricAuthService.shared
     // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
@@ -85,22 +84,11 @@ struct RootView: View {
                             userId: coordinator.userId ?? ""
                         )
                         .transition(.opacity)
-                    } else if celebrationManager.shouldShowCelebration, let data = celebrationManager.celebrationData {
-                        ShiftCompletionCelebrationView(
-                            data: data,
-                            onDismiss: {
-                                guard let userId = coordinator.userId, !userId.isEmpty else { return }
-                                celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
-                            }
-                        )
-                        .transition(.opacity)
                     } else if biometricService.isEnabled && biometricService.isLocked {
                         // Show lock screen instead of main content (prevents flash)
                         AppLockView()
-                            .transition(.opacity)
                     } else {
                         MainTabView()
-                            .transition(.opacity)
                     }
                 }
             }

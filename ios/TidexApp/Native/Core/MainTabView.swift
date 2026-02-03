@@ -15,6 +15,7 @@ struct MainTabView: View {
     @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
     @ObservedObject private var monthContext = SharedMonthContext.shared
     @ObservedObject private var impersonationManager = ImpersonationManager.shared
+    @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
 
     @State private var selectedTab: Tab = .home
 
@@ -98,9 +99,10 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Impersonation banner - shown when admin is impersonating another user
-            if impersonationManager.isImpersonating {
+        ZStack {
+            VStack(spacing: 0) {
+                // Impersonation banner - shown when admin is impersonating another user
+                if impersonationManager.isImpersonating {
                 ImpersonationBanner(
                     targetName: impersonationManager.impersonatedUserName ?? "Unknown",
                     expiresAt: impersonationManager.expiresAt,
@@ -161,7 +163,20 @@ struct MainTabView: View {
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: shouldShowMonthPicker)
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showListView)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: impersonationManager.isImpersonating)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: impersonationManager.isImpersonating)
+
+            // Celebration overlay - above everything including tab bar and month picker
+            if celebrationManager.shouldShowCelebration,
+               let data = celebrationManager.celebrationData {
+                CelebrationOverlay(
+                    data: data,
+                    onDismiss: {
+                        guard let userId = coordinator.userId else { return }
+                        celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
+                    }
+                )
+            }
+        }
         .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
             handlePendingDeepLink(deepLink)
         }

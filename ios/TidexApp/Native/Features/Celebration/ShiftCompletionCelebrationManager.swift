@@ -7,8 +7,13 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
     @Published var shouldShowCelebration: Bool = false
     @Published var celebrationData: CelebrationData?
 
+    /// Delay before showing celebration to allow TotalCard count-up animation to complete
+    /// TotalCard uses 0.8s animation, we add a small buffer
+    private static let displayDelay: UInt64 = 900_000_000 // 0.9 seconds in nanoseconds
+
     private var pendingState: CelebrationState?
     private var checkTask: Task<Void, Never>?
+    private var displayTask: Task<Void, Never>?
 
     private init() {}
 
@@ -16,8 +21,10 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
         userId: String,
         month: (year: Int, month: Int),
         shifts: [ShiftWithComputations],
-        dashboardData: DashboardData,
-        settings: UserSettings
+        displayValue: Double,
+        displayTaxEnabled: Bool,
+        currency: String,
+        includeVirtual: Bool = true
     ) {
         guard !userId.isEmpty else { return }
         guard !shouldShowCelebration else { return }
@@ -25,18 +32,20 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
         checkTask?.cancel()
 
         let shiftsSnapshot = shifts
-        let dashboardSnapshot = dashboardData
         let monthSnapshot = month
         let userIdSnapshot = userId
-        let currencySnapshot = settings.currency ?? dashboardData.currency
+        let displayValueSnapshot = displayValue
+        let displayTaxEnabledSnapshot = displayTaxEnabled
+        let currencySnapshot = currency
+        let includeVirtualSnapshot = includeVirtual
 
         checkTask = Task.detached(priority: .utility) { [weak self] in
             let now = Date()
             let completedIds = CelebrationDetector.completedShiftIds(
                 shifts: shiftsSnapshot,
-                now: now
+                now: now,
+                includeVirtual: includeVirtualSnapshot
             )
-            let display = CelebrationDetector.displayValue(dashboardData: dashboardSnapshot)
             let stateKey = CelebrationPersistence.stateKey(userId: userIdSnapshot, year: monthSnapshot.year, month: monthSnapshot.month)
             let previousState = CelebrationPersistence.loadState(forKey: stateKey)
 #if DEBUG
@@ -53,20 +62,24 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
             let newlyCompleted = CelebrationDetector.newlyCompletedShifts(
                 shifts: shiftsSnapshot,
                 previousCompletedIds: previousCompletedIds,
-                now: now
+                now: now,
+                includeVirtual: includeVirtualSnapshot
             )
 
             let baselineState = CelebrationState(
-                lastDisplayValue: display.value,
+                lastDisplayValue: displayValueSnapshot,
                 completedShiftIds: completedIds.sorted(),
-                displayTaxEnabled: display.taxEnabled
+                displayTaxEnabled: displayTaxEnabledSnapshot
             )
+
+            let eligibleShifts = includeVirtualSnapshot
+                ? shiftsSnapshot
+                : shiftsSnapshot.filter { !$0.isVirtual }
 
             let result: CelebrationResult
             if debugForce {
-                let completedShifts = shiftsSnapshot.filter { shift in
-                    if shift.isVirtual { return false }
-                    return Date.hasShiftEnded(
+                let completedShifts = eligibleShifts.filter { shift in
+                    Date.hasShiftEnded(
                         shiftDate: shift.shiftDate,
                         startTime: shift.startTime,
                         endTime: shift.endTime,
@@ -74,18 +87,18 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
                     )
                 }
                 let featuredShift = CelebrationDetector.selectHighestEarningShift(from: completedShifts)
-                    ?? shiftsSnapshot.first(where: { !$0.isVirtual })
+                    ?? eligibleShifts.first
 
                 if let featuredShift {
                     let previousDisplayValue = previousState?.lastDisplayValue
-                        ?? max(0, display.value - 1000)
-                    let animateFrom: Double? = previousState?.displayTaxEnabled != display.taxEnabled
-                        ? display.value
+                        ?? max(0, displayValueSnapshot - 1000)
+                    let animateFrom: Double? = previousState?.displayTaxEnabled != displayTaxEnabledSnapshot
+                        ? displayValueSnapshot
                         : nil
 
                     let data = CelebrationData(
                         previousDisplayValue: previousDisplayValue,
-                        newDisplayValue: display.value,
+                        newDisplayValue: displayValueSnapshot,
                         featuredShift: featuredShift,
                         completedShiftCount: completedShifts.count,
                         currency: currencySnapshot,
@@ -103,14 +116,14 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
                 result = .store(state: baselineState)
             } else if let featuredShift = CelebrationDetector.selectHighestEarningShift(from: newlyCompleted) {
                 var animateFrom: Double? = nil
-                if previousState?.displayTaxEnabled != display.taxEnabled {
+                if previousState?.displayTaxEnabled != displayTaxEnabledSnapshot {
                     // Avoid misleading count-up when tax basis changed.
-                    animateFrom = display.value
+                    animateFrom = displayValueSnapshot
                 }
 
                 let data = CelebrationData(
-                    previousDisplayValue: previousState?.lastDisplayValue ?? display.value,
-                    newDisplayValue: display.value,
+                    previousDisplayValue: previousState?.lastDisplayValue ?? displayValueSnapshot,
+                    newDisplayValue: displayValueSnapshot,
                     featuredShift: featuredShift,
                     completedShiftCount: newlyCompleted.count,
                     currency: currencySnapshot,
@@ -126,10 +139,95 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
 
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                if self.shouldShowCelebration {
-                    return
-                }
+                if self.shouldShowCelebration { return }
                 self.apply(result: result, stateKey: stateKey)
+            }
+        }
+    }
+
+    func checkForCelebrationFromLocal(userId: String) {
+        guard !userId.isEmpty else { return }
+        guard !shouldShowCelebration else { return }
+
+        checkTask?.cancel()
+
+        let userIdSnapshot = userId
+
+        checkTask = Task.detached(priority: .utility) { [weak self] in
+            let current = Date.currentYearMonth()
+
+            let maxAttempts = 5
+            let retryDelayNs: UInt64 = 300_000_000
+            var data: (settings: UserSettings, rawShifts: [ShiftRow], snapshots: [WageSnapshot], recurring: [RecurringShiftRow])?
+
+            for attempt in 1...maxAttempts {
+                if Task.isCancelled { break }
+                data = await MainActor.run { () -> (settings: UserSettings, rawShifts: [ShiftRow], snapshots: [WageSnapshot], recurring: [RecurringShiftRow])? in
+                    let settingsRepository = SettingsRepository.shared
+                    guard let settings = settingsRepository.getSettings(for: userIdSnapshot) else { return nil }
+
+                    let shiftsRepository = ShiftsRepository.shared
+                    let snapshotsRepository = SnapshotsRepository.shared
+                    let recurringShiftsRepository = RecurringShiftsRepository.shared
+
+                    let startDate = Date.firstDayOfMonthDate(year: current.year, month: current.month)
+                    let endDate = Date.lastDayOfMonthDate(year: current.year, month: current.month)
+
+                    let rawShifts = shiftsRepository.getShifts(
+                        for: userIdSnapshot,
+                        startDate: startDate,
+                        endDate: endDate
+                    )
+                    let snapshots = snapshotsRepository.getSnapshots(for: userIdSnapshot)
+                    let recurring = recurringShiftsRepository.getRecurringShifts(for: userIdSnapshot)
+
+                    return (settings, rawShifts, snapshots, recurring)
+                }
+
+                if data != nil {
+                    break
+                }
+
+                if attempt < maxAttempts {
+                    try? await Task.sleep(nanoseconds: retryDelayNs)
+                }
+            }
+
+            guard let data else { return }
+
+            let computedShifts = PayrollEngine.computeShiftsForMonth(
+                year: current.year,
+                month: current.month,
+                shifts: data.rawShifts,
+                recurring: data.recurring,
+                snapshots: data.snapshots,
+                settings: data.settings
+            )
+
+            let totals = PayrollEngine.summarizeShiftTotals(
+                shifts: computedShifts,
+                halfTaxMonth: data.settings.half_tax_month,
+                earningsMonth: current.month,
+                now: Date()
+            )
+
+            let displayTaxEnabled = computedShifts.first?.taxEnabled ?? false
+            let displayValue = displayTaxEnabled ? totals.completedNet : totals.completedGross
+            let currency = data.settings.currency ?? "kr"
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.checkForCelebration(
+                    userId: userIdSnapshot,
+                    month: current,
+                    shifts: computedShifts,
+                    displayValue: displayValue,
+                    displayTaxEnabled: displayTaxEnabled,
+                    currency: currency,
+                    includeVirtual: true
+                )
             }
         }
     }
@@ -137,6 +235,10 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
     func dismissCelebration(userId: String, month: (year: Int, month: Int)) {
         guard !userId.isEmpty else { return }
         let stateKey = CelebrationPersistence.stateKey(userId: userId, year: month.year, month: month.month)
+
+        // Cancel any pending display task
+        displayTask?.cancel()
+        displayTask = nil
 
         if let pendingState {
             CelebrationPersistence.saveState(pendingState, forKey: stateKey)
@@ -158,12 +260,26 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
     }
 #endif
 
-    private func apply(result: CelebrationResult, stateKey: String) {
+    private func apply(result: CelebrationResult, stateKey: String, immediate: Bool = false) {
         switch result {
         case .show(let data, let state):
             pendingState = state
             celebrationData = data
-            shouldShowCelebration = true
+
+            // Cancel any existing display task
+            displayTask?.cancel()
+
+            if immediate || AppCoordinator.shared.pendingDeepLink != nil {
+                // Show immediately for deep link launches
+                shouldShowCelebration = true
+            } else {
+                // Delay to allow TotalCard count-up animation to complete
+                displayTask = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: Self.displayDelay)
+                    guard !Task.isCancelled else { return }
+                    self?.shouldShowCelebration = true
+                }
+            }
         case .store(let state):
             CelebrationPersistence.saveState(state, forKey: stateKey)
             pendingState = nil
