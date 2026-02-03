@@ -15,6 +15,18 @@ struct DashboardView: View {
     /// State for showing push notification failure alert
     @State private var showPushFailureAlert = false
 
+    /// Selected shift for showing details sheet
+    @State private var selectedShift: ShiftWithComputations?
+
+    /// State for delete confirmation
+    @State private var showDeleteConfirmation = false
+    @State private var shiftToDelete: ShiftWithComputations?
+
+    /// State for recurring shift editing
+    @State private var recurringShiftToEdit: RecurringShiftRow?
+
+    /// Haptic feedback generator
+    private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     // iPad detection - hide logo on iPad
     private var isIPad: Bool {
@@ -132,6 +144,160 @@ struct DashboardView: View {
             }
         } message: {
             Text(.pushFailureMessage)
+        }
+        // Shift details sheet with full edit/delete capabilities
+        .sheet(item: $selectedShift) { shift in
+            ShiftDetailsSheet(
+                shift: shift,
+                onDelete: {
+                    selectedShift = nil
+                    // Small delay before showing delete confirmation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        shiftToDelete = shift
+                        showDeleteConfirmation = true
+                    }
+                },
+                onUpdate: { editResult in
+                    selectedShift = nil
+                    Task {
+                        await viewModel.updateShift(editResult)
+                    }
+                },
+                onEditRecurring: { recurringId in
+                    selectedShift = nil
+                    // Small delay to allow sheet to dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                            recurringShiftToEdit = recurring
+                        }
+                    }
+                },
+                tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        // Delete confirmation dialog
+        .confirmationDialog(
+            shiftToDelete?.isVirtual == true
+                ? String(localized: .shiftsExcludeConfirmTitle)
+                : String(localized: .shiftsDeleteConfirmTitle),
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                shiftToDelete?.isVirtual == true
+                    ? String(localized: .shiftsExcludeButton)
+                    : String(localized: .shiftsDeleteButton),
+                role: .destructive
+            ) {
+                if let shift = shiftToDelete {
+                    Task {
+                        await deleteShift(shift)
+                    }
+                }
+            }
+            Button(String(localized: .commonCancel), role: .cancel) {
+                shiftToDelete = nil
+            }
+        } message: {
+            Text(shiftToDelete?.isVirtual == true
+                ? .shiftsExcludeConfirmMessage
+                : .shiftsDeleteConfirmMessage)
+        }
+        // Recurring shift editor sheet
+        .sheet(item: $recurringShiftToEdit) { recurring in
+            RecurringShiftEditorSheet(
+                recurringShift: recurring,
+                onSave: { editResult in
+                    recurringShiftToEdit = nil
+                    Task {
+                        await updateRecurringShift(editResult)
+                    }
+                },
+                onDelete: {
+                    let recurringId = recurring.id
+                    recurringShiftToEdit = nil
+                    Task {
+                        await deleteRecurringShift(recurringId)
+                    }
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Shift Operations
+
+    /// Delete a shift (or exclude a virtual shift)
+    private func deleteShift(_ shift: ShiftWithComputations) async {
+        impactHaptic.impactOccurred()
+
+        do {
+            if shift.isVirtual {
+                // Virtual shift: add date to exclusions of parent recurring shift
+                guard let recurringId = shift.shift.recurring_id else {
+                    return
+                }
+                try await RecurringShiftsRepository.shared.addExclusion(
+                    id: recurringId,
+                    date: shift.shiftDate
+                )
+            } else {
+                // Regular shift: mark for deletion
+                try await ShiftsRepository.shared.deleteShift(id: shift.id)
+            }
+
+            // Reload to reflect changes
+            await viewModel.reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            // Error handling - could show an alert here
+        }
+
+        shiftToDelete = nil
+    }
+
+    /// Update a recurring shift pattern
+    private func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
+        do {
+            _ = try await RecurringShiftsRepository.shared.updateRecurringShift(
+                id: editResult.recurringId,
+                startTime: editResult.startTime,
+                endTime: editResult.endTime,
+                repeatIntervalWeeks: editResult.repeatIntervalWeeks,
+                selectedDays: editResult.selectedDays,
+                endCondition: editResult.endCondition
+            )
+
+            // Reload to reflect changes
+            await viewModel.reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            // Error handling - could show an alert here
+        }
+    }
+
+    /// Delete a recurring shift pattern
+    private func deleteRecurringShift(_ recurringId: String) async {
+        do {
+            try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
+
+            // Reload to reflect changes
+            await viewModel.reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            // Error handling - could show an alert here
         }
     }
 
@@ -322,13 +488,18 @@ struct DashboardView: View {
             if let featuredShift = data.featuredShift {
                 // Only show progress bar for active shifts (matching Next.js behavior)
                 let shiftProgress: Double? = countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
-                FeaturedShiftCard(
-                    shift: featuredShift,
-                    isToday: data.isFeaturedShiftToday,
-                    isBestShift: data.featuredShiftIsBestShift,
-                    countdownText: countdownManager.shiftCountdownText,
-                    progress: shiftProgress
-                )
+                Button {
+                    selectedShift = featuredShift
+                } label: {
+                    FeaturedShiftCard(
+                        shift: featuredShift,
+                        isToday: data.isFeaturedShiftToday,
+                        isBestShift: data.featuredShiftIsBestShift,
+                        countdownText: countdownManager.shiftCountdownText,
+                        progress: shiftProgress
+                    )
+                }
+                .buttonStyle(.plain)
             } else {
                 EmptyShiftCard()
             }

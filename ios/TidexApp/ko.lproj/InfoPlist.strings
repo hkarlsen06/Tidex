@@ -6,8 +6,17 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex는 프로필 사진을 촬영하기 위해 카메라 접근 권한이 필요합니다.";
 
 /* Face ID usage description */
 "NSFaceIDUsageDescription" = "Tidex는 Face ID를 사용하여 당신의 수입 데이터를 보호합니다. 오직 당신만이 당신의 소득을 볼 수 있어야 합니다.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex는 공유된 캘린더와 근무 이미지를 사진 라이브러리에 저장하기 위해 접근 권한이 필요합니다.";
