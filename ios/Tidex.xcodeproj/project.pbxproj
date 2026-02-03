@@ -89,6 +89,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Supporting/Info.plist,
 			);
 			target = 504EC3031FED79650016851F /* TidexApp */;
 		};
