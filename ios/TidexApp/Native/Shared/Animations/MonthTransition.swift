@@ -233,7 +233,7 @@ struct StaggeredCardsContainer<Content: View>: View {
 
 /// A sheet with wheel pickers for selecting month and year
 struct MonthYearPickerSheet: View {
-        @Binding var isPresented: Bool
+    @Binding var isPresented: Bool
     let currentYear: Int
     let currentMonth: Int
     let onSelect: (Int, Int) -> Void
@@ -249,9 +249,9 @@ struct MonthYearPickerSheet: View {
 
     // Month names (localized)
     private var monthNames: [String] {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: Locale.current.identifier)
-        return formatter.monthSymbols.map { $0.capitalized }
+        FormatterCache.monthNameFormatter(locale: .current)
+            .monthSymbols
+            .map { $0.capitalized }
     }
 
     /// Current real month/year for the "This month" button

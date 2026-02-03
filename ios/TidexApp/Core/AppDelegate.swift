@@ -25,12 +25,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private var apnsRegistrationInFlight = false
 
     private func shiftDateTimeFormatter() -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter
+        FormatterCache.shiftDateTimeFormatter(timeZone: .current)
     }
 
     private func minutes(from time: String) -> Int? {
@@ -55,6 +50,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        Task { @MainActor in
+            AppWarmup.shared.start()
+        }
+
         // Set notification center delegate
         UNUserNotificationCenter.current().delegate = self
 

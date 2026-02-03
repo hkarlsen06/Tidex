@@ -3,6 +3,8 @@ import Foundation
 // MARK: - Date + Tidex Extensions
 
 extension Date {
+    private static let gregorianCalendar = Calendar(identifier: .gregorian)
+
     // MARK: - Timezone
 
     /// User-local timezone (updates dynamically if the device timezone changes)
@@ -12,37 +14,24 @@ extension Date {
 
     /// Format date as ISO date string (YYYY-MM-DD)
     func toISODateString(in timeZone: TimeZone = Date.localTimeZone) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: self)
+        FormatterCache.isoDateFormatter(timeZone: timeZone).string(from: self)
     }
 
     /// Parse ISO date string (YYYY-MM-DD) to Date
     static func fromISODateString(_ string: String, in timeZone: TimeZone = Date.localTimeZone) -> Date? {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: string)
+        FormatterCache.isoDateFormatter(timeZone: timeZone).date(from: string)
     }
 
     /// Parse ISO date string as UTC
     static func fromISODateStringUTC(_ string: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        return formatter.date(from: string)
+        FormatterCache.iso8601DateOnlyUTCFormatter().date(from: string)
     }
 
     // MARK: - Year/Month Components
 
     /// Get year and month components
     func yearMonth(in timeZone: TimeZone = Date.localTimeZone) -> (year: Int, month: Int) {
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = Self.gregorianCalendar
         calendar.timeZone = timeZone
         let components = calendar.dateComponents([.year, .month], from: self)
         return (year: components.year ?? 1970, month: components.month ?? 1)
@@ -80,9 +69,8 @@ extension Date {
         components.year = year
         components.month = month + 1
         components.day = 0
-        let calendar = Calendar(identifier: .gregorian)
-        guard let date = calendar.date(from: components) else { return 30 }
-        return calendar.component(.day, from: date)
+        guard let date = gregorianCalendar.date(from: components) else { return 30 }
+        return gregorianCalendar.component(.day, from: date)
     }
 
     /// Get Date object for first day of month
@@ -91,7 +79,7 @@ extension Date {
         components.year = year
         components.month = month
         components.day = 1
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = gregorianCalendar
         calendar.timeZone = localTimeZone
         return calendar.date(from: components) ?? Date()
     }
@@ -102,7 +90,7 @@ extension Date {
         components.year = year
         components.month = month + 1
         components.day = 0
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = gregorianCalendar
         calendar.timeZone = localTimeZone
         return calendar.date(from: components) ?? Date()
     }
@@ -113,7 +101,7 @@ extension Date {
     ///   - month: The month (1-12)
     /// - Returns: Tuple of (startDate, endDate) for the visible calendar range
     static func visibleCalendarRange(year: Int, month: Int) -> (start: Date, end: Date) {
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = gregorianCalendar
         calendar.timeZone = localTimeZone
 
         let firstOfMonth = firstDayOfMonthDate(year: year, month: month)
@@ -141,7 +129,7 @@ extension Date {
 
     /// Get weekday (1-7 where 1=Monday, 7=Sunday) matching TypeScript conventions
     var tidexWeekday: Int {
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = Self.gregorianCalendar
         calendar.timeZone = Date.localTimeZone
         let weekday = calendar.component(.weekday, from: self)
         // Calendar: 1=Sunday, 2=Monday, ..., 7=Saturday
@@ -157,7 +145,7 @@ extension Date {
 
     /// Get weekday key (0-6 where 0=Sunday) for recurring shift selected_days
     var recurringWeekdayKey: Int {
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = Self.gregorianCalendar
         calendar.timeZone = Date.localTimeZone
         return calendar.component(.weekday, from: self) - 1
     }
@@ -190,7 +178,7 @@ extension Date {
               let toDate = fromISODateString(to) else {
             return 0
         }
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = gregorianCalendar
         calendar.timeZone = localTimeZone
         let fromMidnight = calendar.startOfDay(for: fromDate)
         let toMidnight = calendar.startOfDay(for: toDate)
@@ -228,7 +216,7 @@ extension Date {
         components.second = 0
         components.timeZone = localTimeZone
 
-        var calendar = Calendar(identifier: .gregorian)
+        var calendar = gregorianCalendar
         calendar.timeZone = localTimeZone
         return calendar.date(from: components)
     }
@@ -253,7 +241,7 @@ extension Date {
 
         // Handle cross-midnight shifts (e.g., 22:00-06:00)
         if endDate <= startDate {
-            endDate = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: endDate) ?? endDate
+            endDate = Self.gregorianCalendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
         }
 
         return endDate <= referenceDate

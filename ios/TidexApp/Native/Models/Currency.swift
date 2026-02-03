@@ -132,12 +132,10 @@ enum CurrencyConfig {
     /// Format an amount with the currency symbol
     static func format(_ amount: Double, currency: String, includeDecimals: Bool = false) -> String {
         let config = get(currency)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = includeDecimals ? 2 : 0
-        formatter.maximumFractionDigits = includeDecimals ? 2 : 0
-        formatter.locale = Locale(identifier: "nb_NO")
-
+        let formatter = FormatterCache.numberFormatter(
+            includeDecimals: includeDecimals,
+            locale: Locale(identifier: "nb_NO")
+        )
         let formattedNumber = formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
 
         switch config.display {
@@ -150,12 +148,10 @@ enum CurrencyConfig {
 
     /// Format an amount without the currency symbol (for breakdown displays)
     static func formatPlain(_ amount: Double, includeDecimals: Bool = false) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = includeDecimals ? 2 : 0
-        formatter.maximumFractionDigits = includeDecimals ? 2 : 0
-        formatter.locale = Locale(identifier: "nb_NO")
-
+        let formatter = FormatterCache.numberFormatter(
+            includeDecimals: includeDecimals,
+            locale: Locale(identifier: "nb_NO")
+        )
         return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
     }
 }

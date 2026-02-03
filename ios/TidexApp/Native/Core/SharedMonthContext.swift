@@ -14,6 +14,8 @@ final class SharedMonthContext: ObservableObject {
 
     static let shared = SharedMonthContext()
 
+    private static let gregorianCalendar = Calendar(identifier: .gregorian)
+
     // MARK: - Published State
 
     /// Currently displayed year
@@ -48,13 +50,8 @@ final class SharedMonthContext: ObservableObject {
         components.year = displayYear
         components.month = displayMonth
         components.day = 1
-        let calendar = Calendar(identifier: .gregorian)
-        guard let date = calendar.date(from: components) else { return "" }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM"
-        formatter.locale = Locale(identifier: Locale.current.identifier)
-        return formatter.string(from: date)
+        guard let date = Self.gregorianCalendar.date(from: components) else { return "" }
+        return FormatterCache.monthNameFormatter(locale: .current).string(from: date)
     }
 
     /// Combined publisher for year and month changes
