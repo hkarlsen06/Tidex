@@ -1,0 +1,10 @@
+- Lisätty TotalCard- ja Ystävät-widgetit kotinäyttöön
+- Lisätty biometrinen sovelluksen lukitus Face ID:llä ja Touch ID:llä
+- Lisätty vuorojen ja kalenterin jako kuvakaappauksella
+- Lisätty kuvatuki Wagey AI -chatissa
+- Laajennettu kielituki 17 kielelle
+- Uudelleen suunnitellut aika-syötteet parannetulla näppäimistön käsittelyllä
+- Lisätty pyyhkäisyeleet kuukauden vaihtamiseen
+- Lisätty sileät numeroanimaatiot koontinäyttöön
+- Parannettu suorituskykyä ja käynnistysnopeutta
+- Virheiden korjaukset ja muut parannukset

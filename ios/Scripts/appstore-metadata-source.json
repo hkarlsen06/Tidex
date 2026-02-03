@@ -3,18 +3,18 @@
   "$comment": "Source of truth for App Store metadata. Generator script creates .txt files from this.",
   "metadata": {
     "en": {
-      "name": "Tidex",
+      "name": "Tidex – Payroll & Shifts",
       "subtitle": "Shift & Wage Tracker",
       "description": "Track your work shifts and calculate your wages with Tidex.\n\nFeatures:\n• Easy shift logging with start/end times\n• Automatic wage calculations\n• Calendar view of all shifts\n• Earnings overview and statistics\n• Widget for quick access\n• Sync across devices\n\nPerfect for employees who want to keep track of their work hours and earnings.",
       "keywords": "shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings",
-      "release_notes": "Bug fixes and performance improvements."
+      "release_notes": "- Added TotalCard and Friends home screen widgets\n- Added biometric app lock with Face ID and Touch ID\n- Added shift and calendar sharing with screenshot capture\n- Added image support in Wagey AI chat\n- Expanded language support to 17 languages\n- Redesigned time inputs with improved keyboard handling\n- Added swipe gestures to change months\n- Added smooth number animations to dashboard\n- Improved performance and launch speed\n- Bug fixes and other improvements"
     },
     "nb": {
       "name": "Tidex",
       "subtitle": "Vakt- og lønnskalkulator",
       "description": "Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.\n\nFunksjoner:\n• Enkel vaktregistrering med start- og sluttider\n• Automatisk lønnsberegning\n• Kalendervisning av alle vakter\n• Inntektsoversikt og statistikk\n• Widget for rask tilgang\n• Synkronisering på tvers av enheter\n\nPerfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.",
       "keywords": "vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger",
-      "release_notes": "Feilrettinger og ytelsesforbedringer."
+      "release_notes": "- Lagt til TotalCard- og Venner-widgeter til hjemskjermen\n- Lagt til biometrisk app-lås med Face ID og Touch ID\n- Lagt til deling av vakter og kalender med skjermbilde\n- Lagt til bildestøtte i Wagey AI-chat\n- Utvidet språkstøtte til 17 språk\n- Redesignet tidsinntasting med forbedret tastaturhåndtering\n- Lagt til sveipebevegelser for å bytte måned\n- Lagt til myke tallanimasjoner på dashboardet\n- Forbedret ytelse og oppstartstid\n- Feilrettinger og andre forbedringer"
     }
   }
 }

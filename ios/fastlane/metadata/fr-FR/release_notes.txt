@@ -1,0 +1,10 @@
+- Ajout de widgets d'écran d'accueil TotalCard et Amis
+- Ajout de verrouillage biométrique avec Face ID et Touch ID
+- Ajout de partage d'horaires et calendrier avec capture d'écran
+- Ajout du support d'images dans le chat Wagey AI
+- Expansion du support linguistique à 17 langues
+- Redesign des saisies d'heure avec meilleure gestion du clavier
+- Ajout de gestes de balayage pour changer de mois
+- Ajout d'animations fluides des nombres au tableau de bord
+- Performances et vitesse de lancement améliorées
+- Corrections de bugs et autres améliorations

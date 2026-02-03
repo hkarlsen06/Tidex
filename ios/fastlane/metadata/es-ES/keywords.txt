@@ -1,0 +1,1 @@
+turno,tracker,salario,nómina,trabajo,horas,tiempo,reloj,horario,ganancias

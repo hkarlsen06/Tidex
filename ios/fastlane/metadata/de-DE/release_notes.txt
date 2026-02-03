@@ -1,0 +1,10 @@
+- TotalCard- und Freunde-Startbildschirm-Widgets hinzugefügt
+- Biometrische App-Sperre mit Face ID und Touch ID hinzugefügt
+- Schicht- und Kalenderfreigabe mit Screenshot-Erfassung hinzugefügt
+- Bildunterstützung im Wagey AI-Chat hinzugefügt
+- Sprachunterstützung auf 17 Sprachen erweitert
+- Zeiteingaben mit verbesserter Tastaturbehandlung überarbeitet
+- Wischgesten zum Wechsel des Monats hinzugefügt
+- Sanfte Zahlenanimationen im Dashboard hinzugefügt
+- Leistung und Startgeschwindigkeit verbessert
+- Fehlerbehebungen und weitere Verbesserungen

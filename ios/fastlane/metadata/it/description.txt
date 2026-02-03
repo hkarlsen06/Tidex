@@ -1,0 +1,11 @@
+Monitora i tuoi turni di lavoro e calcola le tue buste paga con Tidex.
+
+Funzionalità:
+• Registrazione facile dei turni con orari di inizio e fine
+• Calcolo automatico delle buste paga
+• Visualizzazione calendario di tutti i turni
+• Panoramica e statistiche dei guadagni
+• Widget per accesso rapido
+• Sincronizzazione tra dispositivi
+
+Perfetto per i dipendenti che desiderano monitorare le ore di lavoro e i guadagni.

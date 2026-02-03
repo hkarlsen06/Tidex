@@ -1,0 +1,10 @@
+- Aggiunti widget TotalCard e Amici alla schermata home
+- Aggiunto blocco app biometrico con Face ID e Touch ID
+- Aggiunta condivisione turni e calendario con cattura schermata
+- Aggiunto supporto immagini nella chat Wagey AI
+- Supporto linguistico esteso a 17 lingue
+- Input orari riprogettati con miglior gestione tastiera
+- Aggiunti gesti di scorrimento per cambiare mese
+- Aggiunte animazioni numeriche fluide al dashboard
+- Migliorata prestazione e velocità di avvio
+- Correzioni bug e altri miglioramenti

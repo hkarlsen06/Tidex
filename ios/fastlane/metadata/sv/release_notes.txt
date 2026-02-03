@@ -1,0 +1,10 @@
+- Lagt till TotalCard- och Vänner-widgetar för hemskärmen
+- Lagt till biometrisk applås med Face ID och Touch ID
+- Lagt till delning av skift och kalender med skärmdump
+- Lagt till bildstöd i Wagey AI-chatt
+- Utökad språkstöd till 17 språk
+- Omdesignad tidsinmatning med förbättrad tangentbordshantering
+- Lagt till svepgester för att byta månad
+- Lagt till mjuka sifferanimationer på instrumentpanelen
+- Förbättrad prestanda och uppstartstid
+- Buggfixar och andra förbättringar
