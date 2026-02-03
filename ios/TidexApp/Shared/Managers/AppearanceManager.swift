@@ -62,22 +62,9 @@ final class AppearanceManager: ObservableObject {
 
     /// UserDefaults key for caching theme locally
     private let themeKey = "cachedTheme"
-    private static let themeKeyStatic = "cachedTheme"
 
     /// UserDefaults key for calendar animation style
     private let calendarAnimationStyleKey = "calendarAnimationStyle"
-
-    // MARK: - Static Methods
-
-    /// Get the cached user interface style without requiring MainActor
-    /// Use this in SceneDelegate for initial window setup before the manager is accessed
-    static func cachedUserInterfaceStyle() -> UIUserInterfaceStyle {
-        if let cachedTheme = UserDefaults.standard.string(forKey: themeKeyStatic),
-           let theme = AppTheme(rawValue: cachedTheme) {
-            return theme.userInterfaceStyle
-        }
-        return .unspecified // Default to system
-    }
 
     // MARK: - Initialization
 
@@ -141,15 +128,6 @@ final class AppearanceManager: ObservableObject {
                 logger.debug("Applied \(self.theme.rawValue) (style: \(String(describing: style.rawValue))) to window and rootVC")
             }
         }
-    }
-
-    /// Apply theme to a specific window and its root view controller
-    /// Called by SceneDelegate after window creation to apply the cached theme
-    func applyToWindow(_ window: UIWindow) {
-        let style = theme.userInterfaceStyle
-        window.overrideUserInterfaceStyle = style
-        window.rootViewController?.overrideUserInterfaceStyle = style
-        logger.debug("Applied theme \(self.theme.rawValue) (style: \(String(describing: style.rawValue))) to window")
     }
 
     /// Load theme from user settings

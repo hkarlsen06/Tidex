@@ -30,10 +30,10 @@ final class BiometricAuthService: ObservableObject {
     @Published var isLocked: Bool = false
 
     /// Whether biometric authentication is currently in progress (used to suppress privacy blur)
-    /// Using nonisolated static for synchronous access from SceneDelegate
+    /// Using nonisolated static for synchronous access from AppLifecycleHandler
     nonisolated(unsafe) static var isCurrentlyAuthenticating: Bool = false
 
-    /// Static cache of isEnabled for synchronous access from SceneDelegate
+    /// Static cache of isEnabled for synchronous access from AppLifecycleHandler
     nonisolated(unsafe) static var isEnabledStatic: Bool = false
 
     // MARK: - Initialization

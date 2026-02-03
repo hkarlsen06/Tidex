@@ -652,7 +652,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Deep Link Handling
 
     /// Handle a deep link URL and set pendingDeepLink for navigation
-    /// Called from SceneDelegate when the app receives a tidex:// URL
+    /// Called from AppLifecycleHandler when the app receives a tidex:// URL
     ///
     /// Supported URL formats:
     /// - tidex://sharing?user=<userId> → Navigate to sharing tab and select the sharer
