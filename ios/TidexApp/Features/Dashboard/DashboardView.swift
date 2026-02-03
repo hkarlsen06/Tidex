@@ -486,7 +486,9 @@ struct DashboardView: View {
                     selectedShift = featuredShift
                 }
             } else {
-                EmptyShiftCard()
+                EmptyShiftCard(onAddShift: {
+                    selectedTab = .add
+                })
             }
         }
     }
