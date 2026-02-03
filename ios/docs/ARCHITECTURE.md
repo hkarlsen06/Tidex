@@ -7,8 +7,8 @@ The iOS app uses a **local-first, sync-based architecture** with clear separatio
 ## Directory Structure
 
 ```
-Native/
-├── Core/                    # App-wide coordination
+TidexApp/
+├── App/                     # App-wide coordination & lifecycle
 │   ├── AppCoordinator       # Central auth state & navigation (singleton)
 │   └── RootView             # Root navigation based on auth state
 ├── Features/                # Feature-specific screens & view models
@@ -29,7 +29,9 @@ Native/
 │   ├── Repositories/        # Local-first data access (ShiftsRepository, etc.)
 │   └── Sync/                # Bidirectional sync (SyncCoordinator)
 ├── Models/                  # Data models (Codable)
-└── Shared/                  # Reusable components & utilities
+├── Shared/                  # Reusable components & utilities
+├── Resources/               # Assets, localization, sounds
+└── Supporting/              # Info.plist, entitlements, storyboard
 ```
 
 ## Core Patterns
@@ -152,4 +154,3 @@ Native/
 - View models accept optional services for testing
 - SyncCoordinator has testable sync result tracking
 - PayrollCalculator is pure function (no side effects)
-
