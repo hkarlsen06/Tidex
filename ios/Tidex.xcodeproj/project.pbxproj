@@ -689,9 +689,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = TidexApp/App.entitlements;
+				CODE_SIGN_ENTITLEMENTS = TidexApp/Supporting/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_FILE = TidexApp/Info.plist;
+				INFOPLIST_FILE = TidexApp/Supporting/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -716,9 +716,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = TidexApp/AppRelease.entitlements;
+				CODE_SIGN_ENTITLEMENTS = TidexApp/Supporting/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_FILE = TidexApp/Info.plist;
+				INFOPLIST_FILE = TidexApp/Supporting/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
