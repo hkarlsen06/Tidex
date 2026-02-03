@@ -6,17 +6,11 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
-/* CFBundleDisplayName */
-"CFBundleDisplayName" = "Tidex";
-
-/* CFBundleName */
-"CFBundleName" = "Tidex";
-
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex需要访问相机来拍摄个人资料照片。";
 
 /* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex使用面容ID来保护您的收入数据的隐私。只有您应该看到您的收入。";
+"NSFaceIDUsageDescription" = "Tidex使用Face ID保护您的收入数据隐私。只有您能查看自己的收入信息。";
 
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex需要访问您的照片库以保存共享日历和班次图片。";
+"NSPhotoLibraryAddUsageDescription" = "Tidex需要访问您的照片库来保存日历和班次图片。";

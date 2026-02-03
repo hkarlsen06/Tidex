@@ -1,14 +1,551 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "---": {},
-    "—": {},
-    "%@": {},
+    "---": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
+        }
+      }
+    },
+    "—": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        }
+      }
+    },
     "%@ - %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "new",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ - %2$@"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
             "value": "%1$@ - %2$@"
           }
         }
@@ -21,6 +558,138 @@
             "state": "new",
             "value": "%1$@ – %2$@"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
         }
       }
     },
@@ -29,6 +698,138 @@
         "en": {
           "stringUnit": {
             "state": "new",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
             "value": "%1$@ · %2$@"
           }
         }
@@ -41,12 +842,270 @@
             "state": "new",
             "value": "%1$@ %2$@"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
         }
       }
     },
     "%lld": {
       "localizations": {
         "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        },
+        "ro": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld"
@@ -62,19 +1121,13 @@
             "value": "%1$lldd %2$@"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lldd %2$@"
-          }
-        },
         "nb": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
           }
         },
-        "es": {
+        "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
@@ -86,13 +1139,19 @@
             "value": "%1$lldd %2$@"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
           }
         },
-        "ko": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
@@ -104,18 +1163,6 @@
             "value": "%1$lldd %2$@"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lldd %2$@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld %2$@"
-          }
-        },
         "sv": {
           "stringUnit": {
             "state": "translated",
@@ -123,12 +1170,6 @@
           }
         },
         "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lldd %2$@"
-          }
-        },
-        "it": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
@@ -146,7 +1187,25 @@
             "value": "%1$lldd %2$@"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
         "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
@@ -165,6 +1224,30 @@
           }
         },
         "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@"
+          }
+        },
+        "ro": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@"
@@ -180,19 +1263,13 @@
             "value": "%1$lldd %2$@-%3$@"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lldd %2$@-%3$@"
-          }
-        },
         "nb": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
           }
         },
-        "es": {
+        "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
@@ -204,13 +1281,19 @@
             "value": "%1$lldd %2$@-%3$@"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
           }
         },
-        "ko": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
@@ -222,18 +1305,6 @@
             "value": "%1$lldd %2$@-%3$@"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lldd %2$@-%3$@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld %2$@-%3$@"
-          }
-        },
         "sv": {
           "stringUnit": {
             "state": "translated",
@@ -241,12 +1312,6 @@
           }
         },
         "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lldd %2$@-%3$@"
-          }
-        },
-        "it": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
@@ -264,7 +1329,25 @@
             "value": "%1$lldd %2$@-%3$@"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
         "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
@@ -283,6 +1366,30 @@
           }
         },
         "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lldd %2$@-%3$@"
+          }
+        },
+        "ro": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lldd %2$@-%3$@"
@@ -304,46 +1411,34 @@
             "value": "Aktiv"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activo"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Actif"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクティブ"
+            "value": "Activo"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "활성"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ativo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активна"
+            "value": "Attiva"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Actief"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativo"
           }
         },
         "sv": {
@@ -358,12 +1453,6 @@
             "value": "Aktiv"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attivo"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -376,28 +1465,70 @@
             "value": "Aktywny"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активна"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Активна"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティブ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "进行中"
+            "value": "活跃"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ใช้งานอยู่"
+            "value": "ใช้งาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Đang hoạt động"
+            "value": "Hoạt động"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktif"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ενεργή"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activ"
           }
         }
       }
@@ -413,49 +1544,37 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Freunde hinzufügen, um ihre Schichten zu sehen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añade amigos para ver sus turnos"
+            "value": "Fügen Sie Freunde hinzu, um deren Schichten zu sehen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajoutez des amis pour voir leurs horaires"
+            "value": "Ajoutez des amis pour voir leurs vactions"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "友人を追加してシフトを表示"
+            "value": "Agrega amigos para ver sus turnos"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "친구를 추가하여 근무 일정 보기"
+            "value": "Aggiungi amici per vedere i loro turni"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voeg vrienden toe om hun diensten te zien"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Adicione amigos para ver seus turnos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавьте друзей, чтобы видеть их смены"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voeg vrienden toe om hun shifts te zien"
           }
         },
         "sv": {
@@ -467,13 +1586,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tilføj venner for at se deres skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiungi amici per vedere i loro turni"
+            "value": "Tilføj venner for at se deres vagter"
           }
         },
         "fi": {
@@ -488,10 +1601,28 @@
             "value": "Dodaj znajomych, aby zobaczyć ich zmiany"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте друзей, чтобы видеть их смены"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Додайте друзів, щоб бачити їхні зміни"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人を追加してシフトを確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구를 추가하여 그들의 근무를 보세요"
           }
         },
         "zh-Hans": {
@@ -503,13 +1634,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เพิ่มเพื่อนเพื่อดูการทำงานของพวกเขา"
+            "value": "เพิ่มเพื่อนเพื่อดูเวลาทำงานของพวกเขา"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Thêm bạn để xem ca làm việc của họ"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legg til venner for å se deres vakter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vak zamanlarını görmek için arkadaş ekleyin"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Προσθέστε φίλους για να δείτε τις βάρδιές τους"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaugă prieteni pentru a vedea vactele lor"
           }
         }
       }
@@ -528,46 +1683,34 @@
             "value": "vor"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "hace"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "il y a"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "前"
+            "value": "hace"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "전"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "atrás"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "назад"
+            "value": "fa"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "geleden"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "atrás"
           }
         },
         "sv": {
@@ -582,12 +1725,6 @@
             "value": "siden"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "fa"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -600,10 +1737,28 @@
             "value": "temu"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "назад"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "тому назад"
+            "value": "тому"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전"
           }
         },
         "zh-Hans": {
@@ -621,7 +1776,31 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "trước đây"
+            "value": "trước đó"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "siden"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "önce"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "πριν"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "în urmă"
           }
         }
       }
@@ -640,46 +1819,34 @@
             "value": "vor Steuern"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "avant impôt"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "antes de impuestos"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "avant impôts"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "税抜き"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "세전"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "antes de impostos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "до налогов"
+            "value": "prima delle tasse"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "voor belasting"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "antes do imposto"
           }
         },
         "sv": {
@@ -694,12 +1861,6 @@
             "value": "før skat"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "lordo"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -712,10 +1873,28 @@
             "value": "przed podatkiem"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "до налогов"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "до податку"
+            "value": "до податків"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "税抜き"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "세전"
           }
         },
         "zh-Hans": {
@@ -735,6 +1914,30 @@
             "state": "translated",
             "value": "trước thuế"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "før skatt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vergi öncesi"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "πριν τη φορολογία"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "înainte de impozit"
+          }
         }
       }
     },
@@ -752,46 +1955,34 @@
             "value": "Tag"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "día"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "jour"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "日"
+            "value": "día"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "일"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "dia"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "день"
+            "value": "giorno"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "dag"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dia"
           }
         },
         "sv": {
@@ -806,12 +1997,6 @@
             "value": "dag"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "giorno"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -824,10 +2009,28 @@
             "value": "dzień"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "день"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "день"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
           }
         },
         "zh-Hans": {
@@ -846,6 +2049,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "ngày"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dag"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ημέρα"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zi"
           }
         }
       }
@@ -864,46 +2091,34 @@
             "value": "Tage"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "días"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "jours"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "日"
+            "value": "días"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "일"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "dias"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "дней"
+            "value": "giorni"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "dagen"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dias"
           }
         },
         "sv": {
@@ -918,12 +2133,6 @@
             "value": "dage"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "giorni"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -936,10 +2145,28 @@
             "value": "dni"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "дней"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "дні"
+            "value": "днів"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
           }
         },
         "zh-Hans": {
@@ -959,6 +2186,30 @@
             "state": "translated",
             "value": "ngày"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dager"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ημέρες"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zile"
+          }
         }
       }
     },
@@ -976,46 +2227,34 @@
             "value": "fertig"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "hecho"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "terminé"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "完了"
+            "value": "listo"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "완료"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "concluído"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "готово"
+            "value": "fatto"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "klaar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concluído"
           }
         },
         "sv": {
@@ -1027,13 +2266,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "udført"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "fatto"
+            "value": "færdig"
           }
         },
         "fi": {
@@ -1048,10 +2281,28 @@
             "value": "gotowe"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "готово"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "готово"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
           }
         },
         "zh-Hans": {
@@ -1063,13 +2314,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เสร็จสิ้น"
+            "value": "เสร็จ"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "hoàn thành"
+            "value": "hoàn tất"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ferdig"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bitti"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ολοκληρωμένο"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gata"
           }
         }
       }
@@ -1088,46 +2363,34 @@
             "value": "Fertig"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hecho"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Terminé"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "完了"
+            "value": "Listo"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "완료"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Concluído"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Готово"
+            "value": "Fatto"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Klaar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concluído"
           }
         },
         "sv": {
@@ -1139,13 +2402,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Udført"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fatto"
+            "value": "Færdig"
           }
         },
         "fi": {
@@ -1160,10 +2417,28 @@
             "value": "Gotowe"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готово"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Готово"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
           }
         },
         "zh-Hans": {
@@ -1175,13 +2450,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เสร็จสิ้น"
+            "value": "เสร็จ"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hoàn thành"
+            "value": "Hoàn tất"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferdig"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitti"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ολοκληρωμένο"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gata"
           }
         }
       }
@@ -1200,46 +2499,34 @@
             "value": "Endet"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finaliza"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se termine"
+            "value": "Fin"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "終了"
+            "value": "Fin"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "종료"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termina"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заканчивается"
+            "value": "Fine"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eindigt"
+            "value": "Einde"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fim"
           }
         },
         "sv": {
@@ -1251,13 +2538,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Slutter"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termina"
+            "value": "Slut"
           }
         },
         "fi": {
@@ -1272,10 +2553,28 @@
             "value": "Koniec"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конец"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Закінчується"
+            "value": "Закінчення"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종료"
           }
         },
         "zh-Hans": {
@@ -1295,6 +2594,30 @@
             "state": "translated",
             "value": "Kết thúc"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slutt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitiş"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Λήξη"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se încheie"
+          }
         }
       }
     },
@@ -1312,46 +2635,34 @@
             "value": "Freund"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amigo"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ami"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "友人"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "친구"
-          }
-        },
-        "pt-BR": {
+        "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Amigo"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Друг"
+            "value": "Amico"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Vriend"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amigo"
           }
         },
         "sv": {
@@ -1366,12 +2677,6 @@
             "value": "Ven"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amico"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -1384,10 +2689,28 @@
             "value": "Znajomy"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Друг"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Друг"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구"
           }
         },
         "zh-Hans": {
@@ -1407,6 +2730,30 @@
             "state": "translated",
             "value": "Bạn"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venn"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaş"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Φίλος"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prieten"
+          }
         }
       }
     },
@@ -1421,7 +2768,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schicht des Freundes"
+            "value": "Schicht eines Freundes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaction de l'ami"
           }
         },
         "es": {
@@ -1430,40 +2783,22 @@
             "value": "Turno del amigo"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Horaire de l'ami"
+            "value": "Turno dell'amico"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "友人のシフト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "친구 근무"
+            "value": "Dienst van vriend"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Turno do Amigo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Смена друга"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shift van vriend"
           }
         },
         "sv": {
@@ -1475,13 +2810,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vens skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turno dell'amico"
+            "value": "Vens vagt"
           }
         },
         "fi": {
@@ -1496,10 +2825,28 @@
             "value": "Zmiana znajomego"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Смена друга"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Змена друга"
+            "value": "Змина друга"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人のシフト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구의 근무"
           }
         },
         "zh-Hans": {
@@ -1511,13 +2858,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "การทำงานของเพื่อน"
+            "value": "เวลาทำงานของเพื่อน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Ca làm việc của bạn"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venns vakt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaşın Vakası"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Βάρδια φίλου"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vacta unui prieten"
           }
         }
       }
@@ -1533,7 +2904,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schichten der Freunde"
+            "value": "Schichten von Freunden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vactions des amis"
           }
         },
         "es": {
@@ -1542,40 +2919,22 @@
             "value": "Turnos de amigos"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Horaires des amis"
+            "value": "Turni degli amici"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "友人のシフト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "친구들의 근무"
+            "value": "Diensten van vrienden"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Turnos dos Amigos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Смены друзей"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shifts van vrienden"
           }
         },
         "sv": {
@@ -1587,13 +2946,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Venners skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turni degli amici"
+            "value": "Venners vagter"
           }
         },
         "fi": {
@@ -1608,10 +2961,28 @@
             "value": "Zmiany znajomych"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Смены друзей"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Змени друзів"
+            "value": "Змини друзів"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人のシフト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구들의 근무"
           }
         },
         "zh-Hans": {
@@ -1623,13 +2994,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "การทำงานของเพื่อน"
+            "value": "เวลาทำงานของเพื่อน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Ca làm việc của bạn bè"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venners vakter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaşların Vakaları"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Βάρδιες φίλων"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vactele prietenilor"
           }
         }
       }
@@ -1648,46 +3043,34 @@
             "value": "Stunden"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "horas"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "heures"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "時間"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시간"
-          }
-        },
-        "pt-BR": {
+        "es": {
           "stringUnit": {
             "state": "translated",
             "value": "horas"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "часов"
+            "value": "ore"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "uur"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "horas"
           }
         },
         "sv": {
@@ -1702,12 +3085,6 @@
             "value": "timer"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ore"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -1720,10 +3097,28 @@
             "value": "godzin"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "часов"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "годин"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간"
           }
         },
         "zh-Hans": {
@@ -1743,6 +3138,30 @@
             "state": "translated",
             "value": "giờ"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "timer"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "saat"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ώρες"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ore"
+          }
         }
       }
     },
@@ -1760,46 +3179,34 @@
             "value": "verbleibend"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "restante"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "restant"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "残り"
+            "value": "restante"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "남음"
+            "value": "rimasto"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "over"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "restante"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "осталось"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "resterend"
           }
         },
         "sv": {
@@ -1814,12 +3221,6 @@
             "value": "tilbage"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "rimaste"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -1832,10 +3233,28 @@
             "value": "pozostało"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "осталось"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "залишилось"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残り"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남음"
           }
         },
         "zh-Hans": {
@@ -1855,6 +3274,30 @@
             "state": "translated",
             "value": "còn lại"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "igjen"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kaldı"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "απομένουν"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rămas"
+          }
         }
       }
     },
@@ -1869,7 +3312,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Monatliches Gesamtergebnis"
+            "value": "Monatssumme"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total mensuel"
           }
         },
         "es": {
@@ -1878,10 +3327,58 @@
             "value": "Total mensual"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Total mensuel"
+            "value": "Totale mensile"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maandelijks totaal"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total Mensal"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Månadens total"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Månedens total"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuukauden yhteensä"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suma miesięczna"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Итого за месяц"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Місячний підсумок"
           }
         },
         "ja": {
@@ -1894,60 +3391,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "월간 합계"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Total Mensal"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Месячный итог"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Maandelijks totaal"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Månadssumma"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Månedssamtotal"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Totale mensile"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kuukauden kokonaismäärä"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suma miesięczna"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Загальна кількість за місяць"
           }
         },
         "zh-Hans": {
@@ -1965,7 +3408,31 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tổng tháng"
+            "value": "Tổng cộng hàng tháng"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Månedens total"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aylık Toplam"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μηνιαίο σύνολο"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total lunar"
           }
         }
       }
@@ -1984,46 +3451,34 @@
             "value": "Nächste Schicht"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prochaine vaction"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Próximo turno"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prochain horaire"
+            "value": "Prossimo turno"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "次のシフト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 근무"
+            "value": "Volgende dienst"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Próximo Turno"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Следующая смена"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Volgende shift"
           }
         },
         "sv": {
@@ -2035,13 +3490,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Næste skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prossimo turno"
+            "value": "Næste vagt"
           }
         },
         "fi": {
@@ -2056,10 +3505,28 @@
             "value": "Następna zmiana"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Следующая смена"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Наступна змена"
+            "value": "Наступна змина"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のシフト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 근무"
           }
         },
         "zh-Hans": {
@@ -2071,13 +3538,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "การทำงานครั้งต่อไป"
+            "value": "เวลาทำงานครั้งต่อไป"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ca tiếp theo"
+            "value": "Ca làm việc tiếp theo"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste vakt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki Vak"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επόμενη βάρδια"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Următoarea vactă"
           }
         }
       }
@@ -2096,46 +3587,34 @@
             "value": "Keine Schicht"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de vaction"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Sin turno"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucun horaire"
+            "value": "Nessun turno"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフトなし"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "근무 없음"
+            "value": "Geen dienst"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Sem turno"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нет смены"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geen shift"
           }
         },
         "sv": {
@@ -2147,13 +3626,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Intet skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessun turno"
+            "value": "Ingen vagt"
           }
         },
         "fi": {
@@ -2168,10 +3641,28 @@
             "value": "Brak zmiany"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет смены"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Немає змени"
+            "value": "Немає змини"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シフトなし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무 없음"
           }
         },
         "zh-Hans": {
@@ -2183,13 +3674,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ไม่มีการทำงาน"
+            "value": "ไม่มีเวลาทำงาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Không có ca"
+            "value": "Không có ca làm việc"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen vakt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vak yok"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Καμία βάρδια"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicio vactă"
           }
         }
       }
@@ -2208,46 +3723,34 @@
             "value": "Keine Schichten"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de vactions"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Sin turnos"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucun horaire"
+            "value": "Nessun turno"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフトなし"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "근무 없음"
+            "value": "Geen diensten"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Sem turnos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нет смен"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geen shifts"
           }
         },
         "sv": {
@@ -2259,13 +3762,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ingen skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessun turno"
+            "value": "Ingen vagter"
           }
         },
         "fi": {
@@ -2280,10 +3777,28 @@
             "value": "Brak zmian"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет смен"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Немає змін"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シフトなし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무 없음"
           }
         },
         "zh-Hans": {
@@ -2295,13 +3810,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ไม่มีการทำงาน"
+            "value": "ไม่มีเวลาทำงาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Không có ca"
+            "value": "Không có ca làm việc"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen vakter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vak yok"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Καμίες βάρδιες"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicio vactă"
           }
         }
       }
@@ -2317,31 +3856,31 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nächste Schicht eines Freundes anzeigen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ve el próximo turno de un amigo"
+            "value": "Sehen Sie die nächste Schicht eines Freundes"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voir le prochain horaire d'un ami"
+            "value": "Voir la prochaine vaction d'un ami"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "友人の次のシフトを確認"
+            "value": "Ver el próximo turno de un amigo"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "친구의 다음 근무 보기"
+            "value": "Vedi il prossimo turno di un amico"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zie de volgende dienst van een vriend"
           }
         },
         "pt-BR": {
@@ -2350,34 +3889,16 @@
             "value": "Veja o próximo turno de um amigo"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Посмотрите следующую смену друга"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zie de volgende shift van een vriend"
-          }
-        },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se väns nästa skift"
+            "value": "Se en väns nästa skift"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se en vens næste skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vedi il prossimo turno di un amico"
+            "value": "Se en vens næste vagt"
           }
         },
         "fi": {
@@ -2392,10 +3913,28 @@
             "value": "Zobacz następną zmianę znajomego"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотрите следующую смену друга"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Див наступну змену друга"
+            "value": "Дивіться наступну змину друга"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人の次のシフトを確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구의 다음 근무 보기"
           }
         },
         "zh-Hans": {
@@ -2407,13 +3946,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ดูการทำงานครั้งต่อไปของเพื่อน"
+            "value": "ดูเวลาทำงานครั้งต่อไปของเพื่อน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Xem ca tiếp theo của bạn"
+            "value": "Xem ca làm việc tiếp theo của một bạn"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se en venns neste vakt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir arkadaşının sonraki vakasını gör"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δείτε την επόμενη βάρδια ενός φίλου"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vezi următoarea vactă a unui prieten"
           }
         }
       }
@@ -2429,49 +3992,37 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kommende Schichten deiner Freunde anzeigen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mira los próximos turnos de tus amigos"
+            "value": "Sehen Sie die kommenden Schichten Ihrer Freunde"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voir les horaires à venir de vos amis"
+            "value": "Voir les vactions à venir de vos amis"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "友人の今後のシフトを確認"
+            "value": "Ver los próximos turnos de tus amigos"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "친구들의 예정된 근무 보기"
+            "value": "Vedi i prossimi turni dei tuoi amici"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zie aankomende diensten van je vrienden"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Veja os próximos turnos de seus amigos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Посмотрите предстоящие смены друзей"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zie de komende shifts van je vrienden"
           }
         },
         "sv": {
@@ -2483,13 +4034,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se dine venners kommende skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vedi i prossimi turni dei tuoi amici"
+            "value": "Se dine venners kommende vagter"
           }
         },
         "fi": {
@@ -2504,28 +4049,70 @@
             "value": "Zobacz nadchodzące zmiany swoich znajomych"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотрите предстоящие смены ваших друзей"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Див майбутні змени друзів"
+            "value": "Дивіться майбутні змини ваших друзів"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人の次のシフトを確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구들의 예정된 근무 보기"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "查看朋友们的即将到来的班次"
+            "value": "查看你朋友们的upcoming班次"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ดูการทำงานที่จะมาของเพื่อนของคุณ"
+            "value": "ดูเวลาทำงานที่กำลังจะมาถึงของเพื่อนๆ"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Xem ca làm việc sắp tới của bạn bè"
+            "value": "Xem các ca làm việc sắp tới của bạn bè"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se dine venners kommende vakter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaşlarının yaklaşan vakaları gör"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δείτε τις επερχόμενες βάρδιες των φίλων σας"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vezi vactele viitoare ale prietenilor tăi"
           }
         }
       }
@@ -2541,19 +4128,73 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dein monatliches Gesamtergebnis auf einen Blick"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ve tu total mensual de un vistazo"
+            "value": "Sehen Sie Ihre Monatssumme auf einen Blick"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voir votre total mensuel en un coup d'œil"
+            "value": "Voir le total mensuel en un coup d'œil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver el total mensual de un vistazo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedi il totale mensile in un'occhiata"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zie je maandelijks totaal in één oogopslag"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veja o total mensal em um relance"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se din månadstotal snabbt"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se månedens total med et blik"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näe kuukauden yhteensä silmäyksellä"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobacz sumę miesięczną w jednym spojrzeniu"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотрите итого за месяц с одного взгляда"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дивіться місячний підсумок з одного погляду"
           }
         },
         "ja": {
@@ -2568,76 +4209,46 @@
             "value": "월간 합계를 한눈에 보기"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Veja seu total mensal em um relance"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Посмотрите месячный итог одним взглядом"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zie je maandelijks totaal in één oogopslag"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se din månadssumma snabbt"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se dit månedssamtotal med det samme"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vedi il tuo totale mensile a colpo d'occhio"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näe kuukauden kokonaismäärä silmäyksellä"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobacz swoją sumę miesięczną na pierwszy rzut oka"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Див загальну кількість за місяць"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "一览月度总计"
+            "value": "一览你的月度总计"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ดูรวมรายเดือนของคุณในแบบสำรวจ"
+            "value": "ดูรวมรายเดือนได้ในแบบมองแวบเดียว"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Xem tổng tháng của bạn một cách nhanh chóng"
+            "value": "Xem tổng cộng hàng tháng trong nháy mắt"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se månedstotalen med ett blikk"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aylık toplamı bir bakışta görün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δείτε το μηνιαίο σύνολο με μια ματιά"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Văd totalul lunar dintr-o privire"
           }
         }
       }
@@ -2653,19 +4264,73 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine nächste Schicht auf einen Blick"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ve tu próximo turno de un vistazo"
+            "value": "Sehen Sie Ihre nächste Schicht auf einen Blick"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voir votre prochain horaire en un coup d'œil"
+            "value": "Voir votre prochaine vaction en un coup d'œil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver tu próximo turno de un vistazo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedi il tuo prossimo turno in un'occhiata"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zie je volgende dienst in één oogopslag"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veja seu próximo turno em um relance"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se nästa skift snabbt"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se næste vagt med et blik"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näe seuraava vuoro silmäyksellä"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobacz następną zmianę w jednym spojrzeniu"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотрите следующую смену с одного взгляда"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дивіться наступну змину з одного погляду"
           }
         },
         "ja": {
@@ -2680,76 +4345,46 @@
             "value": "다음 근무를 한눈에 보기"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Veja seu próximo turno em um relance"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Посмотрите свою следующую смену одним взглядом"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zie je volgende shift in één oogopslag"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se ditt nästa skift snabbt"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se dit næste skift med det samme"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vedi il tuo prossimo turno a colpo d'occhio"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näe seuraava vuoro silmäyksellä"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobacz swoją następną zmianę na pierwszy rzut oka"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Див наступну змену"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "一览下一班次"
+            "value": "一览你的下一班次"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ดูการทำงานครั้งต่อไปของคุณในแบบสำรวจ"
+            "value": "ดูเวลาทำงานครั้งต่อไปได้ในแบบมองแวบเดียว"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Xem ca tiếp theo của bạn một cách nhanh chóng"
+            "value": "Xem ca làm việc tiếp theo trong nháy mắt"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se neste vakt med ett blikk"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki vardiyayı bir bakışta görün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δείτε την επόμενη βάρδια με μια ματιά"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Văd următoarea tură dintr-o privire"
           }
         }
       }
@@ -2765,19 +4400,73 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine nächste Schicht auf dem Sperrbildschirm anzeigen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ve tu próximo turno en la pantalla de bloqueo"
+            "value": "Sehen Sie Ihre nächste Schicht auf dem Sperrbildschirm"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voir votre prochain horaire sur l'écran de verrouillage"
+            "value": "Voir votre prochaine vaction sur l'écran verrouillé"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver tu próximo turno en la pantalla de bloqueo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedi il prossimo turno sulla schermata di blocco"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zie je volgende dienst op het vergrendelingsscherm"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veja seu próximo turno na tela de bloqueio"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se nästa skift på låsskärmen"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se næste vagt på låseskjermen"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näe seuraava vuoro lukitulla näytöllä"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobacz następną zmianę na ekranie blokady"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотрите следующую смену на экране блокировки"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дивіться наступну змину на екрані блокування"
           }
         },
         "ja": {
@@ -2792,76 +4481,46 @@
             "value": "잠금 화면에서 다음 근무 보기"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Veja seu próximo turno na tela de bloqueio"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Посмотрите следующую смену на экране блокировки"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zie je volgende shift op het vergrendelingsscherm"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se ditt nästa skift på låsskärmen"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se dit næste skift på låseskærmen"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vedi il tuo prossimo turno sulla schermata di blocco"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näe seuraava vuoro lukitulla näytöllä"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobacz swoją następną zmianę na ekranie blokady"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Див наступну змену на екрані блокування"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在锁定屏幕上查看下一班次"
+            "value": "在锁屏上查看你的下一班次"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ดูการทำงานครั้งต่อไปของคุณบนหน้าจอล็อก"
+            "value": "ดูเวลาทำงานครั้งต่อไปบนหน้าจออื่น"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Xem ca tiếp theo của bạn trên màn hình khóa"
+            "value": "Xem ca làm việc tiếp theo trên màn hình khóa"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se neste vakt på låseskjermen"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki vardiyayı kilit ekranında görün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δείτε την επόμενη βάρδια στην οθόνη κλειδώματος"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Văd următoarea tură pe ecranul de blocare"
           }
         }
       }
@@ -2877,13 +4536,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Freund auswählen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecciona un amigo"
+            "value": "Wählen Sie einen Freund"
           }
         },
         "fr": {
@@ -2892,34 +4545,28 @@
             "value": "Sélectionnez un ami"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "友人を選択"
+            "value": "Selecciona un amigo"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "친구 선택"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecione um amigo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите друга"
+            "value": "Seleziona un amico"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Selecteer een vriend"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecione um amigo"
           }
         },
         "sv": {
@@ -2934,12 +4581,6 @@
             "value": "Vælg en ven"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seleziona un amico"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -2952,16 +4593,34 @@
             "value": "Wybierz znajomego"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите друга"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Виберіть друга"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人を選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구 선택"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择朋友"
+            "value": "选择一位朋友"
           }
         },
         "th": {
@@ -2974,6 +4633,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chọn một bạn"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velg ein venn"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir arkadaş seçin"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επιλέξτε έναν φίλο"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selectează un prieten"
           }
         }
       }
@@ -2989,19 +4672,73 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle einen Freund aus, um seine Schicht anzuzeigen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecciona un amigo para ver su turno"
+            "value": "Wählen Sie einen Freund, um deren Schicht anzuzeigen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sélectionnez un ami pour afficher son horaire"
+            "value": "Sélectionnez un ami pour afficher sa vaction"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecciona un amigo para mostrar su turno"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona un amico per visualizzare il suo turno"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecteer een vriend om hun dienst weer te geven"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecione um amigo para exibir seu turno"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Välj en vän för att visa deras skift"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg en ven for at vise deres vagt"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valitse ystävä näyttääksesi heidän vuoronsa"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz znajomego, aby wyświetlić jego zmianę"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите друга, чтобы показать его смену"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Виберіть друга, щоб показати його змину"
           }
         },
         "ja": {
@@ -3016,76 +4753,46 @@
             "value": "친구를 선택하여 근무 표시"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecione um amigo para exibir seu turno"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите друга, чтобы увидеть его смену"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecteer een vriend om hun shift weer te geven"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Välj en vän för att visa deras skift"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vælg en ven for at se deres skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seleziona un amico per visualizzare il suo turno"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Valitse ystävä nähdäksesi heidän vuoransa"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wybierz znajomego, aby wyświetlić jego zmianę"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Виберіть друга, щоб показати його змену"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择朋友以显示其班次"
+            "value": "选择一位朋友以显示他们的班次"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เลือกเพื่อนเพื่อแสดงการทำงานของพวกเขา"
+            "value": "เลือกเพื่อนเพื่อแสดงเวลาทำงานของพวกเขา"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Chọn một bạn để hiển thị ca làm việc của họ"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velg ein venn for å vise vakten deres"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vardiyasını göstermek için bir arkadaş seçin"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επιλέξτε έναν φίλο για να εμφανίσετε τη βάρδιά του"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selectează un prieten pentru a-i vedea tura"
           }
         }
       }
@@ -3104,46 +4811,34 @@
             "value": "Schicht"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vaction"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "turno"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "horaire"
+            "value": "turno"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "근무"
+            "value": "dienst"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "turno"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "смена"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "shift"
           }
         },
         "sv": {
@@ -3155,13 +4850,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "turno"
+            "value": "vagt"
           }
         },
         "fi": {
@@ -3176,10 +4865,28 @@
             "value": "zmiana"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "смена"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "змена"
+            "value": "змина"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シフト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무"
           }
         },
         "zh-Hans": {
@@ -3191,13 +4898,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "การทำงาน"
+            "value": "เวลาทำงาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ca"
+            "value": "ca làm việc"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vakt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vardiya"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "βάρδια"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tură"
           }
         }
       }
@@ -3216,46 +4947,34 @@
             "value": "Schicht"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaction"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Turno"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Horaire"
+            "value": "Turno"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "근무"
+            "value": "Dienst"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Turno"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Смена"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shift"
           }
         },
         "sv": {
@@ -3267,13 +4986,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turno"
+            "value": "Vagt"
           }
         },
         "fi": {
@@ -3288,10 +5001,28 @@
             "value": "Zmiana"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Смена"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Змена"
+            "value": "Змина"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シフト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무"
           }
         },
         "zh-Hans": {
@@ -3303,13 +5034,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "การทำงาน"
+            "value": "เวลาทำงาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ca"
+            "value": "Ca làm việc"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vakt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vardiya"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Βάρδια"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tură"
           }
         }
       }
@@ -3328,46 +5083,34 @@
             "value": "Schicht geplant"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vaction planifiée"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "turno planificado"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "horaire prévu"
+            "value": "turno pianificato"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフト予定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "근무 예정"
+            "value": "dienst gepland"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "turno planejado"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "смена запланирована"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "shift gepland"
           }
         },
         "sv": {
@@ -3379,13 +5122,7 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "skift planlagt"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "turno programmato"
+            "value": "vagt planlagt"
           }
         },
         "fi": {
@@ -3397,31 +5134,73 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "zaplanowana zmiana"
+            "value": "zmiana zaplanowana"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "смена запланирована"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "змена заплановано"
+            "value": "змина заплановна"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シフト予定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무 예정됨"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "班次已规划"
+            "value": "班次已计划"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "มีการทำงานวางแผนไว้"
+            "value": "มีการวางแผนเวลาทำงาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ca đã lên lịch"
+            "value": "ca làm việc được lên kế hoạch"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vakt planlagt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vardiya planlandı"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "βάρδια προγραμματισμένη"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tură planificată"
           }
         }
       }
@@ -3440,16 +5219,70 @@
             "value": "Schichten"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quarts"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "turnos"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "horaires"
+            "value": "turni"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diensten"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "turnos"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "skift"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vakter"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vuorot"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zmiany"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "смены"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "зміни"
           }
         },
         "ja": {
@@ -3464,60 +5297,6 @@
             "value": "근무"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "turnos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "смен"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "shifts"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "skift"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "skift"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "turni"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "vuoroja"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zmiany"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "змени"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -3527,13 +5306,37 @@
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "การทำงาน"
+            "value": "กะการทำงาน"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ca"
+            "value": "ca trực"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vakter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vardiyalar"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "βάρδιες"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "turi"
           }
         }
       }
@@ -3552,46 +5355,34 @@
             "value": "Schichten geplant"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quarts planifiés"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "turnos planificados"
           }
         },
-        "fr": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "horaires prévus"
+            "value": "turni pianificati"
           }
         },
-        "ja": {
+        "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "シフト予定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "근무 예정"
+            "value": "diensten gepland"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "turnos planejados"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "смен запланировано"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "shifts gepland"
           }
         },
         "sv": {
@@ -3603,19 +5394,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "skift planlagt"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "turni programmati"
+            "value": "vakter planlagt"
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "vuoroja suunniteltu"
+            "value": "vuorot suunniteltu"
           }
         },
         "pl": {
@@ -3624,28 +5409,70 @@
             "value": "zaplanowane zmiany"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "смены запланированы"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "змени заплановано"
+            "value": "зміни заплановані"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定されたシフト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예정된 근무"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "班次已规划"
+            "value": "已计划班次"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "มีการทำงานวางแผนไว้"
+            "value": "กะการทำงานที่วางแผนไว้"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ca đã lên lịch"
+            "value": "ca trực được lên kế hoạch"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vakter planlagt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vardiyalar planlandı"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "βάρδιες προγραμματισμένες"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "turi planificate"
           }
         }
       }
@@ -3664,46 +5491,34 @@
             "value": "Start"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "inicio"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "début"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始"
+            "value": "inicio"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "시작"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "início"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "начало"
+            "value": "inizio"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "start"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "início"
           }
         },
         "sv": {
@@ -3718,16 +5533,10 @@
             "value": "start"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "inizio"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "alku"
+            "value": "aloitus"
           }
         },
         "pl": {
@@ -3736,10 +5545,28 @@
             "value": "początek"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "начало"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "початок"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작"
           }
         },
         "zh-Hans": {
@@ -3759,6 +5586,30 @@
             "state": "translated",
             "value": "bắt đầu"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "start"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "başlangıç"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "έναρξη"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "start"
+          }
         }
       }
     },
@@ -3773,13 +5624,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "bis heute"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "hasta hoy"
+            "value": "Bislang"
           }
         },
         "fr": {
@@ -3788,34 +5633,28 @@
             "value": "à ce jour"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "本日時点"
+            "value": "hasta la fecha"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "현재까지"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "até hoje"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "по настоящий день"
+            "value": "ad oggi"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "tot heden"
+            "value": "tot nu toe"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "até agora"
           }
         },
         "sv": {
@@ -3830,46 +5669,82 @@
             "value": "til dato"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a oggi"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "tähän asti"
+            "value": "toistaiseksi"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "do dzisiaj"
+            "value": "dotychczas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "к настоящему времени"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "дотепер"
+            "value": "до дати"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "累計"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재까지"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "至今"
+            "value": "迄今为止"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ถึงวันที่"
+            "value": "จนถึงวันนี้"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "đến nay"
+            "value": "cho đến nay"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hittil"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "şimdiye kadar"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "μέχρι σήμερα"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "până acum"
           }
         }
       }
@@ -3888,46 +5763,34 @@
             "value": "Heute"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hoy"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Aujourd'hui"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "今日"
+            "value": "Hoy"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "오늘"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hoje"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сегодня"
+            "value": "Oggi"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Vandaag"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoje"
           }
         },
         "sv": {
@@ -3942,12 +5805,6 @@
             "value": "I dag"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oggi"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -3957,13 +5814,31 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dzisiaj"
+            "value": "Dziś"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сегодня"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Сьогодні"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
           }
         },
         "zh-Hans": {
@@ -3983,6 +5858,30 @@
             "state": "translated",
             "value": "Hôm nay"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I dag"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bugün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Σήμερα"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Astazi"
+          }
         }
       }
     },
@@ -4000,46 +5899,34 @@
             "value": "Morgen"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mañana"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Demain"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "明日"
+            "value": "Mañana"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "내일"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amanhã"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Завтра"
+            "value": "Domani"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Morgen"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amanhã"
           }
         },
         "sv": {
@@ -4054,12 +5941,6 @@
             "value": "I morgen"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Domani"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -4072,10 +5953,28 @@
             "value": "Jutro"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Завтра"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Завтра"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일"
           }
         },
         "zh-Hans": {
@@ -4095,6 +5994,30 @@
             "state": "translated",
             "value": "Ngày mai"
           }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I morgen"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yarın"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αύριο"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mâine"
+          }
         }
       }
     },
@@ -4112,46 +6035,34 @@
             "value": "Gestern"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ayer"
-          }
-        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Hier"
           }
         },
-        "ja": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "昨日"
+            "value": "Ayer"
           }
         },
-        "ko": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "어제"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ontem"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вчера"
+            "value": "Ieri"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
             "value": "Gisteren"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ontem"
           }
         },
         "sv": {
@@ -4166,12 +6077,6 @@
             "value": "I går"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ieri"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
@@ -4184,10 +6089,28 @@
             "value": "Wczoraj"
           }
         },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вчера"
+          }
+        },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Вчора"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昨日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
           }
         },
         "zh-Hans": {
@@ -4206,6 +6129,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hôm qua"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I går"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dün"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Χθες"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ieri"
           }
         }
       }

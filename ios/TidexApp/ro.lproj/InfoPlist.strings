@@ -1,0 +1,16 @@
+/* Romanian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex are nevoie de acces la cameră pentru a face o fotografie de profil.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex folosește Face ID pentru a proteja datele tale de câștiguri de priviri indiscrete. Doar tu ar trebui să vezi venitul tău.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex are nevoie de acces pentru a salva imaginile calendarului și turelor partajate în biblioteca ta foto.";

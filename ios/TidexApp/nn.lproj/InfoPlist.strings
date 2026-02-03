@@ -1,0 +1,16 @@
+/* Norwegian Nynorsk localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex treng kameratilgang for å ta eit profilbilete.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex brukar Face ID for å beskytte inntektsdataa dine. Berre du skal sjå inntekta di.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex treng tilgang til å lagra delte kalenderar og skiftbilete i fotogalleriet ditt.";
