@@ -20,16 +20,18 @@ struct SharedShiftRow: View {
             return ("", "", "")
         }
 
-        let formatter = DateFormatter()
+        let locale = Locale.current
 
-        formatter.dateFormat = "EEEE"
-        let dayName = formatter.string(from: date).capitalized
+        let dayName = FormatterCache.weekdayFormatter(locale: locale)
+            .string(from: date)
+            .capitalized
 
-        formatter.dateFormat = "d"
-        let dayNumber = formatter.string(from: date)
+        let dayNumber = FormatterCache.dayFormatter(locale: locale)
+            .string(from: date)
 
-        formatter.dateFormat = "MMM"
-        let monthName = formatter.string(from: date).lowercased()
+        let monthName = FormatterCache.shortMonthFormatter(locale: locale)
+            .string(from: date)
+            .lowercased()
 
         return (dayName, dayNumber, monthName)
     }

@@ -116,7 +116,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     private let recurringShiftsRepository: RecurringShiftsRepository
     private let syncCoordinator: SyncCoordinator
     private let monthContext: SharedMonthContext
-    private static nonisolated let gregorianCalendar = Calendar(identifier: .gregorian)
+    nonisolated private static let gregorianCalendar = Calendar(identifier: .gregorian)
 
     // MARK: - Published State
 

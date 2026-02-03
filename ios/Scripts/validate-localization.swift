@@ -89,6 +89,51 @@ private func parseConfig() -> Config {
     return Config(catalogURL: catalogURL)
 }
 
+private func findMissingLocalizations(in catalog: Catalog) -> [String] {
+    var missing: [String] = []
+    for (key, entry) in catalog.strings {
+        guard let localizations = entry.localizations, !localizations.isEmpty else { continue }
+        let locales = localizations.keys
+        if !locales.contains("en") || !locales.contains("nb") {
+            missing.append(key)
+        }
+    }
+    return missing
+}
+
+private func validatePlaceholders(
+    in catalog: Catalog
+) -> (missingEntries: [String], missingSpecifiers: [String]) {
+    var missingEntries: [String] = []
+    var missingSpecifiers: [String] = []
+
+    for (base, replacements) in placeholderMappings {
+        guard let entry = catalog.strings[base],
+              let localizations = entry.localizations,
+              !localizations.isEmpty else {
+            missingEntries.append(base)
+            continue
+        }
+
+        for (locale, localization) in localizations {
+            guard let value = localization.stringUnit?.value else {
+                missingSpecifiers.append("\(base) [\(locale)] missing value")
+                continue
+            }
+            for replacement in replacements where !value.contains(replacement.specifier) {
+                missingSpecifiers.append("\(base) [\(locale)] missing \(replacement.specifier)")
+            }
+        }
+    }
+    return (missingEntries, missingSpecifiers)
+}
+
+private func printIssues(_ items: [String], header: String) {
+    guard !items.isEmpty else { return }
+    print("\(header): \(items.count)")
+    items.forEach { print("  \($0)") }
+}
+
 private func run() throws {
     let config = parseConfig()
 
@@ -99,58 +144,18 @@ private func run() throws {
     let catalogData = try Data(contentsOf: config.catalogURL)
     let catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
-    var missingLocalizations: [String] = []
-    for (key, entry) in catalog.strings {
-        guard let localizations = entry.localizations, !localizations.isEmpty else {
-            continue
-        }
-        let locales = localizations.keys
-        if !locales.contains("en") || !locales.contains("nb") {
-            missingLocalizations.append(key)
-        }
-    }
+    let missingLocalizations = findMissingLocalizations(in: catalog)
+    let (missingEntries, missingSpecifiers) = validatePlaceholders(in: catalog)
 
-    var missingPlaceholderEntries: [String] = []
-    var missingPlaceholderSpecifiers: [String] = []
-    for (base, replacements) in placeholderMappings {
-        guard let entry = catalog.strings[base],
-              let localizations = entry.localizations,
-              !localizations.isEmpty else {
-            missingPlaceholderEntries.append(base)
-            continue
-        }
-
-        for (locale, localization) in localizations {
-            guard let value = localization.stringUnit?.value else {
-                missingPlaceholderSpecifiers.append("\(base) [\(locale)] missing value")
-                continue
-            }
-            for replacement in replacements where !value.contains(replacement.specifier) {
-                missingPlaceholderSpecifiers.append("\(base) [\(locale)] missing \(replacement.specifier)")
-            }
-        }
-    }
-
-    if missingLocalizations.isEmpty && missingPlaceholderEntries.isEmpty && missingPlaceholderSpecifiers.isEmpty {
+    let hasIssues = !missingLocalizations.isEmpty || !missingEntries.isEmpty || !missingSpecifiers.isEmpty
+    guard hasIssues else {
         print("Localization validation passed. Catalog entries: \(catalog.strings.count).")
         return
     }
 
-    if !missingLocalizations.isEmpty {
-        print("Missing localizations for entries: \(missingLocalizations.count)")
-        missingLocalizations.forEach { print("  \($0)") }
-    }
-
-    if !missingPlaceholderEntries.isEmpty {
-        print("Missing placeholder entries: \(missingPlaceholderEntries.count)")
-        missingPlaceholderEntries.forEach { print("  \($0)") }
-    }
-
-    if !missingPlaceholderSpecifiers.isEmpty {
-        print("Missing placeholder specifiers: \(missingPlaceholderSpecifiers.count)")
-        missingPlaceholderSpecifiers.forEach { print("  \($0)") }
-    }
-
+    printIssues(missingLocalizations, header: "Missing localizations for entries")
+    printIssues(missingEntries, header: "Missing placeholder entries")
+    printIssues(missingSpecifiers, header: "Missing placeholder specifiers")
     exit(1)
 }
 

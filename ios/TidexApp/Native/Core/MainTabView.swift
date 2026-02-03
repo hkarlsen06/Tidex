@@ -162,7 +162,7 @@ struct MainTabView: View {
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedTab)
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: shouldShowMonthPicker)
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showListView)
-        }
+            }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: impersonationManager.isImpersonating)
 
             // Celebration overlay - above everything including tab bar and month picker

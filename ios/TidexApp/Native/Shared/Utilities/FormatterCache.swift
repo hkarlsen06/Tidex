@@ -86,4 +86,34 @@ enum FormatterCache {
             return formatter
         }
     }
+
+    static func weekdayFormatter(locale: Locale = .current) -> DateFormatter {
+        cached("tidex.weekdayFormatter.\(locale.identifier)") {
+            let formatter = DateFormatter()
+            formatter.locale = locale
+            formatter.dateFormat = "EEEE"
+            return formatter
+        }
+    }
+
+    static func shortMonthFormatter(locale: Locale = .current) -> DateFormatter {
+        cached("tidex.shortMonthFormatter.\(locale.identifier)") {
+            let formatter = DateFormatter()
+            formatter.locale = locale
+            formatter.dateFormat = "MMM"
+            return formatter
+        }
+    }
+
+    static func compactCurrencyFormatter(locale: Locale = .current) -> NumberFormatter {
+        cached("tidex.compactCurrencyFormatter.\(locale.identifier)") {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 0
+            formatter.locale = locale
+            formatter.groupingSeparator = " "
+            return formatter
+        }
+    }
 }

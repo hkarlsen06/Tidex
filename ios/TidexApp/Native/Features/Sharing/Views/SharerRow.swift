@@ -120,6 +120,17 @@ struct SharerRow: View {
 private struct ShiftPreviewCard: View {
     let shift: SharedShiftData
     let status: ShiftPreviewStatus
+    private let schedule: ShiftSchedule?
+    private let formattedDate: String
+    private let formattedTimeRange: String
+
+    init(shift: SharedShiftData, status: ShiftPreviewStatus) {
+        self.shift = shift
+        self.status = status
+        self.schedule = Self.makeSchedule(for: shift)
+        self.formattedDate = Self.formatDate(shiftDate: shift.shift_date)
+        self.formattedTimeRange = Self.formatTimeRange(start: shift.start_time, end: shift.end_time)
+    }
 
     
     var body: some View {
@@ -171,40 +182,22 @@ private struct ShiftPreviewCard: View {
         let relativeText: String
     }
 
+    private struct ShiftSchedule {
+        let start: Date
+        let end: Date
+    }
+
     /// Compute current status, progress, and relative time for a given date
     private func computeStatus(at now: Date) -> ComputedStatus {
         var currentStatus = status
         var progress: Double = 0
         var secondsUntilEnd: Int = 0
-        guard let shiftDate = Date.fromISODateString(shift.shift_date) else {
+        guard let schedule else {
             return ComputedStatus(status: status, progress: 0, secondsUntilEnd: 0, relativeText: "")
         }
 
-        let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
-        let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
-
-        guard startComponents.count >= 2, endComponents.count >= 2 else {
-            return ComputedStatus(status: status, progress: 0, secondsUntilEnd: 0, relativeText: "")
-        }
-
-        let start = Calendar.current.date(
-            bySettingHour: startComponents[0],
-            minute: startComponents[1],
-            second: 0,
-            of: shiftDate
-        ) ?? shiftDate
-
-        var end = Calendar.current.date(
-            bySettingHour: endComponents[0],
-            minute: endComponents[1],
-            second: 0,
-            of: shiftDate
-        ) ?? shiftDate
-
-        // Handle cross-midnight
-        if end <= start {
-            end = Calendar.current.date(byAdding: .day, value: 1, to: end) ?? end
-        }
+        let start = schedule.start
+        let end = schedule.end
 
         // Compute status
         if now >= start && now <= end {
@@ -235,31 +228,64 @@ private struct ShiftPreviewCard: View {
 
     /// Format date: "Mandag · 15. januar" (Norwegian) or "Monday · 15 January" (English)
     /// Friends tab uses full month names for better readability
-    private var formattedDate: String {
-        guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
+    private static func formatDate(shiftDate: String) -> String {
+        guard let date = Date.fromISODateString(shiftDate) else { return "" }
 
-        // Get day name
-        let dayFormatter = DateFormatter()
-        dayFormatter.dateFormat = "EEEE"
-        let dayName = dayFormatter.string(from: date).capitalized
+        let locale = Locale.current
+        let dayName = FormatterCache.weekdayFormatter(locale: locale)
+            .string(from: date)
+            .capitalized
 
-        // Get day number (with locale-appropriate suffix)
         let dayNumber = Calendar.current.component(.day, from: date)
         let daySuffix = String(localized: .commonDaySuffix)
         let dayString = "\(dayNumber)\(daySuffix)"
 
-        // Get full month name for better readability in friends tab
-        dayFormatter.dateFormat = "MMMM"
-        let monthName = dayFormatter.string(from: date).lowercased()
+        let monthName = FormatterCache.monthNameFormatter(locale: locale)
+            .string(from: date)
+            .lowercased()
 
         return "\(dayName) · \(dayString) \(monthName)"
     }
 
     /// Format time range to match Next.js: "09:00 – 17:00" (with spaces around en-dash)
-    private var formattedTimeRange: String {
-        let start = String(shift.start_time.prefix(5))
-        let end = String(shift.end_time.prefix(5))
-        return "\(start) – \(end)"
+    private static func formatTimeRange(start: String, end: String) -> String {
+        let startTime = String(start.prefix(5))
+        let endTime = String(end.prefix(5))
+        return "\(startTime) – \(endTime)"
+    }
+
+    private static func makeSchedule(for shift: SharedShiftData) -> ShiftSchedule? {
+        guard let shiftDate = Date.fromISODateString(shift.shift_date) else {
+            return nil
+        }
+
+        let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
+        let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
+
+        guard startComponents.count >= 2, endComponents.count >= 2 else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+        let start = calendar.date(
+            bySettingHour: startComponents[0],
+            minute: startComponents[1],
+            second: 0,
+            of: shiftDate
+        ) ?? shiftDate
+
+        var end = calendar.date(
+            bySettingHour: endComponents[0],
+            minute: endComponents[1],
+            second: 0,
+            of: shiftDate
+        ) ?? shiftDate
+
+        if end <= start {
+            end = calendar.date(byAdding: .day, value: 1, to: end) ?? end
+        }
+
+        return ShiftSchedule(start: start, end: end)
     }
 
     /// Check if we're in the final countdown (last 60 seconds of active shift)
