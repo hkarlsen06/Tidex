@@ -12,17 +12,58 @@ You may run `xcodebuild` and prefer a simulator destination with a reasonable ti
 - API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
 - No API route: Subscription/entitlement data, settings, shifts - use Supabase client directly or RPC functions
 
-## Localization (String Catalogs)
+## Localization (REQUIRED for all UI strings)
 
-- Use Xcode-generated `LocalizedStringResource` symbols (auto from `Localizable.xcstrings`), not raw string keys.
-  - Example: `Text(.statsMonthlyGoalRemaining)` or `String(localized: .statsMonthlyGoalRemaining)`
-  - For formatted strings: `String(localized: .commonInDays(Int32(days)))` - format symbols become functions
-  - Note: `%lld` format specifiers generate `Int32` parameters, so wrap `Int` values with `Int32()`
-- Use system locale; do not override `.environment(\.locale, ...)`.
-- Prefer `FormatStyle` for numbers/dates/currency instead of `String(format:)`; use `String(focusYear)` when you must avoid locale grouping (e.g., years).
-- Catalog source of truth: `App/TidexApp/Localizable.xcstrings`
-- Scripts:
-  - Validate: `swift run --package-path App/Scripts validate-localization`
+**NEVER hardcode user-visible strings.** Every string shown to users must be localized.
+
+### Adding new strings (AI workflow)
+
+1. **Add the string to the catalog** with English and Norwegian:
+   ```bash
+   ./add-string --key "feature.context.description" --en "English text" --nb "Norwegian text"
+   ```
+
+2. **Use the symbol in code:**
+   ```swift
+   // Simple strings
+   Text(.featureContextDescription)
+   String(localized: .featureContextDescription)
+
+   // Formatted strings (symbols become functions)
+   Text(String(localized: .commonInDays(Int32(days))))
+   ```
+
+3. **Remind the user** to run the translation script for other languages:
+   ```bash
+   node ios/Scripts/translate-xcstrings.mjs
+   ```
+
+### Key naming convention
+
+- Format: `feature.context.description` (dot-separated, lowercase)
+- Symbol becomes camelCase: `feature.context.description` → `.featureContextDescription`
+- Examples:
+  - `settings.profile.saveButton` → `.settingsProfileSaveButton`
+  - `dashboard.earnings.title` → `.dashboardEarningsTitle`
+  - `common.cancel` → `.commonCancel`
+
+### Validation scripts
+
+```bash
+# Check for hardcoded strings in SwiftUI views
+./lint-strings
+
+# Validate string catalog integrity
+ios/Scripts/validate-localization.sh
+```
+
+### Rules
+
+- Use Xcode-generated `LocalizedStringResource` symbols, not raw string keys
+- `%lld` format specifiers generate `Int32` parameters - wrap `Int` with `Int32()`
+- Use system locale; do not override `.environment(\.locale, ...)`
+- Prefer `FormatStyle` for numbers/dates/currency instead of `String(format:)`
+- Catalog source: `ios/Resources/Localization/App/Localizable.xcstrings`
 
 ## Color System
 

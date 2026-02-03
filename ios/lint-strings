@@ -1,0 +1,4 @@
+#!/bin/bash
+# Check for hardcoded strings in iOS SwiftUI views
+# Usage: ./lint-strings [--strict]
+exec "$(dirname "$0")/Scripts/lint-hardcoded-strings.sh" "$@"
