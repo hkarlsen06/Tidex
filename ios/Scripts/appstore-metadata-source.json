@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Source of truth for App Store metadata. Generator script creates .txt files from this.",
+  "metadata": {
+    "en": {
+      "name": "Tidex",
+      "subtitle": "Shift & Wage Tracker",
+      "description": "Track your work shifts and calculate your wages with Tidex.\n\nFeatures:\n• Easy shift logging with start/end times\n• Automatic wage calculations\n• Calendar view of all shifts\n• Earnings overview and statistics\n• Widget for quick access\n• Sync across devices\n\nPerfect for employees who want to keep track of their work hours and earnings.",
+      "keywords": "shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings",
+      "release_notes": "Bug fixes and performance improvements."
+    },
+    "nb": {
+      "name": "Tidex",
+      "subtitle": "Vakt- og lønnskalkulator",
+      "description": "Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.\n\nFunksjoner:\n• Enkel vaktregistrering med start- og sluttider\n• Automatisk lønnsberegning\n• Kalendervisning av alle vakter\n• Inntektsoversikt og statistikk\n• Widget for rask tilgang\n• Synkronisering på tvers av enheter\n\nPerfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.",
+      "keywords": "vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger",
+      "release_notes": "Feilrettinger og ytelsesforbedringer."
+    }
+  }
+}

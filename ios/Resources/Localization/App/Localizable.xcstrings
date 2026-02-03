@@ -22337,6 +22337,18 @@
             "state": "translated",
             "value": "."
           }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "."
+          }
         }
       }
     },

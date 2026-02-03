@@ -1,0 +1,498 @@
+#!/usr/bin/env node
+
+/**
+ * App Store Metadata Generator
+ *
+ * Generates localized .txt files for Fastlane deliver from a structured JSON source.
+ * Reads supported locales from the Xcode project file (knownRegions).
+ * For source locales (en, nb), writes directly from the source JSON.
+ * For other locales, translates in parallel using Claude API.
+ *
+ * Usage:
+ *   node generate-appstore-metadata.mjs                  # Generate all metadata
+ *   node generate-appstore-metadata.mjs --validate-only  # Only validate, don't write
+ *   node generate-appstore-metadata.mjs --source-only    # Only write source locales
+ *   node generate-appstore-metadata.mjs --force          # Re-translate even if files exist
+ */
+
+import Anthropic from "@anthropic-ai/sdk";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+import { config } from "dotenv";
+import cliProgress from "cli-progress";
+import pLimit from "p-limit";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load env from next/.env.local
+config({ path: path.join(__dirname, "../../next/.env.local") });
+
+// Paths
+const XCODE_PROJECT_PATH = path.join(__dirname, "../Tidex.xcodeproj/project.pbxproj");
+const METADATA_SOURCE_PATH = path.join(__dirname, "appstore-metadata-source.json");
+const METADATA_OUTPUT_PATH = path.join(__dirname, "../fastlane/metadata");
+
+// Parse command line args
+const args = process.argv.slice(2);
+const validateOnly = args.includes("--validate-only");
+const sourceOnly = args.includes("--source-only");
+const forceRegenerate = args.includes("--force");
+
+// Source locales (manually maintained, not translated)
+const SOURCE_LOCALES = ["en", "nb"];
+const PRIMARY_LOCALE = "en";
+
+// App Store Connect folder name mapping
+// Maps Xcode locale codes to Fastlane/ASC folder names
+const ASC_FOLDER_MAP = {
+  en: "en-US",
+  nb: "nb-NO",
+  nn: "no",
+  de: "de-DE",
+  fr: "fr-FR",
+  es: "es-ES",
+  it: "it-IT",
+  nl: "nl-NL",
+  "pt-BR": "pt-BR",
+  sv: "sv",
+  da: "da",
+  fi: "fi",
+  pl: "pl",
+  ru: "ru",
+  uk: "uk",
+  tr: "tr",
+  el: "el",
+  ro: "ro",
+  ja: "ja",
+  ko: "ko",
+  "zh-Hans": "zh-Hans",
+  th: "th",
+  vi: "vi",
+  Base: null, // Skip Base locale
+};
+
+// Language names for translation prompts
+const LANGUAGE_NAMES = {
+  de: "German",
+  fr: "French",
+  es: "Spanish",
+  it: "Italian",
+  nl: "Dutch",
+  "pt-BR": "Brazilian Portuguese",
+  nn: "Norwegian Nynorsk",
+  sv: "Swedish",
+  da: "Danish",
+  fi: "Finnish",
+  pl: "Polish",
+  ru: "Russian",
+  uk: "Ukrainian",
+  tr: "Turkish",
+  el: "Greek",
+  ro: "Romanian",
+  ja: "Japanese",
+  ko: "Korean",
+  "zh-Hans": "Simplified Chinese",
+  th: "Thai",
+  vi: "Vietnamese",
+};
+
+// App Store metadata field constraints
+const FIELD_LIMITS = {
+  name: 30,
+  subtitle: 30,
+  description: 4000,
+  keywords: 100,
+  release_notes: 4000,
+};
+
+const FIELDS = ["name", "subtitle", "description", "keywords", "release_notes"];
+
+// Concurrency settings
+const CONCURRENCY = 10;
+
+// Stats tracking
+const stats = {
+  translated: 0,
+  skipped: 0,
+  errors: [],
+};
+
+// Track state for graceful shutdown
+let isShuttingDown = false;
+let currentMultibar = null;
+
+// Graceful shutdown handler
+async function handleShutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  if (currentMultibar) {
+    currentMultibar.stop();
+  }
+
+  console.log("\n\n⚠ Interrupt received. Partial progress has been saved.");
+  console.log("Run the script again to continue.\n");
+  process.exit(0);
+}
+
+process.on("SIGINT", handleShutdown);
+process.on("SIGTERM", handleShutdown);
+
+/**
+ * Read supported locales from Xcode project's knownRegions
+ */
+async function readProjectLocales() {
+  const content = await fs.readFile(XCODE_PROJECT_PATH, "utf-8");
+
+  const match = content.match(/knownRegions\s*=\s*\(\s*([\s\S]*?)\s*\);/);
+  if (!match) {
+    throw new Error("Could not find knownRegions in project.pbxproj");
+  }
+
+  const regions = match[1]
+    .split(",")
+    .map((r) => r.trim().replace(/"/g, ""))
+    .filter((r) => r.length > 0 && r !== "Base");
+
+  return regions;
+}
+
+/**
+ * Validate metadata field lengths
+ */
+function validateMetadata(metadata, locale) {
+  const errors = [];
+
+  for (const field of FIELDS) {
+    const value = metadata[field];
+    const limit = FIELD_LIMITS[field];
+
+    if (!value && value !== "") {
+      errors.push(`[${locale}] Missing required field: ${field}`);
+      continue;
+    }
+
+    if (value.length > limit) {
+      errors.push(
+        `[${locale}] ${field} exceeds limit: ${value.length}/${limit} characters`
+      );
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Check if metadata files already exist for a locale
+ */
+async function metadataExists(folderName) {
+  const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
+
+  try {
+    for (const field of FIELDS) {
+      const filePath = path.join(localeDir, `${field}.txt`);
+      await fs.access(filePath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Write metadata files for a locale
+ */
+async function writeMetadataFiles(folderName, metadata) {
+  const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
+
+  await fs.mkdir(localeDir, { recursive: true });
+
+  for (const field of FIELDS) {
+    const filePath = path.join(localeDir, `${field}.txt`);
+    const content = metadata[field] || "";
+    await fs.writeFile(filePath, content + "\n", "utf-8");
+  }
+}
+
+/**
+ * Retry with exponential backoff
+ */
+async function withRetry(fn, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isRetryable = error.status === 429 || error.status >= 500;
+      if (!isRetryable || attempt === maxRetries - 1) {
+        throw error;
+      }
+      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
+/**
+ * Extract JSON from potentially messy response
+ */
+function extractJson(text) {
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("No valid JSON object found in response");
+  }
+
+  let jsonText = text.slice(firstBrace, lastBrace + 1);
+
+  try {
+    return JSON.parse(jsonText);
+  } catch {
+    // Try fixing common issues
+    jsonText = jsonText
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/,(\s*[}\]])/g, "$1");
+
+    return JSON.parse(jsonText);
+  }
+}
+
+/**
+ * Translate metadata using Claude API
+ */
+async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, client) {
+  const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
+Translate the following App Store metadata to ${languageName}.
+
+CRITICAL RULES:
+1. Keep the app name "Tidex" unchanged
+2. Maintain the same structure and formatting (bullet points, line breaks)
+3. Keep keywords comma-separated WITHOUT spaces after commas
+4. Make translations natural and idiomatic for ${languageName} speakers
+5. Respect character limits: name (30), subtitle (30), keywords (100)
+
+Source metadata (English):
+${JSON.stringify(sourceMetadata, null, 2)}
+
+Reference translation (Norwegian Bokmål) - use this to understand intended meaning:
+${JSON.stringify(norwegianMetadata, null, 2)}
+
+Return ONLY a valid JSON object with these exact keys: name, subtitle, description, keywords, release_notes
+No markdown, no explanation, just the JSON object.`;
+
+  const response = await withRetry(() =>
+    client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    })
+  );
+
+  return extractJson(response.content[0].text.trim());
+}
+
+/**
+ * Process a single locale translation
+ */
+async function processLocale(locale, folderName, sourceMetadata, norwegianMetadata, client) {
+  if (isShuttingDown) return { status: "skipped", locale };
+
+  const languageName = LANGUAGE_NAMES[locale];
+  if (!languageName) {
+    return { status: "error", locale, error: `Unknown language: ${locale}` };
+  }
+
+  // Check if already exists (unless --force)
+  if (!forceRegenerate && (await metadataExists(folderName))) {
+    stats.skipped++;
+    return { status: "exists", locale };
+  }
+
+  try {
+    const translated = await translateMetadata(
+      sourceMetadata,
+      norwegianMetadata,
+      locale,
+      languageName,
+      client
+    );
+
+    // Validate
+    const errors = validateMetadata(translated, locale);
+    if (errors.length > 0) {
+      // Log warnings but still write (truncation is ASC's problem)
+      stats.errors.push(...errors.map((e) => `Warning: ${e}`));
+    }
+
+    await writeMetadataFiles(folderName, translated);
+    stats.translated++;
+    return { status: "success", locale };
+  } catch (error) {
+    stats.errors.push(`${locale}: ${error.message}`);
+    return { status: "error", locale, error: error.message };
+  }
+}
+
+async function main() {
+  console.log("App Store Metadata Generator");
+  console.log("============================\n");
+
+  // Read project locales
+  console.log("Reading locales from Xcode project...");
+  const projectLocales = await readProjectLocales();
+  console.log(`Found ${projectLocales.length} locales: ${projectLocales.join(", ")}\n`);
+
+  // Load source metadata
+  const sourceData = JSON.parse(await fs.readFile(METADATA_SOURCE_PATH, "utf-8"));
+  const { metadata } = sourceData;
+
+  // Validate source metadata
+  console.log("Validating source metadata...");
+  const allErrors = [];
+
+  for (const locale of SOURCE_LOCALES) {
+    if (metadata[locale]) {
+      const errors = validateMetadata(metadata[locale], locale);
+      allErrors.push(...errors);
+    } else {
+      allErrors.push(`Missing source metadata for locale: ${locale}`);
+    }
+  }
+
+  if (allErrors.length > 0) {
+    console.error("\n❌ Validation errors:");
+    allErrors.forEach((e) => console.error(`  - ${e}`));
+    process.exit(1);
+  }
+
+  console.log("✓ Source metadata validation passed\n");
+
+  if (validateOnly) {
+    console.log("Validation only mode - skipping file generation");
+    return;
+  }
+
+  // Write source locale metadata
+  console.log("Writing source locale metadata...");
+  for (const locale of SOURCE_LOCALES) {
+    const folderName = ASC_FOLDER_MAP[locale];
+    if (folderName && metadata[locale]) {
+      await writeMetadataFiles(folderName, metadata[locale]);
+      console.log(`  ✓ ${folderName}`);
+    }
+  }
+
+  if (sourceOnly) {
+    console.log("\n✓ Source-only mode complete");
+    return;
+  }
+
+  // Check for Claude API key
+  const apiKey = process.env.CLAUDE_API_KEY;
+  if (!apiKey) {
+    console.log("\n⚠ CLAUDE_API_KEY not set - skipping translations");
+    console.log("  Set CLAUDE_API_KEY in next/.env.local to enable translations");
+    return;
+  }
+
+  // Initialize client
+  const client = new Anthropic({ apiKey });
+
+  // Filter locales that need translation
+  const localesToTranslate = projectLocales.filter((locale) => {
+    // Skip source locales
+    if (SOURCE_LOCALES.includes(locale)) return false;
+    // Skip locales without ASC mapping
+    if (!ASC_FOLDER_MAP[locale]) return false;
+    // Skip if folder name is null (e.g., Base)
+    if (ASC_FOLDER_MAP[locale] === null) return false;
+    return true;
+  });
+
+  if (localesToTranslate.length === 0) {
+    console.log("\n✓ No additional locales to translate");
+    return;
+  }
+
+  console.log(`\nTranslating to ${localesToTranslate.length} locales...`);
+
+  // Create progress bar
+  const multibar = (currentMultibar = new cliProgress.MultiBar(
+    {
+      clearOnComplete: false,
+      hideCursor: true,
+      format: " {bar} | {label} | {value}/{total} | {status}",
+      barCompleteChar: "\u2588",
+      barIncompleteChar: "\u2591",
+    },
+    cliProgress.Presets.shades_classic
+  ));
+
+  const progressBar = multibar.create(localesToTranslate.length, 0, {
+    label: "Progress".padEnd(12),
+    status: "starting...",
+  });
+
+  // Process in parallel with concurrency limit
+  const limit = pLimit(CONCURRENCY);
+  let completed = 0;
+
+  const promises = localesToTranslate.map((locale) =>
+    limit(async () => {
+      if (isShuttingDown) return;
+
+      const folderName = ASC_FOLDER_MAP[locale];
+      const result = await processLocale(
+        locale,
+        folderName,
+        metadata[PRIMARY_LOCALE],
+        metadata.nb,
+        client
+      );
+
+      completed++;
+      const statusText =
+        result.status === "success"
+          ? `✓ ${locale}`
+          : result.status === "exists"
+            ? `⊘ ${locale} (exists)`
+            : `✗ ${locale}`;
+
+      progressBar.update(completed, {
+        status: statusText,
+      });
+
+      return result;
+    })
+  );
+
+  await Promise.all(promises);
+
+  // Cleanup
+  multibar.stop();
+  currentMultibar = null;
+
+  // Summary
+  console.log("\n" + "=".repeat(40));
+  console.log("SUMMARY");
+  console.log("=".repeat(40));
+  console.log(`✓ Translated: ${stats.translated}`);
+  console.log(`⊘ Skipped (existing): ${stats.skipped}`);
+
+  if (stats.errors.length > 0) {
+    console.log(`\n⚠ Warnings/Errors (${stats.errors.length}):`);
+    stats.errors.slice(0, 10).forEach((e) => console.log(`  - ${e}`));
+    if (stats.errors.length > 10) {
+      console.log(`  ... and ${stats.errors.length - 10} more`);
+    }
+  }
+
+  console.log("\n✓ Done!");
+}
+
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});

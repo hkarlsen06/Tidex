@@ -8,7 +8,12 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "screenshots": "./ASConnectScreenshots/resize-screenshots.sh"
+    "screenshots": "./ASConnectScreenshots/resize-screenshots.sh",
+    "generate-metadata": "node Scripts/generate-appstore-metadata.mjs",
+    "generate-metadata:force": "node Scripts/generate-appstore-metadata.mjs --force",
+    "generate-metadata:source-only": "node Scripts/generate-appstore-metadata.mjs --source-only",
+    "validate-metadata": "node Scripts/generate-appstore-metadata.mjs --validate-only",
+    "upload-metadata": "bundle exec fastlane ios upload_metadata"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,11 @@
+# App Store Connect App Identifier
+app_identifier("no.tidex.app")
+
+# Apple Developer Portal Team ID
+team_id("<DEV_TEAM_ID>")
+
+# Apple ID email (optional, only needed for certain operations)
+# apple_id("<APPLE_ID_EMAIL>")
+
+# App Store Connect Team ID (if different from dev team)
+# itc_team_id("<ITC_TEAM_ID>")

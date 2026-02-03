@@ -1,0 +1,1 @@
+shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings
