@@ -367,6 +367,21 @@ final class AppCoordinator: ObservableObject {
         backgroundTasks.removeAll()
     }
 
+    /// Run a background task and track it for cancellation/cleanup.
+    private func runTrackedTask(_ operation: @escaping @Sendable () async -> Void) {
+        var taskRef: Task<Void, Never>?
+        let task = Task { [weak self] in
+            await operation()
+            if let self = self, let task = taskRef {
+                await MainActor.run {
+                    self.backgroundTasks.removeAll { $0 == task }
+                }
+            }
+        }
+        taskRef = task
+        backgroundTasks.append(task)
+    }
+
     /// Load onboarding completion state from user metadata
     /// Called before setting appState to .authenticated to prevent PostAuthOnboarding flash
     private func loadOnboardingStateFromUser(_ user: User) {
@@ -419,7 +434,11 @@ final class AppCoordinator: ObservableObject {
             triggerInitialSync(userId: currentUserId)
 
             if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-                Task {
+                let expectedUserId = currentUserId
+                runTrackedTask { [weak self] in
+                    guard let self = self else { return }
+                    let isCurrent = await MainActor.run { self.userId == expectedUserId }
+                    guard isCurrent else { return }
                     await appDelegate.registerCachedAPNsTokenIfNeeded()
                 }
             }
@@ -455,13 +474,19 @@ final class AppCoordinator: ObservableObject {
         JWSUploadWorker.shared.processQueue()
 
         // 5. Refresh entitlement from server in background (non-blocking)
-        Task {
+        runTrackedTask { [weak self] in
+            guard let self = self else { return }
+            let isCurrent = await MainActor.run { self.userId == userId }
+            guard isCurrent else { return }
             try? await EntitlementService.shared.refreshFromServer(userId: userId)
             // Silent on success or failure - we have cache fallback
         }
 
         // 6. Load StoreKit products in background (for paywall)
-        Task {
+        runTrackedTask { [weak self] in
+            guard let self = self else { return }
+            let isCurrent = await MainActor.run { self.userId == userId }
+            guard isCurrent else { return }
             await StoreKitManager.shared.loadProducts()
         }
     }
@@ -471,21 +496,33 @@ final class AppCoordinator: ObservableObject {
     /// Trigger initial sync after authentication
     private func triggerInitialSync(userId: String) {
         initialSyncComplete = false
+        let coordinator = syncCoordinator
 
-        Task {
-            _ = await syncCoordinator.sync(reason: .appLaunch, userId: userId)
+        runTrackedTask { [weak self] in
+            guard let self = self else { return }
+            _ = await coordinator.sync(reason: .appLaunch, userId: userId)
 
-            initialSyncComplete = true
+            let settings = await MainActor.run { () -> UserSettings? in
+                guard self.userId == userId else { return nil }
+                self.initialSyncComplete = true
+                return SettingsRepository.shared.getSettings(for: userId)
+            }
 
-            // Update avatar and appearance from synced settings
-            if let settings = SettingsRepository.shared.getSettings(for: userId) {
-                userAvatarUrl = settings.profile_picture_url
-                AppearanceManager.shared.loadFromSettings(settings.theme)
-                AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(settings.calendar_animation_style)
+            if let settings {
+                await MainActor.run {
+                    self.userAvatarUrl = settings.profile_picture_url
+                    AppearanceManager.shared.loadFromSettings(settings.theme)
+                    AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(settings.calendar_animation_style)
+                }
             }
 
             // Update Apple Watch with latest shift data after initial sync
-            WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+            let shouldNotifyWatch = await MainActor.run { self.userId == userId }
+            if shouldNotifyWatch {
+                await MainActor.run {
+                    WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+                }
+            }
         }
     }
 
@@ -494,22 +531,35 @@ final class AppCoordinator: ObservableObject {
     func handleAppForeground() {
         guard appState == .authenticated else { return }
 
-        Task {
+        runTrackedTask { [weak self] in
+            guard let self = self else { return }
             do {
                 // Use AuthSessionManager to prevent concurrent refresh race conditions
                 let session = try await AuthSessionManager.shared.getSession()
                 let userId = session.normalizedUserId
 
-                if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-                    Task {
-                        await appDelegate.registerCachedAPNsTokenIfNeeded()
-                    }
+                // If userId already exists, ensure it matches the current session
+                let currentUserId = await Task { @MainActor in self.userId }.value
+                if let currentUserId, currentUserId != userId {
+                    return
                 }
 
-                _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
+                if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+                    await Task { @MainActor in
+                        await appDelegate.registerCachedAPNsTokenIfNeeded()
+                    }.value
+                }
+
+                _ = await self.syncCoordinator.sync(reason: .foreground, userId: userId)
 
                 // Update Apple Watch with latest shift data after foreground sync
-                WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+                let currentUserIdAfterSync = await Task { @MainActor in self.userId }.value
+                if let currentUserIdAfterSync, currentUserIdAfterSync != userId {
+                    return
+                }
+                await Task { @MainActor in
+                    WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+                }.value
             } catch {
                 // No session available
             }
@@ -531,9 +581,12 @@ final class AppCoordinator: ObservableObject {
     func handleMFASuccess() {
         // Set flag for DashboardView to play release haptic when fully rendered
         didJustCompleteMFA = true
-        Task {
+        runTrackedTask { [weak self] in
+            guard let self = self else { return }
             // After MFA, check if terms acceptance is needed
-            await checkTermsAndUpdateState()
+            await Task { @MainActor in
+                await self.checkTermsAndUpdateState()
+            }.value
         }
     }
 
@@ -544,8 +597,11 @@ final class AppCoordinator: ObservableObject {
         // This ensures DashboardView shows loading instead of empty state
         initialSyncComplete = false
         appState = .authenticated
-        Task {
-            await updateUserProfile()
+        runTrackedTask { [weak self] in
+            guard let self = self else { return }
+            await Task { @MainActor in
+                await self.updateUserProfile()
+            }.value
         }
     }
 
@@ -615,7 +671,7 @@ final class AppCoordinator: ObservableObject {
 
         // Reset sync coordinator state for new user
         // This clears the interval guard so the next user's initial sync isn't blocked
-        syncCoordinator.resetForUserChange()
+        await syncCoordinator.resetForUserChange()
 
         initialSyncComplete = false
     }

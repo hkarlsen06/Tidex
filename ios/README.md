@@ -22,18 +22,6 @@ High-level overview of the app structure, directory layout, and core patterns:
 
 **Read this first** to understand how the app is organized.
 
-### [PATTERNS.md](PATTERNS.md)
-Detailed patterns and best practices for writing iOS code:
-- Service pattern (Supabase fetching)
-- Repository pattern (local-first)
-- View model pattern (UI state)
-- Month navigation pattern (caching & prefetching)
-- Sync coordination pattern
-- Error handling pattern
-- Testing pattern
-
-**Use this** when implementing new features or modifying existing code.
-
 ### [DATA_FLOW.md](DATA_FLOW.md)
 Complete data flow from UI to Supabase and back:
 - Overall data architecture diagram
@@ -222,4 +210,3 @@ XCTAssertEqual(computed.gross, expectedGross)
 - [../CLAUDE.md](../CLAUDE.md) - Full project documentation
 - [../docs/](../docs/) - Web backend documentation
 - [../lib/payroll/](../lib/payroll/) - Web payroll implementation
-
