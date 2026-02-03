@@ -134,6 +134,12 @@
             "state": "translated",
             "value": "---"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "---"
+          }
         }
       }
     },
@@ -270,6 +276,12 @@
             "state": "translated",
             "value": "—"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
         }
       }
     },
@@ -402,6 +414,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@"
@@ -1110,6 +1128,12 @@
             "state": "translated",
             "value": "%lld"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
         }
       }
     },
@@ -1530,6 +1554,12 @@
             "state": "translated",
             "value": "Activ"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
         }
       }
     },
@@ -1665,6 +1695,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adaugă prieteni pentru a vedea vactele lor"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add friends to see their shifts"
           }
         }
       }
@@ -1802,6 +1838,12 @@
             "state": "translated",
             "value": "în urmă"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ago"
+          }
         }
       }
     },
@@ -1937,6 +1979,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "înainte de impozit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "before tax"
           }
         }
       }
@@ -2074,6 +2122,12 @@
             "state": "translated",
             "value": "zi"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "day"
+          }
         }
       }
     },
@@ -2209,6 +2263,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "zile"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "days"
           }
         }
       }
@@ -2346,6 +2406,12 @@
             "state": "translated",
             "value": "gata"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "done"
+          }
         }
       }
     },
@@ -2481,6 +2547,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gata"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
           }
         }
       }
@@ -2618,6 +2690,12 @@
             "state": "translated",
             "value": "Se încheie"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends"
+          }
         }
       }
     },
@@ -2753,6 +2831,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Prieten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friend"
           }
         }
       }
@@ -2890,6 +2974,12 @@
             "state": "translated",
             "value": "Vacta unui prieten"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friend's Shift"
+          }
         }
       }
     },
@@ -3025,6 +3115,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vactele prietenilor"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friends' Shifts"
           }
         }
       }
@@ -3162,6 +3258,12 @@
             "state": "translated",
             "value": "ore"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hours"
+          }
         }
       }
     },
@@ -3297,6 +3399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "rămas"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "left"
           }
         }
       }
@@ -3434,6 +3542,12 @@
             "state": "translated",
             "value": "Total lunar"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly Total"
+          }
         }
       }
     },
@@ -3569,6 +3683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Următoarea vactă"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Shift"
           }
         }
       }
@@ -3706,6 +3826,12 @@
             "state": "translated",
             "value": "Nicio vactă"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No shift"
+          }
         }
       }
     },
@@ -3841,6 +3967,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicio vactă"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No shifts"
           }
         }
       }
@@ -3978,6 +4110,12 @@
             "state": "translated",
             "value": "Vezi următoarea vactă a unui prieten"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See a friend's next shift"
+          }
         }
       }
     },
@@ -4113,6 +4251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vezi vactele viitoare ale prietenilor tăi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See your friends' upcoming shifts"
           }
         }
       }
@@ -4250,6 +4394,12 @@
             "state": "translated",
             "value": "Văd totalul lunar dintr-o privire"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See your monthly total at a glance"
+          }
         }
       }
     },
@@ -4385,6 +4535,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Văd următoarea tură dintr-o privire"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See your next shift at a glance"
           }
         }
       }
@@ -4522,6 +4678,12 @@
             "state": "translated",
             "value": "Văd următoarea tură pe ecranul de blocare"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See your next shift on the lock screen"
+          }
         }
       }
     },
@@ -4657,6 +4819,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Selectează un prieten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a friend"
           }
         }
       }
@@ -4794,6 +4962,12 @@
             "state": "translated",
             "value": "Selectează un prieten pentru a-i vedea tura"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a friend to display their shift"
+          }
         }
       }
     },
@@ -4929,6 +5103,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "tură"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "shift"
           }
         }
       }
@@ -5066,6 +5246,12 @@
             "state": "translated",
             "value": "Tură"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shift"
+          }
         }
       }
     },
@@ -5201,6 +5387,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "tură planificată"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "shift planned"
           }
         }
       }
@@ -5338,6 +5530,12 @@
             "state": "translated",
             "value": "turi"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "shifts"
+          }
         }
       }
     },
@@ -5474,6 +5672,12 @@
             "state": "translated",
             "value": "turi planificate"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "shifts planned"
+          }
         }
       }
     },
@@ -5606,6 +5810,12 @@
           }
         },
         "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "start"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "start"
@@ -5746,6 +5956,12 @@
             "state": "translated",
             "value": "până acum"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "to date"
+          }
         }
       }
     },
@@ -5881,6 +6097,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Astazi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
           }
         }
       }
@@ -6018,6 +6240,12 @@
             "state": "translated",
             "value": "Mâine"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomorrow"
+          }
         }
       }
     },
@@ -6153,6 +6381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ieri"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
           }
         }
       }

@@ -46,6 +46,17 @@ Use these skills for specialized tasks:
 - `use-data-access-layer` - For DAL usage patterns
 - `create-server-action` - For server action patterns
 
+## iOS Localization Scripts
+
+Located in `ios/Scripts/`. PATH is configured via `/etc/paths.d/tidex` and Launch Agent.
+
+**Commands:**
+```bash
+add-string --key "feature.key" --en "English" --nb "Norwegian"
+lint-hardcoded-strings
+validate-localization
+```
+
 ## Supabase Edge Functions
 
 **CRITICAL: Edit locally in `supabase/functions/`, deploy via CLI, NOT via MCP deploy tool**

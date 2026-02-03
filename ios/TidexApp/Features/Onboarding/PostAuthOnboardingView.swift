@@ -412,7 +412,7 @@ private struct MFAEnrollmentSheet: View {
                         .fill(Color.tidexSurfaceSecondary)
                         .frame(width: 200, height: 200)
                         .overlay(
-                            Text("QR Code unavailable")
+                            Text(.onboardingMfaQrCodeUnavailable)
                                 .font(.system(size: 14))
                                 .foregroundColor(.tidexTextMuted)
                         )

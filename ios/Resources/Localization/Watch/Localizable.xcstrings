@@ -134,6 +134,12 @@
             "state": "translated",
             "value": "--"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--"
+          }
         }
       }
     },
@@ -840,6 +846,12 @@
             "state": "translated",
             "value": "Următoarea Vactă"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Shift"
+          }
         }
       }
     },
@@ -975,6 +987,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afișează următoarea ta vactă programată"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows your next upcoming shift"
           }
         }
       }
