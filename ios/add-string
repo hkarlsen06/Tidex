@@ -1,0 +1,4 @@
+#!/bin/bash
+# Add a localized string to the iOS string catalog
+# Usage: ./add-string --key "feature.key" --en "English" --nb "Norwegian"
+exec "$(dirname "$0")/Scripts/add-string.sh" "$@"

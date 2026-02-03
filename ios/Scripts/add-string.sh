@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper script for add-string Swift tool
+# Usage: ./add-string.sh --key "feature.key" --en "English" --nb "Norwegian"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+swift run --package-path "$SCRIPT_DIR" add-string "$@"
