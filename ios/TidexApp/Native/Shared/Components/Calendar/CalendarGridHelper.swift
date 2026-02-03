@@ -138,10 +138,7 @@ enum CalendarGridHelper {
 
     /// Format currency amount for calendar cells (compact, no symbol)
     static func formatCompactCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        formatter.groupingSeparator = " "
+        let formatter = FormatterCache.compactCurrencyFormatter(locale: .current)
         return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
     }
 
@@ -165,10 +162,9 @@ enum CalendarGridHelper {
 
     /// Get localized month name from Date
     static func monthName(from date: Date, locale: Locale) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM"
-        formatter.locale = locale
-        return formatter.string(from: date).capitalized
+        FormatterCache.monthNameFormatter(locale: locale)
+            .string(from: date)
+            .capitalized
     }
 
     /// Get localized month name from year/month components
