@@ -5,6 +5,8 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { config } from "dotenv";
+import cliProgress from "cli-progress";
+import pLimit from "p-limit";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +26,7 @@ const TARGET_LANGUAGES = [
 
   // Nordic
   { code: "nb", name: "Norwegian Bokmål" },
+  { code: "nn", name: "Norwegian Nynorsk" },
   { code: "sv", name: "Swedish" },
   { code: "da", name: "Danish" },
   { code: "fi", name: "Finnish" },
@@ -32,6 +35,9 @@ const TARGET_LANGUAGES = [
   { code: "pl", name: "Polish" },
   { code: "ru", name: "Russian" },
   { code: "uk", name: "Ukrainian" },
+  { code: "tr", name: "Turkish" },
+  { code: "el", name: "Greek" },
+  { code: "ro", name: "Romanian" },
 
   // Asia
   { code: "ja", name: "Japanese" },
@@ -65,6 +71,42 @@ const stats = {
   errors: [],
 };
 
+// Track current file state for graceful shutdown
+let currentFileData = null;
+let currentFilePath = null;
+let currentMultibar = null;
+let isShuttingDown = false;
+
+// Graceful shutdown handler
+async function saveAndExit() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  // Stop progress bars first to clean up terminal
+  if (currentMultibar) {
+    currentMultibar.stop();
+  }
+
+  console.log("\n⚠ Interrupt received, saving progress...");
+
+  if (currentFileData && currentFilePath) {
+    try {
+      await fs.writeFile(currentFilePath, JSON.stringify(currentFileData, null, 2) + "\n");
+      console.log(`✓ Saved: ${currentFilePath}`);
+    } catch (error) {
+      console.error(`✗ Failed to save: ${error.message}`);
+    }
+  }
+
+  console.log(`\nProgress: ${stats.translated} strings translated before shutdown.`);
+  console.log("Run the script again to continue from where you left off.\n");
+  process.exit(0);
+}
+
+// Register signal handlers
+process.on("SIGINT", saveAndExit);
+process.on("SIGTERM", saveAndExit);
+
 // Extract all format specifiers from a string
 function extractFormatSpecifiers(str) {
   // Match all iOS/Mac format specifiers including %@, %d, %lld, %ld, %zd, %tu, %1$@, %.2f, etc.
@@ -87,18 +129,12 @@ function validateFormatSpecifiers(original, translation) {
 
 // Strings that shouldn't be translated
 function shouldSkipString(key, englishValue) {
-  if (!englishValue) return true;
-  if (englishValue.trim() === "") return true;
+  // Don't skip empty strings - if the key exists, it needs translation
+  // (e.g., common.daySuffix is "" in English but "." in German)
+  if (englishValue === undefined || englishValue === null) return true;
 
   // Skip internal identifiers (SCREAMING_SNAKE_CASE or camelCase.dotted.keys without spaces)
   if (/^[A-Z][A-Z0-9_]+$/.test(key) && key === englishValue) return true;
-
-  // Skip if it's ONLY symbols, numbers, or format specifiers (no letters at all)
-  const stripped = englishValue
-    .replace(/%(\d+\$)?[-+0 #]*(\d+|\*)?(\.\d+|\.\*)?([hlLzjt]{0,2})?[@diouxXeEfFgGaAcspn%]/g, "")
-    .replace(/[^a-zA-Z]/g, "");
-
-  if (stripped.length === 0) return true;
 
   return false;
 }
@@ -207,12 +243,18 @@ function extractJson(text) {
 
 // Translate a batch using KEY-BASED mapping to avoid context collision
 async function translateBatch(items, targetLang) {
-  // Build context-aware prompt with keys
-  const stringsToTranslate = items.map((item) => ({
-    id: item.id,
-    english: item.english,
-    context: item.key, // Include key as context hint
-  }));
+  // Build context-aware prompt with keys and Norwegian reference
+  const stringsToTranslate = items.map((item) => {
+    const entry = { id: item.id, english: item.english };
+    // Include Norwegian as reference when available (manually verified translations)
+    if (item.norwegian !== undefined) {
+      entry.norwegian = item.norwegian;
+    }
+    entry.context = item.key;
+    return entry;
+  });
+
+  const hasNorwegianRefs = items.some((item) => item.norwegian !== undefined);
 
   const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
 Translate the following strings from English to ${targetLang.name}.
@@ -226,10 +268,12 @@ CRITICAL RULES - FOLLOW EXACTLY:
    - %d stays as %d
    - %.2f stays as %.2f
    - DO NOT change any format specifier types!
+   - Format specifiers are placeholders for dynamic values passed by code - NEVER hardcode what they represent (e.g., if %@ represents a unit like "min" or "sec", keep it as %@ - do not replace it with the translated unit)
 2. Keep translations concise (mobile UI has limited space)
 3. Preserve leading/trailing whitespace exactly
 4. The "context" field hints at usage - use it to disambiguate meanings
-5. Return a JSON object mapping each "id" to its translation
+${hasNorwegianRefs ? `5. The "norwegian" field (when present) is a manually verified translation - use it to understand the intended meaning, especially for ambiguous or short strings` : ""}
+6. Return a JSON object mapping each "id" to its translation
 
 Strings to translate:
 ${JSON.stringify(stringsToTranslate, null, 2)}
@@ -268,6 +312,10 @@ async function translateXcstrings(filePath) {
   const content = await fs.readFile(filePath, "utf-8");
   const data = JSON.parse(content);
 
+  // Track for graceful shutdown
+  currentFilePath = filePath;
+  currentFileData = data;
+
   // Collect ALL strings that need translation with unique IDs
   const stringsToTranslate = [];
   let idCounter = 0;
@@ -281,20 +329,28 @@ async function translateXcstrings(filePath) {
     // In xcstrings, the key itself is the English value when no explicit en localization exists
     // BUT only use key fallback if there are no plural variations (those need special handling)
     const enStringUnit = value.localizations?.en?.stringUnit;
-    const englishValue = enStringUnit?.value || (hasPluralVariations ? null : key);
+    const englishValue = enStringUnit?.value ?? (hasPluralVariations ? null : key);
 
-    if (englishValue) {
+    if (englishValue !== null) {
+      // Get Norwegian translation as reference (manually verified)
+      const norwegianValue = value.localizations?.nb?.stringUnit?.value;
+
       for (const targetLang of TARGET_LANGUAGES) {
         const hasTranslation =
-          value.localizations?.[targetLang.code]?.stringUnit?.value;
+          value.localizations?.[targetLang.code]?.stringUnit?.value !== undefined;
         if (!hasTranslation && !shouldSkipString(key, englishValue)) {
-          stringsToTranslate.push({
+          const item = {
             id: `s${idCounter++}`,
             key,
             english: englishValue,
             targetLang,
             type: "simple",
-          });
+          };
+          // Include Norwegian reference when available
+          if (norwegianValue !== undefined) {
+            item.norwegian = norwegianValue;
+          }
+          stringsToTranslate.push(item);
         }
       }
     }
@@ -305,20 +361,28 @@ async function translateXcstrings(filePath) {
         const englishValue = pluralData.stringUnit?.value;
         if (!englishValue) continue;
 
+        // Get Norwegian plural variation as reference
+        const norwegianValue =
+          value.localizations?.nb?.variations?.plural?.[pluralForm]?.stringUnit?.value;
+
         for (const targetLang of TARGET_LANGUAGES) {
           const hasTranslation =
             value.localizations?.[targetLang.code]?.variations?.plural?.[
               pluralForm
-            ]?.stringUnit?.value;
+            ]?.stringUnit?.value !== undefined;
           if (!hasTranslation && !shouldSkipString(key, englishValue)) {
-            stringsToTranslate.push({
+            const item = {
               id: `s${idCounter++}`,
               key,
               english: englishValue,
               targetLang,
               type: "plural",
               pluralForm,
-            });
+            };
+            if (norwegianValue !== undefined) {
+              item.norwegian = norwegianValue;
+            }
+            stringsToTranslate.push(item);
           }
         }
       }
@@ -333,9 +397,40 @@ async function translateXcstrings(filePath) {
   }
 
   // Process by language for clearer progress
-  const BATCH_SIZE = 75;
+  // Keep batches small enough for Haiku to maintain attention on format specifiers
+  const BATCH_SIZE = 30;
+  const CONCURRENCY = 15; // Tier 3 Haiku 4.5: 2K req/min = 33/sec, 15 concurrent is safe
+
+  // Count languages with work to do
+  const langsWithWork = TARGET_LANGUAGES.filter(
+    (lang) => stringsToTranslate.some((s) => s.targetLang.code === lang.code)
+  );
+
+  // Create progress bars
+  const multibar = (currentMultibar = new cliProgress.MultiBar(
+    {
+      clearOnComplete: false,
+      hideCursor: true,
+      format: " {bar} | {label} | {value}/{total} | {status}",
+      barCompleteChar: "\u2588",
+      barIncompleteChar: "\u2591",
+    },
+    cliProgress.Presets.shades_classic
+  ));
+
+  const overallBar = multibar.create(langsWithWork.length, 0, {
+    label: "Overall ".padEnd(12),
+    status: "starting...",
+  });
+
+  let langBar = null;
+  let completedLangs = 0;
+  const formatWarnings = []; // Collect warnings to show at end
 
   for (const targetLang of TARGET_LANGUAGES) {
+    // Check for shutdown request
+    if (isShuttingDown) break;
+
     const stringsForLang = stringsToTranslate.filter(
       (s) => s.targetLang.code === targetLang.code
     );
@@ -344,87 +439,131 @@ async function translateXcstrings(filePath) {
       continue;
     }
 
-    console.log(
-      `\nTranslating ${stringsForLang.length} strings to ${targetLang.name}...`
-    );
+    // Create/update language progress bar
+    if (langBar) multibar.remove(langBar);
+    langBar = multibar.create(stringsForLang.length, 0, {
+      label: targetLang.name.padEnd(12).slice(0, 12),
+      status: "translating...",
+    });
 
-    let translatedThisLang = 0;
-    let skippedThisLang = 0;
+    overallBar.update(completedLangs, {
+      status: `${targetLang.name}...`,
+    });
 
+    // Split into batches
+    const batches = [];
     for (let i = 0; i < stringsForLang.length; i += BATCH_SIZE) {
-      const batch = stringsForLang.slice(i, i + BATCH_SIZE);
-
-      try {
-        const translations = await translateBatch(batch, targetLang);
-
-        // Apply translations using ID mapping
-        for (const item of batch) {
-          const translation = translations[item.id];
-
-          if (!translation) {
-            stats.skippedNoTranslation++;
-            continue;
-          }
-
-          // Validate format specifiers
-          if (!validateFormatSpecifiers(item.english, translation)) {
-            console.warn(
-              `    ⚠ Format mismatch: "${item.english}" → "${translation}"`
-            );
-            stats.skippedFormatMismatch++;
-            skippedThisLang++;
-            continue;
-          }
-
-          // Apply translation using deep-set to preserve existing metadata
-          if (item.type === "simple") {
-            deepSet(
-              data.strings[item.key],
-              ["localizations", targetLang.code, "stringUnit"],
-              { state: "translated", value: translation }
-            );
-          } else if (item.type === "plural") {
-            deepSet(
-              data.strings[item.key],
-              [
-                "localizations",
-                targetLang.code,
-                "variations",
-                "plural",
-                item.pluralForm,
-                "stringUnit",
-              ],
-              { state: "translated", value: translation }
-            );
-          }
-
-          translatedThisLang++;
-          stats.translated++;
-        }
-
-        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(stringsForLang.length / BATCH_SIZE);
-        console.log(
-          `  Batch ${batchNum}/${totalBatches}: +${translatedThisLang} translated`
-        );
-
-        // Small delay between batches
-        await new Promise((r) => setTimeout(r, 300));
-      } catch (error) {
-        const errorMsg = `Batch error for ${targetLang.name}: ${error.message}`;
-        console.error(`  ✗ ${errorMsg}`);
-        stats.errors.push(errorMsg);
-      }
+      batches.push(stringsForLang.slice(i, i + BATCH_SIZE));
     }
 
-    console.log(
-      `  ✓ ${targetLang.name}: ${translatedThisLang} translated${skippedThisLang ? `, ${skippedThisLang} skipped` : ""}`
+    // Track progress across parallel batches
+    let translatedThisLang = 0;
+    let skippedThisLang = 0;
+    let completedStrings = 0;
+
+    // Process batches in parallel with concurrency limit
+    const limit = pLimit(CONCURRENCY);
+
+    const batchPromises = batches.map((batch, batchIndex) =>
+      limit(async () => {
+        if (isShuttingDown) return;
+
+        try {
+          const translations = await translateBatch(batch, targetLang);
+
+          // Apply translations using ID mapping
+          for (const item of batch) {
+            const translation = translations[item.id];
+
+            if (!translation) {
+              stats.skippedNoTranslation++;
+              continue;
+            }
+
+            // Validate format specifiers
+            if (!validateFormatSpecifiers(item.english, translation)) {
+              formatWarnings.push(
+                `${targetLang.code}: "${item.english}" -> "${translation}"`
+              );
+              stats.skippedFormatMismatch++;
+              skippedThisLang++;
+              continue;
+            }
+
+            // Apply translation using deep-set to preserve existing metadata
+            if (item.type === "simple") {
+              deepSet(
+                data.strings[item.key],
+                ["localizations", targetLang.code, "stringUnit"],
+                { state: "translated", value: translation }
+              );
+            } else if (item.type === "plural") {
+              deepSet(
+                data.strings[item.key],
+                [
+                  "localizations",
+                  targetLang.code,
+                  "variations",
+                  "plural",
+                  item.pluralForm,
+                  "stringUnit",
+                ],
+                { state: "translated", value: translation }
+              );
+            }
+
+            translatedThisLang++;
+            stats.translated++;
+          }
+
+          // Update progress
+          completedStrings += batch.length;
+          langBar.update(completedStrings, {
+            status: `${translatedThisLang} translated (15x)`,
+          });
+        } catch (error) {
+          const errorMsg = `Batch ${batchIndex + 1} error for ${targetLang.name}: ${error.message}`;
+          stats.errors.push(errorMsg);
+        }
+      })
     );
+
+    // Wait for all batches to complete
+    await Promise.all(batchPromises);
+
+    // Save after each language completes (incremental progress)
+    langBar.update(stringsForLang.length, {
+      status: skippedThisLang
+        ? `done (${skippedThisLang} skipped), saving...`
+        : "done, saving...",
+    });
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+    langBar.update({ status: "saved" });
+
+    completedLangs++;
+    overallBar.update(completedLangs);
   }
 
-  // Write back
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
-  console.log(`\nSaved: ${filePath}`);
+  // Finalize progress bars
+  if (langBar) multibar.remove(langBar);
+  overallBar.update(completedLangs, { status: "complete" });
+  multibar.stop();
+
+  // Show format warnings if any
+  if (formatWarnings.length > 0) {
+    console.log(`\nFormat specifier mismatches (${formatWarnings.length}):`);
+    formatWarnings.slice(0, 10).forEach((w) => console.log(`  - ${w}`));
+    if (formatWarnings.length > 10) {
+      console.log(`  ... and ${formatWarnings.length - 10} more`);
+    }
+  }
+
+  // Clear tracking (file is fully saved)
+  currentFileData = null;
+  currentFilePath = null;
+  currentMultibar = null;
+
+  console.log(`\n✓ Completed: ${filePath}`);
 }
 
 // Sync languages to Xcode project's knownRegions
@@ -643,8 +782,8 @@ Return format (JSON only, no markdown):
         stats.errors.push(`InfoPlist ${targetLang.name}: ${error.message}`);
       }
 
-      // Small delay between languages
-      await new Promise((r) => setTimeout(r, 300));
+      // Brief delay between languages
+      await new Promise((r) => setTimeout(r, 100));
     }
 
     console.log(

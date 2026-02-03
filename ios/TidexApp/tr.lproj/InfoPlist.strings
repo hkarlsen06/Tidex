@@ -1,0 +1,16 @@
+/* Turkish localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex, profil fotoğrafı çekmek için kamera erişimine ihtiyaç duyuyor.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex, kazanç verilerinizi korumak için Face ID kullanıyor. Sadece siz gelir bilgilerinizi görebilmelisiniz.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex, paylaşılan takvim ve vardiya görüntülerini fotoğraf kitaplığınıza kaydetmek için erişim izni gerektirir.";
