@@ -77,7 +77,7 @@ struct LoginView: View {
 
             // Subtitle
             Text(.loginSubtitle)
-                .font(.system(size: 17))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
         }
@@ -142,7 +142,7 @@ struct LoginView: View {
             // Error messages
             if let emailError = viewModel.fieldErrors.emailOrPhone {
                 Text(emailError)
-                    .font(.system(size: 13))
+                    .font(.tidexCaptionRegular)
                     .foregroundColor(.tidexError)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 4)
@@ -150,7 +150,7 @@ struct LoginView: View {
 
             if let passwordError = viewModel.fieldErrors.password {
                 Text(passwordError)
-                    .font(.system(size: 13))
+                    .font(.tidexCaptionRegular)
                     .foregroundColor(.tidexError)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 4)
@@ -164,7 +164,7 @@ struct LoginView: View {
                         onNavigateToResetPassword?()
                     }) {
                         Text(.loginForgotPassword)
-                            .font(.system(size: 15))
+                            .font(.tidexLabelStrong)
                             .foregroundColor(.tidexBlue)
                     }
                     .buttonStyle(.plain)
@@ -174,7 +174,7 @@ struct LoginView: View {
             // Phone hint - password is optional for OTP flow
             if viewModel.inputType == .phone {
                 Text(.loginPhonePasswordHint)
-                    .font(.system(size: 13))
+                    .font(.tidexCaptionRegular)
                     .foregroundColor(.tidexTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -200,9 +200,9 @@ struct LoginView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "envelope")
-                    .font(.system(size: 16))
+                    .font(.tidexBodyMedium)
                 Text(.loginEmailOrPhoneReveal)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.tidexBodyMedium)
             }
             .foregroundColor(.tidexTextSecondary)
             .frame(maxWidth: .infinity)
@@ -243,7 +243,7 @@ struct LoginView: View {
                 onNavigateToSignup?()
             }) {
                 Text(.loginCreateAccount)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.tidexLabelStrong)
                     .foregroundColor(.tidexBlue)
             }
             .buttonStyle(.plain)
@@ -265,15 +265,15 @@ struct NativeTextField: View {
 
     var body: some View {
         TextField(placeholder, text: $text)
-            .font(.system(size: 17))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextPrimary)
             .keyboardType(keyboardType)
             .textContentType(textContentType)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .focused($isFocused)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, Spacing.contentHorizontal)
+            .padding(.vertical, Spacing.sm)
             .onSubmit {
                 onSubmit?()
             }
@@ -295,7 +295,7 @@ struct NativeSecureField: View {
         HStack(spacing: 12) {
             if isSecure {
                 SecureField(placeholder, text: $text)
-                    .font(.system(size: 17))
+                    .font(.tidexBody)
                     .foregroundColor(.tidexTextPrimary)
                     .textContentType(.password)
                     .focused($isFocused)
@@ -304,7 +304,7 @@ struct NativeSecureField: View {
                     }
             } else {
                 TextField(placeholder, text: $text)
-                    .font(.system(size: 17))
+                    .font(.tidexBody)
                     .foregroundColor(.tidexTextPrimary)
                     .textContentType(.password)
                     .textInputAutocapitalization(.never)
@@ -319,13 +319,13 @@ struct NativeSecureField: View {
                 isSecure.toggle()
             } label: {
                 Image(systemName: isSecure ? "eye" : "eye.slash")
-                    .font(.system(size: 16))
+                    .font(.tidexBodyMedium)
                     .foregroundColor(.tidexTextMuted)
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, Spacing.contentHorizontal)
+        .padding(.vertical, Spacing.sm)
     }
 }
 

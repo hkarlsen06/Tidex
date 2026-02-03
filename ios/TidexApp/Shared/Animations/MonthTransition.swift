@@ -37,6 +37,9 @@ enum MonthPickerLayout {
 
     /// Corner radius for the glass effect
     static let cornerRadius: CGFloat = 30
+
+    /// Total inset needed to keep content above the floating month picker
+    static let totalBottomInset: CGFloat = height + bottomPadding
 }
 
 // MARK: - Month Transition Configuration
@@ -106,6 +109,7 @@ struct MonthTransitionPhase: Equatable {
 /// Similar to the Next.js calendar grid animation
 /// Supports horizontal (left/right) or vertical (up/down) animation based on user preference
 struct CardTransitionModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let phase: MonthTransitionPhase
     let index: Int
     let config: MonthTransitionConfig
@@ -114,14 +118,19 @@ struct CardTransitionModifier: ViewModifier {
     private let animationStyle = AppearanceManager.shared.calendarAnimationStyle
 
     func body(content: Content) -> some View {
+        let isVisible = reduceMotion ? true : isAppearing
         content
-            .opacity(isAppearing ? 1 : 0)
+            .opacity(isVisible ? 1 : 0)
             .offset(
-                x: animationStyle == .horizontal ? (isAppearing ? 0 : slideOffset) : 0,
-                y: animationStyle == .vertical ? (isAppearing ? 0 : slideOffset) : 0
+                x: animationStyle == .horizontal ? (isVisible ? 0 : slideOffset) : 0,
+                y: animationStyle == .vertical ? (isVisible ? 0 : slideOffset) : 0
             )
-            .scaleEffect(isAppearing ? 1 : 0.95)
+            .scaleEffect(isVisible ? 1 : 0.95)
             .onAppear {
+                guard !reduceMotion else {
+                    isAppearing = true
+                    return
+                }
                 // Stagger the appearance of each card
                 let delay = Double(index) * config.staggerDelay
                 withAnimation(
@@ -134,6 +143,10 @@ struct CardTransitionModifier: ViewModifier {
             .onChange(of: phase.id) { _, _ in
                 // Reset and re-animate on month change
                 isAppearing = false
+                guard !reduceMotion else {
+                    isAppearing = true
+                    return
+                }
                 let delay = Double(index) * config.staggerDelay
                 withAnimation(
                     .spring(response: config.springResponse, dampingFraction: config.dampingFraction)
@@ -155,6 +168,7 @@ struct CardTransitionModifier: ViewModifier {
 /// A view modifier that applies slide transition to text (month/year labels)
 /// Text slides in the direction of navigation (horizontal or vertical based on user preference)
 struct TextTransitionModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
 
@@ -165,12 +179,15 @@ struct TextTransitionModifier: ViewModifier {
             .id(phase.id)
             .transition(textTransition)
             .animation(
-                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                reduceMotion ? nil : .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
     }
 
     private var textTransition: AnyTransition {
+        if reduceMotion {
+            return .opacity
+        }
         let direction = phase.direction
         let offset = direction == .next ? config.textOffset : -config.textOffset
 
@@ -194,6 +211,7 @@ struct TextTransitionModifier: ViewModifier {
 /// when navigating between months. Supports horizontal or vertical animation
 /// based on user preference.
 struct StaggeredCardsContainer<Content: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
     @ViewBuilder let content: () -> Content
@@ -205,7 +223,7 @@ struct StaggeredCardsContainer<Content: View>: View {
             .id(phase.id)
             .transition(slideTransition)
             .animation(
-                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                reduceMotion ? nil : .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
     }
@@ -213,6 +231,7 @@ struct StaggeredCardsContainer<Content: View>: View {
     /// Asymmetric transition: new content slides in from direction of navigation,
     /// old content slides out in the opposite direction
     private var slideTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
         let offset = phase.direction == .next ? config.slideOffset : -config.slideOffset
 
         if animationStyle == .vertical {
@@ -352,6 +371,7 @@ struct MonthYearPickerSheet: View {
 /// Supports swipe gestures for month navigation and tap to open month/year picker
 /// "Return to current month" functionality is in the MonthYearPickerSheet
 struct AnimatedMonthHeader: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let monthName: String
     let year: Int
     let phase: MonthTransitionPhase
@@ -363,6 +383,8 @@ struct AnimatedMonthHeader: View {
 
     @State private var monthScale: CGFloat = 1.0
     @State private var showingMonthPicker = false
+    @ScaledMetric(relativeTo: .body) private var navButtonSize: CGFloat = 36
+    @ScaledMetric(relativeTo: .body) private var navIconSize: CGFloat = 16
 
     // Haptic feedback for swipe, tap, and long press
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -423,7 +445,7 @@ struct AnimatedMonthHeader: View {
             .transition(textTransition)
             .scaleEffect(monthScale)
             .animation(
-                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                reduceMotion ? nil : .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
             .highPriorityGesture(
@@ -469,7 +491,7 @@ struct AnimatedMonthHeader: View {
             .transition(textTransition)
             .scaleEffect(monthScale)
             .animation(
-                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                reduceMotion ? nil : .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
             .highPriorityGesture(
@@ -505,12 +527,12 @@ struct AnimatedMonthHeader: View {
     private func monthYearLabel(yearText: String) -> some View {
         HStack(spacing: 6) {
             Text(monthName.capitalized)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
 
             Text(yearText)
-                .font(.system(size: 16, weight: .regular))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
     }
@@ -520,17 +542,22 @@ struct AnimatedMonthHeader: View {
     private func compactMonthYearLabel(yearText: String) -> some View {
         VStack(spacing: 0) {
             Text(monthName.capitalized)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
 
             Text(yearText)
-                .font(.system(size: 13, weight: .regular))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
     }
 
     private func showMonthPicker() {
+        guard !reduceMotion else {
+            monthScale = 1.0
+            showingMonthPicker = true
+            return
+        }
         // Bounce animation on tap
         withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
             monthScale = 0.95
@@ -548,6 +575,12 @@ struct AnimatedMonthHeader: View {
     private func jumpToCurrentMonth() {
         // Only navigate if not already on current month
         guard !isOnCurrentMonth else { return }
+
+        guard !reduceMotion else {
+            monthScale = 1.0
+            onNavigateToMonth?(currentMonth.year, currentMonth.month)
+            return
+        }
 
         // Bounce animation
         withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
@@ -588,9 +621,9 @@ struct AnimatedMonthHeader: View {
             action()
         } label: {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: navIconSize, weight: .semibold))
                 .foregroundColor(.tidexBlue)
-                .frame(width: 36, height: 36)
+                .frame(width: navButtonSize, height: navButtonSize)
                 .background(Color.tidexBlue.opacity(0.1))
                 .clipShape(Circle())
         }
@@ -602,6 +635,9 @@ struct AnimatedMonthHeader: View {
     // MARK: - Transitions
 
     private var textTransition: AnyTransition {
+        if reduceMotion {
+            return .opacity
+        }
         let direction = phase.direction
         let offset = direction == .next ? config.textOffset : -config.textOffset
         let animationStyle = AppearanceManager.shared.calendarAnimationStyle

@@ -12,6 +12,7 @@ extension Notification.Name {
 /// Currently a placeholder - will be expanded with full dashboard functionality
 struct MainTabView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
     @ObservedObject private var monthContext = SharedMonthContext.shared
     @ObservedObject private var impersonationManager = ImpersonationManager.shared
@@ -156,14 +157,14 @@ struct MainTabView: View {
                 // Shared month picker overlay - floats above tab bar
                 if shouldShowMonthPicker {
                     sharedMonthPickerOverlay
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(monthPickerTransition)
                 }
             }
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedTab)
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: shouldShowMonthPicker)
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showListView)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: selectedTab)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: shouldShowMonthPicker)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: showListView)
             }
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: impersonationManager.isImpersonating)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: impersonationManager.isImpersonating)
 
             // Celebration overlay - above everything including tab bar and month picker
             if celebrationManager.shouldShowCelebration,
@@ -232,8 +233,8 @@ struct MainTabView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular, in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-                .transition(.scale.combined(with: .opacity))
+                .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
             }
 
             // View mode toggle button - only on Shifts tab
@@ -250,12 +251,43 @@ struct MainTabView: View {
                 }
                 .buttonStyle(.plain)
                 .contentTransition(.symbolEffect(.replace))
-                .glassEffect(
-                    monthContext.hasConflictsInMonth ? .regular.tint(Color.tidexWarning.opacity(0.3)) : .regular,
-                    in: .rect(cornerRadius: MonthPickerLayout.cornerRadius)
+                .tidexGlass(
+                    shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+                    tint: monthContext.hasConflictsInMonth ? Color.tidexWarning.opacity(0.3) : nil
                 )
-                .transition(.scale.combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.2), value: monthContext.hasConflictsInMonth)
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: monthContext.hasConflictsInMonth)
+            }
+
+            // Add button - only on Add tab
+            if selectedTab == .add {
+                Button {
+                    selectionHaptic.selectionChanged()
+                    addShiftCoordinator.triggerAdd()
+                } label: {
+                    Group {
+                        if addShiftCoordinator.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                                .scaleEffect(0.9)
+                        } else {
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
+                        }
+                    }
+                    .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!addShiftCoordinator.canSubmit || addShiftCoordinator.isLoading)
+                .tidexGlass(
+                    shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+                    tint: addShiftCoordinator.canSubmit ? Color.tidexBlue.opacity(0.2) : nil
+                )
+                .opacity(addShiftCoordinator.canSubmit ? 1.0 : 0.6)
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                .accessibilityLabel(Text(.tabsAdd))
             }
 
             // Month picker
@@ -280,7 +312,7 @@ struct MainTabView: View {
             )
             .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
             .frame(height: MonthPickerLayout.height)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+            .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius), interactive: true)
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity)  // Fill screen width, then constrain to tabContent max
@@ -288,6 +320,10 @@ struct MainTabView: View {
         // Position above tab bar (49pt on iPhone) + original bottom padding (8pt)
         // On iPad, tab bar is at top so no extra padding needed
         .padding(.bottom, isIPad ? MonthPickerLayout.bottomPadding : 49 + MonthPickerLayout.bottomPadding)
+    }
+
+    private var monthPickerTransition: AnyTransition {
+        reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity)
     }
 
     /// Current transition phase for month picker animations

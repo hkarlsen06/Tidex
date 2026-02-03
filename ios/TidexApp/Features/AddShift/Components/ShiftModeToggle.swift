@@ -30,9 +30,9 @@ struct ShiftModeToggle: View {
                             if isSelected {
                                 Capsule()
                                     .fill(.clear)
-                                    .glassEffect(
-                                        .regular.tint(Color.tidexBlue.opacity(0.35)),
-                                        in: .capsule
+                                    .tidexGlass(
+                                        shape: .capsule,
+                                        tint: Color.tidexBlue.opacity(0.35)
                                     )
                                     .shadow(color: Color.black.opacity(0.18), radius: 4, x: 0, y: 2)
                                     .matchedGeometryEffect(id: "selection", in: namespace)

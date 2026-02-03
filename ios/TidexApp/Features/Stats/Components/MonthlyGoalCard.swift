@@ -5,7 +5,8 @@ import SwiftUI
 struct MonthlyGoalCard: View {
     let goal: MonthlyGoal
 
-        @Environment(\.userCurrency) private var currency
+    @Environment(\.userCurrency) private var currency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: - Computed Properties
 
@@ -31,24 +32,24 @@ struct MonthlyGoalCard: View {
             // Header row with title and settings icon
             HStack {
                 Text(.statsMonthlyGoalTitle)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.tidexHeadline)
                     .foregroundColor(.tidexTextPrimary)
 
                 Spacer()
 
                 Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.tidexBody)
                     .foregroundColor(.tidexTextMuted)
             }
 
             // Goal target display
             HStack(spacing: 4) {
                 Text("\(String(localized: .statsMonthlyGoalGoalLabel)):")
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexTextSecondary)
 
                 Text(formatCurrency(goal.target))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexTextPrimary)
             }
 
@@ -83,7 +84,7 @@ struct MonthlyGoalCard: View {
                         width: max(0, geometry.size.width * (clampedPercentage / 100)),
                         height: 12
                     )
-                    .animation(.easeOut(duration: 0.5), value: clampedPercentage)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.5), value: clampedPercentage)
             }
         }
         .frame(height: 12)
@@ -103,18 +104,18 @@ struct MonthlyGoalCard: View {
             if overAmount > 0 {
                 // Over target
                 Text(String(localized: .statsMonthlyGoalOverTarget(formatCurrency(overAmount))))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexSuccess)
             } else {
                 // Exactly at goal
                 Text(.statsMonthlyGoalGoalReached)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexSuccess)
             }
         } else {
             // Still working towards goal
             Text(String(localized: .statsMonthlyGoalRemaining(formatCurrency(goal.remaining))))
-                .font(.system(size: 14, weight: .regular))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
     }
@@ -133,18 +134,18 @@ struct MonthlyGoalEmptyCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(.statsMonthlyGoalTitle)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.tidexHeadline)
                     .foregroundColor(.tidexTextPrimary)
 
                 Spacer()
 
                 Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.tidexBody)
                     .foregroundColor(.tidexTextMuted)
             }
 
             Text(.statsMonthlyGoalNotEnabled)
-                .font(.system(size: 14, weight: .regular))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

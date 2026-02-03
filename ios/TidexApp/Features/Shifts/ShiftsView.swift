@@ -861,7 +861,7 @@ struct ShiftsView: View {
                         Spacer()
                     }
                     // Offset for month picker overlay
-                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                    .padding(.bottom, MonthPickerLayout.totalBottomInset)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -884,7 +884,7 @@ struct ShiftsView: View {
                 )
                 .padding(.horizontal, 16)
                 .padding(.top, 40)
-                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16)
+                .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
             }
             .refreshable {
                 AppearanceTracker.shared.reset()
@@ -911,7 +911,7 @@ struct ShiftsView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Color.clear)
-            .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+            .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
             .refreshable {
                 AppearanceTracker.shared.reset()
                 await viewModel.refresh()
@@ -1055,7 +1055,7 @@ struct ShiftsView: View {
                         Spacer()
                     }
                     // Offset for month picker overlay so content centers in available space
-                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                    .padding(.bottom, MonthPickerLayout.totalBottomInset)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -1083,7 +1083,7 @@ struct ShiftsView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 40)
                 // Add bottom padding for floating MonthPicker
-                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16)
+                .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
             }
             .refreshable {
                 AppearanceTracker.shared.reset()
@@ -1183,7 +1183,7 @@ struct ShiftsView: View {
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity)
         // Add bottom padding so last items can scroll above the floating MonthPicker
-        .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
     }
 
     /// Render a single list item (shift or placeholder)

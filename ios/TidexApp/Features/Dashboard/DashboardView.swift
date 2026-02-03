@@ -365,7 +365,7 @@ struct DashboardView: View {
                         Spacer()
                     }
                     // Offset for month picker overlay so content centers in available space
-                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                    .padding(.bottom, MonthPickerLayout.totalBottomInset)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     // Make entire VStack hit-testable for gesture propagation
                     .contentShape(Rectangle())
@@ -544,7 +544,7 @@ struct DashboardView: View {
                     Spacer()
                 }
                 // Offset for month picker overlay so content centers in available space
-                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                .padding(.bottom, MonthPickerLayout.totalBottomInset)
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .contentShape(Rectangle())
             }

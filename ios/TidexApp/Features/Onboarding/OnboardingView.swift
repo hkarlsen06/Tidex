@@ -7,7 +7,8 @@ struct OnboardingView: View {
     let onNavigateToSignup: () -> Void
     let onNavigateToLogin: () -> Void
 
-        @State private var currentPage = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var currentPage = 0
     @State private var hourlyRate: Double = 0  // Set on appear based on locale
     @State private var hasInitializedRate = false
 
@@ -50,7 +51,7 @@ struct OnboardingView: View {
                     .tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
+                .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
 
                 // Bottom controls area - constrained for iPad
                 VStack(spacing: 16) {
@@ -79,7 +80,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
                 .adaptiveContentWidth()
                 .padding(.bottom, 32)
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
+                .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
             }
 
             // Skip button overlaid at top-right (only on first page)
@@ -98,7 +99,7 @@ struct OnboardingView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                         }
-                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .tidexGlass(shape: .capsule, interactive: true)
                         .padding(.trailing, 24)
                         .padding(.top, 16)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -106,7 +107,7 @@ struct OnboardingView: View {
                 }
                 Spacer()
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
+            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
         }
         .onAppear {
             // Initialize hourly rate based on locale (only once)

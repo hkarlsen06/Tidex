@@ -9,6 +9,7 @@ struct CalendarViewModeToggle: View {
     @Binding var viewMode: CalendarViewMode
     let currency: String
     let showMoneyOption: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // Haptic feedback
     private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -29,17 +30,22 @@ struct CalendarViewModeToggle: View {
             Button {
                 guard viewMode != .hours else { return }
                 toggleHaptic.impactOccurred()
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                if reduceMotion {
                     viewMode = .hours
                     viewMode.save()
+                } else {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                        viewMode = .hours
+                        viewMode.save()
+                    }
                 }
             } label: {
                 HStack(spacing: 6) {
                     Text("--:--")
                     Image(systemName: "clock")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.tidexCaptionStrong)
                 }
-                .font(.system(size: 14, weight: viewMode == .hours ? .semibold : .regular))
+                .font(viewMode == .hours ? .tidexLabelStrong : .tidexSubheadline)
                 .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)
@@ -49,7 +55,7 @@ struct CalendarViewModeToggle: View {
                         if viewMode == .hours {
                             Capsule()
                                 .fill(.clear)
-                                .glassEffect(.regular.interactive())
+                                .tidexGlass(shape: .capsule, interactive: true)
                         }
                     }
                 )
@@ -61,13 +67,18 @@ struct CalendarViewModeToggle: View {
                 Button {
                     guard viewMode != .money else { return }
                     toggleHaptic.impactOccurred()
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                    if reduceMotion {
                         viewMode = .money
                         viewMode.save()
+                    } else {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            viewMode = .money
+                            viewMode.save()
+                        }
                     }
                 } label: {
                     Text("---- \(currency)")
-                        .font(.system(size: 14, weight: viewMode == .money ? .semibold : .regular))
+                        .font(viewMode == .money ? .tidexLabelStrong : .tidexSubheadline)
                         .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.sm)
@@ -77,7 +88,7 @@ struct CalendarViewModeToggle: View {
                                 if viewMode == .money {
                                     Capsule()
                                         .fill(.clear)
-                                        .glassEffect(.regular.interactive())
+                                        .tidexGlass(shape: .capsule, interactive: true)
                                 }
                             }
                         )

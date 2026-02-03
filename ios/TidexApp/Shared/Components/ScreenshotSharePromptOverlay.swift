@@ -3,6 +3,7 @@ import SwiftUI
 /// Overlay that prompts users to use the native share button instead of screenshots
 /// Slides up from the bottom when a screenshot is detected in the shifts tab
 struct ScreenshotSharePromptOverlay: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let onDismiss: () -> Void
     let onUseShareButton: () -> Void
 
@@ -37,7 +38,7 @@ struct ScreenshotSharePromptOverlay: View {
 
                     // Title
                     Text(.screenshotShareTitle)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.tidexTitle2)
                         .foregroundColor(.tidexTextPrimary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
@@ -45,7 +46,7 @@ struct ScreenshotSharePromptOverlay: View {
 
                     // Description
                     Text(.screenshotShareDescription)
-                        .font(.system(size: 15))
+                        .font(.tidexBody)
                         .foregroundColor(.tidexTextSecondary)
                         .multilineTextAlignment(.center)
                         .lineLimit(nil)
@@ -118,8 +119,8 @@ struct ScreenshotSharePromptOverlay: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: showContent)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: dragOffset)
+        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: showContent)
+        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: dragOffset)
         .onAppear {
             showContent = true
             Haptics.play(.warning)
@@ -138,7 +139,7 @@ struct ScreenshotSharePromptOverlay: View {
                     .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.tidexBlue)
                     .frame(width: 48, height: 48)
-                    .glassEffect(.regular.interactive(), in: .circle)
+                    .tidexGlass(shape: .circle, interactive: true)
 
                 // Pointer arrow
                 Image(systemName: "arrowtriangle.up.fill")
@@ -151,7 +152,7 @@ struct ScreenshotSharePromptOverlay: View {
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.tidexTextMuted)
                 .frame(width: 40, height: 40)
-                .glassEffect(.regular, in: .circle)
+                .tidexGlass(shape: .circle)
                 .opacity(0.5)
         }
     }
