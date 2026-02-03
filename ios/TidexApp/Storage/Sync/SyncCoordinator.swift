@@ -10,11 +10,58 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinat
 /// Cursor is only persisted after full page success, so failed pages will re-pull.
 private let pullSaveBatchSize = 50
 
+private enum SyncState {
+    case idle
+    case syncing(userId: String, startedAt: Date)
+}
+
+private enum SyncStartDecision {
+    case started
+    case alreadySyncing
+    case skippedInterval
+}
+
+private actor SyncStateStore {
+    private var syncState: SyncState = .idle
+    private var lastAutoSyncAt: Date?
+
+    func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval) -> SyncStartDecision {
+        switch syncState {
+        case .syncing:
+            return .alreadySyncing
+        case .idle:
+            break
+        }
+
+        let requiresIntervalCheck = reason != .manualRefresh && reason != .localChange && reason != .watchRefresh
+        if requiresIntervalCheck,
+           let lastAuto = lastAutoSyncAt,
+           Date().timeIntervalSince(lastAuto) < minimumSyncInterval {
+            return .skippedInterval
+        }
+
+        if requiresIntervalCheck {
+            lastAutoSyncAt = Date()
+        }
+
+        syncState = .syncing(userId: userId, startedAt: Date())
+        return .started
+    }
+
+    func endSync() {
+        syncState = .idle
+    }
+
+    func reset() {
+        syncState = .idle
+        lastAutoSyncAt = nil
+    }
+}
+
 // MARK: - Sync Coordinator
 
 /// Coordinates bidirectional sync between local SwiftData storage and Supabase
 /// Implements incremental sync via revision cursors with field-level conflict detection
-@MainActor
 final class SyncCoordinator: ObservableObject {
     /// Shared instance
     static let shared = SyncCoordinator()
@@ -44,36 +91,21 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Private State
 
     /// Sync state for atomic check-and-set operations
-    /// Prevents race conditions when multiple sync calls occur concurrently
-    private enum SyncState {
-        case idle
-        case syncing(userId: String, startedAt: Date)
-    }
-
-    /// Atomic sync state - replaces separate syncInProgress flag
-    private var syncState: SyncState = .idle
-
-    /// Computed property to check if sync is in progress
-    private var syncInProgress: Bool {
-        if case .syncing = syncState { return true }
-        return false
-    }
-
-    /// Last automatic sync attempt time
-    private var lastAutoSyncAt: Date?
+    private let stateStore = SyncStateStore()
 
     private init() {}
 
     /// Reset sync state when user changes (e.g., sign out)
     /// Clears the interval guard so the next user's initial sync isn't blocked
-    func resetForUserChange() {
-        syncState = .idle
-        isSyncing = false
-        lastAutoSyncAt = nil
-        lastError = nil
-        lastSyncedAt = nil
-        conflictCount = 0
-        SyncStatusManager.shared.reset()
+    func resetForUserChange() async {
+        await stateStore.reset()
+        await MainActor.run {
+            isSyncing = false
+            lastError = nil
+            lastSyncedAt = nil
+            conflictCount = 0
+            SyncStatusManager.shared.reset()
+        }
         logger.info("Sync state reset for user change")
     }
 
@@ -108,10 +140,14 @@ final class SyncCoordinator: ObservableObject {
     /// - Returns: Sync result
     @discardableResult
     func sync(reason: SyncReason, userId: String) async -> SyncResult {
-        // Atomic check-and-set to prevent race conditions
-        // Since this is @MainActor, we're guaranteed single-threaded access here
-        switch syncState {
-        case .syncing:
+        let decision = await stateStore.beginSync(
+            reason: reason,
+            userId: userId,
+            minimumSyncInterval: minimumSyncInterval
+        )
+
+        switch decision {
+        case .alreadySyncing:
             logger.info("Sync already in progress, skipping \(reason.rawValue)")
             return SyncResult(
                 success: false,
@@ -124,53 +160,36 @@ final class SyncCoordinator: ObservableObject {
                 duration: 0,
                 error: "Sync already in progress"
             )
-        case .idle:
+        case .skippedInterval:
+            return SyncResult(
+                success: false,
+                tableResults: [],
+                pushResults: [],
+                totalRowsProcessed: 0,
+                totalRowsPushed: 0,
+                totalConflicts: 0,
+                totalAutoMerged: 0,
+                duration: 0,
+                error: nil
+            )
+        case .started:
             break
         }
 
-        // Interval guard for automatic syncs (silent skip)
-        // Local changes, manual refreshes, and Watch refreshes always bypass the interval guard
-        // Check BEFORE changing state to avoid race conditions
-        let requiresIntervalCheck = reason != .manualRefresh && reason != .localChange && reason != .watchRefresh
-        if requiresIntervalCheck {
-            if let lastAuto = lastAutoSyncAt,
-               Date().timeIntervalSince(lastAuto) < minimumSyncInterval {
-                return SyncResult(
-                    success: false,
-                    tableResults: [],
-                    pushResults: [],
-                    totalRowsProcessed: 0,
-                    totalRowsPushed: 0,
-                    totalConflicts: 0,
-                    totalAutoMerged: 0,
-                    duration: 0,
-                    error: nil
-                )
-            }
+        await MainActor.run {
+            isSyncing = true
+            lastError = nil
         }
-
-        // Atomically update state - timestamp IMMEDIATELY to prevent races
-        // For interval-guarded syncs, update lastAutoSyncAt now, not at the end
-        if requiresIntervalCheck {
-            lastAutoSyncAt = Date()
-        }
-
-        syncState = .syncing(userId: userId, startedAt: Date())
-        isSyncing = true
-        lastError = nil
 
         // Update global sync status for UI indicators (only for manual pull-to-refresh)
         if reason == .manualRefresh {
-            SyncStatusManager.shared.syncStarted()
-        }
-
-        // SAFETY: Ensure state is always reset, even on unexpected errors
-        defer {
-            syncState = .idle
-            isSyncing = false
+            await MainActor.run {
+                SyncStatusManager.shared.syncStarted()
+            }
         }
 
         let startTime = Date()
+        var result: SyncResult
 
         // Update device locale in user metadata (non-blocking, errors logged but not propagated)
         await updateDeviceLocale()
@@ -216,12 +235,13 @@ final class SyncCoordinator: ObservableObject {
                 state.markSyncSucceeded()
             }
 
-            // Update published state
-            lastSyncedAt = Date()
-            conflictCount = try await storeActor.countConflicts(userId: userId)
+            let conflicts = try await storeActor.countConflicts(userId: userId)
 
-            // Update global sync status for UI indicators
-            SyncStatusManager.shared.syncSucceeded()
+            await MainActor.run {
+                lastSyncedAt = Date()
+                conflictCount = conflicts
+                SyncStatusManager.shared.syncSucceeded()
+            }
 
             // Note: lastAutoSyncAt is now updated at the START of sync (for interval-guarded syncs)
             // to prevent race conditions where concurrent syncs both pass the interval check
@@ -232,10 +252,11 @@ final class SyncCoordinator: ObservableObject {
             }
 
             // Update widget storage with latest shift data
-            NativeWidgetStorage.updateWidgetStorage(for: userId)
+            await MainActor.run {
+                NativeWidgetStorage.updateWidgetStorage(for: userId)
+            }
 
-            // Note: syncState and isSyncing are reset by defer block
-            return SyncResult(
+            result = SyncResult(
                 success: true,
                 tableResults: tableResults,
                 pushResults: pushResults,
@@ -269,13 +290,12 @@ final class SyncCoordinator: ObservableObject {
             }
 
             // Surface user-friendly message to UI
-            lastError = userFriendlyMessage
+            await MainActor.run {
+                lastError = userFriendlyMessage
+                SyncStatusManager.shared.syncFailed(message: userFriendlyMessage)
+            }
 
-            // Update global sync status for UI indicators
-            SyncStatusManager.shared.syncFailed(message: userFriendlyMessage)
-
-            // Note: syncState and isSyncing are reset by defer block
-            return SyncResult(
+            result = SyncResult(
                 success: false,
                 tableResults: [],
                 pushResults: [],
@@ -287,6 +307,12 @@ final class SyncCoordinator: ObservableObject {
                 error: userFriendlyMessage
             )
         }
+
+        await stateStore.endSync()
+        await MainActor.run {
+            isSyncing = false
+        }
+        return result
     }
 
     // MARK: - Pull Implementation
@@ -3078,10 +3104,15 @@ final class SyncCoordinator: ObservableObject {
         }
 
         // Update conflict count
-        conflictCount = try await storeActor.countConflicts(userId: userId)
+        let conflicts = try await storeActor.countConflicts(userId: userId)
+        await MainActor.run {
+            conflictCount = conflicts
+        }
 
         // Update widget storage since shift data changed
-        NativeWidgetStorage.updateWidgetStorage(for: userId)
+        await MainActor.run {
+            NativeWidgetStorage.updateWidgetStorage(for: userId)
+        }
     }
 
     /// Resolve a conflict for a recurring shift
@@ -3119,10 +3150,15 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        conflictCount = try await storeActor.countConflicts(userId: userId)
+        let conflicts = try await storeActor.countConflicts(userId: userId)
+        await MainActor.run {
+            conflictCount = conflicts
+        }
 
         // Update widget storage since recurring shift data changed (affects generated shifts)
-        NativeWidgetStorage.updateWidgetStorage(for: userId)
+        await MainActor.run {
+            NativeWidgetStorage.updateWidgetStorage(for: userId)
+        }
     }
 
     /// Resolve a conflict for a wage snapshot
@@ -3160,10 +3196,15 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        conflictCount = try await storeActor.countConflicts(userId: userId)
+        let conflicts = try await storeActor.countConflicts(userId: userId)
+        await MainActor.run {
+            conflictCount = conflicts
+        }
 
         // Update widget storage since wage calculations may have changed
-        NativeWidgetStorage.updateWidgetStorage(for: userId)
+        await MainActor.run {
+            NativeWidgetStorage.updateWidgetStorage(for: userId)
+        }
     }
 
     /// Resolve a conflict for user settings
@@ -3201,10 +3242,15 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        conflictCount = try await storeActor.countConflicts(userId: userId)
+        let conflicts = try await storeActor.countConflicts(userId: userId)
+        await MainActor.run {
+            conflictCount = conflicts
+        }
 
         // Update widget storage since settings (e.g., currency) may affect display
-        NativeWidgetStorage.updateWidgetStorage(for: userId)
+        await MainActor.run {
+            NativeWidgetStorage.updateWidgetStorage(for: userId)
+        }
     }
 
     // MARK: - Notification Preferences Pull
@@ -3255,10 +3301,12 @@ final class SyncCoordinator: ObservableObject {
         let pageStartTime = Date()
 
         // Apply each row to local storage using the repository
-        let repository = NotificationPreferencesRepository.shared
         for row in rows {
             let serverUpdatedAt = parseUpdatedAt(row.updated_at, table: .notificationPreferences, id: row.user_id)
-            repository.saveFromServer(row: row.toNotificationPreferencesRow(), serverUpdatedAt: serverUpdatedAt)
+            await MainActor.run {
+                NotificationPreferencesRepository.shared
+                    .saveFromServer(row: row.toNotificationPreferencesRow(), serverUpdatedAt: serverUpdatedAt)
+            }
         }
 
         let duration = Date().timeIntervalSince(pageStartTime)
@@ -3293,19 +3341,36 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Notification Preferences Push
 
     private func pushNotificationPreferences(userId: String) async throws -> TablePushResult {
-        let repository = NotificationPreferencesRepository.shared
+        struct NotificationPreferencesPayload {
+            let shiftRemindersEnabled: Bool
+            let shiftReminderMinutesArray: [Int]
+            let sharedShiftsEnabled: Bool
+        }
 
         // Get dirty preferences (if any)
-        guard let preferences = repository.getDirtyPreferences(for: userId) else {
+        let preferences = await MainActor.run(resultType: NotificationPreferencesPayload?.self) {
+            guard let dirty = NotificationPreferencesRepository.shared.getDirtyPreferences(for: userId) else {
+                return nil
+            }
+            return NotificationPreferencesPayload(
+                shiftRemindersEnabled: dirty.shiftRemindersEnabled,
+                shiftReminderMinutesArray: dirty.shiftReminderMinutesArray,
+                sharedShiftsEnabled: dirty.sharedShiftsEnabled
+            )
+        }
+
+        guard let preferences else {
             return TablePushResult(table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
         }
 
         // Build upsert payload - iOS is source of truth, so we always push all fields
         let updateData: [String: AnyJSON] = [
-            "user_id": .string(userId),
-            "shift_reminders_enabled": .bool(preferences.shiftRemindersEnabled),
-            "shift_reminder_minutes_array": .array(preferences.shiftReminderMinutesArray.map { .integer($0) }),
-            "shared_shifts_enabled": .bool(preferences.sharedShiftsEnabled)
+            "user_id": AnyJSON.string(userId),
+            "shift_reminders_enabled": AnyJSON.bool(preferences.shiftRemindersEnabled),
+            "shift_reminder_minutes_array": AnyJSON.array(
+                preferences.shiftReminderMinutesArray.map { AnyJSON.integer($0) }
+            ),
+            "shared_shifts_enabled": AnyJSON.bool(preferences.sharedShiftsEnabled)
         ]
 
         do {
@@ -3319,7 +3384,9 @@ final class SyncCoordinator: ObservableObject {
 
             if let returnedRow = returnedRows.first {
                 let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .notificationPreferences, id: userId)
-                repository.markClean(for: userId, serverUpdatedAt: serverUpdatedAt)
+                await MainActor.run {
+                    NotificationPreferencesRepository.shared.markClean(for: userId, serverUpdatedAt: serverUpdatedAt)
+                }
                 logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
                 return TablePushResult(table: .notificationPreferences, rowsPushed: 1, newConflicts: 0, rebased: 0)
             } else {
