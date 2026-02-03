@@ -62,11 +62,16 @@ struct FeaturedShiftCard: View {
                             .foregroundColor(.tidexTextPrimary)
                         Text("·")
                             .foregroundColor(.tidexTextMuted)
-                        Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(.tidexTextMuted)
+                        HStack(spacing: 4) {
+                            Text(dateParts.dayNumber)
+                                .contentTransition(.numericText())
+                            Text(dateParts.monthName)
+                        }
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.tidexTextMuted)
                     }
                     .fixedSize(horizontal: true, vertical: false)
+                    .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
 
                     Spacer()
 
@@ -79,10 +84,15 @@ struct FeaturedShiftCard: View {
                                 .tracking(-0.5)
                                 .foregroundColor(.tidexBlue)
                         }
-                        Text(formatCurrency(displayAmount))
-                            .font(.system(size: 22, weight: .semibold))
-                            .tracking(-0.5)
-                            .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
+                        CurrencyCountUpText(
+                            amount: displayAmount,
+                            duration: 0.8,
+                            animateOnAppear: true,
+                            animateChanges: true
+                        )
+                        .font(.system(size: 22, weight: .semibold))
+                        .tracking(-0.5)
+                        .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
                     }
                 }
 
@@ -116,11 +126,15 @@ struct FeaturedShiftCard: View {
                     if showBreakdown {
                         HStack(spacing: 4) {
                             Text(formatPlainAmount(shift.grossPay))
+                                .contentTransition(.numericText(value: shift.grossPay))
                             Text("−")
                             Text(formatPlainAmount(shift.taxAmount))
+                                .contentTransition(.numericText(value: shift.taxAmount))
                         }
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.tidexTextMuted)
+                        .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
+                        .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
                     }
                 }
             }
