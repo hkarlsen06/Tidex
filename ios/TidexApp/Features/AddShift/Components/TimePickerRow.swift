@@ -135,6 +135,16 @@ struct NumericTimeInput: View {
         // Remove all non-digit characters
         let digits = newValue.filter { $0.isNumber }
 
+        // Only handle focus/navigation when user is actively typing (field is focused)
+        // This prevents programmatic value changes from triggering focus changes
+        guard isFocused else {
+            // Just update the display value without any focus manipulation
+            if digits.count <= 4 {
+                inputValue = formatTimeInput(digits)
+            }
+            return
+        }
+
         // Detect backspace that empties the field - move to previous field
         // This enables continuous backspace navigation between fields
         if digits.isEmpty && previousField != nil {

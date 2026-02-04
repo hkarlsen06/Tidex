@@ -369,7 +369,7 @@ final class AppCoordinator: ObservableObject {
 
     /// Run a background task and track it for cancellation/cleanup.
     private func runTrackedTask(_ operation: @escaping @Sendable () async -> Void) {
-        let task = Task { [weak self] in
+        let task = Task {
             await operation()
         }
         backgroundTasks.append(task)

@@ -153,8 +153,9 @@ struct ShiftsView: View {
                             showingShareOptions = true
                         } label: {
                             Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.tidexTextPrimary)
+                                .offset(y: -1)
                         }
                     }
                 }
