@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex ha bisogno dell'accesso alla fotocamera per scattare una foto profilo.";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex ha bisogno dell'accesso alla libreria foto per salvare immagini di calendario e turni condivisi.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex ha bisogno dell'accesso al calendario per esportare i tuoi turni come eventi del calendario.";

@@ -61,6 +61,7 @@ const INFO_PLIST_TRANSLATABLE_KEYS = [
   "NSCameraUsageDescription",
   "NSFaceIDUsageDescription",
   "NSPhotoLibraryAddUsageDescription",
+  "NSCalendarsFullAccessUsageDescription",
 ];
 
 // Stats for reporting
@@ -725,12 +726,11 @@ async function syncXcodeProjectLanguages() {
       .map((r) => r.trim().replace(/"/g, ""))
       .filter((r) => r.length > 0);
 
-    // Build desired regions list: en + all target languages + Base
+    // Build desired regions list: en + all target languages
     const desiredRegions = new Set(["en"]);
     for (const lang of TARGET_LANGUAGES) {
       desiredRegions.add(lang.code);
     }
-    desiredRegions.add("Base");
 
     // Check what's missing
     const missingRegions = [...desiredRegions].filter(
@@ -800,7 +800,9 @@ function generateInfoPlistStrings(langName, strings) {
           ? "/* Face ID usage description */"
           : key === "NSPhotoLibraryAddUsageDescription"
             ? "/* Photo library save description */"
-            : `/* ${key} */`;
+            : key === "NSCalendarsFullAccessUsageDescription"
+              ? "/* Calendar access description */"
+              : `/* ${key} */`;
     lines.push(comment);
     // Escape any quotes in the value
     const escapedValue = value.replace(/"/g, '\\"');

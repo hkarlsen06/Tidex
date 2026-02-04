@@ -57,6 +57,7 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
 enum ExportFormat {
     case pdf
     case csv
+    case calendar
 }
 
 /// Response from the export API
@@ -103,6 +104,12 @@ final class DataSettingsViewModel: ObservableObject {
     /// Loading state for CSV export
     @Published var isExportingCsv = false
 
+    /// Loading state for calendar export
+    @Published var isExportingCalendar = false
+
+    /// Success message (for calendar export)
+    @Published var successMessage: String?
+
     /// Error message
     @Published var errorMessage: String?
 
@@ -137,7 +144,7 @@ final class DataSettingsViewModel: ObservableObject {
 
     /// Whether export is currently possible
     var canExport: Bool {
-        resolvedDateRange != nil && !isExportingPdf && !isExportingCsv && !isSyncing
+        resolvedDateRange != nil && !isExportingPdf && !isExportingCsv && !isExportingCalendar && !isSyncing
     }
 
     /// Whether the custom date range is invalid
@@ -166,8 +173,11 @@ final class DataSettingsViewModel: ObservableObject {
             isExportingPdf = true
         case .csv:
             isExportingCsv = true
+        case .calendar:
+            isExportingCalendar = true
         }
         errorMessage = nil
+        successMessage = nil
 
         defer {
             switch format {
@@ -175,10 +185,19 @@ final class DataSettingsViewModel: ObservableObject {
                 isExportingPdf = false
             case .csv:
                 isExportingCsv = false
+            case .calendar:
+                isExportingCalendar = false
             }
         }
 
         do {
+            // Calendar export uses local data - no network needed
+            if format == .calendar {
+                try await exportToCalendarFromLocalData(userId: userId, from: range.from, to: range.to)
+                return
+            }
+
+            // PDF/CSV export still uses API for calculation consistency
             // Sync first to ensure local changes are pushed to the server
             isSyncing = true
             logger.info("Syncing before export...")
@@ -193,17 +212,19 @@ final class DataSettingsViewModel: ObservableObject {
             // Fetch export data from API
             let exportData = try await fetchExportData(from: range.from, to: range.to)
 
-            // Generate file based on format
-            let fileURL: URL
+            // Handle export based on format
             switch format {
             case .pdf:
-                fileURL = try generatePDF(from: exportData, range: range, locale: locale)
-            case .csv:
-                fileURL = try generateCSV(from: exportData, range: range, locale: locale)
-            }
+                let fileURL = try generatePDF(from: exportData, range: range, locale: locale)
+                shareURL = fileURL
 
-            // Present share sheet
-            shareURL = fileURL
+            case .csv:
+                let fileURL = try generateCSV(from: exportData, range: range, locale: locale)
+                shareURL = fileURL
+
+            case .calendar:
+                break // Already handled above
+            }
 
         } catch {
             logger.error("Export failed: \(error.localizedDescription)")
@@ -211,9 +232,138 @@ final class DataSettingsViewModel: ObservableObject {
         }
     }
 
+    /// Export shifts to the device calendar using local data
+    private func exportToCalendarFromLocalData(userId: String, from: String, to: String) async throws {
+        logger.info("Exporting to calendar from local data: \(from) to \(to)")
+
+        // Parse date range
+        guard let startDate = parseISODate(from),
+              let endDate = parseISODate(to) else {
+            throw CalendarExportError.invalidDate
+        }
+
+        // Fetch regular shifts from local storage
+        let regularShifts = ShiftsRepository.shared.getShifts(
+            for: userId,
+            startDate: startDate,
+            endDate: endDate
+        )
+        logger.info("Found \(regularShifts.count) regular shifts in local storage")
+
+        // Fetch recurring shifts from local storage
+        let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
+        logger.info("Found \(recurringShifts.count) recurring shift patterns")
+
+        // Generate virtual shifts from recurring patterns
+        var virtualShifts: [ExportedShift] = []
+
+        let calendar = Calendar.current
+        let startYear = calendar.component(.year, from: startDate)
+        let startMonth = calendar.component(.month, from: startDate)
+        let endYear = calendar.component(.year, from: endDate)
+        let endMonth = calendar.component(.month, from: endDate)
+
+        // Create a set of real shift dates to avoid duplicates
+        let realShiftDates = Set(regularShifts.map { $0.shift_date })
+
+        for recurring in recurringShifts {
+            var currentYear = startYear
+            var currentMonth = startMonth
+
+            while currentYear < endYear || (currentYear == endYear && currentMonth <= endMonth) {
+                let generatedShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+                    year: currentYear,
+                    month: currentMonth,
+                    recurring: recurring
+                )
+
+                for virtualShift in generatedShifts {
+                    // Skip if outside the date range
+                    guard virtualShift.date >= from && virtualShift.date <= to else { continue }
+
+                    // Skip if there's already a real shift on this date (prevents duplicates)
+                    guard !realShiftDates.contains(virtualShift.date) else { continue }
+
+                    // Convert to ExportedShift
+                    virtualShifts.append(ExportedShift(
+                        id: "virtual-\(recurring.id)-\(virtualShift.date)",
+                        date: virtualShift.date,
+                        startTime: recurring.start_time,
+                        endTime: recurring.end_time,
+                        type: getShiftType(dateISO: virtualShift.date),
+                        recurringId: recurring.id,
+                        calc: ExportedShift.ShiftCalculation(hours: 0, baseWage: 0, supplement: 0, total: 0)
+                    ))
+                }
+
+                // Move to next month
+                currentMonth += 1
+                if currentMonth > 12 {
+                    currentMonth = 1
+                    currentYear += 1
+                }
+            }
+        }
+
+        logger.info("Generated \(virtualShifts.count) virtual shifts from recurring patterns")
+
+        // Convert regular shifts to ExportedShift format
+        let exportedRegularShifts = regularShifts.map { shift in
+            ExportedShift(
+                id: shift.id,
+                date: shift.shift_date,
+                startTime: shift.start_time,
+                endTime: shift.end_time,
+                type: getShiftType(dateISO: shift.shift_date),
+                recurringId: shift.recurring_id,
+                calc: ExportedShift.ShiftCalculation(hours: 0, baseWage: 0, supplement: 0, total: 0)
+            )
+        }
+
+        // Combine and sort all shifts
+        let allShifts = (exportedRegularShifts + virtualShifts).sorted { $0.date < $1.date }
+
+        logger.info("Total shifts to export to calendar: \(allShifts.count)")
+
+        guard !allShifts.isEmpty else {
+            throw CalendarExportError.noShifts
+        }
+
+        let calendarName = String(localized: .dataExportCalendarCalendarName)
+        let eventTitle = String(localized: .dataExportCalendarEventTitle)
+
+        let count = try await CalendarExportService.shared.exportShifts(
+            allShifts,
+            calendarName: calendarName,
+            eventTitle: eventTitle
+        )
+
+        // Show success message
+        successMessage = String(localized: .dataExportCalendarSuccess(Int32(count)))
+    }
+
+    /// Calculate shift type based on date
+    /// 0 = weekday (Mon-Fri), 1 = Saturday, 2 = Sunday/holiday
+    private func getShiftType(dateISO: String) -> Int {
+        guard let date = parseISODate(dateISO) else { return 0 }
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 1: return 2 // Sunday
+        case 7: return 1 // Saturday
+        default: return 0 // Weekday
+        }
+    }
+
     /// Clear error message
     func clearError() {
         errorMessage = nil
+    }
+
+    /// Clear success message
+    func clearSuccess() {
+        successMessage = nil
     }
 
     /// Dismiss share sheet

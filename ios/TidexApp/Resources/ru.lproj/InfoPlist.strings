@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex требует доступ к камере для создания фотографии профиля.";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex требует доступ к фотопленке для сохранения календарей и изображений смен.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex требует доступ к календарю для экспорта ваших смен в качестве событий календаря.";
