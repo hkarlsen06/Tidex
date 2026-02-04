@@ -7,7 +7,7 @@ let package = Package(
     products: [
         .executable(name: "validate-localization", targets: ["ValidateLocalization"]),
         .executable(name: "add-string", targets: ["AddString"]),
-        .executable(name: "lint-hardcoded-strings", targets: ["LintHardcodedStrings"])
+        .executable(name: "audit-strings", targets: ["AuditStrings"])
     ],
     targets: [
         .executableTarget(
@@ -23,10 +23,10 @@ let package = Package(
             sources: ["add-string.swift"]
         ),
         .executableTarget(
-            name: "LintHardcodedStrings",
+            name: "AuditStrings",
             dependencies: [],
             path: ".",
-            sources: ["lint-hardcoded-strings.swift"]
+            sources: ["audit-strings.swift"]
         )
     ]
 )

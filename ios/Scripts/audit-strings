@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper script for audit-strings Swift tool
+# Usage: audit-strings [--strict] [--path <path>] [--orphaned-only] [--hardcoded-only]
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+swift run --package-path "$SCRIPT_DIR" audit-strings "$@"
