@@ -8,6 +8,12 @@ iOS-specific development guidance for the Tidex native app.
 
 You may run `xcodebuild` and prefer a simulator destination with a reasonable timeout. If a build is long or hangs, stop and report.
 
+### Build Command
+
+```bash
+cd /Users/hjalmarsamuelkristensen-karlsen/Lokalt/Cloned-Repos/tidex/ios && xcodebuild -project Tidex.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' build
+```
+
 **ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
 - API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
 - No API route: Subscription/entitlement data, settings, shifts - use Supabase client directly or RPC functions
