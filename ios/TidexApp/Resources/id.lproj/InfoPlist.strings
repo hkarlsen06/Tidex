@@ -1,0 +1,19 @@
+/* Indonesian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex membutuhkan akses kamera untuk mengambil foto profil.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex menggunakan Face ID untuk melindungi data penghasilan Anda dari orang yang tidak berhak. Hanya Anda yang dapat melihat pendapatan Anda.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex membutuhkan akses untuk menyimpan kalender bersama dan gambar shift ke galeri foto Anda.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex membutuhkan akses kalender untuk mengekspor shift Anda sebagai acara kalender.";

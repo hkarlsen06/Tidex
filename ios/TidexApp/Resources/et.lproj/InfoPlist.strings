@@ -1,0 +1,19 @@
+/* Estonian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex vajab kameralubasust profiilipildi tegemiseks.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex kasutab Face ID-d teie sissetulekuandmete kaitsmiseks. Ainult teie peaksite nägema oma tulu.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex vajab juurdepääsu, et salvestada jagatud kalendri ja vahetuse pilte teie fotogaleriisse.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex vajab kalendrilubasust, et eksportida teie vahetused kalendrietüüpidena.";

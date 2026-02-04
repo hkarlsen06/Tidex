@@ -23,6 +23,7 @@ const TARGET_LANGUAGES = [
   { code: "it", name: "Italian" },
   { code: "nl", name: "Dutch" },
   { code: "pt-BR", name: "Brazilian Portuguese" },
+  { code: "ca", name: "Catalan" },
 
   // Nordic
   { code: "nb", name: "Norwegian Bokmål" },
@@ -30,14 +31,31 @@ const TARGET_LANGUAGES = [
   { code: "sv", name: "Swedish" },
   { code: "da", name: "Danish" },
   { code: "fi", name: "Finnish" },
+  { code: "is", name: "Icelandic" },
+
+  // Baltic
+  { code: "et", name: "Estonian" },
+  { code: "lv", name: "Latvian" },
+  { code: "lt", name: "Lithuanian" },
+
+  // Central Europe
+  { code: "hu", name: "Hungarian" },
+  { code: "cs", name: "Czech" },
+  { code: "sk", name: "Slovak" },
+  { code: "sl", name: "Slovenian" },
 
   // Eastern Europe
   { code: "pl", name: "Polish" },
   { code: "ru", name: "Russian" },
   { code: "uk", name: "Ukrainian" },
-  { code: "tr", name: "Turkish" },
-  { code: "el", name: "Greek" },
   { code: "ro", name: "Romanian" },
+  { code: "bg", name: "Bulgarian" },
+
+  // Balkans
+  { code: "hr", name: "Croatian" },
+  { code: "sr", name: "Serbian" },
+  { code: "el", name: "Greek" },
+  { code: "tr", name: "Turkish" },
 
   // Middle East & RTL languages
   { code: "ar", name: "Arabic" },
@@ -45,12 +63,23 @@ const TARGET_LANGUAGES = [
   { code: "fa", name: "Persian" },
   { code: "ur", name: "Urdu" },
 
-  // Asia
+  // South Asia
+  { code: "hi", name: "Hindi" },
+  { code: "bn", name: "Bengali" },
+  { code: "ta", name: "Tamil" },
+
+  // East & Southeast Asia
   { code: "ja", name: "Japanese" },
   { code: "ko", name: "Korean" },
   { code: "zh-Hans", name: "Chinese Simplified" },
+  { code: "zh-Hant", name: "Chinese Traditional" },
   { code: "th", name: "Thai" },
   { code: "vi", name: "Vietnamese" },
+  { code: "id", name: "Indonesian" },
+  { code: "fil", name: "Filipino" },
+
+  // Africa
+  { code: "sw", name: "Swahili" },
 ];
 
 // Path to Xcode project file

@@ -1,0 +1,19 @@
+/* Slovak localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex potrebuje prístup k fotoaparátu, aby ste si mohli urobiť profilovú fotografiu.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex používa Face ID na ochranu vašich údajov o výdavkoch pred cudzím pohľadom. Vaše príjmy by mal vidieť len vy.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex potrebuje prístup k uloženiu zdieľaného kalendára a obrázkov zmien do vašej knižnice fotografií.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex potrebuje prístup k vášmu kalendáru, aby ste si mohli exportovať svoje zmeny ako udalosti v kalendári.";
