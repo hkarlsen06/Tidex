@@ -82,15 +82,15 @@ struct SharingView: View {
                     }
                 }
 
-                // Trailing area - sync time on iPhone, sharer info on iPad
+                // Trailing area - superimpose toggle on iPhone, sharer info on iPad
                 ToolbarItem(placement: .topBarTrailing) {
                     if let sharer = viewModel.selectedSharer {
                         if isIPad {
                             // Show sharer info on right side for iPad
                             sharerToolbarInfo(sharer: sharer)
                         } else {
-                            // Show sync time on iPhone
-                            syncTimeView
+                            // Show superimpose toggle button on iPhone
+                            superimposeToggleButton
                         }
                     }
                 }
@@ -319,7 +319,9 @@ struct SharingView: View {
                     month: viewModel.committedMonth,
                     isLoading: viewModel.isLoadingShifts,
                     highlightDates: highlightDates,
-                    highlightShiftIds: highlightShiftIds
+                    highlightShiftIds: highlightShiftIds,
+                    isSuperimposing: viewModel.isSuperimposing,
+                    userHoursByDate: viewModel.isSuperimposing ? viewModel.userHoursByDate : nil
                 )
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                 .frame(maxWidth: .infinity)
@@ -353,38 +355,15 @@ struct SharingView: View {
         }
     }
 
-    /// Sync time indicator shown in the toolbar
-    /// Uses TimelineView to efficiently update every second only when visible
-    @ViewBuilder
-    private var syncTimeView: some View {
-        if let cacheTime = viewModel.lastCacheTime {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                Text(formatTimeSinceSync(from: cacheTime, to: context.date))
-                    .font(.system(size: 15))
-                    .foregroundColor(.tidexTextMuted)
-            }
-        } else if viewModel.isLoadingShifts {
-            ProgressView()
-                .scaleEffect(0.7)
-        }
-    }
-
-    /// Format time since sync in a compact way
-    /// Shows: "Nå"/"Now" (< 5s), "Xs" (< 60s), "Xm" (< 60m), "Xt"/"Xh" (hours)
-    private func formatTimeSinceSync(from startDate: Date, to endDate: Date) -> String {
-        let seconds = Int(endDate.timeIntervalSince(startDate))
-
-        if seconds < 5 {
-            return String(localized: .commonNow).capitalized
-        } else if seconds < 60 {
-            return "\(seconds)s"
-        } else if seconds < 3600 {
-            let minutes = seconds / 60
-            return "\(minutes)m"
-        } else {
-            let hours = seconds / 3600
-            let hoursLabel = String(localized: .commonHoursShort)
-            return "\(hours)\(hoursLabel)"
+    /// Superimpose toggle button in the toolbar
+    /// Allows overlaying user's own shifts on friend's calendar
+    private var superimposeToggleButton: some View {
+        Button {
+            viewModel.toggleSuperimpose()
+        } label: {
+            Image(systemName: "rectangle.on.rectangle")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
         }
     }
 

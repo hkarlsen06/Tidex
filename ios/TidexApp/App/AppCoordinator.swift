@@ -369,17 +369,17 @@ final class AppCoordinator: ObservableObject {
 
     /// Run a background task and track it for cancellation/cleanup.
     private func runTrackedTask(_ operation: @escaping @Sendable () async -> Void) {
-        var taskRef: Task<Void, Never>?
         let task = Task { [weak self] in
             await operation()
-            if let self = self, let task = taskRef {
-                await MainActor.run {
-                    self.backgroundTasks.removeAll { $0 == task }
-                }
+        }
+        backgroundTasks.append(task)
+        // Cleanup task waits for completion then removes from tracking array
+        Task { [weak self, task] in
+            _ = await task.value
+            await MainActor.run {
+                self?.backgroundTasks.removeAll { $0 == task }
             }
         }
-        taskRef = task
-        backgroundTasks.append(task)
     }
 
     /// Load onboarding completion state from user metadata
@@ -544,10 +544,8 @@ final class AppCoordinator: ObservableObject {
                     return
                 }
 
-                if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-                    await Task { @MainActor in
-                        await appDelegate.registerCachedAPNsTokenIfNeeded()
-                    }.value
+                if let appDelegate = await MainActor.run(body: { UIApplication.shared.delegate as? AppDelegate }) {
+                    await appDelegate.registerCachedAPNsTokenIfNeeded()
                 }
 
                 _ = await self.syncCoordinator.sync(reason: .foreground, userId: userId)
