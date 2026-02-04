@@ -1432,9 +1432,13 @@ async function executeGetStatistics(
         data = statsData.yearToDate;
         message = tr.statsYearToDate;
         break;
-      case "last_6_months":
-        data = statsData.last6Months;
-        message = tr.statsLast6Months;
+      case "full_year":
+        data = statsData.fullYear;
+        message = tr.statsFullYear;
+        break;
+      case "yearly_months":
+        data = statsData.yearlyMonths;
+        message = tr.statsYearlyMonths;
         break;
       case "this_week":
         data = statsData.thisWeek;

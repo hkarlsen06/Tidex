@@ -134,7 +134,8 @@ export const getStatisticsSchema = z.object({
     "current_month",
     "last_month",
     "year_to_date",
-    "last_6_months",
+    "full_year",
+    "yearly_months",
     "this_week",
     "monthly_goal",
     "supplement_breakdown",
@@ -840,11 +841,16 @@ Note: The date must be one that would normally occur in the recurring shift patt
 Available metrics:
 - current_month: Earnings, hours, shift count for current month
 - last_month: Same metrics for previous month (good for comparison)
-- year_to_date: Cumulative totals for the year
-- last_6_months: Monthly trend data (6 data points for charts)
+- year_to_date: Cumulative totals from Jan 1 up to today's date. For past years, uses same day-of-year as today (e.g., if today is Feb 4 2026, YTD for 2025 = Jan 1 - Feb 4 2025). Good for "same point in time" comparisons.
+- full_year: Complete calendar year totals (Jan 1 - Dec 31). Use for "how much did I earn in total last year" questions.
+- yearly_months: Monthly breakdown for all 12 months of the specified year. Returns array of {month, earnings, hours, shifts} for Jan-Dec. Use for trends, charts, or "show me my earnings by month".
 - this_week: Daily breakdown Monday through Sunday
 - monthly_goal: Progress toward user's monthly goal (if set)
 - supplement_breakdown: How much is base pay vs evening/weekend supplements
+
+When to use year_to_date vs full_year:
+- "How much had I earned by this point last year?" → year_to_date with year parameter
+- "How much did I earn in total last year?" → full_year with year parameter
 
 Optional: year and month parameters to query specific periods (defaults to current).`,
     input_schema: {
@@ -856,7 +862,8 @@ Optional: year and month parameters to query specific periods (defaults to curre
             "current_month",
             "last_month",
             "year_to_date",
-            "last_6_months",
+            "full_year",
+            "yearly_months",
             "this_week",
             "monthly_goal",
             "supplement_breakdown",
@@ -881,8 +888,12 @@ Optional: year and month parameters to query specific periods (defaults to curre
       { metric: "last_month" },
       // Am I on track for my monthly goal?
       { metric: "monthly_goal" },
-      // Show earnings trend over last 6 months
-      { metric: "last_6_months" },
+      // Show monthly breakdown for the year
+      { metric: "yearly_months" },
+      // How much had I earned by this point last year?
+      { metric: "year_to_date", year: 2025 },
+      // How many hours did I work in total last year / in 2025?
+      { metric: "full_year", year: 2025 },
     ],
   },
 
@@ -1145,7 +1156,9 @@ Returns for each scenario:
 - paid_hours: Hours after break deduction
 - breakdown: base_pay, supplement_pay, break_deducted_minutes
 
-The date matters for supplements (weekend/evening rates vary by day).`,
+The date matters for supplements (weekend/evening rates vary by day).
+
+IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references like "Monday", "next Friday", "this weekend". Use today's date as reference to determine the exact calendar date.`,
     input_schema: {
       type: "object",
       properties: {

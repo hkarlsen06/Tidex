@@ -186,7 +186,7 @@ export type StatsData = {
     readonly totalHours: number;
     readonly shiftCount: number;
   };
-  readonly last6Months: MonthlyData[];
+  readonly yearlyMonths: MonthlyData[];
   readonly thisWeek: DailyData[];
   readonly bestWeek: BestWeekData | null; // Best performing week of the month (null if no shifts)
   readonly thisMonthCumulative: DailyCumulativeData[];
@@ -427,7 +427,12 @@ export const StatsServiceLive = Layer.effect(
         const isCurrentSelection =
           focusYear === realNow.getUTCFullYear() && focusMonth === realNow.getUTCMonth() + 1;
         const monthEndDate = new Date(Date.UTC(focusYear, focusMonth, 0));
-        const cutoffDate = isCurrentSelection ? realNow : monthEndDate;
+        // For year-to-date: use same day-of-year for past years (enables "same point in time" comparison)
+        // e.g., if today is Feb 4, 2026, YTD for 2025 uses Feb 4, 2025 as cutoff
+        const isCurrentYear = focusYear === realNow.getUTCFullYear();
+        const ytdCutoffDate = isCurrentYear
+          ? realNow
+          : new Date(Date.UTC(focusYear, realNow.getUTCMonth(), realNow.getUTCDate()));
 
         // Get tax settings from the payout month's snapshot
         // This ensures tax display matches what will be applied when earnings are paid out
@@ -529,10 +534,10 @@ export const StatsServiceLive = Layer.effect(
           percentageChange = Math.round(((displayCurrent - displayLast) / displayLast) * 100);
         }
 
-        // Year-to-date stats (up to selected month's cutoff date)
+        // Year-to-date stats (same day-of-year for cross-year comparison)
         const ytdShifts = allShifts.filter((shift) => {
           const shiftDate = parseDateAsUTC(shift.shift_date);
-          return shiftDate.getUTCFullYear() === focusYear && shiftDate <= cutoffDate;
+          return shiftDate.getUTCFullYear() === focusYear && shiftDate <= ytdCutoffDate;
         });
         const ytdEarnings = ytdShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
         const ytdHours = ytdShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
@@ -547,13 +552,13 @@ export const StatsServiceLive = Layer.effect(
         const fullYearHours = fullYearShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
         // Full year monthly breakdown (all 12 months of the focus year)
-        const last6Months: MonthlyData[] = [];
+        const yearlyMonths: MonthlyData[] = [];
         for (let month = 1; month <= 12; month++) {
           const monthShifts = allShifts.filter((shift) => isDateInMonth(shift.shift_date, focusYear, month));
           const earnings = monthShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
           const hours = monthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
-          last6Months.push({
+          yearlyMonths.push({
             month: MONTH_NAMES[month - 1],
             fullMonth: FULL_MONTH_NAMES[month - 1],
             earnings,
@@ -1014,7 +1019,7 @@ export const StatsServiceLive = Layer.effect(
             totalHours: fullYearHours,
             shiftCount: fullYearShifts.length,
           },
-          last6Months: last6Months as readonly MonthlyData[],
+          yearlyMonths: yearlyMonths as readonly MonthlyData[],
           thisWeek: thisWeek as readonly DailyData[],
           bestWeek,
           thisMonthCumulative: thisMonthCumulative as readonly DailyCumulativeData[],

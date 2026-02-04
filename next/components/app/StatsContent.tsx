@@ -108,7 +108,7 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
  */
 type ChartData = Pick<
   StatsData,
-  | 'last6Months'
+  | 'yearlyMonths'
   | 'thisWeek'
   | 'bestWeek'
   | 'thisMonthCumulative'
@@ -265,7 +265,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
   const [activeData, setActiveData] = useState<StatsData>(data);
   // Initialize chart data from SSR props to avoid unnecessary skeleton UI
   const [chartData, setChartData] = useState<ChartData | null>({
-    last6Months: data.last6Months,
+    yearlyMonths: data.yearlyMonths,
     thisWeek: data.thisWeek,
     bestWeek: data.bestWeek,
     thisMonthCumulative: data.thisMonthCumulative,
@@ -397,7 +397,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
     if (cachedData) {
       setActiveData(cachedData);
       setChartData({
-        last6Months: cachedData.last6Months,
+        yearlyMonths: cachedData.yearlyMonths,
         thisWeek: cachedData.thisWeek,
         bestWeek: cachedData.bestWeek,
         thisMonthCumulative: cachedData.thisMonthCumulative,
@@ -427,7 +427,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
         setActiveData(payload);
         // Extract chart data from full payload
         setChartData({
-          last6Months: payload.last6Months,
+          yearlyMonths: payload.yearlyMonths,
           thisWeek: payload.thisWeek,
           bestWeek: payload.bestWeek,
           thisMonthCumulative: payload.thisMonthCumulative,
@@ -857,7 +857,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
               {!chartData ? (
                 <ChartSkeleton />
               ) : (
-                <MonthlyBarChart data={chartData.last6Months} />
+                <MonthlyBarChart data={chartData.yearlyMonths} />
               )}
             </CardContent>
           </Card>
