@@ -220,6 +220,7 @@ struct NumericTimeInput: View {
 
 /// Combined start/end time pickers with numeric keyboard input
 /// Auto-advances from start to end field when 4 digits are entered
+/// Includes recent time chips below the inputs for quick selection
 struct TimeRangePicker: View {
     @Binding var startTime: Date?
     @Binding var endTime: Date?
@@ -228,7 +229,7 @@ struct TimeRangePicker: View {
     /// Optional binding to expose/control which field is focused (for keyboard accessory)
     var focusedFieldBinding: Binding<NumericTimeInput.TimeField?>?
     @FocusState private var focusedField: NumericTimeInput.TimeField?
-    
+
     /// Shortened label for start time field
     private var startLabel: String {
         String(localized: .commonStart)
@@ -240,27 +241,39 @@ struct TimeRangePicker: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            NumericTimeInput(
-                time: $startTime,
-                label: startLabel,
-                focusField: $focusedField,
-                field: .start,
-                nextField: .end,
-                previousField: nil,
-                onComplete: nil
-            )
+        GeometryReader { geometry in
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    NumericTimeInput(
+                        time: $startTime,
+                        label: startLabel,
+                        focusField: $focusedField,
+                        field: .start,
+                        nextField: .end,
+                        previousField: nil,
+                        onComplete: nil
+                    )
 
-            NumericTimeInput(
-                time: $endTime,
-                label: endLabel,
-                focusField: $focusedField,
-                field: .end,
-                nextField: nil,
-                previousField: .start,
-                onComplete: nil
-            )
+                    NumericTimeInput(
+                        time: $endTime,
+                        label: endLabel,
+                        focusField: $focusedField,
+                        field: .end,
+                        nextField: nil,
+                        previousField: .start,
+                        onComplete: nil
+                    )
+                }
+
+                RecentTimesChips(
+                    onSelect: { range in
+                        applyTimeRange(range)
+                    },
+                    availableWidth: geometry.size.width
+                )
+            }
         }
+        .frame(height: 92) // Time inputs (~56pt) + spacing (8pt) + chips (28pt)
         .id(scrollId)
         .onChange(of: focusedField) { _, newValue in
             // Sync internal focus state to external binding
@@ -274,6 +287,43 @@ struct TimeRangePicker: View {
                 focusedField = newValue
             }
         }
+    }
+
+    /// Apply a recent time range to the inputs
+    private func applyTimeRange(_ timeRange: TimeRangeCount) {
+        // Dismiss keyboard by clearing focus
+        focusedField = nil
+
+        // Parse start time
+        if let start = parseTimeFromHHmm(timeRange.startTime) {
+            startTime = start
+        }
+        // Parse end time
+        if let end = parseTimeFromHHmm(timeRange.endTime) {
+            endTime = end
+        }
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+
+    /// Parse HH:mm string to Date
+    private func parseTimeFromHHmm(_ timeString: String) -> Date? {
+        let parts = timeString.split(separator: ":")
+        guard parts.count == 2,
+              let hours = Int(parts[0]),
+              let minutes = Int(parts[1]),
+              hours >= 0, hours <= 23,
+              minutes >= 0, minutes <= 59 else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        components.hour = hours
+        components.minute = minutes
+        return calendar.date(from: components)
     }
 }
 
