@@ -157,15 +157,7 @@ struct TotalCardWidgetProvider: TimelineProvider {
             decoder.dateDecodingStrategy = .iso8601
             let totals = try decoder.decode(StoredMonthlyTotals.self, from: data)
 
-            // Check if data is stale (more than 1 hour old)
-            let isStale = Date().timeIntervalSince(totals.updatedAt) > 3600
-
-            if isStale {
-                return TotalCardWidgetEntry.empty(
-                    currency: totals.currencySymbol
-                )
-            }
-
+            // Always show cached data - a potentially stale value is more useful than a skeleton
             return TotalCardWidgetEntry(
                 date: Date(),
                 gross: totals.gross,
