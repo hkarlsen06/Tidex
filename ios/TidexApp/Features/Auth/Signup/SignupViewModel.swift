@@ -223,8 +223,11 @@ final class SignupViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let idToken = try await appleAuthProvider.signIn()
-            let _ = try await authService.signInWithApple(idToken: idToken)
+            let result = try await appleAuthProvider.signIn()
+            let _ = try await authService.signInWithApple(
+                idToken: result.idToken,
+                fullName: result.fullName
+            )
             await handleSuccessfulSignup()
         } catch let error as AppleAuthError where error.isCancellation {
             // User cancelled - do nothing

@@ -5,14 +5,6 @@ import SwiftUI
 /// Used to gather wage, supplement, break, tax, and payroll settings during onboarding
 @Observable
 final class OnboardingData {
-    // MARK: - Profile Settings
-
-    /// User's display name (for users who don't have one, e.g., Apple Sign-In)
-    var displayName: String = ""
-
-    /// Whether the user had a name when onboarding started (determines if profile screen shows)
-    var initiallyHadName: Bool = false
-
     // MARK: - Wage Settings
 
     /// Type of wage: tariff (preset rates) or custom (user-defined)
@@ -138,8 +130,6 @@ final class OnboardingData {
     /// Save current state to UserDefaults for persistence across app restarts
     func save(currentScreen: String) {
         let persistedData = PersistedOnboardingData(
-            displayName: displayName,
-            initiallyHadName: initiallyHadName,
             wageType: wageType,
             selectedTariffLevel: selectedTariffLevel,
             customHourlyWage: customHourlyWage,
@@ -168,8 +158,6 @@ final class OnboardingData {
             return nil
         }
 
-        self.displayName = persisted.displayName ?? ""
-        self.initiallyHadName = persisted.initiallyHadName ?? false
         self.wageType = persisted.wageType
         self.selectedTariffLevel = persisted.selectedTariffLevel
         self.customHourlyWage = persisted.customHourlyWage
@@ -201,8 +189,6 @@ final class OnboardingData {
 
 /// Codable wrapper for OnboardingData persistence
 private struct PersistedOnboardingData: Codable {
-    let displayName: String?
-    let initiallyHadName: Bool?
     let wageType: OnboardingData.WageType
     let selectedTariffLevel: Int
     let customHourlyWage: Double

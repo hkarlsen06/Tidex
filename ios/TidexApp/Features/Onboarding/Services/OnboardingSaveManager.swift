@@ -49,25 +49,19 @@ final class OnboardingSaveManager: ObservableObject {
         logger.info("Starting onboarding save for user: \(userId)")
 
         do {
-            // Step 1: Save display name if user entered one during onboarding
-            if !data.initiallyHadName && !data.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                try await saveDisplayName(data.displayName)
-                logger.info("Saved display name: \(data.displayName)")
-            }
-
-            // Step 2: Create baseline wage snapshot
+            // Step 1: Create baseline wage snapshot
             let snapshot = try await createBaselineSnapshot(userId: userId, data: data)
             logger.info("Created baseline snapshot: \(snapshot.id)")
 
-            // Step 3: Update settings (payroll day and currency)
+            // Step 2: Update settings (payroll day and currency)
             try await updateSettings(userId: userId, payrollDay: data.payrollDay, currency: data.currency)
             logger.info("Updated settings with payroll day: \(data.payrollDay), currency: \(data.currency)")
 
-            // Step 4: Mark onboarding as finished in Supabase user metadata
+            // Step 3: Mark onboarding as finished in Supabase user metadata
             try await markOnboardingFinished()
             logger.info("Marked onboarding as finished in user metadata")
 
-            // Step 5: Trigger sync to push changes to server
+            // Step 4: Trigger sync to push changes to server
             let syncResult = await syncCoordinator.sync(reason: .localChange, userId: userId)
             if syncResult.success {
                 logger.info("Sync completed successfully")
@@ -127,19 +121,5 @@ final class OnboardingSaveManager: ObservableObject {
                 data: ["finishedOnboarding": .bool(true)]
             )
         )
-    }
-
-    private func saveDisplayName(_ displayName: String) async throws {
-        _ = try await supabase.auth.update(
-            user: UserAttributes(
-                data: ["full_name": .string(displayName)]
-            )
-        )
-
-        // Refresh session to get updated JWT
-        _ = try? await supabase.auth.refreshSession()
-
-        // Update AppCoordinator's display name
-        AppCoordinator.shared.updateDisplayName(displayName)
     }
 }
