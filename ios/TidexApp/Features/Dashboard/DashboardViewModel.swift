@@ -1193,7 +1193,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         components.month = month
         components.day = 1
         guard let date = gregorianCalendar.date(from: components) else { return "" }
-        return FormatterCache.monthNameFormatter(locale: .current).string(from: date)
+        return FormatterCache.monthNameFormatter(locale: .appLocale).string(from: date)
     }
 
     nonisolated private static func findBestShiftStatic(in shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
@@ -1319,7 +1319,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         components.month = month
         components.day = 1
         guard let date = Self.gregorianCalendar.date(from: components) else { return "" }
-        return FormatterCache.monthNameFormatter(locale: .current).string(from: date)
+        return FormatterCache.monthNameFormatter(locale: .appLocale).string(from: date)
     }
 
     /// Find the best (highest earnings) shift in a collection

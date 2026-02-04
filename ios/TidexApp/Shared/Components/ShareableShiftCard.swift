@@ -6,6 +6,7 @@ struct ShareableShiftCard: View {
     let shift: ShiftWithComputations
     let currency: String
     let includeEarnings: Bool
+    @Environment(\.layoutDirection) private var layoutDirection
 
     // MARK: - Computed Properties
 
@@ -14,17 +15,26 @@ struct ShareableShiftCard: View {
             return shift.shiftDate
         }
         let formatter = DateFormatter()
+        formatter.locale = Locale.appLocale
         formatter.dateFormat = "EEEE, d. MMMM yyyy"
         return formatter.string(from: date).capitalized
     }
 
     private var formattedTimeRange: String {
-        "\(formatTime(shift.startTime)) – \(formatTime(shift.endTime))"
+        ShiftCardFormatter.localizedTimeRange(
+            start: shift.startTime,
+            end: shift.endTime,
+            locale: Locale.appLocale,
+            isRTL: layoutDirection == .rightToLeft,
+            separator: " – "
+        )
     }
 
     private var formattedHours: String {
         let hoursLabel = String(localized: .commonHours)
-        return String(format: "%.2f %@", shift.paidHours, hoursLabel)
+        let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
+        let hoursValue = formatter.string(from: NSNumber(value: shift.paidHours)) ?? String(format: "%.2f", shift.paidHours)
+        return "\(hoursValue) \(hoursLabel)"
     }
 
     private var showTaxBreakdown: Bool {
@@ -163,6 +173,7 @@ struct ShareableShiftCard: View {
                     Text(formattedTimeRange)
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(.tidexTextPrimary)
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
                 Spacer()
@@ -296,9 +307,10 @@ struct ShareableShiftCard: View {
         VStack(spacing: 6) {
             // Time range and hours × rate
             HStack {
-                Text(segment.timeRange)
+                Text(segmentTimeRange(segment))
                     .font(.system(size: 14))
                     .foregroundColor(.tidexTextPrimary)
+                    .environment(\.layoutDirection, .leftToRight)
 
                 Spacer()
 
@@ -355,12 +367,18 @@ struct ShareableShiftCard: View {
         CurrencyConfig.format(amount, currency: currency)
     }
 
-    private func formatTime(_ time: String) -> String {
-        String(time.prefix(5))
-    }
-
     private func formatHoursValue(_ hours: Double) -> String {
         return String(format: "%.2f t", hours)
+    }
+
+    private func segmentTimeRange(_ segment: ShareableSupplementSegment) -> String {
+        let range = segment.timeRange
+        guard layoutDirection == .rightToLeft else { return range }
+        let parts = range.components(separatedBy: " – ")
+        if parts.count == 2 {
+            return "\(parts[1]) – \(parts[0])"
+        }
+        return range
     }
 }
 

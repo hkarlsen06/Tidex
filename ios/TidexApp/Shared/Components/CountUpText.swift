@@ -51,6 +51,8 @@ struct CountUpText: View {
                 }
             }
         }
+        // Keep character order stable in RTL so number + currency stays in string order.
+        .environment(\.layoutDirection, .leftToRight)
         .monospacedDigit()  // Apply tabular figures for consistent digit widths
         .accessibilityLabel(formattedText)
     }

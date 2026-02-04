@@ -92,9 +92,6 @@ final class ShiftReminderScheduler {
             return
         }
 
-        // Get locale for notification content
-        let locale = getAppLocale()
-
         // Schedule reminders with iOS limit in mind
         var scheduledCount = 0
         let maxNotifications = Self.maxScheduledNotifications
@@ -135,8 +132,7 @@ final class ShiftReminderScheduler {
                 let scheduled = await scheduleNotification(
                     for: shift,
                     fireDate: fireDate,
-                    minutesBefore: minutes,
-                    locale: locale
+                    minutesBefore: minutes
                 )
 
                 if scheduled {
@@ -185,16 +181,14 @@ final class ShiftReminderScheduler {
     private func scheduleNotification(
         for shift: StoredShift,
         fireDate: Date,
-        minutesBefore: Int,
-        locale: String
+        minutesBefore: Int
     ) async -> Bool {
         let center = UNUserNotificationCenter.current()
 
         // Build notification content
         let content = buildNotificationContent(
             shift: shift,
-            minutesBefore: minutesBefore,
-            locale: locale
+            minutesBefore: minutesBefore
         )
 
         // Create trigger using calendar components for precise timing
@@ -227,20 +221,19 @@ final class ShiftReminderScheduler {
     /// Build notification content
     private func buildNotificationContent(
         shift: StoredShift,
-        minutesBefore: Int,
-        locale: String
+        minutesBefore: Int
     ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
 
         // Format the time remaining for the title
-        let timeText = formatTimeRemaining(minutes: minutesBefore, locale: locale)
+        let timeText = formatTimeRemaining(minutes: minutesBefore)
 
         // Title: "{time} until next shift"
         let untilNextShift = String(localized: .notificationUntilNextShift)
         content.title = "\(timeText) \(untilNextShift)"
 
         // Body: "Today/Tomorrow at {start}-{end}"
-        let dayText = formatDayText(for: shift.shiftDate, locale: locale)
+        let dayText = formatDayText(for: shift.shiftDate)
         let atTime = String(localized: .notificationAtTime)
         content.body = "\(dayText) \(atTime) \(shift.startTime)-\(shift.endTime)"
 
@@ -261,7 +254,7 @@ final class ShiftReminderScheduler {
     }
 
     /// Format day text (Today/Tomorrow/Date)
-    private func formatDayText(for shiftDateString: String, locale: String) -> String {
+    private func formatDayText(for shiftDateString: String) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -284,7 +277,7 @@ final class ShiftReminderScheduler {
 
         // Format as weekday + date
         let displayFormatter = DateFormatter()
-        displayFormatter.locale = Locale(identifier: locale)
+        displayFormatter.locale = appLocale()
         displayFormatter.dateFormat = "EEEE d MMMM" // e.g., "onsdag 15 januar"
 
         var text = displayFormatter.string(from: shiftDate)
@@ -295,7 +288,7 @@ final class ShiftReminderScheduler {
 
     /// Format time remaining for notification title
     /// Handles minutes, hours, days, and mixed values
-    private func formatTimeRemaining(minutes: Int, locale: String) -> String {
+    private func formatTimeRemaining(minutes: Int) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
 
@@ -350,12 +343,7 @@ final class ShiftReminderScheduler {
 
 // MARK: - App Locale Helper
 
-/// Get the app's effective locale from iOS system settings
-private func getAppLocale() -> String {
-    if let preferred = Bundle.main.preferredLocalizations.first {
-        if preferred.hasPrefix("nb") || preferred.hasPrefix("no") || preferred.hasPrefix("nn") {
-            return "no"
-        }
-    }
-    return "en"
+private func appLocale() -> Locale {
+    let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
+    return Locale(identifier: identifier)
 }

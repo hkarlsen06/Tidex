@@ -33,9 +33,6 @@ struct FriendShiftWidgetEntry: TimelineEntry {
     /// Whether earnings are visible for this friend
     let showEarnings: Bool
 
-    /// User's locale ("no" or "en")
-    let locale: String
-
     /// Whether there's a shift to display
     let hasShift: Bool
 
@@ -57,7 +54,7 @@ struct FriendShiftWidgetEntry: TimelineEntry {
     // MARK: - Factory Methods
 
     /// Placeholder entry for widget gallery and loading states
-    static func placeholder(locale: String = "no") -> FriendShiftWidgetEntry {
+    static func placeholder() -> FriendShiftWidgetEntry {
         FriendShiftWidgetEntry(
             date: Date(),
             friendId: "placeholder",
@@ -68,7 +65,6 @@ struct FriendShiftWidgetEntry: TimelineEntry {
             endTime: "15:00",
             netEarnings: "892 kr",
             showEarnings: true,
-            locale: locale,
             hasShift: true,
             daysRemaining: 0,
             layoutState: .todayOrTomorrow,
@@ -83,7 +79,6 @@ struct FriendShiftWidgetEntry: TimelineEntry {
         friendId: String,
         friendName: String,
         friendInitials: String,
-        locale: String = "no",
         currency: String? = nil
     ) -> FriendShiftWidgetEntry {
         let emptyEarnings: String
@@ -103,7 +98,6 @@ struct FriendShiftWidgetEntry: TimelineEntry {
             endTime: "--:--",
             netEarnings: emptyEarnings,
             showEarnings: true,
-            locale: locale,
             hasShift: false,
             daysRemaining: 0,
             layoutState: .empty,
@@ -114,7 +108,7 @@ struct FriendShiftWidgetEntry: TimelineEntry {
     }
 
     /// No friend selected - prompt to configure widget
-    static func noFriendSelected(locale: String = "no") -> FriendShiftWidgetEntry {
+    static func noFriendSelected() -> FriendShiftWidgetEntry {
         FriendShiftWidgetEntry(
             date: Date(),
             friendId: "",
@@ -125,7 +119,6 @@ struct FriendShiftWidgetEntry: TimelineEntry {
             endTime: "--:--",
             netEarnings: "---",
             showEarnings: false,
-            locale: locale,
             hasShift: false,
             daysRemaining: 0,
             layoutState: .empty,

@@ -110,6 +110,7 @@ struct MonthTransitionPhase: Equatable {
 /// Supports horizontal (left/right) or vertical (up/down) animation based on user preference
 struct CardTransitionModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     let phase: MonthTransitionPhase
     let index: Int
     let config: MonthTransitionConfig
@@ -159,7 +160,11 @@ struct CardTransitionModifier: ViewModifier {
 
     private var slideOffset: CGFloat {
         guard let direction = phase.direction else { return 0 }
-        return direction == .next ? config.slideOffset : -config.slideOffset
+        let base = direction == .next ? config.slideOffset : -config.slideOffset
+        if animationStyle == .horizontal && layoutDirection == .rightToLeft {
+            return -base
+        }
+        return base
     }
 }
 
@@ -169,6 +174,7 @@ struct CardTransitionModifier: ViewModifier {
 /// Text slides in the direction of navigation (horizontal or vertical based on user preference)
 struct TextTransitionModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
 
@@ -189,7 +195,8 @@ struct TextTransitionModifier: ViewModifier {
             return .opacity
         }
         let direction = phase.direction
-        let offset = direction == .next ? config.textOffset : -config.textOffset
+        let base = direction == .next ? config.textOffset : -config.textOffset
+        let offset = animationStyle == .horizontal && layoutDirection == .rightToLeft ? -base : base
 
         if animationStyle == .vertical {
             return .asymmetric(
@@ -212,6 +219,7 @@ struct TextTransitionModifier: ViewModifier {
 /// based on user preference.
 struct StaggeredCardsContainer<Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
     @ViewBuilder let content: () -> Content
@@ -232,7 +240,8 @@ struct StaggeredCardsContainer<Content: View>: View {
     /// old content slides out in the opposite direction
     private var slideTransition: AnyTransition {
         guard !reduceMotion else { return .opacity }
-        let offset = phase.direction == .next ? config.slideOffset : -config.slideOffset
+        let base = phase.direction == .next ? config.slideOffset : -config.slideOffset
+        let offset = animationStyle == .horizontal && layoutDirection == .rightToLeft ? -base : base
 
         if animationStyle == .vertical {
             return .asymmetric(
@@ -268,7 +277,7 @@ struct MonthYearPickerSheet: View {
 
     // Month names (localized)
     private var monthNames: [String] {
-        FormatterCache.monthNameFormatter(locale: .current)
+        FormatterCache.monthNameFormatter(locale: .appLocale)
             .monthSymbols
             .map { $0.capitalized }
     }
@@ -372,6 +381,7 @@ struct MonthYearPickerSheet: View {
 /// "Return to current month" functionality is in the MonthYearPickerSheet
 struct AnimatedMonthHeader: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     let monthName: String
     let year: Int
     let phase: MonthTransitionPhase
@@ -406,6 +416,14 @@ struct AnimatedMonthHeader: View {
         String(format: "%02d", year % 100)
     }
 
+    private var previousIcon: String {
+        layoutDirection == .rightToLeft ? "chevron.right" : "chevron.left"
+    }
+
+    private var nextIcon: String {
+        layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
+    }
+
     var body: some View {
         Group {
             if config.isCompact {
@@ -430,7 +448,7 @@ struct AnimatedMonthHeader: View {
     private var compactLayout: some View {
         HStack(spacing: 8) {
             // Previous button
-            navigationButton(icon: "chevron.left", action: onPrevious)
+            navigationButton(icon: previousIcon, action: onPrevious)
 
             // Month and Year - vertically stacked, centered, takes available space
             // Shows full year when space allows, truncates to 2 digits if needed
@@ -461,7 +479,7 @@ struct AnimatedMonthHeader: View {
             }
 
             // Next button
-            navigationButton(icon: "chevron.right", action: onNext)
+            navigationButton(icon: nextIcon, action: onNext)
         }
         .contentShape(Rectangle())
         .gesture(swipeGesture)
@@ -477,7 +495,7 @@ struct AnimatedMonthHeader: View {
     private var defaultLayout: some View {
         HStack(spacing: 0) {
             // Left section: Previous button
-            navigationButton(icon: "chevron.left", action: onPrevious)
+            navigationButton(icon: previousIcon, action: onPrevious)
 
             // Center section: Month and Year (fills available space, text centered)
             ViewThatFits(in: .horizontal) {
@@ -507,7 +525,7 @@ struct AnimatedMonthHeader: View {
             }
 
             // Right section: Next button
-            navigationButton(icon: "chevron.right", action: onNext)
+            navigationButton(icon: nextIcon, action: onNext)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, Spacing.sm)
@@ -638,9 +656,10 @@ struct AnimatedMonthHeader: View {
         if reduceMotion {
             return .opacity
         }
-        let direction = phase.direction
-        let offset = direction == .next ? config.textOffset : -config.textOffset
         let animationStyle = AppearanceManager.shared.calendarAnimationStyle
+        let direction = phase.direction
+        let base: CGFloat = direction == .next ? config.textOffset : -config.textOffset
+        let offset: CGFloat = animationStyle == .horizontal && layoutDirection == .rightToLeft ? -base : base
 
         if animationStyle == .vertical {
             return .asymmetric(

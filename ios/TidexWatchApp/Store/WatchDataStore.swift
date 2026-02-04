@@ -13,7 +13,6 @@ final class WatchDataStore {
 
     private(set) var userShift: WatchShiftDTO?
     private(set) var friendShifts: [WatchShiftDTO] = []
-    private(set) var locale: String = "no"
     private(set) var currencySymbol: String = "kr"
     private(set) var lastUpdated: Date?
     private(set) var lastSyncTimestamp: Date?
@@ -37,7 +36,6 @@ final class WatchDataStore {
     func update(from payload: WatchDataPayload) {
         self.userShift = payload.userShift
         self.friendShifts = payload.friendShifts
-        self.locale = payload.locale
         self.currencySymbol = payload.currencySymbol
         self.lastUpdated = payload.timestamp
         self.lastSyncTimestamp = payload.lastSyncTimestamp

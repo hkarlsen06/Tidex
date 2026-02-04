@@ -24,8 +24,6 @@ enum WatchDataConverter {
         let settings = SettingsRepository.shared.getSettings(for: userId)
         let currencySymbol = settings?.currency ?? "kr"
 
-        let locale = Locale.current.urlLanguageCode
-
         // Get last sync timestamp
         let lastSyncTimestamp = SyncCoordinator.shared.lastSyncedAt
 
@@ -40,7 +38,6 @@ enum WatchDataConverter {
             lastSyncTimestamp: lastSyncTimestamp,
             userShift: userShift,
             friendShifts: friendShifts,
-            locale: locale,
             currencySymbol: currencySymbol
         )
     }

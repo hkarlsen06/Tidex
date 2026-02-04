@@ -100,7 +100,7 @@ struct SharedShiftsCalendarView: View {
         CalendarGridHelper.monthName(
             year: year,
             month: month,
-            locale: Locale(identifier: Locale.current.identifier)
+            locale: Locale.appLocale
         )
     }
 

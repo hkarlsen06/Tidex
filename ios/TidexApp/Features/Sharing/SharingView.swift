@@ -5,7 +5,8 @@ import UIKit
 /// Fetches shared shifts from the Next.js API for proper payroll computation
 struct SharingView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-        @Environment(\.userCurrency) private var currency
+    @Environment(\.userCurrency) private var currency
+    @Environment(\.layoutDirection) private var layoutDirection
 
     /// Binding to the selected tab for navigation
     @Binding var selectedTab: MainTabView.Tab
@@ -58,7 +59,7 @@ struct SharingView: View {
                             }
                         }) {
                             HStack(spacing: 6) {
-                                Image(systemName: "chevron.left")
+                                Image(systemName: layoutDirection == .rightToLeft ? "chevron.right" : "chevron.left")
                                     .font(.system(size: 16, weight: .semibold))
                                 Text(.commonBack)
                                     .font(.system(size: 17))

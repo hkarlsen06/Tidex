@@ -49,9 +49,6 @@ struct StoredMonthlyTotals: Codable {
 
     // MARK: - Formatting
 
-    /// Locale for widget display ("no" or "en")
-    let locale: String
-
     /// Currency symbol (e.g., "kr", "$", "€")
     let currencySymbol: String
 

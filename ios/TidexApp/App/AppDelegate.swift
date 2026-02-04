@@ -323,7 +323,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             supplementRatePerHour: shift.supplementRatePerHour,
             totalGrossEstimate: shift.totalGrossEstimate,
             totalNetEstimate: totalNetEstimate,
-            locale: shift.locale,
             currencySymbol: shift.currencySymbol ?? "kr",
             startDate: startDate,
             endDate: endDate

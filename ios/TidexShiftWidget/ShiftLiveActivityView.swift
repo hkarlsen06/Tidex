@@ -7,21 +7,6 @@ import WidgetKit
 /// Tidex brand blue color - matches the app's brand gradient
 private let tidexBlue = Color(red: 77/255, green: 137/255, blue: 249/255)
 
-// MARK: - Localization Helper
-
-private func localizedString(_ key: String, locale: String) -> String {
-    let strings: [String: [String: String]] = [
-        "remaining": ["no": "igjen", "en": "left"],
-        "earned": ["no": "Tjent", "en": "Earned"],
-        "of": ["no": "av", "en": "of"],
-        "shift": ["no": "Vakt", "en": "Shift"],
-        "hours_short": ["no": "t", "en": "h"],
-        "minutes_short": ["no": "m", "en": "m"],
-        "before_tax": ["no": "Før skatt:", "en": "Before tax:"]
-    ]
-    return strings[key]?[locale] ?? strings[key]?["en"] ?? key
-}
-
 // MARK: - Currency Formatter
 
 private func formatCurrency(_ value: Double) -> String {
@@ -39,9 +24,9 @@ private func beforeTaxText(
     context: ActivityViewContext<ShiftActivityAttributes>,
     currencySymbol: String
 ) -> String {
-    let label = localizedString("before_tax", locale: context.attributes.locale)
+    let label = String(localized: .widgetBeforeTax)
     let amount = formatCurrency(context.attributes.totalGrossEstimate)
-    return "\(label) \(amount) \(currencySymbol)"
+    return "\(label): \(amount) \(currencySymbol)"
 }
 
 // MARK: - Lock Screen View

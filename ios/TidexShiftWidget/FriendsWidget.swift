@@ -32,9 +32,6 @@ struct FriendsWidgetEntry: TimelineEntry {
     /// Up to 5 friends to display
     let friends: [FriendPreview]
 
-    /// User's locale ("no" or "en")
-    let locale: String
-
     /// Whether there are any friends at all
     let hasAnyFriends: Bool
 
@@ -80,16 +77,14 @@ struct FriendsWidgetEntry: TimelineEntry {
                     daysRemaining: 3
                 )
             ],
-            locale: "no",
             hasAnyFriends: true
         )
     }
 
-    static func empty(locale: String = "no") -> FriendsWidgetEntry {
+    static func empty() -> FriendsWidgetEntry {
         FriendsWidgetEntry(
             date: Date(),
             friends: [],
-            locale: locale,
             hasAnyFriends: false
         )
     }
@@ -127,8 +122,6 @@ struct FriendsWidgetProvider: TimelineProvider {
     }
 
     private func createEntry() -> FriendsWidgetEntry {
-        let locale = getAppLocale()
-
         // Load sharers
         guard let userDefaults = sharedUserDefaults(),
               let sharersJson = userDefaults.string(forKey: friendSharersKey),
@@ -136,7 +129,7 @@ struct FriendsWidgetProvider: TimelineProvider {
               let sharers = try? JSONDecoder().decode([WidgetSharer].self, from: sharersData),
               !sharers.isEmpty
         else {
-            return FriendsWidgetEntry.empty(locale: locale)
+            return FriendsWidgetEntry.empty()
         }
 
         // Load shifts
@@ -161,7 +154,7 @@ struct FriendsWidgetProvider: TimelineProvider {
                     startTime: shift.startTime,
                     endTime: shift.endTime
                 )
-                let formattedDate = formatShiftDate(shift.shiftDate, locale: locale, daysRemaining: daysRemaining)
+                let formattedDate = formatShiftDate(shift.shiftDate, daysRemaining: daysRemaining)
 
                 previews.append(FriendPreview(
                     id: sharer.id,
@@ -226,7 +219,6 @@ struct FriendsWidgetProvider: TimelineProvider {
         return FriendsWidgetEntry(
             date: Date(),
             friends: topFriends,
-            locale: locale,
             hasAnyFriends: true
         )
     }
@@ -309,13 +301,7 @@ struct FriendsWidgetProvider: TimelineProvider {
         return now >= shiftStartDateTime && now < shiftEndDateTime
     }
 
-    /// Get the user's current device locale for date formatting
-    /// This ensures weekday names and date formats are localized correctly
-    private func formatterLocale() -> Locale {
-        Locale.current
-    }
-
-    private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
+    private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
         let calendar = Calendar.current
@@ -329,7 +315,7 @@ struct FriendsWidgetProvider: TimelineProvider {
                 return String(localized: .widgetYesterday)
             } else {
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = formatterLocale()
+                weekdayFormatter.locale = appLocale()
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -349,14 +335,14 @@ struct FriendsWidgetProvider: TimelineProvider {
         // Within a week: weekday only
         if daysRemaining <= 7 {
             let weekdayFormatter = DateFormatter()
-            weekdayFormatter.locale = formatterLocale()
+            weekdayFormatter.locale = appLocale()
             weekdayFormatter.setLocalizedDateFormatFromTemplate("EEEE")
             return weekdayFormatter.string(from: shiftDate).capitalized
         }
 
         // Weekday + date
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = formatterLocale()
+        weekdayFormatter.locale = appLocale()
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
@@ -380,7 +366,6 @@ private struct StoredFriendShift: Codable {
     let startTime: String
     let endTime: String
     let gross: Double
-    let locale: String
     let currencySymbol: String?
     let showEarnings: Bool
     let status: String
@@ -388,13 +373,9 @@ private struct StoredFriendShift: Codable {
 
 // MARK: - App Locale Helper
 
-private func getAppLocale() -> String {
-    if let preferred = Bundle.main.preferredLocalizations.first {
-        if preferred.hasPrefix("nb") || preferred.hasPrefix("no") || preferred.hasPrefix("nn") {
-            return "no"
-        }
-    }
-    return "en"
+private func appLocale() -> Locale {
+    let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
+    return Locale(identifier: identifier)
 }
 
 // MARK: - Widget View
@@ -690,7 +671,6 @@ struct FriendsWidget: Widget {
                 daysRemaining: nil
             )
         ],
-        locale: "no",
         hasAnyFriends: true
     )
 

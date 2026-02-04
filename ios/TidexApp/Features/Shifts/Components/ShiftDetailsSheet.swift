@@ -25,6 +25,7 @@ struct ShiftDetailsSheet: View {
     let tariffRules: [SupplementRule]
 
         @Environment(\.userCurrency) private var currency
+        @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Edit Mode State
@@ -106,17 +107,26 @@ struct ShiftDetailsSheet: View {
         }
 
         let formatter = DateFormatter()
+        formatter.locale = Locale.appLocale
         formatter.dateFormat = "EEEE, d. MMMM yyyy"
         return formatter.string(from: date).capitalized
     }
 
     private var formattedTimeRange: String {
-        "\(formatTime(shift.startTime)) – \(formatTime(shift.endTime))"
+        ShiftCardFormatter.localizedTimeRange(
+            start: shift.startTime,
+            end: shift.endTime,
+            locale: Locale.appLocale,
+            isRTL: layoutDirection == .rightToLeft,
+            separator: " – "
+        )
     }
 
     private var formattedHours: String {
         let hoursLabel = String(localized: .commonHours)
-        return String(format: "%.2f %@", shift.paidHours, hoursLabel)
+        let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
+        let hoursValue = formatter.string(from: NSNumber(value: shift.paidHours)) ?? String(format: "%.2f", shift.paidHours)
+        return "\(hoursValue) \(hoursLabel)"
     }
 
     private var showTaxBreakdown: Bool {
@@ -550,6 +560,7 @@ struct ShiftDetailsSheet: View {
                     Text(formattedTimeRange)
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(.tidexTextPrimary)
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
                 Spacer()
@@ -937,9 +948,10 @@ struct ShiftDetailsSheet: View {
         VStack(spacing: 6) {
             // Time range and hours × rate
             HStack {
-                Text(segment.timeRange)
+                Text(segmentTimeRange(segment))
                     .font(.system(size: 14))
                     .foregroundColor(.tidexTextPrimary)
+                    .environment(\.layoutDirection, .leftToRight)
 
                 Spacer()
 
@@ -971,6 +983,16 @@ struct ShiftDetailsSheet: View {
     /// Format hours value (e.g., "2.50 t")
     private func formatHoursValue(_ hours: Double) -> String {
         return String(format: "%.2f t", hours)
+    }
+
+    private func segmentTimeRange(_ segment: SupplementSegment) -> String {
+        let range = segment.timeRange
+        guard layoutDirection == .rightToLeft else { return range }
+        let parts = range.components(separatedBy: " – ")
+        if parts.count == 2 {
+            return "\(parts[1]) – \(parts[0])"
+        }
+        return range
     }
 
     @ViewBuilder
@@ -1067,10 +1089,6 @@ struct ShiftDetailsSheet: View {
     }
 
     // MARK: - Formatting
-
-    private func formatTime(_ time: String) -> String {
-        String(time.prefix(5))
-    }
 
     private func formatCurrency(_ amount: Double) -> String {
         CurrencyConfig.format(amount, currency: currency)

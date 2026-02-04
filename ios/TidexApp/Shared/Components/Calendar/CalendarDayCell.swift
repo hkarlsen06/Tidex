@@ -73,6 +73,8 @@ struct CalendarDayCell<Content: View>: View {
     /// Optional custom content view (used when content == .custom)
     let customContent: (() -> Content)?
 
+    @Environment(\.layoutDirection) private var layoutDirection
+
     init(
         dayInfo: CalendarDayInfo,
         style: CalendarCellStyle,
@@ -157,24 +159,37 @@ struct CalendarDayCell<Content: View>: View {
             EmptyView()
 
         case .hours(let hoursData, let color):
-            VStack(spacing: 1) {
+            let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
+            VStack(spacing: 0) {
                 Text(hoursData.start)
                     .font(.footnote.weight(.bold))
-                Text(hoursData.end + (hoursData.crossesMidnight ? "*" : ""))
+                    .environment(\.layoutDirection, .leftToRight)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Text(endDisplay)
                     .font(.footnote.weight(.bold))
+                    .environment(\.layoutDirection, .leftToRight)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .foregroundColor(color)
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
             .padding(.top, 8)
+            .padding(.horizontal, 4)
 
         case .earnings(let amount, let color):
             Text(CalendarGridHelper.formatCompactCurrency(amount))
                 .font(.callout.weight(.bold))
                 .foregroundColor(color)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .minimumScaleFactor(0.5)
+                .allowsTightening(true)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 8)
+                .padding(.horizontal, 4)
 
         case .starIcon(let color):
             VStack {

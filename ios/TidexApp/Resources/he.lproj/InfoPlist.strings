@@ -1,0 +1,19 @@
+/* Hebrew localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex זקוק לגישה למצלמה כדי לצלם תמונת פרופיל.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex משתמש ב-Face ID כדי להגן על נתוני ההכנסה שלך מעיניים סקרנות. רק אתה צריך לראות את ההכנסה שלך.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex זקוק לגישה כדי לשמור תמונות של לוח שנה ותורים משותפים בספריית התמונות שלך.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex זקוק לגישה ללוח השנה כדי לייצא את התורים שלך כאירועי לוח שנה.";

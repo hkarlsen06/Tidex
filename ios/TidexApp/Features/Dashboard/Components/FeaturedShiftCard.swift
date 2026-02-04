@@ -15,6 +15,7 @@ struct FeaturedShiftCard: View {
     var showIncreaseHighlight: Bool = false
 
         @Environment(\.userCurrency) private var currency
+        @Environment(\.layoutDirection) private var layoutDirection
 
     /// Animated progress value for smooth entrance animation
     @State private var animatedProgress: Double = 0
@@ -26,11 +27,11 @@ struct FeaturedShiftCard: View {
     }
 
     private var formattedHours: String {
-        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.current)
+        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.appLocale)
     }
 
     private var dateParts: ShiftCardDateParts {
-        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.current)
+        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.appLocale)
     }
 
     /// Footer label shown below the card - "Best shift" or countdown text
@@ -45,6 +46,19 @@ struct FeaturedShiftCard: View {
     private var hasProgress: Bool {
         guard let progress = progress else { return false }
         return progress >= 0 && progress <= 100
+    }
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var timeRangeText: String {
+        return ShiftCardFormatter.localizedTimeRange(
+            start: shift.startTime,
+            end: shift.endTime,
+            locale: Locale.appLocale,
+            isRTL: isRTL
+        )
     }
 
     // MARK: - Body
@@ -100,25 +114,17 @@ struct FeaturedShiftCard: View {
                 HStack(alignment: .center) {
                     // Time range and hours
                     HStack(spacing: 8) {
-                        // Time with clock icon
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(.tidexTextMuted)
-                            Text("\(shift.startTime)–\(shift.endTime)")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(.tidexTextPrimary)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
+                        if isRTL {
+                            hoursLabel
+                            arrowLabel
+                            timeRangeLabel
+                        } else {
+                            timeRangeLabel
+                            arrowLabel
+                            hoursLabel
                         }
-
-                        // Arrow and hours combined
-                        Text("→ \(formattedHours)")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.tidexTextMuted)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
                     }
+                    .environment(\.layoutDirection, .leftToRight)
 
                     Spacer()
 
@@ -204,6 +210,49 @@ struct FeaturedShiftCard: View {
     /// Format amount without currency symbol (for breakdown display)
     private func formatPlainAmount(_ amount: Double) -> String {
         CurrencyConfig.formatPlain(amount)
+    }
+
+    private var timeRangeLabel: some View {
+        HStack(spacing: 4) {
+            if isRTL {
+                timeRangeTextLabel
+                clockIcon
+            } else {
+                clockIcon
+                timeRangeTextLabel
+            }
+        }
+    }
+
+    private var hoursLabel: some View {
+        Text(formattedHours)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var arrowLabel: some View {
+        Text(isRTL ? "←" : "→")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var timeRangeTextLabel: some View {
+        Text(timeRangeText)
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .environment(\.layoutDirection, .leftToRight)
+    }
+
+    private var clockIcon: some View {
+        Image(systemName: "clock")
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(.tidexTextMuted)
     }
 }
 

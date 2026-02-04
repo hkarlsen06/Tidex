@@ -24,6 +24,9 @@ struct FriendRow: View {
     let onShareBack: () -> Void
     let onRemove: () -> Void
 
+    private var nameLayoutDirection: LayoutDirection {
+        friend.displayName.isRightToLeft ? .rightToLeft : .leftToRight
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -36,14 +39,17 @@ struct FriendRow: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextPrimary)
                     .lineLimit(1)
+                    .multilineTextAlignment(.leading)
 
                 if let contactInfo = friend.contactInfo {
                     Text(contactInfo)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextMuted)
                         .lineLimit(1)
+                        .multilineTextAlignment(.leading)
                 }
             }
+            .environment(\.layoutDirection, nameLayoutDirection)
             .truncationFade()
 
             Spacer(minLength: 8)
