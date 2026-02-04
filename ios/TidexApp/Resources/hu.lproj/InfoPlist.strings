@@ -1,0 +1,19 @@
+/* Hungarian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "A Tidex profilképhez kamera-hozzáférésre van szüksége.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "A Tidex Face ID-t használ a kereseti adataid védelméhez. Csak te láthatod a jövedelmedet.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "A Tidex hozzáférésre van szüksége a megosztott naptári és műszak-képek fotókönyvtárba mentéséhez.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "A Tidex naptár-hozzáférésre van szüksége a műszakaid naptáreseményként való exportálásához.";

@@ -1,0 +1,19 @@
+/* Filipino localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Kailangan ng Tidex ng access sa camera upang kumuha ng profile picture.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Gumagamit ang Tidex ng Face ID upang protektahan ang iyong earnings data. Ikaw lang ang dapat makakita ng iyong kita.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Kailangan ng Tidex ng access sa photo library upang magsave ng shared calendar at shift images.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Kailangan ng Tidex ng calendar access upang i-export ang iyong shifts bilang calendar events.";

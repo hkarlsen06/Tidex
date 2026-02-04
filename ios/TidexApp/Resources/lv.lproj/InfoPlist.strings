@@ -1,0 +1,19 @@
+/* Latvian localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex vajag kameras piekļuvi, lai uzņemtu profila fotoattēlu.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex izmanto Face ID, lai aizsargātu jūsu ienākumu datus no neatļautas piekļuves. Tikai jūs varat redzēt savu ienākumu informāciju.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex vajag piekļuvi fotoattēlu bibliotēkai, lai saglabātu koplietotus kalendārus un maiņu attēlus.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex vajag piekļuvi jūsu kalendāram, lai eksportētu jūsu maiņas kā kalendāra notikumus.";

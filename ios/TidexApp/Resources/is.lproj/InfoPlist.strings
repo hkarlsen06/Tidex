@@ -1,0 +1,19 @@
+/* Icelandic localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex þarf aðgang að myndavélinni til að taka prófílmynd.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex notar Face ID til að vernda tekjugögn þín fyrir óheimilum aðilum. Aðeins þú ættir að sjá tekjur þínar.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex þarf aðgang til að vista deildar dagatals- og vaktamyndir á myndasafnið þitt.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex þarf aðgang að dagatali til að flytja út vaktir þínar sem dagatalsatburði.";

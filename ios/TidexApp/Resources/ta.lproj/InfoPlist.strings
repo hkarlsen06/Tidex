@@ -1,0 +1,19 @@
+/* Tamil localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex உங்களின் சுயவிவரப் படத்தை எடுக்க கேமரா அணுகல் தேவை.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex உங்களின் வருமান தரவைப் பாதுகாக்க Face ID ஐ பயன்படுத்துகிறது. உங்கள் வருமானத்தை நீங்கள் மட்டுமே பார்க்க முடியும்.";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex பகிரப்பட்ட காலெண்டர் மற்றும் ஷிப்ட் படங்களை உங்கள் புகைப்படக் நூலகத்தில் சேமிக்க அணுகல் தேவை.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex உங்களின் ஷிப்டுகளை காலெண்டர் நிகழ்வுகளாக ஏற்றுமதி செய்ய காலெண்டர் அணுகல் தேவை.";
