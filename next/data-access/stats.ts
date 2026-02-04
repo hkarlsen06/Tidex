@@ -134,7 +134,7 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
     // Convert readonly arrays to mutable for backward compatibility
     return {
       ...result,
-      last6Months: [...result.last6Months],
+      yearlyMonths: [...result.yearlyMonths],
       thisWeek: [...result.thisWeek],
       bestWeek: result.bestWeek ? {
         ...result.bestWeek,
@@ -181,7 +181,7 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
         totalHours: 0,
         shiftCount: 0,
       },
-      last6Months: [],
+      yearlyMonths: [],
       thisWeek: [],
       bestWeek: null,
       thisMonthCumulative: [],
