@@ -60,13 +60,10 @@ enum ShiftCardFormatter {
         start: String,
         end: String,
         locale: Locale,
-        isRTL: Bool = false,
         separator: String = "–",
         format: String = "HH:mm"
     ) -> String {
-        let from = isRTL ? end : start
-        let to = isRTL ? start : end
-        return "\(localizedTime(from, locale: locale, format: format))\(separator)\(localizedTime(to, locale: locale, format: format))"
+        return "\(localizedTime(start, locale: locale, format: format))\(separator)\(localizedTime(end, locale: locale, format: format))"
     }
 
     private static func localizedTimeComponents(hours: Int, minutes: Int, locale: Locale) -> String {

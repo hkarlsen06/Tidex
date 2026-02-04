@@ -105,7 +105,6 @@ private struct SummaryHeader: View {
             start: startTime,
             end: endTime,
             locale: Locale.appLocale,
-            isRTL: layoutDirection == .rightToLeft,
             separator: " - "
         )
         if isIndefinite {
@@ -228,7 +227,6 @@ private struct ProjectedShiftRow: View {
             start: startTime,
             end: endTime,
             locale: Locale.appLocale,
-            isRTL: layoutDirection == .rightToLeft,
             separator: " - "
         )
     }

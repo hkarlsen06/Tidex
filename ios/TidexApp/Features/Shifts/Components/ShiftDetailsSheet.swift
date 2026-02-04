@@ -117,7 +117,6 @@ struct ShiftDetailsSheet: View {
             start: shift.startTime,
             end: shift.endTime,
             locale: Locale.appLocale,
-            isRTL: layoutDirection == .rightToLeft,
             separator: " – "
         )
     }
