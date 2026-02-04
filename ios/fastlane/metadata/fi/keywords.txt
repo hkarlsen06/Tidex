@@ -1,1 +1,1 @@
-vuoro,palkka,työ,tunnit,aika,kello,aikataulu,ansio,laskuri,työvuoro
+vuoro,tunti,palkka,työ,aikataulu,ansio,laskuri,vuorot,työ,raha

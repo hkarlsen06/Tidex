@@ -1,10 +1,10 @@
-- Adăugate widgeturi TotalCard și Prieteni pe ecranul principal
-- Adăugat blocare aplicație biometrică cu Face ID și Touch ID
-- Adăugată partajare schimburi și calendar cu captură ecran
-- Adăugat suport imagini în chat-ul Wagey AI
-- Extins suportul limbii la 17 limbi
-- Redesignate intrări de timp cu gestionare îmbunătățită a tastaturii
-- Adăugate gesturi de glisare pentru schimbarea lunii
-- Adăugate animații netede de numere pe panou de control
-- Performanță și viteză de pornire îmbunătățite
+- Adăugate 19 limbi noi inclusiv suport RTL pentru ebraică, persană și urdu
+- Adăugată exportare calendar pentru a-ți partaja turile cu alte aplicații calendar
+- Adăugate acțiuni rapide pe ecranul principal pentru gestionare mai rapidă a turilor
+- Adăugat gest de dublu-atingere pentru a sări rapid la luna curentă
+- Adăugate jetoane de timp recent pentru introducere mai rapidă a turilor
+- Adăugată opțiune de suprapunere a turilor tale pe calendarul unui prieten
+- Adăugat timestamp de ultimă editare în detaliile turei
+- Accesibilitate îmbunătățită cu suport Dynamic Type
+- Rezolvate notificări push duplicate
 - Corecturi de erori și alte îmbunătățiri

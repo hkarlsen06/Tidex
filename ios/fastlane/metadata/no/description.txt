@@ -1,6 +1,6 @@
 Hold oversikt over arbeidsvaktene dine og berekn lønna di med Tidex.
 
-Funksjonar:
+Funksjoner:
 • Enkel vaktregistrering med start- og sluttider
 • Automatisk lønnsberekning
 • Kalendervisning av alle vakter
@@ -8,4 +8,4 @@ Funksjonar:
 • Widget for rask tilgang
 • Synkronisering på tvers av einingar
 
-Perfekt for arbeidarar som ønskjer å halde oversikt over arbeidstimar og inntekter.
+Perfekt for tilsette som ønskjer å halde oversikt over arbeidstimar og inntekter.

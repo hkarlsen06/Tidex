@@ -7,14 +7,14 @@
       "subtitle": "Shift & Wage Tracker",
       "description": "Track your work shifts and calculate your wages with Tidex.\n\nFeatures:\n• Easy shift logging with start/end times\n• Automatic wage calculations\n• Calendar view of all shifts\n• Earnings overview and statistics\n• Widget for quick access\n• Sync across devices\n\nPerfect for employees who want to keep track of their work hours and earnings.",
       "keywords": "shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings",
-      "release_notes": "- Added TotalCard and Friends home screen widgets\n- Added biometric app lock with Face ID and Touch ID\n- Added shift and calendar sharing with screenshot capture\n- Added image support in Wagey AI chat\n- Expanded language support to 17 languages\n- Redesigned time inputs with improved keyboard handling\n- Added swipe gestures to change months\n- Added smooth number animations to dashboard\n- Improved performance and launch speed\n- Bug fixes and other improvements"
+      "release_notes": "- Added 19 new languages including RTL support for Hebrew, Persian, and Urdu\n- Added calendar export to share your shifts with other calendar apps\n- Added Home Screen quick actions for faster shift management\n- Added double-tap gesture to quickly jump to the current month\n- Added recent time chips for faster shift entry\n- Added option to overlay your shifts on a friend's calendar\n- Added last edited timestamp to shift details\n- Improved accessibility with Dynamic Type support\n- Fixed duplicate push notifications\n- Bug fixes and other improvements"
     },
     "nb": {
       "name": "Tidex",
       "subtitle": "Vakt- og lønnskalkulator",
       "description": "Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.\n\nFunksjoner:\n• Enkel vaktregistrering med start- og sluttider\n• Automatisk lønnsberegning\n• Kalendervisning av alle vakter\n• Inntektsoversikt og statistikk\n• Widget for rask tilgang\n• Synkronisering på tvers av enheter\n\nPerfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.",
       "keywords": "vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger",
-      "release_notes": "- Lagt til TotalCard- og Venner-widgeter til hjemskjermen\n- Lagt til biometrisk app-lås med Face ID og Touch ID\n- Lagt til deling av vakter og kalender med skjermbilde\n- Lagt til bildestøtte i Wagey AI-chat\n- Utvidet språkstøtte til 17 språk\n- Redesignet tidsinntasting med forbedret tastaturhåndtering\n- Lagt til sveipebevegelser for å bytte måned\n- Lagt til myke tallanimasjoner på dashboardet\n- Forbedret ytelse og oppstartstid\n- Feilrettinger og andre forbedringer"
+      "release_notes": "- Lagt til 19 nye språk inkludert høyre-til-venstre-støtte for hebraisk, persisk og urdu\n- Lagt til kalendereksport for å dele vakter med andre kalenderapper\n- Lagt til hurtighandlinger på hjemskjermen for raskere vakthåndtering\n- Lagt til dobbelttrykk for å hoppe raskt til gjeldende måned\n- Lagt til nylige tidsknapper for raskere vaktregistrering\n- Lagt til mulighet for å legge dine vakter over en venns kalender\n- Lagt til tidsstempel for siste redigering på vaktdetaljer\n- Forbedret tilgjengelighet med støtte for dynamisk tekststørrelse\n- Rettet dupliserte push-varsler\n- Feilrettinger og andre forbedringer"
     }
   }
 }

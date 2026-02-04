@@ -1,10 +1,10 @@
-- Lagt til TotalCard- og Vener-widgetar til heimeskjermen
-- Lagt til biometrisk app-lås med Face ID og Touch ID
-- Lagt til deling av vakter og kalender med skjermbilete
-- Lagt til bildestøtte i Wagey AI-chat
-- Utvidd språkstøtte til 17 språk
-- Redesigna tidsinntasting med forbetrad tastaturhåndtering
-- Lagt til sveipebevegelser for å byta månad
-- Lagt til myke tallanimerasjonar på dashbordet
-- Forbetrad yting og oppstartstid
-- Feilrettingar og andre forbetringer
+- Lagt til 19 nye språk inkludert høgre-til-venstre-støtte for hebraisk, persisk og urdu
+- Lagt til kalendereksport for å dele vakter med andre kalenderapper
+- Lagt til hurtighandlingar på heimskjermen for raskare vakthåndtering
+- Lagt til dobbeltrykk for å hoppa raskt til gjeldande månad
+- Lagt til nylige tidsknapper for raskare vaktregistrering
+- Lagt til moglegheit for å leggja dine vakter over ein venns kalender
+- Lagt til tidsstempel for siste redigering på vaktdetaljar
+- Forbetrad tilgjenge med støtte for dynamisk tekststorleik
+- Retta dupliserte push-varslar
+- Feilrettingar og andre forbetringar

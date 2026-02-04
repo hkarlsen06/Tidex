@@ -1,10 +1,10 @@
-- Dodane widgety TotalCard i Znajomi na ekran główny
-- Dodana biometryczna blokada aplikacji z Face ID i Touch ID
-- Dodany udostępnianie zmian i kalendarza z przechwytywaniem ekranu
-- Dodana obsługa obrazów w czacie Wagey AI
-- Rozszerzona obsługa języków do 17 języków
-- Przeprojektowane wprowadzanie czasu z ulepszoną obsługą klawiatury
-- Dodane gesty przesuwania do zmiany miesiąca
-- Dodane płynne animacje liczb na pulpicie
-- Ulepszona wydajność i szybkość uruchamiania
+- Dodano 19 nowych języków, w tym obsługę RTL dla hebrajskiego, perskiego i urdu
+- Dodano eksport kalendarza w celu udostępniania zmian innym aplikacjom kalendarza
+- Dodano skróty ekranu głównego dla szybszego zarządzania zmianami
+- Dodano dwukrotne dotknięcie w celu szybkiego przejścia do bieżącego miesiąca
+- Dodano niedawne chipsy czasowe dla szybszego wprowadzania zmian
+- Dodano opcję nałożenia zmian na kalendarz znajomego
+- Dodano sygnaturę czasową ostatniej edycji do szczegółów zmian
+- Ulepszona dostępność dzięki obsłudze Dynamic Type
+- Naprawiono zduplikowane powiadomienia push
 - Poprawki błędów i inne ulepszenia

@@ -1,10 +1,10 @@
-- TotalCard- en Vrienden-widgets voor startscherm toegevoegd
-- Biometrische app-vergrendeling met Face ID en Touch ID toegevoegd
-- Diensten- en kalenderdeling met schermafbeelding toegevoegd
-- Afbeeldingsondersteuning in Wagey AI-chat toegevoegd
-- Taalondersteuning uitgebreid tot 17 talen
-- Tijdinvoer opnieuw ontworpen met verbeterde toetsenbordafhandeling
-- Veegbewegingen om maanden te wijzigen toegevoegd
-- Vloeiende getalanimaties op dashboard toegevoegd
-- Prestaties en opstartsnelheid verbeterd
+- 19 nieuwe talen toegevoegd, inclusief RTL-ondersteuning voor Hebreeuws, Perzisch en Urdu
+- Kalenderexport toegevoegd om shifts met andere agenda-apps te delen
+- Snelacties op het startscherm toegevoegd voor sneller shiftbeheer
+- Dubbeltik-gebaar toegevoegd om snel naar de huidige maand te springen
+- Recente tijdchips toegevoegd voor snellere shiftinvoer
+- Optie toegevoegd om je shifts over de agenda van een vriend te leggen
+- Tijdstempel voor laatst bewerkt toegevoegd aan shiftdetails
+- Toegankelijkheid verbeterd met ondersteuning voor dynamisch lettertype
+- Dubbele pushberichten opgelost
 - Bugfixes en andere verbeteringen

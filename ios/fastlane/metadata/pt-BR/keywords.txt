@@ -1,1 +1,1 @@
-turno,rastreador,salário,folha,trabalho,horas,tempo,relógio,agenda,ganhos
+turno,rastreador,salário,folha,trabalho,horas,horário,relógio,agenda,ganhos

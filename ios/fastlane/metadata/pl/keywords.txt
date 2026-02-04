@@ -1,1 +1,1 @@
-zmiana,tracker,płaca,pensja,praca,godziny,czas,zegar,harmonogram,zarobki
+zmiana,tracker,wynagrodzenie,pensja,praca,godziny,czas,zegar,harmonogram,zarobki

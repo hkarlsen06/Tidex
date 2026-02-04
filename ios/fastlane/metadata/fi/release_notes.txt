@@ -1,10 +1,10 @@
-- Lisätty TotalCard- ja Ystävät-widgetit kotinäyttöön
-- Lisätty biometrinen sovelluksen lukitus Face ID:llä ja Touch ID:llä
-- Lisätty vuorojen ja kalenterin jako kuvakaappauksella
-- Lisätty kuvatuki Wagey AI -chatissa
-- Laajennettu kielituki 17 kielelle
-- Uudelleen suunnitellut aika-syötteet parannetulla näppäimistön käsittelyllä
-- Lisätty pyyhkäisyeleet kuukauden vaihtamiseen
-- Lisätty sileät numeroanimaatiot koontinäyttöön
-- Parannettu suorituskykyä ja käynnistysnopeutta
-- Virheiden korjaukset ja muut parannukset
+- Lisätty 19 uutta kieltä oikealta vasemmalle -tuella heprealaisille, persialle ja urdulle
+- Lisätty kalentin vienti vuorojen jakamiseksi muiden kalentisovelluksien kanssa
+- Lisätty aloitusruudun pikavalinnat nopeampaa vuoronhallintaa varten
+- Lisätty kaksoisnapautus nykyisen kuukauden nopeaan siirtymiseen
+- Lisätty viimeaikaiset aikapalat vuorojen nopeampaa syöttöä varten
+- Lisätty mahdollisuus näyttää vuorosi ystävän kalenterin päällä
+- Lisätty viimeisen muokkauksen aikaleima vuoron tietoihin
+- Parannettu saavutettavuus dynaamisella tekstityypin tuella
+- Korjattu päällekkäiset push-ilmoitukset
+- Virheenkorjaukset ja muut parannukset
