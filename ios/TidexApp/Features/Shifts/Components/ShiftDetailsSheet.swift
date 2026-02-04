@@ -233,6 +233,11 @@ struct ShiftDetailsSheet: View {
                     } else {
                         viewModeActionButtons
                     }
+
+                    // Last edited timestamp (only in view mode, for non-virtual shifts)
+                    if !isEditing, let updatedAt = shift.updatedAt, !isVirtualShift {
+                        lastEditedFooter(date: updatedAt)
+                    }
                 }
                 .padding(20)
             }
@@ -1032,6 +1037,35 @@ struct ShiftDetailsSheet: View {
         .padding(.top, 8)
     }
 
+    /// Footer showing when the shift was last edited
+    @ViewBuilder
+    private func lastEditedFooter(date: Date) -> some View {
+        Text(String(localized: .shiftsLastEdited) + " " + formattedLastEdited(date))
+            .font(.system(size: 12))
+            .foregroundColor(.tidexTextMuted)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
+    }
+
+    /// Format the last edited date with relative or absolute formatting
+    private func formattedLastEdited(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+
+        // If within the last 7 days, use relative formatting
+        if let daysAgo = calendar.dateComponents([.day], from: date, to: now).day, daysAgo < 7 {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            return formatter.localizedString(for: date, relativeTo: now)
+        } else {
+            // Otherwise use a short date format
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+            return formatter.string(from: date)
+        }
+    }
+
     // MARK: - Formatting
 
     private func formatTime(_ time: String) -> String {
@@ -1179,7 +1213,8 @@ struct SupplementSegment: Identifiable {
                 shift_date: "2025-01-17",
                 start_time: "17:00",
                 end_time: "23:00",
-                custom_supplements: nil
+                custom_supplements: nil,
+                updated_at: Date().addingTimeInterval(-3600) // 1 hour ago
             ),
             computed: ShiftComputed(
                 id: "preview-1",

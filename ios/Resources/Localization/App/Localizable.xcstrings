@@ -4714,6 +4714,12 @@
             "value": "Δημιουργήστε μια νέα κοινή χρήση μεταξύ δύο χρηστών. Οι βάρδιες του ιδιοκτήτη θα είναι ορατές στον θεατή."
           }
         },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new share between two users. The owner's shifts will be visible to the viewer."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -4826,12 +4832,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在两个用户之间创建新的共享。所有者的班次将对查看者可见。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create a new share between two users. The owner's shifts will be visible to the viewer."
           }
         }
       }
@@ -7142,6 +7142,12 @@
             "value": "Φόρτωση περίληψης..."
           }
         },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading summary..."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -7254,12 +7260,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "加载摘要中..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading summary..."
           }
         }
       }
@@ -9429,6 +9429,12 @@
             "value": "Εκτέλεση δοκιμών επικύρωσης..."
           }
         },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running validation tests..."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -9541,12 +9547,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "运行验证测试中..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Running validation tests..."
           }
         }
       }
@@ -10715,6 +10715,12 @@
             "value": "Συγχρονισμός..."
           }
         },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Syncing..."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -10827,12 +10833,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "同步中..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Syncing..."
           }
         }
       }
@@ -11143,6 +11143,12 @@
             "value": "Οι δοκιμές επαληθεύουν τη λειτουργικότητα αποσυνδεδεμένου συγχρονισμού σύμφωνα με το σχέδιο δοκιμών Phase 8."
           }
         },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tests verify offline sync functionality according to Phase 8 test plan."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -11255,12 +11261,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "测试根据第8阶段测试计划验证离线同步功能。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tests verify offline sync functionality according to Phase 8 test plan."
           }
         }
       }
@@ -33841,13 +33841,7 @@
     "data.export.calendar.button": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Export to Calendar"
-          }
-        },
-        "nb": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eksporter til kalender"
@@ -33859,10 +33853,16 @@
             "value": "In Kalender exportieren"
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exporter vers le calendrier"
+            "value": "Εξαγωγή στο Ημερολόγιο"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export to Calendar"
           }
         },
         "es": {
@@ -33871,82 +33871,22 @@
             "value": "Exportar a Calendario"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esporta nel Calendario"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporteren naar kalender"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportar para Calendário"
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporter til kalender"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportera till kalender"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporter til kalender"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Vie kalenteriin"
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eksportuj do Kalendarza"
+            "value": "Exporter vers le calendrier"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Экспортировать в календарь"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Експортувати в календар"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Takvime'ye Aktar"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Εξαγωγή στο Ημερολόγιο"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportă în Calendar"
+            "value": "Esporta nel Calendario"
           }
         },
         "ja": {
@@ -33961,10 +33901,52 @@
             "value": "캘린더로 내보내기"
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "导出到日历"
+            "value": "Eksporter til kalender"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporteren naar kalender"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksporter til kalender"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportuj do Kalendarza"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportar para Calendário"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportă în Calendar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Экспортировать в календарь"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportera till kalender"
           }
         },
         "th": {
@@ -33973,10 +33955,28 @@
             "value": "ส่งออกไปยังปฏิทิน"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takvime'ye Aktar"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Експортувати в календар"
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Xuất sang Lịch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出到日历"
           }
         }
       }
@@ -33984,13 +33984,7 @@
     "data.export.calendar.calendarName": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Shifts"
-          }
-        },
-        "nb": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tidex Vakter"
@@ -34002,10 +33996,16 @@
             "value": "Tidex Schichten"
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tidex Vactions"
+            "value": "Tidex Vακές"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Shifts"
           }
         },
         "es": {
@@ -34014,82 +34014,22 @@
             "value": "Tidex Vakat"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vakte"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vaken"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Turnos"
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vakter"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vakter"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vakter"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Tidex Vuorot"
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tidex Vachty"
+            "value": "Tidex Vactions"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tidex Вахты"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Вахти"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vardiyaları"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Vακές"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidex Shifts"
+            "value": "Tidex Vakte"
           }
         },
         "ja": {
@@ -34104,10 +34044,52 @@
             "value": "Tidex 근무"
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tidex 班次"
+            "value": "Tidex Vakter"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Vaken"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Vakter"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Vachty"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Turnos"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Shifts"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Вахты"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Vakter"
           }
         },
         "th": {
@@ -34116,10 +34098,28 @@
             "value": "Tidex Shifts"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Vardiyaları"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex Вахти"
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Tidex Shifts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidex 班次"
           }
         }
       }
@@ -34127,16 +34127,10 @@
     "data.export.calendar.description": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Export your shifts to your device's calendar app. Creates a dedicated \"Tidex Shifts\" calendar that you can delete anytime to remove all exported events."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporter vaktene dine til enhetens kalenderapp. Oppretter en dedikert \"Tidex Vakter\" kalender som du kan slette når som helst for å fjerne alle eksporterte hendelser."
+            "value": "Eksporter vaktene dine til enhedens kalenderapp. Oppretter en dedikeret \"Tidex Vakter\" kalender, som du kan slette når som helst for at fjerne alle eksporterede begivenheder."
           }
         },
         "de": {
@@ -34145,10 +34139,16 @@
             "value": "Exportieren Sie Ihre Schichten in die Kalender-App Ihres Geräts. Erstellt einen dedizierten Kalender \"Tidex Schichten\", den Sie jederzeit löschen können, um alle exportierten Ereignisse zu entfernen."
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportez vos vactions vers l'app Calendrier de votre appareil. Crée un calendrier dédié \"Tidex Vactions\" que vous pouvez supprimer à tout moment pour retirer tous les événements exportés."
+            "value": "Εξάγετε τις vακές σας στην εφαρμογή ημερολογίου της συσκευής σας. Δημιουργεί ένα αποκλειστικό ημερολόγιο \"Tidex Vακές\" που μπορείτε να διαγράψετε οποτεδήποτε για να αφαιρέσετε όλα τα εξαγόμενα γεγονότα."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export your shifts to your device's calendar app. Creates a dedicated \"Tidex Shifts\" calendar that you can delete anytime to remove all exported events."
           }
         },
         "es": {
@@ -34157,82 +34157,22 @@
             "value": "Exporta tus vakatas al calendario de tu dispositivo. Crea un calendario dedicado \"Tidex Vakat\" que puedes eliminar en cualquier momento para quitar todos los eventos exportados."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esporta le tue vakte nell'app calendario del tuo dispositivo. Crea un calendario dedicato \"Tidex Vakte\" che puoi eliminare in qualsiasi momento per rimuovere tutti gli eventi esportati."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporteer je vaken naar de kalender-app van je apparaat. Maakt een speciale \"Tidex Vaken\" kalender aan die je op elk moment kunt verwijderen om alle geëxporteerde evenementen te verwijderen."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporte seus turnos para o aplicativo de calendário do seu dispositivo. Cria um calendário dedicado \"Tidex Turnos\" que você pode deletar a qualquer momento para remover todos os eventos exportados."
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporter vaktene dine til enhetens kalenderapp. Oppretter en dedikert \"Tidex Vakter\" kalender som du kan slette når som helst for å fjerne alle eksporterte hendelser."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportera dina vakter till enhetens kalenderapp. Skapar en dedikerad \"Tidex Vakter\"-kalender som du kan ta bort när som helst för att ta bort alla exporterade händelser."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporter vaktene dine til enhedens kalenderapp. Oppretter en dedikeret \"Tidex Vakter\" kalender, som du kan slette når som helst for at fjerne alle eksporterede begivenheder."
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Vie vuorot laitteesi kalenterisovellukseen. Luo varatun \"Tidex Vuorot\" -kalenterin, jonka voit poistaa milloin tahansa poistaaksesi kaikki viedyt tapahtumat."
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eksportuj swoje vachty do aplikacji kalendarza na urządzeniu. Tworzy dedykowany kalendarz \"Tidex Vachty\", który możesz usunąć w dowolnym momencie, aby usunąć wszystkie wyeksportowane wydarzenia."
+            "value": "Exportez vos vactions vers l'app Calendrier de votre appareil. Crée un calendrier dédié \"Tidex Vactions\" que vous pouvez supprimer à tout moment pour retirer tous les événements exportés."
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Экспортируйте свои вахты в календарь устройства. Создает выделенный календарь \"Tidex Вахты\", который вы можете удалить в любое время, чтобы удалить все экспортированные события."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Експортуйте свої вахти до календарної програми вашого пристрою. Створює спеціальний календар \"Tidex Вахти\", який ви можете видалити будь-коли, щоб видалити всі експортовані eventi."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vardiyalarınızı cihazınızın takvim uygulamasına aktarın. Tüm aktarılan etkinlikleri kaldırmak için istediğiniz zaman silebileceğiniz \"Tidex Vardiyaları\" adlı özel bir takvim oluşturur."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Εξάγετε τις vακές σας στην εφαρμογή ημερολογίου της συσκευής σας. Δημιουργεί ένα αποκλειστικό ημερολόγιο \"Tidex Vακές\" που μπορείτε να διαγράψετε οποτεδήποτε για να αφαιρέσετε όλα τα εξαγόμενα γεγονότα."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportă-ți vactele în aplicația calendar a dispozitivului. Creează un calendar dedicat \"Tidex Shifts\" pe care îl poți șterge oricând pentru a elimina toate evenimentele exportate."
+            "value": "Esporta le tue vakte nell'app calendario del tuo dispositivo. Crea un calendario dedicato \"Tidex Vakte\" che puoi eliminare in qualsiasi momento per rimuovere tutti gli eventi esportati."
           }
         },
         "ja": {
@@ -34247,10 +34187,52 @@
             "value": "근무 일정을 기기의 캘린더 앱으로 내보내세요. 언제든지 삭제할 수 있는 \"Tidex 근무\" 캘린더를 생성하여 모든 내보낸 일정을 제거할 수 있습니다."
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "将您的班次导出到设备的日历应用。创建一个专用的"
+            "value": "Eksporter vaktene dine til enhetens kalenderapp. Oppretter en dedikert \"Tidex Vakter\" kalender som du kan slette når som helst for å fjerne alle eksporterte hendelser."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporteer je vaken naar de kalender-app van je apparaat. Maakt een speciale \"Tidex Vaken\" kalender aan die je op elk moment kunt verwijderen om alle geëxporteerde evenementen te verwijderen."
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksporter vaktene dine til enhetens kalenderapp. Oppretter en dedikert \"Tidex Vakter\" kalender som du kan slette når som helst for å fjerne alle eksporterte hendelser."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportuj swoje vachty do aplikacji kalendarza na urządzeniu. Tworzy dedykowany kalendarz \"Tidex Vachty\", który możesz usunąć w dowolnym momencie, aby usunąć wszystkie wyeksportowane wydarzenia."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporte seus turnos para o aplicativo de calendário do seu dispositivo. Cria um calendário dedicado \"Tidex Turnos\" que você pode deletar a qualquer momento para remover todos os eventos exportados."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportă-ți vactele în aplicația calendar a dispozitivului. Creează un calendar dedicat \"Tidex Shifts\" pe care îl poți șterge oricând pentru a elimina toate evenimentele exportate."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Экспортируйте свои вахты в календарь устройства. Создает выделенный календарь \"Tidex Вахты\", который вы можете удалить в любое время, чтобы удалить все экспортированные события."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportera dina vakter till enhetens kalenderapp. Skapar en dedikerad \"Tidex Vakter\"-kalender som du kan ta bort när som helst för att ta bort alla exporterade händelser."
           }
         },
         "th": {
@@ -34259,10 +34241,28 @@
             "value": "ส่งออกเวลาทำงานของคุณไปยังแอปปฏิทินของอุปกรณ์ของคุณ สร้างปฏิทิน \"Tidex Shifts\" ที่อุทิศให้ซึ่งคุณสามารถลบได้ตลอดเวลาเพื่อลบอีเวนต์ที่ส่งออกทั้งหมด"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vardiyalarınızı cihazınızın takvim uygulamasına aktarın. Tüm aktarılan etkinlikleri kaldırmak için istediğiniz zaman silebileceğiniz \"Tidex Vardiyaları\" adlı özel bir takvim oluşturur."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Експортуйте свої вахти до календарної програми вашого пристрою. Створює спеціальний календар \"Tidex Вахти\", який ви можете видалити будь-коли, щоб видалити всі експортовані eventi."
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Xuất các ca làm việc của bạn sang ứng dụng lịch của thiết bị. Tạo một lịch \"Tidex Shifts\" chuyên dụng mà bạn có thể xóa bất kỳ lúc nào để loại bỏ tất cả các sự kiện được xuất."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将您的班次导出到设备的日历应用。创建一个专用的"
           }
         }
       }
@@ -34270,16 +34270,10 @@
     "data.export.calendar.eventTitle": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Work Shift"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vakt"
+            "value": "Vagt"
           }
         },
         "de": {
@@ -34288,10 +34282,16 @@
             "value": "Arbeitschicht"
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vaction"
+            "value": "Vακή"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work Shift"
           }
         },
         "es": {
@@ -34300,82 +34300,22 @@
             "value": "Vakat"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vatta"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vak"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turno de Trabalho"
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vakt"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vakt"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vagt"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Työskenvuoro"
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vachta"
+            "value": "Vaction"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Рабочая смена"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Робоча вахта"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "İş Vardiyası"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vακή"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vactă de Lucru"
+            "value": "Vatta"
           }
         },
         "ja": {
@@ -34390,10 +34330,52 @@
             "value": "근무 일정"
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "工作班次"
+            "value": "Vakt"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vak"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vakt"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vachta"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turno de Trabalho"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vactă de Lucru"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Рабочая смена"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vakt"
           }
         },
         "th": {
@@ -34402,10 +34384,28 @@
             "value": "เวลาทำงาน"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İş Vardiyası"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Робоча вахта"
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Ca làm việc"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作班次"
           }
         }
       }
@@ -34413,13 +34413,7 @@
     "data.export.calendar.exporting": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporting..."
-          }
-        },
-        "nb": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eksporterer..."
@@ -34431,10 +34425,16 @@
             "value": "Wird exportiert..."
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportation en cours..."
+            "value": "Εξαγωγή..."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting..."
           }
         },
         "es": {
@@ -34443,82 +34443,22 @@
             "value": "Exportando..."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esportazione in corso..."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporteren..."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportando..."
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporterer..."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporterar..."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporterer..."
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Viedään..."
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eksportowanie..."
+            "value": "Exportation en cours..."
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Экспортирование..."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Експортування..."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktarılıyor..."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Εξαγωγή..."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se exportă..."
+            "value": "Esportazione in corso..."
           }
         },
         "ja": {
@@ -34533,10 +34473,52 @@
             "value": "내보내는 중..."
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "导出中..."
+            "value": "Eksporterer..."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporteren..."
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksporterer..."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportowanie..."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportando..."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se exportă..."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Экспортирование..."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporterar..."
           }
         },
         "th": {
@@ -34545,10 +34527,28 @@
             "value": "กำลังส่งออก..."
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktarılıyor..."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Експортування..."
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Đang xuất..."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出中..."
           }
         }
       }
@@ -34556,16 +34556,10 @@
     "data.export.calendar.noShifts": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "No shifts found in the selected period"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen vakter funnet i den valgte perioden"
+            "value": "Ingen vakter fundet i den valgte periode"
           }
         },
         "de": {
@@ -34574,10 +34568,16 @@
             "value": "Keine Schichten im ausgewählten Zeitraum gefunden"
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucune vaction trouvée dans la période sélectionnée"
+            "value": "Δεν βρέθηκαν vακές στην επιλεγμένη περίοδο"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No shifts found in the selected period"
           }
         },
         "es": {
@@ -34586,82 +34586,22 @@
             "value": "No se encontraron vakatas en el período seleccionado"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessuna vatta trovata nel periodo selezionato"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geen vaken gevonden in de geselecteerde periode"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhum turno encontrado no período selecionado"
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen vakter funnet i den valgte perioden"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inga vakter hittades under den valda perioden"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen vakter fundet i den valgte periode"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Yhtään vuoroa ei löytynyt valitulta ajanjaksolta"
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie znaleziono vacht w wybranym okresie"
+            "value": "Aucune vaction trouvée dans la période sélectionnée"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "В выбранном периоде вахты не найдены"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вахти в обраному періоді не знайдені"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seçilen dönemde vardiya bulunamadı"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Δεν βρέθηκαν vακές στην επιλεγμένη περίοδο"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nicio vactă găsită în perioada selectată"
+            "value": "Nessuna vatta trovata nel periodo selezionato"
           }
         },
         "ja": {
@@ -34676,10 +34616,52 @@
             "value": "선택한 기간에 근무 일정이 없습니다"
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "在选定的时间段内未找到班次"
+            "value": "Ingen vakter funnet i den valgte perioden"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen vaken gevonden in de geselecteerde periode"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen vakter funnet i den valgte perioden"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie znaleziono vacht w wybranym okresie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum turno encontrado no período selecionado"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicio vactă găsită în perioada selectată"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В выбранном периоде вахты не найдены"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inga vakter hittades under den valda perioden"
           }
         },
         "th": {
@@ -34688,10 +34670,28 @@
             "value": "ไม่พบเวลาทำงานในช่วงเวลาที่เลือก"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen dönemde vardiya bulunamadı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вахти в обраному періоді не знайдені"
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Không tìm thấy ca làm việc trong khoảng thời gian đã chọn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在选定的时间段内未找到班次"
           }
         }
       }
@@ -34699,16 +34699,10 @@
     "data.export.calendar.permissionDenied": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Calendar access denied. Please enable calendar access in Settings."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalendertilgang avslått. Vennligst aktiver kalendertilgang i Innstillinger."
+            "value": "Kalendertilgang nægtet. Aktiver venligst kalendertilgang i Indstillinger."
           }
         },
         "de": {
@@ -34717,10 +34711,16 @@
             "value": "Kalenderzugriff verweigert. Bitte aktivieren Sie den Kalenderzugriff in den Einstellungen."
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Accès au calendrier refusé. Veuillez activer l'accès au calendrier dans les Paramètres."
+            "value": "Η πρόσβαση στο ημερολόγιο αρνήθηκε. Παρακαλώ ενεργοποιήστε την πρόσβαση στο ημερολόγιο στις Ρυθμίσεις."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar access denied. Please enable calendar access in Settings."
           }
         },
         "es": {
@@ -34729,82 +34729,22 @@
             "value": "Acceso al calendario denegado. Por favor, habilita el acceso al calendario en Configuración."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accesso al calendario negato. Abilita l'accesso al calendario in Impostazioni."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalendertoegang geweigerd. Schakel kalendertoegang in bij Instellingen."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acesso ao calendário negado. Por favor, ative o acesso ao calendário em Configurações."
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalendertilgang avslått. Vennligst aktiver kalendertilgang i Innstillingar."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalendertillgång nekad. Vänligen aktivera kalendertillgång i Inställningar."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalendertilgang nægtet. Aktiver venligst kalendertilgang i Indstillinger."
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Kalenteritunnuksiin pääsy evätty. Ota kalenteritunnuksiin pääsy käyttöön asetuksissa."
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dostęp do kalendarza odrzucony. Włącz dostęp do kalendarza w Ustawieniach."
+            "value": "Accès au calendrier refusé. Veuillez activer l'accès au calendrier dans les Paramètres."
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Доступ к календарю запрещен. Пожалуйста, включите доступ к календарю в Параметрах."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Доступ до календаря заборонено. Будь ласка, увімкніть доступ до календаря в Налаштуваннях."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Takvim erişimi reddedildi. Lütfen Ayarlar'da takvim erişimini etkinleştirin."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η πρόσβαση στο ημερολόγιο αρνήθηκε. Παρακαλώ ενεργοποιήστε την πρόσβαση στο ημερολόγιο στις Ρυθμίσεις."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acces la calendar refuzat. Te rugăm să activezi accesul la calendar în Setări."
+            "value": "Accesso al calendario negato. Abilita l'accesso al calendario in Impostazioni."
           }
         },
         "ja": {
@@ -34819,10 +34759,52 @@
             "value": "캘린더 접근이 거부되었습니다. 설정에서 캘린더 접근을 허용해주세요."
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "日历访问被拒绝。请在设置中启用日历访问。"
+            "value": "Kalendertilgang avslått. Vennligst aktiver kalendertilgang i Innstillinger."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalendertoegang geweigerd. Schakel kalendertoegang in bij Instellingen."
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalendertilgang avslått. Vennligst aktiver kalendertilgang i Innstillingar."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostęp do kalendarza odrzucony. Włącz dostęp do kalendarza w Ustawieniach."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acesso ao calendário negado. Por favor, ative o acesso ao calendário em Configurações."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acces la calendar refuzat. Te rugăm să activezi accesul la calendar în Setări."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к календарю запрещен. Пожалуйста, включите доступ к календарю в Параметрах."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalendertillgång nekad. Vänligen aktivera kalendertillgång i Inställningar."
           }
         },
         "th": {
@@ -34831,10 +34813,28 @@
             "value": "การเข้าถึงปฏิทินถูกปฏิเสธ โปรดเปิดใช้การเข้าถึงปฏิทินในการตั้งค่า"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takvim erişimi reddedildi. Lütfen Ayarlar'da takvim erişimini etkinleştirin."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ до календаря заборонено. Будь ласка, увімкніть доступ до календаря в Налаштуваннях."
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Quyền truy cập lịch bị từ chối. Vui lòng bật quyền truy cập lịch trong Cài đặt."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日历访问被拒绝。请在设置中启用日历访问。"
           }
         }
       }
@@ -34842,16 +34842,10 @@
     "data.export.calendar.success": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Successfully exported %d shifts to your calendar"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporterte %d vakter til kalenderen din"
+            "value": "Eksporterede %d vakter til din kalender"
           }
         },
         "de": {
@@ -34860,10 +34854,16 @@
             "value": "Erfolgreich %d Schichten in Ihren Kalender exportiert"
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportation de %d vactions vers votre calendrier réussie"
+            "value": "Επιτυχής εξαγωγή %d vακών στο ημερολόγιό σας"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Successfully exported %d shifts to your calendar"
           }
         },
         "es": {
@@ -34872,82 +34872,22 @@
             "value": "Se exportaron %d vakatas a tu calendario"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esportate %d vatte nel tuo calendario"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Succesvol %d vaken naar je kalender geëxporteerd"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportados com sucesso %d turnos para seu calendário"
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporterte %d vakter til kalenderen din"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporterade %d vakter till din kalender"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eksporterede %d vakter til din kalender"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Vietiin %d vuoroa kalenteriisi"
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pomyślnie wyeksportowano %d vacht do kalendarza"
+            "value": "Exportation de %d vactions vers votre calendrier réussie"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Успешно экспортировано %d вахт в ваш календарь"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Успішно експортовано %d вахт до вашого календаря"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Başarıyla %d vardiya takviminize aktarıldı"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Επιτυχής εξαγωγή %d vακών στο ημερολόγιό σας"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "S-au exportat cu succes %d vacte în calendarul tău"
+            "value": "Esportate %d vatte nel tuo calendario"
           }
         },
         "ja": {
@@ -34962,10 +34902,52 @@
             "value": "캘린더에 %d개의 근무 일정을 내보냈습니다"
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "成功导出 %d 个班次到您的日历"
+            "value": "Eksporterte %d vakter til kalenderen din"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succesvol %d vaken naar je kalender geëxporteerd"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksporterte %d vakter til kalenderen din"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomyślnie wyeksportowano %d vacht do kalendarza"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportados com sucesso %d turnos para seu calendário"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S-au exportat cu succes %d vacte în calendarul tău"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Успешно экспортировано %d вахт в ваш календарь"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporterade %d vakter till din kalender"
           }
         },
         "th": {
@@ -34974,10 +34956,28 @@
             "value": "ส่งออก %d เวลาทำงานไปยังปฏิทินของคุณเรียบร้อยแล้ว"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başarıyla %d vardiya takviminize aktarıldı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Успішно експортовано %d вахт до вашого календаря"
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Đã xuất thành công %d ca làm việc sang lịch của bạn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成功导出 %d 个班次到您的日历"
           }
         }
       }
@@ -34985,13 +34985,7 @@
     "data.export.calendar.title": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendar"
-          }
-        },
-        "nb": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Kalender"
@@ -35003,10 +34997,16 @@
             "value": "Kalender"
           }
         },
-        "fr": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Calendrier"
+            "value": "Ημερολόγιο"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar"
           }
         },
         "es": {
@@ -35015,82 +35015,22 @@
             "value": "Calendario"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendario"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendário"
-          }
-        },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender"
-          }
-        },
         "fi": {
           "stringUnit": {
             "state": "translated",
             "value": "Kalendi"
           }
         },
-        "pl": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kalendarz"
+            "value": "Calendrier"
           }
         },
-        "ru": {
+        "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Календарь"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Календар"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Takvim"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ημερολόγιο"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendar"
+            "value": "Calendario"
           }
         },
         "ja": {
@@ -35105,10 +35045,52 @@
             "value": "캘린더"
           }
         },
-        "zh-Hans": {
+        "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "日历"
+            "value": "Kalender"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalendarz"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendário"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Календарь"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender"
           }
         },
         "th": {
@@ -35117,10 +35099,28 @@
             "value": "ปฏิทิน"
           }
         },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takvim"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Календар"
+          }
+        },
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Lịch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日历"
           }
         }
       }
@@ -131862,6 +131862,149 @@
           "stringUnit": {
             "state": "translated",
             "value": "总工资"
+          }
+        }
+      }
+    },
+    "shifts.lastEdited": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last edited"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sist endret"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt bearbeitet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernière modification"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Última edición"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimo modifica"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laatst bewerkt"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Última edição"
+          }
+        },
+        "nn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sist endret"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senast redigerad"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sidst redigeret"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viimeksi muokattu"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnio edytowano"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Последнее редактирование"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Останнє редагування"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son düzenleme"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Τελευταία επεξεργασία"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima editare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後に編集"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 편집"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最后编辑"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แก้ไขล่าสุด"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lần cuối chỉnh sửa"
           }
         }
       }
