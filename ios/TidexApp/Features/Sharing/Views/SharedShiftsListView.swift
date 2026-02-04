@@ -17,7 +17,13 @@ struct SharedShiftsListView: View {
     /// Shift IDs to highlight from notification deeplink (more precise than dates)
     var highlightShiftIds: Set<String> = []
 
-        @Environment(\.userCurrency) private var currency
+    /// Whether superimpose mode is active
+    var isSuperimposing: Bool = false
+
+    /// User's own shift hours by date (for superimpose feature)
+    var userHoursByDate: [String: HoursData]?
+
+    @Environment(\.userCurrency) private var currency
 
     // Sheet state for shift details (using item-based presentation to fix first-tap bug)
     @State private var selectedShift: ShiftWithComputations?
@@ -42,6 +48,8 @@ struct SharedShiftsListView: View {
                             showEarnings: sharer.showEarnings,
                             highlightDates: highlightDates,
                             highlightShiftIds: highlightShiftIds,
+                            isSuperimposing: isSuperimposing,
+                            userHoursByDate: userHoursByDate,
                             onShiftTapped: { shift in
                                 selectedShift = shift
                             }

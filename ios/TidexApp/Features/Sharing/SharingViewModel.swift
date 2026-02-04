@@ -71,6 +71,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     /// Whether a pull-to-refresh is in progress (for shimmer on cards)
     @Published private(set) var isRefreshing = false
 
+    // MARK: - Superimpose State
+
+    /// Whether to show user's own shifts overlaid on friend's calendar
+    @Published var isSuperimposing = false
+
+    /// User's own shifts for the currently displayed month (raw data, no payroll needed)
+    @Published private(set) var userShiftsForMonth: [ShiftRow] = []
+
     // MARK: - Committed Display State
     // These values only update AFTER shift data is ready, ensuring atomic rendering
     // The calendar uses these to avoid showing the new month structure before data arrives
@@ -162,6 +170,10 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
                 if self.selectedSharer != nil {
                     Task {
                         await self.loadShiftsForSelectedSharer()
+                        // Also reload user shifts if superimposing
+                        if self.isSuperimposing {
+                            await self.loadUserShiftsForMonth()
+                        }
                     }
                 }
             }
@@ -496,6 +508,90 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         isLoadingShifts = false
     }
 
+    /// Load user's own shifts for the current month (for superimpose feature)
+    /// Includes both real shifts and virtual shifts from recurring patterns
+    func loadUserShiftsForMonth() async {
+        guard isSuperimposing else {
+            userShiftsForMonth = []
+            return
+        }
+
+        // Get user ID from cache or fetch
+        var userId = cachedUserId
+        if userId == nil {
+            userId = try? await getCurrentUserId()
+        }
+
+        guard let userId else {
+            userShiftsForMonth = []
+            return
+        }
+
+        let year = committedYear
+        let month = committedMonth
+
+        // Calculate date range for the month
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = 1
+
+        guard let startDate = Calendar.current.date(from: components),
+              let endDate = Calendar.current.date(byAdding: .month, value: 1, to: startDate)?.addingTimeInterval(-1) else {
+            userShiftsForMonth = []
+            return
+        }
+
+        // Fetch user's real shifts from local repository
+        var allShifts = ShiftsRepository.shared.getShifts(
+            for: userId,
+            startDate: startDate,
+            endDate: endDate
+        )
+
+        // Get recurring shifts and generate virtual shifts
+        let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
+        let realShiftDates = Set(allShifts.map { $0.shift_date })
+
+        for recurring in recurringShifts {
+            let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+                year: year,
+                month: month,
+                recurring: recurring
+            )
+
+            for virtual in virtualShifts {
+                // Skip if a real shift exists on this date (avoid duplicates)
+                if realShiftDates.contains(virtual.date) { continue }
+
+                // Create virtual shift row with times from recurring pattern
+                let virtualRow = ShiftRow(
+                    id: "virtual-\(recurring.id)-\(virtual.date)",
+                    user_id: recurring.user_id,
+                    shift_date: virtual.date,
+                    start_time: recurring.cleanStartTime,
+                    end_time: recurring.cleanEndTime,
+                    custom_supplements: recurring.date_specific_supplements?[virtual.date],
+                    created_at: nil,
+                    recurring_id: recurring.id,
+                    recurring_anchor_weekday: virtual.weekday
+                )
+                allShifts.append(virtualRow)
+            }
+        }
+
+        userShiftsForMonth = allShifts
+        logger.info("Loaded \(allShifts.count) user shifts for superimpose (\(year)-\(month)) - includes virtual shifts")
+    }
+
+    /// Toggle superimpose mode and load user shifts if needed
+    func toggleSuperimpose() {
+        isSuperimposing.toggle()
+        Task {
+            await loadUserShiftsForMonth()
+        }
+    }
+
     // MARK: - Computed Properties
 
     /// Whether the view should show the sharer list (no sharer selected)
@@ -539,6 +635,36 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     /// Shift count for the current month
     var shiftCount: Int {
         sharedShifts.count
+    }
+
+    // MARK: - Superimpose Computed Properties
+
+    /// Hours data by ISO date string for user's shifts
+    var userHoursByDate: [String: HoursData] {
+        var shiftsByDateDict: [String: [ShiftRow]] = [:]
+        for shift in userShiftsForMonth {
+            shiftsByDateDict[shift.shift_date, default: []].append(shift)
+        }
+
+        var result: [String: HoursData] = [:]
+        for (date, shiftsOnDate) in shiftsByDateDict {
+            let sorted = shiftsOnDate.sorted { $0.start_time < $1.start_time }
+            let earliestStart = sorted.first?.start_time ?? ""
+            let latestEnd = sorted.map(\.end_time).max() ?? ""
+
+            let crossesMidnight = shiftsOnDate.contains { shift in
+                let startMinutes = CalendarGridHelper.timeToMinutes(shift.start_time)
+                let endMinutes = CalendarGridHelper.timeToMinutes(shift.end_time)
+                return endMinutes <= startMinutes
+            }
+
+            result[date] = HoursData(
+                start: CalendarGridHelper.formatTime(earliestStart),
+                end: CalendarGridHelper.formatTime(latestEnd),
+                crossesMidnight: crossesMidnight
+            )
+        }
+        return result
     }
 
     // MARK: - Private Methods

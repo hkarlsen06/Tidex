@@ -16,10 +16,16 @@ struct SharedShiftsCalendarView: View {
     /// Shift IDs to highlight from notification deeplink (more precise than dates)
     var highlightShiftIds: Set<String> = []
 
+    /// Whether superimpose mode is active (shows user's shifts instead of friend's)
+    var isSuperimposing: Bool = false
+
+    /// User's own shift hours by date (for superimpose feature)
+    var userHoursByDate: [String: HoursData]?
+
     /// Callback when a shift is tapped (for showing details)
     var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
-        @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+    @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
 
     /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
     private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
@@ -122,6 +128,19 @@ struct SharedShiftsCalendarView: View {
             }
         }
         .padding(.horizontal, 16)
+        .overlay(alignment: .top) {
+            // Superimpose legend (floats above header when active)
+            if isSuperimposing {
+                superimposeLegend
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.tidexSurfacePrimary)
+                            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+                    )
+                    .offset(y: -28)
+            }
+        }
     }
 
     // MARK: - Header Row
@@ -170,6 +189,32 @@ struct SharedShiftsCalendarView: View {
         }
     }
 
+    // MARK: - Superimpose Legend
+
+    /// Legend explaining the color coding when superimpose is active
+    private var superimposeLegend: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(Color.tidexBlue)
+                    .frame(width: 8, height: 8)
+                Text(.sharingSuperimposeLegendBlue)
+                    .font(.system(size: 12))
+                    .foregroundColor(.tidexTextMuted)
+            }
+
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 8, height: 8)
+                Text(.sharingSuperimposeLegendGreen)
+                    .font(.system(size: 12))
+                    .foregroundColor(.tidexTextMuted)
+            }
+        }
+        .padding(.horizontal, 12)
+    }
+
     // MARK: - Calendar Grid
 
     private var calendarGrid: some View {
@@ -190,10 +235,16 @@ struct SharedShiftsCalendarView: View {
         let isToday = dayInfo.dateISO == todayISO()
         let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
 
+        // Show overlap indicator when superimposing and both user AND friend have shifts
+        let friendHasShift = !shiftsOnDay.isEmpty
+        let userHasShift = dayInfo.dateISO.flatMap { userHoursByDate?[$0] } != nil
+        let showOverlap = isSuperimposing && friendHasShift && userHasShift
+
         CalendarDayCell(
             dayInfo: dayInfo,
             style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
-            content: cellContent(for: dayInfo, hasShifts: !shiftsOnDay.isEmpty)
+            content: cellContent(for: dayInfo, hasShifts: friendHasShift),
+            showOverlapIndicator: showOverlap
         )
         .onTapGesture {
             handleDayTap(dayInfo: dayInfo)
@@ -244,6 +295,14 @@ struct SharedShiftsCalendarView: View {
     private func cellContent(for dayInfo: CalendarDayInfo, hasShifts: Bool) -> CalendarCellContent {
         guard let dateISO = dayInfo.dateISO else { return .empty }
 
+        // When superimposing and user has a shift on this day
+        if isSuperimposing, let userHours = userHoursByDate?[dateISO] {
+            // Blue if both have shifts (overlap), green if only user has shift
+            let color: Color = hasShifts ? .tidexBlue : .green
+            return .hours(userHours, color: color)
+        }
+
+        // Otherwise show friend's shifts (normal behavior)
         let effectiveViewMode = showEarnings ? viewMode : .hours
 
         if effectiveViewMode == .money, let amount = earningsByDate[dateISO] {

@@ -195,7 +195,7 @@ final class SyncCoordinator: ObservableObject {
         await updateDeviceLocale()
 
         // Get or create sync state
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         do {
             let syncState = try await storeActor.getOrCreateSyncState(userId: userId)
             await storeActor.updateSyncState(userId: userId) { state in
@@ -363,7 +363,7 @@ final class SyncCoordinator: ObservableObject {
                 cursor = SyncCursor(updatedAt: lastUpdatedAt, tieId: result.lastTieId)
 
                 // Persist cursor to sync state
-                let storeActor = LocalStore.shared.storeActor
+                let storeActor = await MainActor.run { LocalStore.shared.storeActor }
                 await storeActor.updateSyncState(userId: userId) { state in
                     state.updateUpdatedAtCursor(for: table, updatedAt: lastUpdatedAt, tieId: result.lastTieId)
                     // Also update legacy cursor for debugging
@@ -456,7 +456,7 @@ final class SyncCoordinator: ObservableObject {
             )
         }
 
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         var newConflicts = 0
         var autoMerged = 0
         var maxRevision: Int64 = 0
@@ -712,7 +712,7 @@ final class SyncCoordinator: ObservableObject {
             )
         }
 
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         var newConflicts = 0
         var autoMerged = 0
         var maxRevision: Int64 = 0
@@ -937,7 +937,7 @@ final class SyncCoordinator: ObservableObject {
             )
         }
 
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         var newConflicts = 0
         var autoMerged = 0
         var maxRevision: Int64 = 0
@@ -1173,7 +1173,7 @@ final class SyncCoordinator: ObservableObject {
             )
         }
 
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         var newConflicts = 0
         var autoMerged = 0
         var maxRevision: Int64 = 0
@@ -1374,7 +1374,7 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - User Shifts Push
 
     private func pushUserShifts(userId: String) async throws -> TablePushResult {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         let dirtyShifts = try await storeActor.getDirtyUserShifts(userId: userId)
 
         if dirtyShifts.isEmpty {
@@ -1846,7 +1846,7 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Recurring Shifts Push
 
     private func pushRecurringShifts(userId: String) async throws -> TablePushResult {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         let dirtyShifts = try await storeActor.getDirtyRecurringShifts(userId: userId)
 
         if dirtyShifts.isEmpty {
@@ -2281,7 +2281,7 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Wage Snapshots Push
 
     private func pushWageSnapshots(userId: String) async throws -> TablePushResult {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         let dirtySnapshots = try await storeActor.getDirtyWageSnapshots(userId: userId)
 
         if dirtySnapshots.isEmpty {
@@ -2739,7 +2739,7 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - User Settings Push
 
     private func pushUserSettings(userId: String) async throws -> TablePushResult {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         guard let settings = try await storeActor.getDirtyUserSettings(userId: userId) else {
             return TablePushResult(table: .userSettings, rowsPushed: 0, newConflicts: 0, rebased: 0)
         }
@@ -3067,7 +3067,7 @@ final class SyncCoordinator: ObservableObject {
 
     /// Resolve a conflict for a user shift
     func resolveShiftConflict(shiftId: String, resolution: ConflictResolution, userId: String) async throws {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
 
         guard let shift = try await storeActor.getUserShift(id: shiftId) else {
             throw SyncError.notFound(table: .userShifts, id: shiftId)
@@ -3117,7 +3117,7 @@ final class SyncCoordinator: ObservableObject {
 
     /// Resolve a conflict for a recurring shift
     func resolveRecurringShiftConflict(shiftId: String, resolution: ConflictResolution, userId: String) async throws {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
 
         guard let shift = try await storeActor.getRecurringShift(id: shiftId) else {
             throw SyncError.notFound(table: .recurringShifts, id: shiftId)
@@ -3163,7 +3163,7 @@ final class SyncCoordinator: ObservableObject {
 
     /// Resolve a conflict for a wage snapshot
     func resolveWageSnapshotConflict(snapshotId: String, resolution: ConflictResolution, userId: String) async throws {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
 
         guard let snapshot = try await storeActor.getWageSnapshot(id: snapshotId) else {
             throw SyncError.notFound(table: .wageSnapshots, id: snapshotId)
@@ -3209,7 +3209,7 @@ final class SyncCoordinator: ObservableObject {
 
     /// Resolve a conflict for user settings
     func resolveUserSettingsConflict(resolution: ConflictResolution, userId: String) async throws {
-        let storeActor = LocalStore.shared.storeActor
+        let storeActor = await MainActor.run { LocalStore.shared.storeActor }
 
         guard let settings = try await storeActor.getUserSettings(userId: userId) else {
             throw SyncError.notFound(table: .userSettings, id: userId)

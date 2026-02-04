@@ -43,7 +43,7 @@ enum CalendarCellContent: Equatable {
     case empty
 
     /// Display hours (start and end times)
-    case hours(HoursData)
+    case hours(HoursData, color: Color = .tidexTextPrimary)
 
     /// Display earnings amount
     case earnings(Double, color: Color = .tidexTextPrimary)
@@ -67,6 +67,9 @@ struct CalendarDayCell<Content: View>: View {
     let style: CalendarCellStyle
     let content: CalendarCellContent
 
+    /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
+    var showOverlapIndicator: Bool = false
+
     /// Optional custom content view (used when content == .custom)
     let customContent: (() -> Content)?
 
@@ -74,18 +77,20 @@ struct CalendarDayCell<Content: View>: View {
         dayInfo: CalendarDayInfo,
         style: CalendarCellStyle,
         content: CalendarCellContent,
+        showOverlapIndicator: Bool = false,
         @ViewBuilder customContent: @escaping () -> Content
     ) {
         self.dayInfo = dayInfo
         self.style = style
         self.content = content
+        self.showOverlapIndicator = showOverlapIndicator
         self.customContent = customContent
     }
 
     var body: some View {
         ZStack {
-            // Week number (top-left corner, only on Mondays)
-            if let weekNum = dayInfo.weekNumber {
+            // Week number (top-left corner, only on Mondays, hidden when overlap indicator shows)
+            if let weekNum = dayInfo.weekNumber, !showOverlapIndicator {
                 VStack {
                     HStack {
                         Text("\(weekNum)")
@@ -112,6 +117,21 @@ struct CalendarDayCell<Content: View>: View {
                 Spacer()
             }
 
+            // Overlap indicator (top-left, replacing week number position)
+            if showOverlapIndicator {
+                VStack {
+                    HStack {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.tidexBlue)
+                            .padding(.leading, 4)
+                            .padding(.top, 5)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+            }
+
             // Content (centered)
             contentView
         }
@@ -136,14 +156,14 @@ struct CalendarDayCell<Content: View>: View {
         case .empty:
             EmptyView()
 
-        case .hours(let hoursData):
+        case .hours(let hoursData, let color):
             VStack(spacing: 1) {
                 Text(hoursData.start)
                     .font(.footnote.weight(.bold))
                 Text(hoursData.end + (hoursData.crossesMidnight ? "*" : ""))
                     .font(.footnote.weight(.bold))
             }
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundColor(color)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .padding(.top, 8)
@@ -188,11 +208,13 @@ extension CalendarDayCell where Content == EmptyView {
     init(
         dayInfo: CalendarDayInfo,
         style: CalendarCellStyle,
-        content: CalendarCellContent
+        content: CalendarCellContent,
+        showOverlapIndicator: Bool = false
     ) {
         self.dayInfo = dayInfo
         self.style = style
         self.content = content
+        self.showOverlapIndicator = showOverlapIndicator
         self.customContent = nil
     }
 }
