@@ -27,6 +27,17 @@ private struct TidexGlassModifier: ViewModifier {
     let interactive: Bool
     let fallbackOpacity: Double
 
+    private var glassEffect: Glass {
+        var effect = Glass.regular
+        if let tint {
+            effect = effect.tint(tint)
+        }
+        if interactive {
+            effect = effect.interactive()
+        }
+        return effect
+    }
+
     func body(content: Content) -> some View {
         let fallbackBase = Color.tidexSurfacePrimary.opacity(fallbackOpacity)
         let fallbackTint = tint?.opacity(0.18) ?? .clear
@@ -77,22 +88,13 @@ private struct TidexGlassModifier: ViewModifier {
                     )
             }
         } else {
-            // Build the glass effect with all applicable modifiers
-            var effect = GlassEffect.regular
-            if let tint {
-                effect = effect.tint(tint)
-            }
-            if interactive {
-                effect = effect.interactive()
-            }
-
             switch shape {
             case .rect(let cornerRadius):
-                content.glassEffect(effect, in: .rect(cornerRadius: cornerRadius))
+                content.glassEffect(glassEffect, in: .rect(cornerRadius: cornerRadius))
             case .capsule:
-                content.glassEffect(effect, in: .capsule)
+                content.glassEffect(glassEffect, in: .capsule)
             case .circle:
-                content.glassEffect(effect, in: .circle)
+                content.glassEffect(glassEffect, in: .circle)
             }
         }
     }

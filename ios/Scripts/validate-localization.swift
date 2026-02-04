@@ -69,7 +69,7 @@ private enum ValidationError: Error, CustomStringConvertible {
 
 // Keys to skip validation (admin/debug strings, symbols, format specifiers)
 private let skipKeyPatterns: [String] = [
-    // Admin/debug views (matches lint-hardcoded-strings skipPaths)
+    // Admin/debug views (matches audit-strings skipPaths)
     "admin.",
     "debug.",
     "impersonate",
