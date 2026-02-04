@@ -16,7 +16,7 @@ struct ShiftModeToggle: View {
     private let buttonSpacing: CGFloat = 8
     private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
 
-    init(mode: Binding<AddShiftMode>, style: Style = .standard) {
+    init(mode: Binding<AddShiftMode>, style: Style = .toolbar) {
         self._mode = mode
         self.style = style
     }
@@ -25,7 +25,7 @@ struct ShiftModeToggle: View {
         let verticalPadding: CGFloat = style == .toolbar ? 6 : Spacing.sm
         let horizontalPadding: CGFloat = style == .toolbar ? 10 : Spacing.md
         let outerPadding: CGFloat = style == .toolbar ? 2 : Spacing.xxs
-        let iconFontSize: CGFloat = style == .toolbar ? 15 : iconSize
+        let iconFontSize: CGFloat = style == .toolbar ? 14 : iconSize
         let shadowRadius: CGFloat = style == .toolbar ? 0 : 4
         let shadowOpacity: Double = style == .toolbar ? 0 : 0.18
 

@@ -21,7 +21,7 @@ struct TimeRangeCount: Identifiable, Hashable {
 }
 
 /// Horizontal chips showing frequently used time range combinations
-/// Chips are sorted by popularity (most used on the right)
+/// Chips are sorted by popularity (most used on the left)
 /// Only shows chips that fit within the available width
 struct RecentTimesChips: View {
     /// Callback when user taps a time range chip
@@ -45,10 +45,10 @@ struct RecentTimesChips: View {
     }
 
     /// Chips to display, limited by available width
-    /// Sorted with most popular on the right
+    /// Sorted with most popular on the left
     private var visibleRanges: [TimeRangeCount] {
-        // Take only what fits, then reverse so most popular is on the right
-        Array(timeRangeCounts.prefix(maxVisibleChips).reversed())
+        // Take only what fits, most popular first (on the left)
+        Array(timeRangeCounts.prefix(maxVisibleChips))
     }
 
     var body: some View {
@@ -65,7 +65,7 @@ struct RecentTimesChips: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: recentTimesChipBarHeight)
             }
         }
