@@ -120,7 +120,7 @@ struct AddShiftView: View {
             .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    ShiftModeToggle(mode: $viewModel.mode)
+                    ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
                         .fixedSize()
                 }
                 if !isIPad {
