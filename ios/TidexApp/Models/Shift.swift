@@ -16,6 +16,8 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     let custom_supplements: CustomSupplementsData?
     /// When the shift was created
     let created_at: String?
+    /// When the shift was last updated (from server)
+    let updated_at: Date?
 
     // Virtual shift metadata (not in database, set programmatically)
     /// Links to recurring_shifts if this is a virtual shift
@@ -29,7 +31,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, user_id, shift_date, start_time, end_time, custom_supplements, created_at
+        case id, user_id, shift_date, start_time, end_time, custom_supplements, created_at, updated_at
     }
 
     init(from decoder: Decoder) throws {
@@ -41,6 +43,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
         end_time = try container.decode(String.self, forKey: .end_time)
         custom_supplements = try container.decodeIfPresent(CustomSupplementsData.self, forKey: .custom_supplements)
         created_at = try container.decodeIfPresent(String.self, forKey: .created_at)
+        updated_at = try container.decodeIfPresent(Date.self, forKey: .updated_at)
         recurring_id = nil
         recurring_anchor_weekday = nil
     }
@@ -53,6 +56,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
         end_time: String,
         custom_supplements: CustomSupplementsData?,
         created_at: String? = nil,
+        updated_at: Date? = nil,
         recurring_id: String? = nil,
         recurring_anchor_weekday: Int? = nil
     ) {
@@ -63,6 +67,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
         self.end_time = end_time
         self.custom_supplements = custom_supplements
         self.created_at = created_at
+        self.updated_at = updated_at
         self.recurring_id = recurring_id
         self.recurring_anchor_weekday = recurring_anchor_weekday
     }
@@ -119,6 +124,7 @@ struct ShiftWithComputations: Identifiable, Equatable {
     var startTime: String { shift.start_time }
     var endTime: String { shift.end_time }
     var isVirtual: Bool { shift.isVirtual }
+    var updatedAt: Date? { shift.updated_at }
 
     /// Net pay after tax
     var netPay: Double {

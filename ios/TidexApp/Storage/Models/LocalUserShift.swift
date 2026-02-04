@@ -255,6 +255,7 @@ extension LocalUserShift {
             end_time: endTime,
             custom_supplements: decodedCustomSupplements,
             created_at: nil,
+            updated_at: serverUpdatedAt,
             recurring_id: nil,
             recurring_anchor_weekday: nil
         )
