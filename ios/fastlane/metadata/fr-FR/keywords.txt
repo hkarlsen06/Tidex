@@ -1,1 +1,1 @@
-horaire,suivi,salaire,paie,travail,heures,temps,pointage,calendrier,revenus
+shift,suivi,paie,salaire,travail,heures,temps,horloge,horaire,gains

@@ -1,1 +1,1 @@
-vagt,tracker,løn,løn,arbejde,timer,tid,ur,skema,indtjening
+vagt,timer,løn,arbejde,tidsplan,indtjening,kalkulator,skift,job,penge

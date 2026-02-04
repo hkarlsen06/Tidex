@@ -1,10 +1,10 @@
-- Ajout de widgets d'écran d'accueil TotalCard et Amis
-- Ajout de verrouillage biométrique avec Face ID et Touch ID
-- Ajout de partage d'horaires et calendrier avec capture d'écran
-- Ajout du support d'images dans le chat Wagey AI
-- Expansion du support linguistique à 17 langues
-- Redesign des saisies d'heure avec meilleure gestion du clavier
-- Ajout de gestes de balayage pour changer de mois
-- Ajout d'animations fluides des nombres au tableau de bord
-- Performances et vitesse de lancement améliorées
+- Ajout de 19 nouvelles langues incluant le support RTL pour l'hébreu, le persan et l'ourdou
+- Ajout de l'export calendrier pour partager vos shifts avec d'autres apps calendrier
+- Ajout d'actions rapides sur l'écran d'accueil pour une gestion des shifts plus rapide
+- Ajout du double-tap pour accéder rapidement au mois actuel
+- Ajout de puces horaires récentes pour une saisie de shift plus rapide
+- Ajout de l'option de superposition de vos shifts sur le calendrier d'un ami
+- Ajout du timestamp de dernière modification aux détails du shift
+- Accessibilité améliorée avec support du texte dynamique
+- Correction des notifications push en double
 - Corrections de bugs et autres améliorations

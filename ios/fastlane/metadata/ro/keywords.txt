@@ -1,1 +1,1 @@
-schimb,tracker,salariu,venit,muncă,ore,timp,ceas,program,câștiguri
+tura,tracker,salariu,venit,muncă,ore,timp,ceas,program,câștiguri

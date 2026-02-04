@@ -1,10 +1,10 @@
-- Added TotalCard and Friends home screen widgets
-- Added biometric app lock with Face ID and Touch ID
-- Added shift and calendar sharing with screenshot capture
-- Added image support in Wagey AI chat
-- Expanded language support to 17 languages
-- Redesigned time inputs with improved keyboard handling
-- Added swipe gestures to change months
-- Added smooth number animations to dashboard
-- Improved performance and launch speed
+- Added 19 new languages including RTL support for Hebrew, Persian, and Urdu
+- Added calendar export to share your shifts with other calendar apps
+- Added Home Screen quick actions for faster shift management
+- Added double-tap gesture to quickly jump to the current month
+- Added recent time chips for faster shift entry
+- Added option to overlay your shifts on a friend's calendar
+- Added last edited timestamp to shift details
+- Improved accessibility with Dynamic Type support
+- Fixed duplicate push notifications
 - Bug fixes and other improvements

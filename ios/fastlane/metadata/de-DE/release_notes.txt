@@ -1,10 +1,10 @@
-- TotalCard- und Freunde-Startbildschirm-Widgets hinzugefügt
-- Biometrische App-Sperre mit Face ID und Touch ID hinzugefügt
-- Schicht- und Kalenderfreigabe mit Screenshot-Erfassung hinzugefügt
-- Bildunterstützung im Wagey AI-Chat hinzugefügt
-- Sprachunterstützung auf 17 Sprachen erweitert
-- Zeiteingaben mit verbesserter Tastaturbehandlung überarbeitet
-- Wischgesten zum Wechsel des Monats hinzugefügt
-- Sanfte Zahlenanimationen im Dashboard hinzugefügt
-- Leistung und Startgeschwindigkeit verbessert
+- 19 neue Sprachen hinzugefügt, einschließlich RTL-Unterstützung für Hebräisch, Persisch und Urdu
+- Kalenderexport zum Teilen deiner Schichten mit anderen Kalender-Apps hinzugefügt
+- Schnellaktionen auf dem Startbildschirm für schnellere Schichtverwaltung hinzugefügt
+- Doppeltippen zum schnellen Springen zum aktuellen Monat hinzugefügt
+- Kürzliche Zeitchips für schnellere Schichterfassung hinzugefügt
+- Option zum Überlagern deiner Schichten mit dem Kalender eines Freundes hinzugefügt
+- Zeitstempel der letzten Bearbeitung zu Schichtdetails hinzugefügt
+- Barrierefreiheit mit Dynamic Type-Unterstützung verbessert
+- Doppelte Push-Benachrichtigungen behoben
 - Fehlerbehebungen und weitere Verbesserungen

@@ -1,10 +1,10 @@
-- Adicionados widgets TotalCard e Amigos na tela inicial
-- Adicionado bloqueio biométrico do app com Face ID e Touch ID
-- Adicionado compartilhamento de turnos e calendário com captura de tela
-- Adicionado suporte a imagens no chat Wagey AI
-- Expandido suporte para 17 idiomas
-- Redesenho de entradas de tempo com melhor tratamento de teclado
-- Adicionados gestos de deslizar para mudar de mês
-- Adicionadas animações suaves de números no painel
-- Melhorado desempenho e velocidade de inicialização
+- Adicionados 19 novos idiomas incluindo suporte RTL para hebraico, persa e urdu
+- Adicionada exportação de calendário para compartilhar seus turnos com outros aplicativos de calendário
+- Adicionadas ações rápidas da tela inicial para gerenciamento mais rápido de turnos
+- Adicionado gesto de toque duplo para pular rapidamente para o mês atual
+- Adicionados chips de horário recente para entrada de turno mais rápida
+- Adicionada opção para sobrepor seus turnos no calendário de um amigo
+- Adicionado timestamp de última edição nos detalhes do turno
+- Acessibilidade melhorada com suporte a Dynamic Type
+- Corrigidas notificações push duplicadas
 - Correções de bugs e outras melhorias

@@ -1,10 +1,10 @@
-- Thêm widget TotalCard và Bạn bè trên màn hình chính
-- Thêm khóa ứng dụng sinh học với Face ID và Touch ID
-- Thêm chia sẻ ca làm việc và lịch với chụp ảnh màn hình
-- Thêm hỗ trợ hình ảnh trong trò chuyện Wagey AI
-- Mở rộng hỗ trợ ngôn ngữ đến 17 ngôn ngữ
-- Thiết kế lại nhập liệu thời gian với xử lý bàn phím cải tiến
-- Thêm cử chỉ vuốt để thay đổi tháng
-- Thêm hoạt ảnh số mượt mà trên bảng điều khiển
-- Cải thiện hiệu suất và tốc độ khởi động
-- Sửa lỗi và cải tiến khác
+- Thêm 19 ngôn ngữ mới bao gồm hỗ trợ RTL cho Hebrew, Persian và Urdu
+- Thêm xuất khẩu lịch để chia sẻ ca làm việc với các ứng dụng lịch khác
+- Thêm hành động nhanh trên Màn hình chính để quản lý ca làm việc nhanh hơn
+- Thêm cú chỉ kép để nhanh chóng chuyển đến tháng hiện tại
+- Thêm chip thời gian gần đây để ghi nhận ca làm việc nhanh hơn
+- Thêm tùy chọn để xếp chồng ca làm việc của bạn lên lịch của bạn bè
+- Thêm dấu thời gian chỉnh sửa lần cuối trong chi tiết ca làm việc
+- Cải thiện khả năng tiếp cận với hỗ trợ Dynamic Type
+- Sửa các thông báo push trùng lặp
+- Sửa lỗi và những cải tiến khác
