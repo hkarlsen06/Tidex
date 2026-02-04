@@ -67,6 +67,14 @@ struct DashboardView: View {
                 }
 
             }
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                TapGesture(count: 2).onEnded {
+                    guard !viewModel.isCurrentMonth else { return }
+                    Haptics.play(.light)
+                    viewModel.goToCurrentMonth()
+                }
+            )
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
@@ -586,6 +594,7 @@ struct DashboardView: View {
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, 40)
     }
+
 }
 
 #Preview {
