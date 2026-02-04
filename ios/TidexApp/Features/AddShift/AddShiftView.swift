@@ -8,7 +8,7 @@ struct AddShiftView: View {
         @StateObject private var viewModel = AddShiftViewModel()
     @Binding var selectedTab: MainTabView.Tab
     @Binding var isKeyboardVisible: Bool
-    @State private var focusedTimeField: NumericTimeInput.TimeField?
+    @State private var focusedTimeField: TimeInputField?
     @State private var keyboardHeight: CGFloat = 0
 
     /// Title for current mode
@@ -242,7 +242,7 @@ struct AddShiftView: View {
 private struct SingleShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
-    @Binding var focusedTimeField: NumericTimeInput.TimeField?
+    @Binding var focusedTimeField: TimeInputField?
     
     var body: some View {
         // Calendar is the anchor - header and time picker positioned relative to it
@@ -301,7 +301,7 @@ private struct SingleShiftContent: View {
 private struct RecurringShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
-    @Binding var focusedTimeField: NumericTimeInput.TimeField?
+    @Binding var focusedTimeField: TimeInputField?
     
     var body: some View {
         VStack(spacing: 20) {
