@@ -1,0 +1,19 @@
+/* Urdu localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex کو آپ کی پروفائل کی تصویر لینے کے لیے کیمرے تک رسائی کی ضرورت ہے۔";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex آپ کی کمائی کی معلومات کو محفوظ رکھنے کے لیے Face ID استعمال کرتا ہے۔ صرف آپ کو اپنی آمدنی نظر آنی چاہیے۔";
+
+/* Photo library save description */
+"NSPhotoLibraryAddUsageDescription" = "Tidex کو شیئر شدہ کیلنڈر اور شفٹ کی تصاویر آپ کی فوٹو لائبریری میں محفوظ کرنے کے لیے رسائی کی ضرورت ہے۔";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex کو آپ کی شفٹوں کو کیلنڈر ایونٹس کے طور پر محفوظ کرنے کے لیے کیلنڈر تک رسائی کی ضرورت ہے۔";

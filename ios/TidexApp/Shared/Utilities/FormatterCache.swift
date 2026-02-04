@@ -53,6 +53,7 @@ enum FormatterCache {
         cached("tidex.monthNameFormatter.\(locale.identifier)") {
             let formatter = DateFormatter()
             formatter.locale = locale
+            formatter.calendar = Calendar.autoupdatingCurrent
             formatter.dateFormat = "MMMM"
             return formatter
         }
@@ -62,6 +63,7 @@ enum FormatterCache {
         cached("tidex.dayFormatter.\(locale.identifier)") {
             let formatter = DateFormatter()
             formatter.locale = locale
+            formatter.calendar = Calendar.autoupdatingCurrent
             formatter.dateFormat = "d"
             return formatter
         }
@@ -71,6 +73,7 @@ enum FormatterCache {
         cached("tidex.dayMonthFormatter.\(locale.identifier)") {
             let formatter = DateFormatter()
             formatter.locale = locale
+            formatter.calendar = Calendar.autoupdatingCurrent
             formatter.dateFormat = "d MMMM"
             return formatter
         }
@@ -91,6 +94,7 @@ enum FormatterCache {
         cached("tidex.weekdayFormatter.\(locale.identifier)") {
             let formatter = DateFormatter()
             formatter.locale = locale
+            formatter.calendar = Calendar.autoupdatingCurrent
             formatter.dateFormat = "EEEE"
             return formatter
         }
@@ -100,6 +104,7 @@ enum FormatterCache {
         cached("tidex.shortMonthFormatter.\(locale.identifier)") {
             let formatter = DateFormatter()
             formatter.locale = locale
+            formatter.calendar = Calendar.autoupdatingCurrent
             formatter.dateFormat = "MMM"
             return formatter
         }

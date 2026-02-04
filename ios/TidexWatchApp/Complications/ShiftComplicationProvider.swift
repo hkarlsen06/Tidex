@@ -7,7 +7,6 @@ import SwiftUI
 struct ShiftComplicationEntry: TimelineEntry {
     let date: Date
     let shift: WatchShiftDTO?
-    let locale: String
 
     static var placeholder: ShiftComplicationEntry {
         ShiftComplicationEntry(
@@ -23,8 +22,7 @@ struct ShiftComplicationEntry: TimelineEntry {
                 endTime: "15:00",
                 status: .upcoming,
                 avatarImageData: nil
-            ),
-            locale: "no"
+            )
         )
     }
 }
@@ -39,8 +37,7 @@ struct ShiftComplicationProvider: TimelineProvider {
     func getSnapshot(in context: Context, completion: @escaping (ShiftComplicationEntry) -> Void) {
         let entry = ShiftComplicationEntry(
             date: Date(),
-            shift: WatchDataStore.shared.userShift,
-            locale: WatchDataStore.shared.locale
+            shift: WatchDataStore.shared.userShift
         )
         completion(entry)
     }
@@ -48,8 +45,7 @@ struct ShiftComplicationProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<ShiftComplicationEntry>) -> Void) {
         let entry = ShiftComplicationEntry(
             date: Date(),
-            shift: WatchDataStore.shared.userShift,
-            locale: WatchDataStore.shared.locale
+            shift: WatchDataStore.shared.userShift
         )
 
         // Refresh every 15 minutes

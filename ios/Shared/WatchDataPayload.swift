@@ -6,7 +6,6 @@ struct WatchDataPayload: Codable, Sendable {
     let lastSyncTimestamp: Date?
     let userShift: WatchShiftDTO?
     let friendShifts: [WatchShiftDTO]
-    let locale: String
     let currencySymbol: String
 
     /// Human-readable "Updated X ago" for Watch display

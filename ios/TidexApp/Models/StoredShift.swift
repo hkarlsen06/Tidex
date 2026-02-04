@@ -11,7 +11,6 @@ struct StoredShift: Codable {
     let hourlyWage: Double
     let supplementRatePerHour: Double
     let totalGrossEstimate: Double
-    let locale: String
     let currencySymbol: String? // e.g., "kr", "$", "€"
     let taxRate: Double? // User's tax rate (0.0-1.0)
 }

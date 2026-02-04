@@ -44,8 +44,6 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     public let totalGrossEstimate: Double
     /// Total expected net earnings for the full shift (after tax), nil if no tax configured
     public let totalNetEstimate: Double?
-    /// User's locale ("no" or "en")
-    public let locale: String
     /// Currency symbol to display (e.g., "kr", "$", "€")
     public let currencySymbol: String?
 
@@ -65,7 +63,6 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
         supplementRatePerHour: Double,
         totalGrossEstimate: Double,
         totalNetEstimate: Double? = nil,
-        locale: String,
         currencySymbol: String? = "kr",
         startDate: Date,
         endDate: Date
@@ -78,7 +75,6 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
         self.supplementRatePerHour = supplementRatePerHour
         self.totalGrossEstimate = totalGrossEstimate
         self.totalNetEstimate = totalNetEstimate
-        self.locale = locale
         self.currencySymbol = currencySymbol
         self.startDate = startDate
         self.endDate = endDate

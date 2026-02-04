@@ -7,12 +7,12 @@ struct SharedShiftRow: View {
     let showEarnings: Bool
 
         @Environment(\.userCurrency) private var currency
+        @Environment(\.layoutDirection) private var layoutDirection
 
     // MARK: - Computed Properties
 
     private var formattedHours: String {
-        let hoursLabel = String(localized: .commonHoursShort)
-        return String(format: "%.2f %@", shift.paidHours, hoursLabel)
+        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.appLocale)
     }
 
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
@@ -20,7 +20,7 @@ struct SharedShiftRow: View {
             return ("", "", "")
         }
 
-        let locale = Locale.current
+        let locale = Locale.appLocale
 
         let dayName = FormatterCache.weekdayFormatter(locale: locale)
             .string(from: date)
@@ -57,23 +57,17 @@ struct SharedShiftRow: View {
 
                 // Time range and hours
                 HStack(spacing: 8) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.tidexTextMuted)
-                        Text("\(formatTime(shift.startTime))–\(formatTime(shift.endTime))")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.tidexTextPrimary)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                    if isRTL {
+                        hoursLabel
+                        arrowLabel
+                        timeRangeLabel
+                    } else {
+                        timeRangeLabel
+                        arrowLabel
+                        hoursLabel
                     }
-
-                    Text("→ \(formattedHours)")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
                 }
+                .environment(\.layoutDirection, .leftToRight)
             }
 
             Spacer()
@@ -139,8 +133,60 @@ struct SharedShiftRow: View {
         CurrencyConfig.format(amount, currency: currency)
     }
 
-    private func formatTime(_ time: String) -> String {
-        String(time.prefix(5))
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var timeRangeText: String {
+        ShiftCardFormatter.localizedTimeRange(
+            start: shift.startTime,
+            end: shift.endTime,
+            locale: Locale.appLocale,
+            isRTL: isRTL
+        )
+    }
+
+    private var timeRangeLabel: some View {
+        HStack(spacing: 4) {
+            if isRTL {
+                timeRangeTextLabel
+                clockIcon
+            } else {
+                clockIcon
+                timeRangeTextLabel
+            }
+        }
+    }
+
+    private var timeRangeTextLabel: some View {
+        Text(timeRangeText)
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .environment(\.layoutDirection, .leftToRight)
+    }
+
+    private var clockIcon: some View {
+        Image(systemName: "clock")
+            .font(.system(size: 13, weight: .regular))
+            .foregroundColor(.tidexTextMuted)
+    }
+
+    private var hoursLabel: some View {
+        Text(formattedHours)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var arrowLabel: some View {
+        Text(isRTL ? "←" : "→")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 }
 

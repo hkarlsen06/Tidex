@@ -134,7 +134,7 @@ enum CurrencyConfig {
         let config = get(currency)
         let formatter = FormatterCache.numberFormatter(
             includeDecimals: includeDecimals,
-            locale: Locale(identifier: "nb_NO")
+            locale: Locale.appLocale
         )
         let formattedNumber = formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
 
@@ -150,7 +150,7 @@ enum CurrencyConfig {
     static func formatPlain(_ amount: Double, includeDecimals: Bool = false) -> String {
         let formatter = FormatterCache.numberFormatter(
             includeDecimals: includeDecimals,
-            locale: Locale(identifier: "nb_NO")
+            locale: Locale.appLocale
         )
         return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
     }

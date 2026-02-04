@@ -252,6 +252,7 @@ struct ShiftsCalendarView: View {
 
     /// Applies horizontal slide transition to the month/year header text
     private struct HeaderTextTransitionModifier: ViewModifier {
+        @Environment(\.layoutDirection) private var layoutDirection
         let phase: MonthTransitionPhase?
 
         func body(content: Content) -> some View {
@@ -269,7 +270,8 @@ struct ShiftsCalendarView: View {
         }
 
         private func textTransition(for phase: MonthTransitionPhase) -> AnyTransition {
-            let offset: CGFloat = phase.direction == .next ? 20 : -20
+            let base: CGFloat = phase.direction == .next ? 20 : -20
+            let offset = layoutDirection == .rightToLeft ? -base : base
             return .asymmetric(
                 insertion: .offset(x: offset).combined(with: .opacity),
                 removal: .offset(x: -offset).combined(with: .opacity)
@@ -348,7 +350,7 @@ struct ShiftsCalendarView: View {
     private var monthName: String {
         CalendarGridHelper.monthName(
             from: month,
-            locale: Locale(identifier: Locale.current.identifier)
+            locale: Locale.appLocale
         )
     }
 

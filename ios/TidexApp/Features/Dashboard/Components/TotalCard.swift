@@ -59,6 +59,16 @@ struct TotalCard: View {
         abs(percentageChange ?? 0)
     }
 
+    private var formattedPercentage: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.locale = Locale.appLocale
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 0
+        let value = displayPercentage / 100
+        return formatter.string(from: NSNumber(value: value)) ?? "\(Int(displayPercentage))%"
+    }
+
     /// Whether to show a dash instead of percentage (nil or zero means no meaningful comparison)
     private var showPercentageDash: Bool {
         percentageChange == nil || percentageChange == 0
@@ -156,7 +166,7 @@ struct TotalCard: View {
                 Image(systemName: isPositive ? "arrow.up" : "arrow.down")
                     .font(.system(size: 16, weight: .semibold))
                     .contentTransition(.symbolEffect(.replace))
-                Text(String(format: "%.0f%%", displayPercentage))
+                Text(formattedPercentage)
                     .font(.system(size: 18, weight: .semibold))
                     .contentTransition(.numericText(value: displayPercentage))
             }

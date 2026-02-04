@@ -43,9 +43,8 @@ enum NativeWidgetStorage {
         let snapshotsRepository = SnapshotsRepository.shared
         let settingsRepository = SettingsRepository.shared
 
-        // Get settings for currency, locale comes from iOS system settings
+        // Get settings for currency
         let settings = settingsRepository.getSettings(for: userId)
-        let locale = getAppLocale()
         // Currency is stored directly as symbol (e.g., "kr", "$", "€")
         let currencySymbol = settings?.currency ?? defaultCurrencySymbol
 
@@ -152,7 +151,6 @@ enum NativeWidgetStorage {
                 hourlyWage: hourlyWage,
                 supplementRatePerHour: supplementRate,
                 totalGrossEstimate: computed.gross,
-                locale: locale,
                 currencySymbol: currencySymbol,
                 taxRate: taxRate
             )
@@ -188,7 +186,6 @@ enum NativeWidgetStorage {
             settings: settings,
             snapshots: snapshots,
             recurringPatterns: recurringPatterns,
-            locale: locale,
             currencySymbol: currencySymbol
         )
     }
@@ -223,7 +220,6 @@ enum NativeWidgetStorage {
         settings: UserSettings?,
         snapshots: [WageSnapshot],
         recurringPatterns: [RecurringShiftRow],
-        locale: String,
         currencySymbol: String
     ) {
         let now = Date()
@@ -321,7 +317,6 @@ enum NativeWidgetStorage {
             percentageChange: percentageChange,
             yearMonth: String(format: "%04d-%02d", currentYear, currentMonth),
             taxEnabled: taxEnabled,
-            locale: locale,
             currencySymbol: currencySymbol,
             updatedAt: now
         )
@@ -369,8 +364,7 @@ enum NativeWidgetStorage {
             return
         }
 
-        // Get locale and currency
-        let locale = getAppLocale()
+        // Get currency
         let currencySymbol = userDefaults.string(forKey: currencyKey) ?? defaultCurrencySymbol
 
         // Convert sharers to WidgetSharer format
@@ -380,7 +374,6 @@ enum NativeWidgetStorage {
         let storedShifts = previews.compactMap { preview in
             StoredFriendShift.from(
                 preview: preview,
-                locale: locale,
                 currencySymbol: currencySymbol
             )
         }
@@ -511,32 +504,5 @@ enum NativeWidgetStorage {
         }
 
         return totalMinutes > 0 ? totalWeightedSupplement / totalMinutes : 0
-    }
-}
-
-// MARK: - App Locale Helper
-
-/// Get the app's effective locale from iOS system settings
-/// Uses Bundle.main.preferredLocalizations which respects the user's
-/// per-app language setting in iOS Settings
-private func getAppLocale() -> String {
-    // preferredLocalizations returns the app's localizations ordered by user preference
-    // The first item is the best match for the user's language settings
-    if let preferred = Bundle.main.preferredLocalizations.first {
-        // Map language codes to our widget locale format
-        if preferred.hasPrefix("nb") || preferred.hasPrefix("no") || preferred.hasPrefix("nn") {
-            return "no"
-        }
-    }
-    return "en"
-}
-
-// MARK: - UserSettings Extensions
-
-extension UserSettings {
-    /// Effective locale for widget storage
-    /// Uses iOS's preferred language for this app (from system settings)
-    var effectiveLocale: String {
-        return getAppLocale()
     }
 }

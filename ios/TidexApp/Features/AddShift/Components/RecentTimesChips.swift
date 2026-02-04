@@ -111,11 +111,24 @@ private struct RecentTimeChip: View {
     let range: TimeRangeCount
     let onTap: () -> Void
 
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var timeRangeText: String {
+        ShiftCardFormatter.localizedTimeRange(
+            start: range.startTime,
+            end: range.endTime,
+            locale: Locale.appLocale,
+            isRTL: layoutDirection == .rightToLeft,
+            separator: "-"
+        )
+    }
+
     var body: some View {
         Button(action: onTap) {
-            Text(range.displayLabel)
+            Text(timeRangeText)
                 .font(.system(size: 13, weight: .medium, design: .monospaced))
                 .foregroundColor(.tidexBlue)
+                .environment(\.layoutDirection, .leftToRight)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(Color.tidexBlue.opacity(0.1))

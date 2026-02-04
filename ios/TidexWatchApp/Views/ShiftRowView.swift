@@ -9,16 +9,16 @@ import UIKit
 struct ShiftRowView: View {
     let shift: WatchShiftDTO
     let isCurrentUser: Bool
-    let locale: String
     let isRefreshing: Bool
 
     /// Get formatter locale for date/number formatting
     private var formatterLocale: Locale {
-        switch locale {
-        case "no": return Locale(identifier: "nb_NO")
-        case "de": return Locale(identifier: "de_DE")
-        default: return Locale(identifier: "en_US")
-        }
+        appLocale()
+    }
+
+    private func appLocale() -> Locale {
+        let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
+        return Locale(identifier: identifier)
     }
 
     // Timer for countdown updates (under 24 hours)
@@ -423,7 +423,6 @@ struct ShiftRowView: View {
                 avatarImageData: nil
             ),
             isCurrentUser: true,
-            locale: "no",
             isRefreshing: false
         )
 
@@ -441,7 +440,6 @@ struct ShiftRowView: View {
                 avatarImageData: nil
             ),
             isCurrentUser: false,
-            locale: "no",
             isRefreshing: true
         )
 
@@ -459,7 +457,6 @@ struct ShiftRowView: View {
                 avatarImageData: nil
             ),
             isCurrentUser: false,
-            locale: "en",
             isRefreshing: false
         )
     }

@@ -67,8 +67,6 @@ final class SmartNotificationScheduler {
         let calendar = Calendar.current
         let now = Date()
         let startOfToday = calendar.startOfDay(for: now)
-        let locale = getAppLocale()
-
         let existingShiftDates = getUpcomingShiftDates(for: userId, from: startOfToday)
 
         var scheduledCount = 0
@@ -85,13 +83,13 @@ final class SmartNotificationScheduler {
             guard let dayPattern = pattern.typicalWorkDays[weekday] else { continue }
 
             if scheduledCount < maxToSchedule {
-                if await scheduleMorningPrompt(for: date, dateISO: dateISO, locale: locale, now: now) {
+                if await scheduleMorningPrompt(for: date, dateISO: dateISO, now: now) {
                     scheduledCount += 1
                 }
             }
 
             if scheduledCount < maxToSchedule {
-                if await scheduleEveningPrompt(for: date, dateISO: dateISO, pattern: dayPattern, locale: locale, now: now) {
+                if await scheduleEveningPrompt(for: date, dateISO: dateISO, pattern: dayPattern, now: now) {
                     scheduledCount += 1
                 }
             }
@@ -119,7 +117,6 @@ final class SmartNotificationScheduler {
     private func scheduleMorningPrompt(
         for date: Date,
         dateISO: String,
-        locale: String,
         now: Date
     ) async -> Bool {
         let calendar = Calendar.current
@@ -129,7 +126,7 @@ final class SmartNotificationScheduler {
 
         guard let fireDate = calendar.date(from: components), fireDate > now else { return false }
 
-        let content = buildMorningContent(date: date, locale: locale)
+        let content = buildMorningContent(date: date)
         let identifier = "\(Self.morningIdentifierPrefix)\(dateISO)"
         return await scheduleNotification(identifier: identifier, content: content, fireDate: fireDate)
     }
@@ -138,7 +135,6 @@ final class SmartNotificationScheduler {
         for date: Date,
         dateISO: String,
         pattern: WorkPatternAnalyzer.DayPattern,
-        locale: String,
         now: Date
     ) async -> Bool {
         let calendar = Calendar.current
@@ -183,9 +179,9 @@ final class SmartNotificationScheduler {
         }
     }
 
-    private func buildMorningContent(date: Date, locale: String) -> UNMutableNotificationContent {
+    private func buildMorningContent(date: Date) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        let weekday = localizedWeekdayName(for: date, locale: locale)
+        let weekday = localizedWeekdayName(for: date)
 
         content.title = String(localized: .notificationsSmartMorningTitle(weekday))
         content.body = String(localized: .notificationsSmartMorningBody)
@@ -217,10 +213,10 @@ final class SmartNotificationScheduler {
         return content
     }
 
-    private func localizedWeekdayName(for date: Date, locale: String) -> String {
+    private func localizedWeekdayName(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE"
-        formatter.locale = Locale(identifier: locale)
+        formatter.locale = appLocale()
         let text = formatter.string(from: date)
         return text.prefix(1).uppercased() + text.dropFirst()
     }
@@ -284,12 +280,7 @@ final class SmartNotificationScheduler {
 
 // MARK: - App Locale Helper
 
-/// Get the app's effective locale from iOS system settings
-private func getAppLocale() -> String {
-    if let preferred = Bundle.main.preferredLocalizations.first {
-        if preferred.hasPrefix("nb") || preferred.hasPrefix("no") || preferred.hasPrefix("nn") {
-            return "no"
-        }
-    }
-    return "en"
+private func appLocale() -> Locale {
+    let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
+    return Locale(identifier: identifier)
 }

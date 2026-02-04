@@ -457,7 +457,6 @@ private struct StoredShift: Codable {
     let hourlyWage: Double
     let supplementRatePerHour: Double
     let totalGrossEstimate: Double
-    let locale: String
     let currencySymbol: String?
     let taxRate: Double?
 }
@@ -719,10 +718,9 @@ struct ShiftWidgetProvider: TimelineProvider {
 
         // Find the best shift to display
         guard let shift = findBestShift(from: shifts) else {
-            return ShiftWidgetEntry.empty(locale: shifts.first?.locale ?? "no", currency: storedCurrency)
+            return ShiftWidgetEntry.empty(currency: storedCurrency)
         }
 
-        let locale = shift.locale
         // Prefer shift's currency, then stored currency, then nil (no currency shown)
         let currencySymbol = shift.currencySymbol ?? storedCurrency
         let taxRate = shift.taxRate ?? 0.0
@@ -763,10 +761,10 @@ struct ShiftWidgetProvider: TimelineProvider {
         }
 
         // Format date (pass daysRemaining for past shift formatting)
-        let formattedDate = formatShiftDate(shift.shiftDate, locale: locale, daysRemaining: daysRemaining)
+        let formattedDate = formatShiftDate(shift.shiftDate, daysRemaining: daysRemaining)
 
         // Get random salute
-        let salute = MotivationalSalutes.random(locale: locale)
+        let salute = MotivationalSalutes.random()
 
         // Build deep link URL to navigate to /shifts and highlight the shift date in calendar
         // Format: tidex://shifts?dates=2025-01-15&action=highlight
@@ -781,7 +779,6 @@ struct ShiftWidgetProvider: TimelineProvider {
             endTime: shift.endTime,
             netEarnings: formattedEarnings,
             salute: salute,
-            locale: locale,
             hasShift: true,
             daysRemaining: daysRemaining,
             layoutState: layoutState,
@@ -817,13 +814,7 @@ struct ShiftWidgetProvider: TimelineProvider {
         return sortedShifts.last
     }
 
-    /// Get the user's current device locale for date formatting
-    /// This ensures weekday names and date formats are localized correctly
-    private func formatterLocale() -> Locale {
-        Locale.current
-    }
-
-    private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
+    private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
         let calendar = Calendar.current
@@ -838,7 +829,7 @@ struct ShiftWidgetProvider: TimelineProvider {
             } else {
                 // 2+ days ago: show weekday + day format (e.g., "Mon 12.")
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = formatterLocale()
+                weekdayFormatter.locale = appLocale()
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -857,10 +848,17 @@ struct ShiftWidgetProvider: TimelineProvider {
 
         // Weekday + day: "Mon 12."
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = formatterLocale()
+        weekdayFormatter.locale = appLocale()
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
+}
+
+// MARK: - App Locale Helper
+
+private func appLocale() -> Locale {
+    let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
+    return Locale(identifier: identifier)
 }
 
 // MARK: - Widget Configuration
@@ -892,8 +890,8 @@ struct ShiftHomeWidget: Widget {
     ShiftHomeWidget()
 } timeline: {
     // State A: Before shift starts (start time emphasized)
-    ShiftWidgetEntry.placeholder(locale: "no")
-    ShiftWidgetEntry.placeholder(locale: "en")
+    ShiftWidgetEntry.placeholder()
+    ShiftWidgetEntry.placeholder()
     // State A: After shift starts (end time emphasized)
     ShiftWidgetEntry(
         date: Date(),
@@ -902,7 +900,6 @@ struct ShiftHomeWidget: Widget {
         endTime: "15:00",
         netEarnings: "892 kr",
         salute: "Du klarer det!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -918,7 +915,6 @@ struct ShiftHomeWidget: Widget {
         endTime: "15:00",
         netEarnings: "892 kr",
         salute: "Godt jobbet!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -934,7 +930,6 @@ struct ShiftHomeWidget: Widget {
         endTime: "23:15",
         netEarnings: "1 332 kr",
         salute: "Du klarer det!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 5,
         layoutState: .countdown,
@@ -949,7 +944,6 @@ struct ShiftHomeWidget: Widget {
         endTime: "23:15",
         netEarnings: "$234",
         salute: "You got this!",
-        locale: "en",
         hasShift: true,
         daysRemaining: 12,
         layoutState: .countdown,
@@ -965,7 +959,6 @@ struct ShiftHomeWidget: Widget {
         endTime: "16:00",
         netEarnings: "230 kr",
         salute: "Godt jobbet!",
-        locale: "no",
         hasShift: true,
         daysRemaining: -3,
         layoutState: .pastShift,
@@ -974,7 +967,7 @@ struct ShiftHomeWidget: Widget {
         deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-09&action=highlight")
     )
     // Empty state
-    ShiftWidgetEntry.empty(locale: "no")
+    ShiftWidgetEntry.empty()
 }
 #endif
 // swiftlint:enable file_length function_body_length

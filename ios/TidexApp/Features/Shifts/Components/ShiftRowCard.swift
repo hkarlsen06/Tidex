@@ -10,6 +10,7 @@ struct ShiftRowCard: View {
     let onTap: (() -> Void)?
 
         @Environment(\.userCurrency) private var currency
+        @Environment(\.layoutDirection) private var layoutDirection
 
     // Convenience initializer without conflict props
     init(
@@ -33,11 +34,24 @@ struct ShiftRowCard: View {
     }
 
     private var formattedHours: String {
-        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.current)
+        ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.appLocale)
     }
 
     private var dateParts: ShiftCardDateParts {
-        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.current)
+        ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.appLocale)
+    }
+
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var timeRangeText: String {
+        return ShiftCardFormatter.localizedTimeRange(
+            start: shift.startTime,
+            end: shift.endTime,
+            locale: Locale.appLocale,
+            isRTL: isRTL
+        )
     }
 
     // MARK: - Body
@@ -86,31 +100,17 @@ struct ShiftRowCard: View {
             HStack(alignment: .center) {
                 // Time range and hours
                 HStack(spacing: 8) {
-                    // Time with clock or warning icon (warning replaces clock when conflict)
-                    HStack(spacing: 4) {
-                        if hasConflict {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.tidexWarning)
-                        } else {
-                            Image(systemName: "clock")
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.tidexTextMuted)
-                        }
-                        Text("\(formatTime(shift.startTime))–\(formatTime(shift.endTime))")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.tidexTextPrimary)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                    if isRTL {
+                        hoursLabel
+                        arrowLabel
+                        timeRangeLabel
+                    } else {
+                        timeRangeLabel
+                        arrowLabel
+                        hoursLabel
                     }
-
-                    // Arrow and hours combined
-                    Text("→ \(formattedHours)")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
                 }
+                .environment(\.layoutDirection, .leftToRight)
 
                 Spacer()
 
@@ -159,10 +159,54 @@ struct ShiftRowCard: View {
         CurrencyConfig.formatPlain(amount)
     }
 
-    /// Format time string to HH:mm (removes seconds if present)
-    private func formatTime(_ time: String) -> String {
-        // Handle both "HH:mm" and "HH:mm:ss" formats
-        String(time.prefix(5))
+    private var timeRangeLabel: some View {
+        HStack(spacing: 4) {
+            if isRTL {
+                timeRangeTextLabel
+                statusIcon
+            } else {
+                statusIcon
+                timeRangeTextLabel
+            }
+        }
+    }
+
+    private var hoursLabel: some View {
+        Text(formattedHours)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var arrowLabel: some View {
+        Text(isRTL ? "←" : "→")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var timeRangeTextLabel: some View {
+        Text(timeRangeText)
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .environment(\.layoutDirection, .leftToRight)
+    }
+
+    private var statusIcon: some View {
+        Group {
+            if hasConflict {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.tidexWarning)
+            } else {
+                Image(systemName: "clock")
+                    .foregroundColor(.tidexTextMuted)
+            }
+        }
+        .font(.system(size: 13, weight: .regular))
     }
 }
 

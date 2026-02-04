@@ -9,6 +9,7 @@ struct DayShiftsSheet: View {
     var excludedFromTotalIds: Set<String> = []
 
         @Environment(\.userCurrency) private var currency
+        @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Computed Properties
@@ -19,7 +20,7 @@ struct DayShiftsSheet: View {
         }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: Locale.current.identifier)
+        formatter.locale = Locale.appLocale
         formatter.dateFormat = "EEEE, d. MMMM"
         return formatter.string(from: date).capitalized
     }
@@ -135,6 +136,7 @@ struct DayShiftsSheet: View {
                     Text(formatTimeRange(shift))
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(.tidexTextPrimary)
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(formattedHours(shift.paidHours))
                         .font(.system(size: 14))
@@ -174,15 +176,18 @@ struct DayShiftsSheet: View {
     // MARK: - Formatting
 
     private func formatTimeRange(_ shift: ShiftWithComputations) -> String {
-        "\(formatTime(shift.startTime)) – \(formatTime(shift.endTime))"
-    }
-
-    private func formatTime(_ time: String) -> String {
-        String(time.prefix(5))
+        ShiftCardFormatter.localizedTimeRange(
+            start: shift.startTime,
+            end: shift.endTime,
+            locale: Locale.appLocale,
+            isRTL: layoutDirection == .rightToLeft,
+            separator: " – "
+        )
     }
 
     private func formattedHours(_ hours: Double) -> String {
-        return String(format: "%.2f", hours)
+        let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
+        return formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
     }
 
     private func formatCurrency(_ amount: Double) -> String {

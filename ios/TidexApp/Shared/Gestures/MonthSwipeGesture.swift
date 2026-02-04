@@ -60,6 +60,7 @@ struct MonthSwipeContainer<Content: View>: View {
     let config: SwipeGestureConfig
     let isEnabled: Bool
     @ViewBuilder let content: () -> Content
+    @Environment(\.layoutDirection) private var layoutDirection
 
     // MARK: - State
 
@@ -194,10 +195,10 @@ struct MonthSwipeContainer<Content: View>: View {
 
                     if horizontal > 0 {
                         // Swipe right → previous month
-                        onSwipeRight()
+                        effectiveOnSwipeRight()
                     } else {
                         // Swipe left → next month
-                        onSwipeLeft()
+                        effectiveOnSwipeLeft()
                     }
                 }
             }
@@ -205,6 +206,14 @@ struct MonthSwipeContainer<Content: View>: View {
 
     // Track if we've already triggered the threshold haptic during this drag
     @State private var hasTriggeredThresholdHaptic = false
+
+    private var effectiveOnSwipeLeft: () -> Void {
+        layoutDirection == .rightToLeft ? onSwipeRight : onSwipeLeft
+    }
+
+    private var effectiveOnSwipeRight: () -> Void {
+        layoutDirection == .rightToLeft ? onSwipeLeft : onSwipeRight
+    }
 }
 
 // MARK: - Animated Month Content
@@ -283,6 +292,7 @@ private struct MonthSwipeGestureModifier: ViewModifier {
     let onSwipeRight: () -> Void
     let threshold: CGFloat
     let isEnabled: Bool
+    @Environment(\.layoutDirection) private var layoutDirection
 
     func body(content: Content) -> some View {
         content
@@ -290,7 +300,8 @@ private struct MonthSwipeGestureModifier: ViewModifier {
                 SwipeGestureView(
                     onSwipeLeft: onSwipeLeft,
                     onSwipeRight: onSwipeRight,
-                    isEnabled: isEnabled
+                    isEnabled: isEnabled,
+                    isRTL: layoutDirection == .rightToLeft
                 )
             )
     }
@@ -306,6 +317,7 @@ private struct SwipeGestureView: UIViewRepresentable {
     let onSwipeLeft: () -> Void
     let onSwipeRight: () -> Void
     let isEnabled: Bool
+    let isRTL: Bool
 
     func makeUIView(context: Context) -> SwipeContainerView {
         let view = SwipeContainerView()
@@ -341,26 +353,29 @@ private struct SwipeGestureView: UIViewRepresentable {
         context.coordinator.onSwipeLeft = onSwipeLeft
         context.coordinator.onSwipeRight = onSwipeRight
         context.coordinator.isEnabled = isEnabled
+        context.coordinator.isRTL = isRTL
 
         // Enable/disable gesture recognizers
         uiView.gestureRecognizers?.forEach { $0.isEnabled = isEnabled }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onSwipeLeft: onSwipeLeft, onSwipeRight: onSwipeRight, isEnabled: isEnabled)
+        Coordinator(onSwipeLeft: onSwipeLeft, onSwipeRight: onSwipeRight, isEnabled: isEnabled, isRTL: isRTL)
     }
 
     class Coordinator: NSObject {
         var onSwipeLeft: () -> Void
         var onSwipeRight: () -> Void
         var isEnabled: Bool
+        var isRTL: Bool
 
         private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
-        init(onSwipeLeft: @escaping () -> Void, onSwipeRight: @escaping () -> Void, isEnabled: Bool) {
+        init(onSwipeLeft: @escaping () -> Void, onSwipeRight: @escaping () -> Void, isEnabled: Bool, isRTL: Bool) {
             self.onSwipeLeft = onSwipeLeft
             self.onSwipeRight = onSwipeRight
             self.isEnabled = isEnabled
+            self.isRTL = isRTL
             super.init()
             haptic.prepare()
         }
@@ -373,9 +388,9 @@ private struct SwipeGestureView: UIViewRepresentable {
 
             switch gesture.direction {
             case .left:
-                onSwipeLeft()
+                isRTL ? onSwipeRight() : onSwipeLeft()
             case .right:
-                onSwipeRight()
+                isRTL ? onSwipeLeft() : onSwipeRight()
             default:
                 break
             }

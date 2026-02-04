@@ -7,7 +7,6 @@ struct ShiftCardDateParts {
 }
 
 /// Shared formatting helpers for shift cards to avoid duplicated logic.
-@MainActor
 enum ShiftCardFormatter {
     private static let formatterCache = ShiftCardFormatterCache()
 
@@ -30,7 +29,56 @@ enum ShiftCardFormatter {
 
     static func formattedHours(_ hours: Double, locale: Locale) -> String {
         let hoursLabel = String(localized: .commonHoursShort)
-        return String(format: "%.2f %@", hours, hoursLabel)
+        let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: locale)
+        let formattedHours = formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
+        return "\(formattedHours) \(hoursLabel)"
+    }
+
+    static func localizedTime(_ time: String, locale: Locale, format: String = "HH:mm") -> String {
+        let hhmm = String(time.prefix(5))
+        let parts = hhmm.split(separator: ":")
+        guard parts.count >= 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]) else {
+            return hhmm
+        }
+        if hour == 24 && minute == 0 {
+            return localizedTimeComponents(hours: 24, minutes: 0, locale: locale)
+        }
+
+        var components = DateComponents()
+        components.calendar = Calendar(identifier: .gregorian)
+        components.hour = hour
+        components.minute = minute
+
+        let date = components.date ?? Date()
+        let formatter = formatterCache.formatter(locale: locale, format: format)
+        return formatter.string(from: date)
+    }
+
+    static func localizedTimeRange(
+        start: String,
+        end: String,
+        locale: Locale,
+        isRTL: Bool = false,
+        separator: String = "–",
+        format: String = "HH:mm"
+    ) -> String {
+        let from = isRTL ? end : start
+        let to = isRTL ? start : end
+        return "\(localizedTime(from, locale: locale, format: format))\(separator)\(localizedTime(to, locale: locale, format: format))"
+    }
+
+    private static func localizedTimeComponents(hours: Int, minutes: Int, locale: Locale) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.minimumIntegerDigits = 2
+        formatter.maximumIntegerDigits = 2
+        let hoursString = formatter.string(from: NSNumber(value: hours)) ?? String(format: "%02d", hours)
+        let minutesString = formatter.string(from: NSNumber(value: minutes)) ?? String(format: "%02d", minutes)
+        return "\(hoursString):\(minutesString)"
     }
 }
 
@@ -50,6 +98,7 @@ private final class ShiftCardFormatterCache {
 
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: locale.identifier)
+        formatter.calendar = Calendar.autoupdatingCurrent
         formatter.dateFormat = format
         formatters[key] = formatter
         return formatter

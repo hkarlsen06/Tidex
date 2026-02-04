@@ -31,7 +31,8 @@ struct RecurringPreviewSheet: View {
                             ForEach(Array(viewModel.cachedProjectedDates.prefix(50).enumerated()), id: \.offset) { _, dateISO in
                                 ProjectedShiftRow(
                                     dateISO: dateISO,
-                                    time: "\(viewModel.startTimeString) - \(viewModel.endTimeString)",
+                                    startTime: viewModel.startTimeString,
+                                    endTime: viewModel.endTimeString,
                                     hasConflict: viewModel.cachedConflictDates.contains(dateISO)
                                 )
                             }
@@ -85,6 +86,7 @@ private struct SummaryHeader: View {
     let endTime: String
     let isIndefinite: Bool
 
+    @Environment(\.layoutDirection) private var layoutDirection
     
     /// Title text - shows "Recurring Shifts" for indefinite, count for limited
     private var titleText: String {
@@ -99,10 +101,17 @@ private struct SummaryHeader: View {
 
     /// Subtitle text - shows "Repeats indefinitely" for indefinite, time for limited
     private var subtitleText: String {
+        let timeRange = ShiftCardFormatter.localizedTimeRange(
+            start: startTime,
+            end: endTime,
+            locale: Locale.appLocale,
+            isRTL: layoutDirection == .rightToLeft,
+            separator: " - "
+        )
         if isIndefinite {
-            return "\(startTime) - \(endTime) · " + String(localized: .previewOngoingHint)
+            return "\(timeRange) · " + String(localized: .previewOngoingHint)
         } else {
-            return "\(startTime) - \(endTime)"
+            return timeRange
         }
     }
 
@@ -125,6 +134,7 @@ private struct SummaryHeader: View {
                     Text(subtitleText)
                         .font(.system(size: 16))
                         .foregroundColor(.tidexTextSecondary)
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
                 Spacer()
@@ -197,17 +207,30 @@ private struct ConflictWarning: View {
 
 private struct ProjectedShiftRow: View {
     let dateISO: String
-    let time: String
+    let startTime: String
+    let endTime: String
     let hasConflict: Bool
+
+    @Environment(\.layoutDirection) private var layoutDirection
     
     private var formattedDate: String {
         guard let date = Date.fromISODateString(dateISO) else { return dateISO }
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, d. MMMM yyyy"  // Full weekday name, e.g. "Mandag, 3. februar 2025"
-        formatter.locale = Locale(identifier: Locale.current.identifier)
+        formatter.locale = Locale.appLocale
         let formatted = formatter.string(from: date)
         // Capitalize first letter
         return formatted.prefix(1).uppercased() + formatted.dropFirst()
+    }
+
+    private var timeRangeText: String {
+        ShiftCardFormatter.localizedTimeRange(
+            start: startTime,
+            end: endTime,
+            locale: Locale.appLocale,
+            isRTL: layoutDirection == .rightToLeft,
+            separator: " - "
+        )
     }
 
     var body: some View {
@@ -218,10 +241,11 @@ private struct ProjectedShiftRow: View {
                     .foregroundColor(hasConflict ? .tidexTextMuted : .tidexTextPrimary)
                     .strikethrough(hasConflict)
 
-                Text(time)
+                Text(timeRangeText)
                     .font(.system(size: 14))
                     .foregroundColor(hasConflict ? .tidexTextMuted : .tidexTextSecondary)
                     .strikethrough(hasConflict)
+                    .environment(\.layoutDirection, .leftToRight)
             }
 
             Spacer()

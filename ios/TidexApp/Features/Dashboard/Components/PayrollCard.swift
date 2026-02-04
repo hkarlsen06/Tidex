@@ -166,7 +166,7 @@ struct PayrollCard: View {
 
     /// Day number (e.g., "10")
     private var payrollDay: String {
-        FormatterCache.dayFormatter(locale: .current).string(from: payrollDate)
+        FormatterCache.dayFormatter(locale: .appLocale).string(from: payrollDate)
     }
 
     /// Day suffix for languages that use it (e.g., "." for Norwegian)
@@ -176,7 +176,7 @@ struct PayrollCard: View {
 
     /// Month name (e.g., "februar")
     private var payrollMonth: String {
-        FormatterCache.monthNameFormatter(locale: .current)
+        FormatterCache.monthNameFormatter(locale: .appLocale)
             .string(from: payrollDate)
             .lowercased()
     }

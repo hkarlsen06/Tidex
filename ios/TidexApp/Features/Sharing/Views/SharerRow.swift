@@ -9,7 +9,8 @@ struct SharerRow: View {
     let isRefreshing: Bool
     let onTap: () -> Void
 
-    
+    @Environment(\.layoutDirection) private var layoutDirection
+
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 0) {
@@ -33,7 +34,7 @@ struct SharerRow: View {
 
                     Spacer()
 
-                    Image(systemName: "chevron.right")
+                    Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.tidexTextMuted)
                 }
@@ -121,17 +122,31 @@ private struct ShiftPreviewCard: View {
     let shift: SharedShiftData
     let status: ShiftPreviewStatus
     private let schedule: ShiftSchedule?
-    private let formattedDate: String
-    private let formattedTimeRange: String
+    @Environment(\.layoutDirection) private var layoutDirection
 
     init(shift: SharedShiftData, status: ShiftPreviewStatus) {
         self.shift = shift
         self.status = status
         self.schedule = Self.makeSchedule(for: shift)
-        self.formattedDate = Self.formatDate(shiftDate: shift.shift_date)
-        self.formattedTimeRange = Self.formatTimeRange(start: shift.start_time, end: shift.end_time)
     }
 
+    private var isRTL: Bool {
+        layoutDirection == .rightToLeft
+    }
+
+    private var formattedDate: String {
+        Self.formatDate(shiftDate: shift.shift_date)
+    }
+
+    private var formattedTimeRange: String {
+        ShiftCardFormatter.localizedTimeRange(
+            start: shift.start_time,
+            end: shift.end_time,
+            locale: Locale.appLocale,
+            isRTL: isRTL,
+            separator: " – "
+        )
+    }
     
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -147,6 +162,7 @@ private struct ShiftPreviewCard: View {
                     Text(formattedTimeRange)
                         .font(.system(size: 13))
                         .foregroundColor(.tidexTextMuted)
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
                 Spacer()
@@ -231,7 +247,7 @@ private struct ShiftPreviewCard: View {
     private static func formatDate(shiftDate: String) -> String {
         guard let date = Date.fromISODateString(shiftDate) else { return "" }
 
-        let locale = Locale.current
+        let locale = Locale.appLocale
         let dayName = FormatterCache.weekdayFormatter(locale: locale)
             .string(from: date)
             .capitalized
@@ -245,13 +261,6 @@ private struct ShiftPreviewCard: View {
             .lowercased()
 
         return "\(dayName) · \(dayString) \(monthName)"
-    }
-
-    /// Format time range to match Next.js: "09:00 – 17:00" (with spaces around en-dash)
-    private static func formatTimeRange(start: String, end: String) -> String {
-        let startTime = String(start.prefix(5))
-        let endTime = String(end.prefix(5))
-        return "\(startTime) – \(endTime)"
     }
 
     private static func makeSchedule(for shift: SharedShiftData) -> ShiftSchedule? {

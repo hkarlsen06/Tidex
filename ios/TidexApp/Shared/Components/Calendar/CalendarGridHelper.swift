@@ -144,9 +144,8 @@ enum CalendarGridHelper {
 
     /// Format time string for display (removes seconds, optional leading zero)
     /// e.g., "08:30:00" -> "8:30"
-    static func formatTime(_ time: String) -> String {
-        let hhmm = String(time.prefix(5))
-        return hhmm.hasPrefix("0") ? String(hhmm.dropFirst()) : hhmm
+    static func formatTime(_ time: String, locale: Locale = .appLocale) -> String {
+        return ShiftCardFormatter.localizedTime(time, locale: locale, format: "H:mm")
     }
 
     /// Convert time string to minutes since midnight

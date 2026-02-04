@@ -21,9 +21,6 @@ struct StoredFriendShift: Codable {
     /// Gross earnings for the shift
     let gross: Double
 
-    /// User's locale ("no" or "en")
-    let locale: String
-
     /// Currency symbol (e.g., "kr", "$", "€")
     let currencySymbol: String?
 
@@ -40,12 +37,10 @@ extension StoredFriendShift {
     /// Create from a SharerShiftPreview
     /// - Parameters:
     ///   - preview: The shift preview from the API
-    ///   - locale: The user's locale
     ///   - currencySymbol: The user's currency symbol
     /// - Returns: A StoredFriendShift, or nil if the preview has no shift
     static func from(
         preview: SharerShiftPreview,
-        locale: String,
         currencySymbol: String?
     ) -> StoredFriendShift? {
         guard let shift = preview.shift else { return nil }
@@ -57,7 +52,6 @@ extension StoredFriendShift {
             startTime: shift.start_time,
             endTime: shift.end_time,
             gross: shift.computed.gross,
-            locale: locale,
             currencySymbol: currencySymbol,
             showEarnings: preview.showEarnings,
             status: preview.status?.rawValue ?? "upcoming"

@@ -1,6 +1,13 @@
 import SwiftUI
 
 extension Locale {
+    /// App locale derived from the app's preferred localization (falls back to system locale)
+    static var appLocale: Locale {
+        let identifier = Bundle.main.preferredLocalizations.first
+            ?? Locale.autoupdatingCurrent.identifier
+        return Locale(identifier: identifier)
+    }
+
     /// Whether the current locale is Norwegian (nb, nn, or no)
     var isNorwegian: Bool {
         let code = language.languageCode?.identifier ?? ""

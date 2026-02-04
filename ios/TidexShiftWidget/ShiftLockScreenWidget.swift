@@ -62,7 +62,7 @@ struct ShiftAccessoryCircularView: View {
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .monospacedDigit()
 
-                        Text("start")
+                        Text(.widgetStart)
                             .font(.system(size: 9, weight: .medium))
                             .textCase(.uppercase)
                     }
@@ -218,7 +218,7 @@ private extension View {
 #Preview("Circular", as: .accessoryCircular) {
     ShiftLockScreenWidget()
 } timeline: {
-    ShiftWidgetEntry.placeholder(locale: "no")
+    ShiftWidgetEntry.placeholder()
     ShiftWidgetEntry(
         date: Date(),
         shiftDate: "I dag",
@@ -226,7 +226,6 @@ private extension View {
         endTime: "15:00",
         netEarnings: "892 kr",
         salute: "Du klarer det!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -242,7 +241,6 @@ private extension View {
         endTime: "15:00",
         netEarnings: "892 kr",
         salute: "Godt jobbet!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -257,7 +255,6 @@ private extension View {
         endTime: "23:15",
         netEarnings: "1 332 kr",
         salute: "Stå på!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 5,
         layoutState: .countdown,
@@ -273,7 +270,6 @@ private extension View {
         endTime: "16:00",
         netEarnings: "230 kr",
         salute: "Godt jobbet!",
-        locale: "no",
         hasShift: true,
         daysRemaining: -3,
         layoutState: .pastShift,
@@ -281,14 +277,14 @@ private extension View {
         shiftHasEnded: true,
         deepLinkURL: nil
     )
-    ShiftWidgetEntry.empty(locale: "no")
+    ShiftWidgetEntry.empty()
 }
 
 #Preview("Rectangular", as: .accessoryRectangular) {
     ShiftLockScreenWidget()
 } timeline: {
-    ShiftWidgetEntry.placeholder(locale: "no")
-    ShiftWidgetEntry.placeholder(locale: "en")
+    ShiftWidgetEntry.placeholder()
+    ShiftWidgetEntry.placeholder()
     ShiftWidgetEntry(
         date: Date(),
         shiftDate: "I dag",
@@ -296,7 +292,6 @@ private extension View {
         endTime: "15:00",
         netEarnings: "892 kr",
         salute: "Du klarer det!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -304,13 +299,13 @@ private extension View {
         shiftHasEnded: false,
         deepLinkURL: nil
     )
-    ShiftWidgetEntry.empty(locale: "no")
+    ShiftWidgetEntry.empty()
 }
 
 #Preview("Inline", as: .accessoryInline) {
     ShiftLockScreenWidget()
 } timeline: {
-    ShiftWidgetEntry.placeholder(locale: "no")
+    ShiftWidgetEntry.placeholder()
     ShiftWidgetEntry(
         date: Date(),
         shiftDate: "I dag",
@@ -318,7 +313,6 @@ private extension View {
         endTime: "15:00",
         netEarnings: "892 kr",
         salute: "Du klarer det!",
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -333,7 +327,6 @@ private extension View {
         endTime: "23:15",
         netEarnings: "$234",
         salute: "You got this!",
-        locale: "en",
         hasShift: true,
         daysRemaining: 5,
         layoutState: .countdown,
@@ -341,6 +334,6 @@ private extension View {
         shiftHasEnded: false,
         deepLinkURL: nil
     )
-    ShiftWidgetEntry.empty(locale: "en")
+    ShiftWidgetEntry.empty()
 }
 #endif

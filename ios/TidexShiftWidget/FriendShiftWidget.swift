@@ -26,7 +26,6 @@ private struct StoredFriendShift: Codable {
     let startTime: String
     let endTime: String
     let gross: Double
-    let locale: String
     let currencySymbol: String?
     let showEarnings: Bool
     let status: String
@@ -170,7 +169,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: FriendShiftIntent, in _: Context) async -> Timeline<FriendShiftWidgetEntry> {
         guard let friend = configuration.friend else {
-            let entry = FriendShiftWidgetEntry.noFriendSelected(locale: getAppLocale())
+            let entry = FriendShiftWidgetEntry.noFriendSelected()
             return Timeline(entries: [entry], policy: .never)
         }
 
@@ -214,7 +213,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
 
         // Convert to StoredFriendShift format and save
-        let locale = getAppLocale()
         let currency = userDefaults.string(forKey: currencyKey) ?? "kr"
 
         let shifts: [StoredFriendShift] = friends.compactMap { friend in
@@ -233,7 +231,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
                 startTime: startTime,
                 endTime: endTime,
                 gross: friend.gross ?? 0,
-                locale: locale,
                 currencySymbol: currency,
                 showEarnings: friend.showEarnings,
                 status: friend.status?.rawValue ?? "upcoming"
@@ -276,7 +273,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     ///   - friend: The friend entity from widget config
     ///   - fromAPI: Optional fresh data from API (if available)
     private func createEntry(for friend: FriendEntity, fromAPI: FriendWithShift?) -> FriendShiftWidgetEntry {
-        let locale = getAppLocale()
         let storedCurrency = getStoredCurrency()
 
         // Use API data if available, otherwise fall back to App Group cache
@@ -304,7 +300,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
                 friendId: friend.id,
                 friendName: friend.displayName,
                 friendInitials: friend.initials,
-                locale: locale,
                 currency: storedCurrency
             )
         }
@@ -318,7 +313,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
                 friendId: friend.id,
                 friendName: friend.displayName,
                 friendInitials: friend.initials,
-                locale: locale,
                 currency: storedCurrency
             )
         }
@@ -341,7 +335,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
 
         // Format date
-        let formattedDate = formatShiftDate(shiftDate, locale: locale, daysRemaining: daysRemaining)
+        let formattedDate = formatShiftDate(shiftDate, daysRemaining: daysRemaining)
 
         // Format earnings (or hide if not allowed)
         let netEarnings: String
@@ -371,7 +365,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
             endTime: endTime,
             netEarnings: netEarnings,
             showEarnings: showEarnings,
-            locale: locale,
             hasShift: true,
             daysRemaining: daysRemaining,
             layoutState: layoutState,
@@ -466,13 +459,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         }
     }
 
-    /// Get the user's current device locale for date formatting
-    /// This ensures weekday names and date formats are localized correctly
-    private func formatterLocale() -> Locale {
-        Locale.current
-    }
-
-    private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
+    private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
         let calendar = Calendar.current
@@ -486,7 +473,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
                 return String(localized: .widgetYesterday)
             } else {
                 let weekdayFormatter = DateFormatter()
-                weekdayFormatter.locale = formatterLocale()
+                weekdayFormatter.locale = appLocale()
                 weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
                 return weekdayFormatter.string(from: shiftDate).capitalized
             }
@@ -505,7 +492,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
         // Weekday + day
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = formatterLocale()
+        weekdayFormatter.locale = appLocale()
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
@@ -513,13 +500,9 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
 // MARK: - App Locale Helper
 
-private func getAppLocale() -> String {
-    if let preferred = Bundle.main.preferredLocalizations.first {
-        if preferred.hasPrefix("nb") || preferred.hasPrefix("no") || preferred.hasPrefix("nn") {
-            return "no"
-        }
-    }
-    return "en"
+private func appLocale() -> Locale {
+    let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
+    return Locale(identifier: identifier)
 }
 
 // MARK: - Initials Circle View
@@ -868,8 +851,8 @@ struct FriendShiftWidget: Widget {
     FriendShiftWidget()
 } timeline: {
     // Placeholder
-    FriendShiftWidgetEntry.placeholder(locale: "no")
-    FriendShiftWidgetEntry.placeholder(locale: "en")
+    FriendShiftWidgetEntry.placeholder()
+    FriendShiftWidgetEntry.placeholder()
 
     // Today's shift
     FriendShiftWidgetEntry(
@@ -882,7 +865,6 @@ struct FriendShiftWidget: Widget {
         endTime: "15:00",
         netEarnings: "892 kr",
         showEarnings: true,
-        locale: "no",
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
@@ -902,7 +884,6 @@ struct FriendShiftWidget: Widget {
         endTime: "23:15",
         netEarnings: "1 332 kr",
         showEarnings: true,
-        locale: "no",
         hasShift: true,
         daysRemaining: 5,
         layoutState: .countdown,
@@ -922,7 +903,6 @@ struct FriendShiftWidget: Widget {
         endTime: "16:00",
         netEarnings: "---",
         showEarnings: false,
-        locale: "no",
         hasShift: true,
         daysRemaining: 1,
         layoutState: .todayOrTomorrow,
@@ -936,12 +916,11 @@ struct FriendShiftWidget: Widget {
         friendId: "friend-4",
         friendName: "Anna",
         friendInitials: "AN",
-        locale: "no",
         currency: "kr"
     )
 
     // No friend selected
-    FriendShiftWidgetEntry.noFriendSelected(locale: "no")
+    FriendShiftWidgetEntry.noFriendSelected()
 }
 #endif
 // swiftlint:enable file_length type_body_length function_body_length

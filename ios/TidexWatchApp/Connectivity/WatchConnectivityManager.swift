@@ -142,7 +142,6 @@ final class WatchConnectivityManager: NSObject {
                 lastSyncTimestamp: Date(),
                 userShift: WatchDataStore.shared.userShift,
                 friendShifts: friendShifts,
-                locale: getWatchLocale(),
                 currencySymbol: WatchDataStore.shared.currencySymbol
             )
 
@@ -159,16 +158,6 @@ final class WatchConnectivityManager: NSObject {
             logger.error("API fetch failed: \(error.localizedDescription)")
             return false
         }
-    }
-
-    /// Get the watch's locale preference
-    private func getWatchLocale() -> String {
-        if let preferred = Bundle.main.preferredLocalizations.first {
-            if preferred.hasPrefix("nb") || preferred.hasPrefix("no") || preferred.hasPrefix("nn") {
-                return "no"
-            }
-        }
-        return "en"
     }
 
     // MARK: - iPhone Fallback

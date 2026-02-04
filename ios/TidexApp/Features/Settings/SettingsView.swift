@@ -352,6 +352,8 @@ struct SettingsMenuItem: View {
     var iconColor: Color = .tidexBlue
     let action: () -> Void
 
+    @Environment(\.layoutDirection) private var layoutDirection
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: Spacing.sm) {
@@ -376,7 +378,7 @@ struct SettingsMenuItem: View {
                 Spacer()
 
                 // Chevron
-                Image(systemName: "chevron.right")
+                Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
             }

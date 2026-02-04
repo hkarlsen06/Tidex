@@ -39,6 +39,12 @@ const TARGET_LANGUAGES = [
   { code: "el", name: "Greek" },
   { code: "ro", name: "Romanian" },
 
+  // Middle East & RTL languages
+  { code: "ar", name: "Arabic" },
+  { code: "he", name: "Hebrew" },
+  { code: "fa", name: "Persian" },
+  { code: "ur", name: "Urdu" },
+
   // Asia
   { code: "ja", name: "Japanese" },
   { code: "ko", name: "Korean" },

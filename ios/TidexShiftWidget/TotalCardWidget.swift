@@ -20,7 +20,6 @@ struct TotalCardWidgetEntry: TimelineEntry {
     let taxEnabled: Bool
 
     // Formatting
-    let locale: String
     let currencySymbol: String
     let yearMonth: String
 
@@ -88,14 +87,13 @@ struct TotalCardWidgetEntry: TimelineEntry {
             totalHours: 64,
             percentageChange: 12,
             taxEnabled: true,
-            locale: "no",
             currencySymbol: "kr",
             yearMonth: "2026-02",
             hasData: true
         )
     }
 
-    static func empty(locale: String = "no", currency: String = "kr") -> TotalCardWidgetEntry {
+    static func empty(currency: String = "kr") -> TotalCardWidgetEntry {
         TotalCardWidgetEntry(
             date: Date(),
             gross: 0,
@@ -107,7 +105,6 @@ struct TotalCardWidgetEntry: TimelineEntry {
             totalHours: 0,
             percentageChange: nil,
             taxEnabled: false,
-            locale: locale,
             currencySymbol: currency,
             yearMonth: "",
             hasData: false
@@ -165,7 +162,6 @@ struct TotalCardWidgetProvider: TimelineProvider {
 
             if isStale {
                 return TotalCardWidgetEntry.empty(
-                    locale: totals.locale,
                     currency: totals.currencySymbol
                 )
             }
@@ -181,7 +177,6 @@ struct TotalCardWidgetProvider: TimelineProvider {
                 totalHours: totals.totalHours,
                 percentageChange: totals.percentageChange,
                 taxEnabled: totals.taxEnabled,
-                locale: totals.locale,
                 currencySymbol: totals.currencySymbol,
                 yearMonth: totals.yearMonth,
                 hasData: true
@@ -545,7 +540,6 @@ private struct StoredMonthlyTotals: Codable {
     let percentageChange: Double?
     let yearMonth: String
     let taxEnabled: Bool
-    let locale: String
     let currencySymbol: String
     let updatedAt: Date
 }
@@ -568,7 +562,6 @@ private struct StoredMonthlyTotals: Codable {
         totalHours: 64,
         percentageChange: 15,
         taxEnabled: true,
-        locale: "no",
         currencySymbol: "kr",
         yearMonth: "2026-02",
         hasData: true
@@ -585,7 +578,6 @@ private struct StoredMonthlyTotals: Codable {
         totalHours: 40,
         percentageChange: -8,
         taxEnabled: true,
-        locale: "no",
         currencySymbol: "kr",
         yearMonth: "2026-02",
         hasData: true
@@ -602,7 +594,6 @@ private struct StoredMonthlyTotals: Codable {
         totalHours: 40,
         percentageChange: -8,
         taxEnabled: false,
-        locale: "no",
         currencySymbol: "kr",
         yearMonth: "2026-02",
         hasData: true
@@ -619,7 +610,6 @@ private struct StoredMonthlyTotals: Codable {
         totalHours: 24,
         percentageChange: nil,
         taxEnabled: false,
-        locale: "no",
         currencySymbol: "kr",
         yearMonth: "2026-02",
         hasData: true

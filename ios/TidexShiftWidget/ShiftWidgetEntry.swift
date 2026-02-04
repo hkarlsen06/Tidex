@@ -32,9 +32,6 @@ struct ShiftWidgetEntry: TimelineEntry {
     /// Random motivational salute phrase
     let salute: String
 
-    /// User's locale ("no" or "en")
-    let locale: String
-
     /// Whether there's a shift to display (false shows placeholder)
     let hasShift: Bool
 
@@ -54,15 +51,14 @@ struct ShiftWidgetEntry: TimelineEntry {
     let deepLinkURL: URL?
 
     /// Placeholder entry for widget gallery and loading states
-    static func placeholder(locale: String = "no") -> ShiftWidgetEntry {
+    static func placeholder() -> ShiftWidgetEntry {
         ShiftWidgetEntry(
             date: Date(),
             shiftDate: String(localized: .widgetToday),
             startTime: "07:00",
             endTime: "15:00",
             netEarnings: "892 kr",
-            salute: MotivationalSalutes.random(locale: locale),
-            locale: locale,
+            salute: MotivationalSalutes.random(),
             hasShift: true,
             daysRemaining: 0,
             layoutState: .todayOrTomorrow,
@@ -75,9 +71,8 @@ struct ShiftWidgetEntry: TimelineEntry {
     /// Empty state entry when no shifts are available
     /// Shows placeholder values for each element instead of a single message
     /// - Parameters:
-    ///   - locale: User's locale ("no" or "en")
     ///   - currency: User's currency symbol (e.g., "kr", "$"). If nil, shows "---" without currency
-    static func empty(locale: String = "no", currency: String? = nil) -> ShiftWidgetEntry {
+    static func empty(currency: String? = nil) -> ShiftWidgetEntry {
         // Format empty earnings based on currency
         // If no currency is known, just show "---"
         let emptyEarnings: String
@@ -94,7 +89,6 @@ struct ShiftWidgetEntry: TimelineEntry {
             endTime: "--:--",
             netEarnings: emptyEarnings,
             salute: "---",
-            locale: locale,
             hasShift: false,
             daysRemaining: 0,
             layoutState: .empty,

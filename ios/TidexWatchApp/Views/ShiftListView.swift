@@ -34,7 +34,6 @@ struct ShiftListView: View {
                     ShiftRowView(
                         shift: userShift,
                         isCurrentUser: true,
-                        locale: store.locale,
                         isRefreshing: connectivity.isRefreshing
                     )
                 }
@@ -47,7 +46,6 @@ struct ShiftListView: View {
                         ShiftRowView(
                             shift: shift,
                             isCurrentUser: false,
-                            locale: store.locale,
                             isRefreshing: connectivity.isRefreshing
                         )
                     }

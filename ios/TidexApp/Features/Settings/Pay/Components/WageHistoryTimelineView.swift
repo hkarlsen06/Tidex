@@ -135,6 +135,7 @@ struct WageHistoryTimelineView: View {
 // MARK: - Timeline Entry Row
 
 private struct TimelineEntryRow: View {
+    @Environment(\.layoutDirection) private var layoutDirection
     let entry: WageTimelineEntry
     let isFirst: Bool
     let isLast: Bool
@@ -270,7 +271,7 @@ private struct TimelineEntryRow: View {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
-        formatter.locale = Locale(identifier: "nb_NO")
+        formatter.locale = Locale.appLocale
         return formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
     }
 
@@ -300,11 +301,39 @@ private struct TimelineEntryRow: View {
     private var changesTitle: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(nonWageChanges) { change in
-                Text(change.description)
+                Text(rtlAdjustedChangeDescription(change.description))
                     .font(.system(size: entry.type == .current ? 20 : 15, weight: entry.type == .current ? .bold : .semibold))
                     .foregroundColor(.tidexTextPrimary)
             }
         }
+    }
+
+    private func rtlAdjustedChangeDescription(_ description: String) -> String {
+        guard layoutDirection == .rightToLeft else { return description }
+        if let swapped = swapArrowValues(description, separator: " \u{2192} ", arrow: " \u{2190} ") { return swapped }
+        if let swapped = swapArrowValues(description, separator: "\u{2192}", arrow: "\u{2190}") { return swapped }
+        if let swapped = swapArrowValues(description, separator: " -> ", arrow: " <- ") { return swapped }
+        if let swapped = swapArrowValues(description, separator: "->", arrow: "<-") { return swapped }
+        return description
+    }
+
+    private func swapArrowValues(_ description: String, separator: String, arrow: String) -> String? {
+        let parts = description.components(separatedBy: separator)
+        guard parts.count == 2 else { return nil }
+        let left = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let right = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefix = left.prefix { character in
+            let scalar = character.unicodeScalars.first
+            let isNumber = character.isNumber
+            let isNumericSymbol = character == "%" || character == "." || character == "," || scalar?.value == 0x066B || scalar?.value == 0x066C
+            return !(isNumber || isNumericSymbol)
+        }
+        let prefixString = String(prefix)
+        let oldValue = left.dropFirst(prefix.count).trimmingCharacters(in: .whitespacesAndNewlines)
+        let newValue = right
+        let ordered = oldValue.isEmpty ? "\(right)\(arrow)\(left)" : "\(newValue)\(arrow)\(oldValue)"
+        // Force the numeric/arrow sequence to render LTR within the RTL prefix.
+        return "\(prefixString)\u{2066}\(ordered)\u{2069}"
     }
 }
 
