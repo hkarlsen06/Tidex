@@ -29,7 +29,7 @@ struct RecurringShiftEditorSheet: View {
     @State private var isDeleting = false
     @State private var showDeleteConfirmation = false
     @State private var errorMessage: String?
-    @State private var focusedTimeField: NumericTimeInput.TimeField?
+    @State private var focusedTimeField: TimeInputField?
 
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
