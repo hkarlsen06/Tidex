@@ -118,7 +118,6 @@ private struct RecentTimeChip: View {
             start: range.startTime,
             end: range.endTime,
             locale: Locale.appLocale,
-            isRTL: layoutDirection == .rightToLeft,
             separator: "-"
         )
     }

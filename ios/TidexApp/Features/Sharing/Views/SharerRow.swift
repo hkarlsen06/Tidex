@@ -130,10 +130,6 @@ private struct ShiftPreviewCard: View {
         self.schedule = Self.makeSchedule(for: shift)
     }
 
-    private var isRTL: Bool {
-        layoutDirection == .rightToLeft
-    }
-
     private var formattedDate: String {
         Self.formatDate(shiftDate: shift.shift_date)
     }
@@ -143,7 +139,6 @@ private struct ShiftPreviewCard: View {
             start: shift.start_time,
             end: shift.end_time,
             locale: Locale.appLocale,
-            isRTL: isRTL,
             separator: " – "
         )
     }

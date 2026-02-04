@@ -141,8 +141,7 @@ struct SharedShiftRow: View {
         ShiftCardFormatter.localizedTimeRange(
             start: shift.startTime,
             end: shift.endTime,
-            locale: Locale.appLocale,
-            isRTL: isRTL
+            locale: Locale.appLocale
         )
     }
 
