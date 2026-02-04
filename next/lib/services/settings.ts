@@ -204,7 +204,11 @@ export const SettingsServiceLive = Layer.effect(
           const hasGoogleConnected = identityProviders.has("google");
           const hasAppleConnected = identityProviders.has("apple");
           const hasPhoneConnected = identityProviders.has("phone");
-          const hasPassword = identityProviders.has("email");
+          const metadataHasPassword = Boolean(
+            (freshUser.user_metadata as { hasPassword?: boolean } | null | undefined)
+              ?.hasPassword
+          );
+          const hasPassword = identityProviders.has("email") || metadataHasPassword;
 
           // Format phone number (strip +47 prefix for display)
           let phoneNumber: string | null = null;
@@ -215,7 +219,9 @@ export const SettingsServiceLive = Layer.effect(
           }
 
           // Calculate connection capabilities
-          const loginMethodCount = identityProviders.size;
+          const passwordCountsAsMethod = hasPassword && Boolean(freshUser.email);
+          const loginMethodCount =
+            identityProviders.size + (passwordCountsAsMethod && !identityProviders.has("email") ? 1 : 0);
           const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
           const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
           const canDisconnectApple = hasAppleConnected && loginMethodCount > 1;

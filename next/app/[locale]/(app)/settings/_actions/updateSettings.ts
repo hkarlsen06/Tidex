@@ -441,7 +441,11 @@ export async function setPassword(password: string, nonce?: string) {
   }
 
   // Update user password (with nonce if provided for phone-only users)
-  const updateData: { password: string; nonce?: string } = { password };
+  // Store a metadata flag since Supabase doesn't always add an "email" identity on OAuth users.
+  const updateData: { password: string; nonce?: string; data?: Record<string, unknown> } = {
+    password,
+    data: { hasPassword: true },
+  };
   if (nonce) {
     updateData.nonce = nonce;
   }
