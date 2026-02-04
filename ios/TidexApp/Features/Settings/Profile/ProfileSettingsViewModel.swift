@@ -103,7 +103,14 @@ final class ProfileSettingsViewModel: ObservableObject {
             let identities = freshUser.identities ?? []
             let providers = Set(identities.map { $0.provider })
 
-            hasPassword = providers.contains("email")
+            // Supabase may not add an "email" identity when setting a password on OAuth users.
+            let metadataHasPassword = freshUser.userMetadata["hasPassword"]?.value as? Bool ?? false
+            let appMetadataProviders = freshUser.appMetadata["providers"]?.value as? [String]
+                ?? (freshUser.appMetadata["providers"]?.value as? [Any])?.compactMap { $0 as? String }
+                ?? []
+            let hasEmailProvider = providers.contains("email") || appMetadataProviders.contains("email")
+
+            hasPassword = hasEmailProvider || metadataHasPassword
             let hasGoogle = providers.contains("google")
             let hasApple = providers.contains("apple")
             let hasPhone = providers.contains("phone")
@@ -221,7 +228,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             emailChangeSent = true
 
         } catch {
-            errorMessage = String(localized: .profileEmailChangeErrorsFailed)
+            errorMessage = ErrorTranslations.translate(error)
         }
 
         isChangingEmail = false

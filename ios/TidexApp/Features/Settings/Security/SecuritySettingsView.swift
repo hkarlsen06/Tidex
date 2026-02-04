@@ -61,10 +61,8 @@ struct SecuritySettingsView: View {
                     biometricLockSection
                 }
 
-                // Password section (hidden for OAuth-only users)
-                if !viewModel.isOAuthOnly {
-                    passwordSection
-                }
+                // Password section
+                passwordSection
 
                 // Connected accounts section
                 connectedAccountsSection

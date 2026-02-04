@@ -130,13 +130,22 @@ final class SecuritySettingsViewModel: ObservableObject {
             let identities = user.identities ?? []
             let providers = Set(identities.map { $0.provider })
 
-            hasPassword = providers.contains("email")
+            // Supabase does not always create an "email" identity when setting a password on OAuth users.
+            // Track a metadata flag as a fallback (set when password is created/updated).
+            let metadataHasPassword = user.userMetadata["hasPassword"]?.value as? Bool ?? false
+            let appMetadataProviders = user.appMetadata["providers"]?.value as? [String]
+                ?? (user.appMetadata["providers"]?.value as? [Any])?.compactMap { $0 as? String }
+                ?? []
+            let hasEmailProvider = providers.contains("email") || appMetadataProviders.contains("email")
+
+            hasPassword = hasEmailProvider || metadataHasPassword
             hasGoogleConnected = providers.contains("google")
             hasAppleConnected = providers.contains("apple")
             hasPhoneConnected = providers.contains("phone")
 
-            // Count total auth methods
-            let authMethodCount = [hasPassword, hasGoogleConnected, hasAppleConnected, hasPhoneConnected].filter { $0 }.count
+            // Count total auth methods (password only counts if user has an email identifier)
+            let passwordCountsAsMethod = hasPassword && !email.isEmpty
+            let authMethodCount = [passwordCountsAsMethod, hasGoogleConnected, hasAppleConnected, hasPhoneConnected].filter { $0 }.count
 
             // Can only disconnect if there's more than one auth method
             canDisconnectGoogle = hasGoogleConnected && authMethodCount > 1
@@ -240,7 +249,20 @@ final class SecuritySettingsViewModel: ObservableObject {
             }
 
             // Update password
-            try await supabase.auth.update(user: UserAttributes(password: newPassword))
+            // Supabase won't always add an "email" identity for OAuth users, so store a metadata flag.
+            let passwordMetadata: [String: AnyJSON] = ["hasPassword": .bool(true)]
+            if !hasPassword && !email.isEmpty {
+                try await supabase.auth.update(user: UserAttributes(
+                    email: email,
+                    password: newPassword,
+                    data: passwordMetadata
+                ))
+            } else {
+                try await supabase.auth.update(user: UserAttributes(
+                    password: newPassword,
+                    data: passwordMetadata
+                ))
+            }
 
             // Refresh session
             _ = try? await supabase.auth.refreshSession()
@@ -257,7 +279,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch {
             logger.error("Failed to set password: \(error)")
-            errorMessage = String(localized: .securityPasswordErrorsFailed)
+            errorMessage = ErrorTranslations.translate(error)
         }
 
         isSettingPassword = false

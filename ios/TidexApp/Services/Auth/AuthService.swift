@@ -185,7 +185,10 @@ final class AuthService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        _ = try await supabase.auth.update(user: UserAttributes(password: newPassword))
+        _ = try await supabase.auth.update(user: UserAttributes(
+            password: newPassword,
+            data: ["hasPassword": .bool(true)]
+        ))
     }
 
     // MARK: - Phone OTP Authentication
@@ -243,7 +246,7 @@ final class AuthService: ObservableObject {
 
             if !displayName.isEmpty {
                 // Best-effort: don't block login if the metadata update fails.
-                try? await supabase.auth.update(
+                _ = try? await supabase.auth.update(
                     user: UserAttributes(data: ["full_name": .string(displayName)])
                 )
             }
