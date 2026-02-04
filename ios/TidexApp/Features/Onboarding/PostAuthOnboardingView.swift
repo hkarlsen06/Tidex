@@ -1,6 +1,5 @@
 import SwiftUI
 import Supabase
-import AuthenticationServices
 import CoreImage.CIFilterBuiltins
 
 /// Post-auth onboarding flow container
@@ -15,12 +14,10 @@ struct PostAuthOnboardingView: View {
     @StateObject private var saveManager = OnboardingSaveManager()
     @State private var showingMFAEnrollment = false
     @State private var isNavigatingBack = false
-    @State private var hasCheckedUserName = false
     @Environment(\.scenePhase) private var scenePhase
 
     enum PostAuthScreen: String {
         case loading
-        case profileSetup
         case wage
         case supplements
         case settingsAccordion
@@ -38,18 +35,9 @@ struct PostAuthOnboardingView: View {
             Group {
                 switch currentScreen {
                 case .loading:
-                    // Brief loading state while checking user name
+                    // Brief loading state while restoring progress
                     Color.tidexBackground
                         .ignoresSafeArea()
-
-                case .profileSetup:
-                    ProfileSetupScreen(
-                        data: onboardingData,
-                        onContinue: {
-                            navigateTo(.wage)
-                        }
-                    )
-                    .transition(screenTransition)
 
                 case .wage:
                     WageScreen(
@@ -57,9 +45,7 @@ struct PostAuthOnboardingView: View {
                         onContinue: {
                             navigateFromWage()
                         },
-                        onBack: onboardingData.initiallyHadName ? nil : {
-                            navigateBack(to: .profileSetup)
-                        }
+                        onBack: nil
                     )
                     .transition(screenTransition)
 
@@ -138,8 +124,8 @@ struct PostAuthOnboardingView: View {
                 }
             )
         }
-        .task {
-            await initializeOnboarding()
+        .onAppear {
+            initializeOnboarding()
         }
         .onChange(of: currentScreen) { _, newScreen in
             // Save progress when screen changes (except success and loading screens)
@@ -201,53 +187,22 @@ struct PostAuthOnboardingView: View {
                 saveProgress()
             }
         }
-        .onChange(of: onboardingData.displayName) { _, _ in
-            if currentScreen != .success && currentScreen != .loading {
-                saveProgress()
-            }
-        }
     }
 
     // MARK: - Initialization
 
-    /// Initialize onboarding by checking if user has a name and restoring progress
-    private func initializeOnboarding() async {
-        guard !hasCheckedUserName else { return }
-        hasCheckedUserName = true
-
-        // First, try to restore saved progress
+    /// Initialize onboarding by restoring progress
+    private func initializeOnboarding() {
+        // Try to restore saved progress
         if let savedScreenName = onboardingData.restore(),
            let savedScreen = PostAuthScreen(rawValue: savedScreenName),
            savedScreen != .success && savedScreen != .loading {
-            // Restore to the saved screen
             currentScreen = savedScreen
             return
         }
 
-        // No saved progress - check if user has a name
-        do {
-            let user = try await supabase.auth.user()
-            let fullName = user.userMetadata["full_name"]?.value as? String
-            let name = user.userMetadata["name"]?.value as? String
-
-            let hasName = !(fullName ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                          !(name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-
-            onboardingData.initiallyHadName = hasName
-
-            if hasName {
-                // User has a name, skip profile setup
-                onboardingData.displayName = fullName ?? name ?? ""
-                currentScreen = .wage
-            } else {
-                // User doesn't have a name, show profile setup
-                currentScreen = .profileSetup
-            }
-        } catch {
-            // On error, skip profile setup and go to wage
-            onboardingData.initiallyHadName = true
-            currentScreen = .wage
-        }
+        // Default start
+        currentScreen = .wage
     }
 
     // MARK: - Persistence

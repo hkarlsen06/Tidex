@@ -223,8 +223,9 @@ final class AuthService: ObservableObject {
 
     /// Sign in with Apple using ID token
     /// - Parameter idToken: The identity token from Apple Sign-In
+    /// - Parameter fullName: Optional name components from Apple (only provided on first sign-in)
     /// - Returns: The authenticated session
-    func signInWithApple(idToken: String) async throws -> Session {
+    func signInWithApple(idToken: String, fullName: PersonNameComponents? = nil) async throws -> Session {
         isLoading = true
         defer { isLoading = false }
 
@@ -234,6 +235,20 @@ final class AuthService: ObservableObject {
                 idToken: idToken
             )
         )
+
+        if let fullName {
+            let formatter = PersonNameComponentsFormatter()
+            let displayName = formatter.string(from: fullName)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if !displayName.isEmpty {
+                // Best-effort: don't block login if the metadata update fails.
+                try? await supabase.auth.update(
+                    user: UserAttributes(data: ["full_name": .string(displayName)])
+                )
+            }
+        }
+
         return response
     }
 

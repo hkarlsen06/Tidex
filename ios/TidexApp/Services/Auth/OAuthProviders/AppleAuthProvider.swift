@@ -8,6 +8,11 @@ import UIKit
 final class AppleAuthProvider: NSObject {
     static let shared = AppleAuthProvider()
 
+    struct SignInResult {
+        let idToken: String
+        let fullName: PersonNameComponents?
+    }
+
     private var continuation: CheckedContinuation<ASAuthorization, Error>?
     private weak var presentationAnchor: UIWindow?
 
@@ -15,8 +20,8 @@ final class AppleAuthProvider: NSObject {
 
     /// Perform native Apple Sign-In
     /// - Parameter anchor: The window to present the sign-in sheet
-    /// - Returns: The identity token from Apple
-    func signIn(from anchor: UIWindow? = nil) async throws -> String {
+    /// - Returns: The identity token and optional name from Apple
+    func signIn(from anchor: UIWindow? = nil) async throws -> SignInResult {
         self.presentationAnchor = anchor ?? UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
@@ -30,7 +35,7 @@ final class AppleAuthProvider: NSObject {
             throw AppleAuthError.invalidCredentials
         }
 
-        return tokenString
+        return SignInResult(idToken: tokenString, fullName: appleIDCredential.fullName)
     }
 
     private func performRequest() async throws -> ASAuthorization {
