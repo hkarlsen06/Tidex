@@ -138,7 +138,7 @@ struct SharedShiftsCalendarView: View {
                             .fill(Color.tidexSurfacePrimary)
                             .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
                     )
-                    .offset(y: -28)
+                    .offset(y: -44)
             }
         }
     }
