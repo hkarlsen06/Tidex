@@ -224,6 +224,10 @@ struct SharingView: View {
         case .feedback, .adminFeedback:
             // Not handled here - MainTabView handles these
             break
+
+        case .tab:
+            // Not handled here - MainTabView handles tab navigation
+            break
         }
     }
 

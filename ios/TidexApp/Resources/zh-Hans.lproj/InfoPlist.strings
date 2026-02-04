@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex需要访问相机来拍摄个人资料照片。";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex需要访问您的照片库来保存日历和班次图片。";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex需要访问您的日历，以便将您的班次导出为日历事件。";

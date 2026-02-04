@@ -51,6 +51,13 @@ final class AppCoordinator: ObservableObject {
         let op: String  // "added", "updated", "deleted"
     }
 
+    /// Tab identifiers for quick action navigation
+    enum QuickActionTab: String {
+        case add
+        case stats
+        case sharing
+    }
+
     /// Supported deep link types
     enum DeepLink: Equatable {
         case shifts(dates: [String]?, action: ShiftDeepLinkAction) // Navigate to shifts view, optionally filtering dates
@@ -59,6 +66,7 @@ final class AppCoordinator: ObservableObject {
         case addShift // Navigate to Add Shift tab (preselected date set via SharedMonthContext)
         case feedback // Navigate to feedback settings (for users receiving response)
         case adminFeedback // Navigate to admin panel with feedback tab (for admins receiving new feedback)
+        case tab(QuickActionTab) // Navigate directly to a specific tab (from Home Screen quick actions)
     }
 
     // MARK: - Terms Acceptance State

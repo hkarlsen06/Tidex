@@ -11,6 +11,11 @@ struct DataSettingsView: View {
                 // Header
                 headerSection
 
+                // Success message
+                if let success = viewModel.successMessage {
+                    successBanner(success)
+                }
+
                 // Error message
                 if let error = viewModel.errorMessage {
                     errorBanner(error)
@@ -62,6 +67,33 @@ struct DataSettingsView: View {
                 .foregroundColor(.tidexTextSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Success Banner
+
+    private func successBanner(_ message: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.tidexSuccess)
+
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextPrimary)
+
+            Spacer()
+
+            Button {
+                viewModel.clearSuccess()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.tidexTextMuted)
+            }
+        }
+        .padding(12)
+        .background(Color.tidexSuccess.opacity(0.1))
+        .cornerRadius(8)
     }
 
     // MARK: - Error Banner
@@ -300,6 +332,23 @@ struct DataSettingsView: View {
             ) {
                 Task {
                     await viewModel.exportShifts(format: .csv, locale: Locale.current)
+                }
+            }
+
+            // Calendar Export
+            exportCard(
+                icon: "calendar.badge.plus",
+                iconColor: .orange,
+                title: String(localized: .dataExportCalendarTitle),
+                description: String(localized: .dataExportCalendarDescription),
+                buttonLabel: viewModel.isExportingCalendar
+                    ? String(localized: .dataExportCalendarExporting)
+                    : String(localized: .dataExportCalendarButton),
+                isLoading: viewModel.isExportingCalendar,
+                buttonColor: .orange
+            ) {
+                Task {
+                    await viewModel.exportShifts(format: .calendar, locale: Locale.current)
                 }
             }
         }
