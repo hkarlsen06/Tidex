@@ -125,7 +125,7 @@ struct RecurringCalendarView: View {
                 let hasConflict = dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false
                 let hasExistingShift = dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false
                 let isToday = dayInfo.dateISO == todayISO()
-                let existingEarnings = dayInfo.dateISO.flatMap { viewModel.existingShiftEarnings[$0] }
+                let existingHours = dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] }
                 let anchorEarnings = isAnchor ? dayInfo.dateISO.flatMap { viewModel.earningsForRecurringDate($0) } : nil
 
                 CalendarDayCell(
@@ -143,7 +143,7 @@ struct RecurringCalendarView: View {
                         isProjected: isProjected,
                         hasConflict: hasConflict,
                         anchorEarnings: anchorEarnings,
-                        existingEarnings: existingEarnings,
+                        existingHours: existingHours,
                         isOutsideMonth: dayInfo.isOutsideMonth
                     )
                 )
@@ -213,7 +213,7 @@ struct RecurringCalendarView: View {
         isProjected: Bool,
         hasConflict: Bool,
         anchorEarnings: CalendarEarningsData?,
-        existingEarnings: CalendarEarningsData?,
+        existingHours: HoursData?,
         isOutsideMonth: Bool
     ) -> CalendarCellContent {
         if isAnchor {
@@ -234,13 +234,9 @@ struct RecurringCalendarView: View {
             return .dot(color: hasConflict ? .tidexWarning : .tidexBlue)
         }
 
-        if let earnings = existingEarnings, !isOutsideMonth {
-            // Existing shift earnings (grey)
-            return .earningsBreakdown(
-                earnings,
-                color: .tidexTextMuted,
-                beforeTaxColor: .tidexTextMuted
-            )
+        if let existingHours, !isOutsideMonth {
+            // Existing shift hours (grey)
+            return .hours(existingHours, color: .tidexTextMuted)
         }
 
         return .empty

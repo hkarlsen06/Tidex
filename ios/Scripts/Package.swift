@@ -7,7 +7,8 @@ let package = Package(
     products: [
         .executable(name: "validate-localization", targets: ["ValidateLocalization"]),
         .executable(name: "add-string", targets: ["AddString"]),
-        .executable(name: "audit-strings", targets: ["AuditStrings"])
+        .executable(name: "audit-strings", targets: ["AuditStrings"]),
+        .executable(name: "delete-string", targets: ["DeleteString"])
     ],
     targets: [
         .executableTarget(
@@ -27,6 +28,12 @@ let package = Package(
             dependencies: [],
             path: ".",
             sources: ["audit-strings.swift"]
+        ),
+        .executableTarget(
+            name: "DeleteString",
+            dependencies: [],
+            path: ".",
+            sources: ["delete-string.swift"]
         )
     ]
 )

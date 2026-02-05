@@ -146,7 +146,7 @@ struct AddShiftCalendarView: View {
                     isToday: dayInfo.dateISO == todayISO(),
                     isSelected: dayInfo.dateISO.map { viewModel.selectedDates.contains($0) } ?? false,
                     hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
-                    existingEarnings: dayInfo.dateISO.flatMap { viewModel.existingShiftEarnings[$0] },
+                    existingHours: dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] },
                     previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewEarnings[$0] }
                 )
                 .onTapGesture {
@@ -245,13 +245,13 @@ struct AddShiftCalendarView: View {
 // MARK: - Day Cell
 
 /// Add-shift specific calendar day cell that wraps CalendarDayCell
-/// Handles multi-select, conflict detection, and preview earnings display
+/// Handles multi-select, conflict detection, selected earnings, and existing-shift hours display
 private struct AddShiftCalendarDayCell: View {
     let dayInfo: CalendarDayInfo
     let isToday: Bool
     let isSelected: Bool
     let hasConflict: Bool
-    let existingEarnings: CalendarEarningsData?
+    let existingHours: HoursData?
     let previewEarnings: CalendarEarningsData?
 
     var body: some View {
@@ -314,12 +314,8 @@ private struct AddShiftCalendarDayCell: View {
             )
         } else if isSelected {
             return .custom
-        } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
-            return .earningsBreakdown(
-                earnings,
-                color: .tidexTextMuted,
-                beforeTaxColor: .tidexTextMuted
-            )
+        } else if let existingHours, !dayInfo.isOutsideMonth {
+            return .hours(existingHours, color: .tidexTextMuted)
         }
         return .empty
     }

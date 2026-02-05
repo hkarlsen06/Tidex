@@ -13,6 +13,8 @@ struct CalendarDisplayData {
     let existingShiftDates: Set<String>
     /// Earnings by date for existing shifts
     let existingShiftEarnings: [String: CalendarEarningsData]
+    /// Start/end hour range by date for existing shifts
+    let existingShiftHours: [String: HoursData]
     /// Virtual shifts with computed earnings (cached)
     let virtualShifts: [VirtualShiftWithEarnings]
     /// Year and month this data is for
@@ -396,6 +398,26 @@ final class AddShiftViewModel: ObservableObject {
     /// Computed earnings for existing shifts by date - uses cached data for performance
     var existingShiftEarnings: [String: CalendarEarningsData] {
         cachedDisplayData?.existingShiftEarnings ?? [:]
+    }
+
+    /// Start/end hours for existing shifts by date - uses cached data for performance
+    var existingShiftHours: [String: HoursData] {
+        cachedDisplayData?.existingShiftHours ?? [:]
+    }
+
+    /// Start/end hours for currently entered times (used for add-calendar previews)
+    var enteredHours: HoursData? {
+        guard hasValidTimes else { return nil }
+
+        let start = CalendarGridHelper.formatTime(startTimeString)
+        let end = CalendarGridHelper.formatTime(endTimeString)
+        let crossesMidnight = CalendarGridHelper.timeToMinutes(endTimeString) <= CalendarGridHelper.timeToMinutes(startTimeString)
+
+        return HoursData(
+            start: start,
+            end: end,
+            crossesMidnight: crossesMidnight
+        )
     }
 
     /// Set of dates that would conflict with the current time selection - uses cached data
@@ -1140,6 +1162,7 @@ final class AddShiftViewModel: ObservableObject {
         var existingNetEarnings: [String: Double] = [:]
         var existingGrossEarnings: [String: Double] = [:]
         var existingHasTax: [String: Bool] = [:]
+        var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
 
         // Add regular shifts
         for shift in cachedShifts {
@@ -1160,6 +1183,7 @@ final class AddShiftViewModel: ObservableObject {
             )
             existingGrossEarnings[shift.shift_date, default: 0] += computed.gross
             existingHasTax[shift.shift_date, default: false] = existingHasTax[shift.shift_date, default: false] || taxEnabled
+            shiftTimesByDate[shift.shift_date, default: []].append((start: shift.start_time, end: shift.end_time))
         }
 
         // Generate virtual shifts with computed earnings
@@ -1213,6 +1237,10 @@ final class AddShiftViewModel: ObservableObject {
                 existingNetEarnings[virtualShift.date, default: 0] += netEarnings
                 existingGrossEarnings[virtualShift.date, default: 0] += computed.gross
                 existingHasTax[virtualShift.date, default: false] = existingHasTax[virtualShift.date, default: false] || taxEnabled
+                shiftTimesByDate[virtualShift.date, default: []].append((
+                    start: recurring.cleanStartTime,
+                    end: recurring.cleanEndTime
+                ))
             }
         }
 
@@ -1225,10 +1253,41 @@ final class AddShiftViewModel: ObservableObject {
             )
         }
 
+        var existingHours: [String: HoursData] = [:]
+        for (date, shiftsOnDate) in shiftTimesByDate {
+            guard !shiftsOnDate.isEmpty else { continue }
+
+            let sortedByStart = shiftsOnDate.sorted {
+                CalendarGridHelper.timeToMinutes($0.start) < CalendarGridHelper.timeToMinutes($1.start)
+            }
+            let earliestStart = sortedByStart.first?.start ?? ""
+            let latestEnd = shiftsOnDate.max(by: { lhs, rhs in
+                let lhsStart = CalendarGridHelper.timeToMinutes(lhs.start)
+                let lhsEnd = CalendarGridHelper.timeToMinutes(lhs.end)
+                let lhsAdjustedEnd = lhsEnd <= lhsStart ? lhsEnd + 24 * 60 : lhsEnd
+
+                let rhsStart = CalendarGridHelper.timeToMinutes(rhs.start)
+                let rhsEnd = CalendarGridHelper.timeToMinutes(rhs.end)
+                let rhsAdjustedEnd = rhsEnd <= rhsStart ? rhsEnd + 24 * 60 : rhsEnd
+
+                return lhsAdjustedEnd < rhsAdjustedEnd
+            })?.end ?? ""
+            let crossesMidnight = shiftsOnDate.contains {
+                CalendarGridHelper.timeToMinutes($0.end) <= CalendarGridHelper.timeToMinutes($0.start)
+            }
+
+            existingHours[date] = HoursData(
+                start: CalendarGridHelper.formatTime(earliestStart),
+                end: CalendarGridHelper.formatTime(latestEnd),
+                crossesMidnight: crossesMidnight
+            )
+        }
+
         // Store the cached display data
         cachedDisplayData = CalendarDisplayData(
             existingShiftDates: existingDates,
             existingShiftEarnings: existingEarnings,
+            existingShiftHours: existingHours,
             virtualShifts: virtualShiftsWithEarnings,
             year: year,
             month: month,
