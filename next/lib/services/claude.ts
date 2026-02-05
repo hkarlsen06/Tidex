@@ -47,12 +47,30 @@ export type ToolResultContent = {
   is_error?: boolean;
 };
 
+export type ThinkingContent = {
+  type: "thinking";
+  thinking: string;
+  signature: string;
+};
+
+export type RedactedThinkingContent = {
+  type: "redacted_thinking";
+  data: string;
+};
+
 export type CompactionContent = {
   type: "compaction";
   content: string;
 };
 
-export type ContentBlock = TextContent | ImageContent | ToolUseContent | ToolResultContent | CompactionContent;
+export type ContentBlock =
+  | TextContent
+  | ImageContent
+  | ToolUseContent
+  | ToolResultContent
+  | ThinkingContent
+  | RedactedThinkingContent
+  | CompactionContent;
 
 /**
  * Message type (Claude format)
@@ -74,6 +92,7 @@ export type ToolInputExample = Record<string, unknown>;
 export type Tool = {
   name: string;
   description: string;
+  eager_input_streaming?: boolean;
   input_schema: {
     type: "object";
     properties: Record<string, unknown>;
@@ -99,6 +118,15 @@ export type StreamChunk =
   | {
       type: "compaction";
       content: string;
+    }
+  | {
+      type: "thinking";
+      thinking: string;
+      signature: string;
+    }
+  | {
+      type: "redacted_thinking";
+      data: string;
     }
   | {
       type: "done";
@@ -133,7 +161,11 @@ export class ClaudeService extends Context.Tag("ClaudeService")<
  */
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const COMPACTION_BETA = "compact-2026-01-12";
-const COMPACTION_SUPPORTED_MODELS = new Set(["claude-opus-4-6"]);
+const OPUS_46_MODEL_PREFIX = "claude-opus-4-6";
+
+function isOpus46Model(model: string): boolean {
+  return model.startsWith(OPUS_46_MODEL_PREFIX);
+}
 
 /**
  * Parse SSE event from Claude streaming response
@@ -176,10 +208,12 @@ export const ClaudeServiceLive = Layer.effect(
           messages,
           system,
           tools,
-          temperature = 0.7,
+          temperature,
           maxTokens = 4096,
         } = options;
-        const compactionEnabled = COMPACTION_SUPPORTED_MODELS.has(defaultModel);
+        const opus46Enabled = isOpus46Model(defaultModel);
+        const compactionEnabled = opus46Enabled;
+        const adaptiveThinkingEnabled = opus46Enabled;
 
         // Build headers
         const headers: Record<string, string> = {
@@ -196,10 +230,16 @@ export const ClaudeServiceLive = Layer.effect(
         const body: Record<string, unknown> = {
           model: defaultModel,
           max_tokens: maxTokens,
-          temperature,
           stream: true,
           messages,
         };
+
+        if (adaptiveThinkingEnabled) {
+          body.thinking = { type: "adaptive" };
+          body.output_config = { effort: "high" };
+        } else if (typeof temperature === "number") {
+          body.temperature = temperature;
+        }
 
         if (compactionEnabled) {
           body.context_management = {
@@ -219,8 +259,12 @@ export const ClaudeServiceLive = Layer.effect(
         }
 
         if (tools?.length) {
-          // Strip input_examples from tools - not supported without beta header
-          body.tools = tools.map(({ input_examples: _input_examples, ...tool }) => tool);
+          // Strip input_examples from tools - not supported without beta header.
+          // Enable eager tool input streaming for lower latency tool argument delivery.
+          body.tools = tools.map(({ input_examples: _input_examples, ...tool }) => ({
+            ...tool,
+            eager_input_streaming: true,
+          }));
         }
 
         // Make API request
@@ -289,6 +333,8 @@ export const ClaudeServiceLive = Layer.effect(
               inputJson: string;
             } | null = null;
             let currentCompaction: { content: string } | null = null;
+            let currentThinking: { thinking: string; signature: string } | null = null;
+            let currentRedactedThinking: { data: string } | null = null;
 
             try {
               while (true) {
@@ -326,6 +372,12 @@ export const ClaudeServiceLive = Layer.effect(
                         };
                       } else if (block.type === "compaction") {
                         currentCompaction = { content: "" };
+                      } else if (block.type === "thinking") {
+                        currentThinking = { thinking: "", signature: "" };
+                      } else if (block.type === "redacted_thinking") {
+                        currentRedactedThinking = {
+                          data: typeof block.data === "string" ? block.data : "",
+                        };
                       }
                       break;
                     }
@@ -351,6 +403,17 @@ export const ClaudeServiceLive = Layer.effect(
                       if (delta.type === "compaction_delta" && currentCompaction) {
                         currentCompaction.content = delta.content as string;
                       }
+
+                      // Thinking deltas
+                      if (delta.type === "thinking_delta" && currentThinking) {
+                        currentThinking.thinking += (delta.thinking as string) || "";
+                      }
+                      if (delta.type === "signature_delta" && currentThinking) {
+                        currentThinking.signature = (delta.signature as string) || "";
+                      }
+                      if (delta.type === "redacted_thinking_delta" && currentRedactedThinking) {
+                        currentRedactedThinking.data += (delta.data as string) || "";
+                      }
                       break;
                     }
 
@@ -366,12 +429,15 @@ export const ClaudeServiceLive = Layer.effect(
                             input,
                           };
                         } catch {
-                          // Invalid JSON - emit with empty input
+                          // Invalid JSON (possible with fine-grained tool streaming).
+                          // Preserve raw payload so caller can pass back a structured error.
                           yield {
                             type: "tool_use",
                             id: currentToolUse.id,
                             name: currentToolUse.name,
-                            input: {},
+                            input: {
+                              INVALID_JSON: currentToolUse.inputJson,
+                            },
                           };
                         }
                         currentToolUse = null;
@@ -384,6 +450,23 @@ export const ClaudeServiceLive = Layer.effect(
                           content: currentCompaction.content,
                         };
                         currentCompaction = null;
+                      }
+
+                      if (currentThinking) {
+                        yield {
+                          type: "thinking",
+                          thinking: currentThinking.thinking,
+                          signature: currentThinking.signature,
+                        };
+                        currentThinking = null;
+                      }
+
+                      if (currentRedactedThinking) {
+                        yield {
+                          type: "redacted_thinking",
+                          data: currentRedactedThinking.data,
+                        };
+                        currentRedactedThinking = null;
                       }
                       break;
                     }

@@ -6,35 +6,62 @@ You are now in iOS development mode, ready to work on the native Tidex iOS app.
 
 ## Project Structure
 
-The iOS app lives in `ios/App/TidexApp/`:
-- **Native/** - All SwiftUI views and logic
-  - `Core/` - App coordinator, tab configuration, root views
-  - `Features/` - Feature modules (AddShift, Auth, Dashboard, Settings, etc.)
-  - `Services/` - API clients, data services
-  - `Shared/Components/` - Reusable UI components
-- **Models/** - Data models and DTOs
-- **Shared/** - Code shared with widgets/watch
+The iOS project has 3 targets inside `ios/`:
+
+**Main App** (`ios/TidexApp/`):
+- `App/` - App entry point, AppCoordinator, RootView, MainTabView, push notifications
+- `Features/` - Feature modules (AddShift, Auth, Onboarding, Dashboard, Shifts, Stats, Settings, Sharing, Wagey, Paywall, Celebration)
+- `Services/` - AuthService, PayrollCalculator, PayrollEngine, NotificationService, StoreKitManager, WageyService, etc.
+- `Storage/` - LocalStore (SwiftData), Local* models, Repositories, SyncCoordinator
+- `Models/` - Data models and DTOs (Shift, WageSnapshot, Currency, Friend, etc.)
+- `Shared/` - Reusable components, Color+Tidex extensions, Typography, Spacing
+
+**Widgets** (`ios/TidexShiftWidget/`) - Home screen, lock screen widgets, live activities
+
+**Watch App** (`ios/TidexWatchApp/`) - Apple Watch companion with complications
+
+**Shared** (`ios/Shared/`) - Cross-target shared APIs and models
+
+**Resources** (`ios/Resources/Localization/`) - Xcode String Catalogs (App, Widget, Watch)
 
 ## Key Patterns
 
-**Architecture:** MVVM with `@Observable` (iOS 17+)
-- Views in `*View.swift`
-- ViewModels in `*ViewModel.swift`
-- Coordinators for navigation
-
-**API Integration:**
-- Use Supabase client directly with user JWT + RLS policies
-- Only create Next.js API routes when service role is required (see CLAUDE.md)
-- Bearer token auth for any API routes
+**Architecture:** Local-first MVVM with bidirectional sync
+- **All reads** come from SwiftData (offline-capable, instant)
+- **All writes** mark records dirty, SyncCoordinator pushes to Supabase
+- **Repositories** wrap LocalStore for thread-safe data access
+- **ViewModels** are `@MainActor ObservableObject` with repository/service dependencies
+- **AppCoordinator** manages auth state flow: loading → unauthenticated → mfaRequired → termsRequired → authenticated
 
 **State Management:**
 - `@State` for view-local state
-- `@Observable` ViewModels for feature state
-- `@Environment` for shared services
+- `@StateObject` / `@ObservedObject` for view models
+- `@Environment` for dependency injection
+- SwiftData `@Model` with dirty tracking (clean/dirty/pendingDelete)
 
-## Before We Start
+**API Integration:**
+- Use Supabase client directly with user JWT + RLS policies (preferred)
+- Only create Next.js API routes when service role is required (see CLAUDE.md)
+- Bearer token auth for any API routes
 
-**Important:** I will NOT run Xcode builds automatically. When code changes are complete, you'll need to build in Xcode yourself to verify.
+**Localization (Required):**
+- Never hardcode user-visible strings
+- Add strings: `./add-string --key "feature.context.description" --en "English text" --nb "Norwegian text"`
+- Use generated `LocalizedStringResource` symbols in code (e.g., `.featureContextDescription`)
+
+**Color System:**
+- Always use semantic colors from `Color+Tidex.swift` (e.g., `Color.tidexSurfacePrimary`)
+- Never hardcode color values
+
+## Build
+
+You may run xcodebuild with simulator destination and reasonable timeout:
+```bash
+cd /Users/hjalmarsamuelkristensen-karlsen/Lokalt/Cloned-Repos/tidex/ios && xcodebuild -project Tidex.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' build
+```
+If a build hangs or takes too long, stop and report.
+
+**Current iOS version: iOS 26** (Liquid Glass design language)
 
 ## What Are We Working On?
 
