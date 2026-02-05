@@ -675,6 +675,11 @@ final class AppCoordinator: ObservableObject {
         // Clear image cache
         ImageCache.shared.clearAll()
 
+        // Clear all UserDefaults (APNs registration cache, preferences, etc.)
+        if let bundleId = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleId)
+        }
+
         // Reset sync coordinator state for new user
         // This clears the interval guard so the next user's initial sync isn't blocked
         await syncCoordinator.resetForUserChange()
