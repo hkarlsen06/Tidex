@@ -114,6 +114,19 @@ export async function POST(request: NextRequest) {
       existingDeviceId = platformMatch?.id ?? null;
     }
 
+    // CROSS-USER DEDUP: Clear any existing rows with the same APNs token
+    // belonging to a DIFFERENT user. This prevents stale tokens from
+    // impersonation sessions or account switches delivering notifications
+    // to the wrong device.
+    if (apnsToken) {
+      await serviceClient
+        .schema('internal')
+        .from('push_devices')
+        .delete()
+        .eq('apns_token', apnsToken)
+        .neq('user_id', session.user.id);
+    }
+
     if (existingDeviceId) {
       // Update existing record
       const updatePayload: Record<string, unknown> = {

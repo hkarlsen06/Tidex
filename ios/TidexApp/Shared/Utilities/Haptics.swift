@@ -36,6 +36,10 @@ enum Haptics {
 
     /// Preload all sounds (call at app startup)
     static func prepareSounds() {
+        // Set ambient category before creating any AVAudioPlayer instances.
+        // Without this, iOS uses the default .soloAmbient which pauses external audio (Spotify, Apple Music, etc.)
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+
         for soundType in [SoundType.shiftCreated, .shiftDeleted, .subscriptionSuccess] {
             prepareSound(soundType)
         }

@@ -415,6 +415,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Prevent duplicate in-flight registrations
         guard !apnsRegistrationInFlight else { return }
 
+        // Never register push tokens during admin impersonation — this would
+        // associate the admin's physical device with the impersonated user,
+        // causing the admin to receive the target user's notifications.
+        let isImpersonating = await MainActor.run { ImpersonationManager.shared.isImpersonating }
+        guard !isImpersonating else {
+            print("[APNs] Skipping registration during impersonation")
+            return
+        }
+
         do {
             // Get current user session for auth and user ID
             let session = try await supabase.auth.session

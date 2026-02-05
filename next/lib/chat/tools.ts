@@ -485,6 +485,9 @@ Required parameters:
 
 IMPORTANT: Use weekdays array to create a SINGLE recurring shift with multiple weekdays (e.g., Mon/Wed/Fri). Do NOT create separate recurring shifts for each day.
 
+Anchor date offsets for alternating patterns:
+When using biweekly (or every_N_weeks) frequency with multiple weekdays, the anchorDates control WHICH WEEKS each day falls on. If all anchorDates are in the same week, all days occur together. If anchorDates are offset by one week, the days ALTERNATE between weeks. Example: biweekly Thu (anchor week 33) + Fri (anchor week 34) = Thu week 33, Fri week 34, Thu week 35, Fri week 36, etc.
+
 Workflow: After this returns conflict info, ask user how to handle conflicts, then call confirm_recurring_shift.`,
     input_schema: {
       type: "object",
@@ -581,6 +584,18 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
         frequency: "weekly",
         endType: "after_months",
         endValue: 3,
+      },
+      // Alternating weeks: Thursday one week, Friday the next (biweekly with offset anchors)
+      {
+        weekdays: [
+          { day: 4, anchorDate: "2025-01-16" },
+          { day: 5, anchorDate: "2025-01-24" },
+        ],
+        start: "12:00",
+        end: "19:00",
+        frequency: "biweekly",
+        endType: "after_months",
+        endValue: 6,
       },
     ],
   },

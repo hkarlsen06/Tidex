@@ -12,8 +12,8 @@ final class SoundManager {
     ]
 
     private init() {
-        // Ambient category respects the device silent switch
-        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+        // Ambient category respects the device silent switch and mixes with other audio
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
     }
 
     func preload(_ name: String, extension ext: String = "wav") {
