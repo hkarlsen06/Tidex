@@ -125,14 +125,18 @@ struct RecurringCalendarView: View {
         isAnchor: Bool,
         isProjected: Bool,
         hasConflict: Bool,
-        anchorEarnings: Double?,
-        existingEarnings: Double?,
+        anchorEarnings: CalendarEarningsData?,
+        existingEarnings: CalendarEarningsData?,
         isOutsideMonth: Bool
     ) -> CalendarCellContent {
         if isAnchor {
             // Anchor date: show earnings if available, otherwise star icon
             if let earnings = anchorEarnings {
-                return .earnings(earnings, color: .white)
+                return .earningsBreakdown(
+                    earnings,
+                    color: .white,
+                    beforeTaxColor: .white.opacity(0.75)
+                )
             } else {
                 return .starIcon(color: .white)
             }
@@ -145,7 +149,11 @@ struct RecurringCalendarView: View {
 
         if let earnings = existingEarnings, !isOutsideMonth {
             // Existing shift earnings (grey)
-            return .earnings(earnings, color: .tidexTextMuted)
+            return .earningsBreakdown(
+                earnings,
+                color: .tidexTextMuted,
+                beforeTaxColor: .tidexTextMuted
+            )
         }
 
         return .empty

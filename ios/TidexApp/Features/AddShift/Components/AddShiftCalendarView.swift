@@ -164,14 +164,14 @@ private struct AddShiftCalendarDayCell: View {
     let isToday: Bool
     let isSelected: Bool
     let hasConflict: Bool
-    let existingEarnings: Double?
-    let previewEarnings: Double?
+    let existingEarnings: CalendarEarningsData?
+    let previewEarnings: CalendarEarningsData?
 
     var body: some View {
         CalendarDayCell(
             dayInfo: dayInfo,
             style: cellStyle,
-            content: .custom
+            content: cellContent
         ) {
             addShiftContent
         }
@@ -218,29 +218,32 @@ private struct AddShiftCalendarDayCell: View {
 
     // MARK: - Content
 
+    private var cellContent: CalendarCellContent {
+        if isSelected, let earnings = previewEarnings {
+            return .earningsBreakdown(
+                earnings,
+                color: hasConflict ? .tidexWarning : .tidexBlue,
+                beforeTaxColor: .tidexTextMuted
+            )
+        } else if isSelected {
+            return .custom
+        } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
+            return .earningsBreakdown(
+                earnings,
+                color: .tidexTextMuted,
+                beforeTaxColor: .tidexTextMuted
+            )
+        }
+        return .empty
+    }
+
     @ViewBuilder
     private var addShiftContent: some View {
-        if isSelected, let earnings = previewEarnings {
-            // Preview earnings for selected dates (blue or warning)
-            Text(CalendarGridHelper.formatCompactCurrency(earnings))
-                .font(.system(size: 15, weight: .bold))
-                .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .padding(.top, 8)
-        } else if isSelected {
+        if isSelected && previewEarnings == nil {
             // Selected but no preview earnings yet (need times)
             Image(systemName: "checkmark")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                .padding(.top, 8)
-        } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
-            // Existing shift earnings (grey)
-            Text(CalendarGridHelper.formatCompactCurrency(earnings))
-                .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.tidexTextMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
                 .padding(.top, 8)
         }
     }

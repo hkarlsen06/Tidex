@@ -12,7 +12,7 @@ struct CalendarDisplayData {
     /// Set of dates that have existing shifts
     let existingShiftDates: Set<String>
     /// Earnings by date for existing shifts
-    let existingShiftEarnings: [String: Double]
+    let existingShiftEarnings: [String: CalendarEarningsData]
     /// Virtual shifts with computed earnings (cached)
     let virtualShifts: [VirtualShiftWithEarnings]
     /// Year and month this data is for
@@ -24,7 +24,7 @@ struct CalendarDisplayData {
     /// Virtual shift with computed earnings
     struct VirtualShiftWithEarnings {
         let date: String
-        let earnings: Double
+        let earnings: CalendarEarningsData
     }
 
     /// Check if cache is valid for the given month
@@ -213,13 +213,13 @@ final class AddShiftViewModel: ObservableObject {
     @Published private(set) var cachedConflictDatesForCalendar: Set<String> = []
 
     /// Cached preview earnings - only recomputed when selection or times change
-    @Published private(set) var cachedPreviewEarnings: [String: Double] = [:]
+    @Published private(set) var cachedPreviewEarnings: [String: CalendarEarningsData] = [:]
 
     /// Cached projected recurring dates for calendar display (current month only)
     @Published private(set) var cachedProjectedRecurringDates: [String] = []
 
     /// Cached earnings per anchor weekday - computed once per anchor, shared by all projected dates
-    @Published private(set) var cachedAnchorEarnings: [String: Double] = [:]
+    @Published private(set) var cachedAnchorEarnings: [String: CalendarEarningsData] = [:]
 
     // MARK: - Preview Cache (computed only when preview sheet is shown)
 
@@ -394,7 +394,7 @@ final class AddShiftViewModel: ObservableObject {
     }
 
     /// Computed earnings for existing shifts by date - uses cached data for performance
-    var existingShiftEarnings: [String: Double] {
+    var existingShiftEarnings: [String: CalendarEarningsData] {
         cachedDisplayData?.existingShiftEarnings ?? [:]
     }
 
@@ -414,13 +414,13 @@ final class AddShiftViewModel: ObservableObject {
     }
 
     /// Preview earnings for selected dates (single mode) - uses cached data
-    var previewEarnings: [String: Double] {
+    var previewEarnings: [String: CalendarEarningsData] {
         cachedPreviewEarnings
     }
 
     /// Get earnings for a recurring date by looking up its anchor's earnings
     /// All dates on the same weekday share the same earnings
-    func earningsForRecurringDate(_ dateISO: String) -> Double? {
+    func earningsForRecurringDate(_ dateISO: String) -> CalendarEarningsData? {
         let weekday = weekdayFromDate(dateISO)
         return cachedAnchorEarnings[weekday]
     }
@@ -831,9 +831,9 @@ final class AddShiftViewModel: ObservableObject {
         return String((weekday - 1) % 7)
     }
 
-    /// Compute earnings for a single date (net after tax)
+    /// Compute earnings for a single date (net + gross)
     /// Uses wage snapshot from shift date, tax snapshot from payout date (shift month + 1)
-    private func computeEarningsForDate(_ dateISO: String) -> Double? {
+    private func computeEarningsForDate(_ dateISO: String) -> CalendarEarningsData? {
         // Wage/supplements from shift date
         let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: cachedSnapshots)
 
@@ -852,16 +852,19 @@ final class AddShiftViewModel: ObservableObject {
         )
 
         let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-        return computed.netPay(
+        let gross = computed.gross
+        let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+        let net = computed.netPay(
             taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
             taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
         )
+        return CalendarEarningsData(net: net, gross: gross, hasTaxEnabled: taxEnabled)
     }
 
     /// Virtual shift with computed earnings
     struct VirtualShiftWithEarnings {
         let date: String
-        let earnings: Double
+        let earnings: CalendarEarningsData
     }
 
     /// Generate virtual shift dates from recurring patterns for display
@@ -905,11 +908,18 @@ final class AddShiftViewModel: ObservableObject {
                 let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: virtualShift.date, payrollDay: payrollDay)
                 let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
 
+                let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+                let net = computed.netPay(
+                    taxEnabled: taxEnabled,
+                    taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+                )
+
                 results.append(VirtualShiftWithEarnings(
                     date: virtualShift.date,
-                    earnings: computed.netPay(
-                        taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
-                        taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+                    earnings: CalendarEarningsData(
+                        net: net,
+                        gross: computed.gross,
+                        hasTaxEnabled: taxEnabled
                     )
                 ))
             }
@@ -1127,7 +1137,9 @@ final class AddShiftViewModel: ObservableObject {
 
         // Build set of existing shift dates
         var existingDates = Set<String>()
-        var existingEarnings: [String: Double] = [:]
+        var existingNetEarnings: [String: Double] = [:]
+        var existingGrossEarnings: [String: Double] = [:]
+        var existingHasTax: [String: Bool] = [:]
 
         // Add regular shifts
         for shift in cachedShifts {
@@ -1141,10 +1153,13 @@ final class AddShiftViewModel: ObservableObject {
             let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: shift.shift_date, payrollDay: payrollDay)
             let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
 
-            existingEarnings[shift.shift_date, default: 0] += computed.netPay(
-                taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+            let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+            existingNetEarnings[shift.shift_date, default: 0] += computed.netPay(
+                taxEnabled: taxEnabled,
                 taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
             )
+            existingGrossEarnings[shift.shift_date, default: 0] += computed.gross
+            existingHasTax[shift.shift_date, default: false] = existingHasTax[shift.shift_date, default: false] || taxEnabled
         }
 
         // Generate virtual shifts with computed earnings
@@ -1178,19 +1193,36 @@ final class AddShiftViewModel: ObservableObject {
                 let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: virtualShift.date, payrollDay: payrollDay)
                 let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
 
+                let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
                 let netEarnings = computed.netPay(
-                    taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+                    taxEnabled: taxEnabled,
                     taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+                )
+                let earnings = CalendarEarningsData(
+                    net: netEarnings,
+                    gross: computed.gross,
+                    hasTaxEnabled: taxEnabled
                 )
 
                 virtualShiftsWithEarnings.append(CalendarDisplayData.VirtualShiftWithEarnings(
                     date: virtualShift.date,
-                    earnings: netEarnings
+                    earnings: earnings
                 ))
 
                 // Also add to existing earnings map
-                existingEarnings[virtualShift.date, default: 0] += netEarnings
+                existingNetEarnings[virtualShift.date, default: 0] += netEarnings
+                existingGrossEarnings[virtualShift.date, default: 0] += computed.gross
+                existingHasTax[virtualShift.date, default: false] = existingHasTax[virtualShift.date, default: false] || taxEnabled
             }
+        }
+
+        var existingEarnings: [String: CalendarEarningsData] = [:]
+        for (date, net) in existingNetEarnings {
+            existingEarnings[date] = CalendarEarningsData(
+                net: net,
+                gross: existingGrossEarnings[date] ?? net,
+                hasTaxEnabled: existingHasTax[date] ?? false
+            )
         }
 
         // Store the cached display data
@@ -1225,7 +1257,7 @@ final class AddShiftViewModel: ObservableObject {
 
                 // Compute earnings once per anchor (all dates on same weekday share earnings)
                 if hasValidTimes {
-                    var anchorEarnings: [String: Double] = [:]
+                    var anchorEarnings: [String: CalendarEarningsData] = [:]
                     for (weekday, anchorISO) in selectedDays {
                         if let earnings = computeEarningsForDate(anchorISO) {
                             anchorEarnings[weekday] = earnings
@@ -1258,7 +1290,7 @@ final class AddShiftViewModel: ObservableObject {
 
         // Compute preview earnings for all selected dates
         if mode == .single {
-            var newPreviewEarnings: [String: Double] = [:]
+            var newPreviewEarnings: [String: CalendarEarningsData] = [:]
             for dateISO in selectedDates {
                 if let earnings = computeEarningsForDate(dateISO) {
                     newPreviewEarnings[dateISO] = earnings
@@ -1318,7 +1350,7 @@ final class AddShiftViewModel: ObservableObject {
 
         // Compute earnings once per anchor
         if hasValidTimes {
-            var anchorEarnings: [String: Double] = [:]
+            var anchorEarnings: [String: CalendarEarningsData] = [:]
             for (weekday, anchorISO) in selectedDays {
                 if let earnings = computeEarningsForDate(anchorISO) {
                     anchorEarnings[weekday] = earnings

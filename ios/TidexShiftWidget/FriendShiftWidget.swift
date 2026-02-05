@@ -786,10 +786,7 @@ struct FriendShiftWidgetView: View {
 
             Spacer()
 
-            Text("\(entry.startTime) – \(entry.endTime)")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(secondaryTextColor)
-                .lineLimit(1)
+            bottomTextView
         }
         .padding(.horizontal, 16)
         .padding(.top, 14)

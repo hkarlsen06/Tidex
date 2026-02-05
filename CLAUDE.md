@@ -98,3 +98,8 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 - Focus on code changes only - communicate findings in chat
 
 **NEVER push to git automatically** - commit when requested, but wait for user approval before pushing.
+
+**iOS Builds:**
+- **NEVER run `xcodebuild` directly** - it is slow and often fails due to environment issues (watchOS SDK, derived data, etc.)
+- To check for Swift errors, run `swiftlint` instead (fast, catches common issues)
+- At the end of your turn, **ask the user to run a build in Xcode** to catch any remaining compilation errors

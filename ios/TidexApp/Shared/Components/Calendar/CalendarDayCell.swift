@@ -48,6 +48,13 @@ enum CalendarCellContent: Equatable {
     /// Display earnings amount
     case earnings(Double, color: Color = .tidexTextPrimary)
 
+    /// Display earnings with optional before-tax breakdown
+    case earningsBreakdown(
+        CalendarEarningsData,
+        color: Color = .tidexTextPrimary,
+        beforeTaxColor: Color = .tidexTextMuted
+    )
+
     /// Display a star icon (for anchor dates)
     case starIcon(color: Color = .white)
 
@@ -98,8 +105,8 @@ struct CalendarDayCell<Content: View>: View {
                         Text("\(weekNum)")
                             .font(.caption2)
                             .foregroundColor(.tidexTextMuted)
-                            .padding(.leading, 6)
-                            .padding(.top, 4)
+                            .padding(.leading, 4)
+                            .padding(.top, 3)
                         Spacer()
                     }
                     Spacer()
@@ -161,35 +168,74 @@ struct CalendarDayCell<Content: View>: View {
         case .hours(let hoursData, let color):
             let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
             VStack(spacing: 0) {
-                Text(hoursData.start)
-                    .font(.footnote.weight(.bold))
-                    .environment(\.layoutDirection, .leftToRight)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .allowsTightening(true)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                Text(endDisplay)
-                    .font(.footnote.weight(.bold))
-                    .environment(\.layoutDirection, .leftToRight)
+                Spacer(minLength: 0)
+                VStack(spacing: -4) {
+                    Text(hoursData.start)
+                        .font(.footnote.weight(.bold))
+                        .environment(\.layoutDirection, .leftToRight)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .allowsTightening(true)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Text(endDisplay)
+                        .font(.footnote.weight(.bold))
+                        .environment(\.layoutDirection, .leftToRight)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .allowsTightening(true)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .foregroundColor(color)
+            .padding(.bottom, 6)
+            .padding(.horizontal, 4)
+
+        case .earnings(let amount, let color):
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Text(CalendarGridHelper.formatCompactCurrency(amount))
+                    .font(.callout.weight(.bold))
+                    .foregroundColor(color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .allowsTightening(true)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
-            .foregroundColor(color)
-            .padding(.top, 8)
+            .padding(.bottom, 6)
             .padding(.horizontal, 4)
 
-        case .earnings(let amount, let color):
-            Text(CalendarGridHelper.formatCompactCurrency(amount))
-                .font(.callout.weight(.bold))
-                .foregroundColor(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .allowsTightening(true)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 8)
-                .padding(.horizontal, 4)
+        case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                if earnings.hasTaxEnabled {
+                    VStack(spacing: -4) {
+                        Text(CalendarGridHelper.formatCompactCurrency(earnings.net))
+                            .font(.callout.weight(.bold))
+                            .foregroundColor(color)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .allowsTightening(true)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
+                            .font(.footnote.weight(.bold))
+                            .foregroundColor(beforeTaxColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .allowsTightening(true)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                } else {
+                    Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
+                        .font(.callout.weight(.bold))
+                        .foregroundColor(color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .allowsTightening(true)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .padding(.bottom, 6)
+            .padding(.horizontal, 4)
 
         case .starIcon(let color):
             VStack {
