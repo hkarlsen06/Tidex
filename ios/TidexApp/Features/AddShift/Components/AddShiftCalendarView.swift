@@ -6,18 +6,105 @@ import UIKit
 /// Supports tap to toggle date selection with existing shift and conflict indicators
 struct AddShiftCalendarView: View {
     @ObservedObject var viewModel: AddShiftViewModel
+    let onReset: (() -> Void)?
+
+    init(viewModel: AddShiftViewModel, onReset: (() -> Void)? = nil) {
+        self.viewModel = viewModel
+        self.onReset = onReset
+    }
     
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
     var body: some View {
         VStack(spacing: 0) {
+            CalendarHeaderRow(
+                monthName: monthName,
+                year: viewModel.displayYear,
+                selectionCount: viewModel.selectedDates.count >= 2 ? viewModel.selectedDates.count : nil,
+                phase: transitionPhase,
+                totals: headerTotals,
+                trailingAccessory: resetButton
+            )
+
             // Weekday headers
             weekdayHeaderRow
                 .padding(.bottom, 8)
 
             // Calendar grid
             calendarGrid
+        }
+    }
+
+    private var monthName: String {
+        CalendarGridHelper.monthName(
+            from: viewModel.displayMonth,
+            locale: Locale.appLocale
+        )
+    }
+
+    private var transitionPhase: MonthTransitionPhase {
+        MonthTransitionPhase(
+            year: viewModel.displayYear,
+            month: viewModel.displayMonthNumber,
+            direction: viewModel.navigationDirection
+        )
+    }
+
+    private var headerTotals: CalendarHeaderTotals {
+        let monthTotals = monthlyTotals
+        let selectedTotals = selectedPreviewTotals
+        let displayTotals = selectedTotals ?? monthTotals
+
+        let primaryAmount = displayTotals.gross > 0
+            ? (displayTotals.hasTaxEnabled ? displayTotals.net : displayTotals.gross)
+            : nil
+        let secondaryAmount = (displayTotals.hasTaxEnabled && displayTotals.gross > 0)
+            ? displayTotals.gross
+            : nil
+
+        return CalendarHeaderTotals(
+            primary: primaryAmount,
+            secondary: secondaryAmount
+        )
+    }
+
+    private var resetButton: AnyView? {
+        guard viewModel.hasContent, let onReset else { return nil }
+        return AnyView(
+            Button(action: onReset) {
+                Image(systemName: "arrow.counterclockwise.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.tidexBlue)
+            }
+            .buttonStyle(.plain)
+        )
+    }
+
+    private var monthlyTotals: (net: Double, gross: Double, hasTaxEnabled: Bool) {
+        viewModel.existingShiftEarnings.values.reduce(
+            into: (net: 0.0, gross: 0.0, hasTaxEnabled: false)
+        ) { partial, earnings in
+            partial.net += earnings.net
+            partial.gross += earnings.gross
+            partial.hasTaxEnabled = partial.hasTaxEnabled || earnings.hasTaxEnabled
+        }
+    }
+
+    private var selectedPreviewTotals: (net: Double, gross: Double, hasTaxEnabled: Bool)? {
+        guard !viewModel.selectedDates.isEmpty else { return nil }
+
+        let selectedEarnings = viewModel.selectedDates.compactMap { dateISO in
+            viewModel.previewEarnings[dateISO]
+        }
+        guard !selectedEarnings.isEmpty else { return nil }
+
+        return selectedEarnings.reduce(
+            into: (net: 0.0, gross: 0.0, hasTaxEnabled: false)
+        ) { partial, earnings in
+            partial.net += earnings.net
+            partial.gross += earnings.gross
+            partial.hasTaxEnabled = partial.hasTaxEnabled || earnings.hasTaxEnabled
         }
     }
 

@@ -10,6 +10,8 @@ struct AddShiftView: View {
     @Binding var isKeyboardVisible: Bool
     @State private var focusedTimeField: TimeInputField?
     @State private var keyboardHeight: CGFloat = 0
+    @State private var tabTransitionOffset: CGFloat = 0
+    @State private var tabTransitionOpacity: Double = 1
 
     /// Title for current mode
     private var modeTitle: String {
@@ -53,6 +55,8 @@ struct AddShiftView: View {
                                     SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
                                         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                                         .padding(.horizontal, 16)
+                                        .offset(y: tabTransitionOffset)
+                                        .opacity(tabTransitionOpacity)
 
                                     Spacer()
                                 }
@@ -77,6 +81,8 @@ struct AddShiftView: View {
                                 .padding(.top, 16)
                                 .frame(maxWidth: .infinity)
                                 .frame(minHeight: availableHeight, alignment: .center)
+                                .offset(y: tabTransitionOffset)
+                                .opacity(tabTransitionOpacity)
                             }
                             .monthSwipeGesture(
                                 onSwipeLeft: { viewModel.goToNextMonth() },
@@ -123,13 +129,10 @@ struct AddShiftView: View {
                     ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
                         .fixedSize()
                 }
-                if !isIPad {
-                    ToolbarItem(placement: .principal) {
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
-                    }
+                ToolbarItem(placement: .principal) {
+                    Text(.tabsAdd)
+                        .font(.headline)
+                        .foregroundColor(.tidexTextPrimary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -169,6 +172,15 @@ struct AddShiftView: View {
         }
         .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
             handleDeepLink(deepLink)
+        }
+        .onChange(of: selectedTab) { oldTab, newTab in
+            guard newTab == .add, oldTab == .shifts else { return }
+            tabTransitionOffset = 28
+            tabTransitionOpacity = 0.92
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                tabTransitionOffset = 0
+                tabTransitionOpacity = 1
+            }
         }
         .sheet(isPresented: $viewModel.showPreviewSheet) {
             RecurringPreviewSheet(viewModel: viewModel)
@@ -245,54 +257,26 @@ private struct SingleShiftContent: View {
     @Binding var focusedTimeField: TimeInputField?
     
     var body: some View {
-        // Calendar is the anchor - header and time picker positioned relative to it
-        // Using overlay with alignment guides to position content outside calendar bounds
-        AddShiftCalendarView(viewModel: viewModel)
-            .overlay(alignment: .top) {
-                // Header positioned above the calendar
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(.addShiftHeaderTitle)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.tidexTextPrimary)
-
-                        Text(.addShiftHeaderSubtitle)
-                            .font(.system(size: 15))
-                            .foregroundColor(.tidexTextSecondary)
-                    }
-
-                    Spacer()
-
-                    // Undo button to clear state (only show when there's content)
-                    if viewModel.hasContent {
-                        Button {
-                            viewModel.startFresh()
-                            // Dismiss keyboard when clearing
-                            if focusedTimeField != nil {
-                                focusedTimeField = nil
-                            }
-                        } label: {
-                            Image(systemName: "arrow.counterclockwise.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.tidexBlue)
-                        }
+        VStack(spacing: 0) {
+            AddShiftCalendarView(
+                viewModel: viewModel,
+                onReset: {
+                    viewModel.startFresh()
+                    if focusedTimeField != nil {
+                        focusedTimeField = nil
                     }
                 }
-                .padding(.bottom, 12)
-                .alignmentGuide(.top) { d in d[.bottom] }
-            }
-            .overlay(alignment: .bottom) {
-                // Time picker positioned below the calendar
-                TimeRangePicker(
-                    startTime: $viewModel.startTime,
-                    endTime: $viewModel.endTime,
-                    scrollProxy: scrollProxy,
-                    scrollId: "singleTimePicker",
-                    focusedFieldBinding: $focusedTimeField
-                )
-                .padding(.top, 12)
-                .alignmentGuide(.bottom) { d in d[.top] }
-            }
+            )
+
+            TimeRangePicker(
+                startTime: $viewModel.startTime,
+                endTime: $viewModel.endTime,
+                scrollProxy: scrollProxy,
+                scrollId: "singleTimePicker",
+                focusedFieldBinding: $focusedTimeField
+            )
+            .padding(.top, 12)
+        }
     }
 }
 
@@ -305,37 +289,6 @@ private struct RecurringShiftContent: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            // Header with optional "Start fresh" button
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(.addShiftHeaderTitleRecurring)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.tidexTextPrimary)
-
-                    Text(.addShiftHeaderSubtitle)
-                        .font(.system(size: 15))
-                        .foregroundColor(.tidexTextSecondary)
-                }
-
-                Spacer()
-
-                // Undo button to clear state (only show when there's content)
-                if viewModel.hasContent {
-                    Button {
-                        viewModel.startFresh()
-                        // Dismiss keyboard when clearing
-                        if focusedTimeField != nil {
-                            focusedTimeField = nil
-                        }
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.tidexBlue)
-                    }
-                }
-            }
-            .padding(.bottom, 8)
-
             DurationPicker(endCondition: $viewModel.endCondition)
 
             RepeatIntervalPicker(interval: $viewModel.repeatInterval)
@@ -360,7 +313,15 @@ private struct RecurringShiftContent: View {
                 }
             )
 
-            RecurringCalendarView(viewModel: viewModel)
+            RecurringCalendarView(
+                viewModel: viewModel,
+                onReset: {
+                    viewModel.startFresh()
+                    if focusedTimeField != nil {
+                        focusedTimeField = nil
+                    }
+                }
+            )
         }
         // Extra bottom padding to clear the month picker
         .padding(.bottom, 80)
