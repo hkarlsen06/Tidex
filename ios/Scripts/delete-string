@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper script for delete-string Swift tool
+# Usage: delete-string --key "feature.key"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+swift run --package-path "$SCRIPT_DIR" delete-string "$@"

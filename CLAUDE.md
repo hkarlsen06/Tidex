@@ -53,6 +53,7 @@ Located in `ios/Scripts/`. PATH is configured via `/etc/paths.d/tidex` and Launc
 **Commands:**
 ```bash
 add-string --key "feature.key" --en "English" --nb "Norwegian"
+delete-string --key "feature.key"
 audit-strings
 validate-localization
 ```

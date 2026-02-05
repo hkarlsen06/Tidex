@@ -183,8 +183,8 @@ struct ShiftsView: View {
         }
         // Screenshot detection - prompt user to use share button instead
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)) { _ in
-            // Only show prompt in calendar view (where share button is visible)
-            if !showListView {
+            // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
+            if selectedTab == .shifts && !showListView {
                 showScreenshotPrompt = true
             }
         }
@@ -911,6 +911,7 @@ struct ShiftsView: View {
                     Section {
                         ForEach(weekGroup.items) { item in
                             listItemRow(item: item)
+                                .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                         }
                     } header: {
                         WeekHeaderView(
@@ -919,6 +920,7 @@ struct ShiftsView: View {
                         )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.tidexBackground)
+                        .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                     }
                 }
             }
@@ -1135,7 +1137,7 @@ struct ShiftsView: View {
     }
 
     /// Group list items by ISO week (preserves placeholder in correct position)
-    private var weekGroupsWithPlaceholder: [(weekKey: String, weekNumber: Int, totalGross: Double, items: [ShiftListItem])] {
+    private var weekGroupsWithPlaceholder: [(weekKey: String, weekNumber: Int, totalGross: Double, items: [ShiftListItem], isOutsideMonth: Bool)] {
         var calendar = Calendar(identifier: .iso8601)
         calendar.firstWeekday = 2  // Monday
         calendar.minimumDaysInFirstWeek = 4
@@ -1168,8 +1170,12 @@ struct ShiftsView: View {
         }
 
         // Convert to array and sort
-        return weekMap.map { (weekKey: $0.key, weekNumber: $0.value.weekNumber, totalGross: $0.value.totalGross, items: $0.value.items) }
-            .sorted { $0.weekKey < $1.weekKey }
+        let committedPrefix = String(format: "%04d-%02d", viewModel.committedYear, viewModel.committedMonth)
+        return weekMap.map { entry in
+            let isOutside = !entry.value.items.contains { $0.sortDate.hasPrefix(committedPrefix) }
+            return (weekKey: entry.key, weekNumber: entry.value.weekNumber, totalGross: entry.value.totalGross, items: entry.value.items, isOutsideMonth: isOutside)
+        }
+        .sorted { $0.weekKey < $1.weekKey }
     }
 
     @ViewBuilder
@@ -1182,6 +1188,7 @@ struct ShiftsView: View {
                 Section {
                     ForEach(weekGroup.items) { item in
                         listItemRow(item: item)
+                            .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                     }
                 } header: {
                     WeekHeaderView(
@@ -1190,6 +1197,7 @@ struct ShiftsView: View {
                     )
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                     .listRowBackground(Color.tidexBackground)
+                    .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                 }
             }
         }
