@@ -13,7 +13,15 @@ import {
   createRiverRouter,
   defaultRiverProvider,
 } from "@/lib/river";
-import type { Message, ContentBlock, CompactionContent, ImageContent, ToolResultContent } from "@/lib/services/claude";
+import type {
+  Message,
+  ContentBlock,
+  CompactionContent,
+  ImageContent,
+  ToolResultContent,
+  ThinkingContent,
+  RedactedThinkingContent,
+} from "@/lib/services/claude";
 import { getSystemPrompt, type SystemPromptContext } from "./system-prompt";
 import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
@@ -410,7 +418,6 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           system,
           messages: conversationMessages,
           tools,
-          temperature: 0.7,
           maxTokens: 2048,
         });
       }).pipe(Effect.provide(ClaudeLive), Effect.scoped);
@@ -419,6 +426,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
 
       let currentTextContent = "";
       let compactionBlock: CompactionContent | null = null;
+      const thinkingBlocks: Array<ThinkingContent | RedactedThinkingContent> = [];
       const toolUses: Array<{
         id: string;
         name: string;
@@ -464,6 +472,18 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           // Preserve compaction block for server continuity and optional client state sync
           compactionBlock = { type: "compaction", content: chunk.content };
           latestCompactionContent = chunk.content;
+        } else if (chunk.type === "thinking") {
+          // Preserve thinking/signature blocks for tool-use round-trip integrity
+          thinkingBlocks.push({
+            type: "thinking",
+            thinking: chunk.thinking,
+            signature: chunk.signature,
+          });
+        } else if (chunk.type === "redacted_thinking") {
+          thinkingBlocks.push({
+            type: "redacted_thinking",
+            data: chunk.data,
+          });
         }
       }
 
@@ -477,6 +497,9 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       // Compaction block must come first - API drops everything before it
       if (compactionBlock) {
         assistantContent.push(compactionBlock);
+      }
+      if (thinkingBlocks.length > 0) {
+        assistantContent.push(...thinkingBlocks);
       }
       if (currentTextContent) {
         assistantContent.push({
@@ -509,6 +532,34 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
 
       for (const toolUse of toolUses) {
         try {
+          const invalidJson = toolUse.input.INVALID_JSON;
+          if (typeof invalidJson === "string") {
+            const invalidResult = {
+              success: false,
+              message:
+                "Tool input was invalid or incomplete JSON. Please resend a valid JSON object for this tool call.",
+              invalid_input: {
+                INVALID_JSON: invalidJson,
+              },
+            };
+
+            await stream.appendChunk({
+              type: "tool_result",
+              toolName: toolUse.name,
+              toolCallId: toolUse.id,
+              result: JSON.stringify(invalidResult),
+              success: false,
+            });
+
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: toolUse.id,
+              content: JSON.stringify(invalidResult),
+              is_error: true,
+            });
+            continue;
+          }
+
           const result = await executeTool(
             toolUse.name as ToolName,
             JSON.stringify(toolUse.input),
