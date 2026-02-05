@@ -17,8 +17,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private let shiftCheckTaskId = "no.tidex.app.shiftcheck"
 
     private let apnsTokenDefaultsKey = "apns_device_token"
-    private let apnsTokenRegisteredUserKey = "apns_device_token_registered_user"
-    private let apnsTokenRegisteredValueKey = "apns_device_token_registered_value"
 
     /// Prevents duplicate APNs registration calls while one is in flight
     private var apnsRegistrationInFlight = false
@@ -75,6 +73,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // Activate Watch Connectivity for Apple Watch companion app
         WatchConnectivityManager.shared.activateSession()
+
+        // Always register for remote notifications on launch
+        // Ensures APNs token stays fresh (e.g., after TestFlight → App Store transition)
+        application.registerForRemoteNotifications()
 
         return true
     }
@@ -416,13 +418,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         do {
             // Get current user session for auth and user ID
             let session = try await supabase.auth.session
-            let userId = session.normalizedUserId
-            let defaults = UserDefaults.standard
-
-            // Skip silently if already registered for this user
-            if !needsAPNsRegistration(token: token, userId: userId) {
-                return
-            }
 
             apnsRegistrationInFlight = true
             defer { apnsRegistrationInFlight = false }
@@ -465,9 +460,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
 
             if httpResponse.statusCode == 200 {
-                // Success - cache the registration
-                defaults.set(token, forKey: apnsTokenRegisteredValueKey)
-                defaults.set(userId, forKey: apnsTokenRegisteredUserKey)
                 await MainActor.run {
                     PushNotificationManager.shared.registrationSucceeded()
                 }
@@ -488,14 +480,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     private func cacheAPNsToken(_ token: String) {
-        let defaults = UserDefaults.standard
-        let existingToken = defaults.string(forKey: apnsTokenDefaultsKey)
-
-        if existingToken != token {
-            defaults.set(token, forKey: apnsTokenDefaultsKey)
-            defaults.removeObject(forKey: apnsTokenRegisteredValueKey)
-            defaults.removeObject(forKey: apnsTokenRegisteredUserKey)
-        }
+        UserDefaults.standard.set(token, forKey: apnsTokenDefaultsKey)
     }
 
     private func cachedAPNsToken() -> String? {
@@ -508,13 +493,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         await registerAPNsToken(token)
-    }
-
-    private func needsAPNsRegistration(token: String, userId: String) -> Bool {
-        let defaults = UserDefaults.standard
-        let lastToken = defaults.string(forKey: apnsTokenRegisteredValueKey)
-        let lastUserId = defaults.string(forKey: apnsTokenRegisteredUserKey)
-        return lastToken != token || lastUserId != userId
     }
 }
 
