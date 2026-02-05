@@ -79,6 +79,8 @@ struct ShiftsView: View {
 
     // View mode toggle (calendar vs list) - persisted across app launches
     @AppStorage("shiftsViewMode") private var showListView = false
+    @State private var tabTransitionOffset: CGFloat = 0
+    @State private var tabTransitionOpacity: Double = 1
 
     // Haptic feedback
     private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -190,6 +192,15 @@ struct ShiftsView: View {
             // Reload shifts when they change (e.g., after adding a shift)
             Task {
                 await viewModel.reloadFromLocal()
+            }
+        }
+        .onChange(of: selectedTab) { oldTab, newTab in
+            guard newTab == .shifts, oldTab == .add else { return }
+            tabTransitionOffset = -28
+            tabTransitionOpacity = 0.92
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                tabTransitionOffset = 0
+                tabTransitionOpacity = 1
             }
         }
         // Pass user's currency to all child views
@@ -859,6 +870,8 @@ struct ShiftsView: View {
                             )
                             .padding(.horizontal, 16)
                         }
+                        .offset(y: tabTransitionOffset)
+                        .opacity(tabTransitionOpacity)
                         Spacer()
                     }
                     // Offset for month picker overlay
@@ -1053,6 +1066,8 @@ struct ShiftsView: View {
                             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                             .padding(.horizontal, 16)
                         }
+                        .offset(y: tabTransitionOffset)
+                        .opacity(tabTransitionOpacity)
                         Spacer()
                     }
                     // Offset for month picker overlay so content centers in available space

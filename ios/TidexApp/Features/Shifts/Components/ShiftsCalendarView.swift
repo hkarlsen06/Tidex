@@ -103,12 +103,6 @@ struct ShiftsCalendarView: View {
     /// Preview dates during drag (before committing)
     @State private var dragPreviewDates: Set<String> = []
 
-    /// Track the last displayed earnings amount for smooth animation
-    @State private var lastDisplayedEarnings: Double = 0
-
-    /// Track the last displayed gross earnings amount for smooth animation
-    @State private var lastDisplayedGrossEarnings: Double = 0
-
     // Haptic feedback for UI interactions (non-gesture haptics)
     private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
     private let warningHaptic = UINotificationFeedbackGenerator()
@@ -206,98 +200,31 @@ struct ShiftsCalendarView: View {
     // MARK: - Body
 
     var body: some View {
-        // Calendar grid is the anchor - header and action bar positioned relative to it
-        // Using overlay with alignment guides to position content outside calendar bounds
         VStack(spacing: 0) {
+            CalendarHeaderRow(
+                monthName: monthName,
+                year: year,
+                selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
+                phase: phase,
+                totals: headerTotals,
+                trailingAccessory: nil
+            )
+
             CalendarWeekdayHeader()
                 .padding(.bottom, 8)
+
             calendarGrid
-        }
-        .overlay(alignment: .top) {
-            // Header positioned above the calendar
-            headerRow
-                .padding(.bottom, 12)
-                .alignmentGuide(.top) { d in d[.bottom] }
-        }
-        .overlay(alignment: .bottom) {
-            // Action bar positioned below the calendar
+
             actionBar
                 .padding(.top, 12)
-                .alignmentGuide(.bottom) { d in d[.top] }
         }
     }
 
-    // MARK: - Header Row
+    // MARK: - Header Data
 
-    @ViewBuilder
-    private var headerRow: some View {
-        HStack {
-            // Month name + Year (or selection count)
-            // Animated horizontally on month change (like the month picker)
-            HStack(spacing: 6) {
-                Text(monthName)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
+    private var headerTotals: CalendarHeaderTotals? {
+        guard showEarnings else { return nil }
 
-                // Show selection count or year
-                if selectedDates.count >= 2 {
-                    Text("(\(selectedDates.count))")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.tidexTextMuted)
-                } else {
-                    Text(String(year))
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
-                }
-            }
-            .modifier(HeaderTextTransitionModifier(phase: phase))
-
-            Spacer()
-
-            // Monthly total or selection total (if showing earnings)
-            if showEarnings {
-                earningsDisplay
-            }
-        }
-        .padding(.horizontal, 4)
-        .padding(.bottom, 12)
-    }
-
-    // MARK: - Header Text Transition
-
-    /// Applies horizontal slide transition to the month/year header text
-    private struct HeaderTextTransitionModifier: ViewModifier {
-        @Environment(\.layoutDirection) private var layoutDirection
-        let phase: MonthTransitionPhase?
-
-        func body(content: Content) -> some View {
-            if let phase = phase {
-                content
-                    .id("header-\(phase.id)")
-                    .transition(textTransition(for: phase))
-                    .animation(
-                        .spring(response: 0.3, dampingFraction: 0.85),
-                        value: phase.id
-                    )
-            } else {
-                content
-            }
-        }
-
-        private func textTransition(for phase: MonthTransitionPhase) -> AnyTransition {
-            let base: CGFloat = phase.direction == .next ? 20 : -20
-            let offset = layoutDirection == .rightToLeft ? -base : base
-            return .asymmetric(
-                insertion: .offset(x: offset).combined(with: .opacity),
-                removal: .offset(x: -offset).combined(with: .opacity)
-            )
-        }
-    }
-
-    /// Earnings display - shows monthly or selection totals
-    /// Uses fixed height to prevent layout jumps during month transitions
-    @ViewBuilder
-    private var earningsDisplay: some View {
         // Use selection earnings if dates are selected, otherwise monthly
         let displayTotals: (net: Double, gross: Double) = {
             if selectedDates.isEmpty {
@@ -311,53 +238,13 @@ struct ShiftsCalendarView: View {
 
         // Use selectedHasTaxEnabled when dates are selected
         let showTax = selectedDates.isEmpty ? hasTaxEnabled : selectedHasTaxEnabled
-        let displayAmount = showTax ? displayTotals.net : displayTotals.gross
+        let primaryAmount = displayTotals.gross > 0 ? (showTax ? displayTotals.net : displayTotals.gross) : nil
+        let secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
 
-        // Fixed height prevents calendar jumping when gross line appears/disappears
-        // Height: 17pt (net) + 2pt (spacing) + 13pt (gross) ≈ 36pt total
-        VStack(alignment: .trailing, spacing: 2) {
-            if displayTotals.gross == 0 {
-                Text("—")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-            } else {
-                CurrencyCountUpText(
-                    amount: displayAmount,
-                    animateOnAppear: false,
-                    animateFrom: lastDisplayedEarnings > 0 ? lastDisplayedEarnings : nil
-                )
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.tidexTextPrimary)
-                .onChange(of: displayAmount) { _, newValue in
-                    lastDisplayedEarnings = newValue
-                }
-                .onAppear {
-                    if lastDisplayedEarnings == 0 {
-                        lastDisplayedEarnings = displayAmount
-                    }
-                }
-            }
-
-            // Always render the gross line to reserve space, use opacity for visibility
-            // This prevents layout jumps during month transitions
-            CurrencyCountUpText(
-                amount: displayTotals.gross,
-                animateOnAppear: false,
-                animateFrom: lastDisplayedGrossEarnings > 0 ? lastDisplayedGrossEarnings : nil
-            )
-            .font(.system(size: 13))
-            .foregroundColor(.tidexTextMuted)
-            .opacity(showTax && displayTotals.gross > 0 ? 1 : 0)
-            .onChange(of: displayTotals.gross) { _, newValue in
-                lastDisplayedGrossEarnings = newValue
-            }
-            .onAppear {
-                if lastDisplayedGrossEarnings == 0 {
-                    lastDisplayedGrossEarnings = displayTotals.gross
-                }
-            }
-        }
-        .frame(minHeight: 36, alignment: .trailing)
+        return CalendarHeaderTotals(
+            primary: primaryAmount,
+            secondary: secondaryAmount
+        )
     }
 
     // MARK: - Month Name
