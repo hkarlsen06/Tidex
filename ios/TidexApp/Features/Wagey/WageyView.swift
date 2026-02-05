@@ -23,6 +23,9 @@ struct WageyView: View {
         _showShowcase = State(initialValue: WageyViewModel.shared.shouldShowShowcase)
     }
 
+    /// Input text for the chat field
+    @State private var inputText: String = ""
+
     /// Whether to show the paywall when limit is reached
     @State private var showPaywall = false
 
@@ -154,12 +157,13 @@ struct WageyView: View {
                 streamingContentBlocks: viewModel.activeContentBlocks,
                 isStreaming: viewModel.isStreaming,
                 onSuggestionTapped: { suggestion in
-                    handleSendMessage(suggestion)
+                    inputText = suggestion
                 }
             )
 
             // Input field with image support
             ChatInputField(
+                inputText: $inputText,
                 onSend: { content in
                     handleSendMessage(content)
                 },

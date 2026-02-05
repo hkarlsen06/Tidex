@@ -63,6 +63,9 @@ struct ShiftsView: View {
     // Celebration state
     @State private var showConfetti = false
 
+    // List scroll state (hidden until scrolled to today to prevent flash)
+    @State private var listReady = false
+
     // Deep link navigation state
     @State private var highlightedDateISO: String?
     @State private var deepLinkAction: AppCoordinator.ShiftDeepLinkAction = .open
@@ -906,31 +909,41 @@ struct ShiftsView: View {
             }
         } else {
             // Shift list
-            List {
-                ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
-                    Section {
-                        ForEach(weekGroup.items) { item in
-                            listItemRow(item: item)
-                                .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
+            ScrollViewReader { proxy in
+                List {
+                    ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
+                        Section {
+                            ForEach(weekGroup.items) { item in
+                                listItemRow(item: item)
+                                    .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
+                                    .id(item.id)
+                            }
+                        } header: {
+                            WeekHeaderView(
+                                weekNumber: weekGroup.weekNumber,
+                                totalGross: weekGroup.totalGross
+                            )
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.tidexBackground)
+                            .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                         }
-                    } header: {
-                        WeekHeaderView(
-                            weekNumber: weekGroup.weekNumber,
-                            totalGross: weekGroup.totalGross
-                        )
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-                        .listRowBackground(Color.tidexBackground)
-                        .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                     }
                 }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
-            .refreshable {
-                AppearanceTracker.shared.reset()
-                await viewModel.refresh()
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+                .refreshable {
+                    AppearanceTracker.shared.reset()
+                    await viewModel.refresh()
+                }
+                .opacity(listReady ? 1 : 0)
+                .onAppear {
+                    scrollToTodayItem(using: proxy)
+                }
+                .onDisappear {
+                    listReady = false
+                }
             }
         }
     }
@@ -1183,31 +1196,41 @@ struct ShiftsView: View {
         // ARCHITECTURE: Using native List with .swipeActions() for reliable gesture handling
         // This is Apple's designed solution - no custom gesture conflicts with scrolling
         // Styled with .listRowBackground() and .listRowSeparator(.hidden) for custom look
-        List {
-            ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
-                Section {
-                    ForEach(weekGroup.items) { item in
-                        listItemRow(item: item)
-                            .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
+        ScrollViewReader { proxy in
+            List {
+                ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
+                    Section {
+                        ForEach(weekGroup.items) { item in
+                            listItemRow(item: item)
+                                .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
+                                .id(item.id)
+                        }
+                    } header: {
+                        WeekHeaderView(
+                            weekNumber: weekGroup.weekNumber,
+                            totalGross: weekGroup.totalGross
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.tidexBackground)
+                        .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                     }
-                } header: {
-                    WeekHeaderView(
-                        weekNumber: weekGroup.weekNumber,
-                        totalGross: weekGroup.totalGross
-                    )
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-                    .listRowBackground(Color.tidexBackground)
-                    .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+            .frame(maxWidth: .infinity)
+            // Add bottom padding so last items can scroll above the floating MonthPicker
+            .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+            .opacity(listReady ? 1 : 0)
+            .onAppear {
+                scrollToTodayItem(using: proxy)
+            }
+            .onDisappear {
+                listReady = false
+            }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
-        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .frame(maxWidth: .infinity)
-        // Add bottom padding so last items can scroll above the floating MonthPicker
-        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
     }
 
     /// Render a single list item (shift or placeholder)
@@ -1277,6 +1300,17 @@ struct ShiftsView: View {
                 NextShiftCountdownText(shift: shift)
             }
         }
+    }
+
+    /// Scroll the list to today's shift card or placeholder, then reveal the list
+    private func scrollToTodayItem(using proxy: ScrollViewProxy) {
+        if viewModel.isCurrentMonth {
+            let today = todayISO()
+            if let targetId = shiftListItems.first(where: { $0.sortDate == today })?.id {
+                proxy.scrollTo(targetId, anchor: .top)
+            }
+        }
+        listReady = true
     }
 
     /// Convert displayed year/month to a Date for the calendar

@@ -15,7 +15,7 @@ struct ChatInputField: View {
 
     
     /// Current input text
-    @State private var inputText: String = ""
+    @Binding var inputText: String
 
     /// Whether the text field is focused
     @FocusState private var isFocused: Bool
@@ -33,7 +33,8 @@ struct ChatInputField: View {
     @State private var imageError: String?
 
     /// Initialize with text-only send callback
-    init(onSend: @escaping (String) -> Void, disabled: Bool) {
+    init(inputText: Binding<String>, onSend: @escaping (String) -> Void, disabled: Bool) {
+        self._inputText = inputText
         self.onSend = onSend
         self.onSendWithImage = nil
         self.disabled = disabled
@@ -41,10 +42,12 @@ struct ChatInputField: View {
 
     /// Initialize with both text and image send callbacks
     init(
+        inputText: Binding<String>,
         onSend: @escaping (String) -> Void,
         onSendWithImage: @escaping (String, ImageAttachment) -> Void,
         disabled: Bool
     ) {
+        self._inputText = inputText
         self.onSend = onSend
         self.onSendWithImage = onSendWithImage
         self.disabled = disabled
@@ -280,9 +283,11 @@ struct ChatInputField: View {
 // MARK: - Previews
 
 #Preview("Default") {
+    @Previewable @State var text = ""
     VStack {
         Spacer()
         ChatInputField(
+            inputText: $text,
             onSend: { message in
                 print("Sent: \(message)")
             },
@@ -293,9 +298,11 @@ struct ChatInputField: View {
 }
 
 #Preview("With Image Support") {
+    @Previewable @State var text = ""
     VStack {
         Spacer()
         ChatInputField(
+            inputText: $text,
             onSend: { message in
                 print("Sent text: \(message)")
             },
@@ -309,9 +316,11 @@ struct ChatInputField: View {
 }
 
 #Preview("Disabled") {
+    @Previewable @State var text = ""
     VStack {
         Spacer()
         ChatInputField(
+            inputText: $text,
             onSend: { message in
                 print("Sent: \(message)")
             },

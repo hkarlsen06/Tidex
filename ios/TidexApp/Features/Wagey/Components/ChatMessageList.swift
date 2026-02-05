@@ -9,9 +9,11 @@ struct ChatMessageList: View {
     /// Callback when a suggestion chip is tapped
     var onSuggestionTapped: ((String) -> Void)?
 
-    
     /// Namespace for scroll-to-bottom animation
     @Namespace private var bottomID
+
+    /// Whether the "Copied!" confirmation is showing
+    @State private var showCopiedConfirmation = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -32,6 +34,11 @@ struct ChatMessageList: View {
                         if isStreaming {
                             StreamingMessageBubble(contentBlocks: streamingContentBlocks)
                                 .id("streaming")
+                        }
+
+                        // Copy conversation button (after last assistant message, when not streaming)
+                        if !isStreaming, messages.last?.role == .assistant {
+                            copyConversationButton
                         }
                     }
 
@@ -87,6 +94,7 @@ struct ChatMessageList: View {
                 suggestionChip(String(localized: .wageyEmptyStateSuggestion1))
                 suggestionChip(String(localized: .wageyEmptyStateSuggestion2))
                 suggestionChip(String(localized: .wageyEmptyStateSuggestion3))
+                suggestionChip(String(localized: .wageyEmptyStateSuggestion4))
             }
             .padding(.top, 8)
         }
@@ -107,6 +115,48 @@ struct ChatMessageList: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Copy Conversation
+
+    private var copyConversationButton: some View {
+        Button {
+            Haptics.play(.light)
+            copyConversation()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 13, weight: .medium))
+                Text(showCopiedConfirmation ? .wageyConversationCopied : .wageyCopyConversation)
+                    .font(.system(size: 13, weight: .medium))
+            }
+            .foregroundColor(showCopiedConfirmation ? .tidexSuccess : .tidexTextSecondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.tidexSurfacePrimary)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 4)
+    }
+
+    private func copyConversation() {
+        let text = messages.map { message in
+            let role = message.role == .user ? "You" : "Wagey"
+            return "\(role): \(message.content)"
+        }.joined(separator: "\n\n")
+
+        UIPasteboard.general.string = text
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showCopiedConfirmation = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showCopiedConfirmation = false
+            }
+        }
     }
 
     // MARK: - Scroll Helper

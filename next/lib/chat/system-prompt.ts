@@ -154,6 +154,7 @@ DO NOT:
 1. draft_recurring_shift - validate pattern and check conflicts
    - Use weekdays array for multiple days: [{day:1,anchorDate:"..."}, {day:2,anchorDate:"..."}, ...]
    - anchorDate must: (1) fall on the correct weekday, (2) be in the starting week
+   - Alternating weeks: offset anchorDates by one week so days alternate (e.g., biweekly Thu week 1 + Fri week 2 = one shift per week, alternating day)
 2. If conflicts exist, ask user how to handle them
 3. confirm_recurring_shift with chosen conflict resolution
 
