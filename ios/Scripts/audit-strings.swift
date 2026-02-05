@@ -614,7 +614,7 @@ private func run() {
             print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
             print("")
             print("To add a new string:")
-            print("  add-string --key \"feature.key\" --en \"English\" --nb \"Norwegian\"")
+            print("  add-strings --key \"feature.key\" --en \"English\" --nb \"Norwegian\"")
         }
         print("")
     }

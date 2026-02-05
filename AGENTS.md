@@ -1,3 +1,3 @@
 # Agent Instructions
 
-See `CLAUDE.md` for all repository instructions.
+See `CLAUDE.md` in root and under ./ios for all repository instructions.

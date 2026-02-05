@@ -48,12 +48,13 @@ Use these skills for specialized tasks:
 
 ## iOS Localization Scripts
 
-Located in `ios/Scripts/`. PATH is configured via `/etc/paths.d/tidex` and Launch Agent.
+Located in `ios/Scripts/`. These are on the system PATH (via `/etc/paths.d/tidex`), so **always run them directly as commands** — never use `./`, `swift run`, or full paths.
 
 **Commands:**
 ```bash
-add-string --key "feature.key" --en "English" --nb "Norwegian"
-delete-string --key "feature.key"
+add-strings --key "feature.key" --en "English" --nb "Norwegian"
+delete-strings --key "feature.key"
+search-strings "query"
 audit-strings
 validate-localization
 ```

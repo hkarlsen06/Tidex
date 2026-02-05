@@ -46,7 +46,7 @@ The iOS project has 3 targets inside `ios/`:
 
 **Localization (Required):**
 - Never hardcode user-visible strings
-- Add strings: `./add-string --key "feature.context.description" --en "English text" --nb "Norwegian text"`
+- Add strings: `add-strings --key "feature.context.description" --en "English text" --nb "Norwegian text"`
 - Use generated `LocalizedStringResource` symbols in code (e.g., `.featureContextDescription`)
 
 **Color System:**

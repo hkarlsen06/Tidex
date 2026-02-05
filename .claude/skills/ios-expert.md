@@ -101,9 +101,9 @@ ios/
 
 ## Localization (Required)
 
-All UI strings must be localized. Use the `add-string` script:
+All UI strings must be localized. Use the `add-strings` script:
 ```bash
-./add-string --key "feature.context.description" --en "English text" --nb "Norwegian text"
+add-strings --key "feature.context.description" --en "English text" --nb "Norwegian text"
 ```
 Reference strings via generated `LocalizedStringResource` symbols (e.g., `.featureContextDescription`).
 
