@@ -26,7 +26,7 @@ cd /Users/hjalmarsamuelkristensen-karlsen/Lokalt/Cloned-Repos/tidex/ios && xcode
 
 1. **Add the string to the catalog** with English and Norwegian:
    ```bash
-   ./add-string --key "feature.context.description" --en "English text" --nb "Norwegian text"
+   add-strings --key "feature.context.description" --en "English text" --nb "Norwegian text"
    ```
 
 2. **Use the symbol in code:**

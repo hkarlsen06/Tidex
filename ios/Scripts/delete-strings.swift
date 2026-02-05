@@ -2,7 +2,7 @@
 
 import Foundation
 
-// MARK: - Models (must match add-string.swift exactly to avoid mangling JSON)
+// MARK: - Models (must match add-strings.swift exactly to avoid mangling JSON)
 
 private struct Catalog: Codable {
     var sourceLanguage: String
@@ -37,7 +37,7 @@ private struct CatalogStringUnit: Codable {
 // MARK: - Config
 
 private struct Config {
-    let key: String
+    let keys: [String]
     let catalogPath: String
     let dryRun: Bool
 }
@@ -54,15 +54,16 @@ private enum DeleteStringError: Error, CustomStringConvertible {
         switch self {
         case .missingArguments:
             return """
-            Usage: swift run delete-string --key <key>
+            Usage: delete-strings --key <key> [--key <key2> ...]
 
-            Example:
-              swift run delete-string --key "settings.profile.saveButton"
+            Examples:
+              delete-strings --key "settings.profile.saveButton"
+              delete-strings --key "btn.ok" --key "btn.cancel" --key "btn.retry"
 
             Options:
-              --key      The localization key to delete (required)
-              --catalog  Optional path to xcstrings file (defaults to App catalog)
-              --dry-run  Show what would be deleted without modifying the file
+              --key, -k    The localization key to delete (repeatable for multiple keys)
+              --catalog, -c  Optional path to xcstrings file (defaults to App catalog)
+              --dry-run, -n  Show what would be deleted without modifying the file
             """
         case .fileNotFound(let path):
             return "String catalog not found: \(path)"
@@ -77,7 +78,7 @@ private enum DeleteStringError: Error, CustomStringConvertible {
 // MARK: - Main
 
 private func parseArgs() throws -> Config {
-    var key: String?
+    var keys: [String] = []
     var catalogPath: String?
     var dryRun = false
 
@@ -85,7 +86,9 @@ private func parseArgs() throws -> Config {
     while let arg = iterator.next() {
         switch arg {
         case "--key", "-k":
-            key = iterator.next()
+            if let key = iterator.next() {
+                keys.append(key)
+            }
         case "--catalog", "-c":
             catalogPath = iterator.next()
         case "--dry-run", "-n":
@@ -97,11 +100,11 @@ private func parseArgs() throws -> Config {
         }
     }
 
-    guard let key else {
+    guard !keys.isEmpty else {
         throw DeleteStringError.missingArguments
     }
 
-    // Default catalog path (same as add-string)
+    // Default catalog path (same as add-strings)
     let scriptURL = URL(fileURLWithPath: #filePath)
     let scriptsDir = scriptURL.deletingLastPathComponent()
     let defaultCatalog = scriptsDir
@@ -110,10 +113,26 @@ private func parseArgs() throws -> Config {
         .path
 
     return Config(
-        key: key,
+        keys: keys,
         catalogPath: catalogPath ?? defaultCatalog,
         dryRun: dryRun
     )
+}
+
+private func printEntry(key: String, entry: CatalogEntry) {
+    let locales = entry.localizations?.keys.sorted() ?? []
+    let localeList = locales.isEmpty ? "(no translations)" : locales.joined(separator: ", ")
+    print("  \(key)  [\(localeList)]")
+
+    if let localizations = entry.localizations {
+        for locale in localizations.keys.sorted() {
+            if let value = localizations[locale]?.stringUnit?.value {
+                print("    \(locale): \"\(value)\"")
+            } else if localizations[locale]?.variations != nil {
+                print("    \(locale): (plural/device variations)")
+            }
+        }
+    }
 }
 
 private func run() throws {
@@ -128,49 +147,56 @@ private func run() throws {
     let catalogData = try Data(contentsOf: catalogURL)
     var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
-    // Check if key exists
-    guard let entry = catalog.strings[config.key] else {
-        throw DeleteStringError.keyNotFound(config.key)
+    // Validate all keys exist first
+    var notFound: [String] = []
+    for key in config.keys {
+        if catalog.strings[key] == nil {
+            notFound.append(key)
+        }
+    }
+
+    if !notFound.isEmpty {
+        print("Keys not found in catalog:")
+        for key in notFound {
+            print("  \(key)")
+        }
+        if notFound.count < config.keys.count {
+            print("")
+            print("Aborting — no keys were deleted. Fix the missing keys and try again.")
+        }
+        exit(1)
     }
 
     // Show what will be deleted
-    let locales = entry.localizations?.keys.sorted() ?? []
-    let localeList = locales.isEmpty ? "(no translations)" : locales.joined(separator: ", ")
-    print("Key: \(config.key)")
-    print("Translations: \(localeList)")
-
-    if let localizations = entry.localizations {
-        for locale in localizations.keys.sorted() {
-            if let value = localizations[locale]?.stringUnit?.value {
-                print("  \(locale): \"\(value)\"")
-            } else if localizations[locale]?.variations != nil {
-                print("  \(locale): (plural/device variations)")
-            }
+    for key in config.keys {
+        if let entry = catalog.strings[key] {
+            printEntry(key: key, entry: entry)
         }
     }
 
     if config.dryRun {
         print("")
-        print("[dry-run] Would delete '\(config.key)' from catalog")
+        print("[dry-run] Would delete \(config.keys.count) key(s) from catalog")
         return
     }
 
-    // Remove the key
-    catalog.strings.removeValue(forKey: config.key)
+    // Remove all keys
+    for key in config.keys {
+        catalog.strings.removeValue(forKey: key)
+    }
 
-    // Write back (same approach as add-string to avoid mangling)
+    // Write back (same approach as add-strings to avoid mangling)
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     let outputData = try encoder.encode(catalog)
 
-    // JSONEncoder escapes forward slashes by default, but xcstrings files don't
     var outputString = String(data: outputData, encoding: .utf8)!
     outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
 
     try outputString.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)
 
     print("")
-    print("Deleted '\(config.key)' from string catalog")
+    print("Deleted \(config.keys.count) key(s) from string catalog")
 }
 
 do {
