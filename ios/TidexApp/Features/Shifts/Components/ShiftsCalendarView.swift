@@ -118,13 +118,28 @@ struct ShiftsCalendarView: View {
     // MARK: - Computed Data
 
     /// Earnings by ISO date string (excludes conflicting shifts)
-    private var earningsByDate: [String: Double] {
-        var result: [String: Double] = [:]
+    private var earningsByDate: [String: CalendarEarningsData] {
+        var netByDate: [String: Double] = [:]
+        var grossByDate: [String: Double] = [:]
+        var hasTaxByDate: [String: Bool] = [:]
+
         for shift in shifts {
             // Skip shifts excluded from totals
             guard !excludedFromTotalIds.contains(shift.id) else { continue }
             let net = shift.taxEnabled ? shift.netPay : shift.grossPay
-            result[shift.shiftDate, default: 0] += net
+            netByDate[shift.shiftDate, default: 0] += net
+            grossByDate[shift.shiftDate, default: 0] += shift.grossPay
+            hasTaxByDate[shift.shiftDate, default: false] = hasTaxByDate[shift.shiftDate, default: false] || shift.taxEnabled
+        }
+
+        var result: [String: CalendarEarningsData] = [:]
+        for (date, net) in netByDate {
+            let gross = grossByDate[date] ?? net
+            result[date] = CalendarEarningsData(
+                net: net,
+                gross: gross,
+                hasTaxEnabled: hasTaxByDate[date] ?? false
+            )
         }
         return result
     }
@@ -485,8 +500,8 @@ struct ShiftsCalendarView: View {
 
         let effectiveViewMode = showEarnings ? viewMode : .hours
 
-        if effectiveViewMode == .money, let amount = earningsByDate[dateISO] {
-            return .earnings(amount)
+        if effectiveViewMode == .money, let earnings = earningsByDate[dateISO] {
+            return .earningsBreakdown(earnings)
         } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
             return .hours(hoursData)
         }

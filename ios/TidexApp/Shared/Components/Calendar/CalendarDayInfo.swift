@@ -43,6 +43,16 @@ struct HoursData: Equatable {
     let crossesMidnight: Bool
 }
 
+/// Earnings breakdown for calendar cells
+struct CalendarEarningsData: Equatable {
+    /// Amount after tax (or gross when tax is disabled)
+    let net: Double
+    /// Amount before tax
+    let gross: Double
+    /// Whether tax is enabled for this day
+    let hasTaxEnabled: Bool
+}
+
 // MARK: - Calendar View Mode
 
 /// Mode for displaying data in calendar cells (hours or money)

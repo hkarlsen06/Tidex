@@ -28,5 +28,6 @@
   "css.validate": false,
   "css.customData": [
     ".vscode/css-custom-data.json"
-  ]
+  ],
+  "swift.diagnostics": false
 }
