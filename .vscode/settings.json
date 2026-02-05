@@ -26,5 +26,7 @@
     "*.css": "tailwindcss"
   },
   "css.validate": false,
-  "css.customData": [".vscode/css-custom-data.json"]
+  "css.customData": [
+    ".vscode/css-custom-data.json"
+  ]
 }

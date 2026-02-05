@@ -13,7 +13,7 @@ import {
   createRiverRouter,
   defaultRiverProvider,
 } from "@/lib/river";
-import type { Message, ContentBlock, ImageContent, ToolResultContent } from "@/lib/services/claude";
+import type { Message, ContentBlock, CompactionContent, ImageContent, ToolResultContent } from "@/lib/services/claude";
 import { getSystemPrompt, type SystemPromptContext } from "./system-prompt";
 import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
@@ -57,6 +57,14 @@ export type ChatChunk =
     }
   | {
       type: "wagey_no_access";
+    }
+  | {
+      /**
+       * Optional compaction state for clients that support it.
+       * Older clients ignore unknown chunk types.
+       */
+      type: "wagey_compaction";
+      content: string;
     };
 
 /**
@@ -114,6 +122,11 @@ const chatInputSchema = z.object({
   ),
   userId: z.string().uuid(),
   userName: z.string().optional(),
+  /**
+   * Optional compaction summary to preserve long conversation context across requests.
+   * Backwards compatible: older clients omit this field.
+   */
+  compaction: z.string().optional(),
 });
 
 export type ChatInput = z.infer<typeof chatInputSchema>;
@@ -170,10 +183,23 @@ function extractTextContent(content: ChatInput["messages"][0]["content"]): strin
  * Supports multimodal messages with images
  */
 function convertToClaudeMessages(
-  openAiMessages: ChatInput["messages"]
+  openAiMessages: ChatInput["messages"],
+  compaction?: string
 ): { system?: string; messages: Message[] } {
   let systemPrompt: string | undefined;
   const claudeMessages: Message[] = [];
+
+  if (compaction) {
+    claudeMessages.push({
+      role: "assistant",
+      content: [
+        {
+          type: "compaction",
+          content: compaction,
+        } satisfies CompactionContent,
+      ],
+    });
+  }
 
   for (const msg of openAiMessages) {
     // Extract system prompt separately (Claude doesn't include it in messages)
@@ -304,7 +330,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .input(chatInputSchema)
   .provider(defaultRiverProvider())
   .runner(async ({ input, stream, abortSignal, adapterRequest }) => {
-    const { messages, userId, userName } = input;
+    const { messages, userId, userName, compaction } = input;
 
     // Verify authentication first (supports both Bearer token for iOS and cookies for web)
     const authResult = await verifyAuthentication(adapterRequest, userId);
@@ -357,7 +383,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     };
 
     // Convert messages and add system prompt if not present
-    let { system, messages: claudeMessages } = convertToClaudeMessages(messages);
+    let { system, messages: claudeMessages } = convertToClaudeMessages(messages, compaction);
 
     // Use our system prompt if none provided
     if (!system) {
@@ -372,6 +398,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     let conversationMessages = [...claudeMessages];
     let iterationCount = 0;
     const MAX_ITERATIONS = 10; // Safety limit to prevent infinite loops
+    let latestCompactionContent: string | undefined;
 
     while (iterationCount < MAX_ITERATIONS) {
       iterationCount++;
@@ -384,13 +411,14 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           messages: conversationMessages,
           tools,
           temperature: 0.7,
-          maxTokens: 4096,
+          maxTokens: 2048,
         });
       }).pipe(Effect.provide(ClaudeLive), Effect.scoped);
 
       const aiStream = await Effect.runPromise(getAiStream);
 
       let currentTextContent = "";
+      let compactionBlock: CompactionContent | null = null;
       const toolUses: Array<{
         id: string;
         name: string;
@@ -432,6 +460,10 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
               toolArguments: JSON.stringify(chunk.input),
             });
           }
+        } else if (chunk.type === "compaction") {
+          // Preserve compaction block for server continuity and optional client state sync
+          compactionBlock = { type: "compaction", content: chunk.content };
+          latestCompactionContent = chunk.content;
         }
       }
 
@@ -442,6 +474,10 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
 
       // Build assistant message content blocks
       const assistantContent: ContentBlock[] = [];
+      // Compaction block must come first - API drops everything before it
+      if (compactionBlock) {
+        assistantContent.push(compactionBlock);
+      }
       if (currentTextContent) {
         assistantContent.push({
           type: "text",
@@ -563,6 +599,14 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       resetDays: getDaysUntilReset(),
       exceeded: limitExceeded,
     });
+
+    // Send compaction state for clients that support long-context continuity.
+    if (latestCompactionContent) {
+      await stream.appendChunk({
+        type: "wagey_compaction",
+        content: latestCompactionContent,
+      });
+    }
 
     // Send done chunk
     await stream.appendChunk({ type: "done" });

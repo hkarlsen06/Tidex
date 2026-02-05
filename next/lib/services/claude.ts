@@ -47,7 +47,12 @@ export type ToolResultContent = {
   is_error?: boolean;
 };
 
-export type ContentBlock = TextContent | ImageContent | ToolUseContent | ToolResultContent;
+export type CompactionContent = {
+  type: "compaction";
+  content: string;
+};
+
+export type ContentBlock = TextContent | ImageContent | ToolUseContent | ToolResultContent | CompactionContent;
 
 /**
  * Message type (Claude format)
@@ -92,6 +97,10 @@ export type StreamChunk =
       input: Record<string, unknown>;
     }
   | {
+      type: "compaction";
+      content: string;
+    }
+  | {
       type: "done";
       stopReason: string;
     };
@@ -123,6 +132,8 @@ export class ClaudeService extends Context.Tag("ClaudeService")<
  * Claude API endpoint
  */
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const COMPACTION_BETA = "compact-2026-01-12";
+const COMPACTION_SUPPORTED_MODELS = new Set(["claude-opus-4-6"]);
 
 /**
  * Parse SSE event from Claude streaming response
@@ -168,20 +179,18 @@ export const ClaudeServiceLive = Layer.effect(
           temperature = 0.7,
           maxTokens = 4096,
         } = options;
+        const compactionEnabled = COMPACTION_SUPPORTED_MODELS.has(defaultModel);
 
-        // Build headers - include beta header for input_examples
+        // Build headers
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
         };
 
-        // Add beta header if using tools with input_examples
-        // See: https://www.anthropic.com/engineering/advanced-tool-use
-        // NOTE: Temporarily disabled - may cause 500 errors with claude-opus-4-5
-        // if (tools?.some((t) => t.input_examples?.length)) {
-        //   headers["anthropic-beta"] = "advanced-tool-use-2025-11-20";
-        // }
+        if (compactionEnabled) {
+          headers["anthropic-beta"] = COMPACTION_BETA;
+        }
 
         // Build request body
         const body: Record<string, unknown> = {
@@ -191,6 +200,19 @@ export const ClaudeServiceLive = Layer.effect(
           stream: true,
           messages,
         };
+
+        if (compactionEnabled) {
+          body.context_management = {
+            edits: [
+              {
+                type: "compact_20260112",
+                pause_after_compaction: false,
+                instructions:
+                  "Summarize this conversation between a user and Wagey, a shift/wage assistant. Preserve: shift IDs and dates mentioned, tool call results and their outcomes, user preferences and settings discussed, any pending actions or unresolved requests, and the user's name if known. Keep it concise. Wrap in <summary></summary>.",
+              },
+            ],
+          };
+        }
 
         if (system) {
           body.system = system;
@@ -266,6 +288,7 @@ export const ClaudeServiceLive = Layer.effect(
               name: string;
               inputJson: string;
             } | null = null;
+            let currentCompaction: { content: string } | null = null;
 
             try {
               while (true) {
@@ -301,6 +324,8 @@ export const ClaudeServiceLive = Layer.effect(
                           name: block.name as string,
                           inputJson: "",
                         };
+                      } else if (block.type === "compaction") {
+                        currentCompaction = { content: "" };
                       }
                       break;
                     }
@@ -320,6 +345,11 @@ export const ClaudeServiceLive = Layer.effect(
                         currentToolUse
                       ) {
                         currentToolUse.inputJson += delta.partial_json as string;
+                      }
+
+                      // Compaction delta (single delta with full content)
+                      if (delta.type === "compaction_delta" && currentCompaction) {
+                        currentCompaction.content = delta.content as string;
                       }
                       break;
                     }
@@ -345,6 +375,15 @@ export const ClaudeServiceLive = Layer.effect(
                           };
                         }
                         currentToolUse = null;
+                      }
+
+                      // Emit completed compaction block
+                      if (currentCompaction) {
+                        yield {
+                          type: "compaction",
+                          content: currentCompaction.content,
+                        };
+                        currentCompaction = null;
                       }
                       break;
                     }
