@@ -259,6 +259,30 @@ struct MainTabView: View {
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: monthContext.hasConflictsInMonth)
             }
 
+            // Month picker
+            AnimatedMonthHeader(
+                monthName: monthContext.displayMonthName,
+                year: monthContext.displayYear,
+                phase: transitionPhase,
+                config: .default,
+                onPrevious: {
+                    AppearanceTracker.shared.reset()
+                    monthContext.goToPreviousMonth()
+                },
+                onNext: {
+                    AppearanceTracker.shared.reset()
+                    monthContext.goToNextMonth()
+                },
+                onNavigateToMonth: { year, month in
+                    AppearanceTracker.shared.reset()
+                    monthContext.navigateTo(year: year, month: month)
+                },
+                isLoading: false
+            )
+            .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
+            .frame(height: MonthPickerLayout.height)
+            .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius), interactive: true)
+
             // Add button - only on Add tab
             if selectedTab == .add {
                 Button {
@@ -289,30 +313,6 @@ struct MainTabView: View {
                 .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
                 .accessibilityLabel(Text(.tabsAdd))
             }
-
-            // Month picker
-            AnimatedMonthHeader(
-                monthName: monthContext.displayMonthName,
-                year: monthContext.displayYear,
-                phase: transitionPhase,
-                config: .default,
-                onPrevious: {
-                    AppearanceTracker.shared.reset()
-                    monthContext.goToPreviousMonth()
-                },
-                onNext: {
-                    AppearanceTracker.shared.reset()
-                    monthContext.goToNextMonth()
-                },
-                onNavigateToMonth: { year, month in
-                    AppearanceTracker.shared.reset()
-                    monthContext.navigateTo(year: year, month: month)
-                },
-                isLoading: false
-            )
-            .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
-            .frame(height: MonthPickerLayout.height)
-            .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius), interactive: true)
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity)  // Fill screen width, then constrain to tabContent max

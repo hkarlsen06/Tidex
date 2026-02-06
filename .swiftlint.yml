@@ -1,0 +1,6 @@
+included:
+  - ios
+
+excluded:
+  - ios/Scripts/.build
+  - next
