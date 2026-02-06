@@ -1,13 +1,11 @@
 import SwiftUI
 
 /// Shows today's date when no shifts exist for today
-/// Visually matches ShiftRowCard styling but shows placeholder dashes for earnings
+/// Visually matches ShiftRowCard styling but shows a placeholder skeleton bar for earnings
 /// Tapping navigates to add shift with today's date pre-selected
 struct TodayPlaceholderCard: View {
     /// Callback when the card is tapped
     let onTap: () -> Void
-
-        @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
@@ -30,16 +28,6 @@ struct TodayPlaceholderCard: View {
         return (dayName, dayNumber, monthName)
     }
 
-    /// Placeholder earnings text with currency symbol
-    private var placeholderEarnings: String {
-        let currencyOption = CurrencyConfig.get(currency)
-        if currencyOption.display == .prefix {
-            return "\(currencyOption.value)——"
-        } else {
-            return "—— \(currencyOption.value)"
-        }
-    }
-
     // MARK: - Body
 
     var body: some View {
@@ -52,7 +40,7 @@ struct TodayPlaceholderCard: View {
 
     @ViewBuilder
     private var cardContent: some View {
-        HStack(alignment: .center) {
+        ShiftCardContentLayout {
             // Date (left side)
             HStack(spacing: 4) {
                 Text(dateParts.dayName)
@@ -65,14 +53,15 @@ struct TodayPlaceholderCard: View {
                     .foregroundColor(.tidexTextMuted)
             }
             .fixedSize(horizontal: true, vertical: false)
-
-            Spacer()
-
-            // Placeholder earnings (right side)
-            Text(placeholderEarnings)
-                .font(.system(size: 22, weight: .semibold))
-                .tracking(-0.5)
-                .foregroundColor(.tidexTextMuted)
+        } leadingBottom: {
+            EmptyView()
+        } trailingTop: {
+            // Placeholder earnings bar (right side)
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.tidexTextMuted.opacity(0.3))
+                .frame(width: 80, height: 20)
+        } trailingBottom: {
+            EmptyView()
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)

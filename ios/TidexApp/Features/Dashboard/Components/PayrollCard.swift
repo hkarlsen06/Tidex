@@ -44,88 +44,78 @@ struct PayrollCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Row 1: Date (left) and amount (right) - center aligned
-            HStack(alignment: .center) {
-                // Date display
-                if isPayrollToday {
-                    HStack(spacing: 8) {
-                        Text(.dashboardToday)
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(.tidexTextPrimary)
-                        Image(systemName: "party.popper.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.tidexBlue)
-                    }
-                } else {
-                    // Separate day number for animation
-                    HStack(spacing: 0) {
-                        Text(payrollDay)
-                            .contentTransition(.numericText())
-                        Text(payrollDaySuffix)
-                        Text(" ")
-                        Text(payrollMonth)
-                    }
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.tidexTextPrimary)
-                    .animation(.spring(duration: 0.8, bounce: 0), value: payrollDay)
-                }
-
-                Spacer()
-
-                // Right side: amount
-                if hasPayout {
-                    let primaryAmount = taxEnabled ? (net ?? gross) : gross
-                    CurrencyCountUpText(
-                        amount: primaryAmount,
-                        duration: 0.8,
-                        animateOnAppear: !prewarm,
-                        animateChanges: true
-                    )
-                    .font(.system(size: 22, weight: .semibold))
-                    .tracking(-0.5)
-                    .foregroundColor(.tidexTextPrimary)
-                } else {
-                    // Skeleton for amount
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.tidexTextMuted.opacity(0.3))
-                        .frame(width: 100, height: 20)
-                }
-            }
-
-            // Row 2: Label (left) and breakdown (right) - center aligned
-            HStack(alignment: .center) {
-                // Label with calendar icon
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.tidexTextMuted)
-                    Text(label)
-                        .font(.system(size: 14, weight: .regular))
+        ShiftCardContentLayout {
+            // Row 1: Date display
+            if isPayrollToday {
+                HStack(spacing: 8) {
+                    Text(.dashboardToday)
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundColor(.tidexTextPrimary)
+                    Image(systemName: "party.popper.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.tidexBlue)
                 }
-
-                Spacer()
-
-                // Breakdown (gross - tax) when tax enabled
-                if hasPayout && showBreakdown {
-                    HStack(spacing: 4) {
-                        Text(formatPlainAmount(gross))
-                            .contentTransition(.numericText(value: gross))
-                        Text("−")
-                        Text(formatPlainAmount(tax ?? 0))
-                            .contentTransition(.numericText(value: tax ?? 0))
-                    }
+            } else {
+                // Separate day number for animation
+                HStack(spacing: 0) {
+                    Text(payrollDay)
+                        .contentTransition(.numericText())
+                    Text(payrollDaySuffix)
+                    Text(" ")
+                    Text(payrollMonth)
+                }
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.tidexTextPrimary)
+                .animation(.spring(duration: 0.8, bounce: 0), value: payrollDay)
+            }
+        } leadingBottom: {
+            // Row 2: Label with calendar icon
+            HStack(spacing: 4) {
+                Image(systemName: "calendar")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.tidexTextMuted)
-                    .animation(.spring(duration: 0.8, bounce: 0), value: gross)
-                    .animation(.spring(duration: 0.8, bounce: 0), value: tax)
-                } else if !hasPayout {
-                    // Skeleton for breakdown
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.tidexTextMuted.opacity(0.2))
-                        .frame(width: 70, height: 12)
+                Text(label)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.tidexTextPrimary)
+            }
+        } trailingTop: {
+            // Right side: amount
+            if hasPayout {
+                let primaryAmount = taxEnabled ? (net ?? gross) : gross
+                CurrencyCountUpText(
+                    amount: primaryAmount,
+                    duration: 0.8,
+                    animateOnAppear: !prewarm,
+                    animateChanges: true
+                )
+                .font(.system(size: 22, weight: .semibold))
+                .tracking(-0.5)
+                .foregroundColor(.tidexTextPrimary)
+            } else {
+                // Skeleton for amount
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.tidexTextMuted.opacity(0.3))
+                    .frame(width: 100, height: 20)
+            }
+        } trailingBottom: {
+            // Breakdown (gross - tax) when tax enabled
+            if hasPayout && showBreakdown {
+                HStack(spacing: 4) {
+                    Text(formatPlainAmount(gross))
+                        .contentTransition(.numericText(value: gross))
+                    Text("−")
+                    Text(formatPlainAmount(tax ?? 0))
+                        .contentTransition(.numericText(value: tax ?? 0))
                 }
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.tidexTextMuted)
+                .animation(.spring(duration: 0.8, bounce: 0), value: gross)
+                .animation(.spring(duration: 0.8, bounce: 0), value: tax)
+            } else if !hasPayout {
+                // Skeleton for breakdown
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.tidexTextMuted.opacity(0.2))
+                    .frame(width: 70, height: 12)
             }
         }
         .padding(.horizontal, 20)

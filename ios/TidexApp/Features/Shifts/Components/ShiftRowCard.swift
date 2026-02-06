@@ -68,66 +68,56 @@ struct ShiftRowCard: View {
     /// The card's visual content (extracted for cleaner code)
     @ViewBuilder
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Row 1: Date (left) and earnings amount (right) - center aligned
-            HStack(alignment: .center) {
-                // Day name and date
-                HStack(spacing: 4) {
-                    Text(dateParts.dayName)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.tidexTextPrimary)
-                    Text("·")
-                        .foregroundColor(.tidexTextMuted)
-                    Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
-                }
-                .fixedSize(horizontal: true, vertical: false)
-
-                Spacer()
-
-                // Net/gross amount
-                let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-                Text(formatCurrency(displayAmount))
-                    .font(.system(size: 22, weight: .semibold))
-                    .tracking(-0.5)
-                    .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
-                    .strikethrough(excludedFromTotal, color: .tidexTextMuted)
-            }
-
-            // Row 2: Time range (left) and breakdown (right) - center aligned
-            HStack(alignment: .center) {
-                // Time range and hours
-                HStack(spacing: 8) {
-                    if isRTL {
-                        hoursLabel
-                        arrowLabel
-                        timeRangeLabel
-                    } else {
-                        timeRangeLabel
-                        arrowLabel
-                        hoursLabel
-                    }
-                }
-                .environment(\.layoutDirection, .leftToRight)
-
-                Spacer()
-
-                // When excluded from total, show excluded label instead of breakdown
-                if excludedFromTotal {
-                    Text(.shiftsExcludedFromTotal)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.tidexWarning)
-                } else if showBreakdown {
-                    // Breakdown (gross - tax) when tax enabled
-                    HStack(spacing: 4) {
-                        Text(formatPlainAmount(shift.grossPay))
-                        Text("−")
-                        Text(formatPlainAmount(shift.taxAmount))
-                    }
-                    .font(.system(size: 14, weight: .regular))
+        ShiftCardContentLayout {
+            // Row 1: Day name and date
+            HStack(spacing: 4) {
+                Text(dateParts.dayName)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.tidexTextPrimary)
+                Text("·")
                     .foregroundColor(.tidexTextMuted)
+                Text("\(dateParts.dayNumber) \(dateParts.monthName)")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.tidexTextMuted)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        } leadingBottom: {
+            // Row 2: Time range and hours
+            HStack(spacing: 8) {
+                if isRTL {
+                    hoursLabel
+                    arrowLabel
+                    timeRangeLabel
+                } else {
+                    timeRangeLabel
+                    arrowLabel
+                    hoursLabel
                 }
+            }
+            .environment(\.layoutDirection, .leftToRight)
+        } trailingTop: {
+            // Net/gross amount
+            let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
+            Text(formatCurrency(displayAmount))
+                .font(.system(size: 22, weight: .semibold))
+                .tracking(-0.5)
+                .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
+                .strikethrough(excludedFromTotal, color: .tidexTextMuted)
+        } trailingBottom: {
+            // When excluded from total, show excluded label instead of breakdown
+            if excludedFromTotal {
+                Text(.shiftsExcludedFromTotal)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.tidexWarning)
+            } else if showBreakdown {
+                // Breakdown (gross - tax) when tax enabled
+                HStack(spacing: 4) {
+                    Text(formatPlainAmount(shift.grossPay))
+                    Text("−")
+                    Text(formatPlainAmount(shift.taxAmount))
+                }
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.tidexTextMuted)
             }
         }
         .padding(.horizontal, 20)
