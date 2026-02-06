@@ -113,7 +113,13 @@ export const verifySession = cache(async () => {
 export const getSession = cache(async () => {
   // Call cookies() early to satisfy Next.js 16 prerendering requirements
   // This must happen before Effect Cache uses Date.now()
-  await cookies();
+  try {
+    await cookies();
+  } catch {
+    // During prerender without a live request context, cookies() can reject.
+    // Treat this as unauthenticated for API consumers.
+    return null;
+  }
 
   // Try Bearer token auth first (iOS native app)
   const bearerUser = await tryBearerAuth();

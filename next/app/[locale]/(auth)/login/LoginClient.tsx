@@ -6,8 +6,6 @@ import dynamic from 'next/dynamic';
 import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useTranslations } from '@/lib/i18n/client';
-import { isNativePlatform } from '@/lib/capacitor/platform';
-import { hideSplash } from '@/lib/capacitor/native-splash';
 import { turnstileLanguages, locales, type Locale } from '@/lib/i18n/config';
 
 // Animation variants for entrance animation
@@ -32,7 +30,7 @@ const reducedMotionVariants = {
 
 import { supabase } from '@/lib/supabase/browser';
 import { translateError } from '@/lib/errors/translate';
-import { performOAuthSignIn } from '@/lib/capacitor/oauth';
+import { performOAuthSignIn } from '@/lib/auth/oauth';
 import {
   detectInputType,
   normalizePhoneToE164,
@@ -106,38 +104,8 @@ export default function LoginClient({
   };
 
   // Reset Turnstile widget on mount to prevent stale token issues
-  // Also hide splash screen now that login form is ready
   useEffect(() => {
     turnstileRef.current?.reset();
-
-    // Hide splash screen - login form is ready
-    if (isNativePlatform()) {
-      hideSplash(200);
-    }
-  }, []);
-
-  // Listen for Capacitor Browser close events to reset OAuth state
-  // This handles when user cancels Apple/Google sign-in (e.g., fails Face ID)
-  useEffect(() => {
-    if (!isNativePlatform()) return;
-
-    let cleanup: (() => void) | undefined;
-
-    const setupListener = async () => {
-      const { Browser } = await import('@capacitor/browser');
-      const handle = await Browser.addListener('browserFinished', () => {
-        // Browser was closed - reset OAuth state so user can try again
-        setOauthProvider(null);
-        setMessage(null);
-      });
-      cleanup = () => handle.remove();
-    };
-
-    setupListener();
-
-    return () => {
-      cleanup?.();
-    };
   }, []);
 
   // Save the current page locale to user metadata if not already set.
@@ -231,19 +199,7 @@ export default function LoginClient({
       return;
     }
 
-    // Native Google sign-in: session is already created, redirect immediately
-    // Web/browser flow: waiting for OAuth callback redirect
-    if (!result.authUrl) {
-      // Native flow completed - redirect to destination
-      setMessage({
-        type: 'success',
-        text: t.pages.auth.login.loggingIn,
-      });
-      await checkMfaAndRedirect(redirectPath);
-      return;
-    }
-
-    // Browser flow - waiting for callback
+    // Redirect flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForGoogle,
@@ -509,19 +465,7 @@ export default function LoginClient({
       return;
     }
 
-    // Native Apple sign-in: session is already created, redirect immediately
-    // Web/browser flow: waiting for OAuth callback redirect
-    if (!result.authUrl) {
-      // Native flow completed - redirect to destination
-      setMessage({
-        type: 'success',
-        text: t.pages.auth.login.loggingIn,
-      });
-      await checkMfaAndRedirect(redirectPath);
-      return;
-    }
-
-    // Browser flow - waiting for callback
+    // Redirect flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForApple,

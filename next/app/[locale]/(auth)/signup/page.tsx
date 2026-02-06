@@ -7,8 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "@/lib/i18n/client";
-import { isNativePlatform } from "@/lib/capacitor/platform";
-import { hideSplash } from "@/lib/capacitor/native-splash";
 import { turnstileLanguages, type Locale } from "@/lib/i18n/config";
 
 // Animation variants for entrance animation
@@ -32,7 +30,7 @@ const reducedMotionVariants = {
 };
 
 import { supabase } from "@/lib/supabase/browser";
-import { performOAuthSignIn } from "@/lib/capacitor/oauth";
+import { performOAuthSignIn } from "@/lib/auth/oauth";
 import {
   detectInputType,
   normalizePhoneToE164,
@@ -114,38 +112,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   };
 
   // Reset Turnstile widget on mount to prevent stale token issues
-  // Also hide splash screen now that signup form is ready
   useEffect(() => {
     turnstileRef.current?.reset();
-
-    // Hide splash screen - signup form is ready
-    if (isNativePlatform()) {
-      hideSplash(200);
-    }
-  }, []);
-
-  // Listen for Capacitor Browser close events to reset OAuth state
-  // This handles when user cancels Apple/Google sign-in (e.g., fails Face ID)
-  useEffect(() => {
-    if (!isNativePlatform()) return;
-
-    let cleanup: (() => void) | undefined;
-
-    const setupListener = async () => {
-      const { Browser } = await import("@capacitor/browser");
-      const handle = await Browser.addListener("browserFinished", () => {
-        // Browser was closed - reset OAuth state so user can try again
-        setOauthProvider(null);
-        setMessage(null);
-      });
-      cleanup = () => handle.remove();
-    };
-
-    setupListener();
-
-    return () => {
-      cleanup?.();
-    };
   }, []);
 
   const performGoogleSignIn = async () => {
@@ -174,27 +142,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    // Native Google sign-in: session is already created, redirect immediately
-    // Web/browser flow: waiting for OAuth callback redirect
-    if (!result.authUrl) {
-      // Native flow completed - set terms acceptance before redirecting
-      setMessage({
-        type: 'success',
-        text: t.pages.auth.login.loggingIn,
-      });
-      // User agreed to terms on signup page - save to metadata
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { terms_accepted_at: new Date().toISOString() },
-      });
-      if (updateError) {
-        console.error('Failed to update terms acceptance:', updateError);
-        // Continue anyway - the accept-terms page will catch this later
-      }
-      router.push(`/${locale}/onboarding`);
-      return;
-    }
-
-    // Browser flow - waiting for callback
+    // Redirect flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForGoogle,
@@ -237,27 +185,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    // Native Apple sign-in: session is already created, redirect immediately
-    // Web/browser flow: waiting for OAuth callback redirect
-    if (!result.authUrl) {
-      // Native flow completed - set terms acceptance before redirecting
-      setMessage({
-        type: 'success',
-        text: t.pages.auth.login.loggingIn,
-      });
-      // User agreed to terms on signup page - save to metadata
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { terms_accepted_at: new Date().toISOString() },
-      });
-      if (updateError) {
-        console.error('Failed to update terms acceptance:', updateError);
-        // Continue anyway - the accept-terms page will catch this later
-      }
-      router.push(`/${locale}/onboarding`);
-      return;
-    }
-
-    // Browser flow - waiting for callback
+    // Redirect flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForApple,

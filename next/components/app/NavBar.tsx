@@ -17,7 +17,6 @@ import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import { useAddShiftFormSafe } from "@/lib/contexts/AddShiftFormContext";
 import { useSharers } from "./SharersProvider";
 import { clearSharingViewState } from "@/lib/hooks/useSharingViewState";
-import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -85,7 +84,6 @@ export function NavBar() {
   const { scrollDirection } = useScrollContext();
   const addShiftForm = useAddShiftFormSafe();
   const sharers = useSharers();
-  const isNativeIOS = useHasNativeTabBar();
 
   // Sort sharers: prioritize self-picked profile pictures, then OAuth avatars, then no avatar
   const sortedSharers = [...sharers].sort((a, b) => {
@@ -128,11 +126,6 @@ export function NavBar() {
   };
 
   if (isOnboardingPath(pathname) || isOnboardingPath(pendingPath)) {
-    return null;
-  }
-
-  // Hide web NavBar on native iOS (native UITabBar handles navigation)
-  if (isNativeIOS) {
     return null;
   }
 

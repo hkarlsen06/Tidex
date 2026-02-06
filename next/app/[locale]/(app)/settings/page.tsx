@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
@@ -12,7 +12,6 @@ import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { defaultLocale } from '@/lib/i18n/config';
 import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
-import { isNativePlatform } from '@/lib/capacitor/platform';
 import { supabase } from '@/lib/supabase/browser';
 
 interface SettingsItem {
@@ -20,7 +19,6 @@ interface SettingsItem {
   label: string;
   description: string;
   icon: typeof User;
-  nativeOnly?: boolean;
   adminOnly?: boolean;
 }
 
@@ -50,7 +48,6 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     label: t.pages.settings.menu.notifications.label,
     description: t.pages.settings.menu.notifications.description,
     icon: Bell,
-    nativeOnly: true,
   },
   {
     href: '/settings/display',
@@ -100,17 +97,6 @@ export default function SettingsPage() {
   const { t } = useTranslations();
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check if we're on a native platform (iOS/Android) for showing notifications menu
-  // useSyncExternalStore ensures proper SSR hydration without setState-in-effect
-  const isNative = useSyncExternalStore(
-    // Subscribe is a no-op since platform doesn't change at runtime
-    () => () => { },
-    // Client snapshot: check platform
-    () => isNativePlatform(),
-    // Server snapshot: always false (no notifications menu in SSR)
-    () => false
-  );
-
   // Check admin status from JWT (cosmetic only - server enforces)
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -119,9 +105,7 @@ export default function SettingsPage() {
   }, []);
 
   const allItems = getSettingsItems(t);
-  const settingsItems = allItems.filter(item =>
-    (!item.nativeOnly || isNative) && (!item.adminOnly || isAdmin)
-  );
+  const settingsItems = allItems.filter(item => !item.adminOnly || isAdmin);
 
   // Extract locale from current pathname
   const localeMatch = pathname.match(/^\/(en|no|de)/);

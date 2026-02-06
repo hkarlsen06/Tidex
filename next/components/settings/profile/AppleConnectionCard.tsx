@@ -7,9 +7,8 @@ import { Button } from '@/components/app/Button';
 import { useRouter } from 'next/navigation';
 import { disconnectAppleAccount } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useTranslations } from '@/lib/i18n/client';
-import { performIdentityLink } from '@/lib/capacitor/oauth';
+import { performIdentityLink } from '@/lib/auth/oauth';
 import { supabase } from '@/lib/supabase/browser';
-import { isNativePlatform } from '@/lib/capacitor/platform';
 
 interface AppleConnectionCardProps {
   hasAppleConnected: boolean;
@@ -27,8 +26,6 @@ export function AppleConnectionCard({ hasAppleConnected, canDisconnectApple }: A
     setError(null);
 
     try {
-      // Use performIdentityLink which handles both native (Capacitor Browser overlay)
-      // and web (standard redirect) platforms correctly
       const result = await performIdentityLink(supabase, 'apple', {
         redirectPath: window.location.pathname,
       });
@@ -37,9 +34,7 @@ export function AppleConnectionCard({ hasAppleConnected, canDisconnectApple }: A
         throw result.error || new Error('Failed to initiate Apple linking');
       }
 
-      // On web (non-native), we need to navigate to the OAuth URL
-      // On native, performIdentityLink already opened the Capacitor Browser
-      if (!isNativePlatform() && result.authUrl) {
+      if (result.authUrl) {
         window.location.href = result.authUrl;
       }
     } catch (err) {

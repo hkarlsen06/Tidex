@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardHeader } from "@/components/app/Card";
-import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 import { cn } from "@/lib/cn";
 
 /**
@@ -150,24 +149,17 @@ function WeekGroupSkeleton({ shiftCount }: { shiftCount: number }) {
  * Matches the actual ShiftsView layout with ScrollablePageWrapper
  */
 export function ShiftsSkeleton() {
-  const hasNativeTabBar = useHasNativeTabBar();
-
   return (
     <div className={cn(
       "h-full overflow-y-auto md:pb-8",
-      hasNativeTabBar
-        ? "pb-[env(safe-area-inset-bottom)]"
-        : "pb-[calc(5rem+env(safe-area-inset-bottom))]"
+      "pb-[calc(5rem+env(safe-area-inset-bottom))]"
     )}>
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side */}
       <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
         {/* Calendar Section */}
-        {/* Native iOS: no web navbar (5rem), only safe areas. Web: subtract both header (3.5rem) and navbar (5rem) */}
         <div className={cn(
           "flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0",
-          hasNativeTabBar
-            ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
-            : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+          "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
         )}>
           <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
             <CalendarSkeleton />

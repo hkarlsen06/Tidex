@@ -122,26 +122,8 @@ export function DangerZone({ activeSubscription }: DangerZoneProps) {
   };
 
   const handleManageSubscription = async () => {
-    // Helper to open URL - tries Capacitor Browser first (iOS in-app browser), falls back to new tab (web)
     const openUrl = async (url: string) => {
-      try {
-        const { Browser } = await import('@capacitor/browser');
-        const { Capacitor } = await import('@capacitor/core');
-        if (Capacitor.isNativePlatform()) {
-          // Use presentationStyle to force in-app browser overlay on iOS
-          await Browser.open({
-            url,
-            presentationStyle: 'popover',
-            toolbarColor: '#000000',
-          });
-          return true;
-        }
-      } catch (error) {
-        console.error('Browser.open failed:', error);
-        // Not on native platform or Browser plugin not available
-      }
-      // Fallback: open in new tab for web
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
       return true;
     };
 

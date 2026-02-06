@@ -11,13 +11,11 @@ import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings, WageSnapshot, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { usePayrollCountdown } from "@/lib/hooks/usePayrollCountdown";
-import { useLiveActivity } from "@/lib/hooks/useLiveActivity";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
-import { useCurrency } from "@/components/providers/CurrencyProvider";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
 import { useSwipe } from "@/lib/hooks/useSwipe";
@@ -194,7 +192,6 @@ function isFutureMonth(date: Date): boolean {
 export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, cacheKey, preloadedMonths }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
-  const { symbol: currencySymbol } = useCurrency();
   const router = useRouter();
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction, isHydrated } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -255,16 +252,6 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
       return override ? { ...shift, ...override } : shift;
     });
   }, [initialShifts, additionalShifts, deletedShiftIds, shiftOverrides]);
-
-  // Live Activity management for ongoing shifts (iOS only)
-  // Automatically starts/ends activity based on shift state
-  // Each shift has its own tax_enabled/tax_percentage from its applicable snapshot
-  useLiveActivity({
-    shifts,
-    locale,
-    currencySymbol,
-    enabled: true,
-  });
 
   // Reset optimistic updates when new data arrives from server (after router.refresh())
   // Skip if same reference (cacheComponents reveal, not actual data change)

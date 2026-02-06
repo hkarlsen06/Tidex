@@ -1,24 +1,10 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
-import { isNativePlatform } from '@/lib/capacitor/platform';
 import { useTranslations } from '@/lib/i18n/client';
 
-/**
- * Opens a URL in the appropriate browser based on platform.
- * - Native: Opens in Capacitor Browser overlay (preserves app state)
- * - Web: Opens in new tab
- */
-async function openExternalUrl(url: string) {
-  if (isNativePlatform()) {
-    const { Browser } = await import('@capacitor/browser');
-    await Browser.open({
-      url,
-      presentationStyle: 'popover',
-    });
-  } else {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
+function openExternalUrl(url: string) {
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 interface LegalLinksProps {

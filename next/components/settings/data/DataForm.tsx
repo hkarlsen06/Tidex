@@ -10,7 +10,7 @@ import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Locale } from '@/lib/i18n/config';
 import { getDateFormatter } from '@/lib/i18n/locale';
-import { shareDocument, shareCsvDocument } from '@/lib/capacitor/document-share';
+import { shareDocument, shareCsvDocument } from '@/lib/utils/document-download';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 

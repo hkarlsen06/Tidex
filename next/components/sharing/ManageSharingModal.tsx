@@ -42,7 +42,6 @@ import {
 import { useTranslations } from "@/lib/i18n/client";
 import type { Friend } from "@/data-access/sharing";
 import { MuteSharerToggle } from "./MuteSharerToggle";
-import { isNativePlatform } from "@/lib/capacitor/platform";
 
 type ManageSharingModalProps = {
   isOpen: boolean;
@@ -172,9 +171,6 @@ export function ManageSharingModal({
   const [isPending, startTransition] = useTransition();
   const [newRecipientShowEarnings, setNewRecipientShowEarnings] =
     useState(false);
-  // Initialize isNative directly - isNativePlatform() is synchronous and returns false on server
-  // This is safe because the function checks window/navigator which return false during SSR
-  const [isNative] = useState(() => isNativePlatform());
 
   // Optimistic state for friends
   const [optimisticFriends, setOptimisticFriends] = useOptimistic(
@@ -490,18 +486,16 @@ export function ManageSharingModal({
                             <div className="flex items-center gap-1 shrink-0">
                               {sharesWithMe && (
                                 <>
-                                  {isNative && (
-                                    <MuteSharerToggle
-                                      sharerId={friend.id}
-                                      isMuted={sharesWithMe.notificationFrequency === "muted"}
-                                      disabled={isActionPending}
-                                      translations={{
-                                        mute: "Demp varsler",
-                                        unmute: "Skru på varsler",
-                                      }}
-                                      onError={(err) => setError(err)}
-                                    />
-                                  )}
+                                  <MuteSharerToggle
+                                    sharerId={friend.id}
+                                    isMuted={sharesWithMe.notificationFrequency === "muted"}
+                                    disabled={isActionPending}
+                                    translations={{
+                                      mute: "Demp varsler",
+                                      unmute: "Skru på varsler",
+                                    }}
+                                    onError={(err) => setError(err)}
+                                  />
                                   <button
                                     type="button"
                                     onClick={() =>
@@ -678,18 +672,16 @@ export function ManageSharingModal({
                             <div className="flex items-center gap-1 shrink-0">
                               {sharesWithMe && (
                                 <>
-                                  {isNative && (
-                                    <MuteSharerToggle
-                                      sharerId={friend.id}
-                                      isMuted={sharesWithMe.notificationFrequency === "muted"}
-                                      disabled={isActionPending}
-                                      translations={{
-                                        mute: "Demp varsler",
-                                        unmute: "Skru på varsler",
-                                      }}
-                                      onError={(err) => setError(err)}
-                                    />
-                                  )}
+                                  <MuteSharerToggle
+                                    sharerId={friend.id}
+                                    isMuted={sharesWithMe.notificationFrequency === "muted"}
+                                    disabled={isActionPending}
+                                    translations={{
+                                      mute: "Demp varsler",
+                                      unmute: "Skru på varsler",
+                                    }}
+                                    onError={(err) => setError(err)}
+                                  />
                                   <button
                                     type="button"
                                     onClick={() =>

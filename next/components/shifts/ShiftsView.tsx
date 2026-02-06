@@ -51,12 +51,8 @@ import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
-import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
 import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
-import { celebrationHaptic, selectionEndHaptic, selectionHaptic, selectionStartHaptic } from "@/lib/capacitor/haptics";
-import { useCurrency } from "@/components/providers/CurrencyProvider";
-import { useWidgetStorageSync } from "@/lib/hooks/useWidgetStorageSync";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -302,7 +298,6 @@ function ShiftItemWithConnector({
   setSelectedShift,
   setDetailsOpen,
   onVisibilityChange,
-  onSelectionHaptic,
   nextShiftInView,
   onSwipeDelete,
   readOnly,
@@ -325,7 +320,6 @@ function ShiftItemWithConnector({
   setSelectedShift: (shift: ShiftWithComputations) => void;
   setDetailsOpen: (open: boolean, editMode?: boolean) => void;
   onVisibilityChange: (shiftId: string, inView: boolean) => void;
-  onSelectionHaptic: () => void;
   nextShiftInView: boolean;
   onSwipeDelete?: (shift: ShiftWithComputations) => void;
   readOnly: boolean;
@@ -340,16 +334,10 @@ function ShiftItemWithConnector({
   const isNextUpcomingShift = nextUpcomingShift?.id === shift.id;
   const hasConnector = conflictConnectorSet.has(shift.id);
 
-  // Report visibility changes to parent and trigger haptic on scroll into view
-  const wasInViewRef = useRef(false);
+  // Report visibility changes to parent
   useEffect(() => {
     onVisibilityChange(shift.id, inView);
-    // Trigger selection haptic when card scrolls into view (not on initial render)
-    if (inView && !wasInViewRef.current) {
-      onSelectionHaptic();
-    }
-    wasInViewRef.current = inView;
-  }, [shift.id, inView, onVisibilityChange, onSelectionHaptic]);
+  }, [shift.id, inView, onVisibilityChange]);
 
   const handleOpenDetails = useCallback(() => {
     clearSelection();
@@ -458,10 +446,6 @@ function ShiftGroupContent({
 }) {
   // Track visibility state for each shift - lifted to parent so siblings can access
   const [visibilityMap, setVisibilityMap] = useState<Map<string, boolean>>(() => new Map());
-  const selectionSessionRef = useRef<{
-    active: boolean;
-    endTimeoutId: ReturnType<typeof setTimeout> | null;
-  }>({ active: false, endTimeoutId: null });
 
   const handleVisibilityChange = useCallback((shiftId: string, inView: boolean) => {
     setVisibilityMap(prev => {
@@ -469,38 +453,6 @@ function ShiftGroupContent({
       next.set(shiftId, inView);
       return next;
     });
-  }, []);
-
-  const handleSelectionHaptic = useCallback(() => {
-    if (!selectionSessionRef.current.active) {
-      selectionSessionRef.current.active = true;
-      selectionStartHaptic();
-    }
-
-    selectionHaptic();
-
-    if (selectionSessionRef.current.endTimeoutId) {
-      clearTimeout(selectionSessionRef.current.endTimeoutId);
-    }
-
-    selectionSessionRef.current.endTimeoutId = setTimeout(() => {
-      selectionSessionRef.current.active = false;
-      selectionSessionRef.current.endTimeoutId = null;
-      selectionEndHaptic();
-    }, 150);
-  }, []);
-
-  useEffect(() => {
-    const session = selectionSessionRef.current;
-    return () => {
-      if (session.endTimeoutId) {
-        clearTimeout(session.endTimeoutId);
-      }
-      if (session.active) {
-        session.active = false;
-        selectionEndHaptic();
-      }
-    };
   }, []);
 
   return (
@@ -530,7 +482,6 @@ function ShiftGroupContent({
             setSelectedShift={setSelectedShift}
             setDetailsOpen={setDetailsOpen}
             onVisibilityChange={handleVisibilityChange}
-            onSelectionHaptic={handleSelectionHaptic}
             nextShiftInView={nextShiftInView}
             onSwipeDelete={onSwipeDelete}
             readOnly={readOnly}
@@ -1134,12 +1085,7 @@ type ShiftsViewProps = {
 export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, wageSnapshots, monthContext, cacheKey, highlightDates }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
-  const { symbol: currencySymbol } = useCurrency();
-  const { syncWidgetStorage } = useWidgetStorageSync({
-    locale,
-    currencySymbol,
-    cacheKey,
-  });
+  const syncWidgetStorage = useCallback(() => {}, []);
   const {
     errorSelectOne,
     errorPartial,
@@ -1178,7 +1124,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [multiSelectedDates, setMultiSelectedDates] = useState<Set<ISODate>>(new Set());
   const [deleting, startDeleteTransition] = useTransition();
   const isOffline = useOnlineStatus();
-  const hasNativeTabBar = useHasNativeTabBar();
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
@@ -1196,11 +1141,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // Swipe delete dialog state
   const [swipeDeleteShift, setSwipeDeleteShift] = useState<ShiftWithComputations | null>(null);
   const [swipeDeleteDialogOpen, setSwipeDeleteDialogOpen] = useState(false);
-  const calendarSelectionSessionRef = useRef<{
-    active: boolean;
-    endTimeoutId: ReturnType<typeof setTimeout> | null;
-  }>({ active: false, endTimeoutId: null });
-
   // Track which months have been loaded or are currently loading
   // Using refs to avoid race conditions with effects and cacheComponents
   const loadedMonthsRef = useRef<Set<string>>(new Set());
@@ -1813,10 +1753,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         url.searchParams.delete('optimistic');
         window.history.replaceState({}, '', url.toString());
 
-        // Fire confetti and haptic immediately for instant feedback
+        // Fire confetti immediately for instant feedback
         setTimeout(async () => {
           const confetti = (await import('canvas-confetti')).default;
-          celebrationHaptic();
           const currentMonth = targetMonth.getMonth();
           const currentYear = targetMonth.getFullYear();
 
@@ -1962,37 +1901,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return () => clearTimeout(dismissTimer);
   }, [operationError]);
 
-  const triggerCalendarSelectionHaptic = useCallback(() => {
-    if (!calendarSelectionSessionRef.current.active) {
-      calendarSelectionSessionRef.current.active = true;
-      selectionStartHaptic();
-    }
-
-    selectionHaptic();
-
-    if (calendarSelectionSessionRef.current.endTimeoutId) {
-      clearTimeout(calendarSelectionSessionRef.current.endTimeoutId);
-    }
-
-    calendarSelectionSessionRef.current.endTimeoutId = setTimeout(() => {
-      calendarSelectionSessionRef.current.active = false;
-      calendarSelectionSessionRef.current.endTimeoutId = null;
-      selectionEndHaptic();
-    }, 150);
-  }, []);
-
-  useEffect(() => {
-    const session = calendarSelectionSessionRef.current;
-    return () => {
-      if (session.endTimeoutId) {
-        clearTimeout(session.endTimeoutId);
-      }
-      if (session.active) {
-        session.active = false;
-        selectionEndHaptic();
-      }
-    };
-  }, []);
+  const triggerCalendarSelectionFeedback = useCallback(() => {}, []);
 
   // Confetti celebration for newly added shifts
   useEffect(() => {
@@ -2040,7 +1949,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
         // Dynamically import confetti only when needed (reduces initial bundle by ~2MB)
         const confetti = (await import('canvas-confetti')).default;
-        celebrationHaptic();
 
         if (datesInCurrentMonth.length > 0) {
           // Fire confetti from each newly added shift in the current month
@@ -2099,15 +2007,15 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   const handleMonthChange = useCallback(
     (month: Date) => {
-      triggerCalendarSelectionHaptic();
+      triggerCalendarSelectionFeedback();
       setSelectedMonth(startOfMonth(month));
     },
-    [setSelectedMonth, triggerCalendarSelectionHaptic]
+    [setSelectedMonth, triggerCalendarSelectionFeedback]
   );
 
   const handleDayClick = useCallback(
     (iso: string, hasShifts: boolean) => {
-      triggerCalendarSelectionHaptic();
+      triggerCalendarSelectionFeedback();
       const isoDate = iso as ISODate;
       const targetShifts = shiftsByDate.get(isoDate) ?? [];
 
@@ -2246,7 +2154,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionHaptic, syncWidgetStorage]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionFeedback, syncWidgetStorage]
   );
 
   const handleSelectDateRange = useCallback(
@@ -2268,7 +2176,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       const selectable = range.filter((iso) => (shiftsByDate.get(iso)?.length ?? 0) > 0);
       if (selectable.length === 0) return;
 
-      triggerCalendarSelectionHaptic();
+      triggerCalendarSelectionFeedback();
       setCopyMode(false);
       setMoveMode(false);
       setMoveSelection([]);
@@ -2294,7 +2202,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       setCalendarSelectedShiftId(null);
       setMultiSelectedDates(merged);
     },
-    [copyMode, moveMode, readOnly, showEarnings, shiftsByDate, triggerCalendarSelectionHaptic, selectedDate, multiSelectedDates]
+    [copyMode, moveMode, readOnly, showEarnings, shiftsByDate, triggerCalendarSelectionFeedback, selectedDate, multiSelectedDates]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -2837,12 +2745,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
     <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
       {/* Calendar Section - On mobile: takes full viewport height (minus header/navbar) and centers calendar */}
-      {/* Native iOS: no web navbar (5rem), only safe areas. Web: subtract both header (3.5rem) and navbar (5rem) */}
       <div className={cn(
         "flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0",
-        hasNativeTabBar
-          ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
-          : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+        "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
       )}>
         <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120 mx-auto lg:mx-0">
           {/* Custom header slot (e.g., sharing dropdown) - constrained to calendar width */}

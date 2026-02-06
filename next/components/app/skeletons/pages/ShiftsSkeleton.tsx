@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import { CalendarSkeleton } from "../calendar/CalendarSkeleton";
 import { ShiftCardSkeleton } from "../cards/ShiftCardSkeleton";
-import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 import { cn } from "@/lib/cn";
 
 // Animation variants for staggered skeleton sections
@@ -63,14 +62,10 @@ function WeekGroupSkeleton({ shiftCount }: { shiftCount: number }) {
  * When the real content loads, it simply replaces the skeleton without additional animation.
  */
 export function ShiftsSkeleton() {
-  const hasNativeTabBar = useHasNativeTabBar();
-
   return (
     <div className={cn(
       "h-full overflow-y-auto md:pb-8",
-      hasNativeTabBar
-        ? "pb-[env(safe-area-inset-bottom)]"
-        : "pb-[calc(5rem+env(safe-area-inset-bottom))]"
+      "pb-[calc(5rem+env(safe-area-inset-bottom))]"
     )}>
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side */}
       <motion.div
@@ -80,13 +75,10 @@ export function ShiftsSkeleton() {
         animate="visible"
       >
         {/* Calendar Section */}
-        {/* Native iOS: no web navbar (5rem), only safe areas. Web: subtract both header (3.5rem) and navbar (5rem) */}
         <motion.div
           className={cn(
             "flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0",
-            hasNativeTabBar
-              ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
-              : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+            "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
           )}
           variants={itemVariants}
         >

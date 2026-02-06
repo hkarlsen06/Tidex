@@ -19,7 +19,6 @@ import { getLatestTariffVersionAction, getTariffTypesAction } from "@/app/[local
 import type { TariffVersion, TariffType } from "@/data-access/tariff";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
-import { HideNativeTabBar } from "@/components/app/HideNativeTabBar";
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -242,7 +241,6 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
 
   return (
     <ScrollablePageWrapper routeKey="onboarding" applyContainer={false}>
-      <HideNativeTabBar />
       <TooltipProvider>
         <motion.div
           className="min-h-full flex justify-center pt-8 px-4 bg-background"

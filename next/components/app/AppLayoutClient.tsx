@@ -10,11 +10,8 @@ import { NavigationFeedbackProvider } from "./navigation-feedback";
 import { ScrollProvider } from "@/lib/contexts/ScrollContext";
 import { AddShiftFormProvider } from "@/lib/contexts/AddShiftFormContext";
 import { RouteVisibilityProvider } from "./RouteVisibilityContext";
-import { NativeTabBarProvider } from "@/lib/contexts/NativeTabBarContext";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
-import { NativeTabBarSync } from "./NativeTabBarSync";
-import { ShowNativeTabBar } from "./ShowNativeTabBar";
 
 type AppLayoutClientProps = {
   children: ReactNode;
@@ -54,21 +51,17 @@ export function AppLayoutClient({
   }, []);
 
   return (
-    <NativeTabBarProvider>
-      <RouteVisibilityProvider>
-        <ScrollProvider threshold={50}>
-          <AddShiftFormProvider>
-            <NavigationFeedbackProvider>
-              <LayoutContent userName={userName}>
-                {children}
-              </LayoutContent>
-            </NavigationFeedbackProvider>
-          </AddShiftFormProvider>
-          <NativeTabBarSync />
-          <ShowNativeTabBar />
-        </ScrollProvider>
-      </RouteVisibilityProvider>
-    </NativeTabBarProvider>
+    <RouteVisibilityProvider>
+      <ScrollProvider threshold={50}>
+        <AddShiftFormProvider>
+          <NavigationFeedbackProvider>
+            <LayoutContent userName={userName}>
+              {children}
+            </LayoutContent>
+          </NavigationFeedbackProvider>
+        </AddShiftFormProvider>
+      </ScrollProvider>
+    </RouteVisibilityProvider>
   );
 }
 
