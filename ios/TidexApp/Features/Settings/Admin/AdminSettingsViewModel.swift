@@ -337,7 +337,6 @@ final class AdminSettingsViewModel: ObservableObject {
   @Published var selectedTab: AdminTab = .users
   @Published var isSuperAdmin: Bool = false
   @Published var errorMessage: String?
-  @Published var successMessage: String?
   @Published var isPerformingAction: Bool = false
   @Published var shouldDismissAfterImpersonation: Bool = false
 
@@ -636,7 +635,6 @@ final class AdminSettingsViewModel: ObservableObject {
 
   func clearMessages() {
     errorMessage = nil
-    successMessage = nil
     sqlError = nil
   }
 
@@ -731,7 +729,7 @@ final class AdminSettingsViewModel: ObservableObject {
         url: APIConfiguration.webAppBaseURL.appendingPathComponent(endpoint), method: "POST",
         body: body)
       if response.success {
-        successMessage = response.message ?? "Action completed"
+        Haptics.play(.success)
         await fetchUsers(
           page: usersCurrentPage, search: usersSearchQuery.isEmpty ? nil : usersSearchQuery)
       } else {
@@ -774,7 +772,7 @@ final class AdminSettingsViewModel: ObservableObject {
         body: ["feedbackId": feedbackId, "response": response]
       )
       if result.success {
-        successMessage = "Response sent"
+        Haptics.play(.success)
         selectedFeedback = nil
         feedbackResponse = ""
         await fetchFeedback()
@@ -884,7 +882,7 @@ final class AdminSettingsViewModel: ObservableObject {
         method: "DELETE"
       )
       if result.success {
-        successMessage = "Share deleted"
+        Haptics.play(.success)
         await fetchShares()
       } else {
         errorMessage = result.message ?? "Failed to delete share"
@@ -922,7 +920,7 @@ final class AdminSettingsViewModel: ObservableObject {
         ]
       )
       if result.success {
-        successMessage = "Share created"
+        Haptics.play(.success)
         resetCreateShareForm()
         isShowingCreateShare = false
         await fetchShares()
@@ -1162,7 +1160,7 @@ final class AdminSettingsViewModel: ObservableObject {
       )
 
       if result.success {
-        successMessage = result.message ?? "Notification sent"
+        Haptics.play(.success)
         // Don't clear fields on success - user may want to send similar notification
         await fetchBroadcastHistory()
       } else {
@@ -1235,7 +1233,7 @@ final class AdminSettingsViewModel: ObservableObject {
         targetUserId: targetUser.id,
         reason: reason
       )
-      successMessage = "Now impersonating \(targetUser.displayName)"
+      Haptics.play(.success)
       // Clear form
       clearImpersonationUser()
       impersonationReason = ""

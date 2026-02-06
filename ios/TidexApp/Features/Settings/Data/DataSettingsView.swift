@@ -8,11 +8,6 @@ struct DataSettingsView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 24) {
-        // Success message
-        if let success = viewModel.successMessage {
-          successBanner(success)
-        }
-
         // Error message
         if let error = viewModel.errorMessage {
           errorBanner(error)
@@ -47,33 +42,6 @@ struct DataSettingsView: View {
           viewModel.dismissShareSheet()
         }
     }
-  }
-
-  // MARK: - Success Banner
-
-  private func successBanner(_ message: String) -> some View {
-    HStack(spacing: 12) {
-      Image(systemName: "checkmark.circle.fill")
-        .font(.system(size: 16))
-        .foregroundColor(.tidexSuccess)
-
-      Text(message)
-        .font(.system(size: 14))
-        .foregroundColor(.tidexTextPrimary)
-
-      Spacer()
-
-      Button {
-        viewModel.clearSuccess()
-      } label: {
-        Image(systemName: "xmark")
-          .font(.system(size: 12, weight: .medium))
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-    .padding(12)
-    .background(Color.tidexSuccess.opacity(0.1))
-    .cornerRadius(8)
   }
 
   // MARK: - Error Banner

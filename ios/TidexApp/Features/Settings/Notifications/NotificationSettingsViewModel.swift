@@ -75,9 +75,6 @@ final class NotificationSettingsViewModel: ObservableObject {
   /// Error message
   @Published var errorMessage: String?
 
-  /// Success message
-  @Published var successMessage: String?
-
   // MARK: - Private Properties
 
   private let preferencesRepository = NotificationPreferencesRepository.shared
@@ -172,7 +169,6 @@ final class NotificationSettingsViewModel: ObservableObject {
   /// Clear messages
   func clearMessages() {
     errorMessage = nil
-    successMessage = nil
   }
 
   // MARK: - Time Picker Methods

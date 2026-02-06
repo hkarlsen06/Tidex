@@ -111,9 +111,6 @@ final class DataSettingsViewModel: ObservableObject {
   /// Loading state for calendar export
   @Published var isExportingCalendar = false
 
-  /// Success message (for calendar export)
-  @Published var successMessage: String?
-
   /// Error message
   @Published var errorMessage: String?
 
@@ -182,7 +179,6 @@ final class DataSettingsViewModel: ObservableObject {
       isExportingCalendar = true
     }
     errorMessage = nil
-    successMessage = nil
 
     defer {
       switch format {
@@ -340,14 +336,13 @@ final class DataSettingsViewModel: ObservableObject {
     let calendarName = String(localized: .dataExportCalendarCalendarName)
     let eventTitle = String(localized: .dataExportCalendarEventTitle)
 
-    let count = try await CalendarExportService.shared.exportShifts(
+    try await CalendarExportService.shared.exportShifts(
       allShifts,
       calendarName: calendarName,
       eventTitle: eventTitle
     )
 
-    // Show success message
-    successMessage = String(localized: .dataExportCalendarSuccess(Int32(count)))
+    Haptics.play(.success)
   }
 
   /// Calculate shift type based on date
@@ -367,11 +362,6 @@ final class DataSettingsViewModel: ObservableObject {
   /// Clear error message
   func clearError() {
     errorMessage = nil
-  }
-
-  /// Clear success message
-  func clearSuccess() {
-    successMessage = nil
   }
 
   /// Dismiss share sheet
