@@ -1302,12 +1302,18 @@ struct ShiftsView: View {
         }
     }
 
-    /// Scroll the list to today's shift card or placeholder, then reveal the list
+    /// Scroll the list to the top-most conflict card when conflicts exist,
+    /// otherwise to today's shift card/placeholder, then reveal the list.
     private func scrollToTodayItem(using proxy: ScrollViewProxy) {
-        if viewModel.isCurrentMonth {
+        if let conflictTargetId = shiftListItems.first(where: { item in
+            guard case .shift(let shift) = item else { return false }
+            return viewModel.conflictingShiftIds.contains(shift.id)
+        })?.id {
+            proxy.scrollTo(conflictTargetId, anchor: .top)
+        } else if viewModel.isCurrentMonth {
             let today = todayISO()
-            if let targetId = shiftListItems.first(where: { $0.sortDate == today })?.id {
-                proxy.scrollTo(targetId, anchor: .top)
+            if let todayTargetId = shiftListItems.first(where: { $0.sortDate == today })?.id {
+                proxy.scrollTo(todayTargetId, anchor: .top)
             }
         }
         listReady = true

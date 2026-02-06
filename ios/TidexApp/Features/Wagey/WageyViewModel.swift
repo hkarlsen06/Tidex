@@ -618,10 +618,10 @@ final class WageyViewModel {
             saveCurrentConversation()
         }
 
-        // Trigger sync if any tool calls succeeded (shifts may have changed)
+        // Trigger sync if any tool calls succeeded (shifts may have changed server-side)
         if hadSuccessfulToolCalls, let userId = cachedUserId ?? AppCoordinator.shared.userId {
             Task {
-                await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
+                await syncAndNotifyShiftChanges(userId: userId)
             }
         }
 
@@ -631,6 +631,50 @@ final class WageyViewModel {
         isStreaming = false
         currentAssistantMessageId = nil
         streamTask = nil
+    }
+
+    /// Ensures Wagey-created shift changes are pulled locally before notifying UI observers.
+    /// Retries when another sync is already in progress to avoid stale reloads.
+    private func syncAndNotifyShiftChanges(userId: String) async {
+        let alreadySyncingError = "Sync already in progress"
+        let retryIntervalNanoseconds: UInt64 = 250_000_000
+        let retryDeadline = Date().addingTimeInterval(30)
+        var syncResult: SyncResult
+
+        while true {
+            syncResult = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
+
+            if syncResult.success {
+                break
+            }
+
+            guard syncResult.error == alreadySyncingError else {
+                break
+            }
+
+            guard Date() < retryDeadline else {
+                logger.warning("Wagey sync retry timed out after 30 seconds")
+                return
+            }
+
+            do {
+                try await Task.sleep(nanoseconds: retryIntervalNanoseconds)
+            } catch {
+                logger.info("Wagey sync retry cancelled")
+                return
+            }
+        }
+
+        guard syncResult.success else {
+            if let error = syncResult.error {
+                logger.warning("Wagey sync failed before UI reload: \(error)")
+            } else {
+                logger.warning("Wagey sync did not complete successfully before UI reload")
+            }
+            return
+        }
+
+        NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
     }
 }
 
