@@ -532,6 +532,7 @@ private struct RecurringShiftsSettingsView: View {
 
       await loadRecurringShifts()
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      Haptics.play(.success)
     } catch {
       logger.error("Failed to update recurring shift from settings: \(error.localizedDescription)")
       errorMessage = String(localized: .settingsRecurringShiftsSaveFailed)
@@ -543,6 +544,7 @@ private struct RecurringShiftsSettingsView: View {
       try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
       await loadRecurringShifts()
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      Haptics.play(.success)
     } catch {
       logger.error("Failed to delete recurring shift from settings: \(error.localizedDescription)")
       errorMessage = String(localized: .settingsRecurringShiftsDeleteFailed)
