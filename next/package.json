@@ -40,7 +40,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "2.90.1",
+    "@supabase/supabase-js": "^2.95.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/canvas-confetti": "^1.9.0",
     "@types/react-syntax-highlighter": "^15.5.13",
