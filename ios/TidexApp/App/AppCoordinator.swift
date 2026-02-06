@@ -142,6 +142,9 @@ final class AppCoordinator: ObservableObject {
     private var backgroundTasks: [Task<Void, Never>] = []
     private var didReceiveInitialSession = false
     private var isUpdatingAuthState = false
+    /// When biometric lock is active during .initialSession, MFA/terms checks are
+    /// deferred until after the user successfully unlocks via AppLockView.
+    private var needsPostUnlockCheck = false
 
     // MARK: - Initialization
 
@@ -217,8 +220,21 @@ final class AppCoordinator: ObservableObject {
                     self.didReceiveInitialSession = true
 
                     // On app launch, check if we have a valid session
-                    if session != nil {
-                        await self.checkMFAAndUpdateState()
+                    if let session = session {
+                        if BiometricAuthService.shared.isLocked {
+                            // When biometric lock is active, the SDK wraps session access in
+                            // withBiometrics() which triggers a biometric prompt. The .initialSession
+                            // event provides the session from local storage WITHOUT the biometric gate,
+                            // so use it directly to load onboarding state and set authenticated.
+                            // MFA/terms checks are deferred until after the user unlocks.
+                            self.loadOnboardingStateFromUser(session.user)
+                            self.userId = session.user.normalizedId
+                            self.initialSyncComplete = false
+                            self.appState = .authenticated
+                            self.needsPostUnlockCheck = true
+                        } else {
+                            await self.checkMFAAndUpdateState()
+                        }
                     } else {
                         self.appState = .unauthenticated
                     }
@@ -538,6 +554,9 @@ final class AppCoordinator: ObservableObject {
     /// Triggers a sync with interval guard (won't sync if recent sync occurred)
     func handleAppForeground() {
         guard appState == .authenticated else { return }
+        // Skip foreground sync while biometric lock is active to prevent
+        // session access from triggering a biometric prompt before AppLockView handles unlock.
+        guard !BiometricAuthService.shared.isLocked else { return }
 
         runTrackedTask { [weak self] in
             guard let self = self else { return }
@@ -573,6 +592,30 @@ final class AppCoordinator: ObservableObject {
     }
 
     // MARK: - Public Actions
+
+    /// Called after successful biometric unlock to run deferred checks and foreground sync.
+    ///
+    /// When biometric lock is active during `.initialSession`, we skip biometric-gated
+    /// session access and defer MFA/terms checks. After the user successfully authenticates
+    /// via `AppLockView`, this method runs those deferred checks. At this point the SDK's
+    /// biometric session is valid, so `withBiometrics` won't prompt again.
+    ///
+    /// On subsequent background→foreground cycles, `handleAppForeground()` skips sync while
+    /// locked to avoid triggering biometric prompts. This method re-triggers that sync after
+    /// the user unlocks so data (shifts, watch, APNs) stays fresh.
+    func handleBiometricUnlock() {
+        if needsPostUnlockCheck {
+            needsPostUnlockCheck = false
+
+            runTrackedTask { [weak self] in
+                guard let self else { return }
+                await self.checkMFAAndUpdateState()
+            }
+        }
+
+        // Re-trigger the foreground sync that was skipped while locked.
+        handleAppForeground()
+    }
 
     /// Called when login is successful
     /// The auth state listener will handle the transition
@@ -631,6 +674,9 @@ final class AppCoordinator: ObservableObject {
     /// Internal sign out implementation
     /// - Parameter global: If true, signs out from all devices; if false, only this device
     private func performSignOut(global: Bool) async {
+        // Reset biometric state before sign-out to ensure clean state for next user
+        BiometricAuthService.shared.reset()
+
         // Clear all cached data
         await clearAllCachedData()
 

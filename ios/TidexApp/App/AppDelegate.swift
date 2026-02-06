@@ -389,8 +389,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         cacheAPNsToken(tokenString)
 
-        // Store APNs token in Supabase
-        Task {
+        // Store APNs token in Supabase.
+        // Skip when biometric lock is active — supabase.auth.session triggers the SDK's
+        // biometric prompt via withBiometrics(), which races with AppLockView's unlock flow.
+        // The cached token will be registered after unlock via handleAppForeground().
+        Task { @MainActor in
+            guard !BiometricAuthService.shared.isLocked else { return }
             await registerAPNsToken(tokenString)
         }
     }

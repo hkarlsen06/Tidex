@@ -74,8 +74,10 @@ struct RootView: View {
                         .transition(.opacity)
 
                 case .authenticated:
-                    // Skip post-auth onboarding if already completed locally OR remotely (Supabase user metadata)
-                    if !hasCompletedPostAuthOnboarding && !coordinator.hasFinishedOnboardingRemotely {
+                    if biometricService.isLocked {
+                        // Lock screen takes priority over everything when biometrics are active
+                        AppLockView()
+                    } else if !hasCompletedPostAuthOnboarding && !coordinator.hasFinishedOnboardingRemotely {
                         // Show post-auth onboarding (screens 5-6)
                         PostAuthOnboardingView(
                             onComplete: {
@@ -84,9 +86,6 @@ struct RootView: View {
                             userId: coordinator.userId ?? ""
                         )
                         .transition(.opacity)
-                    } else if biometricService.isEnabled && biometricService.isLocked {
-                        // Show lock screen instead of main content (prevents flash)
-                        AppLockView()
                     } else {
                         MainTabView()
                     }

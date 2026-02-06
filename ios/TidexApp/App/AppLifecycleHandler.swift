@@ -15,24 +15,27 @@ final class AppLifecycleHandler {
         switch phase {
         case .active:
             AppearanceManager.shared.applyToWindows()
+            // Blur hide is handled by didBecomeActiveNotification (see TidexApp.swift)
+            // for synchronous timing, but do a defensive cleanup here too.
             PrivacyBlurManager.hide()
-            Task { @MainActor in
-                await Task.yield()
-                PrivacyBlurManager.hide()
-            }
             scheduleLoadingRecoveryIfNeeded()
+            BiometricAuthService.shared.handleAppForeground()
             AppCoordinator.shared.handleAppForeground()
             (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
             (UIApplication.shared.delegate as? AppDelegate)?.endBackgroundTaskIfNeeded()
         case .inactive:
             loadingRecoveryTask?.cancel()
             loadingRecoveryTask = nil
-            PrivacyBlurManager.showIfNeeded()
+            // Blur show is handled by willResignActiveNotification (see TidexApp.swift)
+            // for synchronous timing before app switcher snapshot.
         case .background:
             loadingRecoveryTask?.cancel()
             loadingRecoveryTask = nil
             BiometricAuthService.shared.handleAppBackground()
             (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
+            // Defensive: ensure blur is shown when entering background.
+            // Primary blur is handled by willResignActiveNotification but
+            // some transitions may skip .inactive.
             PrivacyBlurManager.showIfNeeded()
         @unknown default:
             break
