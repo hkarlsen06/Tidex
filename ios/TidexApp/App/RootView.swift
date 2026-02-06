@@ -74,10 +74,7 @@ struct RootView: View {
             .transition(.opacity)
 
         case .authenticated:
-          if biometricService.isLocked {
-            // Lock screen takes priority over everything when biometrics are active
-            AppLockView()
-          } else if !hasCompletedPostAuthOnboarding && !coordinator.hasFinishedOnboardingRemotely {
+          if !hasCompletedPostAuthOnboarding && !coordinator.hasFinishedOnboardingRemotely {
             // Show post-auth onboarding (screens 5-6)
             PostAuthOnboardingView(
               onComplete: {
@@ -88,6 +85,12 @@ struct RootView: View {
             .transition(.opacity)
           } else {
             MainTabView()
+              .overlay {
+                if biometricService.isLocked {
+                  AppLockView()
+                    .transition(.opacity)
+                }
+              }
           }
         }
       }
