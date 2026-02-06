@@ -626,18 +626,24 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         do {
             try await supabase.auth.mfa.unenroll(params: MFAUnenrollParams(factorId: factor.id))
-
-            successMessage = String(localized: .securityMfaSuccessUnenrolled)
-            showUnenrollConfirmation = false
-            factorToUnenroll = nil
-
-            // Reload factors
-            await loadMFAFactors()
-
         } catch {
             logger.error("Failed to unenroll MFA: \(error)")
             errorMessage = String(localized: .securityMfaErrorsUnenrollFailed)
+            isUnenrollingMFA = false
+            return
         }
+
+        successMessage = String(localized: .securityMfaSuccessUnenrolled)
+        showUnenrollConfirmation = false
+        factorToUnenroll = nil
+
+        // Remove factor from local list immediately for instant UI feedback
+        mfaFactors.removeAll { $0.id == factor.id }
+
+        // Refresh session so the cached user data no longer includes the removed factor.
+        // listFactors() reads from the cached session, so without this it would still
+        // return the old factor on subsequent loads.
+        _ = try? await supabase.auth.refreshSession()
 
         isUnenrollingMFA = false
     }
