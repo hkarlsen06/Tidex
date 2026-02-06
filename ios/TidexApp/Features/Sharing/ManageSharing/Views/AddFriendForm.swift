@@ -144,10 +144,6 @@ struct AddFriendForm: View {
       }
     }
     .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 12)
-        .fill(Color.tidexSurfacePrimary)
-    )
     .onChange(of: isExpanded) { _, expanded in
       if expanded {
         Task { @MainActor in

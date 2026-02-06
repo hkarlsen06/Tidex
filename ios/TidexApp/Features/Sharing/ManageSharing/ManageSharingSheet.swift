@@ -32,68 +32,78 @@ struct ManageSharingSheet: View {
 
   var body: some View {
     NavigationStack {
-      ZStack {
-        Color.tidexBackground
-          .ignoresSafeArea()
+      ScrollViewReader { scrollProxy in
+        List {
+          // MARK: - Description
+          Section {
+          } footer: {
+            Text(.sharingManageDescription)
+              .font(.system(size: 15))
+          }
 
-        ScrollViewReader { scrollProxy in
-          ScrollView {
-            VStack(spacing: 20) {
-              // Description
-              descriptionSection
-
-              // Error banner
-              if let error = viewModel.errorMessage {
-                ErrorBanner(
-                  message: error,
-                  onRetry: {
-                    Task {
-                      await viewModel.refresh()
-                    }
-                  },
-                  onDismiss: { viewModel.errorMessage = nil }
-                )
-              }
-
-              // Friend sections
-              if viewModel.isLoading {
-                loadingView
-              } else if viewModel.friends.isEmpty {
-                emptyState
-              } else {
-                friendSections
-              }
-
-              // Add friend form
-              AddFriendForm(
-                isExpanded: $viewModel.isAddFormExpanded,
-                identifier: $viewModel.addIdentifier,
-                showEarnings: $viewModel.addShowEarnings,
-                error: $viewModel.addError,
-                isLoading: viewModel.isAdding,
-                canAdd: viewModel.canAddMore,
-                capacityDisplay: viewModel.capacityDisplay,
-                onAdd: {
+          // MARK: - Error Banner
+          if let error = viewModel.errorMessage {
+            Section {
+              ErrorBanner(
+                message: error,
+                onRetry: {
                   Task {
-                    await viewModel.addFriend()
+                    await viewModel.refresh()
                   }
                 },
-                onCancel: {
-                  viewModel.cancelAddFriend()
-                }
+                onDismiss: { viewModel.errorMessage = nil }
               )
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
           }
-          .refreshable {
-            await viewModel.refresh()
+
+          // MARK: - Content
+          if viewModel.isLoading {
+            Section {
+              loadingView
+            }
+            .listRowBackground(Color.clear)
+          } else if viewModel.friends.isEmpty {
+            Section {
+              emptyState
+            }
+            .listRowBackground(Color.clear)
+          } else {
+            friendSections
           }
-          .onChange(of: viewModel.friends) { _, friends in
-            // Scroll to highlighted user after friends load
-            scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
+
+          // MARK: - Add Friend
+          Section {
+            AddFriendForm(
+              isExpanded: $viewModel.isAddFormExpanded,
+              identifier: $viewModel.addIdentifier,
+              showEarnings: $viewModel.addShowEarnings,
+              error: $viewModel.addError,
+              isLoading: viewModel.isAdding,
+              canAdd: viewModel.canAddMore,
+              capacityDisplay: viewModel.capacityDisplay,
+              onAdd: {
+                Task {
+                  await viewModel.addFriend()
+                }
+              },
+              onCancel: {
+                viewModel.cancelAddFriend()
+              }
+            )
           }
+          .listRowInsets(EdgeInsets())
+          .listRowBackground(Color.tidexSurfacePrimary)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.tidexBackground)
+        .refreshable {
+          await viewModel.refresh()
+        }
+        .onChange(of: viewModel.friends) { _, friends in
+          scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
         }
       }
       .navigationTitle(String(localized: .sharingManageTitle))
@@ -149,7 +159,6 @@ struct ManageSharingSheet: View {
       }
     }
     .onChange(of: viewModel.friends) { _, _ in
-      // Notify parent when friends list changes
       onVisibilityChange?()
     }
   }
@@ -167,19 +176,6 @@ struct ManageSharingSheet: View {
     case .removeSharer:
       return String(localized: .sharingRemoveFromList(friend.displayName))
     }
-  }
-
-  // MARK: - Description Section
-
-  private var descriptionSection: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(.sharingManageDescription)
-        .font(.system(size: 15))
-        .foregroundColor(.tidexTextSecondary)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, 4)
   }
 
   // MARK: - Loading View
@@ -223,95 +219,96 @@ struct ManageSharingSheet: View {
 
   @ViewBuilder
   private var friendSections: some View {
-    // Mutual shares
     if !viewModel.mutualFriends.isEmpty {
-      friendSection(
-        title: String(localized: .sharingMutual),
-        friends: viewModel.mutualFriends,
-        sectionType: .mutual
-      )
+      Section(header: Text(String(localized: .sharingMutual))) {
+        ForEach(viewModel.mutualFriends) { friend in
+          makeFriendRow(friend, sectionType: .mutual)
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
 
-    // Outgoing shares (I share with them)
     if !viewModel.outgoingOnlyFriends.isEmpty {
-      friendSection(
-        title: String(localized: .sharingIShareWith),
-        friends: viewModel.outgoingOnlyFriends,
-        sectionType: .outgoing
-      )
+      Section(header: Text(String(localized: .sharingIShareWith))) {
+        ForEach(viewModel.outgoingOnlyFriends) { friend in
+          makeFriendRow(friend, sectionType: .outgoing)
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
 
-    // Incoming shares (they share with me)
     if !viewModel.incomingOnlyFriends.isEmpty {
-      friendSection(
-        title: String(localized: .sharingSharesWithMe),
-        friends: viewModel.incomingOnlyFriends,
-        sectionType: .incoming
-      )
+      Section(header: Text(String(localized: .sharingSharesWithMe))) {
+        ForEach(viewModel.incomingOnlyFriends) { friend in
+          makeFriendRow(friend, sectionType: .incoming)
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
-  private func friendSection(title: String, friends: [Friend], sectionType: FriendSectionType)
-    -> some View
-  {
-    VStack(alignment: .leading, spacing: 8) {
-      // Section header
-      Text(title)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(.tidexTextMuted)
-        .textCase(.uppercase)
-        .padding(.horizontal, 4)
+  private func makeFriendRow(_ friend: Friend, sectionType: FriendSectionType) -> some View {
+    let isHighlighted = highlightUserId == friend.id && isHighlightActive
 
-      // Friends list
-      VStack(spacing: 0) {
-        ForEach(Array(friends.enumerated()), id: \.element.id) { index, friend in
-          let isHighlighted = highlightUserId == friend.id && isHighlightActive
-
-          FriendRow(
-            friend: friend,
-            sectionType: sectionType,
-            isActionInProgress: viewModel.actionInProgress == friend.id,
-            isHighlighted: isHighlighted,
-            onToggleMuted: {
-              Task {
-                await viewModel.toggleMuted(for: friend)
-              }
-            },
-            onToggleBlocked: {
-              Task {
-                await viewModel.toggleBlocked(for: friend)
-                onVisibilityChange?()
-              }
-            },
-            onToggleEarnings: {
-              Task {
-                await viewModel.toggleEarnings(for: friend)
-              }
-            },
-            onShareBack: {
-              Task {
-                await viewModel.shareBack(with: friend)
-              }
-            },
-            onRemove: {
-              // Show confirmation dialog
-              friendToRemove = friend
-              removeAction = sectionType == .incoming ? .removeSharer : .removeShare
-            }
-          )
-          .id(friend.id)  // For ScrollViewReader
-
-          // Divider (except last item)
-          if index < friends.count - 1 {
-            Divider()
-              .padding(.leading, 68)
-          }
+    return FriendRow(
+      friend: friend,
+      sectionType: sectionType,
+      isActionInProgress: viewModel.actionInProgress == friend.id,
+      isHighlighted: isHighlighted,
+      onToggleEarnings: {
+        Task {
+          await viewModel.toggleEarnings(for: friend)
+        }
+      },
+      onShareBack: {
+        Task {
+          await viewModel.shareBack(with: friend)
         }
       }
-      .background(
-        RoundedRectangle(cornerRadius: 12)
-          .fill(Color.tidexSurfacePrimary)
-      )
+    )
+    .id(friend.id)
+    .alignmentGuide(.listRowSeparatorLeading) { d in
+      d[.leading] + 52
+    }
+    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+      Button(role: .destructive) {
+        friendToRemove = friend
+        removeAction = sectionType == .incoming ? .removeSharer : .removeShare
+      } label: {
+        Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
+      }
+    }
+    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+      if sectionType == .mutual || sectionType == .incoming {
+        Button {
+          Task {
+            await viewModel.toggleBlocked(for: friend)
+            onVisibilityChange?()
+          }
+        } label: {
+          Label(
+            String(
+              localized: friend.sharesWithMe?.blocked == true
+                ? .sharingSwipeShow : .sharingSwipeHide),
+            systemImage: friend.sharesWithMe?.blocked == true ? "eye" : "eye.slash"
+          )
+        }
+        .tint(friend.sharesWithMe?.blocked == true ? .green : .orange)
+
+        Button {
+          Task {
+            await viewModel.toggleMuted(for: friend)
+          }
+        } label: {
+          Label(
+            String(
+              localized: friend.sharesWithMe?.isMuted == true
+                ? .sharingSwipeUnmute : .sharingSwipeMute),
+            systemImage: friend.sharesWithMe?.isMuted == true ? "bell" : "bell.slash"
+          )
+        }
+        .tint(friend.sharesWithMe?.isMuted == true ? .blue : .gray)
+      }
     }
   }
 
@@ -325,14 +322,12 @@ struct ManageSharingSheet: View {
       return
     }
 
-    // Wait for next run loop to ensure layout is complete, then scroll
     DispatchQueue.main.async {
       withAnimation(.easeOut(duration: 0.25)) {
         scrollProxy.scrollTo(highlightUserId, anchor: .center)
         isHighlightActive = true
       }
 
-      // Turn off highlight after 3 seconds
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(3))
         withAnimation(.easeOut(duration: 0.3)) {
