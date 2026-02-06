@@ -38,7 +38,9 @@ struct PullToRefreshContainer<Content: View>: View {
             ScrollView {
                 content()
                     .frame(maxWidth: .infinity, alignment: .top)
-                    .frame(minHeight: geometry.size.height, alignment: .top)
+                    // +1 ensures the host is treated as scrollable, so `.refreshable` can trigger
+                    // even when the visible content would otherwise exactly match viewport height.
+                    .frame(minHeight: geometry.size.height + 1, alignment: .top)
             }
             // Required for non-scrollable/fixed-height surfaces so pull-to-refresh can arm.
             .scrollBounceBehavior(.always, axes: .vertical)
