@@ -167,74 +167,78 @@ struct CalendarDayCell<Content: View>: View {
 
         case .hours(let hoursData, let color):
             let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                VStack(spacing: -4) {
+            GeometryReader { geo in
+                let fontSize = min(geo.size.width * 0.4, geo.size.height * 0.42)
+                VStack(spacing: -1) {
                     Text(hoursData.start)
-                        .font(.footnote.weight(.bold))
+                        .font(.system(size: fontSize, weight: .bold))
                         .environment(\.layoutDirection, .leftToRight)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .allowsTightening(true)
                         .frame(maxWidth: .infinity, alignment: .center)
                     Text(endDisplay)
-                        .font(.footnote.weight(.bold))
+                        .font(.system(size: fontSize, weight: .bold))
                         .environment(\.layoutDirection, .leftToRight)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .allowsTightening(true)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
+                .foregroundColor(color)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .foregroundColor(color)
-            .padding(.bottom, 6)
+            .padding(.top, 14)
             .padding(.horizontal, 4)
 
         case .earnings(let amount, let color):
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
+            GeometryReader { geo in
+                let fontSize = min(geo.size.width * 0.5, geo.size.height * 0.65)
                 Text(CalendarGridHelper.formatCompactCurrency(amount))
-                    .font(.callout.weight(.bold))
+                    .font(.system(size: fontSize, weight: .bold))
                     .foregroundColor(color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .allowsTightening(true)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(.bottom, 6)
+            .padding(.top, 14)
             .padding(.horizontal, 4)
 
         case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
+            GeometryReader { geo in
                 if earnings.hasTaxEnabled {
-                    VStack(spacing: -4) {
+                    let primarySize = min(geo.size.width * 0.4, geo.size.height * 0.42)
+                    let secondarySize = primarySize * 0.8
+                    VStack(spacing: -1) {
                         Text(CalendarGridHelper.formatCompactCurrency(earnings.net))
-                            .font(.callout.weight(.bold))
+                            .font(.system(size: primarySize, weight: .bold))
                             .foregroundColor(color)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                             .allowsTightening(true)
                             .frame(maxWidth: .infinity, alignment: .center)
                         Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
-                            .font(.footnote.weight(.bold))
+                            .font(.system(size: secondarySize, weight: .bold))
                             .foregroundColor(beforeTaxColor)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                             .allowsTightening(true)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
+                    let fontSize = min(geo.size.width * 0.5, geo.size.height * 0.65)
                     Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
-                        .font(.callout.weight(.bold))
+                        .font(.system(size: fontSize, weight: .bold))
                         .foregroundColor(color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .allowsTightening(true)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .padding(.bottom, 6)
+            .padding(.top, 14)
             .padding(.horizontal, 4)
 
         case .starIcon(let color):
