@@ -7,142 +7,145 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AppearanceSet
 @MainActor
 final class AppearanceSettingsViewModel: ObservableObject {
 
-    // MARK: - Published State
+  // MARK: - Published State
 
-    /// The currently selected theme
-    @Published var selectedTheme: AppTheme = .system {
-        didSet {
-            if oldValue != selectedTheme && !isInitialLoad {
-                updateTheme()
-            }
-        }
+  /// The currently selected theme
+  @Published var selectedTheme: AppTheme = .system {
+    didSet {
+      if oldValue != selectedTheme && !isInitialLoad {
+        updateTheme()
+      }
+    }
+  }
+
+  /// The currently selected calendar animation style
+  @Published var selectedCalendarAnimationStyle: CalendarAnimationStyle = .horizontal {
+    didSet {
+      if oldValue != selectedCalendarAnimationStyle && !isInitialLoad {
+        updateCalendarAnimationStyle()
+      }
+    }
+  }
+
+  /// Loading state
+  @Published var isLoading: Bool = false
+
+  /// Error message
+  @Published var errorMessage: String?
+
+  // MARK: - Private Properties
+
+  private let settingsRepository = SettingsRepository.shared
+  private let appearanceManager = AppearanceManager.shared
+  private var userId: String?
+  private var isInitialLoad = true
+
+  // MARK: - Initialization
+
+  init() {}
+
+  // MARK: - Public Methods
+
+  /// Load appearance settings
+  func loadSettings() async {
+    isLoading = true
+    errorMessage = nil
+
+    // Get current user
+    do {
+      userId = try await AuthSessionManager.shared.getUserId()
+    } catch {
+      logger.error("Failed to get user session: \(error.localizedDescription)")
+      isLoading = false
+      return
     }
 
-    /// The currently selected calendar animation style
-    @Published var selectedCalendarAnimationStyle: CalendarAnimationStyle = .horizontal {
-        didSet {
-            if oldValue != selectedCalendarAnimationStyle && !isInitialLoad {
-                updateCalendarAnimationStyle()
-            }
-        }
+    guard let userId = userId else {
+      isLoading = false
+      return
     }
 
-    /// Loading state
-    @Published var isLoading: Bool = false
+    // Load settings from repository
+    let settings = settingsRepository.getSettings(for: userId)
 
-    /// Error message
-    @Published var errorMessage: String?
-
-    // MARK: - Private Properties
-
-    private let settingsRepository = SettingsRepository.shared
-    private let appearanceManager = AppearanceManager.shared
-    private var userId: String?
-    private var isInitialLoad = true
-
-    // MARK: - Initialization
-
-    init() {}
-
-    // MARK: - Public Methods
-
-    /// Load appearance settings
-    func loadSettings() async {
-        isLoading = true
-        errorMessage = nil
-
-        // Get current user
-        do {
-            userId = try await AuthSessionManager.shared.getUserId()
-        } catch {
-            logger.error("Failed to get user session: \(error.localizedDescription)")
-            isLoading = false
-            return
-        }
-
-        guard let userId = userId else {
-            isLoading = false
-            return
-        }
-
-        // Load settings from repository
-        let settings = settingsRepository.getSettings(for: userId)
-
-        // Update state without triggering saves
-        isInitialLoad = true
-        if let themeString = settings?.theme,
-           let theme = AppTheme(rawValue: themeString) {
-            selectedTheme = theme
-        } else {
-            selectedTheme = .system
-        }
-
-        // Load calendar animation style from settings (synced from server)
-        if let styleString = settings?.calendar_animation_style,
-           let style = CalendarAnimationStyle(rawValue: styleString) {
-            selectedCalendarAnimationStyle = style
-            // Also update AppearanceManager to match
-            appearanceManager.setCalendarAnimationStyle(style)
-        } else {
-            selectedCalendarAnimationStyle = .horizontal
-        }
-
-        isInitialLoad = false
-
-        isLoading = false
-        logger.info("Loaded appearance settings")
+    // Update state without triggering saves
+    isInitialLoad = true
+    if let themeString = settings?.theme,
+      let theme = AppTheme(rawValue: themeString)
+    {
+      selectedTheme = theme
+    } else {
+      selectedTheme = .system
     }
 
-    /// Clear error message
-    func clearError() {
-        errorMessage = nil
+    // Load calendar animation style from settings (synced from server)
+    if let styleString = settings?.calendar_animation_style,
+      let style = CalendarAnimationStyle(rawValue: styleString)
+    {
+      selectedCalendarAnimationStyle = style
+      // Also update AppearanceManager to match
+      appearanceManager.setCalendarAnimationStyle(style)
+    } else {
+      selectedCalendarAnimationStyle = .horizontal
     }
 
-    // MARK: - Private Methods
+    isInitialLoad = false
 
-    /// Update theme in repository and apply to app
-    private func updateTheme() {
-        guard !isInitialLoad, let userId = userId else { return }
+    isLoading = false
+    logger.info("Loaded appearance settings")
+  }
 
-        // Apply immediately to AppearanceManager
-        appearanceManager.setTheme(selectedTheme)
+  /// Clear error message
+  func clearError() {
+    errorMessage = nil
+  }
 
-        // Save to repository (automatically triggers sync)
-        Task {
-            do {
-                _ = try await settingsRepository.updateSettings(
-                    for: userId,
-                    theme: selectedTheme.rawValue
-                )
+  // MARK: - Private Methods
 
-                logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
-            } catch {
-                logger.error("Failed to save theme: \(error.localizedDescription)")
-                errorMessage = "Failed to save theme preference"
-            }
-        }
+  /// Update theme in repository and apply to app
+  private func updateTheme() {
+    guard !isInitialLoad, let userId = userId else { return }
+
+    // Apply immediately to AppearanceManager
+    appearanceManager.setTheme(selectedTheme)
+
+    // Save to repository (automatically triggers sync)
+    Task {
+      do {
+        _ = try await settingsRepository.updateSettings(
+          for: userId,
+          theme: selectedTheme.rawValue
+        )
+
+        logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
+      } catch {
+        logger.error("Failed to save theme: \(error.localizedDescription)")
+        errorMessage = "Failed to save theme preference"
+      }
     }
+  }
 
-    /// Update calendar animation style in repository and apply to app
-    private func updateCalendarAnimationStyle() {
-        guard !isInitialLoad, let userId = userId else { return }
+  /// Update calendar animation style in repository and apply to app
+  private func updateCalendarAnimationStyle() {
+    guard !isInitialLoad, let userId = userId else { return }
 
-        // Apply immediately to AppearanceManager
-        appearanceManager.setCalendarAnimationStyle(selectedCalendarAnimationStyle)
+    // Apply immediately to AppearanceManager
+    appearanceManager.setCalendarAnimationStyle(selectedCalendarAnimationStyle)
 
-        // Save to repository (automatically triggers sync)
-        Task {
-            do {
-                _ = try await settingsRepository.updateSettings(
-                    for: userId,
-                    calendarAnimationStyle: selectedCalendarAnimationStyle.rawValue
-                )
+    // Save to repository (automatically triggers sync)
+    Task {
+      do {
+        _ = try await settingsRepository.updateSettings(
+          for: userId,
+          calendarAnimationStyle: selectedCalendarAnimationStyle.rawValue
+        )
 
-                logger.info("Updated calendar animation style to: \(self.selectedCalendarAnimationStyle.rawValue)")
-            } catch {
-                logger.error("Failed to save calendar animation style: \(error.localizedDescription)")
-                errorMessage = "Failed to save animation preference"
-            }
-        }
+        logger.info(
+          "Updated calendar animation style to: \(self.selectedCalendarAnimationStyle.rawValue)")
+      } catch {
+        logger.error("Failed to save calendar animation style: \(error.localizedDescription)")
+        errorMessage = "Failed to save animation preference"
+      }
     }
+  }
 }

@@ -5,217 +5,221 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsL
 
 /// List of shared shifts from a specific sharer for the selected month
 struct SharedShiftsListView: View {
-    let sharer: SharedUser
-    let shifts: [ShiftWithComputations]
-    let year: Int
-    let month: Int
-    let isLoading: Bool
+  let sharer: SharedUser
+  let shifts: [ShiftWithComputations]
+  let year: Int
+  let month: Int
+  let isLoading: Bool
 
-    /// Dates to highlight from notification deeplink
-    var highlightDates: Set<String> = []
+  /// Dates to highlight from notification deeplink
+  var highlightDates: Set<String> = []
 
-    /// Shift IDs to highlight from notification deeplink (more precise than dates)
-    var highlightShiftIds: Set<String> = []
+  /// Shift IDs to highlight from notification deeplink (more precise than dates)
+  var highlightShiftIds: Set<String> = []
 
-    /// Whether superimpose mode is active
-    var isSuperimposing: Bool = false
+  /// Whether superimpose mode is active
+  var isSuperimposing: Bool = false
 
-    /// User's own shift hours by date (for superimpose feature)
-    var userHoursByDate: [String: HoursData]?
+  /// User's own shift hours by date (for superimpose feature)
+  var userHoursByDate: [String: HoursData]?
 
-    @Environment(\.userCurrency) private var currency
+  @Environment(\.userCurrency) private var currency
 
-    // Sheet state for shift details (using item-based presentation to fix first-tap bug)
-    @State private var selectedShift: ShiftWithComputations?
+  // Sheet state for shift details (using item-based presentation to fix first-tap bug)
+  @State private var selectedShift: ShiftWithComputations?
 
-    // Screenshot bubble state
-    @State private var showScreenshotBubble = false
-    @State private var showNotifiedIcon = false
-    @State private var bellShakeTrigger = false
+  // Screenshot bubble state
+  @State private var showScreenshotBubble = false
+  @State private var showNotifiedIcon = false
+  @State private var bellShakeTrigger = false
 
-    var body: some View {
-        GeometryReader { _ in
-            ZStack {
-                if isLoading && shifts.isEmpty {
-                    loadingState
-                } else {
-                    // Center the calendar vertically like in ShiftsView
-                    VStack {
-                        Spacer()
-                        SharedShiftsCalendarView(
-                            shifts: shifts,
-                            year: year,
-                            month: month,
-                            currency: currency,
-                            showEarnings: sharer.showEarnings,
-                            highlightDates: highlightDates,
-                            highlightShiftIds: highlightShiftIds,
-                            isSuperimposing: isSuperimposing,
-                            userHoursByDate: userHoursByDate,
-                            onShiftTapped: { shift in
-                                selectedShift = shift
-                            }
-                        )
-                        Spacer()
-                    }
-                }
+  var body: some View {
+    GeometryReader { _ in
+      ZStack {
+        if isLoading && shifts.isEmpty {
+          loadingState
+        } else {
+          // Center the calendar vertically like in ShiftsView
+          VStack {
+            Spacer()
+            SharedShiftsCalendarView(
+              shifts: shifts,
+              year: year,
+              month: month,
+              currency: currency,
+              showEarnings: sharer.showEarnings,
+              highlightDates: highlightDates,
+              highlightShiftIds: highlightShiftIds,
+              isSuperimposing: isSuperimposing,
+              userHoursByDate: userHoursByDate,
+              onShiftTapped: { shift in
+                selectedShift = shift
+              }
+            )
+            Spacer()
+          }
+        }
 
-                // Screenshot bubble overlay
-                if showScreenshotBubble {
-                    VStack {
-                        screenshotBubble
-                            .onTapGesture {
-                                dismissScreenshotBubble()
-                            }
-                            .transition(.asymmetric(
-                                insertion: .scale.combined(with: .opacity),
-                                removal: .opacity
-                            ))
-                        Spacer()
-                    }
-                    .padding(.top, 16)
-                }
+        // Screenshot bubble overlay
+        if showScreenshotBubble {
+          VStack {
+            screenshotBubble
+              .onTapGesture {
+                dismissScreenshotBubble()
+              }
+              .transition(
+                .asymmetric(
+                  insertion: .scale.combined(with: .opacity),
+                  removal: .opacity
+                ))
+            Spacer()
+          }
+          .padding(.top, 16)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // Using .sheet(item:) guarantees data availability when sheet presents
+    .sheet(item: $selectedShift) { shift in
+      ShiftDetailsSheet(shift: shift, onDelete: nil)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+    // Detect screenshots and notify the sharer
+    .onReceive(
+      NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
+    ) { _ in
+      Task {
+        await reportScreenshot()
+      }
+    }
+  }
+
+  // MARK: - Screenshot Detection
+
+  /// Reports to the sharer that their shifts were screenshotted
+  private func reportScreenshot() async {
+    logger.info("Screenshot detected while viewing \(sharer.firstName ?? "friend")'s shifts")
+
+    // Reset state
+    showNotifiedIcon = false
+
+    // Show the bubble immediately
+    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+      showScreenshotBubble = true
+    }
+
+    // Bubble persists until user taps it
+
+    do {
+      try await ScreenshotNotificationService.shared.reportScreenshot(sharerId: sharer.id)
+      logger.info("Screenshot notification sent successfully")
+      withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+        showNotifiedIcon = true
+      }
+      Haptics.play(.success)
+      // Trigger shake after the bell springs in
+      try? await Task.sleep(for: .seconds(0.3))
+      bellShakeTrigger.toggle()
+    } catch {
+      // Silently fail - don't interrupt user experience for notification failures
+      logger.error("Failed to report screenshot: \(error.localizedDescription)")
+    }
+  }
+
+  /// Dismisses the screenshot bubble
+  private func dismissScreenshotBubble() {
+    withAnimation(.easeOut(duration: 0.2)) {
+      showScreenshotBubble = false
+    }
+    // Reset after dismiss animation
+    Task {
+      try? await Task.sleep(for: .seconds(0.3))
+      showNotifiedIcon = false
+      bellShakeTrigger = false
+    }
+  }
+
+  /// Screenshot notification bubble (matches SyncStatusIndicator styling)
+  private var screenshotBubble: some View {
+    HStack(spacing: 8) {
+      Image(systemName: "camera.viewfinder")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundColor(.tidexTextSecondary)
+
+      Text(.sharingScreenshotTaken)
+        .font(.system(size: 13, weight: .medium))
+        .foregroundColor(.tidexTextSecondary)
+
+      if showNotifiedIcon {
+        Image(systemName: "bell.and.waves.left.and.right")
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(.tidexBlue)
+          .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) {
+            content, value in
+            content
+              .rotationEffect(.degrees(value.angle), anchor: .top)
+          } keyframes: { _ in
+            KeyframeTrack(\.angle) {
+              SpringKeyframe(15, duration: 0.1, spring: .bouncy)
+              SpringKeyframe(-12, duration: 0.1, spring: .bouncy)
+              SpringKeyframe(8, duration: 0.1, spring: .bouncy)
+              SpringKeyframe(-5, duration: 0.1, spring: .bouncy)
+              SpringKeyframe(2, duration: 0.1, spring: .bouncy)
+              SpringKeyframe(0, duration: 0.15, spring: .bouncy)
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Using .sheet(item:) guarantees data availability when sheet presents
-        .sheet(item: $selectedShift) { shift in
-            ShiftDetailsSheet(shift: shift, onDelete: nil)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
-        // Detect screenshots and notify the sharer
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)) { _ in
-            Task {
-                await reportScreenshot()
-            }
-        }
+          }
+          .transition(.scale.combined(with: .opacity))
+      }
     }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .background(Color.tidexSurfacePrimary)
+    .cornerRadius(20)
+    .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+  }
 
-    // MARK: - Screenshot Detection
+  // MARK: - States
 
-    /// Reports to the sharer that their shifts were screenshotted
-    private func reportScreenshot() async {
-        logger.info("Screenshot detected while viewing \(sharer.firstName ?? "friend")'s shifts")
+  private var loadingState: some View {
+    VStack(spacing: 16) {
+      ProgressView()
+        .scaleEffect(1.2)
 
-        // Reset state
-        showNotifiedIcon = false
-
-        // Show the bubble immediately
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showScreenshotBubble = true
-        }
-
-        // Bubble persists until user taps it
-
-        do {
-            try await ScreenshotNotificationService.shared.reportScreenshot(sharerId: sharer.id)
-            logger.info("Screenshot notification sent successfully")
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                showNotifiedIcon = true
-            }
-            Haptics.play(.success)
-            // Trigger shake after the bell springs in
-            try? await Task.sleep(for: .seconds(0.3))
-            bellShakeTrigger.toggle()
-        } catch {
-            // Silently fail - don't interrupt user experience for notification failures
-            logger.error("Failed to report screenshot: \(error.localizedDescription)")
-        }
+      Text(.sharingLoadingShifts)
+        .font(.system(size: 15))
+        .foregroundColor(.tidexTextMuted)
     }
-
-    /// Dismisses the screenshot bubble
-    private func dismissScreenshotBubble() {
-        withAnimation(.easeOut(duration: 0.2)) {
-            showScreenshotBubble = false
-        }
-        // Reset after dismiss animation
-        Task {
-            try? await Task.sleep(for: .seconds(0.3))
-            showNotifiedIcon = false
-            bellShakeTrigger = false
-        }
-    }
-
-    /// Screenshot notification bubble (matches SyncStatusIndicator styling)
-    private var screenshotBubble: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "camera.viewfinder")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.tidexTextSecondary)
-
-            Text(.sharingScreenshotTaken)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.tidexTextSecondary)
-
-            if showNotifiedIcon {
-                Image(systemName: "bell.and.waves.left.and.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.tidexBlue)
-                    .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) { content, value in
-                        content
-                            .rotationEffect(.degrees(value.angle), anchor: .top)
-                    } keyframes: { _ in
-                        KeyframeTrack(\.angle) {
-                            SpringKeyframe(15, duration: 0.1, spring: .bouncy)
-                            SpringKeyframe(-12, duration: 0.1, spring: .bouncy)
-                            SpringKeyframe(8, duration: 0.1, spring: .bouncy)
-                            SpringKeyframe(-5, duration: 0.1, spring: .bouncy)
-                            SpringKeyframe(2, duration: 0.1, spring: .bouncy)
-                            SpringKeyframe(0, duration: 0.15, spring: .bouncy)
-                        }
-                    }
-                    .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.tidexSurfacePrimary)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
-    }
-
-    // MARK: - States
-
-    private var loadingState: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-
-            Text(.sharingLoadingShifts)
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextMuted)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 60)
-    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .padding(.vertical, 60)
+  }
 
 }
 
 // MARK: - Bell Shake Keyframe
 
 private struct BellShake {
-    var angle: Double = 0
+  var angle: Double = 0
 }
 
 #Preview {
-    SharedShiftsListView(
-        sharer: SharedUser(
-            id: "1",
-            email: "john@example.com",
-            phone: nil,
-            firstName: "John Doe",
-            profilePictureUrl: nil,
-            oauthAvatarUrl: nil,
-            sharedAt: "2025-01-01",
-            showEarnings: true,
-            blocked: false
-        ),
-        shifts: [],
-        year: 2025,
-        month: 1,
-        isLoading: false
-    )
-    .background(Color.tidexBackground)
-    .environment(\.userCurrency, "kr")
+  SharedShiftsListView(
+    sharer: SharedUser(
+      id: "1",
+      email: "john@example.com",
+      phone: nil,
+      firstName: "John Doe",
+      profilePictureUrl: nil,
+      oauthAvatarUrl: nil,
+      sharedAt: "2025-01-01",
+      showEarnings: true,
+      blocked: false
+    ),
+    shifts: [],
+    year: 2025,
+    month: 1,
+    isLoading: false
+  )
+  .background(Color.tidexBackground)
+  .environment(\.userCurrency, "kr")
 }

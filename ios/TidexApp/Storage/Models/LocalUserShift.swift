@@ -7,166 +7,166 @@ import SwiftData
 /// Maps to the `user_shifts` table in Supabase
 @Model
 final class LocalUserShift {
-    // MARK: - Primary Key & Foreign Key
+  // MARK: - Primary Key & Foreign Key
 
-    /// Unique identifier (UUID string from server)
-    @Attribute(.unique)
-    var id: String
+  /// Unique identifier (UUID string from server)
+  @Attribute(.unique)
+  var id: String
 
-    /// User who owns this shift
-    var userId: String
+  /// User who owns this shift
+  var userId: String
 
-    // MARK: - Shift Data
+  // MARK: - Shift Data
 
-    /// Date of the shift (stored as Date, derived from YYYY-MM-DD)
-    var shiftDate: Date
+  /// Date of the shift (stored as Date, derived from YYYY-MM-DD)
+  var shiftDate: Date
 
-    /// Start time in HH:mm format
-    var startTime: String
+  /// Start time in HH:mm format
+  var startTime: String
 
-    /// End time in HH:mm format (can be less than startTime for cross-midnight)
-    var endTime: String
+  /// End time in HH:mm format (can be less than startTime for cross-midnight)
+  var endTime: String
 
-    /// Custom supplements JSON blob (nullable)
-    /// Stored as canonical JSON Data for reliable diffing
-    var customSupplements: Data?
+  /// Custom supplements JSON blob (nullable)
+  /// Stored as canonical JSON Data for reliable diffing
+  var customSupplements: Data?
 
-    // MARK: - Server Metadata
+  // MARK: - Server Metadata
 
-    /// Server's updated_at timestamp
-    var serverUpdatedAt: Date
+  /// Server's updated_at timestamp
+  var serverUpdatedAt: Date
 
-    /// Server's revision number for optimistic concurrency
-    var serverRevision: Int64
+  /// Server's revision number for optimistic concurrency
+  var serverRevision: Int64
 
-    /// Server's deleted_at timestamp (soft delete)
-    var serverDeletedAt: Date?
+  /// Server's deleted_at timestamp (soft delete)
+  var serverDeletedAt: Date?
 
-    // MARK: - Sync Metadata
+  // MARK: - Sync Metadata
 
-    /// Current sync status
-    var syncStatusRaw: String
+  /// Current sync status
+  var syncStatusRaw: String
 
-    /// Fields modified locally since last sync (JSON array of field keys)
-    var dirtyFields: Data
+  /// Fields modified locally since last sync (JSON array of field keys)
+  var dirtyFields: Data
 
-    /// Snapshot of server data at last sync (for conflict detection)
-    /// Contains JSON-encoded UserShiftServerSnapshot
-    var lastSyncedSnapshot: Data
+  /// Snapshot of server data at last sync (for conflict detection)
+  /// Contains JSON-encoded UserShiftServerSnapshot
+  var lastSyncedSnapshot: Data
 
-    /// When the user last modified this record locally
-    var localUpdatedAt: Date
+  /// When the user last modified this record locally
+  var localUpdatedAt: Date
 
-    /// Server version on conflict (for resolution UI)
-    /// Contains JSON-encoded UserShiftServerSnapshot
-    var conflictServerSnapshot: Data?
+  /// Server version on conflict (for resolution UI)
+  /// Contains JSON-encoded UserShiftServerSnapshot
+  var conflictServerSnapshot: Data?
 
-    // MARK: - Computed Properties
+  // MARK: - Computed Properties
 
-    var syncStatus: SyncStatus {
-        get { SyncStatus(rawValue: syncStatusRaw) ?? .clean }
-        set { syncStatusRaw = newValue.rawValue }
+  var syncStatus: SyncStatus {
+    get { SyncStatus(rawValue: syncStatusRaw) ?? .clean }
+    set { syncStatusRaw = newValue.rawValue }
+  }
+
+  /// Decoded dirty fields
+  /// When decoding fails (corrupted data), treats record as fully dirty to prevent silent data loss
+  var dirtyFieldKeys: Set<UserShiftField> {
+    get {
+      // Empty data means no dirty fields (common case for clean records)
+      guard !dirtyFields.isEmpty else {
+        return []
+      }
+
+      do {
+        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        return Set(keys.compactMap { UserShiftField(rawValue: $0) })
+      } catch {
+        // If decode fails, treat as fully dirty to ensure data is pushed to server
+        // This prevents silent data loss when dirty fields data is corrupted
+        SyncLogger.shared.log(
+          "Corrupted dirtyFields for shift \(id), treating as fully dirty: \(error.localizedDescription)",
+          level: .error
+        )
+        return Set(UserShiftField.allCases)
+      }
     }
-
-    /// Decoded dirty fields
-    /// When decoding fails (corrupted data), treats record as fully dirty to prevent silent data loss
-    var dirtyFieldKeys: Set<UserShiftField> {
-        get {
-            // Empty data means no dirty fields (common case for clean records)
-            guard !dirtyFields.isEmpty else {
-                return []
-            }
-
-            do {
-                let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
-                return Set(keys.compactMap { UserShiftField(rawValue: $0) })
-            } catch {
-                // If decode fails, treat as fully dirty to ensure data is pushed to server
-                // This prevents silent data loss when dirty fields data is corrupted
-                SyncLogger.shared.log(
-                    "Corrupted dirtyFields for shift \(id), treating as fully dirty: \(error.localizedDescription)",
-                    level: .error
-                )
-                return Set(UserShiftField.allCases)
-            }
-        }
-        set {
-            let keys = newValue.map { $0.rawValue }
-            dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
-        }
+    set {
+      let keys = newValue.map { $0.rawValue }
+      dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
     }
+  }
 
-    /// Decoded custom supplements
-    var decodedCustomSupplements: CustomSupplementsData? {
-        get {
-            guard let data = customSupplements else { return nil }
-            return try? syncJSONDecoder.decode(CustomSupplementsData.self, from: data)
-        }
-        set {
-            customSupplements = newValue.flatMap { try? canonicalJSONEncoder.encode($0) }
-        }
+  /// Decoded custom supplements
+  var decodedCustomSupplements: CustomSupplementsData? {
+    get {
+      guard let data = customSupplements else { return nil }
+      return try? syncJSONDecoder.decode(CustomSupplementsData.self, from: data)
     }
-
-    /// Shift date as ISO string (YYYY-MM-DD)
-    var shiftDateString: String {
-        FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: shiftDate)
+    set {
+      customSupplements = newValue.flatMap { try? canonicalJSONEncoder.encode($0) }
     }
+  }
 
-    /// Whether this shift is soft-deleted
-    var isDeleted: Bool {
-        serverDeletedAt != nil
-    }
+  /// Shift date as ISO string (YYYY-MM-DD)
+  var shiftDateString: String {
+    FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: shiftDate)
+  }
 
-    /// Whether this shift is pending deletion (not yet synced)
-    /// Used to avoid stringly-typed status checks
-    var isPendingDelete: Bool {
-        syncStatusRaw == "pendingDelete"
-    }
+  /// Whether this shift is soft-deleted
+  var isDeleted: Bool {
+    serverDeletedAt != nil
+  }
 
-    /// Whether this shift should be counted as "existing" for month gating
-    /// Excludes deleted and pending-delete shifts
-    var isActiveShift: Bool {
-        serverDeletedAt == nil && !isPendingDelete
-    }
+  /// Whether this shift is pending deletion (not yet synced)
+  /// Used to avoid stringly-typed status checks
+  var isPendingDelete: Bool {
+    syncStatusRaw == "pendingDelete"
+  }
 
-    // MARK: - Initialization
+  /// Whether this shift should be counted as "existing" for month gating
+  /// Excludes deleted and pending-delete shifts
+  var isActiveShift: Bool {
+    serverDeletedAt == nil && !isPendingDelete
+  }
 
-    init(
-        id: String,
-        userId: String,
-        shiftDate: Date,
-        startTime: String,
-        endTime: String,
-        customSupplements: Data? = nil,
-        serverUpdatedAt: Date,
-        serverRevision: Int64,
-        serverDeletedAt: Date? = nil,
-        syncStatus: SyncStatus = .clean,
-        dirtyFields: Data = Data(),
-        lastSyncedSnapshot: Data,
-        localUpdatedAt: Date,
-        conflictServerSnapshot: Data? = nil
-    ) {
-        self.id = id
-        self.userId = userId
-        self.shiftDate = shiftDate
-        self.startTime = startTime
-        self.endTime = endTime
-        self.customSupplements = customSupplements
-        self.serverUpdatedAt = serverUpdatedAt
-        self.serverRevision = serverRevision
-        self.serverDeletedAt = serverDeletedAt
-        self.syncStatusRaw = syncStatus.rawValue
-        self.dirtyFields = dirtyFields
-        self.lastSyncedSnapshot = lastSyncedSnapshot
-        self.localUpdatedAt = localUpdatedAt
-        self.conflictServerSnapshot = conflictServerSnapshot
-    }
+  // MARK: - Initialization
 
-    /// Initialize empty dirty fields array
-    static func emptyDirtyFields() -> Data {
-        (try? canonicalJSONEncoder.encode([String]())) ?? Data()
-    }
+  init(
+    id: String,
+    userId: String,
+    shiftDate: Date,
+    startTime: String,
+    endTime: String,
+    customSupplements: Data? = nil,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date? = nil,
+    syncStatus: SyncStatus = .clean,
+    dirtyFields: Data = Data(),
+    lastSyncedSnapshot: Data,
+    localUpdatedAt: Date,
+    conflictServerSnapshot: Data? = nil
+  ) {
+    self.id = id
+    self.userId = userId
+    self.shiftDate = shiftDate
+    self.startTime = startTime
+    self.endTime = endTime
+    self.customSupplements = customSupplements
+    self.serverUpdatedAt = serverUpdatedAt
+    self.serverRevision = serverRevision
+    self.serverDeletedAt = serverDeletedAt
+    self.syncStatusRaw = syncStatus.rawValue
+    self.dirtyFields = dirtyFields
+    self.lastSyncedSnapshot = lastSyncedSnapshot
+    self.localUpdatedAt = localUpdatedAt
+    self.conflictServerSnapshot = conflictServerSnapshot
+  }
+
+  /// Initialize empty dirty fields array
+  static func emptyDirtyFields() -> Data {
+    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+  }
 }
 
 // MARK: - Server Snapshot
@@ -174,132 +174,135 @@ final class LocalUserShift {
 /// Snapshot of server data for a user shift
 /// Used for conflict detection and field-level diffing
 struct UserShiftServerSnapshot: Codable, Equatable {
-    let shiftDate: String
-    let startTime: String
-    let endTime: String
-    let customSupplements: Data?
-    let updatedAt: Date
-    let revision: Int64
-    let deletedAt: Date?
+  let shiftDate: String
+  let startTime: String
+  let endTime: String
+  let customSupplements: Data?
+  let updatedAt: Date
+  let revision: Int64
+  let deletedAt: Date?
 
-    /// Create snapshot from a ShiftRow server response
-    static func from( // swiftlint:disable:this function_parameter_count
-        shiftDate: String,
-        startTime: String,
-        endTime: String,
-        customSupplements: CustomSupplementsData?,
-        updatedAt: Date,
-        revision: Int64,
-        deletedAt: Date?
-    ) -> UserShiftServerSnapshot {
-        let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
-        return UserShiftServerSnapshot(
-            shiftDate: shiftDate,
-            startTime: startTime,
-            endTime: endTime,
-            customSupplements: supplementsData,
-            updatedAt: updatedAt,
-            revision: revision,
-            deletedAt: deletedAt
-        )
+  /// Create snapshot from a ShiftRow server response
+  static func from(  // swiftlint:disable:this function_parameter_count
+    shiftDate: String,
+    startTime: String,
+    endTime: String,
+    customSupplements: CustomSupplementsData?,
+    updatedAt: Date,
+    revision: Int64,
+    deletedAt: Date?
+  ) -> UserShiftServerSnapshot {
+    let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    return UserShiftServerSnapshot(
+      shiftDate: shiftDate,
+      startTime: startTime,
+      endTime: endTime,
+      customSupplements: supplementsData,
+      updatedAt: updatedAt,
+      revision: revision,
+      deletedAt: deletedAt
+    )
+  }
+
+  /// Encode to Data (throws on failure for critical paths)
+  /// Use this in insert/update paths where empty Data would corrupt sync state
+  func encodedOrThrow() throws -> Data {
+    try requireEncode(self, typeName: "UserShiftServerSnapshot")
+  }
+
+  /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
+  /// DEPRECATED: Prefer encodedOrThrow() for new code
+  func encoded() -> Data {
+    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+  }
+
+  /// Decode from Data
+  static func decode(from data: Data) -> UserShiftServerSnapshot? {
+    try? syncJSONDecoder.decode(UserShiftServerSnapshot.self, from: data)
+  }
+
+  /// Compute changed fields compared to another snapshot
+  func changedFields(from other: UserShiftServerSnapshot) -> Set<UserShiftField> {
+    var changed: Set<UserShiftField> = []
+
+    if shiftDate != other.shiftDate {
+      changed.insert(.shiftDate)
+    }
+    if startTime != other.startTime {
+      changed.insert(.startTime)
+    }
+    if endTime != other.endTime {
+      changed.insert(.endTime)
+    }
+    if customSupplements != other.customSupplements {
+      changed.insert(.customSupplements)
     }
 
-    /// Encode to Data (throws on failure for critical paths)
-    /// Use this in insert/update paths where empty Data would corrupt sync state
-    func encodedOrThrow() throws -> Data {
-        try requireEncode(self, typeName: "UserShiftServerSnapshot")
-    }
-
-    /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
-    /// DEPRECATED: Prefer encodedOrThrow() for new code
-    func encoded() -> Data {
-        (try? canonicalJSONEncoder.encode(self)) ?? Data()
-    }
-
-    /// Decode from Data
-    static func decode(from data: Data) -> UserShiftServerSnapshot? {
-        try? syncJSONDecoder.decode(UserShiftServerSnapshot.self, from: data)
-    }
-
-    /// Compute changed fields compared to another snapshot
-    func changedFields(from other: UserShiftServerSnapshot) -> Set<UserShiftField> {
-        var changed: Set<UserShiftField> = []
-
-        if shiftDate != other.shiftDate {
-            changed.insert(.shiftDate)
-        }
-        if startTime != other.startTime {
-            changed.insert(.startTime)
-        }
-        if endTime != other.endTime {
-            changed.insert(.endTime)
-        }
-        if customSupplements != other.customSupplements {
-            changed.insert(.customSupplements)
-        }
-
-        return changed
-    }
+    return changed
+  }
 }
 
 // MARK: - Conversion Extensions
 
 extension LocalUserShift {
-    /// Convert to ShiftRow for use with existing payroll calculators
-    func toShiftRow() -> ShiftRow {
-        ShiftRow(
-            id: id,
-            user_id: userId,
-            shift_date: shiftDateString,
-            start_time: startTime,
-            end_time: endTime,
-            custom_supplements: decodedCustomSupplements,
-            created_at: nil,
-            updated_at: serverUpdatedAt,
-            recurring_id: nil,
-            recurring_anchor_weekday: nil
-        )
+  /// Convert to ShiftRow for use with existing payroll calculators
+  func toShiftRow() -> ShiftRow {
+    ShiftRow(
+      id: id,
+      user_id: userId,
+      shift_date: shiftDateString,
+      start_time: startTime,
+      end_time: endTime,
+      custom_supplements: decodedCustomSupplements,
+      created_at: nil,
+      updated_at: serverUpdatedAt,
+      recurring_id: nil,
+      recurring_anchor_weekday: nil
+    )
+  }
+
+  /// Create from a server response row
+  static func from(
+    serverRow: ShiftRow,
+    userId: String,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date?,
+    context: ModelContext
+  ) -> LocalUserShift {
+    let shiftDate =
+      FormatterCache
+      .isoDateFormatter(timeZone: Date.localTimeZone)
+      .date(from: serverRow.shift_date) ?? Date()
+    let supplementsData = serverRow.custom_supplements.flatMap {
+      try? canonicalJSONEncoder.encode($0)
     }
 
-    /// Create from a server response row
-    static func from(
-        serverRow: ShiftRow,
-        userId: String,
-        serverUpdatedAt: Date,
-        serverRevision: Int64,
-        serverDeletedAt: Date?,
-        context: ModelContext
-    ) -> LocalUserShift {
-        let shiftDate = FormatterCache
-            .isoDateFormatter(timeZone: Date.localTimeZone)
-            .date(from: serverRow.shift_date) ?? Date()
-        let supplementsData = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let snapshot = UserShiftServerSnapshot.from(
+      shiftDate: serverRow.shift_date,
+      startTime: serverRow.start_time,
+      endTime: serverRow.end_time,
+      customSupplements: serverRow.custom_supplements,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision,
+      deletedAt: serverDeletedAt
+    )
 
-        let snapshot = UserShiftServerSnapshot.from(
-            shiftDate: serverRow.shift_date,
-            startTime: serverRow.start_time,
-            endTime: serverRow.end_time,
-            customSupplements: serverRow.custom_supplements,
-            updatedAt: serverUpdatedAt,
-            revision: serverRevision,
-            deletedAt: serverDeletedAt
-        )
-
-        return LocalUserShift(
-            id: serverRow.id,
-            userId: userId,
-            shiftDate: shiftDate,
-            startTime: serverRow.start_time,
-            endTime: serverRow.end_time,
-            customSupplements: supplementsData,
-            serverUpdatedAt: serverUpdatedAt,
-            serverRevision: serverRevision,
-            serverDeletedAt: serverDeletedAt,
-            syncStatus: .clean,
-            dirtyFields: emptyDirtyFields(),
-            lastSyncedSnapshot: snapshot.encoded(),
-            localUpdatedAt: Date(),
-            conflictServerSnapshot: nil
-        )
-    }
+    return LocalUserShift(
+      id: serverRow.id,
+      userId: userId,
+      shiftDate: shiftDate,
+      startTime: serverRow.start_time,
+      endTime: serverRow.end_time,
+      customSupplements: supplementsData,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      serverDeletedAt: serverDeletedAt,
+      syncStatus: .clean,
+      dirtyFields: emptyDirtyFields(),
+      lastSyncedSnapshot: snapshot.encoded(),
+      localUpdatedAt: Date(),
+      conflictServerSnapshot: nil
+    )
+  }
 }

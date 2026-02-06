@@ -2,225 +2,228 @@ import SwiftUI
 
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
-    let messages: [ChatMessage]
-    let streamingContentBlocks: [ContentBlock]
-    let isStreaming: Bool
+  let messages: [ChatMessage]
+  let streamingContentBlocks: [ContentBlock]
+  let isStreaming: Bool
 
-    /// Callback when a suggestion chip is tapped
-    var onSuggestionTapped: ((String) -> Void)?
+  /// Callback when a suggestion chip is tapped
+  var onSuggestionTapped: ((String) -> Void)?
 
-    /// Namespace for scroll-to-bottom animation
-    @Namespace private var bottomID
+  /// Namespace for scroll-to-bottom animation
+  @Namespace private var bottomID
 
-    /// Whether the "Copied!" confirmation is showing
-    @State private var showCopiedConfirmation = false
+  /// Whether the "Copied!" confirmation is showing
+  @State private var showCopiedConfirmation = false
 
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    // Empty state when no messages
-                    if messages.isEmpty && !isStreaming {
-                        emptyStateView
-                            .padding(.top, 40)
-                    } else {
-                        // Message bubbles
-                        ForEach(messages) { message in
-                            ChatMessageBubble(message: message)
-                                .id(message.id)
-                        }
-
-                        // Streaming message
-                        if isStreaming {
-                            StreamingMessageBubble(contentBlocks: streamingContentBlocks)
-                                .id("streaming")
-                        }
-
-                        // Copy conversation button (after last assistant message, when not streaming)
-                        if !isStreaming, messages.last?.role == .assistant {
-                            copyConversationButton
-                        }
-                    }
-
-                    // Bottom anchor for scrolling
-                    Color.clear
-                        .frame(height: 1)
-                        .id("bottom")
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
+  var body: some View {
+    ScrollViewReader { proxy in
+      ScrollView {
+        LazyVStack(spacing: 12) {
+          // Empty state when no messages
+          if messages.isEmpty && !isStreaming {
+            emptyStateView
+              .padding(.top, 40)
+          } else {
+            // Message bubbles
+            ForEach(messages) { message in
+              ChatMessageBubble(message: message)
+                .id(message.id)
             }
-            .onChange(of: messages.count) { _, _ in
-                scrollToBottom(proxy: proxy)
+
+            // Streaming message
+            if isStreaming {
+              StreamingMessageBubble(contentBlocks: streamingContentBlocks)
+                .id("streaming")
             }
-            .onChange(of: streamingContentBlocks.count) { _, _ in
-                scrollToBottom(proxy: proxy)
+
+            // Copy conversation button (after last assistant message, when not streaming)
+            if !isStreaming, messages.last?.role == .assistant {
+              copyConversationButton
             }
-            .onChange(of: isStreaming) { _, streaming in
-                if streaming {
-                    scrollToBottom(proxy: proxy)
-                }
-            }
-            .scrollDismissesKeyboard(.interactively)
+          }
+
+          // Bottom anchor for scrolling
+          Color.clear
+            .frame(height: 1)
+            .id("bottom")
         }
-        .onTapGesture {
-            // Dismiss keyboard when tapping on the message area
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+      }
+      .onChange(of: messages.count) { _, _ in
+        scrollToBottom(proxy: proxy)
+      }
+      .onChange(of: streamingContentBlocks.count) { _, _ in
+        scrollToBottom(proxy: proxy)
+      }
+      .onChange(of: isStreaming) { _, streaming in
+        if streaming {
+          scrollToBottom(proxy: proxy)
         }
+      }
+      .scrollDismissesKeyboard(.interactively)
     }
-
-    // MARK: - Empty State
-
-    private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            // Wagey icon
-            Image(systemName: "sparkles")
-                .font(.system(size: 48))
-                .foregroundColor(.tidexBlue)
-
-            VStack(spacing: 8) {
-                Text(.wageyEmptyStateTitle)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-
-                Text(.wageyEmptyStateSubtitle)
-                    .font(.system(size: 15))
-                    .foregroundColor(.tidexTextSecondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            // Suggestion chips
-            VStack(spacing: 12) {
-                suggestionChip(String(localized: .wageyEmptyStateSuggestion1))
-                suggestionChip(String(localized: .wageyEmptyStateSuggestion2))
-                suggestionChip(String(localized: .wageyEmptyStateSuggestion3))
-                suggestionChip(String(localized: .wageyEmptyStateSuggestion4))
-            }
-            .padding(.top, 8)
-        }
-        .padding(.horizontal, 24)
+    .onTapGesture {
+      // Dismiss keyboard when tapping on the message area
+      UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+  }
 
-    private func suggestionChip(_ text: String) -> some View {
-        Button {
-            Haptics.play(.light)
-            onSuggestionTapped?(text)
-        } label: {
-            Text(text)
-                .font(.system(size: 14))
-                .foregroundColor(.tidexBlue)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.tidexBlue.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
+  // MARK: - Empty State
+
+  private var emptyStateView: some View {
+    VStack(spacing: 24) {
+      // Wagey icon
+      Image(systemName: "sparkles")
+        .font(.system(size: 48))
+        .foregroundColor(.tidexBlue)
+
+      VStack(spacing: 8) {
+        Text(.wageyEmptyStateTitle)
+          .font(.system(size: 20, weight: .semibold))
+          .foregroundColor(.tidexTextPrimary)
+
+        Text(.wageyEmptyStateSubtitle)
+          .font(.system(size: 15))
+          .foregroundColor(.tidexTextSecondary)
+          .multilineTextAlignment(.center)
+      }
+
+      // Suggestion chips
+      VStack(spacing: 12) {
+        suggestionChip(String(localized: .wageyEmptyStateSuggestion1))
+        suggestionChip(String(localized: .wageyEmptyStateSuggestion2))
+        suggestionChip(String(localized: .wageyEmptyStateSuggestion3))
+        suggestionChip(String(localized: .wageyEmptyStateSuggestion4))
+      }
+      .padding(.top, 8)
     }
+    .padding(.horizontal, 24)
+  }
 
-    // MARK: - Copy Conversation
-
-    private var copyConversationButton: some View {
-        Button {
-            Haptics.play(.light)
-            copyConversation()
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 13, weight: .medium))
-                Text(showCopiedConfirmation ? .wageyConversationCopied : .wageyCopyConversation)
-                    .font(.system(size: 13, weight: .medium))
-            }
-            .foregroundColor(showCopiedConfirmation ? .tidexSuccess : .tidexTextSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.tidexSurfacePrimary)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 4)
+  private func suggestionChip(_ text: String) -> some View {
+    Button {
+      Haptics.play(.light)
+      onSuggestionTapped?(text)
+    } label: {
+      Text(text)
+        .font(.system(size: 14))
+        .foregroundColor(.tidexBlue)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.tidexBlue.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
+    .buttonStyle(.plain)
+  }
 
-    private func copyConversation() {
-        let text = messages.map { message in
-            let role = message.role == .user ? "You" : "Wagey"
-            return "\(role): \(message.content)"
-        }.joined(separator: "\n\n")
+  // MARK: - Copy Conversation
 
-        UIPasteboard.general.string = text
-
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showCopiedConfirmation = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showCopiedConfirmation = false
-            }
-        }
+  private var copyConversationButton: some View {
+    Button {
+      Haptics.play(.light)
+      copyConversation()
+    } label: {
+      HStack(spacing: 6) {
+        Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
+          .font(.system(size: 13, weight: .medium))
+        Text(showCopiedConfirmation ? .wageyConversationCopied : .wageyCopyConversation)
+          .font(.system(size: 13, weight: .medium))
+      }
+      .foregroundColor(showCopiedConfirmation ? .tidexSuccess : .tidexTextSecondary)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
+    .buttonStyle(.plain)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.top, 4)
+  }
 
-    // MARK: - Scroll Helper
+  private func copyConversation() {
+    let text = messages.map { message in
+      let role = message.role == .user ? "You" : "Wagey"
+      return "\(role): \(message.content)"
+    }.joined(separator: "\n\n")
 
-    private func scrollToBottom(proxy: ScrollViewProxy) {
-        withAnimation(.easeOut(duration: 0.2)) {
-            proxy.scrollTo("bottom", anchor: .bottom)
-        }
+    UIPasteboard.general.string = text
+
+    withAnimation(.easeInOut(duration: 0.2)) {
+      showCopiedConfirmation = true
     }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      withAnimation(.easeInOut(duration: 0.2)) {
+        showCopiedConfirmation = false
+      }
+    }
+  }
+
+  // MARK: - Scroll Helper
+
+  private func scrollToBottom(proxy: ScrollViewProxy) {
+    withAnimation(.easeOut(duration: 0.2)) {
+      proxy.scrollTo("bottom", anchor: .bottom)
+    }
+  }
 }
 
 // MARK: - Previews
 
 #Preview("Empty State") {
-    ChatMessageList(
-        messages: [],
-        streamingContentBlocks: [],
-        isStreaming: false
-    )
-    .background(Color.tidexBackground)
+  ChatMessageList(
+    messages: [],
+    streamingContentBlocks: [],
+    isStreaming: false
+  )
+  .background(Color.tidexBackground)
 }
 
 #Preview("With Messages") {
-    ChatMessageList(
-        messages: [
-            ChatMessage(
-                id: "1",
-                role: MessageRole.user,
-                content: "What shifts do I have this week?",
-                toolCalls: nil,
-                timestamp: Date()
-            ),
-            ChatMessage(
-                id: "2",
-                role: MessageRole.assistant,
-                content: "You have 3 shifts scheduled this week:\n\n- Monday: 09:00-17:00\n- Wednesday: 14:00-22:00\n- Friday: 08:00-16:00\n\nTotal: 24 hours, approximately **4,800 kr** before taxes.",
-                toolCalls: [
-                    ToolCall(id: "call_1", name: "get_shifts", arguments: nil, result: "{}", success: true)
-                ],
-                timestamp: Date()
-            )
+  ChatMessageList(
+    messages: [
+      ChatMessage(
+        id: "1",
+        role: MessageRole.user,
+        content: "What shifts do I have this week?",
+        toolCalls: nil,
+        timestamp: Date()
+      ),
+      ChatMessage(
+        id: "2",
+        role: MessageRole.assistant,
+        content:
+          "You have 3 shifts scheduled this week:\n\n- Monday: 09:00-17:00\n- Wednesday: 14:00-22:00\n- Friday: 08:00-16:00\n\nTotal: 24 hours, approximately **4,800 kr** before taxes.",
+        toolCalls: [
+          ToolCall(id: "call_1", name: "get_shifts", arguments: nil, result: "{}", success: true)
         ],
-        streamingContentBlocks: [],
-        isStreaming: false
-    )
-    .background(Color.tidexBackground)
+        timestamp: Date()
+      ),
+    ],
+    streamingContentBlocks: [],
+    isStreaming: false
+  )
+  .background(Color.tidexBackground)
 }
 
 #Preview("Streaming") {
-    ChatMessageList(
-        messages: [
-            ChatMessage(
-                id: "1",
-                role: MessageRole.user,
-                content: "Add a shift tomorrow 9-17",
-                toolCalls: nil,
-                timestamp: Date()
-            )
-        ],
-        streamingContentBlocks: [
-            .text("I'll add that shift for you..."),
-            .toolCall(ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil))
-        ],
-        isStreaming: true
-    )
-    .background(Color.tidexBackground)
+  ChatMessageList(
+    messages: [
+      ChatMessage(
+        id: "1",
+        role: MessageRole.user,
+        content: "Add a shift tomorrow 9-17",
+        toolCalls: nil,
+        timestamp: Date()
+      )
+    ],
+    streamingContentBlocks: [
+      .text("I'll add that shift for you..."),
+      .toolCall(
+        ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil)),
+    ],
+    isStreaming: true
+  )
+  .background(Color.tidexBackground)
 }

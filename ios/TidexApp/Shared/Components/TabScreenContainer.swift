@@ -9,170 +9,173 @@ import SwiftUI
 ///     // Your tab content here
 /// }
 /// ```
-struct TabScreenContainer<Content: View, PrincipalContent: View, LeadingContent: View, TrailingContent: View>: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
-    
-    let title: String
-    let showsUserMenu: Bool
-    @ViewBuilder let content: () -> Content
-    @ViewBuilder let principalContent: () -> PrincipalContent
-    @ViewBuilder let leadingContent: () -> LeadingContent
-    @ViewBuilder let trailingContent: () -> TrailingContent
+struct TabScreenContainer<
+  Content: View, PrincipalContent: View, LeadingContent: View, TrailingContent: View
+>: View {
+  @EnvironmentObject private var coordinator: AppCoordinator
 
-    init(
-        title: String,
-        showsUserMenu: Bool = true,
-        @ViewBuilder content: @escaping () -> Content,
-        @ViewBuilder principalContent: @escaping () -> PrincipalContent,
-        @ViewBuilder leadingContent: @escaping () -> LeadingContent,
-        @ViewBuilder trailingContent: @escaping () -> TrailingContent
-    ) {
-        self.title = title
-        self.showsUserMenu = showsUserMenu
-        self.content = content
-        self.principalContent = principalContent
-        self.leadingContent = leadingContent
-        self.trailingContent = trailingContent
-    }
+  let title: String
+  let showsUserMenu: Bool
+  @ViewBuilder let content: () -> Content
+  @ViewBuilder let principalContent: () -> PrincipalContent
+  @ViewBuilder let leadingContent: () -> LeadingContent
+  @ViewBuilder let trailingContent: () -> TrailingContent
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.tidexBackground
-                    .ignoresSafeArea()
+  init(
+    title: String,
+    showsUserMenu: Bool = true,
+    @ViewBuilder content: @escaping () -> Content,
+    @ViewBuilder principalContent: @escaping () -> PrincipalContent,
+    @ViewBuilder leadingContent: @escaping () -> LeadingContent,
+    @ViewBuilder trailingContent: @escaping () -> TrailingContent
+  ) {
+    self.title = title
+    self.showsUserMenu = showsUserMenu
+    self.content = content
+    self.principalContent = principalContent
+    self.leadingContent = leadingContent
+    self.trailingContent = trailingContent
+  }
 
-                content()
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    leadingContent()
-                }
-                ToolbarItem(placement: .principal) {
-                    principalContent()
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    if showsUserMenu {
-                        UserMenuButton(
-                            displayName: coordinator.userDisplayName,
-                            avatarUrl: coordinator.userAvatarUrl
-                        )
-                    } else {
-                        trailingContent()
-                    }
-                }
-            }
+  var body: some View {
+    NavigationStack {
+      ZStack {
+        Color.tidexBackground
+          .ignoresSafeArea()
+
+        content()
+      }
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          leadingContent()
         }
+        ToolbarItem(placement: .principal) {
+          principalContent()
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          if showsUserMenu {
+            UserMenuButton(
+              displayName: coordinator.userDisplayName,
+              avatarUrl: coordinator.userAvatarUrl
+            )
+          } else {
+            trailingContent()
+          }
+        }
+      }
     }
+  }
 }
 
 // Convenience initializer for screens that just want a title
-extension TabScreenContainer where PrincipalContent == Text, LeadingContent == EmptyView, TrailingContent == EmptyView {
-    init(
-        title: String,
-        showsUserMenu: Bool = true,
-        @ViewBuilder content: @escaping () -> Content
-    ) {
-        self.title = title
-        self.showsUserMenu = showsUserMenu
-        self.content = content
-        self.principalContent = {
-            Text(title)
-                .font(.headline)
-        }
-        self.leadingContent = { EmptyView() }
-        self.trailingContent = { EmptyView() }
+extension TabScreenContainer
+where PrincipalContent == Text, LeadingContent == EmptyView, TrailingContent == EmptyView {
+  init(
+    title: String,
+    showsUserMenu: Bool = true,
+    @ViewBuilder content: @escaping () -> Content
+  ) {
+    self.title = title
+    self.showsUserMenu = showsUserMenu
+    self.content = content
+    self.principalContent = {
+      Text(title)
+        .font(.headline)
     }
+    self.leadingContent = { EmptyView() }
+    self.trailingContent = { EmptyView() }
+  }
 }
 
 // Convenience initializer for screens with custom principal content only
 extension TabScreenContainer where LeadingContent == EmptyView, TrailingContent == EmptyView {
-    init(
-        title: String,
-        showsUserMenu: Bool = true,
-        @ViewBuilder content: @escaping () -> Content,
-        @ViewBuilder principalContent: @escaping () -> PrincipalContent
-    ) {
-        self.title = title
-        self.showsUserMenu = showsUserMenu
-        self.content = content
-        self.principalContent = principalContent
-        self.leadingContent = { EmptyView() }
-        self.trailingContent = { EmptyView() }
-    }
+  init(
+    title: String,
+    showsUserMenu: Bool = true,
+    @ViewBuilder content: @escaping () -> Content,
+    @ViewBuilder principalContent: @escaping () -> PrincipalContent
+  ) {
+    self.title = title
+    self.showsUserMenu = showsUserMenu
+    self.content = content
+    self.principalContent = principalContent
+    self.leadingContent = { EmptyView() }
+    self.trailingContent = { EmptyView() }
+  }
 }
 
 // Convenience initializer for screens with leading and trailing content (no user menu)
 extension TabScreenContainer where PrincipalContent == EmptyView {
-    init(
-        title: String,
-        showsUserMenu: Bool = false,
-        @ViewBuilder content: @escaping () -> Content,
-        @ViewBuilder leadingContent: @escaping () -> LeadingContent,
-        @ViewBuilder trailingContent: @escaping () -> TrailingContent
-    ) {
-        self.title = title
-        self.showsUserMenu = showsUserMenu
-        self.content = content
-        self.principalContent = { EmptyView() }
-        self.leadingContent = leadingContent
-        self.trailingContent = trailingContent
-    }
+  init(
+    title: String,
+    showsUserMenu: Bool = false,
+    @ViewBuilder content: @escaping () -> Content,
+    @ViewBuilder leadingContent: @escaping () -> LeadingContent,
+    @ViewBuilder trailingContent: @escaping () -> TrailingContent
+  ) {
+    self.title = title
+    self.showsUserMenu = showsUserMenu
+    self.content = content
+    self.principalContent = { EmptyView() }
+    self.leadingContent = leadingContent
+    self.trailingContent = trailingContent
+  }
 }
 
 /// Container with built-in pull-to-refresh support
 /// Use for tabs that need refresh functionality
 struct RefreshableTabScreenContainer<Content: View>: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
-    
-    let title: String
-    let showsUserMenu: Bool
-    let onRefresh: () async -> Void
-    @ViewBuilder let content: () -> Content
+  @EnvironmentObject private var coordinator: AppCoordinator
 
-    init(
-        title: String,
-        showsUserMenu: Bool = true,
-        onRefresh: @escaping () async -> Void,
-        @ViewBuilder content: @escaping () -> Content
-    ) {
-        self.title = title
-        self.showsUserMenu = showsUserMenu
-        self.onRefresh = onRefresh
-        self.content = content
-    }
+  let title: String
+  let showsUserMenu: Bool
+  let onRefresh: () async -> Void
+  @ViewBuilder let content: () -> Content
 
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                content()
-            }
-            .refreshable {
-                await onRefresh()
-            }
-            .background(Color.tidexBackground)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            .toolbar {
-                if showsUserMenu {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        UserMenuButton(
-                            displayName: coordinator.userDisplayName,
-                            avatarUrl: coordinator.userAvatarUrl
-                        )
-                    }
-                }
-            }
+  init(
+    title: String,
+    showsUserMenu: Bool = true,
+    onRefresh: @escaping () async -> Void,
+    @ViewBuilder content: @escaping () -> Content
+  ) {
+    self.title = title
+    self.showsUserMenu = showsUserMenu
+    self.onRefresh = onRefresh
+    self.content = content
+  }
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        content()
+      }
+      .refreshable {
+        await onRefresh()
+      }
+      .background(Color.tidexBackground)
+      .navigationTitle(title)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+      .toolbar {
+        if showsUserMenu {
+          ToolbarItem(placement: .topBarTrailing) {
+            UserMenuButton(
+              displayName: coordinator.userDisplayName,
+              avatarUrl: coordinator.userAvatarUrl
+            )
+          }
         }
+      }
     }
+  }
 }
 
 #Preview("TabScreenContainer") {
-    TabScreenContainer(title: "Test Tab") {
-        Text("Tab Content")
-            .foregroundColor(.tidexTextPrimary)
-    }
-    .environmentObject(AppCoordinator.shared)
+  TabScreenContainer(title: "Test Tab") {
+    Text("Tab Content")
+      .foregroundColor(.tidexTextPrimary)
+  }
+  .environmentObject(AppCoordinator.shared)
 }

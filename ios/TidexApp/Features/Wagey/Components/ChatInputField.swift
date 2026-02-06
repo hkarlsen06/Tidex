@@ -1,331 +1,330 @@
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 /// Chat input field with send button and image attachment support
 /// Supports multi-line input, image uploads, and disabled states
 struct ChatInputField: View {
-    /// Callback when user sends a message (text only)
-    let onSend: (String) -> Void
+  /// Callback when user sends a message (text only)
+  let onSend: (String) -> Void
 
-    /// Callback when user sends a message with an image
-    let onSendWithImage: ((String, ImageAttachment) -> Void)?
+  /// Callback when user sends a message with an image
+  let onSendWithImage: ((String, ImageAttachment) -> Void)?
 
-    /// Whether the input should be disabled
-    let disabled: Bool
+  /// Whether the input should be disabled
+  let disabled: Bool
 
-    
-    /// Current input text
-    @Binding var inputText: String
+  /// Current input text
+  @Binding var inputText: String
 
-    /// Whether the text field is focused
-    @FocusState private var isFocused: Bool
+  /// Whether the text field is focused
+  @FocusState private var isFocused: Bool
 
-    /// Selected photo item from PhotosPicker
-    @State private var selectedPhotoItem: PhotosPickerItem?
+  /// Selected photo item from PhotosPicker
+  @State private var selectedPhotoItem: PhotosPickerItem?
 
-    /// Attached image data (compressed for upload)
-    @State private var attachedImage: ImageAttachment?
+  /// Attached image data (compressed for upload)
+  @State private var attachedImage: ImageAttachment?
 
-    /// Whether image is being processed
-    @State private var isProcessingImage = false
+  /// Whether image is being processed
+  @State private var isProcessingImage = false
 
-    /// Error message for image processing
-    @State private var imageError: String?
+  /// Error message for image processing
+  @State private var imageError: String?
 
-    /// Initialize with text-only send callback
-    init(inputText: Binding<String>, onSend: @escaping (String) -> Void, disabled: Bool) {
-        self._inputText = inputText
-        self.onSend = onSend
-        self.onSendWithImage = nil
-        self.disabled = disabled
+  /// Initialize with text-only send callback
+  init(inputText: Binding<String>, onSend: @escaping (String) -> Void, disabled: Bool) {
+    self._inputText = inputText
+    self.onSend = onSend
+    self.onSendWithImage = nil
+    self.disabled = disabled
+  }
+
+  /// Initialize with both text and image send callbacks
+  init(
+    inputText: Binding<String>,
+    onSend: @escaping (String) -> Void,
+    onSendWithImage: @escaping (String, ImageAttachment) -> Void,
+    disabled: Bool
+  ) {
+    self._inputText = inputText
+    self.onSend = onSend
+    self.onSendWithImage = onSendWithImage
+    self.disabled = disabled
+  }
+
+  /// Whether the send button can be tapped
+  private var canSend: Bool {
+    let hasText = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    let hasImage = attachedImage != nil
+    return (hasText || hasImage) && !disabled && !isProcessingImage
+  }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      // Top border
+      Divider()
+        .background(Color.tidexBorder)
+
+      // Image preview (if attached)
+      if let image = attachedImage, let uiImage = UIImage(data: image.data) {
+        imagePreview(uiImage: uiImage)
+      }
+
+      // Error message
+      if let error = imageError {
+        errorBanner(message: error)
+      }
+
+      // Input area
+      HStack(alignment: .center, spacing: 12) {
+        // Image picker button (only show if callback is provided)
+        if onSendWithImage != nil {
+          imagePickerButton
+        }
+
+        // Text input
+        TextField(
+          String(localized: .wageyPlaceholder),
+          text: $inputText,
+          axis: .vertical
+        )
+        .textFieldStyle(.plain)
+        .font(.system(size: 16))
+        .foregroundColor(.tidexTextPrimary)
+        .lineLimit(1...5)
+        .focused($isFocused)
+        .disabled(disabled)
+        .submitLabel(.return)
+        .onSubmit {
+          sendMessage()
+        }
+
+        // Send button
+        Button(action: sendMessage) {
+          Image(systemName: "arrow.up.circle.fill")
+            .font(.system(size: 32))
+            .foregroundColor(canSend ? .tidexBlue : .tidexTextMuted)
+        }
+        .disabled(!canSend)
+        .animation(.easeInOut(duration: 0.15), value: canSend)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
     }
+    .background(Color.tidexBackground)
+    .safeAreaPadding(.bottom)
+    .onChange(of: selectedPhotoItem) { _, newItem in
+      processSelectedPhoto(newItem)
+    }
+  }
 
-    /// Initialize with both text and image send callbacks
-    init(
-        inputText: Binding<String>,
-        onSend: @escaping (String) -> Void,
-        onSendWithImage: @escaping (String, ImageAttachment) -> Void,
-        disabled: Bool
+  // MARK: - Image Picker Button
+
+  private var imagePickerButton: some View {
+    PhotosPicker(
+      selection: $selectedPhotoItem,
+      matching: .images,
+      photoLibrary: .shared()
     ) {
-        self._inputText = inputText
-        self.onSend = onSend
-        self.onSendWithImage = onSendWithImage
-        self.disabled = disabled
+      if isProcessingImage {
+        ProgressView()
+          .scaleEffect(0.8)
+          .frame(width: 28, height: 28)
+      } else {
+        Image(systemName: "photo.on.rectangle.angled")
+          .font(.system(size: 22))
+          .foregroundColor(disabled ? .tidexTextMuted : .tidexBlue)
+      }
     }
+    .disabled(disabled || isProcessingImage)
+  }
 
-    /// Whether the send button can be tapped
-    private var canSend: Bool {
-        let hasText = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasImage = attachedImage != nil
-        return (hasText || hasImage) && !disabled && !isProcessingImage
-    }
+  // MARK: - Image Preview
 
-    var body: some View {
-        VStack(spacing: 0) {
-            // Top border
-            Divider()
-                .background(Color.tidexBorder)
+  private func imagePreview(uiImage: UIImage) -> some View {
+    HStack {
+      ZStack(alignment: .topTrailing) {
+        Image(uiImage: uiImage)
+          .resizable()
+          .scaledToFill()
+          .frame(width: 80, height: 80)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            // Image preview (if attached)
-            if let image = attachedImage, let uiImage = UIImage(data: image.data) {
-                imagePreview(uiImage: uiImage)
-            }
-
-            // Error message
-            if let error = imageError {
-                errorBanner(message: error)
-            }
-
-            // Input area
-            HStack(alignment: .center, spacing: 12) {
-                // Image picker button (only show if callback is provided)
-                if onSendWithImage != nil {
-                    imagePickerButton
-                }
-
-                // Text input
-                TextField(
-                    String(localized: .wageyPlaceholder),
-                    text: $inputText,
-                    axis: .vertical
-                )
-                .textFieldStyle(.plain)
-                .font(.system(size: 16))
-                .foregroundColor(.tidexTextPrimary)
-                .lineLimit(1...5)
-                .focused($isFocused)
-                .disabled(disabled)
-                .submitLabel(.return)
-                .onSubmit {
-                    sendMessage()
-                }
-
-                // Send button
-                Button(action: sendMessage) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(canSend ? .tidexBlue : .tidexTextMuted)
-                }
-                .disabled(!canSend)
-                .animation(.easeInOut(duration: 0.15), value: canSend)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-        .background(Color.tidexBackground)
-        .safeAreaPadding(.bottom)
-        .onChange(of: selectedPhotoItem) { _, newItem in
-            processSelectedPhoto(newItem)
-        }
-    }
-
-    // MARK: - Image Picker Button
-
-    private var imagePickerButton: some View {
-        PhotosPicker(
-            selection: $selectedPhotoItem,
-            matching: .images,
-            photoLibrary: .shared()
-        ) {
-            if isProcessingImage {
-                ProgressView()
-                    .scaleEffect(0.8)
-                    .frame(width: 28, height: 28)
-            } else {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.system(size: 22))
-                    .foregroundColor(disabled ? .tidexTextMuted : .tidexBlue)
-            }
-        }
-        .disabled(disabled || isProcessingImage)
-    }
-
-    // MARK: - Image Preview
-
-    private func imagePreview(uiImage: UIImage) -> some View {
-        HStack {
-            ZStack(alignment: .topTrailing) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 80, height: 80)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                // Remove button
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        attachedImage = nil
-                        selectedPhotoItem = nil
-                    }
-                    Haptics.play(.light)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                        .background(
-                            Circle()
-                                .fill(Color.black.opacity(0.5))
-                                .frame(width: 18, height: 18)
-                        )
-                }
-                .offset(x: 6, y: -6)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.tidexWarning)
-                .font(.system(size: 14))
-
-            Text(message)
-                .font(.system(size: 13))
-                .foregroundColor(.tidexTextPrimary)
-
-            Spacer()
-
-            Button {
-                withAnimation {
-                    imageError = nil
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.tidexTextMuted)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.tidexSurfaceSecondary)
-    }
-
-    // MARK: - Photo Processing
-
-    private func processSelectedPhoto(_ item: PhotosPickerItem?) {
-        guard let item = item else { return }
-
-        isProcessingImage = true
-        imageError = nil
-
-        Task {
-            do {
-                guard let data = try await item.loadTransferable(type: Data.self) else {
-                    throw ImageProcessingError.loadFailed
-                }
-
-                guard let compressed = ImageCompressor.compress(data) else {
-                    throw ImageProcessingError.compressionFailed
-                }
-
-                await MainActor.run {
-                    attachedImage = ImageAttachment(
-                        data: compressed.data,
-                        mediaType: compressed.mediaType
-                    )
-                    isProcessingImage = false
-                    Haptics.play(.success)
-                }
-            } catch {
-                await MainActor.run {
-                    imageError = String(localized: .wageyImageError)
-                    isProcessingImage = false
-                    selectedPhotoItem = nil
-                    Haptics.play(.error)
-                }
-            }
-        }
-    }
-
-    private enum ImageProcessingError: Error {
-        case loadFailed
-        case compressionFailed
-    }
-
-    // MARK: - Actions
-
-    private func sendMessage() {
-        guard canSend else { return }
-
-        let message = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Provide haptic feedback
-        Haptics.play(.medium)
-
-        // Dismiss keyboard
-        isFocused = false
-
-        // Clear input
-        inputText = ""
-
-        // Send message with or without image
-        if let image = attachedImage, let onSendWithImage = onSendWithImage {
-            // Clear image attachment
+        // Remove button
+        Button {
+          withAnimation(.easeInOut(duration: 0.2)) {
             attachedImage = nil
             selectedPhotoItem = nil
-
-            // Send with image
-            onSendWithImage(message, image)
-        } else if !message.isEmpty {
-            // Send text only
-            onSend(message)
+          }
+          Haptics.play(.light)
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+            .font(.system(size: 20))
+            .foregroundColor(.white)
+            .background(
+              Circle()
+                .fill(Color.black.opacity(0.5))
+                .frame(width: 18, height: 18)
+            )
         }
+        .offset(x: 6, y: -6)
+      }
+
+      Spacer()
     }
+    .padding(.horizontal, 16)
+    .padding(.top, 8)
+    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+  }
+
+  // MARK: - Error Banner
+
+  private func errorBanner(message: String) -> some View {
+    HStack(spacing: 8) {
+      Image(systemName: "exclamationmark.triangle.fill")
+        .foregroundColor(.tidexWarning)
+        .font(.system(size: 14))
+
+      Text(message)
+        .font(.system(size: 13))
+        .foregroundColor(.tidexTextPrimary)
+
+      Spacer()
+
+      Button {
+        withAnimation {
+          imageError = nil
+        }
+      } label: {
+        Image(systemName: "xmark")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.tidexTextMuted)
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 8)
+    .background(Color.tidexSurfaceSecondary)
+  }
+
+  // MARK: - Photo Processing
+
+  private func processSelectedPhoto(_ item: PhotosPickerItem?) {
+    guard let item = item else { return }
+
+    isProcessingImage = true
+    imageError = nil
+
+    Task {
+      do {
+        guard let data = try await item.loadTransferable(type: Data.self) else {
+          throw ImageProcessingError.loadFailed
+        }
+
+        guard let compressed = ImageCompressor.compress(data) else {
+          throw ImageProcessingError.compressionFailed
+        }
+
+        await MainActor.run {
+          attachedImage = ImageAttachment(
+            data: compressed.data,
+            mediaType: compressed.mediaType
+          )
+          isProcessingImage = false
+          Haptics.play(.success)
+        }
+      } catch {
+        await MainActor.run {
+          imageError = String(localized: .wageyImageError)
+          isProcessingImage = false
+          selectedPhotoItem = nil
+          Haptics.play(.error)
+        }
+      }
+    }
+  }
+
+  private enum ImageProcessingError: Error {
+    case loadFailed
+    case compressionFailed
+  }
+
+  // MARK: - Actions
+
+  private func sendMessage() {
+    guard canSend else { return }
+
+    let message = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // Provide haptic feedback
+    Haptics.play(.medium)
+
+    // Dismiss keyboard
+    isFocused = false
+
+    // Clear input
+    inputText = ""
+
+    // Send message with or without image
+    if let image = attachedImage, let onSendWithImage = onSendWithImage {
+      // Clear image attachment
+      attachedImage = nil
+      selectedPhotoItem = nil
+
+      // Send with image
+      onSendWithImage(message, image)
+    } else if !message.isEmpty {
+      // Send text only
+      onSend(message)
+    }
+  }
 }
 
 // MARK: - Previews
 
 #Preview("Default") {
-    @Previewable @State var text = ""
-    VStack {
-        Spacer()
-        ChatInputField(
-            inputText: $text,
-            onSend: { message in
-                print("Sent: \(message)")
-            },
-            disabled: false
-        )
-    }
-    .background(Color.tidexBackground)
+  @Previewable @State var text = ""
+  VStack {
+    Spacer()
+    ChatInputField(
+      inputText: $text,
+      onSend: { message in
+        print("Sent: \(message)")
+      },
+      disabled: false
+    )
+  }
+  .background(Color.tidexBackground)
 }
 
 #Preview("With Image Support") {
-    @Previewable @State var text = ""
-    VStack {
-        Spacer()
-        ChatInputField(
-            inputText: $text,
-            onSend: { message in
-                print("Sent text: \(message)")
-            },
-            onSendWithImage: { message, image in
-                print("Sent with image: \(message), size: \(image.data.count) bytes")
-            },
-            disabled: false
-        )
-    }
-    .background(Color.tidexBackground)
+  @Previewable @State var text = ""
+  VStack {
+    Spacer()
+    ChatInputField(
+      inputText: $text,
+      onSend: { message in
+        print("Sent text: \(message)")
+      },
+      onSendWithImage: { message, image in
+        print("Sent with image: \(message), size: \(image.data.count) bytes")
+      },
+      disabled: false
+    )
+  }
+  .background(Color.tidexBackground)
 }
 
 #Preview("Disabled") {
-    @Previewable @State var text = ""
-    VStack {
-        Spacer()
-        ChatInputField(
-            inputText: $text,
-            onSend: { message in
-                print("Sent: \(message)")
-            },
-            disabled: true
-        )
-    }
-    .background(Color.tidexBackground)
+  @Previewable @State var text = ""
+  VStack {
+    Spacer()
+    ChatInputField(
+      inputText: $text,
+      onSend: { message in
+        print("Sent: \(message)")
+      },
+      disabled: true
+    )
+  }
+  .background(Color.tidexBackground)
 }

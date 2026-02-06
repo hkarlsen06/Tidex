@@ -5,182 +5,184 @@ import OSLog
 /// Port of lib/payroll/calc.ts
 struct PayrollCalculator {
 
-    // MARK: - Logging
+  // MARK: - Logging
 
-    private static let logger = Logger(subsystem: "com.tidex.app", category: "PayrollCalculator")
+  private static let logger = Logger(subsystem: "com.tidex.app", category: "PayrollCalculator")
 
-    // MARK: - Constants
+  // MARK: - Constants
 
-    /// Precision for hour calculations (3 decimal places)
-    private static let hourPrecision: Double = 1000
-    /// Precision for currency calculations (2 decimal places)
-    private static let currencyPrecision: Double = 100
+  /// Precision for hour calculations (3 decimal places)
+  private static let hourPrecision: Double = 1000
+  /// Precision for currency calculations (2 decimal places)
+  private static let currencyPrecision: Double = 100
 
-    /// Weekday mapping: JS getDay() 0=Sun maps to 7, then 1-6 for Mon-Sat
-    private static let weekdayMap = [7, 1, 2, 3, 4, 5, 6]
+  /// Weekday mapping: JS getDay() 0=Sun maps to 7, then 1-6 for Mon-Sat
+  private static let weekdayMap = [7, 1, 2, 3, 4, 5, 6]
 
-    /// Preset wage rates by tariff level
-    static let presetWageRates: [String: Double] = [
-        "-1": 129.91, "-2": 132.90, "1": 184.54, "2": 185.38,
-        "3": 187.46, "4": 193.05, "5": 210.81, "6": 256.14
-    ]
+  /// Preset wage rates by tariff level
+  static let presetWageRates: [String: Double] = [
+    "-1": 129.91, "-2": 132.90, "1": 184.54, "2": 185.38,
+    "3": 187.46, "4": 193.05, "5": 210.81, "6": 256.14,
+  ]
 
-    /// Preset supplement rules (Norwegian tariff-based)
-    static let presetSupplementRules: [SupplementRule] = [
-        SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22, percent: nil),
-        SupplementRule(days: [1, 2, 3, 4, 5], from: "21:00", to: "24:00", rate: 45, percent: nil),
-        SupplementRule(days: [6], from: "13:00", to: "15:00", rate: 45, percent: nil),
-        SupplementRule(days: [6], from: "15:00", to: "18:00", rate: 55, percent: nil),
-        SupplementRule(days: [6], from: "18:00", to: "24:00", rate: 110, percent: nil),
-        SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 115, percent: nil)
-    ]
+  /// Preset supplement rules (Norwegian tariff-based)
+  static let presetSupplementRules: [SupplementRule] = [
+    SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22, percent: nil),
+    SupplementRule(days: [1, 2, 3, 4, 5], from: "21:00", to: "24:00", rate: 45, percent: nil),
+    SupplementRule(days: [6], from: "13:00", to: "15:00", rate: 45, percent: nil),
+    SupplementRule(days: [6], from: "15:00", to: "18:00", rate: 55, percent: nil),
+    SupplementRule(days: [6], from: "18:00", to: "24:00", rate: 110, percent: nil),
+    SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 115, percent: nil),
+  ]
 
-    /// Default break deduction settings
-    private static let defaultBreakEnabled = true
-    private static let defaultBreakMethod: BreakMethod = .proportional
-    private static let defaultBreakThresholdHours = 5.5
-    private static let defaultBreakDeductionMinutes = 30
+  /// Default break deduction settings
+  private static let defaultBreakEnabled = true
+  private static let defaultBreakMethod: BreakMethod = .proportional
+  private static let defaultBreakThresholdHours = 5.5
+  private static let defaultBreakDeductionMinutes = 30
 
-    // MARK: - Public API
+  // MARK: - Public API
 
-    /// Compute payroll for a single shift
-    /// - Parameters:
-    ///   - shift: The shift data
-    ///   - snapshot: Wage snapshot containing wage, supplement, tax, and break settings
-    /// - Returns: Computed payroll data including gross pay, hours, and breakdown
-    static func computeShift(
-        _ shift: ShiftRow,
-        snapshot: WageSnapshot?
-    ) -> ShiftComputed {
-        // Get weekday (1-7 where 1=Mon, 7=Sun)
-        let weekday = Date.weekdayFromISO(shift.shift_date)
+  /// Compute payroll for a single shift
+  /// - Parameters:
+  ///   - shift: The shift data
+  ///   - snapshot: Wage snapshot containing wage, supplement, tax, and break settings
+  /// - Returns: Computed payroll data including gross pay, hours, and breakdown
+  static func computeShift(
+    _ shift: ShiftRow,
+    snapshot: WageSnapshot?
+  ) -> ShiftComputed {
+    // Get weekday (1-7 where 1=Mon, 7=Sun)
+    let weekday = Date.weekdayFromISO(shift.shift_date)
 
-        // Resolve base rate from snapshot or fallback
-        let baseRate = resolveBaseRate(shift: shift, snapshot: snapshot)
+    // Resolve base rate from snapshot or fallback
+    let baseRate = resolveBaseRate(shift: shift, snapshot: snapshot)
 
-        // Resolve supplement rules
-        let rules = resolveSupplementRules(
-            weekday: weekday,
-            snapshot: snapshot,
-            customSupplements: shift.custom_supplements
-        )
+    // Resolve supplement rules
+    let rules = resolveSupplementRules(
+      weekday: weekday,
+      snapshot: snapshot,
+      customSupplements: shift.custom_supplements
+    )
 
-        // Build wage periods
-        var periods = WagePeriodBuilder.buildWagePeriods(
-            startTime: shift.start_time,
-            endTime: shift.end_time,
-            weekday: weekday,
-            baseRate: baseRate,
-            rules: rules
-        )
+    // Build wage periods
+    var periods = WagePeriodBuilder.buildWagePeriods(
+      startTime: shift.start_time,
+      endTime: shift.end_time,
+      weekday: weekday,
+      baseRate: baseRate,
+      rules: rules
+    )
 
-        // Calculate raw duration (durationMinutes is Double for precision)
-        let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
-        let durationHours = round(totalMinutes / 60.0 * 100) / 100
+    // Calculate raw duration (durationMinutes is Double for precision)
+    let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let durationHours = round(totalMinutes / 60.0 * 100) / 100
 
-        // Store original periods before break deduction (for display)
-        let originalPeriods = periods
+    // Store original periods before break deduction (for display)
+    let originalPeriods = periods
 
-        // Resolve break settings from snapshot (with defaults for backward compatibility)
-        let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
-        let method = snapshot?.breakMethod ?? defaultBreakMethod
-        let threshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
-        let breakMinutes = breakEnabled
-            ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
-            : 0
-        let breakHours = Double(breakMinutes) / 60.0
+    // Resolve break settings from snapshot (with defaults for backward compatibility)
+    let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
+    let method = snapshot?.breakMethod ?? defaultBreakMethod
+    let threshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
+    let breakMinutes =
+      breakEnabled
+      ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
+      : 0
+    let breakHours = Double(breakMinutes) / 60.0
 
-        // Log when using default break settings
-        if snapshot == nil {
-            logger.warning("Using default break settings - no snapshot available for shift \(shift.id)")
-        }
-
-        // Apply automatic break deduction
-        let afterBreak = BreakDeduction.applyBreakDeduction(
-            periods: periods,
-            method: method,
-            thresholdHours: threshold,
-            deductionHours: breakHours
-        )
-        periods = afterBreak.periods
-
-        // Calculate paid hours (after break deduction, with fractional precision)
-        let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
-        let paidHours = round(paidMinutes / 60.0 * 100) / 100
-
-        // Calculate pay
-        var basePay: Double = 0
-        var supplementPay: Double = 0
-
-        for period in periods {
-            // Round hours to 3 decimals to match old codebase behavior
-            let h = round(period.durationHours * hourPrecision) / hourPrecision
-            // Round each period's contribution to cents
-            basePay += round(h * period.baseRate * currencyPrecision) / currencyPrecision
-            supplementPay += round(h * period.supplementRate * currencyPrecision) / currencyPrecision
-        }
-
-        basePay = round(basePay * 100) / 100
-        supplementPay = round(supplementPay * 100) / 100
-        let gross = round((basePay + supplementPay) * 100) / 100
-
-        return ShiftComputed(
-            id: shift.id,
-            durationHours: durationHours,
-            paidHours: paidHours,
-            basePay: basePay,
-            supplementPay: supplementPay,
-            gross: gross,
-            wagePeriods: periods,
-            originalWagePeriods: originalPeriods,
-            breakAudit: afterBreak.audit
-        )
+    // Log when using default break settings
+    if snapshot == nil {
+      logger.warning("Using default break settings - no snapshot available for shift \(shift.id)")
     }
 
-    // MARK: - Private Helpers
+    // Apply automatic break deduction
+    let afterBreak = BreakDeduction.applyBreakDeduction(
+      periods: periods,
+      method: method,
+      thresholdHours: threshold,
+      deductionHours: breakHours
+    )
+    periods = afterBreak.periods
 
-    /// Resolve the base hourly wage rate for a shift
-    /// Priority: 1. Snapshot system, 2. Fallback to preset
-    private static func resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot?) -> Double {
-        // Priority 1: Use snapshot system
-        if let rate = snapshot?.hourly_wage, rate > 0 {
-            return rate
-        }
+    // Calculate paid hours (after break deduction, with fractional precision)
+    let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let paidHours = round(paidMinutes / 60.0 * 100) / 100
 
-        // Priority 2: Fallback to tariff level 1
-        let fallbackRate = presetWageRates["1"] ?? 184.54
-        logger.warning("Using default base rate (\(fallbackRate)) - no snapshot available for shift \(shift.id)")
-        return fallbackRate
+    // Calculate pay
+    var basePay: Double = 0
+    var supplementPay: Double = 0
+
+    for period in periods {
+      // Round hours to 3 decimals to match old codebase behavior
+      let h = round(period.durationHours * hourPrecision) / hourPrecision
+      // Round each period's contribution to cents
+      basePay += round(h * period.baseRate * currencyPrecision) / currencyPrecision
+      supplementPay += round(h * period.supplementRate * currencyPrecision) / currencyPrecision
     }
 
-    /// Resolve supplement rules with custom supplements
-    /// When custom supplements exist, they completely replace predefined rules
-    private static func resolveSupplementRules(
-        weekday: Int,
-        snapshot: WageSnapshot?,
-        customSupplements: CustomSupplementsData?
-    ) -> [SupplementRule] {
-        // If custom supplements exist, they replace everything
-        if let custom = customSupplements, !custom.rules.isEmpty {
-            return custom.rules.map { rule in
-                SupplementRule(
-                    days: [weekday],
-                    from: rule.from,
-                    to: rule.to,
-                    rate: rule.rate,
-                    percent: rule.percent
-                )
-            }
-        }
+    basePay = round(basePay * 100) / 100
+    supplementPay = round(supplementPay * 100) / 100
+    let gross = round((basePay + supplementPay) * 100) / 100
 
-        // Priority: snapshot supplements (even if empty) > preset fallback
-        // If snapshot exists, use its supplements - empty array means "no supplements"
-        // Only fall back to presets if there's no snapshot at all (offline fallback)
-        if let snapshot = snapshot {
-            return snapshot.effectiveSupplements
-        }
+    return ShiftComputed(
+      id: shift.id,
+      durationHours: durationHours,
+      paidHours: paidHours,
+      basePay: basePay,
+      supplementPay: supplementPay,
+      gross: gross,
+      wagePeriods: periods,
+      originalWagePeriods: originalPeriods,
+      breakAudit: afterBreak.audit
+    )
+  }
 
-        logger.warning("Using preset supplement rules - no snapshot available (offline fallback)")
-        return presetSupplementRules
+  // MARK: - Private Helpers
+
+  /// Resolve the base hourly wage rate for a shift
+  /// Priority: 1. Snapshot system, 2. Fallback to preset
+  private static func resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot?) -> Double {
+    // Priority 1: Use snapshot system
+    if let rate = snapshot?.hourly_wage, rate > 0 {
+      return rate
     }
+
+    // Priority 2: Fallback to tariff level 1
+    let fallbackRate = presetWageRates["1"] ?? 184.54
+    logger.warning(
+      "Using default base rate (\(fallbackRate)) - no snapshot available for shift \(shift.id)")
+    return fallbackRate
+  }
+
+  /// Resolve supplement rules with custom supplements
+  /// When custom supplements exist, they completely replace predefined rules
+  private static func resolveSupplementRules(
+    weekday: Int,
+    snapshot: WageSnapshot?,
+    customSupplements: CustomSupplementsData?
+  ) -> [SupplementRule] {
+    // If custom supplements exist, they replace everything
+    if let custom = customSupplements, !custom.rules.isEmpty {
+      return custom.rules.map { rule in
+        SupplementRule(
+          days: [weekday],
+          from: rule.from,
+          to: rule.to,
+          rate: rule.rate,
+          percent: rule.percent
+        )
+      }
+    }
+
+    // Priority: snapshot supplements (even if empty) > preset fallback
+    // If snapshot exists, use its supplements - empty array means "no supplements"
+    // Only fall back to presets if there's no snapshot at all (offline fallback)
+    if let snapshot = snapshot {
+      return snapshot.effectiveSupplements
+    }
+
+    logger.warning("Using preset supplement rules - no snapshot available (offline fallback)")
+    return presetSupplementRules
+  }
 }

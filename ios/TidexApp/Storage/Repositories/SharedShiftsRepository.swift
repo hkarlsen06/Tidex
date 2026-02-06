@@ -10,237 +10,234 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsR
 /// Server is source of truth - local data is replaced on each fetch
 @MainActor
 final class SharedShiftsRepository: ObservableObject {
-    static let shared = SharedShiftsRepository()
+  static let shared = SharedShiftsRepository()
 
-    private let localStore: LocalStore
+  private let localStore: LocalStore
 
-    private init(localStore: LocalStore? = nil) {
-        self.localStore = localStore ?? LocalStore.shared
+  private init(localStore: LocalStore? = nil) {
+    self.localStore = localStore ?? LocalStore.shared
+  }
+
+  // MARK: - Sharer Operations
+
+  /// Get all cached sharers for a viewer
+  /// - Parameter viewerId: The current user's ID
+  /// - Returns: Array of SharedUser objects
+  func getSharers(for viewerId: String) -> [SharedUser] {
+    let context = localStore.mainContext
+
+    let descriptor = FetchDescriptor<LocalSharer>(
+      predicate: #Predicate { sharer in
+        sharer.viewerId == viewerId && !sharer.blocked
+      },
+      sortBy: [SortDescriptor(\LocalSharer.cachedAt, order: .reverse)]
+    )
+
+    do {
+      let localSharers = try context.fetch(descriptor)
+      return localSharers.map { $0.toSharedUser() }
+    } catch {
+      logger.error("Failed to fetch cached sharers: \(error.localizedDescription)")
+      return []
     }
+  }
 
-    // MARK: - Sharer Operations
-
-    /// Get all cached sharers for a viewer
-    /// - Parameter viewerId: The current user's ID
-    /// - Returns: Array of SharedUser objects
-    func getSharers(for viewerId: String) -> [SharedUser] {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalSharer>(
-            predicate: #Predicate { sharer in
-                sharer.viewerId == viewerId && !sharer.blocked
-            },
-            sortBy: [SortDescriptor(\LocalSharer.cachedAt, order: .reverse)]
-        )
-
-        do {
-            let localSharers = try context.fetch(descriptor)
-            return localSharers.map { $0.toSharedUser() }
-        } catch {
-            logger.error("Failed to fetch cached sharers: \(error.localizedDescription)")
-            return []
-        }
+  /// Save sharers to local cache, replacing existing entries
+  /// - Parameters:
+  ///   - sharers: Array of SharedUser from API
+  ///   - viewerId: The current user's ID
+  func saveSharers(_ sharers: [SharedUser], for viewerId: String) async {
+    do {
+      try await localStore.storeActor.saveSharers(sharers, for: viewerId)
+      logger.info("Saved \(sharers.count) sharers to cache")
+    } catch {
+      logger.error("Failed to save sharers: \(error.localizedDescription)")
     }
+  }
 
-    /// Save sharers to local cache, replacing existing entries
-    /// - Parameters:
-    ///   - sharers: Array of SharedUser from API
-    ///   - viewerId: The current user's ID
-    func saveSharers(_ sharers: [SharedUser], for viewerId: String) async {
-        do {
-            try await localStore.storeActor.saveSharers(sharers, for: viewerId)
-            logger.info("Saved \(sharers.count) sharers to cache")
-        } catch {
-            logger.error("Failed to save sharers: \(error.localizedDescription)")
-        }
+  /// Get a specific sharer by ID
+  /// - Parameters:
+  ///   - sharerId: The sharer's user ID
+  ///   - viewerId: The current user's ID
+  /// - Returns: SharedUser if found
+  func getSharer(sharerId: String, viewerId: String) -> SharedUser? {
+    let context = localStore.mainContext
+    let compositeKey = "\(viewerId):\(sharerId)"
+
+    let descriptor = FetchDescriptor<LocalSharer>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    do {
+      guard let localSharer = try context.fetch(descriptor).first else {
+        return nil
+      }
+      return localSharer.toSharedUser()
+    } catch {
+      logger.error("Failed to fetch sharer: \(error.localizedDescription)")
+      return nil
     }
+  }
 
-    /// Get a specific sharer by ID
-    /// - Parameters:
-    ///   - sharerId: The sharer's user ID
-    ///   - viewerId: The current user's ID
-    /// - Returns: SharedUser if found
-    func getSharer(sharerId: String, viewerId: String) -> SharedUser? {
-        let context = localStore.mainContext
-        let compositeKey = "\(viewerId):\(sharerId)"
+  // MARK: - Shared Shift Operations
 
-        let descriptor = FetchDescriptor<LocalSharer>(
-            predicate: #Predicate { $0.compositeKey == compositeKey }
-        )
+  /// Get cached shared shifts for a specific owner and month
+  /// - Parameters:
+  ///   - ownerId: The owner's user ID
+  ///   - viewerId: The current user's ID
+  ///   - year: Year
+  ///   - month: Month (1-12)
+  /// - Returns: Array of ShiftWithComputations
+  func getSharedShifts(
+    ownerId: String,
+    viewerId: String,
+    year: Int,
+    month: Int
+  ) -> [ShiftWithComputations] {
+    let context = localStore.mainContext
 
-        do {
-            guard let localSharer = try context.fetch(descriptor).first else {
-                return nil
-            }
-            return localSharer.toSharedUser()
-        } catch {
-            logger.error("Failed to fetch sharer: \(error.localizedDescription)")
-            return nil
-        }
+    let descriptor = FetchDescriptor<LocalSharedShift>(
+      predicate: #Predicate { shift in
+        shift.ownerId == ownerId && shift.viewerId == viewerId && shift.year == year
+          && shift.month == month
+      },
+      sortBy: [SortDescriptor(\LocalSharedShift.shiftDate, order: .reverse)]
+    )
+
+    do {
+      let localShifts = try context.fetch(descriptor)
+      return localShifts.map { $0.toShiftWithComputations() }
+    } catch {
+      logger.error("Failed to fetch cached shared shifts: \(error.localizedDescription)")
+      return []
     }
+  }
 
-    // MARK: - Shared Shift Operations
-
-    /// Get cached shared shifts for a specific owner and month
-    /// - Parameters:
-    ///   - ownerId: The owner's user ID
-    ///   - viewerId: The current user's ID
-    ///   - year: Year
-    ///   - month: Month (1-12)
-    /// - Returns: Array of ShiftWithComputations
-    func getSharedShifts(
-        ownerId: String,
-        viewerId: String,
-        year: Int,
-        month: Int
-    ) -> [ShiftWithComputations] {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalSharedShift>(
-            predicate: #Predicate { shift in
-                shift.ownerId == ownerId &&
-                shift.viewerId == viewerId &&
-                shift.year == year &&
-                shift.month == month
-            },
-            sortBy: [SortDescriptor(\LocalSharedShift.shiftDate, order: .reverse)]
-        )
-
-        do {
-            let localShifts = try context.fetch(descriptor)
-            return localShifts.map { $0.toShiftWithComputations() }
-        } catch {
-            logger.error("Failed to fetch cached shared shifts: \(error.localizedDescription)")
-            return []
-        }
+  /// Save shared shifts from API response, replacing existing entries for the month
+  /// - Parameters:
+  ///   - shifts: Array of SharedShiftData from API
+  ///   - ownerId: The owner's user ID
+  ///   - viewerId: The current user's ID
+  ///   - showEarnings: Whether earnings are visible for this share
+  ///   - year: Year
+  ///   - month: Month (1-12)
+  func saveSharedShifts(
+    _ shifts: [SharedShiftData],
+    ownerId: String,
+    viewerId: String,
+    showEarnings: Bool,
+    year: Int,
+    month: Int
+  ) async {
+    do {
+      try await localStore.storeActor.saveSharedShifts(
+        shifts,
+        ownerId: ownerId,
+        viewerId: viewerId,
+        showEarnings: showEarnings,
+        year: year,
+        month: month
+      )
+      logger.info("Saved \(shifts.count) shared shifts to cache for \(year)-\(month)")
+    } catch {
+      logger.error("Failed to save shared shifts: \(error.localizedDescription)")
     }
+  }
 
-    /// Save shared shifts from API response, replacing existing entries for the month
-    /// - Parameters:
-    ///   - shifts: Array of SharedShiftData from API
-    ///   - ownerId: The owner's user ID
-    ///   - viewerId: The current user's ID
-    ///   - showEarnings: Whether earnings are visible for this share
-    ///   - year: Year
-    ///   - month: Month (1-12)
-    func saveSharedShifts(
-        _ shifts: [SharedShiftData],
-        ownerId: String,
-        viewerId: String,
-        showEarnings: Bool,
-        year: Int,
-        month: Int
-    ) async {
-        do {
-            try await localStore.storeActor.saveSharedShifts(
-                shifts,
-                ownerId: ownerId,
-                viewerId: viewerId,
-                showEarnings: showEarnings,
-                year: year,
-                month: month
-            )
-            logger.info("Saved \(shifts.count) shared shifts to cache for \(year)-\(month)")
-        } catch {
-            logger.error("Failed to save shared shifts: \(error.localizedDescription)")
-        }
+  /// Get the last cache time for shared shifts from a specific owner/month
+  /// - Parameters:
+  ///   - ownerId: The owner's user ID
+  ///   - viewerId: The current user's ID
+  ///   - year: Year
+  ///   - month: Month (1-12)
+  /// - Returns: Cache timestamp or nil if not cached
+  func getLastCacheTime(
+    ownerId: String,
+    viewerId: String,
+    year: Int,
+    month: Int
+  ) -> Date? {
+    let context = localStore.mainContext
+
+    var descriptor = FetchDescriptor<LocalSharedShift>(
+      predicate: #Predicate { shift in
+        shift.ownerId == ownerId && shift.viewerId == viewerId && shift.year == year
+          && shift.month == month
+      },
+      sortBy: [SortDescriptor(\LocalSharedShift.cachedAt, order: .reverse)]
+    )
+    descriptor.fetchLimit = 1
+
+    do {
+      let result = try context.fetch(descriptor)
+      return result.first?.cachedAt
+    } catch {
+      logger.error("Failed to get cache time: \(error.localizedDescription)")
+      return nil
     }
+  }
 
-    /// Get the last cache time for shared shifts from a specific owner/month
-    /// - Parameters:
-    ///   - ownerId: The owner's user ID
-    ///   - viewerId: The current user's ID
-    ///   - year: Year
-    ///   - month: Month (1-12)
-    /// - Returns: Cache timestamp or nil if not cached
-    func getLastCacheTime(
-        ownerId: String,
-        viewerId: String,
-        year: Int,
-        month: Int
-    ) -> Date? {
-        let context = localStore.mainContext
-
-        var descriptor = FetchDescriptor<LocalSharedShift>(
-            predicate: #Predicate { shift in
-                shift.ownerId == ownerId &&
-                shift.viewerId == viewerId &&
-                shift.year == year &&
-                shift.month == month
-            },
-            sortBy: [SortDescriptor(\LocalSharedShift.cachedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 1
-
-        do {
-            let result = try context.fetch(descriptor)
-            return result.first?.cachedAt
-        } catch {
-            logger.error("Failed to get cache time: \(error.localizedDescription)")
-            return nil
-        }
+  /// Clear all cached shared shifts for a viewer
+  /// - Parameter viewerId: The current user's ID
+  func clearAllCachedData(for viewerId: String) async {
+    do {
+      try await localStore.storeActor.clearSharedData(for: viewerId)
+      logger.info("Cleared all shared data cache for viewer")
+    } catch {
+      logger.error("Failed to clear shared data cache: \(error.localizedDescription)")
     }
+  }
 
-    /// Clear all cached shared shifts for a viewer
-    /// - Parameter viewerId: The current user's ID
-    func clearAllCachedData(for viewerId: String) async {
-        do {
-            try await localStore.storeActor.clearSharedData(for: viewerId)
-            logger.info("Cleared all shared data cache for viewer")
-        } catch {
-            logger.error("Failed to clear shared data cache: \(error.localizedDescription)")
-        }
+  /// Clear cached shared shifts for a specific owner
+  /// - Parameters:
+  ///   - ownerId: The owner's user ID
+  ///   - viewerId: The current user's ID
+  func clearCachedShifts(ownerId: String, viewerId: String) async {
+    do {
+      try await localStore.storeActor.clearSharedShifts(ownerId: ownerId, viewerId: viewerId)
+      logger.info("Cleared shared shifts cache for owner \(ownerId)")
+    } catch {
+      logger.error("Failed to clear shared shifts cache: \(error.localizedDescription)")
     }
+  }
 
-    /// Clear cached shared shifts for a specific owner
-    /// - Parameters:
-    ///   - ownerId: The owner's user ID
-    ///   - viewerId: The current user's ID
-    func clearCachedShifts(ownerId: String, viewerId: String) async {
-        do {
-            try await localStore.storeActor.clearSharedShifts(ownerId: ownerId, viewerId: viewerId)
-            logger.info("Cleared shared shifts cache for owner \(ownerId)")
-        } catch {
-            logger.error("Failed to clear shared shifts cache: \(error.localizedDescription)")
-        }
+  // MARK: - Shift Preview Operations
+
+  /// Get cached shift previews for a viewer
+  /// - Parameter viewerId: The current user's ID
+  /// - Returns: Dictionary of sharer ID to SharerShiftPreview
+  func getShiftPreviews(for viewerId: String) -> [String: SharerShiftPreview] {
+    let context = localStore.mainContext
+
+    let descriptor = FetchDescriptor<LocalShiftPreview>(
+      predicate: #Predicate { $0.viewerId == viewerId }
+    )
+
+    do {
+      let localPreviews = try context.fetch(descriptor)
+      logger.info(
+        "📦 Found \(localPreviews.count) cached shift previews for viewer \(viewerId.prefix(8))...")
+      var previewMap: [String: SharerShiftPreview] = [:]
+      for localPreview in localPreviews {
+        previewMap[localPreview.sharerId] = localPreview.toSharerShiftPreview()
+      }
+      return previewMap
+    } catch {
+      logger.error("Failed to fetch cached shift previews: \(error.localizedDescription)")
+      return [:]
     }
+  }
 
-    // MARK: - Shift Preview Operations
-
-    /// Get cached shift previews for a viewer
-    /// - Parameter viewerId: The current user's ID
-    /// - Returns: Dictionary of sharer ID to SharerShiftPreview
-    func getShiftPreviews(for viewerId: String) -> [String: SharerShiftPreview] {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalShiftPreview>(
-            predicate: #Predicate { $0.viewerId == viewerId }
-        )
-
-        do {
-            let localPreviews = try context.fetch(descriptor)
-            logger.info("📦 Found \(localPreviews.count) cached shift previews for viewer \(viewerId.prefix(8))...")
-            var previewMap: [String: SharerShiftPreview] = [:]
-            for localPreview in localPreviews {
-                previewMap[localPreview.sharerId] = localPreview.toSharerShiftPreview()
-            }
-            return previewMap
-        } catch {
-            logger.error("Failed to fetch cached shift previews: \(error.localizedDescription)")
-            return [:]
-        }
+  /// Save shift previews to local cache
+  /// - Parameters:
+  ///   - previews: Array of SharerShiftPreview from API
+  ///   - viewerId: The current user's ID
+  func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) async {
+    do {
+      try await localStore.storeActor.saveShiftPreviews(previews, for: viewerId)
+      logger.info("Saved \(previews.count) shift previews to cache")
+    } catch {
+      logger.error("Failed to save shift previews: \(error.localizedDescription)")
     }
-
-    /// Save shift previews to local cache
-    /// - Parameters:
-    ///   - previews: Array of SharerShiftPreview from API
-    ///   - viewerId: The current user's ID
-    func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) async {
-        do {
-            try await localStore.storeActor.saveShiftPreviews(previews, for: viewerId)
-            logger.info("Saved \(previews.count) shift previews to cache")
-        } catch {
-            logger.error("Failed to save shift previews: \(error.localizedDescription)")
-        }
-    }
+  }
 }
