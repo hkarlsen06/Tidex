@@ -26,10 +26,10 @@ export default async function SettingsLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const dictionary = getAppDictionary(locale as Locale, ['pages.settings']);
+  const dictionary = getAppDictionary(locale as Locale, ['pages.settings', 'pages.shifts']);
 
   return (
-    <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.settings']}>
+    <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.settings', 'pages.shifts']}>
       <SettingsLayoutClient>{children}</SettingsLayoutClient>
     </I18nProvider>
   );

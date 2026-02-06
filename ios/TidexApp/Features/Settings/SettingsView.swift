@@ -29,6 +29,7 @@ struct SettingsView: View {
         case notifications
         case appearance
         case pay
+        case recurringShifts
         case data
         case feedback
         case admin
@@ -99,6 +100,15 @@ struct SettingsView: View {
                                 description: String(localized: .settingsMenuPayDescription),
                                 action: {
                                     navigationPath.append(SettingsDestination.pay)
+                                }
+                            )
+
+                            SettingsMenuItem(
+                                icon: "repeat.circle",
+                                title: String(localized: .settingsMenuRecurringShiftsLabel),
+                                description: String(localized: .settingsMenuRecurringShiftsDescription),
+                                action: {
+                                    navigationPath.append(SettingsDestination.recurringShifts)
                                 }
                             )
                         }
@@ -191,6 +201,8 @@ struct SettingsView: View {
                         AppearanceSettingsView()
                     case .pay:
                         PaySettingsView()
+                    case .recurringShifts:
+                        RecurringShiftsSettingsView()
                     case .data:
                         DataSettingsView()
                     case .feedback:
@@ -316,6 +328,242 @@ struct SettingsView: View {
         await coordinator.signOutGlobal()
         dismiss()
         isSigningOutGlobal = false
+    }
+}
+
+// MARK: - Recurring Shifts Settings
+
+private struct RecurringShiftsSettingsView: View {
+    @State private var recurringShifts: [RecurringShiftRow] = []
+    @State private var recurringShiftToEdit: RecurringShiftRow?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+
+    private let impactHaptic = UIImpactFeedbackGenerator(style: .light)
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                headerSection
+
+                if let errorMessage {
+                    errorBanner(errorMessage)
+                }
+
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 24)
+                } else if recurringShifts.isEmpty {
+                    emptyState
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(recurringShifts, id: \.id) { recurring in
+                            recurringShiftRow(recurring)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 24)
+        }
+        .background(Color.tidexBackground)
+        .navigationTitle(String(localized: .settingsRecurringShiftsTitle))
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadRecurringShifts()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+            Task {
+                await loadRecurringShifts()
+            }
+        }
+        .sheet(item: $recurringShiftToEdit) { recurring in
+            RecurringShiftEditorSheet(
+                recurringShift: recurring,
+                onSave: { editResult in
+                    recurringShiftToEdit = nil
+                    Task {
+                        await updateRecurringShift(editResult)
+                    }
+                },
+                onDelete: {
+                    let recurringId = recurring.id
+                    recurringShiftToEdit = nil
+                    Task {
+                        await deleteRecurringShift(recurringId)
+                    }
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(.settingsRecurringShiftsTitle)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.tidexTextPrimary)
+
+            Text(.settingsRecurringShiftsSubtitle)
+                .font(.subheadline)
+                .foregroundColor(.tidexTextSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Text(.settingsRecurringShiftsEmptyTitle)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(.settingsRecurringShiftsEmptyDescription)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .background(Color.tidexSurfacePrimary)
+        .cornerRadius(12)
+        .tidexCardShadow(cornerRadius: 12)
+    }
+
+    private func recurringShiftRow(_ recurring: RecurringShiftRow) -> some View {
+        let exclusionCount = recurring.effectiveExclusions.count
+
+        return Button {
+            impactHaptic.impactOccurred()
+            recurringShiftToEdit = recurring
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(verbatim: "\(recurring.cleanStartTime) - \(recurring.cleanEndTime)")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.tidexTextPrimary)
+
+                HStack(spacing: 6) {
+                    Text(weekdaySummary(for: recurring.selected_days))
+                    Text("•")
+                    Text(repeatLabel(for: recurring.repeat_interval_weeks))
+                    if exclusionCount > 0 {
+                        Text("•")
+                        Text(String(localized: .settingsRecurringShiftsExcludedCount(exclusionCount)))
+                    }
+                }
+                .font(.system(size: 13))
+                .foregroundColor(.tidexTextSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color.tidexSurfacePrimary)
+            .cornerRadius(12)
+            .tidexCardShadow(cornerRadius: 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func errorBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(.tidexError)
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexError)
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.tidexError.opacity(0.1))
+        )
+    }
+
+    private func loadRecurringShifts() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let session = try await AuthSessionManager.shared.getSession()
+            let shifts = RecurringShiftsRepository.shared.getRecurringShifts(for: session.normalizedUserId)
+            recurringShifts = sortRecurringShifts(shifts)
+        } catch {
+            logger.error("Failed to load recurring shifts settings: \(error.localizedDescription)")
+            errorMessage = String(localized: .settingsRecurringShiftsLoadFailed)
+        }
+
+        isLoading = false
+    }
+
+    private func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
+        do {
+            _ = try await RecurringShiftsRepository.shared.updateRecurringShift(
+                id: editResult.recurringId,
+                startTime: editResult.startTime,
+                endTime: editResult.endTime,
+                repeatIntervalWeeks: editResult.repeatIntervalWeeks,
+                selectedDays: editResult.selectedDays,
+                endCondition: editResult.endCondition,
+                exclusions: editResult.exclusions
+            )
+
+            await loadRecurringShifts()
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+        } catch {
+            logger.error("Failed to update recurring shift from settings: \(error.localizedDescription)")
+            errorMessage = String(localized: .settingsRecurringShiftsSaveFailed)
+        }
+    }
+
+    private func deleteRecurringShift(_ recurringId: String) async {
+        do {
+            try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
+            await loadRecurringShifts()
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+        } catch {
+            logger.error("Failed to delete recurring shift from settings: \(error.localizedDescription)")
+            errorMessage = String(localized: .settingsRecurringShiftsDeleteFailed)
+        }
+    }
+
+    private func sortRecurringShifts(_ shifts: [RecurringShiftRow]) -> [RecurringShiftRow] {
+        shifts.sorted { lhs, rhs in
+            let lhsEarliestAnchor = lhs.selected_days.values.min() ?? "9999-12-31"
+            let rhsEarliestAnchor = rhs.selected_days.values.min() ?? "9999-12-31"
+            if lhsEarliestAnchor != rhsEarliestAnchor {
+                return lhsEarliestAnchor < rhsEarliestAnchor
+            }
+            if lhs.cleanStartTime != rhs.cleanStartTime {
+                return lhs.cleanStartTime < rhs.cleanStartTime
+            }
+            return lhs.id < rhs.id
+        }
+    }
+
+    private func weekdaySummary(for selectedDays: SelectedDays) -> String {
+        let order = ["1", "2", "3", "4", "5", "6", "0"]
+        var calendar = Calendar.current
+        calendar.locale = Locale(identifier: Locale.current.identifier)
+        let symbols = calendar.shortWeekdaySymbols
+        let labels = order
+            .filter { selectedDays[$0] != nil }
+            .compactMap { key -> String? in
+                guard let index = Int(key), index >= 0, index < symbols.count else { return nil }
+                return symbols[index]
+            }
+        return labels.joined(separator: ", ")
+    }
+
+    private func repeatLabel(for repeatInterval: Int) -> String {
+        if repeatInterval == 0 {
+            return String(localized: .addShiftEveryWeek)
+        }
+        return String(localized: .addShiftEveryNWeeks(repeatInterval + 1))
     }
 }
 

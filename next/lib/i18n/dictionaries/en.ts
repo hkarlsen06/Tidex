@@ -312,6 +312,10 @@ export const en: Dictionary = {
         endTimeLabel: 'End time',
         repeatIntervalLabel: 'Repeat interval',
         selectedWeekdaysLabel: 'Selected weekdays',
+        exclusionsLabel: 'Excluded dates',
+        exclusionsDescription: 'Restore a date to include that shift occurrence again.',
+        noExclusions: 'No excluded dates',
+        restoreDateButton: 'Restore',
         deleteRecurringButton: 'Delete Recurring Shift',
         confirmDeleteRecurringButton: 'Confirm Delete',
         cancelButton: 'Cancel',
@@ -808,6 +812,10 @@ export const en: Dictionary = {
           label: 'Pay and supplements',
           description: 'Configure pay settings and supplements',
         },
+        recurring: {
+          label: 'Recurring shifts',
+          description: 'View and edit all recurring shift patterns',
+        },
         security: {
           label: 'Login and security',
           description: 'Password, connections, and two-factor authentication',
@@ -836,6 +844,13 @@ export const en: Dictionary = {
           label: 'Feedback',
           description: 'Send us your feedback',
         },
+      },
+      recurring: {
+        title: 'Recurring shifts',
+        subtitle: 'Open a recurring shift to edit its schedule and exclusions',
+        emptyTitle: 'No recurring shifts yet',
+        emptyDescription: 'Create a recurring shift from Add Shift to manage it here.',
+        excludedDates: '{count} excluded',
       },
       profile: {
         title: 'Account',

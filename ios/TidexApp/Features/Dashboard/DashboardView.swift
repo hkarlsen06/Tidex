@@ -279,7 +279,8 @@ struct DashboardView: View {
                 endTime: editResult.endTime,
                 repeatIntervalWeeks: editResult.repeatIntervalWeeks,
                 selectedDays: editResult.selectedDays,
-                endCondition: editResult.endCondition
+                endCondition: editResult.endCondition,
+                exclusions: editResult.exclusions
             )
 
             // Reload to reflect changes

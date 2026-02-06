@@ -311,6 +311,10 @@ export const no = {
         endTimeLabel: 'Sluttid',
         repeatIntervalLabel: 'Gjentagelsesintervall',
         selectedWeekdaysLabel: 'Valgte ukedager',
+        exclusionsLabel: 'Ekskluderte datoer',
+        exclusionsDescription: 'Gjenopprett en dato for å inkludere vakten igjen.',
+        noExclusions: 'Ingen ekskluderte datoer',
+        restoreDateButton: 'Gjenopprett',
         deleteRecurringButton: 'Slett fast vakt',
         confirmDeleteRecurringButton: 'Bekreft sletting',
         cancelButton: 'Avbryt',
@@ -807,6 +811,10 @@ export const no = {
           label: 'Lønn og tillegg',
           description: 'Dine gjeldende lønnsinnstillinger',
         },
+        recurring: {
+          label: 'Faste vakter',
+          description: 'Se og rediger alle faste vaktmønstre',
+        },
         security: {
           label: 'Innlogging og sikkerhet',
           description: 'Passord, tilkoblinger og tofaktorautentisering',
@@ -835,6 +843,13 @@ export const no = {
           label: 'Tilbakemelding',
           description: 'Send oss din tilbakemelding',
         },
+      },
+      recurring: {
+        title: 'Faste vakter',
+        subtitle: 'Åpne en fast vakt for å redigere plan og ekskluderinger',
+        emptyTitle: 'Ingen faste vakter ennå',
+        emptyDescription: 'Opprett en fast vakt fra Legg til vakt for å administrere den her.',
+        excludedDates: '{count} ekskludert',
       },
       profile: {
         title: 'Konto',

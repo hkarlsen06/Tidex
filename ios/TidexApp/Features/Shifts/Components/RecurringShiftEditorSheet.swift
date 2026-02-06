@@ -17,6 +17,7 @@ struct RecurringShiftEditorSheet: View {
     @State private var editedRepeatInterval: Int = 0
     @State private var editedSelectedDays: SelectedDays = [:]
     @State private var editedEndCondition: EndCondition? = nil
+    @State private var editedExclusions: [String] = []
 
     // MARK: - Calendar Display State
 
@@ -47,7 +48,8 @@ struct RecurringShiftEditorSheet: View {
                newEndTime != recurringShift.cleanEndTime ||
                editedRepeatInterval != recurringShift.repeat_interval_weeks ||
                editedSelectedDays != recurringShift.selected_days ||
-               editedEndCondition != recurringShift.end_condition
+               editedEndCondition != recurringShift.end_condition ||
+               normalizeExclusions(editedExclusions) != normalizeExclusions(recurringShift.effectiveExclusions)
     }
 
     /// Whether form is valid for saving
@@ -176,6 +178,8 @@ struct RecurringShiftEditorSheet: View {
                             existingShiftDates: []
                         )
 
+                        exclusionsSection
+
                         // Error message
                         if let error = errorMessage {
                             errorBanner(message: error)
@@ -294,6 +298,72 @@ struct RecurringShiftEditorSheet: View {
         .padding(.bottom, 80)  // Extra bottom padding to clear the month picker
     }
 
+    private var exclusionsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(.recurringExclusionsTitle)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+
+            Text(.recurringExclusionsDescription)
+                .font(.system(size: 13))
+                .foregroundColor(.tidexTextSecondary)
+
+            if editedExclusions.isEmpty {
+                Text(.recurringExclusionsNone)
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexTextMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.tidexSurfaceSecondary)
+                    .cornerRadius(10)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(editedExclusions, id: \.self) { dateISO in
+                        exclusionRow(dateISO: dateISO)
+                    }
+                }
+            }
+        }
+    }
+
+    private func exclusionRow(dateISO: String) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(formattedExclusionDate(dateISO))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextPrimary)
+
+                Text(verbatim: dateISO)
+                    .font(.system(size: 12))
+                    .foregroundColor(.tidexTextMuted)
+            }
+
+            Spacer()
+
+            Button {
+                editedExclusions.removeAll { $0 == dateISO }
+                editedExclusions = normalizeExclusions(editedExclusions)
+            } label: {
+                Text(.recurringRestoreDateButton)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.tidexBlue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Color.tidexBlue.opacity(0.12))
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(Color.tidexSurfacePrimary)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     private func errorBanner(message: String) -> some View {
         HStack(spacing: 8) {
@@ -329,6 +399,9 @@ struct RecurringShiftEditorSheet: View {
 
         // Set end condition
         editedEndCondition = recurringShift.end_condition
+
+        // Set exclusions
+        editedExclusions = normalizeExclusions(recurringShift.effectiveExclusions)
 
         // Initialize display month to the earliest anchor date
         initializeDisplayMonth()
@@ -385,7 +458,8 @@ struct RecurringShiftEditorSheet: View {
             endTime: formatTimeToString(endTime),
             repeatIntervalWeeks: editedRepeatInterval,
             selectedDays: editedSelectedDays,
-            endCondition: editedEndCondition
+            endCondition: editedEndCondition,
+            exclusions: normalizeExclusions(editedExclusions)
         )
 
         onSave?(result)
@@ -397,6 +471,19 @@ struct RecurringShiftEditorSheet: View {
         impactHaptic.impactOccurred()
         onDelete?()
         dismiss()
+    }
+
+    private func normalizeExclusions(_ exclusions: [String]) -> [String] {
+        Array(Set(exclusions)).sorted()
+    }
+
+    private func formattedExclusionDate(_ dateISO: String) -> String {
+        guard let date = Date.fromISODateString(dateISO) else { return dateISO }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = Locale(identifier: Locale.current.identifier)
+        return formatter.string(from: date)
     }
 }
 
@@ -410,6 +497,7 @@ struct RecurringShiftEditResult {
     let repeatIntervalWeeks: Int
     let selectedDays: SelectedDays
     let endCondition: EndCondition?
+    let exclusions: [String]
 }
 
 // MARK: - Preview

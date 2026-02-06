@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, useTransition, useEffect, useCallback } from "react";
+import { useId, useRef, useState, useTransition, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
@@ -12,10 +12,11 @@ import { DurationSection } from "@/components/app/DurationSection";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updateRecurringShift";
 import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
-import { Clock, Trash2 } from "lucide-react";
+import { Clock, Trash2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
+import { cleanTime } from "@/lib/date-utils";
 import type { RecurringDraft, RecurringShiftRow } from "@/lib/recurring/types";
 import type { ExistingShift } from "@/lib/recurring/conflicts";
 import type { UserSettings, SupplementRule } from "@/lib/payroll";
@@ -41,7 +42,7 @@ export function RecurringEditModal({
   cacheKey,
 }: RecurringEditModalProps) {
   const { t } = useTranslations();
-  const _locale = useLocale();
+  const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
@@ -77,26 +78,6 @@ export function RecurringEditModal({
         }
 
         const recurring: RecurringShiftRow = await response.json();
-
-        // Strip timezone and seconds from time strings
-        // Input formats: "12:30:00+01:00", "12:30+01:00", "12:30:00", "12:30"
-        // Output format: "12:30"
-        const cleanTime = (time: string) => {
-          // First, remove timezone offset (e.g., "+01:00" or "-05:00")
-          // Split on + or - but keep the first part only
-          let cleaned = time;
-          const plusIndex = cleaned.indexOf('+');
-          const minusIndex = cleaned.lastIndexOf('-'); // lastIndexOf to avoid catching negative in time
-
-          if (plusIndex > 0) {
-            cleaned = cleaned.substring(0, plusIndex);
-          } else if (minusIndex > 2) { // Must be beyond position 2 to be timezone, not part of time
-            cleaned = cleaned.substring(0, minusIndex);
-          }
-
-          // Now extract just HH:MM (first 5 characters)
-          return cleaned.substring(0, 5);
-        };
 
         setDraft({
           start_time: cleanTime(recurring.start_time),
@@ -182,6 +163,21 @@ export function RecurringEditModal({
   }, [confirmingDelete, recurringId, router, onClose, t]);
 
   const canSave = draft && draft.start_time && draft.end_time && Object.keys(draft.selected_days).length > 0;
+  const sortedExclusions = useMemo(() => {
+    if (!draft) return [];
+    return Array.from(new Set(draft.exclusions)).sort((a, b) => a.localeCompare(b));
+  }, [draft]);
+
+  const formatExcludedDate = useCallback((isoDate: string) => {
+    const date = new Date(`${isoDate}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return isoDate;
+    return new Intl.DateTimeFormat(locale === "no" ? "nb-NO" : "en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }, [locale]);
 
   if (!draft || loading) {
     return (
@@ -312,6 +308,53 @@ export function RecurringEditModal({
             onConflictsFound={handleConflictsFound}
             onError={handleError}
           />
+
+          <div className="h-px bg-border-subtle" />
+
+          <div className="space-y-3">
+            <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+              {t.pages.shifts.recurringEdit.exclusionsLabel}
+            </span>
+            <p className="text-sm text-text-secondary">
+              {t.pages.shifts.recurringEdit.exclusionsDescription}
+            </p>
+
+            {sortedExclusions.length === 0 ? (
+              <div className="rounded-xl border border-border-subtle bg-surface-secondary/50 px-3 py-2 text-sm text-text-muted">
+                {t.pages.shifts.recurringEdit.noExclusions}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {sortedExclusions.map((date) => (
+                  <div
+                    key={date}
+                    className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-text-primary">
+                        {formatExcludedDate(date)}
+                      </p>
+                      <p className="text-xs text-text-muted">{date}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          exclusions: draft.exclusions.filter((excludedDate) => excludedDate !== date),
+                        })
+                      }
+                      disabled={pending || deleting}
+                      className="h-9 rounded-full border border-border-subtle px-3 text-xs font-medium"
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      {t.pages.shifts.recurringEdit.restoreDateButton}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {error && (
             <div className="text-sm text-error">{error}</div>
