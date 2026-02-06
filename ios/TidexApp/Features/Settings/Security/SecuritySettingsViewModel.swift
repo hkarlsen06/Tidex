@@ -626,28 +626,18 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         do {
             try await supabase.auth.mfa.unenroll(params: MFAUnenrollParams(factorId: factor.id))
-        } catch is DecodingError {
-            // SDK bug: AuthMFAUnenrollResponse expects 'factor_id' but GoTrue returns 'id'.
-            // The DELETE succeeded (HTTP 200) so the factor is already removed.
-            logger.debug("Ignoring SDK decoding error after successful MFA unenroll")
+
+            successMessage = String(localized: .securityMfaSuccessUnenrolled)
+            showUnenrollConfirmation = false
+            factorToUnenroll = nil
+
+            // Reload factors
+            await loadMFAFactors()
+
         } catch {
             logger.error("Failed to unenroll MFA: \(error)")
             errorMessage = String(localized: .securityMfaErrorsUnenrollFailed)
-            isUnenrollingMFA = false
-            return
         }
-
-        successMessage = String(localized: .securityMfaSuccessUnenrolled)
-        showUnenrollConfirmation = false
-        factorToUnenroll = nil
-
-        // Remove factor from local list immediately for instant UI feedback
-        mfaFactors.removeAll { $0.id == factor.id }
-
-        // Refresh session so the cached user data no longer includes the removed factor.
-        // listFactors() reads from the cached session, so without this it would still
-        // return the old factor on subsequent loads.
-        _ = try? await supabase.auth.refreshSession()
 
         isUnenrollingMFA = false
     }
