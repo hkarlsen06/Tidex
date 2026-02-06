@@ -101,9 +101,12 @@ struct RootView: View {
         // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
         // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
         .onAppear {
-            // Check if LocalStore fell back to in-memory storage
-            if LocalStore.shared.isUsingInMemoryFallback {
-                showStorageWarning = true
+            Task { @MainActor in
+                // Defer storage initialization until after first render to avoid launch stalls.
+                await Task.yield()
+                if LocalStore.shared.isUsingInMemoryFallback {
+                    showStorageWarning = true
+                }
             }
         }
         .alert(String(localized: .alertsStorageIssueTitle), isPresented: $showStorageWarning) {

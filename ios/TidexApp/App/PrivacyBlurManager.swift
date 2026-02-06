@@ -29,12 +29,23 @@ enum PrivacyBlurManager {
     static func hide() {
         privacyBlurView?.removeFromSuperview()
         privacyBlurView = nil
+
+        // Defensive cleanup in case the tracked reference was lost across scene transitions.
+        for window in allWindows() {
+            while let lingeringView = window.viewWithTag(999) {
+                lingeringView.removeFromSuperview()
+            }
+        }
     }
 
     private static func keyWindow() -> UIWindow? {
+        let windows = allWindows()
+        return windows.first { $0.isKeyWindow } ?? windows.first
+    }
+
+    private static func allWindows() -> [UIWindow] {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
     }
 }
