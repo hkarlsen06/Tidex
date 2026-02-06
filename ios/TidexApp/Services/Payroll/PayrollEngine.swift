@@ -107,9 +107,6 @@ struct PayrollEngine {
                     // Filter to visible date range
                     guard virtual.date >= startDate && virtual.date <= endDate else { continue }
 
-                    // Skip if a real shift exists on this date (avoid duplicates)
-                    if shifts.contains(where: { $0.shift_date == virtual.date }) { continue }
-
                     // Skip if we already added this virtual shift (from another month generation)
                     let virtualId = "virtual-\(recurringShift.id)-\(virtual.date)"
                     if result.contains(where: { $0.id == virtualId }) { continue }
