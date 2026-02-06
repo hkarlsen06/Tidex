@@ -80314,6 +80314,23 @@
         }
       }
     },
+    "dataExport.calendar.eventNotes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duration: %@ hours"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Varighet: %@ timer"
+          }
+        }
+      }
+    },
     "days.allDays" : {
       "extractionState" : "manual",
       "localizations" : {

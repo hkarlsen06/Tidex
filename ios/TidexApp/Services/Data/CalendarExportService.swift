@@ -160,8 +160,8 @@ final class CalendarExportService {
         event.calendar = calendar
 
         // Add notes with shift details
-        let hoursFormatted = String(format: "%.1f", shift.calc.hours)
-        event.notes = "Duration: \(hoursFormatted) hours"
+        let hoursFormatted = shift.calc.hours.formatted(.number.precision(.fractionLength(1)))
+        event.notes = String(localized: .dataExportCalendarEventNotes(hoursFormatted))
 
         try eventStore.save(event, span: .thisEvent, commit: true)
     }
