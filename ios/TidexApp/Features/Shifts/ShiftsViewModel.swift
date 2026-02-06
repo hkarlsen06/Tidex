@@ -770,7 +770,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 endTime: editResult.endTime,
                 repeatIntervalWeeks: editResult.repeatIntervalWeeks,
                 selectedDays: editResult.selectedDays,
-                endCondition: editResult.endCondition
+                endCondition: editResult.endCondition,
+                exclusions: editResult.exclusions
             )
 
             logger.info("✅ Updated recurring shift \(editResult.recurringId)")

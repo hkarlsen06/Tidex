@@ -503,14 +503,14 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week THIS weekday starts from — each weekday can have a different anchor week to create alternating patterns.",
               },
             },
             required: ["day", "anchorDate"],
           },
           minItems: 1,
           maxItems: 7,
-          description: "Array of weekdays with their anchor dates. Use multiple entries for multi-day patterns (e.g., Mon/Wed/Fri).",
+          description: "Array of weekdays with their anchor dates. Use multiple entries for multi-day patterns (same week: Mon/Wed/Fri; alternating weeks: offset anchorDates by one week).",
         },
         start: {
           type: "string",

@@ -174670,6 +174670,74 @@
         }
       }
     },
+    "recurring.exclusions.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore a date to include that shift occurrence again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gjenopprett en dato for å inkludere vakten igjen."
+          }
+        }
+      }
+    },
+    "recurring.exclusions.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No excluded dates"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen ekskluderte datoer"
+          }
+        }
+      }
+    },
+    "recurring.exclusions.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluded dates"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekskluderte datoer"
+          }
+        }
+      }
+    },
+    "recurring.restoreDateButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gjenopprett"
+          }
+        }
+      }
+    },
     "resetPassword.backToLogin" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -216820,6 +216888,40 @@
         }
       }
     },
+    "settings.menu.recurringShifts.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View and edit all recurring shift patterns"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se og rediger alle faste vaktmønstre"
+          }
+        }
+      }
+    },
+    "settings.menu.recurringShifts.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recurring shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faste vakter"
+          }
+        }
+      }
+    },
     "settings.menu.security.description" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -237319,6 +237421,142 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "薪資和津貼"
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.deleteFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not delete recurring shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke slette fast vakt."
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.emptyDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a recurring shift from Add Shift to manage it here."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opprett en fast vakt fra Legg til vakt for å administrere den her."
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No recurring shifts yet"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen faste vakter ennå"
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.excludedCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld excluded"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ekskludert"
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.loadFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load recurring shifts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke laste faste vakter."
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.saveFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not save recurring shift changes."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke lagre endringer i fast vakt."
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open a recurring shift to edit its schedule and exclusions"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne en fast vakt for å redigere plan og ekskluderinger"
+          }
+        }
+      }
+    },
+    "settings.recurringShifts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recurring shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faste vakter"
           }
         }
       }

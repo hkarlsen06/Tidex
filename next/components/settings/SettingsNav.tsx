@@ -17,6 +17,7 @@ import {
   Loader2,
   ShieldAlert,
   MessageSquare,
+  Repeat,
 } from "lucide-react";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
@@ -80,6 +81,12 @@ const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: 
       label: t.pages.settings.menu.pay.label,
       description: t.pages.settings.menu.pay.description,
       icon: Banknote,
+    },
+    {
+      href: "/settings/recurring",
+      label: t.pages.settings.menu.recurring.label,
+      description: t.pages.settings.menu.recurring.description,
+      icon: Repeat,
     },
     // Data & Support group
     {
