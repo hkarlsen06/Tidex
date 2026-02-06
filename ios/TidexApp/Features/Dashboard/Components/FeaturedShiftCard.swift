@@ -65,82 +65,72 @@ struct FeaturedShiftCard: View {
     var body: some View {
         VStack(spacing: 8) {
             // Main card content
-            VStack(alignment: .leading, spacing: 4) {
-                // Row 1: Date (left) and earnings amount (right) - center aligned
-                HStack(alignment: .center) {
-                    // Day name and date
-                    HStack(spacing: 4) {
-                        Text(dateParts.dayName)
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(.tidexTextPrimary)
-                        Text("·")
-                            .foregroundColor(.tidexTextMuted)
-                        HStack(spacing: 4) {
-                            Text(dateParts.dayNumber)
-                                .contentTransition(.numericText())
-                            Text(dateParts.monthName)
-                        }
+            ShiftCardContentLayout {
+                // Row 1: Day name and date
+                HStack(spacing: 4) {
+                    Text(dateParts.dayName)
                         .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.tidexTextPrimary)
+                    Text("·")
                         .foregroundColor(.tidexTextMuted)
+                    HStack(spacing: 4) {
+                        Text(dateParts.dayNumber)
+                            .contentTransition(.numericText())
+                        Text(dateParts.monthName)
                     }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
-
-                    Spacer()
-
-                    // Net/gross amount
-                    let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-                    HStack(spacing: 2) {
-                        if showIncreaseHighlight {
-                            Text("+")
-                                .font(.system(size: 22, weight: .semibold))
-                                .tracking(-0.5)
-                                .foregroundColor(.tidexBlue)
-                        }
-                        CurrencyCountUpText(
-                            amount: displayAmount,
-                            duration: 0.8,
-                            animateOnAppear: true,
-                            animateChanges: true
-                        )
-                        .font(.system(size: 22, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.tidexTextMuted)
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
+            } leadingBottom: {
+                // Row 2: Time range and hours
+                HStack(spacing: 8) {
+                    if isRTL {
+                        hoursLabel
+                        arrowLabel
+                        timeRangeLabel
+                    } else {
+                        timeRangeLabel
+                        arrowLabel
+                        hoursLabel
                     }
                 }
-
-                // Row 2: Time range (left) and breakdown (right) - center aligned
-                HStack(alignment: .center) {
-                    // Time range and hours
-                    HStack(spacing: 8) {
-                        if isRTL {
-                            hoursLabel
-                            arrowLabel
-                            timeRangeLabel
-                        } else {
-                            timeRangeLabel
-                            arrowLabel
-                            hoursLabel
-                        }
+                .environment(\.layoutDirection, .leftToRight)
+            } trailingTop: {
+                // Net/gross amount
+                let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
+                HStack(spacing: 2) {
+                    if showIncreaseHighlight {
+                        Text("+")
+                            .font(.system(size: 22, weight: .semibold))
+                            .tracking(-0.5)
+                            .foregroundColor(.tidexBlue)
                     }
-                    .environment(\.layoutDirection, .leftToRight)
-
-                    Spacer()
-
-                    // Breakdown (gross - tax) when tax enabled
-                    if showBreakdown {
-                        HStack(spacing: 4) {
-                            Text(formatPlainAmount(shift.grossPay))
-                                .contentTransition(.numericText(value: shift.grossPay))
-                            Text("−")
-                            Text(formatPlainAmount(shift.taxAmount))
-                                .contentTransition(.numericText(value: shift.taxAmount))
-                        }
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.tidexTextMuted)
-                        .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
-                        .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
+                    CurrencyCountUpText(
+                        amount: displayAmount,
+                        duration: 0.8,
+                        animateOnAppear: true,
+                        animateChanges: true
+                    )
+                    .font(.system(size: 22, weight: .semibold))
+                    .tracking(-0.5)
+                    .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
+                }
+            } trailingBottom: {
+                // Breakdown (gross - tax) when tax enabled
+                if showBreakdown {
+                    HStack(spacing: 4) {
+                        Text(formatPlainAmount(shift.grossPay))
+                            .contentTransition(.numericText(value: shift.grossPay))
+                        Text("−")
+                        Text(formatPlainAmount(shift.taxAmount))
+                            .contentTransition(.numericText(value: shift.taxAmount))
                     }
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.tidexTextMuted)
+                    .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
+                    .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
                 }
             }
             .padding(.horizontal, 20)
