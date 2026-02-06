@@ -71,8 +71,12 @@ struct DashboardView: View {
         }
       )
       .navigationBarTitleDisplayMode(.inline)
-      .iPadToolbarBackground()
+      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
       .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          TodayDateLabel()
+        }
+        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .topBarTrailing) {
           UserMenuButton(
             displayName: coordinator.userDisplayName,

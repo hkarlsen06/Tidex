@@ -19,7 +19,7 @@ struct TodayPlaceholderCard: View {
 
     // Get day number
     formatter.dateFormat = "d"
-    let dayNumber = formatter.string(from: date)
+    let dayNumber = formatter.string(from: date) + String(localized: .commonDaySuffix)
 
     // Get month name (short)
     formatter.dateFormat = "MMM"

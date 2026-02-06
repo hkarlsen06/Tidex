@@ -6,84 +6,78 @@ struct AppLockView: View {
   @Environment(\.scenePhase) private var scenePhase
 
   @State private var isAuthenticating = false
+  @State private var wasInBackground = false
 
   var body: some View {
-    GeometryReader { geometry in
-      ZStack {
-        // Background - matches splash screen
-        Color.tidexLaunchBackground
+    ZStack {
+      Color.tidexLaunchBackground
 
-        VStack(spacing: 32) {
-          Spacer()
+      VStack(spacing: 0) {
+        Spacer()
 
-          // Logo
-          Image("Splash")
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 160, height: 160)
+        // App logo
+        Image("Splash")
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(width: 120, height: 120)
 
-          // Lock icon and text
-          VStack(spacing: 12) {
-            Image(systemName: biometricService.biometricIconName)
-              .font(.system(size: 44))
-              .foregroundColor(.tidexBlue)
+        Spacer()
+          .frame(height: 24)
 
-            Text(.appLockTitle)
-              .font(.title2)
-              .fontWeight(.semibold)
-              .foregroundColor(.tidexTextPrimary)
+        // Title
+        Text(.appLockTitle)
+          .font(.title3)
+          .fontWeight(.semibold)
+          .foregroundColor(.tidexTextPrimary)
 
-            Text(.appLockSubtitle)
-              .font(.subheadline)
+        Spacer()
+          .frame(height: 8)
+
+        // Subtitle
+        Text(.appLockSubtitle)
+          .font(.subheadline)
+          .foregroundColor(.tidexTextSecondary)
+          .multilineTextAlignment(.center)
+          .padding(.horizontal, 48)
+
+        Spacer()
+
+        // Tappable biometric icon — Apple-style
+        Button {
+          Task { await unlock() }
+        } label: {
+          VStack(spacing: 10) {
+            if isAuthenticating {
+              ProgressView()
+                .controlSize(.regular)
+                .tint(.tidexTextSecondary)
+            } else {
+              Image(systemName: biometricService.biometricIconName)
+                .font(.system(size: 36, weight: .thin))
+                .foregroundColor(.tidexTextPrimary)
+                .contentTransition(.symbolEffect(.replace))
+            }
+
+            Text(String(localized: .appLockUnlock(biometricService.biometricTypeName)))
+              .font(.footnote)
               .foregroundColor(.tidexTextSecondary)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal, 32)
           }
-
-          Spacer()
-
-          // Unlock button
-          Button {
-            Task {
-              await unlock()
-            }
-          } label: {
-            HStack(spacing: 10) {
-              if isAuthenticating {
-                ProgressView()
-                  .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                  .scaleEffect(0.9)
-              } else {
-                Image(systemName: biometricService.biometricIconName)
-                  .font(.system(size: 20))
-              }
-              Text(String(localized: .appLockUnlock(biometricService.biometricTypeName)))
-            }
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.tidexBlue)
-            .cornerRadius(12)
-          }
-          .disabled(isAuthenticating)
-          .padding(.horizontal, 24)
-
-          Spacer()
-            .frame(height: 60)
         }
+        .disabled(isAuthenticating)
+
+        Spacer()
+          .frame(height: 80)
       }
     }
     .ignoresSafeArea()
     .task {
-      // Auto-trigger biometric prompt on appear (fresh launch)
       await unlock()
     }
     .onChange(of: scenePhase) { _, newPhase in
-      // Re-trigger biometric prompt when returning from background.
-      // .task only fires on first appear; if the view was inserted while
-      // backgrounded, it won't re-fire when the app becomes active.
-      if newPhase == .active {
+      if newPhase == .background {
+        wasInBackground = true
+      } else if newPhase == .active, wasInBackground {
+        wasInBackground = false
         Task { await unlock() }
       }
     }

@@ -53,7 +53,13 @@ struct SharingView: View {
       .navigationBarTitleDisplayMode(.inline)
       .iPadToolbarBackground()
       .toolbar {
-        // Back button when viewing a sharer
+        // Date label or back button when viewing a sharer
+        ToolbarItem(placement: .topBarLeading) {
+          if viewModel.selectedSharer == nil {
+            TodayDateLabel()
+          }
+        }
+        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .topBarLeading) {
           if viewModel.selectedSharer != nil {
             Button(action: {
