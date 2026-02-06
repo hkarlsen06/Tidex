@@ -3,13 +3,14 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WorkPatternAnalyzer")
 
-/// Analyzes recent shift history to detect typical work patterns
+/// Analyzes recent shift history to detect typical work days
+/// For each weekday, checks if the user has worked that day regularly over the analysis window
 @MainActor
 struct WorkPatternAnalyzer {
   struct WorkPattern {
     let typicalWorkDays: [Int: DayPattern]  // weekday -> pattern (0=Sun)
     let computedAt: Date
-    static let minimumWeeksRequired = 4
+    static let minimumWeeksRequired = 6
   }
 
   /// Detailed analysis result including diagnostics
@@ -27,7 +28,8 @@ struct WorkPatternAnalyzer {
     let medianEndMinutes: Int
   }
 
-  private static let analysisWeeks = 12
+  private static let analysisWeeks = 26
+  private static let frequencyThreshold = 0.45
 
   /// Analyze shift history for typical work patterns
   /// - Parameter userId: User ID
@@ -42,8 +44,9 @@ struct WorkPatternAnalyzer {
   }
 
   /// Analyze shift history with detailed result including diagnostics
-  /// - Parameter userId: User ID
-  /// - Returns: AnalysisResult with pattern or reason for failure
+  /// For each weekday (Mon-Sun), computes how often the user works that day
+  /// across the analysis window. Any weekday above the frequency threshold
+  /// is considered a typical work day.
   static func analyzeDetailed(for userId: String) -> AnalysisResult {
     let calendar = Calendar.current
     let now = Date()
@@ -53,15 +56,15 @@ struct WorkPatternAnalyzer {
       return .noShifts
     }
 
-    let combinedShifts = combinedShifts(for: userId, startDate: startDate, endDate: endDate)
-    guard !combinedShifts.isEmpty else {
+    let shifts = combinedShifts(for: userId, startDate: startDate, endDate: endDate)
+    guard !shifts.isEmpty else {
       logger.info("No shifts available for pattern analysis")
       return .noShifts
     }
 
-    // Compute weeks-with-data in the analysis window
+    // Count weeks with any shift data
     var weeksWithData = Set<String>()
-    for shift in combinedShifts {
+    for shift in shifts {
       guard let date = Date.fromISODateString(shift.dateISO) else { continue }
       let weekOfYear = calendar.component(.weekOfYear, from: date)
       let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
@@ -76,19 +79,20 @@ struct WorkPatternAnalyzer {
 
     // Group shifts by weekday
     var byWeekday: [Int: [ShiftTime]] = [:]
-    for shift in combinedShifts {
+    for shift in shifts {
       guard let date = Date.fromISODateString(shift.dateISO) else { continue }
       let weekday = calendar.component(.weekday, from: date) - 1  // 0=Sun
       byWeekday[weekday, default: []].append(shift)
     }
 
+    // For each weekday, check if user works that day regularly
     var typicalWorkDays: [Int: DayPattern] = [:]
-    for (weekday, shifts) in byWeekday {
-      let frequency = Double(shifts.count) / Double(weeksCount)
-      guard frequency >= 0.6 else { continue }
+    for (weekday, dayShifts) in byWeekday {
+      let frequency = Double(dayShifts.count) / Double(weeksCount)
+      guard frequency >= frequencyThreshold else { continue }
 
-      let startMinutes = shifts.map { $0.startMinutes }.sorted()
-      let endMinutes = shifts.map { $0.endMinutes }.sorted()
+      let startMinutes = dayShifts.map { $0.startMinutes }.sorted()
+      let endMinutes = dayShifts.map { $0.endMinutes }.sorted()
 
       guard let medianStart = median(of: startMinutes),
         let medianEnd = median(of: endMinutes)
@@ -109,6 +113,8 @@ struct WorkPatternAnalyzer {
       return .noPatternDetected
     }
 
+    logger.info(
+      "Detected \(typicalWorkDays.count) typical work days (threshold: \(self.frequencyThreshold))")
     return .success(WorkPattern(typicalWorkDays: typicalWorkDays, computedAt: now))
   }
 

@@ -243,8 +243,8 @@ final class SmartNotificationScheduler {
     let content = UNMutableNotificationContent()
     let weekday = localizedWeekdayName(for: date)
 
-    content.title = String(localized: .notificationsSmartMorningTitle(weekday))
-    content.body = String(localized: .notificationsSmartMorningBody)
+    content.title = String(localized: .notificationsSmartMorningTitle)
+    content.body = String(localized: .notificationsSmartMorningBody(weekday))
 
     content.sound = UNNotificationSound(named: UNNotificationSoundName("tidex_notification.caf"))
     content.userInfo = [
