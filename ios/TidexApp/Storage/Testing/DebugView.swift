@@ -1,6 +1,7 @@
 #if DEBUG
   import SwiftUI
   import StoreKit
+  import UserNotifications
   import os.log
 
   private let logger = Logger(subsystem: "com.tidex.app", category: "SyncDebugView")
@@ -26,6 +27,13 @@
     @State private var isSyncingStoreKit = false
     @State private var storeKitSyncResult: String?
 
+    // Notification debug state
+    @State private var pendingSmartCount = 0
+    @State private var pendingReminderCount = 0
+    @State private var scheduledNotifications: [(id: String, fireDate: Date?)] = []
+    @State private var workPatternResult: WorkPatternAnalyzer.AnalysisResult?
+    @State private var testNotificationResult: String?
+
     var body: some View {
       List {
         // Quick Actions (most used)
@@ -33,6 +41,9 @@
 
         // Entitlement Section
         entitlementSection
+
+        // Notifications Section
+        notificationsSection
 
         // Sync Status Section
         syncStatusSection
@@ -51,6 +62,180 @@
       .refreshable {
         await loadSummary()
       }
+    }
+
+    // MARK: - Notifications Section
+
+    private var notificationsSection: some View {
+      Section("Notifications") {
+        // Work Pattern Status
+        HStack {
+          Text("Work Pattern")
+          Spacer()
+          if let result = workPatternResult {
+            switch result {
+            case .success(let pattern):
+              Text("\(pattern.typicalWorkDays.count) work days")
+                .foregroundColor(.green)
+            case .insufficientData(let weeksFound):
+              Text("\(weeksFound)/\(WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired) weeks")
+                .foregroundColor(.orange)
+            case .noShifts:
+              Text("No shifts")
+                .foregroundColor(.red)
+            case .noPatternDetected:
+              Text("No pattern")
+                .foregroundColor(.orange)
+            }
+          } else {
+            Text("Not loaded")
+              .foregroundColor(.secondary)
+          }
+        }
+
+        // Pending notification counts
+        HStack {
+          Text("Smart Notifications")
+          Spacer()
+          Text("\(pendingSmartCount) pending")
+            .foregroundColor(pendingSmartCount > 0 ? .green : .secondary)
+        }
+
+        HStack {
+          Text("Shift Reminders")
+          Spacer()
+          Text("\(pendingReminderCount) pending")
+            .foregroundColor(pendingReminderCount > 0 ? .green : .secondary)
+        }
+
+        // Scheduled notification details
+        if !scheduledNotifications.isEmpty {
+          ForEach(scheduledNotifications, id: \.id) { notification in
+            HStack {
+              let label = notificationLabel(for: notification.id)
+              Image(systemName: label.icon)
+                .font(.caption)
+                .foregroundColor(label.color)
+                .frame(width: 16)
+
+              Text(label.text)
+                .font(.caption)
+                .foregroundColor(.primary)
+
+              Spacer()
+
+              if let fireDate = notification.fireDate {
+                Text(fireDate, style: .relative)
+                  .font(.caption.monospaced())
+                  .foregroundColor(.secondary)
+              } else {
+                Text("—")
+                  .font(.caption)
+                  .foregroundColor(.secondary)
+              }
+            }
+          }
+        }
+
+        // Test buttons
+        Button {
+          Task {
+            let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
+              type: .morning)
+            testNotificationResult = success ? "Morning test scheduled (5s)" : "Failed to schedule"
+          }
+        } label: {
+          Label("Send Test Morning", systemImage: "sun.max")
+        }
+
+        Button {
+          Task {
+            let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
+              type: .evening)
+            testNotificationResult = success ? "Evening test scheduled (5s)" : "Failed to schedule"
+          }
+        } label: {
+          Label("Send Test Evening", systemImage: "moon")
+        }
+
+        Button {
+          guard let userId = userId else { return }
+          Task {
+            await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
+            testNotificationResult = "Rescheduled"
+            await loadNotificationState()
+          }
+        } label: {
+          Label("Reschedule Smart Notifications", systemImage: "arrow.clockwise")
+        }
+        .disabled(userId == nil)
+
+        if let result = testNotificationResult {
+          Text(result)
+            .font(.caption)
+            .foregroundColor(result.contains("Failed") ? .red : .green)
+        }
+      }
+    }
+
+    private func loadNotificationState() async {
+      let center = UNUserNotificationCenter.current()
+      let pending = await center.pendingNotificationRequests()
+
+      let smartRequests = pending.filter { request in
+        request.identifier.hasPrefix("smart-morning-") || request.identifier.hasPrefix(
+          "smart-evening-") || request.identifier.hasPrefix("smart-test-")
+      }
+      pendingSmartCount = smartRequests.count
+
+      let reminderRequests = pending.filter { request in
+        request.identifier.hasPrefix("shift-reminder-")
+      }
+      pendingReminderCount = reminderRequests.count
+
+      // Build sorted list of all smart + reminder notifications with fire dates
+      let allRelevant = smartRequests + reminderRequests
+      scheduledNotifications =
+        allRelevant
+        .map { request in
+          let fireDate: Date?
+          if let calTrigger = request.trigger as? UNCalendarNotificationTrigger {
+            fireDate = calTrigger.nextTriggerDate()
+          } else if let timeTrigger = request.trigger as? UNTimeIntervalNotificationTrigger {
+            fireDate = timeTrigger.nextTriggerDate()
+          } else {
+            fireDate = nil
+          }
+          return (id: request.identifier, fireDate: fireDate)
+        }
+        .sorted { a, b in
+          guard let aDate = a.fireDate else { return false }
+          guard let bDate = b.fireDate else { return true }
+          return aDate < bDate
+        }
+
+      if let userId = userId {
+        workPatternResult = WorkPatternAnalyzer.analyzeDetailed(for: userId)
+      }
+    }
+
+    private func notificationLabel(for identifier: String)
+      -> (text: String, icon: String, color: Color)
+    {
+      if identifier.hasPrefix("smart-test-morning") {
+        return ("Test morning", "sun.max", .orange)
+      } else if identifier.hasPrefix("smart-test-evening") {
+        return ("Test evening", "moon", .purple)
+      } else if identifier.hasPrefix("smart-morning-") {
+        let date = String(identifier.dropFirst("smart-morning-".count))
+        return ("Morning \(date)", "sun.max", .yellow)
+      } else if identifier.hasPrefix("smart-evening-") {
+        let date = String(identifier.dropFirst("smart-evening-".count))
+        return ("Evening \(date)", "moon", .indigo)
+      } else if identifier.hasPrefix("shift-reminder-") {
+        return ("Reminder", "bell.fill", .blue)
+      }
+      return (identifier, "questionmark.circle", .secondary)
     }
 
     // MARK: - Sync Status Section
@@ -653,6 +838,7 @@
       do {
         userId = try await AuthSessionManager.shared.getUserId()
         await loadSummary()
+        await loadNotificationState()
       } catch {
         logger.error("Failed to get user ID: \(error.localizedDescription)")
       }
