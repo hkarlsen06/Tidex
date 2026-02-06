@@ -22,10 +22,13 @@ final class AppleAuthProvider: NSObject {
     /// - Parameter anchor: The window to present the sign-in sheet
     /// - Returns: The identity token and optional name from Apple
     func signIn(from anchor: UIWindow? = nil) async throws -> SignInResult {
-        self.presentationAnchor = anchor ?? UIApplication.shared.connectedScenes
+        guard let resolvedAnchor = anchor ?? UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
+            .first { $0.isKeyWindow } else {
+            throw AppleAuthError.presentationAnchorUnavailable
+        }
+        self.presentationAnchor = resolvedAnchor
 
         let authorization = try await performRequest()
 
@@ -121,12 +124,13 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
                 return keyWindow
             }
             // Create window from first available scene (required in iOS 26+)
-            guard let windowScene = UIApplication.shared.connectedScenes
+            if let windowScene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
-                .first else {
-                fatalError("No UIWindowScene available - this should never happen in a running app")
+                .first {
+                return UIWindow(windowScene: windowScene)
             }
-            return UIWindow(windowScene: windowScene)
+            assertionFailure("Unexpected: no window scene available for auth presentation")
+            return UIWindow(frame: .zero)
         }
     }
 }
@@ -141,6 +145,7 @@ enum AppleAuthError: Error, LocalizedError {
     case notHandled
     case notInteractive
     case matchedExcludedCredential
+    case presentationAnchorUnavailable
     case unknown
 
     var errorDescription: String? {
@@ -159,6 +164,8 @@ enum AppleAuthError: Error, LocalizedError {
             return "Apple Sign-In requires user interaction"
         case .matchedExcludedCredential:
             return "Apple Sign-In credential was excluded"
+        case .presentationAnchorUnavailable:
+            return "Unable to present Apple Sign-In"
         case .unknown:
             return "An unknown error occurred during Apple Sign-In"
         }

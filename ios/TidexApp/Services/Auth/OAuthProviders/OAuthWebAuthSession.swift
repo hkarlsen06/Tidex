@@ -75,10 +75,13 @@ final class OAuthWebAuthSession: NSObject {
 
     private func performWebAuth(url: URL) async throws -> URL {
         // Get the presentation anchor
-        presentationAnchor = UIApplication.shared.connectedScenes
+        guard let resolvedAnchor = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
+            .first { $0.isKeyWindow } else {
+            throw OAuthWebAuthError.presentationAnchorUnavailable
+        }
+        presentationAnchor = resolvedAnchor
 
         return try await withCheckedThrowingContinuation { continuation in
             // SECURITY: The access token is NEVER passed in the URL
@@ -189,12 +192,13 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
                 return keyWindow
             }
             // Create window from first available scene (required in iOS 26+)
-            guard let windowScene = UIApplication.shared.connectedScenes
+            if let windowScene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
-                .first else {
-                fatalError("No UIWindowScene available - this should never happen in a running app")
+                .first {
+                return UIWindow(windowScene: windowScene)
             }
-            return UIWindow(windowScene: windowScene)
+            assertionFailure("Unexpected: no window scene available for auth presentation")
+            return UIWindow(frame: .zero)
         }
     }
 }
@@ -207,6 +211,7 @@ enum OAuthWebAuthError: Error, LocalizedError {
     case noCallback
     case sessionStartFailed
     case stateMismatch
+    case presentationAnchorUnavailable
     case failed(String)
 
     var errorDescription: String? {
@@ -221,6 +226,8 @@ enum OAuthWebAuthError: Error, LocalizedError {
             return "Failed to start OAuth session"
         case .stateMismatch:
             return "OAuth state validation failed - possible CSRF attack"
+        case .presentationAnchorUnavailable:
+            return "Unable to present OAuth"
         case .failed(let message):
             return "OAuth failed: \(message)"
         }
