@@ -4,7 +4,7 @@
 
 /*
  * Safe-area-inset loading state
- * On iOS PWA/Capacitor, env(safe-area-inset-*) values are not immediately available.
+ * On iOS PWA, env(safe-area-inset-*) values are not immediately available.
  * This causes a layout shift when they resolve (e.g., header jumps down by ~47px).
  * Solution: Hide the body until safe-area-insets are resolved, then reveal with fade.
  * The script in layout.tsx removes the 'safe-area-loading' class once insets are ready.
@@ -16,54 +16,6 @@ html.safe-area-loading body {
 html:not(.safe-area-loading) body {
   opacity: 1;
   transition: opacity 50ms ease-out;
-}
-
-/*
- * Native iOS tab bar handling
- * On native iOS, a UITabBar is used instead of the web NavBar.
- * The inline script adds 'native-ios' class before React hydrates,
- * so we can apply native-specific styles immediately to prevent flash/shift.
- */
-html.native-ios [data-web-navbar] {
-  display: none !important;
-}
-
-/*
- * Native iOS bottom padding override
- * Page wrappers use 5rem bottom padding for web NavBar, but on native iOS
- * we need padding for the native tab bar + extra spacing since WebView
- * extends edge-to-edge behind the tab bar for proper safe area inset reporting.
- *
- * --native-tab-bar-height is injected by TidexContainerViewController and
- * already includes the tab bar's internal safe area handling. We add a small
- * buffer (8px) for visual spacing.
- */
-html.native-ios [data-page-wrapper] {
-  padding-bottom: calc(var(--native-tab-bar-height, 83px) + 8px) !important;
-}
-
-/*
- * When tab bar is hidden (e.g., during immersive experiences), use only safe area
- */
-html.native-ios.native-tab-bar-hidden [data-page-wrapper] {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
-}
-
-/*
- * Native iOS top padding for header
- * Ensure the header respects safe area inset on native iOS.
- * This provides a fallback in case React hydration doesn't apply it correctly.
- */
-html.native-ios [data-top-header] {
-  padding-top: env(safe-area-inset-top) !important;
-}
-
-/*
- * Native iOS uses theme-aware background on html element
- * This ensures consistent background during redirects/navigation on the native app.
- */
-html.native-ios {
-  background: hsl(var(--background)) !important;
 }
 
 /* Define content sources for scanning */

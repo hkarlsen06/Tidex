@@ -12,9 +12,8 @@ export async function GET(
   const { locale } = await params;
   const loginUrl = `/${locale}/login`;
 
-  // Create response with HTML that does client-side redirect
-  // This avoids 307 redirect issues with Capacitor WebView
-  // Uses same background colors as the app (dark: #020817, light: #ffffff)
+  // Create response with HTML that does client-side redirect.
+  // Uses same background colors as the app (dark: #020817, light: #ffffff).
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -32,23 +31,6 @@ export async function GET(
       var theme = localStorage.getItem('theme');
       if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.style.setProperty('--bg', '#020817');
-      }
-    })();
-    // Hide native tab bar and clear widget data on iOS before redirecting
-    (function() {
-      try {
-        if (window.Capacitor && window.Capacitor.Plugins) {
-          // Hide native tab bar
-          if (window.Capacitor.Plugins.NativeTabBar) {
-            window.Capacitor.Plugins.NativeTabBar.hide();
-          }
-          // Clear widget data (shared storage for home screen widget)
-          if (window.Capacitor.Plugins.ShiftActivity) {
-            window.Capacitor.Plugins.ShiftActivity.saveShiftsToSharedStorage({ shifts: '[]' });
-          }
-        }
-      } catch (e) {
-        // Ignore - not running in Capacitor
       }
     })();
     window.location.href = "${loginUrl}";

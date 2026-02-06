@@ -14,7 +14,7 @@ import { createSupabaseServiceClient } from '@/lib/supabase/service';
  *
  * Body:
  * - apnsToken?: string - APNs device token (iOS native)
- * - fcmToken?: string - FCM token (web/Android/iOS Capacitor)
+ * - fcmToken?: string - FCM token (web/Android/iOS app)
  * - platform: 'ios' | 'android' | 'web'
  * - deviceId?: string - Device identifier
  * - deviceModel?: string - Device model name

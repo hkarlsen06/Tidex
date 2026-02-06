@@ -191,18 +191,9 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
   const isAppleSubscription = subscription.provider === 'apple';
 
   const handleManageSubscription = async () => {
-    // For Apple subscriptions, open Apple's subscription management
     if (isAppleSubscription) {
-      // iOS deep link to subscription management
       const iosDeepLink = 'https://apps.apple.com/account/subscriptions';
-
-      // Try to use Capacitor Browser for better UX, fallback to window.open
-      try {
-        const { Browser } = await import('@capacitor/browser');
-        await Browser.open({ url: iosDeepLink });
-      } catch {
-        window.open(iosDeepLink, '_blank');
-      }
+      window.open(iosDeepLink, '_blank', 'noopener,noreferrer');
       return;
     }
 

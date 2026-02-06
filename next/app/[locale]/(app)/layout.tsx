@@ -13,7 +13,6 @@ import { SharersProvider } from "@/components/app/SharersProvider";
 import { UserAvatarProvider } from "@/components/app/UserAvatarProvider";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
-import { PushNotificationProvider } from "@/components/providers/PushNotificationProvider";
 import { ImpersonationProvider } from "@/components/providers/ImpersonationProvider";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import { getUsersWhoSharedWithMe } from "@/data-access/sharing";
@@ -245,33 +244,31 @@ export default async function RootLayout({
             expiresAt={impersonationBannerData?.expiresAt}
           >
             <SupabaseListener />
-            <PushNotificationProvider>
-              {/* Stream user settings (currency, avatar) with Suspense */}
-              <Suspense
-                fallback={
-                  <CurrencyProvider currency="kr">
+            {/* Stream user settings (currency, avatar) with Suspense */}
+            <Suspense
+              fallback={
+                <CurrencyProvider currency="kr">
+                  <SharersProvider sharers={[]}>
+                    <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
+                  </SharersProvider>
+                </CurrencyProvider>
+              }
+            >
+              <UserSettingsData userId={claims.sub} oauthAvatarUrl={oauthAvatarUrl}>
+                {/* Stream sharers data separately - SharersProvider in fallback prevents layout shift */}
+                <Suspense
+                  fallback={
                     <SharersProvider sharers={[]}>
                       <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
                     </SharersProvider>
-                  </CurrencyProvider>
-                }
-              >
-                <UserSettingsData userId={claims.sub} oauthAvatarUrl={oauthAvatarUrl}>
-                  {/* Stream sharers data separately - SharersProvider in fallback prevents layout shift */}
-                  <Suspense
-                    fallback={
-                      <SharersProvider sharers={[]}>
-                        <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
-                      </SharersProvider>
-                    }
-                  >
-                    <SharersData userId={claims.sub}>
-                      <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
-                    </SharersData>
-                  </Suspense>
-                </UserSettingsData>
-              </Suspense>
-            </PushNotificationProvider>
+                  }
+                >
+                  <SharersData userId={claims.sub}>
+                    <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
+                  </SharersData>
+                </Suspense>
+              </UserSettingsData>
+            </Suspense>
           </ImpersonationProvider>
         </I18nProvider>
       </MonthProvider>

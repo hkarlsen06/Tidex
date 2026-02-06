@@ -12,7 +12,6 @@ import {
 } from "motion/react";
 import { Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { impactHaptic } from "@/lib/capacitor/haptics";
 import type { ShiftWithComputations } from "@/lib/payroll";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -120,7 +119,6 @@ export function SwipeableShiftCard({
         // Haptic feedback when crossing threshold
         if (isSwipingBeyondThreshold && !hasTriggeredHaptic.current) {
           hasTriggeredHaptic.current = true;
-          impactHaptic("medium");
         } else if (!isSwipingBeyondThreshold && hasTriggeredHaptic.current) {
           hasTriggeredHaptic.current = false;
         }

@@ -16,13 +16,9 @@ import {
   updateNotificationSettings,
   updateShiftReminderSettings,
 } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
-import { pushNotificationService } from '@/lib/notifications/push-service';
-import { isNativePlatform } from '@/lib/capacitor/platform';
 import { useRouter } from 'next/navigation';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { Plus, X } from 'lucide-react';
-
-type PermissionStatus = 'granted' | 'denied' | 'prompt' | 'unknown';
 
 interface NotificationSettingsFormProps {
   initialData: {
@@ -55,32 +51,6 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
     initialData.shiftReminderMinutesArray
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('unknown');
-  const [isNative, setIsNative] = useState(false);
-
-  // Check platform and permission status on mount
-  useEffect(() => {
-    const checkPlatformAndPermission = async () => {
-      const native = isNativePlatform();
-      setIsNative(native);
-
-      if (!native) {
-        // On web, just show as granted (we don't do web push yet)
-        setPermissionStatus('granted');
-        return;
-      }
-
-      try {
-        const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
-        const status = await FirebaseMessaging.checkPermissions();
-        setPermissionStatus(status.receive as PermissionStatus);
-      } catch {
-        setPermissionStatus('unknown');
-      }
-    };
-
-    checkPlatformAndPermission();
-  }, []);
 
   // Auto-save when preference changes
   useEffect(() => {
@@ -131,23 +101,6 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
     saveReminderPreferences();
   }, [shiftRemindersEnabled, shiftReminderMinutesArray, router]);
 
-  const handleRequestPermission = useCallback(async () => {
-    if (!isNative) return;
-
-    try {
-      const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
-      const result = await FirebaseMessaging.requestPermissions();
-      setPermissionStatus(result.receive as PermissionStatus);
-
-      if (result.receive === 'granted') {
-        // Re-initialize push service to register token
-        await pushNotificationService.initialize();
-      }
-    } catch (error) {
-      console.error('Failed to request permission:', error);
-    }
-  }, [isNative]);
-
   const handleAddReminder = useCallback(() => {
     if (shiftReminderMinutesArray.length >= MAX_REMINDERS) return;
 
@@ -197,25 +150,6 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
     <div className="space-y-6">
       <Card className="p-6">
         <div className="space-y-6">
-          {/* Permission denied warning */}
-          {isNative && permissionStatus === 'denied' && (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-200 rounded-lg">
-              <p className="text-sm">
-                {notifications.permissionDenied}
-              </p>
-            </div>
-          )}
-
-          {/* Enable notifications button when permission is prompt */}
-          {isNative && permissionStatus === 'prompt' && (
-            <Button
-              onClick={handleRequestPermission}
-              className="w-full"
-            >
-              {notifications.enableButton}
-            </Button>
-          )}
-
           {/* Shared shifts toggle */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 flex-1">
@@ -230,7 +164,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
               id="sharedShifts"
               checked={sharedShiftsEnabled}
               onCheckedChange={setSharedShiftsEnabled}
-              disabled={isSaving || (isNative && permissionStatus === 'denied')}
+              disabled={isSaving}
             />
           </div>
 
@@ -251,7 +185,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
               id="shiftReminders"
               checked={shiftRemindersEnabled}
               onCheckedChange={setShiftRemindersEnabled}
-              disabled={isSaving || (isNative && permissionStatus === 'denied')}
+              disabled={isSaving}
             />
           </div>
 
@@ -269,7 +203,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
                     <Select
                       value={String(minutes)}
                       onValueChange={(value) => handleChangeReminder(index, Number(value))}
-                      disabled={isSaving || (isNative && permissionStatus === 'denied')}
+                      disabled={isSaving}
                     >
                       <SelectTrigger className="flex-1">
                         <SelectValue>{getReminderLabel(minutes)}</SelectValue>
@@ -289,7 +223,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveReminder(index)}
-                        disabled={isSaving || (isNative && permissionStatus === 'denied')}
+                        disabled={isSaving}
                         className="h-10 w-10 shrink-0 text-text-muted hover:text-text-primary"
                       >
                         <X className="h-4 w-4" />
@@ -305,7 +239,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
                   variant="outline"
                   size="sm"
                   onClick={handleAddReminder}
-                  disabled={isSaving || (isNative && permissionStatus === 'denied')}
+                  disabled={isSaving}
                   className="w-full"
                 >
                   <Plus className="h-4 w-4 mr-2" />

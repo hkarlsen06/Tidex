@@ -5,9 +5,7 @@ import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 
 import SWRegister from "./sw-register";
-import { CapacitorUrlListener } from "./capacitor-url-listener";
 import { ChunkErrorRecovery } from "./chunk-error-recovery";
-import { SplashScreenManager } from "./splash-screen-manager";
 import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
 import "./globals.css";
 
@@ -82,14 +80,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                // Track if we've confirmed platform detection (for coordinating with safe-area check)
-                var platformConfirmed = false;
                 var safeAreaReady = false;
                 var safeAreaTestElement = null;
 
-                // Function to show content once both platform and safe-area are ready
+                // Function to show content once safe-area is ready
                 function maybeShowContent() {
-                  if (platformConfirmed && safeAreaReady) {
+                  if (safeAreaReady) {
                     document.documentElement.classList.remove('safe-area-loading');
                     if (safeAreaTestElement) {
                       safeAreaTestElement.remove();
@@ -98,73 +94,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   }
                 }
 
-                // Detect if running in iOS native app (Capacitor WebView)
-                // Primary: Check for Capacitor bridge (most reliable)
-                // Fallback: Check user agent for iOS without Safari (legacy WebViews)
-                function checkNativeIOS() {
-                  // Check Capacitor bridge first (injected by native shell)
-                  if (window.Capacitor && window.Capacitor.getPlatform) {
-                    return window.Capacitor.getPlatform() === 'ios';
-                  }
-                  // Fallback: iOS device without Safari in UA (legacy WebViews only)
-                  // Note: Modern WKWebView includes Safari in UA, so this fallback
-                  // mainly catches older setups. We rely on the Capacitor retry below.
-                  var ua = navigator.userAgent || '';
-                  return /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
-                }
-
-                var isIOSNative = checkNativeIOS();
-
-                // Mark native iOS immediately so CSS can hide web NavBar on first paint
-                if (isIOSNative) {
-                  document.documentElement.classList.add('native-ios');
-                }
-
-                // If Capacitor bridge wasn't ready, check again shortly
-                // This handles race condition where bridge loads after this script
-                if (!window.Capacitor) {
-                  var checkCount = 0;
-                  var maxChecks = 20; // ~200ms max wait
-                  function recheckCapacitor() {
-                    checkCount++;
-                    if (window.Capacitor && window.Capacitor.getPlatform) {
-                      if (window.Capacitor.getPlatform() === 'ios') {
-                        document.documentElement.classList.add('native-ios');
-                        // Force dark theme to match launch screen (theme was set before bridge was ready)
-                        document.documentElement.classList.add('dark');
-                      }
-                      // Platform confirmed - can show content now
-                      platformConfirmed = true;
-                      maybeShowContent();
-                    } else if (checkCount < maxChecks) {
-                      setTimeout(recheckCapacitor, 10);
-                    } else {
-                      // Max attempts reached, assume web platform
-                      platformConfirmed = true;
-                      maybeShowContent();
-                    }
-                  }
-                  setTimeout(recheckCapacitor, 10);
-                } else {
-                  // Capacitor bridge already available, platform confirmed
-                  platformConfirmed = true;
-                }
-
                 // Initialize theme from localStorage or system preference
                 // ThemeProvider will sync with DB preference on authenticated pages
-                // On native iOS, always start dark to match the launch screen
                 var savedTheme = localStorage.getItem('theme');
-                var theme;
-                if (isIOSNative) {
-                  // Native iOS: force dark to match launch screen, then system will take over
-                  theme = 'dark';
-                } else {
-                  theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                }
+                var theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                 document.documentElement.classList.toggle('dark', theme === 'dark');
 
                 // Wait for safe-area-insets to be available before showing content
-                // On iOS PWA/Capacitor, env() values are not immediately available
+                // On iOS PWA, env() values are not immediately available
                 // This prevents the layout shift when the header/navbar snap into position
                 (function waitForSafeArea() {
                   // Create a test element to measure safe-area-inset-top
@@ -216,8 +153,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className={`${inter.className} text-foreground antialiased`}>
         <ChunkErrorRecovery />
         <DynamicThemeColor />
-        <CapacitorUrlListener />
-        <SplashScreenManager />
         {children}
         <SWRegister />
         <Analytics />

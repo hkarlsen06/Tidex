@@ -17,7 +17,6 @@ import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
-import { notificationHaptic, impactHaptic } from "@/lib/capacitor/haptics";
 
 type TaxSettings = {
   enabled: boolean;
@@ -710,11 +709,9 @@ export function MonthlyEarningsCalendar({
                       variant="ghost"
                       onClick={() => {
                         if (confirmingMultiDelete) {
-                          notificationHaptic("warning");
                           onDeleteSelected();
                           setConfirmingMultiDelete(false);
                         } else {
-                          impactHaptic("medium");
                           setConfirmingMultiDelete(true);
                         }
                       }}
@@ -777,11 +774,9 @@ export function MonthlyEarningsCalendar({
                       variant="ghost"
                       onClick={() => {
                         if (confirmingDelete) {
-                          notificationHaptic("warning");
                           onDeleteSingleDate();
                           setConfirmingDelete(false);
                         } else {
-                          impactHaptic("medium");
                           setConfirmingDelete(true);
                         }
                       }}

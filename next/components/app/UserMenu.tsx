@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,7 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
-import { isNativePlatform } from "@/lib/capacitor/platform";
 
 export function UserMenu({
   displayName,
@@ -63,13 +62,6 @@ export function UserMenu({
     setShowLogoutEverywhereDialog(false);
     window.location.href = "/logout-global";
   }, []);
-
-  // Hide locale toggle on native - iOS uses system language preference
-  const isNative = useSyncExternalStore(
-    () => () => {},
-    () => isNativePlatform(),
-    () => false
-  );
 
   // Close menu on navigation
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -188,7 +180,7 @@ export function UserMenu({
             {t.userMenu.settings}
           </Link>
           <ThemeToggle />
-          {!isNative && <LocaleToggle />}
+          <LocaleToggle />
           <Link
             href="/logout"
             onClick={handleLogout}

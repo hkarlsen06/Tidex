@@ -15,7 +15,6 @@ import type { EarningsByDate, HoursByDate } from "./calendar-types";
 import { cn } from "@/lib/cn";
 import { formatInteger } from "@/lib/formatters";
 import { useLocale } from "@/lib/i18n/client";
-import { impactHaptic } from "@/lib/capacitor/haptics";
 
 export type ShiftsCalendarProps = {
   month: Date;
@@ -517,7 +516,6 @@ export function ShiftsCalendar({
           const range = buildRange(startCell, current.lastHoverCell);
           setDragSelectedDates(new Set(range));
           setIsGestureLocked(true);
-          impactHaptic("heavy");
           reportMetric({
             type: "selectionStarted",
             data: { anchor: startCell },
