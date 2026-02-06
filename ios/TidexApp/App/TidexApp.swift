@@ -14,8 +14,8 @@ struct TidexApp: App {
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     AppLifecycleHandler.shared.handleUserActivity(activity)
                 }
-                .onChange(of: scenePhase) { _, newPhase in
-                    AppLifecycleHandler.shared.handleScenePhase(newPhase)
+                .task(id: scenePhase) {
+                    AppLifecycleHandler.shared.handleScenePhase(scenePhase)
                 }
         }
     }

@@ -10,7 +10,11 @@ final class AppWarmup {
         guard !didRun else { return }
         didRun = true
         warmupFormatters()
-        prewarmDashboardCards()
+        Task { @MainActor [weak self] in
+            // Let the first frame render before prewarming offscreen SwiftUI cards.
+            await Task.yield()
+            self?.prewarmDashboardCards()
+        }
     }
 
     private func warmupFormatters() {
