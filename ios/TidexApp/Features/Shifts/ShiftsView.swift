@@ -714,6 +714,12 @@ struct ShiftsView: View {
         )
     }
 
+    /// Shared pull-to-refresh action used across calendar and list surfaces.
+    private func refreshShiftsContent() async {
+        AppearanceTracker.shared.reset()
+        await viewModel.refresh()
+    }
+
     // MARK: - Unified Shifts Content
 
     /// Single unified view that handles both populated and empty states
@@ -755,132 +761,136 @@ struct ShiftsView: View {
     /// Calendar panel for iPad landscape (left side)
     @ViewBuilder
     private var calendarPanelForIPad: some View {
-        MonthSwipeContainer(
-            onSwipeLeft: {
-                AppearanceTracker.shared.reset()
-                viewModel.goToNextMonth()
-            },
-            onSwipeRight: {
-                AppearanceTracker.shared.reset()
-                viewModel.goToPreviousMonth()
-            },
-            isEnabled: !viewModel.isSelectionModeEnabled
-        ) {
-            GeometryReader { geometry in
-                ZStack {
-                    // Background layer to dismiss selection when tapping outside calendar
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if !viewModel.selectedDates.isEmpty {
-                                viewModel.clearSelection()
-                            }
-                        }
-
-                    // Calendar content - centered
-                    VStack {
-                        Spacer()
-                        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
-                            ShiftsCalendarView(
-                                shifts: viewModel.shifts,
-                                month: displayedMonthDate,
-                                year: viewModel.committedYear,
-                                monthNumber: viewModel.committedMonth,
-                                currency: viewModel.currency,
-                                showEarnings: true,
-                                phase: transitionPhase,
-                                onDayTapped: { dateISO, shiftsOnDay in
-                                    viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
-                                },
-                                selectedDates: $viewModel.selectedDates,
-                                confirmingDelete: viewModel.confirmingDelete,
-                                isDeleting: viewModel.isDeleting,
-                                selectedEarnings: viewModel.selectedEarnings,
-                                selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
-                                onDelete: {
-                                    viewModel.confirmingDelete = true
-                                },
-                                onConfirmDelete: {
-                                    Task {
-                                        await viewModel.deleteSelectedShifts()
-                                    }
-                                },
-                                onCancelDelete: {
-                                    viewModel.confirmingDelete = false
-                                },
-                                onCopy: {
-                                    viewModel.initiateCopy()
-                                },
-                                onDetails: {
-                                    let shiftsOnDate = viewModel.selectedDateShifts
-                                    if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
-                                        selectedShift = shift
-                                    } else if let dateISO = viewModel.selectedDates.first {
-                                        selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
-                                    }
-                                },
-                                onEdit: {
-                                    let shiftsOnDate = viewModel.selectedDateShifts
-                                    if let shift = shiftsOnDate.first {
-                                        shiftToEditDirectly = shift
-                                    }
-                                },
-                                onMove: {
-                                    viewModel.initiateMove()
-                                },
-                                onClearSelection: {
+        PullToRefreshContainer(onRefresh: {
+            await refreshShiftsContent()
+        }) {
+            MonthSwipeContainer(
+                onSwipeLeft: {
+                    AppearanceTracker.shared.reset()
+                    viewModel.goToNextMonth()
+                },
+                onSwipeRight: {
+                    AppearanceTracker.shared.reset()
+                    viewModel.goToPreviousMonth()
+                },
+                isEnabled: !viewModel.isSelectionModeEnabled
+            ) {
+                GeometryReader { geometry in
+                    ZStack {
+                        // Background layer to dismiss selection when tapping outside calendar
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if !viewModel.selectedDates.isEmpty {
                                     viewModel.clearSelection()
-                                },
-                                onSelectDateRange: { dates in
-                                    viewModel.handleDateRangeSelected(dates)
-                                },
-                                onEmptyDayTapped: { dateISO in
-                                    if viewModel.isCopyMode || viewModel.isMoveMode {
+                                }
+                            }
+
+                        // Calendar content - centered
+                        VStack {
+                            Spacer()
+                            StaggeredCardsContainer(phase: transitionPhase, config: .default) {
+                                ShiftsCalendarView(
+                                    shifts: viewModel.shifts,
+                                    month: displayedMonthDate,
+                                    year: viewModel.committedYear,
+                                    monthNumber: viewModel.committedMonth,
+                                    currency: viewModel.currency,
+                                    showEarnings: true,
+                                    phase: transitionPhase,
+                                    onDayTapped: { dateISO, shiftsOnDay in
+                                        viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                                    },
+                                    selectedDates: $viewModel.selectedDates,
+                                    confirmingDelete: viewModel.confirmingDelete,
+                                    isDeleting: viewModel.isDeleting,
+                                    selectedEarnings: viewModel.selectedEarnings,
+                                    selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
+                                    onDelete: {
+                                        viewModel.confirmingDelete = true
+                                    },
+                                    onConfirmDelete: {
+                                        Task {
+                                            await viewModel.deleteSelectedShifts()
+                                        }
+                                    },
+                                    onCancelDelete: {
+                                        viewModel.confirmingDelete = false
+                                    },
+                                    onCopy: {
+                                        viewModel.initiateCopy()
+                                    },
+                                    onDetails: {
+                                        let shiftsOnDate = viewModel.selectedDateShifts
+                                        if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+                                            selectedShift = shift
+                                        } else if let dateISO = viewModel.selectedDates.first {
+                                            selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                                        }
+                                    },
+                                    onEdit: {
+                                        let shiftsOnDate = viewModel.selectedDateShifts
+                                        if let shift = shiftsOnDate.first {
+                                            shiftToEditDirectly = shift
+                                        }
+                                    },
+                                    onMove: {
+                                        viewModel.initiateMove()
+                                    },
+                                    onClearSelection: {
+                                        viewModel.clearSelection()
+                                    },
+                                    onSelectDateRange: { dates in
+                                        viewModel.handleDateRangeSelected(dates)
+                                    },
+                                    onEmptyDayTapped: { dateISO in
+                                        if viewModel.isCopyMode || viewModel.isMoveMode {
+                                            viewModel.cancelCopyMoveMode()
+                                            return
+                                        }
+                                        // Ignore empty cell taps while dates are selected
+                                        if !viewModel.selectedDates.isEmpty {
+                                            return
+                                        }
+                                        if let dateISO = dateISO {
+                                            SharedMonthContext.shared.preselectedDate = dateISO
+                                            selectedTab = .add
+                                        }
+                                    },
+                                    isCopyMode: viewModel.isCopyMode,
+                                    isMoveMode: viewModel.isMoveMode,
+                                    isCopying: viewModel.isCopying,
+                                    isMoving: viewModel.isMoving,
+                                    onCopyToDate: { targetDateISO in
+                                        Task {
+                                            await viewModel.handleCopyToDate(targetDateISO)
+                                        }
+                                    },
+                                    onMoveToDate: { targetDateISO in
+                                        Task {
+                                            await viewModel.handleMoveToDate(targetDateISO)
+                                        }
+                                    },
+                                    onCancelCopyMove: {
                                         viewModel.cancelCopyMoveMode()
-                                        return
-                                    }
-                                    // Ignore empty cell taps while dates are selected
-                                    if !viewModel.selectedDates.isEmpty {
-                                        return
-                                    }
-                                    if let dateISO = dateISO {
-                                        SharedMonthContext.shared.preselectedDate = dateISO
-                                        selectedTab = .add
-                                    }
-                                },
-                                isCopyMode: viewModel.isCopyMode,
-                                isMoveMode: viewModel.isMoveMode,
-                                isCopying: viewModel.isCopying,
-                                isMoving: viewModel.isMoving,
-                                onCopyToDate: { targetDateISO in
-                                    Task {
-                                        await viewModel.handleCopyToDate(targetDateISO)
-                                    }
-                                },
-                                onMoveToDate: { targetDateISO in
-                                    Task {
-                                        await viewModel.handleMoveToDate(targetDateISO)
-                                    }
-                                },
-                                onCancelCopyMove: {
-                                    viewModel.cancelCopyMoveMode()
-                                },
-                                isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
-                                newlyAddedDates: celebrationManager.newlyAddedDates,
-                                deepLinkHighlightDate: deepLinkHighlightDate,
-                                conflictDates: viewModel.conflictDates,
-                                excludedFromTotalIds: viewModel.excludedFromTotalIds
-                            )
-                            .padding(.horizontal, 16)
+                                    },
+                                    isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
+                                    newlyAddedDates: celebrationManager.newlyAddedDates,
+                                    deepLinkHighlightDate: deepLinkHighlightDate,
+                                    conflictDates: viewModel.conflictDates,
+                                    excludedFromTotalIds: viewModel.excludedFromTotalIds
+                                )
+                                .padding(.horizontal, 16)
+                            }
+                            .offset(y: tabTransitionOffset)
+                            .opacity(tabTransitionOpacity)
+                            Spacer()
                         }
-                        .offset(y: tabTransitionOffset)
-                        .opacity(tabTransitionOpacity)
-                        Spacer()
+                        // Offset for month picker overlay
+                        .padding(.bottom, MonthPickerLayout.totalBottomInset)
                     }
-                    // Offset for month picker overlay
-                    .padding(.bottom, MonthPickerLayout.totalBottomInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -904,8 +914,7 @@ struct ShiftsView: View {
                 .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
             }
             .refreshable {
-                AppearanceTracker.shared.reset()
-                await viewModel.refresh()
+                await refreshShiftsContent()
             }
         } else {
             // Shift list
@@ -934,8 +943,7 @@ struct ShiftsView: View {
                 .background(Color.clear)
                 .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
                 .refreshable {
-                    AppearanceTracker.shared.reset()
-                    await viewModel.refresh()
+                    await refreshShiftsContent()
                 }
                 .opacity(listReady ? 1 : 0)
                 .onAppear {
@@ -954,141 +962,145 @@ struct ShiftsView: View {
     private var calendarViewContent: some View {
         // MonthSwipeContainer handles horizontal swipes for month navigation
         // Swipes are DISABLED when selection mode is enabled (drag-to-select takes priority)
-        MonthSwipeContainer(
-            onSwipeLeft: {
-                AppearanceTracker.shared.reset()
-                viewModel.goToNextMonth()
-            },
-            onSwipeRight: {
-                AppearanceTracker.shared.reset()
-                viewModel.goToPreviousMonth()
-            },
-            isEnabled: !viewModel.isSelectionModeEnabled
-        ) {
-            GeometryReader { geometry in
-                // Calendar only - no list below. Tapping days opens day sheet.
-                ZStack {
-                    // Background layer to dismiss selection when tapping outside calendar
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if !viewModel.selectedDates.isEmpty {
-                                viewModel.clearSelection()
-                            }
-                        }
-
-                    // Calendar content - centered between toolbar and month picker
-                    VStack {
-                        Spacer()
-                        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
-                            ShiftsCalendarView(
-                                shifts: viewModel.shifts,
-                                month: displayedMonthDate,
-                                year: viewModel.committedYear,
-                                monthNumber: viewModel.committedMonth,
-                                currency: viewModel.currency,
-                                showEarnings: true,
-                                phase: transitionPhase,
-                                onDayTapped: { dateISO, shiftsOnDay in
-                                    viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
-                                },
-                                selectedDates: $viewModel.selectedDates,
-                                confirmingDelete: viewModel.confirmingDelete,
-                                isDeleting: viewModel.isDeleting,
-                                selectedEarnings: viewModel.selectedEarnings,
-                                selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
-                                onDelete: {
-                                    viewModel.confirmingDelete = true
-                                },
-                                onConfirmDelete: {
-                                    Task {
-                                        await viewModel.deleteSelectedShifts()
-                                    }
-                                },
-                                onCancelDelete: {
-                                    viewModel.confirmingDelete = false
-                                },
-                                onCopy: {
-                                    viewModel.initiateCopy()
-                                },
-                                onDetails: {
-                                    // Show DayShiftsSheet for multiple shifts, or direct details for single
-                                    let shiftsOnDate = viewModel.selectedDateShifts
-                                    if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
-                                        selectedShift = shift
-                                    } else if let dateISO = viewModel.selectedDates.first {
-                                        selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
-                                    }
-                                },
-                                onEdit: {
-                                    // Open shift directly in edit mode
-                                    let shiftsOnDate = viewModel.selectedDateShifts
-                                    if let shift = shiftsOnDate.first {
-                                        shiftToEditDirectly = shift
-                                    }
-                                },
-                                onMove: {
-                                    viewModel.initiateMove()
-                                },
-                                onClearSelection: {
+        PullToRefreshContainer(onRefresh: {
+            await refreshShiftsContent()
+        }) {
+            MonthSwipeContainer(
+                onSwipeLeft: {
+                    AppearanceTracker.shared.reset()
+                    viewModel.goToNextMonth()
+                },
+                onSwipeRight: {
+                    AppearanceTracker.shared.reset()
+                    viewModel.goToPreviousMonth()
+                },
+                isEnabled: !viewModel.isSelectionModeEnabled
+            ) {
+                GeometryReader { geometry in
+                    // Calendar only - no list below. Tapping days opens day sheet.
+                    ZStack {
+                        // Background layer to dismiss selection when tapping outside calendar
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if !viewModel.selectedDates.isEmpty {
                                     viewModel.clearSelection()
-                                },
-                                onSelectDateRange: { dates in
-                                    viewModel.handleDateRangeSelected(dates)
-                                },
-                                onEmptyDayTapped: { dateISO in
-                                    // If in copy/move mode, handle that instead
-                                    if viewModel.isCopyMode || viewModel.isMoveMode {
-                                        // Tapping outside valid dates cancels operation
+                                }
+                            }
+
+                        // Calendar content - centered between toolbar and month picker
+                        VStack {
+                            Spacer()
+                            StaggeredCardsContainer(phase: transitionPhase, config: .default) {
+                                ShiftsCalendarView(
+                                    shifts: viewModel.shifts,
+                                    month: displayedMonthDate,
+                                    year: viewModel.committedYear,
+                                    monthNumber: viewModel.committedMonth,
+                                    currency: viewModel.currency,
+                                    showEarnings: true,
+                                    phase: transitionPhase,
+                                    onDayTapped: { dateISO, shiftsOnDay in
+                                        viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                                    },
+                                    selectedDates: $viewModel.selectedDates,
+                                    confirmingDelete: viewModel.confirmingDelete,
+                                    isDeleting: viewModel.isDeleting,
+                                    selectedEarnings: viewModel.selectedEarnings,
+                                    selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
+                                    onDelete: {
+                                        viewModel.confirmingDelete = true
+                                    },
+                                    onConfirmDelete: {
+                                        Task {
+                                            await viewModel.deleteSelectedShifts()
+                                        }
+                                    },
+                                    onCancelDelete: {
+                                        viewModel.confirmingDelete = false
+                                    },
+                                    onCopy: {
+                                        viewModel.initiateCopy()
+                                    },
+                                    onDetails: {
+                                        // Show DayShiftsSheet for multiple shifts, or direct details for single
+                                        let shiftsOnDate = viewModel.selectedDateShifts
+                                        if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+                                            selectedShift = shift
+                                        } else if let dateISO = viewModel.selectedDates.first {
+                                            selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                                        }
+                                    },
+                                    onEdit: {
+                                        // Open shift directly in edit mode
+                                        let shiftsOnDate = viewModel.selectedDateShifts
+                                        if let shift = shiftsOnDate.first {
+                                            shiftToEditDirectly = shift
+                                        }
+                                    },
+                                    onMove: {
+                                        viewModel.initiateMove()
+                                    },
+                                    onClearSelection: {
+                                        viewModel.clearSelection()
+                                    },
+                                    onSelectDateRange: { dates in
+                                        viewModel.handleDateRangeSelected(dates)
+                                    },
+                                    onEmptyDayTapped: { dateISO in
+                                        // If in copy/move mode, handle that instead
+                                        if viewModel.isCopyMode || viewModel.isMoveMode {
+                                            // Tapping outside valid dates cancels operation
+                                            viewModel.cancelCopyMoveMode()
+                                            return
+                                        }
+
+                                        // Ignore empty cell taps while dates are selected
+                                        if !viewModel.selectedDates.isEmpty {
+                                            return
+                                        }
+
+                                        // No selection active - navigate to Add tab with date pre-selected
+                                        if let dateISO = dateISO {
+                                            SharedMonthContext.shared.preselectedDate = dateISO
+                                            selectedTab = .add
+                                        }
+                                    },
+                                    isCopyMode: viewModel.isCopyMode,
+                                    isMoveMode: viewModel.isMoveMode,
+                                    isCopying: viewModel.isCopying,
+                                    isMoving: viewModel.isMoving,
+                                    onCopyToDate: { targetDateISO in
+                                        Task {
+                                            await viewModel.handleCopyToDate(targetDateISO)
+                                        }
+                                    },
+                                    onMoveToDate: { targetDateISO in
+                                        Task {
+                                            await viewModel.handleMoveToDate(targetDateISO)
+                                        }
+                                    },
+                                    onCancelCopyMove: {
                                         viewModel.cancelCopyMoveMode()
-                                        return
-                                    }
-
-                                    // Ignore empty cell taps while dates are selected
-                                    if !viewModel.selectedDates.isEmpty {
-                                        return
-                                    }
-
-                                    // No selection active - navigate to Add tab with date pre-selected
-                                    if let dateISO = dateISO {
-                                        SharedMonthContext.shared.preselectedDate = dateISO
-                                        selectedTab = .add
-                                    }
-                                },
-                                isCopyMode: viewModel.isCopyMode,
-                                isMoveMode: viewModel.isMoveMode,
-                                isCopying: viewModel.isCopying,
-                                isMoving: viewModel.isMoving,
-                                onCopyToDate: { targetDateISO in
-                                    Task {
-                                        await viewModel.handleCopyToDate(targetDateISO)
-                                    }
-                                },
-                                onMoveToDate: { targetDateISO in
-                                    Task {
-                                        await viewModel.handleMoveToDate(targetDateISO)
-                                    }
-                                },
-                                onCancelCopyMove: {
-                                    viewModel.cancelCopyMoveMode()
-                                },
-                                isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
-                                newlyAddedDates: celebrationManager.newlyAddedDates,
-                                deepLinkHighlightDate: deepLinkHighlightDate,
-                                conflictDates: viewModel.conflictDates,
-                                excludedFromTotalIds: viewModel.excludedFromTotalIds
-                            )
-                            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                            .padding(.horizontal, 16)
+                                    },
+                                    isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
+                                    newlyAddedDates: celebrationManager.newlyAddedDates,
+                                    deepLinkHighlightDate: deepLinkHighlightDate,
+                                    conflictDates: viewModel.conflictDates,
+                                    excludedFromTotalIds: viewModel.excludedFromTotalIds
+                                )
+                                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                                .padding(.horizontal, 16)
+                            }
+                            .offset(y: tabTransitionOffset)
+                            .opacity(tabTransitionOpacity)
+                            Spacer()
                         }
-                        .offset(y: tabTransitionOffset)
-                        .opacity(tabTransitionOpacity)
-                        Spacer()
+                        // Offset for month picker overlay so content centers in available space
+                        .padding(.bottom, MonthPickerLayout.totalBottomInset)
                     }
-                    // Offset for month picker overlay so content centers in available space
-                    .padding(.bottom, MonthPickerLayout.totalBottomInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -1117,15 +1129,13 @@ struct ShiftsView: View {
                 .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
             }
             .refreshable {
-                AppearanceTracker.shared.reset()
-                await viewModel.refresh()
+                await refreshShiftsContent()
             }
         } else {
             // Shift list (includes today placeholder for current month if no shift today)
             shiftListContent
                 .refreshable {
-                    AppearanceTracker.shared.reset()
-                    await viewModel.refresh()
+                    await refreshShiftsContent()
                 }
         }
     }

@@ -140,11 +140,46 @@ final class SyncCoordinator: ObservableObject {
     /// - Returns: Sync result
     @discardableResult
     func sync(reason: SyncReason, userId: String) async -> SyncResult {
-        let decision = await stateStore.beginSync(
-            reason: reason,
-            userId: userId,
-            minimumSyncInterval: minimumSyncInterval
-        )
+        var decision: SyncStartDecision = .alreadySyncing
+        var waitAttempts = 0
+        let maxWaitAttempts = 48  // 12s at 250ms intervals
+
+        syncStartLoop: while true {
+            decision = await stateStore.beginSync(
+                reason: reason,
+                userId: userId,
+                minimumSyncInterval: minimumSyncInterval
+            )
+
+            // Manual pull-to-refresh should wait for an ongoing sync, then retry.
+            // This avoids dismissing the refresh UI immediately when background sync is active.
+            if case .alreadySyncing = decision, reason == .manualRefresh {
+                if waitAttempts >= maxWaitAttempts {
+                    logger.warning("Manual refresh timed out waiting for ongoing sync to finish")
+                    break syncStartLoop
+                }
+                waitAttempts += 1
+                logger.info("Manual refresh requested while sync in progress, waiting for idle")
+                do {
+                    try await Task.sleep(nanoseconds: 250_000_000)
+                } catch {
+                    return SyncResult(
+                        success: false,
+                        tableResults: [],
+                        pushResults: [],
+                        totalRowsProcessed: 0,
+                        totalRowsPushed: 0,
+                        totalConflicts: 0,
+                        totalAutoMerged: 0,
+                        duration: 0,
+                        error: nil
+                    )
+                }
+                continue syncStartLoop
+            }
+
+            break syncStartLoop
+        }
 
         switch decision {
         case .alreadySyncing:
