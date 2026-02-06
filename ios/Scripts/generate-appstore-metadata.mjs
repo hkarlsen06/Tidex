@@ -74,8 +74,8 @@ const ASC_FOLDER_MAP = {
   Base: null, // Skip Base locale
 };
 
-// Norwegian uses short name "Tidex", all others get translated "Tidex – [Payroll & Shifts]"
-const LOCALES_WITH_SHORT_NAME = new Set(["no"]);
+// Fields that get translated — name is excluded (managed manually per locale)
+const TRANSLATED_FIELDS = ["subtitle", "description", "keywords", "release_notes"];
 
 // Language names for translation prompts
 const LANGUAGE_NAMES = {
@@ -168,10 +168,10 @@ async function readProjectLocales() {
 /**
  * Validate metadata field lengths
  */
-function validateMetadata(metadata, locale) {
+function validateMetadata(metadata, locale, fields = FIELDS) {
   const errors = [];
 
-  for (const field of FIELDS) {
+  for (const field of fields) {
     const value = metadata[field];
     const limit = FIELD_LIMITS[field];
 
@@ -208,18 +208,8 @@ async function metadataExists(folderName) {
 }
 
 /**
- * Get the appropriate app name for a locale
- * Norwegian uses "Tidex", all others use translated names from metadata
- */
-function getAppNameForLocale(folderName, translatedName) {
-  if (LOCALES_WITH_SHORT_NAME.has(folderName)) {
-    return "Tidex";
-  }
-  return translatedName; // Use the translated name from metadata
-}
-
-/**
  * Write metadata files for a locale
+ * Only writes fields present in the metadata object (skips missing keys)
  */
 async function writeMetadataFiles(folderName, metadata) {
   const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
@@ -227,14 +217,9 @@ async function writeMetadataFiles(folderName, metadata) {
   await fs.mkdir(localeDir, { recursive: true });
 
   for (const field of FIELDS) {
+    if (!(field in metadata)) continue;
     const filePath = path.join(localeDir, `${field}.txt`);
-    let content = metadata[field] || "";
-
-    // Apply locale-specific app name override (Norwegian uses short name)
-    if (field === "name") {
-      content = getAppNameForLocale(folderName, content);
-    }
-
+    const content = metadata[field] || "";
     await fs.writeFile(filePath, content + "\n", "utf-8");
   }
 }
@@ -287,23 +272,26 @@ function extractJson(text) {
  * Translate metadata using Claude API
  */
 async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, client) {
+  // Build source/reference objects with only translatable fields
+  const sourceFields = Object.fromEntries(TRANSLATED_FIELDS.map((f) => [f, sourceMetadata[f]]));
+  const referenceFields = Object.fromEntries(TRANSLATED_FIELDS.map((f) => [f, norwegianMetadata[f]]));
+
   const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
 Translate the following App Store metadata to ${languageName}.
 
 CRITICAL RULES:
-1. For the app name: Keep "Tidex – " prefix unchanged, translate "Payroll & Shifts" to ${languageName}. Format: "Tidex – [translated phrase]". CRITICAL: Must be UNDER 30 characters total. If translation is too long, use shorter synonyms or abbreviations.
-2. Maintain the same structure and formatting (bullet points, line breaks)
-3. Keep keywords comma-separated WITHOUT spaces after commas
-4. Make translations natural and idiomatic for ${languageName} speakers
-5. Respect character limits: name (30), subtitle (30), keywords (100)
+1. Maintain the same structure and formatting (bullet points, line breaks)
+2. Keep keywords comma-separated WITHOUT spaces after commas
+3. Make translations natural and idiomatic for ${languageName} speakers
+4. Respect character limits: subtitle (30), keywords (100)
 
 Source metadata (English):
-${JSON.stringify(sourceMetadata, null, 2)}
+${JSON.stringify(sourceFields, null, 2)}
 
 Reference translation (Norwegian Bokmål) - use this to understand intended meaning:
-${JSON.stringify(norwegianMetadata, null, 2)}
+${JSON.stringify(referenceFields, null, 2)}
 
-Return ONLY a valid JSON object with these exact keys: name, subtitle, description, keywords, release_notes
+Return ONLY a valid JSON object with these exact keys: subtitle, description, keywords, release_notes
 No markdown, no explanation, just the JSON object.`;
 
   const response = await withRetry(() =>
@@ -322,10 +310,6 @@ No markdown, no explanation, just the JSON object.`;
  */
 function enforceCharacterLimits(metadata, locale) {
   const errors = [];
-
-  if (metadata.name && metadata.name.length > FIELD_LIMITS.name) {
-    errors.push(`name is ${metadata.name.length}/${FIELD_LIMITS.name} chars: "${metadata.name}"`);
-  }
 
   if (metadata.subtitle && metadata.subtitle.length > FIELD_LIMITS.subtitle) {
     errors.push(`subtitle is ${metadata.subtitle.length}/${FIELD_LIMITS.subtitle} chars: "${metadata.subtitle}"`);
@@ -372,7 +356,7 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
     translated = enforceCharacterLimits(translated, locale);
 
     // Validate (should pass now after enforcement)
-    const errors = validateMetadata(translated, locale);
+    const errors = validateMetadata(translated, locale, TRANSLATED_FIELDS);
     if (errors.length > 0) {
       stats.errors.push(...errors.map((e) => `Warning: ${e}`));
     }
