@@ -393,7 +393,9 @@ struct AnimatedMonthHeader: View {
 
     @State private var monthScale: CGFloat = 1.0
     @State private var showingMonthPicker = false
-    @ScaledMetric(relativeTo: .body) private var navButtonSize: CGFloat = 36
+    @ScaledMetric(relativeTo: .body) private var navPillVisualSize: CGFloat = 36
+    @ScaledMetric(relativeTo: .body) private var navTapTargetSize: CGFloat = 44
+    @ScaledMetric(relativeTo: .body) private var navTextSafeInset: CGFloat = 24
     @ScaledMetric(relativeTo: .body) private var navIconSize: CGFloat = 16
 
     // Haptic feedback for swipe, tap, and long press
@@ -448,7 +450,7 @@ struct AnimatedMonthHeader: View {
     private var compactLayout: some View {
         HStack(spacing: 8) {
             // Previous button
-            navigationButton(icon: previousIcon, action: onPrevious)
+            pillNavigationButton(icon: previousIcon, action: onPrevious)
 
             // Month and Year - vertically stacked, centered, takes available space
             // Shows full year when space allows, truncates to 2 digits if needed
@@ -479,7 +481,7 @@ struct AnimatedMonthHeader: View {
             }
 
             // Next button
-            navigationButton(icon: nextIcon, action: onNext)
+            pillNavigationButton(icon: nextIcon, action: onNext)
         }
         .contentShape(Rectangle())
         .gesture(swipeGesture)
@@ -493,10 +495,7 @@ struct AnimatedMonthHeader: View {
     // MARK: - Default Layout (for Dashboard/Shifts)
 
     private var defaultLayout: some View {
-        HStack(spacing: 0) {
-            // Left section: Previous button
-            navigationButton(icon: previousIcon, action: onPrevious)
-
+        ZStack {
             // Center section: Month and Year (fills available space, text centered)
             ViewThatFits(in: .horizontal) {
                 // Try full year first
@@ -505,6 +504,7 @@ struct AnimatedMonthHeader: View {
                 monthYearLabel(yearText: shortYear)
             }
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, navTextSafeInset)
             .id("month-\(phase.id)")
             .transition(textTransition)
             .scaleEffect(monthScale)
@@ -523,11 +523,15 @@ struct AnimatedMonthHeader: View {
                 tapHaptic.impactOccurred()
                 showMonthPicker()
             }
-
-            // Right section: Next button
-            navigationButton(icon: nextIcon, action: onNext)
         }
-        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .leading) {
+            edgeNavigationButton(icon: previousIcon, action: onPrevious)
+        }
+        .overlay(alignment: .trailing) {
+            edgeNavigationButton(icon: nextIcon, action: onNext)
+        }
+        .padding(.horizontal, 10)
         .padding(.vertical, Spacing.sm)
         .contentShape(Rectangle())
         .gesture(swipeGesture)
@@ -633,7 +637,7 @@ struct AnimatedMonthHeader: View {
     // MARK: - Subviews
 
     @ViewBuilder
-    private func navigationButton(icon: String, action: @escaping () -> Void) -> some View {
+    private func pillNavigationButton(icon: String, action: @escaping () -> Void) -> some View {
         Button {
             swipeHaptic.impactOccurred()
             action()
@@ -641,13 +645,33 @@ struct AnimatedMonthHeader: View {
             Image(systemName: icon)
                 .font(.system(size: navIconSize, weight: .semibold))
                 .foregroundColor(.tidexBlue)
-                .frame(width: navButtonSize, height: navButtonSize)
+                .frame(width: navPillVisualSize, height: navPillVisualSize)
                 .background(Color.tidexBlue.opacity(0.1))
                 .clipShape(Circle())
+                .frame(width: navTapTargetSize, height: navTapTargetSize)
+                .contentShape(Rectangle())
         }
         // Navigation is always enabled - data loading happens in background
         // Visual feedback via subtle opacity when loading
         .opacity(isLoading ? 0.7 : 1.0)
+        .buttonRepeatBehavior(.enabled)
+    }
+
+    @ViewBuilder
+    private func edgeNavigationButton(icon: String, action: @escaping () -> Void) -> some View {
+        Button {
+            swipeHaptic.impactOccurred()
+            action()
+        } label: {
+            Image(systemName: icon)
+                .font(.system(size: navIconSize, weight: .semibold))
+                .foregroundColor(.tidexBlue)
+                .frame(width: navTapTargetSize, height: navTapTargetSize)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(isLoading ? 0.7 : 1.0)
+        .buttonRepeatBehavior(.enabled)
     }
 
     // MARK: - Transitions
