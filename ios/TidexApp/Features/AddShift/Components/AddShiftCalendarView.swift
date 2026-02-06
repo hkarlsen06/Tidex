@@ -59,13 +59,10 @@ struct AddShiftCalendarView: View {
         let primaryAmount = displayTotals.gross > 0
             ? (displayTotals.hasTaxEnabled ? displayTotals.net : displayTotals.gross)
             : nil
-        let secondaryAmount = (displayTotals.hasTaxEnabled && displayTotals.gross > 0)
-            ? displayTotals.gross
-            : nil
 
         return CalendarHeaderTotals(
             primary: primaryAmount,
-            secondary: secondaryAmount
+            secondary: nil
         )
     }
 
