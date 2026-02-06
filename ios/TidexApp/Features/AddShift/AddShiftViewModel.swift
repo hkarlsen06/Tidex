@@ -483,6 +483,22 @@ final class AddShiftViewModel: ObservableObject {
         logger.info("Loaded data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots")
     }
 
+    /// Refresh cached repository data while preserving current in-progress form state.
+    func refreshData() async { // swiftlint:disable:this async_without_await
+        guard let userId = AppCoordinator.shared.getCurrentUserId() else {
+            logger.warning("Cannot refresh data: no user ID")
+            return
+        }
+
+        // Reload cache sources without touching draft-driven UI state.
+        cachedSettings = settingsRepository.getSettings(for: userId)
+        cachedSnapshots = snapshotsRepository.getSnapshots(for: userId)
+        cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
+        reloadShiftsForDisplayedMonth()
+
+        logger.info("Refreshed add tab data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots")
+    }
+
     /// Check and apply any pre-selected date from SharedMonthContext
     /// Called from onAppear when tab becomes visible
     func checkPreselectedDate() {
