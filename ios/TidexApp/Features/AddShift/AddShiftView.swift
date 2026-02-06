@@ -39,27 +39,26 @@ struct AddShiftView: View {
                         case .single:
                             // Single mode: Fixed layout with centered calendar
                             // Uses manual offset for keyboard avoidance to handle 6-week months
-                            MonthSwipeContainer(
+                            VStack(spacing: 0) {
+                                Spacer()
+
+                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
+                                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                                    .padding(.horizontal, 16)
+                                    .offset(y: tabTransitionOffset)
+                                    .opacity(tabTransitionOpacity)
+
+                                Spacer()
+                            }
+                            .padding(.bottom, MonthPickerLayout.totalBottomInset)
+                            .contentShape(Rectangle())
+                            .monthSwipeGesture(
                                 onSwipeLeft: { viewModel.goToNextMonth() },
                                 onSwipeRight: { viewModel.goToPreviousMonth() },
                                 isEnabled: true
-                            ) {
-                                VStack(spacing: 0) {
-                                    Spacer()
-
-                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy, focusedTimeField: $focusedTimeField)
-                                        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                                        .padding(.horizontal, 16)
-                                        .offset(y: tabTransitionOffset)
-                                        .opacity(tabTransitionOpacity)
-
-                                    Spacer()
-                                }
-                                .padding(.bottom, MonthPickerLayout.totalBottomInset)
-                                .contentShape(Rectangle())
-                                .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
-                                .animation(.easeInOut(duration: 0.25), value: focusedTimeField != nil)
-                            }
+                            )
+                            .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
+                            .animation(.easeInOut(duration: 0.25), value: focusedTimeField != nil)
                             .ignoresSafeArea(.keyboard)
                             .onTapGesture {
                                 hideKeyboard()

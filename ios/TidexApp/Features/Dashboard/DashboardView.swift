@@ -339,36 +339,29 @@ struct DashboardView: View {
         PullToRefreshContainer(onRefresh: {
             await viewModel.refresh()
         }) {
-            MonthSwipeContainer(
-                onSwipeLeft: {
-                    viewModel.goToNextMonth()
-                },
-                onSwipeRight: {
-                    viewModel.goToPreviousMonth()
-                },
-                isEnabled: true  // Always enabled - navigation is now non-blocking
-            ) {
-                // Cards centered in available space (between toolbar and month picker)
-                GeometryReader { geometry in
-                    VStack(spacing: 0) {
-                        Spacer()
+            // Cards centered in available space (between toolbar and month picker)
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    Spacer()
 
-                        // Animated card content - centered vertically
-                        animatedCardContent(data: data)
-                            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                            .padding(.horizontal, 16)
+                    // Animated card content - centered vertically
+                    animatedCardContent(data: data)
+                        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                        .padding(.horizontal, 16)
 
-                        Spacer()
-                    }
-                    // Offset for month picker overlay so content centers in available space
-                    .padding(.bottom, MonthPickerLayout.totalBottomInset)
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    // Make entire VStack hit-testable for gesture propagation
-                    .contentShape(Rectangle())
+                    Spacer()
                 }
-                // Make GeometryReader hit-testable
+                // Offset for month picker overlay so content centers in available space
+                .padding(.bottom, MonthPickerLayout.totalBottomInset)
+                .frame(width: geometry.size.width, height: geometry.size.height)
                 .contentShape(Rectangle())
             }
+            .contentShape(Rectangle())
+            .monthSwipeGesture(
+                onSwipeLeft: { viewModel.goToNextMonth() },
+                onSwipeRight: { viewModel.goToPreviousMonth() },
+                isEnabled: true
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Pass user's currency to all child views

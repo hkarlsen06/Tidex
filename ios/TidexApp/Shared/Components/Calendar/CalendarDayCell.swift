@@ -193,7 +193,7 @@ struct CalendarDayCell<Content: View>: View {
 
         case .earnings(let amount, let color):
             GeometryReader { geo in
-                let fontSize = min(geo.size.width * 0.5, geo.size.height * 0.65)
+                let fontSize = min(geo.size.width * 0.4, geo.size.height * 0.42)
                 Text(CalendarGridHelper.formatCompactCurrency(amount))
                     .font(.system(size: fontSize, weight: .bold))
                     .foregroundColor(color)
@@ -228,7 +228,7 @@ struct CalendarDayCell<Content: View>: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    let fontSize = min(geo.size.width * 0.5, geo.size.height * 0.65)
+                    let fontSize = min(geo.size.width * 0.4, geo.size.height * 0.42)
                     Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
                         .font(.system(size: fontSize, weight: .bold))
                         .foregroundColor(color)

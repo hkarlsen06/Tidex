@@ -311,29 +311,27 @@ struct SharingView: View {
     @ViewBuilder
     private var sharedShiftsView: some View {
         if let sharer = viewModel.selectedSharer {
-            // MonthSwipeContainer handles horizontal swipes for month navigation
-            MonthSwipeContainer(
+            SharedShiftsListView(
+                sharer: sharer,
+                shifts: viewModel.sharedShifts,
+                year: viewModel.committedYear,
+                month: viewModel.committedMonth,
+                isLoading: viewModel.isLoadingShifts,
+                highlightDates: highlightDates,
+                highlightShiftIds: highlightShiftIds,
+                isSuperimposing: viewModel.isSuperimposing,
+                userHoursByDate: viewModel.isSuperimposing ? viewModel.userHoursByDate : nil
+            )
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+            .frame(maxWidth: .infinity)
+            .monthSwipeGesture(
                 onSwipeLeft: {
                     viewModel.goToNextMonth()
                 },
                 onSwipeRight: {
                     viewModel.goToPreviousMonth()
                 }
-            ) {
-                SharedShiftsListView(
-                    sharer: sharer,
-                    shifts: viewModel.sharedShifts,
-                    year: viewModel.committedYear,
-                    month: viewModel.committedMonth,
-                    isLoading: viewModel.isLoadingShifts,
-                    highlightDates: highlightDates,
-                    highlightShiftIds: highlightShiftIds,
-                    isSuperimposing: viewModel.isSuperimposing,
-                    userHoursByDate: viewModel.isSuperimposing ? viewModel.userHoursByDate : nil
-                )
-                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                .frame(maxWidth: .infinity)
-            }
+            )
             .background(
                 EdgeSwipeBackGesture {
                     withAnimation(.easeInOut(duration: 0.2)) {

@@ -49,9 +49,8 @@ struct SwipeGestureConfig {
 
 // MARK: - Month Swipe Container
 
-/// A container view that detects horizontal swipes for month navigation
-/// Wraps content and triggers navigation on swipe gestures
-/// Enhanced with visual feedback during drag (opacity, scale, rotation)
+/// Legacy container for horizontal month swipes.
+/// Prefer `monthSwipeGesture(...)` for new usage, especially on refreshable surfaces.
 struct MonthSwipeContainer<Content: View>: View {
     // MARK: - Properties
 
@@ -122,8 +121,9 @@ struct MonthSwipeContainer<Content: View>: View {
         content()
             // Make entire content area hit-testable for gestures
             .contentShape(Rectangle())
-            // Use gesture() with exclusive behavior - once we lock horizontal, we own the gesture
-            .gesture(swipeGesture)
+            // Use simultaneousGesture so vertical drags still reach parent ScrollView
+            // (required for native pull-to-refresh in wrappers like PullToRefreshContainer).
+            .simultaneousGesture(swipeGesture)
             .onAppear {
                 // Pre-warm haptic generators
                 swipeHaptic.prepare()
@@ -241,12 +241,14 @@ struct AnimatedMonthContent<Content: View>: View {
 // MARK: - View Extension
 
 extension View {
-    /// Add month swipe navigation to any view
+    /// Legacy month swipe wrapper API.
+    /// Prefer `.monthSwipeGesture(...)` for new usage.
     /// - Parameters:
     ///   - onSwipeLeft: Called when user swipes left (go to next month)
     ///   - onSwipeRight: Called when user swipes right (go to previous month)
     ///   - isEnabled: Whether swipe detection is enabled
     /// - Returns: View with swipe gesture support
+    @available(*, deprecated, message: "Use .monthSwipeGesture(...) instead")
     func monthSwipeable(
         onSwipeLeft: @escaping () -> Void,
         onSwipeRight: @escaping () -> Void,
@@ -261,9 +263,8 @@ extension View {
         }
     }
 
-    /// Add month swipe gesture directly to a ScrollView using highPriorityGesture
-    /// This gives the horizontal swipe gesture priority over ScrollView's pan gesture
-    /// Use this instead of MonthSwipeContainer when wrapping a ScrollView
+    /// Preferred month swipe API that uses UIKit recognizers under the hood.
+    /// Designed to minimize conflicts with vertical scroll/pull-to-refresh gestures.
     func monthSwipeGesture(
         onSwipeLeft: @escaping () -> Void,
         onSwipeRight: @escaping () -> Void,
@@ -300,6 +301,7 @@ private struct MonthSwipeGestureModifier: ViewModifier {
                 SwipeGestureView(
                     onSwipeLeft: onSwipeLeft,
                     onSwipeRight: onSwipeRight,
+                    threshold: threshold,
                     isEnabled: isEnabled,
                     isRTL: layoutDirection == .rightToLeft
                 )
@@ -309,13 +311,14 @@ private struct MonthSwipeGestureModifier: ViewModifier {
 
 // MARK: - UIKit Swipe Gesture View
 
-/// A UIViewRepresentable that adds UISwipeGestureRecognizers for left and right swipes.
+/// A UIViewRepresentable that adds a horizontal UIPanGestureRecognizer for month swipes.
 /// The view is placed in background and uses userInteractionEnabled = false so it
 /// doesn't intercept touches, but gesture recognizers still work because they're
 /// added to a parent view that IS in the responder chain.
 private struct SwipeGestureView: UIViewRepresentable {
     let onSwipeLeft: () -> Void
     let onSwipeRight: () -> Void
+    let threshold: CGFloat
     let isEnabled: Bool
     let isRTL: Bool
 
@@ -324,27 +327,16 @@ private struct SwipeGestureView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.coordinator = context.coordinator
 
-        // Left swipe gesture
-        let leftSwipe = UISwipeGestureRecognizer(
+        // Horizontal pan recognizer with slight precedence bias over vertical scroll.
+        let horizontalPan = UIPanGestureRecognizer(
             target: context.coordinator,
-            action: #selector(Coordinator.handleSwipe(_:))
+            action: #selector(Coordinator.handlePan(_:))
         )
-        leftSwipe.direction = .left
-        leftSwipe.delaysTouchesBegan = false
-        leftSwipe.delaysTouchesEnded = false
-        leftSwipe.cancelsTouchesInView = false
-        view.addGestureRecognizer(leftSwipe)
-
-        // Right swipe gesture
-        let rightSwipe = UISwipeGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handleSwipe(_:))
-        )
-        rightSwipe.direction = .right
-        rightSwipe.delaysTouchesBegan = false
-        rightSwipe.delaysTouchesEnded = false
-        rightSwipe.cancelsTouchesInView = false
-        view.addGestureRecognizer(rightSwipe)
+        horizontalPan.delegate = context.coordinator
+        horizontalPan.delaysTouchesBegan = false
+        horizontalPan.delaysTouchesEnded = false
+        horizontalPan.cancelsTouchesInView = false
+        view.addGestureRecognizer(horizontalPan)
 
         return view
     }
@@ -352,6 +344,7 @@ private struct SwipeGestureView: UIViewRepresentable {
     func updateUIView(_ uiView: SwipeContainerView, context: Context) {
         context.coordinator.onSwipeLeft = onSwipeLeft
         context.coordinator.onSwipeRight = onSwipeRight
+        context.coordinator.threshold = threshold
         context.coordinator.isEnabled = isEnabled
         context.coordinator.isRTL = isRTL
 
@@ -360,40 +353,79 @@ private struct SwipeGestureView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onSwipeLeft: onSwipeLeft, onSwipeRight: onSwipeRight, isEnabled: isEnabled, isRTL: isRTL)
+        Coordinator(
+            onSwipeLeft: onSwipeLeft,
+            onSwipeRight: onSwipeRight,
+            threshold: threshold,
+            isEnabled: isEnabled,
+            isRTL: isRTL
+        )
     }
 
-    class Coordinator: NSObject {
+    class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onSwipeLeft: () -> Void
         var onSwipeRight: () -> Void
+        var threshold: CGFloat
         var isEnabled: Bool
         var isRTL: Bool
 
+        private let horizontalPrecedenceMultiplier: CGFloat = 0.9
+        private let flickVelocity: CGFloat = 280
         private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
-        init(onSwipeLeft: @escaping () -> Void, onSwipeRight: @escaping () -> Void, isEnabled: Bool, isRTL: Bool) {
+        init(
+            onSwipeLeft: @escaping () -> Void,
+            onSwipeRight: @escaping () -> Void,
+            threshold: CGFloat,
+            isEnabled: Bool,
+            isRTL: Bool
+        ) {
             self.onSwipeLeft = onSwipeLeft
             self.onSwipeRight = onSwipeRight
+            self.threshold = threshold
             self.isEnabled = isEnabled
             self.isRTL = isRTL
             super.init()
             haptic.prepare()
         }
 
-        @objc func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
+        @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
             guard isEnabled else { return }
+            guard gesture.state == .ended else { return }
+            guard let view = gesture.view else { return }
+
+            let translationX = gesture.translation(in: view).x
+            let velocityX = gesture.velocity(in: view).x
+            let effectiveThreshold = max(20, threshold * 0.8)
+            let isFlick = abs(velocityX) >= flickVelocity
+            let crossedThreshold = abs(translationX) >= effectiveThreshold
+
+            guard isFlick || crossedThreshold else { return }
+
+            let directionX = abs(translationX) > 6 ? translationX : velocityX
+            guard directionX != 0 else { return }
 
             haptic.impactOccurred()
             haptic.prepare()
 
-            switch gesture.direction {
-            case .left:
+            if directionX < 0 {
                 if isRTL { onSwipeRight() } else { onSwipeLeft() }
-            case .right:
+            } else {
                 if isRTL { onSwipeLeft() } else { onSwipeRight() }
-            default:
-                break
             }
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard isEnabled else { return false }
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
+            guard let view = pan.view else { return false }
+
+            let velocity = pan.velocity(in: view)
+            let absHorizontal = abs(velocity.x)
+            let absVertical = abs(velocity.y)
+
+            // Stronger precedence: near-diagonal drags can still start month navigation.
+            return absHorizontal >= absVertical * horizontalPrecedenceMultiplier
         }
     }
 }
@@ -420,6 +452,10 @@ private class SwipeContainerView: UIView {
             gestureRecognizers?.forEach { gesture in
                 removeGestureRecognizer(gesture)
                 scrollView.addGestureRecognizer(gesture)
+                // Give month navigation precedence over vertical pan/refresh.
+                // The custom pan recognizer rejects clearly vertical drags in shouldBegin,
+                // so pull-to-refresh remains responsive.
+                scrollView.panGestureRecognizer.require(toFail: gesture)
             }
         }
     }
