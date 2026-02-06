@@ -2,446 +2,455 @@ import SwiftUI
 import UIKit
 
 enum TimeInputField: Hashable {
-    case start
-    case end
+  case start
+  case end
 }
 
 final class TimeInputFocusController {
-    weak var startField: UITextField?
-    weak var endField: UITextField?
-    var onFocusChange: ((TimeInputField?) -> Void)?
-    private(set) var currentFocus: TimeInputField? {
-        didSet {
-            if oldValue != currentFocus {
-                onFocusChange?(currentFocus)
-            }
-        }
+  weak var startField: UITextField?
+  weak var endField: UITextField?
+  var onFocusChange: ((TimeInputField?) -> Void)?
+  private(set) var currentFocus: TimeInputField? {
+    didSet {
+      if oldValue != currentFocus {
+        onFocusChange?(currentFocus)
+      }
     }
+  }
 
-    func register(_ textField: UITextField, field: TimeInputField) {
-        switch field {
-        case .start:
-            startField = textField
-        case .end:
-            endField = textField
-        }
+  func register(_ textField: UITextField, field: TimeInputField) {
+    switch field {
+    case .start:
+      startField = textField
+    case .end:
+      endField = textField
     }
+  }
 
-    func focus(_ field: TimeInputField?) {
-        currentFocus = field
+  func focus(_ field: TimeInputField?) {
+    currentFocus = field
 
-        switch field {
-        case .start:
-            if let startField {
-                startField.becomeFirstResponder()
-                setCursorToEnd(startField)
-            }
-            endField?.resignFirstResponder()
-        case .end:
-            if let endField {
-                endField.becomeFirstResponder()
-                setCursorToEnd(endField)
-            }
-            startField?.resignFirstResponder()
-        case .none:
-            startField?.resignFirstResponder()
-            endField?.resignFirstResponder()
-        }
+    switch field {
+    case .start:
+      if let startField {
+        startField.becomeFirstResponder()
+        setCursorToEnd(startField)
+      }
+      endField?.resignFirstResponder()
+    case .end:
+      if let endField {
+        endField.becomeFirstResponder()
+        setCursorToEnd(endField)
+      }
+      startField?.resignFirstResponder()
+    case .none:
+      startField?.resignFirstResponder()
+      endField?.resignFirstResponder()
     }
+  }
 
-    private func setCursorToEnd(_ textField: UITextField) {
-        let length = textField.text?.count ?? 0
-        guard let start = textField.position(from: textField.beginningOfDocument, offset: length) else {
-            return
-        }
-        textField.selectedTextRange = textField.textRange(from: start, to: start)
+  private func setCursorToEnd(_ textField: UITextField) {
+    let length = textField.text?.count ?? 0
+    guard let start = textField.position(from: textField.beginningOfDocument, offset: length) else {
+      return
     }
+    textField.selectedTextRange = textField.textRange(from: start, to: start)
+  }
 }
 
 private final class TimeInputTextField: UITextField {
-    var onDeleteBackward: (() -> Bool)?
+  var onDeleteBackward: (() -> Bool)?
 
-    override func deleteBackward() {
-        if onDeleteBackward?() == true {
-            return
-        }
-        super.deleteBackward()
+  override func deleteBackward() {
+    if onDeleteBackward?() == true {
+      return
     }
+    super.deleteBackward()
+  }
 }
 
 private func formatTimeInput(_ digits: String) -> String {
-    guard !digits.isEmpty else { return "" }
+  guard !digits.isEmpty else { return "" }
 
-    if digits.count <= 2 {
-        return digits
-    }
+  if digits.count <= 2 {
+    return digits
+  }
 
-    let hours = String(digits.prefix(2))
-    let minutes = String(digits.dropFirst(2))
-    return "\(hours):\(minutes)"
+  let hours = String(digits.prefix(2))
+  let minutes = String(digits.dropFirst(2))
+  return "\(hours):\(minutes)"
 }
 
 private struct TimeTextField: UIViewRepresentable {
-    struct Change {
-        let formatted: String
-        let digits: String
-        let priorDigits: String
-        let didInsert: Bool
-        let didDelete: Bool
-        let caretAtEnd: Bool
-        let caretAtStart: Bool
+  struct Change {
+    let formatted: String
+    let digits: String
+    let priorDigits: String
+    let didInsert: Bool
+    let didDelete: Bool
+    let caretAtEnd: Bool
+    let caretAtStart: Bool
+  }
+
+  @Binding var text: String
+  let field: TimeInputField
+  let focusController: TimeInputFocusController
+  let placeholder: String
+  let onTextChange: (Change) -> Void
+
+  func makeUIView(context: Context) -> UITextField {
+    let textField = TimeInputTextField()
+    textField.delegate = context.coordinator
+    textField.keyboardType = .numberPad
+    textField.autocorrectionType = .no
+    textField.spellCheckingType = .no
+    textField.autocapitalizationType = .none
+    textField.textAlignment = .center
+    textField.font = .monospacedSystemFont(ofSize: 24, weight: .medium)
+    textField.textColor = UIColor(Color.tidexTextPrimary)
+    textField.tintColor = UIColor(Color.tidexBlue)
+    textField.placeholder = placeholder
+    textField.text = text
+    focusController.register(textField, field: field)
+    context.coordinator.attach(textField)
+    return textField
+  }
+
+  func updateUIView(_ uiView: UITextField, context: Context) {
+    if uiView.text != text {
+      uiView.text = text
+      if uiView.isFirstResponder {
+        context.coordinator.setCursor(uiView, position: text.count)
+      }
     }
 
-    @Binding var text: String
-    let field: TimeInputField
-    let focusController: TimeInputFocusController
-    let placeholder: String
-    let onTextChange: (Change) -> Void
+    let shouldFocus = focusController.currentFocus == field
+    if shouldFocus, uiView.window != nil, !uiView.isFirstResponder {
+      uiView.becomeFirstResponder()
+      context.coordinator.setCursor(uiView, position: text.count)
+    } else if !shouldFocus, uiView.isFirstResponder {
+      uiView.resignFirstResponder()
+    }
+  }
 
-    func makeUIView(context: Context) -> UITextField {
-        let textField = TimeInputTextField()
-        textField.delegate = context.coordinator
-        textField.keyboardType = .numberPad
-        textField.autocorrectionType = .no
-        textField.spellCheckingType = .no
-        textField.autocapitalizationType = .none
-        textField.textAlignment = .center
-        textField.font = .monospacedSystemFont(ofSize: 24, weight: .medium)
-        textField.textColor = UIColor(Color.tidexTextPrimary)
-        textField.tintColor = UIColor(Color.tidexBlue)
-        textField.placeholder = placeholder
-        textField.text = text
-        focusController.register(textField, field: field)
-        context.coordinator.attach(textField)
-        return textField
+  func makeCoordinator() -> Coordinator {
+    Coordinator(parent: self)
+  }
+
+  final class Coordinator: NSObject, UITextFieldDelegate {
+    private let parent: TimeTextField
+    private weak var textField: TimeInputTextField?
+
+    init(parent: TimeTextField) {
+      self.parent = parent
     }
 
-    func updateUIView(_ uiView: UITextField, context: Context) {
-        if uiView.text != text {
-            uiView.text = text
-            if uiView.isFirstResponder {
-                context.coordinator.setCursor(uiView, position: text.count)
-            }
-        }
-
-        let shouldFocus = focusController.currentFocus == field
-        if shouldFocus, uiView.window != nil, !uiView.isFirstResponder {
-            uiView.becomeFirstResponder()
-            context.coordinator.setCursor(uiView, position: text.count)
-        } else if !shouldFocus, uiView.isFirstResponder {
-            uiView.resignFirstResponder()
-        }
+    func attach(_ textField: TimeInputTextField) {
+      self.textField = textField
+      textField.onDeleteBackward = { [weak self] in
+        self?.handleDeleteBackward() ?? false
+      }
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+      parent.focusController.focus(parent.field)
     }
 
-    final class Coordinator: NSObject, UITextFieldDelegate {
-        private let parent: TimeTextField
-        private weak var textField: TimeInputTextField?
-
-        init(parent: TimeTextField) {
-            self.parent = parent
-        }
-
-        func attach(_ textField: TimeInputTextField) {
-            self.textField = textField
-            textField.onDeleteBackward = { [weak self] in
-                self?.handleDeleteBackward() ?? false
-            }
-        }
-
-        func textFieldDidBeginEditing(_ textField: UITextField) {
-            parent.focusController.focus(parent.field)
-        }
-
-        func textFieldDidEndEditing(_ textField: UITextField) {
-            if parent.focusController.currentFocus == parent.field {
-                parent.focusController.focus(nil)
-            }
-        }
-
-        func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-            let currentText = textField.text ?? ""
-            let currentDigits = currentText.filter { $0.isNumber }
-
-            let adjustedRange = adjustRangeForColonBackspace(range, in: currentText, replacement: string)
-            let proposedText = (currentText as NSString).replacingCharacters(in: adjustedRange, with: string)
-
-            let proposedDigits = proposedText.filter { $0.isNumber }
-            let limitedDigits = String(proposedDigits.prefix(4))
-            let formatted = formatTimeInput(limitedDigits)
-
-            let replacementLength = (string as NSString).length
-            let cursorPosition = adjustedRange.location + replacementLength
-            let digitsBeforeCursor = countDigits(in: proposedText, upToUTF16: cursorPosition)
-            let cappedDigitsBeforeCursor = min(digitsBeforeCursor, limitedDigits.count)
-            let caretPosition = caretIndex(forDigitsBefore: cappedDigitsBeforeCursor, digitsCount: limitedDigits.count)
-
-            textField.text = formatted
-            parent.text = formatted
-            setCursor(textField, position: caretPosition)
-
-            let didInsert = string.rangeOfCharacter(from: .decimalDigits) != nil
-            let didDelete = string.isEmpty && adjustedRange.length > 0
-            let caretAtEnd = caretPosition == formatted.count
-            let caretAtStart = caretPosition == 0
-
-            parent.onTextChange(
-                Change(
-                    formatted: formatted,
-                    digits: limitedDigits,
-                    priorDigits: currentDigits,
-                    didInsert: didInsert,
-                    didDelete: didDelete,
-                    caretAtEnd: caretAtEnd,
-                    caretAtStart: caretAtStart
-                )
-            )
-
-            return false
-        }
-
-        private func handleDeleteBackward() -> Bool {
-            guard let textField else { return false }
-            let currentText = textField.text ?? ""
-            let currentDigits = currentText.filter { $0.isNumber }
-            let caretOffset = currentCaretOffset(in: textField)
-
-            guard currentDigits.count <= 2, caretOffset == 0 else { return false }
-
-            textField.text = ""
-            parent.text = ""
-            setCursor(textField, position: 0)
-
-            parent.onTextChange(
-                Change(
-                    formatted: "",
-                    digits: "",
-                    priorDigits: currentDigits,
-                    didInsert: false,
-                    didDelete: true,
-                    caretAtEnd: true,
-                    caretAtStart: true
-                )
-            )
-
-            return true
-        }
-
-        private func adjustRangeForColonBackspace(_ range: NSRange, in text: String, replacement: String) -> NSRange {
-            guard replacement.isEmpty, range.length == 1 else { return range }
-            let nsText = text as NSString
-            guard range.location < nsText.length else { return range }
-            let char = nsText.substring(with: range)
-            guard char == ":", range.location > 0 else { return range }
-            return NSRange(location: range.location - 1, length: 1)
-        }
-
-        private func countDigits(in text: String, upToUTF16 position: Int) -> Int {
-            let nsText = text as NSString
-            let safePosition = min(position, nsText.length)
-            let prefix = nsText.substring(to: safePosition)
-            return prefix.filter { $0.isNumber }.count
-        }
-
-        private func caretIndex(forDigitsBefore digitsBefore: Int, digitsCount: Int) -> Int {
-            guard digitsCount >= 3 else { return digitsBefore }
-            if digitsBefore <= 2 {
-                return digitsBefore
-            }
-            return digitsBefore + 1
-        }
-
-        private func currentCaretOffset(in textField: UITextField) -> Int {
-            guard let selectedRange = textField.selectedTextRange else { return 0 }
-            return textField.offset(from: textField.beginningOfDocument, to: selectedRange.start)
-        }
-
-        fileprivate func setCursor(_ textField: UITextField, position: Int) {
-            guard let start = textField.position(from: textField.beginningOfDocument, offset: position) else {
-                return
-            }
-            textField.selectedTextRange = textField.textRange(from: start, to: start)
-        }
+    func textFieldDidEndEditing(_ textField: UITextField) {
+      if parent.focusController.currentFocus == parent.field {
+        parent.focusController.focus(nil)
+      }
     }
+
+    func textField(
+      _ textField: UITextField, shouldChangeCharactersIn range: NSRange,
+      replacementString string: String
+    ) -> Bool {
+      let currentText = textField.text ?? ""
+      let currentDigits = currentText.filter { $0.isNumber }
+
+      let adjustedRange = adjustRangeForColonBackspace(range, in: currentText, replacement: string)
+      let proposedText = (currentText as NSString).replacingCharacters(
+        in: adjustedRange, with: string)
+
+      let proposedDigits = proposedText.filter { $0.isNumber }
+      let limitedDigits = String(proposedDigits.prefix(4))
+      let formatted = formatTimeInput(limitedDigits)
+
+      let replacementLength = (string as NSString).length
+      let cursorPosition = adjustedRange.location + replacementLength
+      let digitsBeforeCursor = countDigits(in: proposedText, upToUTF16: cursorPosition)
+      let cappedDigitsBeforeCursor = min(digitsBeforeCursor, limitedDigits.count)
+      let caretPosition = caretIndex(
+        forDigitsBefore: cappedDigitsBeforeCursor, digitsCount: limitedDigits.count)
+
+      textField.text = formatted
+      parent.text = formatted
+      setCursor(textField, position: caretPosition)
+
+      let didInsert = string.rangeOfCharacter(from: .decimalDigits) != nil
+      let didDelete = string.isEmpty && adjustedRange.length > 0
+      let caretAtEnd = caretPosition == formatted.count
+      let caretAtStart = caretPosition == 0
+
+      parent.onTextChange(
+        Change(
+          formatted: formatted,
+          digits: limitedDigits,
+          priorDigits: currentDigits,
+          didInsert: didInsert,
+          didDelete: didDelete,
+          caretAtEnd: caretAtEnd,
+          caretAtStart: caretAtStart
+        )
+      )
+
+      return false
+    }
+
+    private func handleDeleteBackward() -> Bool {
+      guard let textField else { return false }
+      let currentText = textField.text ?? ""
+      let currentDigits = currentText.filter { $0.isNumber }
+      let caretOffset = currentCaretOffset(in: textField)
+
+      guard currentDigits.count <= 2, caretOffset == 0 else { return false }
+
+      textField.text = ""
+      parent.text = ""
+      setCursor(textField, position: 0)
+
+      parent.onTextChange(
+        Change(
+          formatted: "",
+          digits: "",
+          priorDigits: currentDigits,
+          didInsert: false,
+          didDelete: true,
+          caretAtEnd: true,
+          caretAtStart: true
+        )
+      )
+
+      return true
+    }
+
+    private func adjustRangeForColonBackspace(
+      _ range: NSRange, in text: String, replacement: String
+    ) -> NSRange {
+      guard replacement.isEmpty, range.length == 1 else { return range }
+      let nsText = text as NSString
+      guard range.location < nsText.length else { return range }
+      let char = nsText.substring(with: range)
+      guard char == ":", range.location > 0 else { return range }
+      return NSRange(location: range.location - 1, length: 1)
+    }
+
+    private func countDigits(in text: String, upToUTF16 position: Int) -> Int {
+      let nsText = text as NSString
+      let safePosition = min(position, nsText.length)
+      let prefix = nsText.substring(to: safePosition)
+      return prefix.filter { $0.isNumber }.count
+    }
+
+    private func caretIndex(forDigitsBefore digitsBefore: Int, digitsCount: Int) -> Int {
+      guard digitsCount >= 3 else { return digitsBefore }
+      if digitsBefore <= 2 {
+        return digitsBefore
+      }
+      return digitsBefore + 1
+    }
+
+    private func currentCaretOffset(in textField: UITextField) -> Int {
+      guard let selectedRange = textField.selectedTextRange else { return 0 }
+      return textField.offset(from: textField.beginningOfDocument, to: selectedRange.start)
+    }
+
+    fileprivate func setCursor(_ textField: UITextField, position: Int) {
+      guard let start = textField.position(from: textField.beginningOfDocument, offset: position)
+      else {
+        return
+      }
+      textField.selectedTextRange = textField.textRange(from: start, to: start)
+    }
+  }
 }
 
 /// Custom time input field that accepts 4 digits and formats as HH:MM
 /// Mimics the behavior of the web TimeInput component
 struct NumericTimeInput: View {
-    @Binding var time: Date?
-    let label: String
-    let focusController: TimeInputFocusController
-    let field: TimeInputField
-    let nextField: TimeInputField?
-    let previousField: TimeInputField?
-    let onComplete: (() -> Void)?
+  @Binding var time: Date?
+  let label: String
+  let focusController: TimeInputFocusController
+  let field: TimeInputField
+  let nextField: TimeInputField?
+  let previousField: TimeInputField?
+  let onComplete: (() -> Void)?
 
-    @State private var inputValue: String = ""
+  @State private var inputValue: String = ""
 
-    private var isFocused: Bool {
-        focusController.currentFocus == field
-    }
+  private var isFocused: Bool {
+    focusController.currentFocus == field
+  }
 
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.tidexTextMuted)
-                .textCase(.uppercase)
-                .tracking(0.5)
+  var body: some View {
+    HStack(spacing: 12) {
+      Text(label)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(.tidexTextMuted)
+        .textCase(.uppercase)
+        .tracking(0.5)
 
-            TimeTextField(
-                text: $inputValue,
-                field: field,
-                focusController: focusController,
-                placeholder: "00:00",
-                onTextChange: { change in
-                    handleTextChange(change)
-                }
-            )
-            .frame(maxWidth: .infinity)
-            .onChange(of: time) { _, newTime in
-                // Sync input display with time value
-                if let newTime {
-                    let formatted = formatDateToHHMM(newTime)
-                    if inputValue != formatted {
-                        inputValue = formatted
-                    }
-                } else if !inputValue.isEmpty {
-                    inputValue = ""
-                }
-            }
-            .onAppear {
-                // Initialize input from existing time value
-                if let time {
-                    inputValue = formatDateToHHMM(time)
-                }
-            }
-            .onChange(of: isFocused) { wasFocused, nowFocused in
-                // When focus is lost, auto-complete partial hour input
-                if wasFocused && !nowFocused {
-                    autoCompletePartialInput()
-                }
-            }
+      TimeTextField(
+        text: $inputValue,
+        field: field,
+        focusController: focusController,
+        placeholder: "00:00",
+        onTextChange: { change in
+          handleTextChange(change)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(
-                    isFocused ? Color.tidexBlue : Color.tidexBorder,
-                    lineWidth: isFocused ? 2 : 1
-                )
+      )
+      .frame(maxWidth: .infinity)
+      .onChange(of: time) { _, newTime in
+        // Sync input display with time value
+        if let newTime {
+          let formatted = formatDateToHHMM(newTime)
+          if inputValue != formatted {
+            inputValue = formatted
+          }
+        } else if !inputValue.isEmpty {
+          inputValue = ""
+        }
+      }
+      .onAppear {
+        // Initialize input from existing time value
+        if let time {
+          inputValue = formatDateToHHMM(time)
+        }
+      }
+      .onChange(of: isFocused) { wasFocused, nowFocused in
+        // When focus is lost, auto-complete partial hour input
+        if wasFocused && !nowFocused {
+          autoCompletePartialInput()
+        }
+      }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 12)
+    .frame(maxWidth: .infinity)
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .overlay(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .strokeBorder(
+          isFocused ? Color.tidexBlue : Color.tidexBorder,
+          lineWidth: isFocused ? 2 : 1
         )
-            .animation(.easeInOut(duration: 0.15), value: isFocused)
+    )
+    .animation(.easeInOut(duration: 0.15), value: isFocused)
+  }
+
+  /// Auto-completes partial input when user taps away
+  /// e.g., "9" → "09:00", "14" → "14:00", "930" → "09:30"
+  private func autoCompletePartialInput() {
+    let digits = inputValue.filter { $0.isNumber }
+
+    // Only process if we have 1-3 digits (incomplete input)
+    guard digits.count >= 1 && digits.count < 4 else { return }
+
+    let completed: String
+    switch digits.count {
+    case 1:
+      // Single digit: treat as hour, pad with zero and add :00
+      // "9" → "09:00"
+      completed = "0\(digits):00"
+    case 2:
+      // Two digits: treat as hour, add :00
+      // "14" → "14:00", "09" → "09:00"
+      completed = "\(digits):00"
+    case 3:
+      // Three digits: interpret based on first digits
+      // "930" → "09:30" (single-digit hour + 2-digit minutes)
+      // "143" → "14:30" (2-digit hour + partial minute, append 0)
+      let potentialHour = Int(String(digits.prefix(2))) ?? 99
+      if potentialHour <= 23 {
+        // First 2 digits are a valid hour, last digit is partial minute
+        // "143" → "14:30", "123" → "12:30"
+        let hour = String(digits.prefix(2))
+        let minute = String(digits.dropFirst(2)) + "0"
+        completed = "\(hour):\(minute)"
+      } else {
+        // First 2 digits > 23, so first digit is hour, last 2 are minutes
+        // "930" → "09:30", "253" → "02:53"
+        // swiftlint:disable:next force_unwrapping
+        let hour = "0\(digits.first!)"
+        let minutes = String(digits.dropFirst())
+        completed = "\(hour):\(minutes)"
+      }
+    default:
+      return
     }
 
-    /// Auto-completes partial input when user taps away
-    /// e.g., "9" → "09:00", "14" → "14:00", "930" → "09:30"
-    private func autoCompletePartialInput() {
-        let digits = inputValue.filter { $0.isNumber }
+    // Validate and set the time
+    if let date = parseTime(completed) {
+      inputValue = completed
+      time = date
 
-        // Only process if we have 1-3 digits (incomplete input)
-        guard digits.count >= 1 && digits.count < 4 else { return }
+      // Haptic feedback
+      let generator = UIImpactFeedbackGenerator(style: .light)
+      generator.impactOccurred()
+    }
+  }
 
-        let completed: String
-        switch digits.count {
-        case 1:
-            // Single digit: treat as hour, pad with zero and add :00
-            // "9" → "09:00"
-            completed = "0\(digits):00"
-        case 2:
-            // Two digits: treat as hour, add :00
-            // "14" → "14:00", "09" → "09:00"
-            completed = "\(digits):00"
-        case 3:
-            // Three digits: interpret based on first digits
-            // "930" → "09:30" (single-digit hour + 2-digit minutes)
-            // "143" → "14:30" (2-digit hour + partial minute, append 0)
-            let potentialHour = Int(String(digits.prefix(2))) ?? 99
-            if potentialHour <= 23 {
-                // First 2 digits are a valid hour, last digit is partial minute
-                // "143" → "14:30", "123" → "12:30"
-                let hour = String(digits.prefix(2))
-                let minute = String(digits.dropFirst(2)) + "0"
-                completed = "\(hour):\(minute)"
-            } else {
-                // First 2 digits > 23, so first digit is hour, last 2 are minutes
-                // "930" → "09:30", "253" → "02:53"
-                // swiftlint:disable:next force_unwrapping
-                let hour = "0\(digits.first!)"
-                let minutes = String(digits.dropFirst())
-                completed = "\(hour):\(minutes)"
-            }
-        default:
-            return
-        }
-
-        // Validate and set the time
-        if let date = parseTime(completed) {
-            inputValue = completed
-            time = date
-
-            // Haptic feedback
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-        }
+  private func handleTextChange(_ change: TimeTextField.Change) {
+    if change.digits.isEmpty {
+      time = nil
+      if change.didDelete, previousField != nil {
+        focusController.focus(previousField)
+      }
+      return
     }
 
-    private func handleTextChange(_ change: TimeTextField.Change) {
-        if change.digits.isEmpty {
-            time = nil
-            if change.didDelete, previousField != nil {
-                focusController.focus(previousField)
-            }
-            return
+    if change.digits.count == 4, let date = parseTime(change.formatted) {
+      time = date
+
+      let generator = UIImpactFeedbackGenerator(style: .light)
+      generator.impactOccurred()
+
+      if change.caretAtEnd {
+        if let next = nextField {
+          focusController.focus(next)
+        } else {
+          focusController.focus(nil as TimeInputField?)
+          onComplete?()
         }
+      }
+    }
+  }
 
-        if change.digits.count == 4, let date = parseTime(change.formatted) {
-            time = date
-
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-
-            if change.caretAtEnd {
-                if let next = nextField {
-                    focusController.focus(next)
-                } else {
-                    focusController.focus(nil as TimeInputField?)
-                    onComplete?()
-                }
-            }
-        }
+  private func parseTime(_ formatted: String) -> Date? {
+    let parts = formatted.split(separator: ":")
+    guard parts.count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      hours >= 0, hours <= 23,
+      minutes >= 0, minutes <= 59
+    else {
+      return nil
     }
 
-    private func parseTime(_ formatted: String) -> Date? {
-        let parts = formatted.split(separator: ":")
-        guard parts.count == 2,
-              let hours = Int(parts[0]),
-              let minutes = Int(parts[1]),
-              hours >= 0, hours <= 23,
-              minutes >= 0, minutes <= 59 else {
-            return nil
-        }
+    let calendar = Calendar.current
+    var components = calendar.dateComponents([.year, .month, .day], from: Date())
+    components.hour = hours
+    components.minute = minutes
+    return calendar.date(from: components)
+  }
 
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: Date())
-        components.hour = hours
-        components.minute = minutes
-        return calendar.date(from: components)
-    }
-
-    private func formatDateToHHMM(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
+  private func formatDateToHHMM(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm"
+    return formatter.string(from: date)
+  }
 }
 
 // MARK: - Time Range Picker
@@ -450,110 +459,111 @@ struct NumericTimeInput: View {
 /// Auto-advances from start to end field when 4 digits are entered
 /// Includes recent time chips below the inputs for quick selection
 struct TimeRangePicker: View {
-    @Binding var startTime: Date?
-    @Binding var endTime: Date?
-    var scrollProxy: ScrollViewProxy?
-    var scrollId: String?
-    /// Optional binding to expose/control which field is focused (for keyboard accessory)
-    var focusedFieldBinding: Binding<TimeInputField?>?
-    @State private var focusController = TimeInputFocusController()
+  @Binding var startTime: Date?
+  @Binding var endTime: Date?
+  var scrollProxy: ScrollViewProxy?
+  var scrollId: String?
+  /// Optional binding to expose/control which field is focused (for keyboard accessory)
+  var focusedFieldBinding: Binding<TimeInputField?>?
+  @State private var focusController = TimeInputFocusController()
 
-    /// Shortened label for start time field
-    private var startLabel: String {
-        String(localized: .commonStart)
+  /// Shortened label for start time field
+  private var startLabel: String {
+    String(localized: .commonStart)
+  }
+
+  /// Shortened label for end time field
+  private var endLabel: String {
+    String(localized: .commonEnd)
+  }
+
+  var body: some View {
+    GeometryReader { geometry in
+      VStack(spacing: 8) {
+        HStack(spacing: 12) {
+          NumericTimeInput(
+            time: $startTime,
+            label: startLabel,
+            focusController: focusController,
+            field: .start,
+            nextField: .end,
+            previousField: nil,
+            onComplete: nil
+          )
+
+          NumericTimeInput(
+            time: $endTime,
+            label: endLabel,
+            focusController: focusController,
+            field: .end,
+            nextField: nil,
+            previousField: .start,
+            onComplete: nil
+          )
+        }
+
+        RecentTimesChips(
+          onSelect: { range in
+            applyTimeRange(range)
+          },
+          availableWidth: geometry.size.width
+        )
+      }
+    }
+    .frame(height: 92)  // Time inputs (~56pt) + spacing (8pt) + chips (28pt)
+    .id(scrollId)
+    .onAppear {
+      focusController.onFocusChange = { (focused: TimeInputField?) in
+        if focusedFieldBinding?.wrappedValue != focused {
+          focusedFieldBinding?.wrappedValue = focused
+        }
+      }
+      focusController.focus(focusedFieldBinding?.wrappedValue as TimeInputField?)
+    }
+    .onChange(of: focusedFieldBinding?.wrappedValue) { _, newValue in
+      if focusController.currentFocus != newValue {
+        focusController.focus(newValue)
+      }
+    }
+  }
+
+  /// Apply a recent time range to the inputs
+  private func applyTimeRange(_ timeRange: TimeRangeCount) {
+    // Dismiss keyboard by clearing focus
+    focusController.focus(nil as TimeInputField?)
+
+    // Parse start time
+    if let start = parseTimeFromHHmm(timeRange.startTime) {
+      startTime = start
+    }
+    // Parse end time
+    if let end = parseTimeFromHHmm(timeRange.endTime) {
+      endTime = end
     }
 
-    /// Shortened label for end time field
-    private var endLabel: String {
-        String(localized: .commonEnd)
+    // Haptic feedback
+    let generator = UIImpactFeedbackGenerator(style: .light)
+    generator.impactOccurred()
+  }
+
+  /// Parse HH:mm string to Date
+  private func parseTimeFromHHmm(_ timeString: String) -> Date? {
+    let parts = timeString.split(separator: ":")
+    guard parts.count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      hours >= 0, hours <= 23,
+      minutes >= 0, minutes <= 59
+    else {
+      return nil
     }
 
-    var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    NumericTimeInput(
-                        time: $startTime,
-                        label: startLabel,
-                        focusController: focusController,
-                        field: .start,
-                        nextField: .end,
-                        previousField: nil,
-                        onComplete: nil
-                    )
-
-                    NumericTimeInput(
-                        time: $endTime,
-                        label: endLabel,
-                        focusController: focusController,
-                        field: .end,
-                        nextField: nil,
-                        previousField: .start,
-                        onComplete: nil
-                    )
-                }
-
-                RecentTimesChips(
-                    onSelect: { range in
-                        applyTimeRange(range)
-                    },
-                    availableWidth: geometry.size.width
-                )
-            }
-        }
-        .frame(height: 92) // Time inputs (~56pt) + spacing (8pt) + chips (28pt)
-        .id(scrollId)
-        .onAppear {
-            focusController.onFocusChange = { (focused: TimeInputField?) in
-                if focusedFieldBinding?.wrappedValue != focused {
-                    focusedFieldBinding?.wrappedValue = focused
-                }
-            }
-            focusController.focus(focusedFieldBinding?.wrappedValue as TimeInputField?)
-        }
-        .onChange(of: focusedFieldBinding?.wrappedValue) { _, newValue in
-            if focusController.currentFocus != newValue {
-                focusController.focus(newValue)
-            }
-        }
-    }
-
-    /// Apply a recent time range to the inputs
-    private func applyTimeRange(_ timeRange: TimeRangeCount) {
-        // Dismiss keyboard by clearing focus
-        focusController.focus(nil as TimeInputField?)
-
-        // Parse start time
-        if let start = parseTimeFromHHmm(timeRange.startTime) {
-            startTime = start
-        }
-        // Parse end time
-        if let end = parseTimeFromHHmm(timeRange.endTime) {
-            endTime = end
-        }
-
-        // Haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
-    }
-
-    /// Parse HH:mm string to Date
-    private func parseTimeFromHHmm(_ timeString: String) -> Date? {
-        let parts = timeString.split(separator: ":")
-        guard parts.count == 2,
-              let hours = Int(parts[0]),
-              let minutes = Int(parts[1]),
-              hours >= 0, hours <= 23,
-              minutes >= 0, minutes <= 59 else {
-            return nil
-        }
-
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: Date())
-        components.hour = hours
-        components.minute = minutes
-        return calendar.date(from: components)
-    }
+    let calendar = Calendar.current
+    var components = calendar.dateComponents([.year, .month, .day], from: Date())
+    components.hour = hours
+    components.minute = minutes
+    return calendar.date(from: components)
+  }
 }
 
 // MARK: - Legacy Time Picker Row (for backward compatibility)
@@ -561,48 +571,48 @@ struct TimeRangePicker: View {
 /// Reusable time picker with label
 /// Uses native DatePicker with compact style
 struct TimePickerRow: View {
-    let label: String
-    @Binding var time: Date
-    var onTimeChange: (() -> Void)?
+  let label: String
+  @Binding var time: Date
+  var onTimeChange: (() -> Void)?
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.tidexTextMuted)
-                .textCase(.uppercase)
-                .tracking(0.5)
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(label)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(.tidexTextMuted)
+        .textCase(.uppercase)
+        .tracking(0.5)
 
-            DatePicker(
-                "",
-                selection: $time,
-                displayedComponents: .hourAndMinute
-            )
-            .datePickerStyle(.compact)
-            .labelsHidden()
-            .tint(.tidexBlue)
-            .onChange(of: time) { _, _ in
-                onTimeChange?()
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      DatePicker(
+        "",
+        selection: $time,
+        displayedComponents: .hourAndMinute
+      )
+      .datePickerStyle(.compact)
+      .labelsHidden()
+      .tint(.tidexBlue)
+      .onChange(of: time) { _, _ in
+        onTimeChange?()
+      }
     }
+    .padding(16)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
 }
 
 // MARK: - Preview
 
 #Preview {
-    NavigationStack {
-        VStack(spacing: 16) {
-            TimeRangePicker(
-                startTime: .constant(nil),
-                endTime: .constant(nil)
-            )
-        }
-        .padding()
-        .background(Color.tidexBackground)
+  NavigationStack {
+    VStack(spacing: 16) {
+      TimeRangePicker(
+        startTime: .constant(nil),
+        endTime: .constant(nil)
+      )
     }
+    .padding()
+    .background(Color.tidexBackground)
+  }
 }

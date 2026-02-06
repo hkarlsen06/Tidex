@@ -3,344 +3,345 @@ import SwiftUI
 /// Main login screen view with native iOS styling
 /// Supports email/password, phone/OTP, Google, and Apple sign-in
 struct LoginView: View {
-    @StateObject private var viewModel = LoginViewModel()
-    
-    // Navigation callbacks
-    var onNavigateToSignup: (() -> Void)?
-    var onNavigateToResetPassword: (() -> Void)?
+  @StateObject private var viewModel = LoginViewModel()
 
-    var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 60)
+  // Navigation callbacks
+  var onNavigateToSignup: (() -> Void)?
+  var onNavigateToResetPassword: (() -> Void)?
 
-                    // Header section
-                    headerSection
-                        .padding(.bottom, 40)
+  var body: some View {
+    GeometryReader { geometry in
+      ScrollView {
+        VStack(spacing: 0) {
+          Spacer(minLength: 60)
 
-                    // Main content
-                    VStack(spacing: 24) {
-                        // Error/Success banners
-                        if let error = viewModel.errorMessage {
-                            ErrorBanner(
-                                message: error,
-                                onDismiss: { viewModel.errorMessage = nil }
-                            )
-                        }
+          // Header section
+          headerSection
+            .padding(.bottom, 40)
 
-                        if let success = viewModel.successMessage {
-                            SuccessBanner(
-                                message: success,
-                                onDismiss: { viewModel.successMessage = nil }
-                            )
-                        }
-
-                        // Step content
-                        switch viewModel.currentStep {
-                        case .input:
-                            inputStepContent
-                        case .otp:
-                            PhoneOTPForm(viewModel: viewModel)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-
-                    Spacer(minLength: 60)
-
-                    // Footer
-                    if viewModel.currentStep == .input {
-                        footerView
-                            .padding(.bottom, 40)
-                    }
-                }
-                .frame(minHeight: geometry.size.height)
+          // Main content
+          VStack(spacing: 24) {
+            // Error/Success banners
+            if let error = viewModel.errorMessage {
+              ErrorBanner(
+                message: error,
+                onDismiss: { viewModel.errorMessage = nil }
+              )
             }
-            .scrollBounceBehavior(.basedOnSize)
+
+            if let success = viewModel.successMessage {
+              SuccessBanner(
+                message: success,
+                onDismiss: { viewModel.successMessage = nil }
+              )
+            }
+
+            // Step content
+            switch viewModel.currentStep {
+            case .input:
+              inputStepContent
+            case .otp:
+              PhoneOTPForm(viewModel: viewModel)
+            }
+          }
+          .padding(.horizontal, 24)
+
+          Spacer(minLength: 60)
+
+          // Footer
+          if viewModel.currentStep == .input {
+            footerView
+              .padding(.bottom, 40)
+          }
         }
-        .background(Color.tidexBackground)
-        .loading(viewModel.isLoading)
-        .onTapGesture {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
+        .frame(minHeight: geometry.size.height)
+      }
+      .scrollBounceBehavior(.basedOnSize)
     }
-
-    // MARK: - Header Section
-
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Full wordmark
-            Image("TidexWordmark")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 48)
-
-            // Subtitle
-            Text(.loginSubtitle)
-                .font(.tidexBody)
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-        }
+    .background(Color.tidexBackground)
+    .loading(viewModel.isLoading)
+    .onTapGesture {
+      UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+  }
 
-    // MARK: - Input Step Content
+  // MARK: - Header Section
 
-    @ViewBuilder
-    private var inputStepContent: some View {
-        VStack(spacing: 16) {
-            // OAuth buttons
-            OAuthButtonsView(
-                onGoogleTap: { Task { await viewModel.signInWithGoogle() } },
-                onAppleTap: { Task { await viewModel.signInWithApple() } },
-                isLoading: viewModel.isLoading
-            )
+  private var headerSection: some View {
+    VStack(spacing: 16) {
+      // Full wordmark
+      Image("TidexWordmark")
+        .resizable()
+        .scaledToFit()
+        .frame(height: 48)
 
-            // Divider
-            dividerView
-                .padding(.vertical, 8)
-
-            // Email/phone form or reveal button
-            if viewModel.showEmailForm {
-                emailFormSection
-            } else {
-                revealEmailButton
-            }
-        }
+      // Subtitle
+      Text(.loginSubtitle)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.center)
     }
+  }
 
-    // MARK: - Email Form Section
+  // MARK: - Input Step Content
 
-    private var emailFormSection: some View {
-        VStack(spacing: 16) {
-            // Form fields in a grouped style
-            VStack(spacing: 0) {
-                // Email/Phone field
-                NativeTextField(
-                    placeholder: String(localized: .loginEmailOrPhonePlaceholder),
-                    text: $viewModel.emailOrPhone,
-                    keyboardType: .emailAddress,
-                    textContentType: .emailAddress
-                )
+  @ViewBuilder
+  private var inputStepContent: some View {
+    VStack(spacing: 16) {
+      // OAuth buttons
+      OAuthButtonsView(
+        onGoogleTap: { Task { await viewModel.signInWithGoogle() } },
+        onAppleTap: { Task { await viewModel.signInWithApple() } },
+        isLoading: viewModel.isLoading
+      )
 
-                Divider()
-                    .background(Color.tidexBorderSubtle)
+      // Divider
+      dividerView
+        .padding(.vertical, 8)
 
-                // Password field
-                NativeSecureField(
-                    placeholder: viewModel.inputType == .phone
-                        ? String(localized: .loginPasswordOptionalLabel)
-                        : String(localized: .loginPasswordPlaceholder),
-                    text: $viewModel.password,
-                    onSubmit: {
-                        Task { await viewModel.signIn() }
-                    }
-                )
-            }
-            .background(Color.tidexSurfacePrimary)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            // Error messages
-            if let emailError = viewModel.fieldErrors.emailOrPhone {
-                Text(emailError)
-                    .font(.tidexCaptionRegular)
-                    .foregroundColor(.tidexError)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
-            }
-
-            if let passwordError = viewModel.fieldErrors.password {
-                Text(passwordError)
-                    .font(.tidexCaptionRegular)
-                    .foregroundColor(.tidexError)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
-            }
-
-            // Forgot password link (only for email login)
-            if viewModel.inputType == .email {
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        onNavigateToResetPassword?()
-                    }) {
-                        Text(.loginForgotPassword)
-                            .font(.tidexLabelStrong)
-                            .foregroundColor(.tidexBlue)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            // Phone hint - password is optional for OTP flow
-            if viewModel.inputType == .phone {
-                Text(.loginPhonePasswordHint)
-                    .font(.tidexCaptionRegular)
-                    .foregroundColor(.tidexTextMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            // Submit button
-            PrimaryButton(
-                title: String(localized: .loginSubmitButton),
-                action: {
-                    Task { await viewModel.signIn() }
-                },
-                isLoading: viewModel.isLoading
-            )
-        }
+      // Email/phone form or reveal button
+      if viewModel.showEmailForm {
+        emailFormSection
+      } else {
+        revealEmailButton
+      }
     }
+  }
 
-    // MARK: - Reveal Email Button
+  // MARK: - Email Form Section
 
-    private var revealEmailButton: some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.showEmailForm = true
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "envelope")
-                    .font(.tidexBodyMedium)
-                Text(.loginEmailOrPhoneReveal)
-                    .font(.tidexBodyMedium)
-            }
-            .foregroundColor(.tidexTextSecondary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(Color.tidexSurfacePrimary)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+  private var emailFormSection: some View {
+    VStack(spacing: 16) {
+      // Form fields in a grouped style
+      VStack(spacing: 0) {
+        // Email/Phone field
+        NativeTextField(
+          placeholder: String(localized: .loginEmailOrPhonePlaceholder),
+          text: $viewModel.emailOrPhone,
+          keyboardType: .emailAddress,
+          textContentType: .emailAddress
+        )
+
+        Divider()
+          .background(Color.tidexBorderSubtle)
+
+        // Password field
+        NativeSecureField(
+          placeholder: viewModel.inputType == .phone
+            ? String(localized: .loginPasswordOptionalLabel)
+            : String(localized: .loginPasswordPlaceholder),
+          text: $viewModel.password,
+          onSubmit: {
+            Task { await viewModel.signIn() }
+          }
+        )
+      }
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+      // Error messages
+      if let emailError = viewModel.fieldErrors.emailOrPhone {
+        Text(emailError)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexError)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 4)
+      }
+
+      if let passwordError = viewModel.fieldErrors.password {
+        Text(passwordError)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexError)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 4)
+      }
+
+      // Forgot password link (only for email login)
+      if viewModel.inputType == .email {
+        HStack {
+          Spacer()
+          Button(action: {
+            onNavigateToResetPassword?()
+          }) {
+            Text(.loginForgotPassword)
+              .font(.tidexLabelStrong)
+              .foregroundColor(.tidexBlue)
+          }
+          .buttonStyle(.plain)
         }
-        .buttonStyle(SnappyButtonStyle())
+      }
+
+      // Phone hint - password is optional for OTP flow
+      if viewModel.inputType == .phone {
+        Text(.loginPhonePasswordHint)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      // Submit button
+      PrimaryButton(
+        title: String(localized: .loginSubmitButton),
+        action: {
+          Task { await viewModel.signIn() }
+        },
+        isLoading: viewModel.isLoading
+      )
     }
+  }
 
-    // MARK: - Divider
+  // MARK: - Reveal Email Button
 
-    private var dividerView: some View {
-        HStack(spacing: 16) {
-            Rectangle()
-                .fill(Color.tidexBorderSubtle)
-                .frame(height: 1)
-
-            Text(.loginSeparator)
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextMuted)
-
-            Rectangle()
-                .fill(Color.tidexBorderSubtle)
-                .frame(height: 1)
-        }
+  private var revealEmailButton: some View {
+    Button {
+      withAnimation(.easeInOut(duration: 0.2)) {
+        viewModel.showEmailForm = true
+      }
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: "envelope")
+          .font(.tidexBodyMedium)
+        Text(.loginEmailOrPhoneReveal)
+          .font(.tidexBodyMedium)
+      }
+      .foregroundColor(.tidexTextSecondary)
+      .frame(maxWidth: .infinity)
+      .frame(height: 50)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
+    .buttonStyle(SnappyButtonStyle())
+  }
 
-    // MARK: - Footer
+  // MARK: - Divider
 
-    private var footerView: some View {
-        HStack(spacing: 4) {
-            Text(.loginNoAccount)
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextSecondary)
+  private var dividerView: some View {
+    HStack(spacing: 16) {
+      Rectangle()
+        .fill(Color.tidexBorderSubtle)
+        .frame(height: 1)
 
-            Button(action: {
-                onNavigateToSignup?()
-            }) {
-                Text(.loginCreateAccount)
-                    .font(.tidexLabelStrong)
-                    .foregroundColor(.tidexBlue)
-            }
-            .buttonStyle(.plain)
-        }
+      Text(.loginSeparator)
+        .font(.system(size: 14))
+        .foregroundColor(.tidexTextMuted)
+
+      Rectangle()
+        .fill(Color.tidexBorderSubtle)
+        .frame(height: 1)
     }
+  }
+
+  // MARK: - Footer
+
+  private var footerView: some View {
+    HStack(spacing: 4) {
+      Text(.loginNoAccount)
+        .font(.system(size: 15))
+        .foregroundColor(.tidexTextSecondary)
+
+      Button(action: {
+        onNavigateToSignup?()
+      }) {
+        Text(.loginCreateAccount)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexBlue)
+      }
+      .buttonStyle(.plain)
+    }
+  }
 }
 
 // MARK: - Native Text Field
 
 /// A text field styled like native iOS grouped forms
 struct NativeTextField: View {
-    let placeholder: String
-    @Binding var text: String
-    var keyboardType: UIKeyboardType = .default
-    var textContentType: UITextContentType? = nil
-    var onSubmit: (() -> Void)? = nil
+  let placeholder: String
+  @Binding var text: String
+  var keyboardType: UIKeyboardType = .default
+  var textContentType: UITextContentType? = nil
+  var onSubmit: (() -> Void)? = nil
 
-    @FocusState private var isFocused: Bool
+  @FocusState private var isFocused: Bool
 
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-            .keyboardType(keyboardType)
-            .textContentType(textContentType)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .focused($isFocused)
-            .padding(.horizontal, Spacing.contentHorizontal)
-            .padding(.vertical, Spacing.sm)
-            .onSubmit {
-                onSubmit?()
-            }
-    }
+  var body: some View {
+    TextField(placeholder, text: $text)
+      .font(.tidexBody)
+      .foregroundColor(.tidexTextPrimary)
+      .keyboardType(keyboardType)
+      .textContentType(textContentType)
+      .textInputAutocapitalization(.never)
+      .autocorrectionDisabled()
+      .focused($isFocused)
+      .padding(.horizontal, Spacing.contentHorizontal)
+      .padding(.vertical, Spacing.sm)
+      .onSubmit {
+        onSubmit?()
+      }
+  }
 }
 
 // MARK: - Native Secure Field
 
 /// A secure field styled like native iOS grouped forms
 struct NativeSecureField: View {
-    let placeholder: String
-    @Binding var text: String
-    var onSubmit: (() -> Void)? = nil
+  let placeholder: String
+  @Binding var text: String
+  var onSubmit: (() -> Void)? = nil
 
-    @FocusState private var isFocused: Bool
-    @State private var isSecure: Bool = true
+  @FocusState private var isFocused: Bool
+  @State private var isSecure: Bool = true
 
-    var body: some View {
-        HStack(spacing: 12) {
-            if isSecure {
-                SecureField(placeholder, text: $text)
-                    .font(.tidexBody)
-                    .foregroundColor(.tidexTextPrimary)
-                    .textContentType(.password)
-                    .focused($isFocused)
-                    .onSubmit {
-                        onSubmit?()
-                    }
-            } else {
-                TextField(placeholder, text: $text)
-                    .font(.tidexBody)
-                    .foregroundColor(.tidexTextPrimary)
-                    .textContentType(.password)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($isFocused)
-                    .onSubmit {
-                        onSubmit?()
-                    }
-            }
+  var body: some View {
+    HStack(spacing: 12) {
+      if isSecure {
+        SecureField(placeholder, text: $text)
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextPrimary)
+          .textContentType(.password)
+          .focused($isFocused)
+          .onSubmit {
+            onSubmit?()
+          }
+      } else {
+        TextField(placeholder, text: $text)
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextPrimary)
+          .textContentType(.password)
+          .textInputAutocapitalization(.never)
+          .autocorrectionDisabled()
+          .focused($isFocused)
+          .onSubmit {
+            onSubmit?()
+          }
+      }
 
-            Button {
-                isSecure.toggle()
-            } label: {
-                Image(systemName: isSecure ? "eye" : "eye.slash")
-                    .font(.tidexBodyMedium)
-                    .foregroundColor(.tidexTextMuted)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, Spacing.contentHorizontal)
-        .padding(.vertical, Spacing.sm)
+      Button {
+        isSecure.toggle()
+      } label: {
+        Image(systemName: isSecure ? "eye" : "eye.slash")
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextMuted)
+      }
+      .buttonStyle(.plain)
     }
+    .padding(.horizontal, Spacing.contentHorizontal)
+    .padding(.vertical, Spacing.sm)
+  }
 }
 
 // MARK: - Snappy Button Style
 
 /// Button style with immediate press feedback
 struct SnappyButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
-    }
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+      .opacity(configuration.isPressed ? 0.9 : 1.0)
+      .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+  }
 }
 
 #Preview {
-    LoginView()
+  LoginView()
 }

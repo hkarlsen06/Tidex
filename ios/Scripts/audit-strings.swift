@@ -6,153 +6,153 @@ import Foundation
 // MARK: - Config
 
 private struct Config {
-    let searchPath: String
-    let catalogPath: String
-    let strict: Bool
-    let checkHardcoded: Bool
-    let checkOrphaned: Bool
-    let jsonOutput: Bool
-    let removeOrphaned: Bool
+  let searchPath: String
+  let catalogPath: String
+  let strict: Bool
+  let checkHardcoded: Bool
+  let checkOrphaned: Bool
+  let jsonOutput: Bool
+  let removeOrphaned: Bool
 }
 
 // MARK: - Models
 
 private struct Violation: CustomStringConvertible {
-    let file: String
-    let line: Int
-    let code: String
-    let pattern: String
+  let file: String
+  let line: Int
+  let code: String
+  let pattern: String
 
-    var description: String {
-        "\(file):\(line): \(pattern) - \(code.trimmingCharacters(in: .whitespaces))"
-    }
+  var description: String {
+    "\(file):\(line): \(pattern) - \(code.trimmingCharacters(in: .whitespaces))"
+  }
 }
 
 private struct OrphanedKey {
-    let key: String
-    let symbolName: String
+  let key: String
+  let symbolName: String
 }
 
 // MARK: - Patterns to detect hardcoded strings
 
 // SwiftUI views that commonly contain user-visible strings
 private let uiPatterns: [(regex: NSRegularExpression, name: String)] = {
-    let patterns: [(String, String)] = [
-        // Text with literal string (not a symbol like .keyName)
-        (#"Text\(\s*"[^"]+""#, "Text(\"...\")"),
+  let patterns: [(String, String)] = [
+    // Text with literal string (not a symbol like .keyName)
+    (#"Text\(\s*"[^"]+""#, "Text(\"...\")"),
 
-        // Label with literal title
-        (#"Label\(\s*"[^"]+""#, "Label(\"...\")"),
+    // Label with literal title
+    (#"Label\(\s*"[^"]+""#, "Label(\"...\")"),
 
-        // Button with literal label
-        (#"Button\(\s*"[^"]+""#, "Button(\"...\")"),
+    // Button with literal label
+    (#"Button\(\s*"[^"]+""#, "Button(\"...\")"),
 
-        // NavigationTitle with literal
-        (#"\.navigationTitle\(\s*"[^"]+""#, ".navigationTitle(\"...\")"),
+    // NavigationTitle with literal
+    (#"\.navigationTitle\(\s*"[^"]+""#, ".navigationTitle(\"...\")"),
 
-        // Alert title/message with literal
-        (#"\.alert\(\s*"[^"]+""#, ".alert(\"...\")"),
+    // Alert title/message with literal
+    (#"\.alert\(\s*"[^"]+""#, ".alert(\"...\")"),
 
-        // Section header with literal
-        (#"Section\(\s*"[^"]+""#, "Section(\"...\")"),
+    // Section header with literal
+    (#"Section\(\s*"[^"]+""#, "Section(\"...\")"),
 
-        // Tab item label
-        (#"\.tabItem\s*\{[^}]*Text\(\s*"[^"]+""#, ".tabItem { Text(\"...\") }"),
+    // Tab item label
+    (#"\.tabItem\s*\{[^}]*Text\(\s*"[^"]+""#, ".tabItem { Text(\"...\") }"),
 
-        // Toolbar item label
-        (#"ToolbarItem[^}]*Label\(\s*"[^"]+""#, "ToolbarItem Label(\"...\")"),
+    // Toolbar item label
+    (#"ToolbarItem[^}]*Label\(\s*"[^"]+""#, "ToolbarItem Label(\"...\")"),
 
-        // Placeholder text
-        (#"\.textFieldStyle[^)]*placeholder:\s*"[^"]+""#, "placeholder: \"...\""),
+    // Placeholder text
+    (#"\.textFieldStyle[^)]*placeholder:\s*"[^"]+""#, "placeholder: \"...\""),
 
-        // TextField/SecureField with literal prompt
-        (#"TextField\(\s*"[^"]+""#, "TextField(\"...\")"),
-        (#"SecureField\(\s*"[^"]+""#, "SecureField(\"...\")")
-    ]
+    // TextField/SecureField with literal prompt
+    (#"TextField\(\s*"[^"]+""#, "TextField(\"...\")"),
+    (#"SecureField\(\s*"[^"]+""#, "SecureField(\"...\")"),
+  ]
 
-    return patterns.compactMap { pattern, name -> (NSRegularExpression, String)? in
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            return nil
-        }
-        return (regex, name)
+  return patterns.compactMap { pattern, name -> (NSRegularExpression, String)? in
+    guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+      return nil
     }
+    return (regex, name)
+  }
 }()
 
 // Patterns that are OK (not violations)
 private let allowedPatterns: [NSRegularExpression] = {
-    let patterns = [
-        // Empty strings and whitespace-only
-        #"Text\(\s*""\s*\)"#,
-        #"Text\(\s*"\s+"\s*\)"#,
+  let patterns = [
+    // Empty strings and whitespace-only
+    #"Text\(\s*""\s*\)"#,
+    #"Text\(\s*"\s+"\s*\)"#,
 
-        // String interpolation (likely dynamic)
-        #"Text\(\s*".*\\.*""#,
+    // String interpolation (likely dynamic)
+    #"Text\(\s*".*\\.*""#,
 
-        // SF Symbols
-        #"Image\(systemName:\s*"[^"]+""#,
-        #"Label\([^,]+,\s*systemImage:\s*"[^"]+""#,
+    // SF Symbols
+    #"Image\(systemName:\s*"[^"]+""#,
+    #"Label\([^,]+,\s*systemImage:\s*"[^"]+""#,
 
-        // Asset names
-        #"Image\(\s*"[^"]+""#,
-        #"Color\(\s*"[^"]+""#,
+    // Asset names
+    #"Image\(\s*"[^"]+""#,
+    #"Color\(\s*"[^"]+""#,
 
-        // Identifiers/keys (no spaces, looks like code)
-        #"Text\(\s*"[a-zA-Z0-9_.]+"\s*\)"#,
+    // Identifiers/keys (no spaces, looks like code)
+    #"Text\(\s*"[a-zA-Z0-9_.]+"\s*\)"#,
 
-        // URLs
-        #""https?://[^"]+""#,
+    // URLs
+    #""https?://[^"]+""#,
 
-        // Format specifiers (likely used with String(format:))
-        #""%[^"]*[dsfx@]"#,
+    // Format specifiers (likely used with String(format:))
+    #""%[^"]*[dsfx@]"#,
 
-        // Debug/preview strings
-        #"#Preview\s*\{"#,
-        #"preview"#,
+    // Debug/preview strings
+    #"#Preview\s*\{"#,
+    #"preview"#,
 
-        // Comments
-        #"^\s*//"#,
+    // Comments
+    #"^\s*//"#,
 
-        // String(localized:) - proper localization
-        #"String\(localized:"#,
+    // String(localized:) - proper localization
+    #"String\(localized:"#,
 
-        // LocalizedStringKey
-        #"LocalizedStringKey"#,
+    // LocalizedStringKey
+    #"LocalizedStringKey"#,
 
-        // Universal symbols and separators (not localizable)
-        #"Text\(\s*"[·•−+–→—|%]"\s*\)"#,
+    // Universal symbols and separators (not localizable)
+    #"Text\(\s*"[·•−+–→—|%]"\s*\)"#,
 
-        // Time/number format hints in TextFields (e.g., "00:00", "000000", "123456")
-        #"TextField\(\s*"[0-9:]+""#,
+    // Time/number format hints in TextFields (e.g., "00:00", "000000", "123456")
+    #"TextField\(\s*"[0-9:]+""#,
 
-        // Country codes (e.g., "+47")
-        #"Text\(\s*"\+\d+""#,
+    // Country codes (e.g., "+47")
+    #"Text\(\s*"\+\d+""#,
 
-        // System button labels (OK, Cancel - handled by iOS)
-        #"Button\(\s*"OK""#,
+    // System button labels (OK, Cancel - handled by iOS)
+    #"Button\(\s*"OK""#,
 
-        // Em dash for "no value" placeholder
-        #"Text\(\s*"—"\s*\)"#,
-        #"Text\(\s*"---"\s*\)"#,
+    // Em dash for "no value" placeholder
+    #"Text\(\s*"—"\s*\)"#,
+    #"Text\(\s*"---"\s*\)"#,
 
-        // Time/data placeholder formats
-        #"Text\(\s*"--:--"\s*\)"#,
-        #"Text\(\s*"--"\s*\)"#
-    ]
+    // Time/data placeholder formats
+    #"Text\(\s*"--:--"\s*\)"#,
+    #"Text\(\s*"--"\s*\)"#,
+  ]
 
-    return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: [.caseInsensitive]) }
+  return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: [.caseInsensitive]) }
 }()
 
 // Files/directories to skip
 private let skipPaths = [
-    "/Preview Content/",
-    "/Previews/",
-    "Tests.swift",
-    "Mock",
-    ".build/",
-    "DerivedData/",
-    "/Admin/",
-    "DebugView.swift",
-    "/Scripts/"
+  "/Preview Content/",
+  "/Previews/",
+  "Tests.swift",
+  "Mock",
+  ".build/",
+  "DerivedData/",
+  "/Admin/",
+  "DebugView.swift",
+  "/Scripts/",
 ]
 
 // MARK: - Key to Symbol Name Conversion
@@ -161,334 +161,354 @@ private let skipPaths = [
 /// e.g., "onboarding.mfa.addToPasswords" -> "onboardingMfaAddToPasswords"
 /// e.g., "onboarding.paycheck.base_pay" -> "onboardingPaycheckBasePay"
 private func keyToSymbolName(_ key: String) -> String {
-    // Split by dots first, then handle underscores within each part
-    let dotParts = key.split(separator: ".")
-    guard !dotParts.isEmpty else { return key }
+  // Split by dots first, then handle underscores within each part
+  let dotParts = key.split(separator: ".")
+  guard !dotParts.isEmpty else { return key }
 
-    var result = ""
-    for (index, dotPart) in dotParts.enumerated() {
-        // Split each dot-part by underscores
-        let underscoreParts = dotPart.split(separator: "_")
-        for (subIndex, part) in underscoreParts.enumerated() {
-            if index == 0 && subIndex == 0 {
-                // First part stays as-is (preserves original casing)
-                result += String(part)
-            } else {
-                // Subsequent parts: capitalize first letter, keep rest as-is
-                result += part.prefix(1).uppercased() + part.dropFirst()
-            }
-        }
+  var result = ""
+  for (index, dotPart) in dotParts.enumerated() {
+    // Split each dot-part by underscores
+    let underscoreParts = dotPart.split(separator: "_")
+    for (subIndex, part) in underscoreParts.enumerated() {
+      if index == 0 && subIndex == 0 {
+        // First part stays as-is (preserves original casing)
+        result += String(part)
+      } else {
+        // Subsequent parts: capitalize first letter, keep rest as-is
+        result += part.prefix(1).uppercased() + part.dropFirst()
+      }
     }
-    return result
+  }
+  return result
 }
 
 // MARK: - String Catalog Parsing
 
 private func loadStringCatalogKeys(from path: String) -> Set<String> {
-    guard let data = FileManager.default.contents(atPath: path),
-          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let strings = json["strings"] as? [String: Any] else {
-        print("Error: Could not load String Catalog from \(path)")
-        return []
-    }
+  guard let data = FileManager.default.contents(atPath: path),
+    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    let strings = json["strings"] as? [String: Any]
+  else {
+    print("Error: Could not load String Catalog from \(path)")
+    return []
+  }
 
-    return Set(strings.keys)
+  return Set(strings.keys)
 }
 
 // MARK: - File Scanning
 
 private func findSwiftFiles(in directory: String) -> [String] {
-    let fileManager = FileManager.default
-    var swiftFiles: [String] = []
+  let fileManager = FileManager.default
+  var swiftFiles: [String] = []
 
-    guard let enumerator = fileManager.enumerator(atPath: directory) else {
-        return []
+  guard let enumerator = fileManager.enumerator(atPath: directory) else {
+    return []
+  }
+
+  while let file = enumerator.nextObject() as? String {
+    guard file.hasSuffix(".swift") else { continue }
+
+    let fullPath = (directory as NSString).appendingPathComponent(file)
+
+    // Skip excluded paths
+    if skipPaths.contains(where: { fullPath.contains($0) }) {
+      continue
     }
 
-    while let file = enumerator.nextObject() as? String {
-        guard file.hasSuffix(".swift") else { continue }
+    swiftFiles.append(fullPath)
+  }
 
-        let fullPath = (directory as NSString).appendingPathComponent(file)
-
-        // Skip excluded paths
-        if skipPaths.contains(where: { fullPath.contains($0) }) {
-            continue
-        }
-
-        swiftFiles.append(fullPath)
-    }
-
-    return swiftFiles
+  return swiftFiles
 }
 
 private func isAllowedLine(_ line: String) -> Bool {
-    let range = NSRange(line.startIndex..., in: line)
-    return allowedPatterns.contains { regex in
-        regex.firstMatch(in: line, options: [], range: range) != nil
-    }
+  let range = NSRange(line.startIndex..., in: line)
+  return allowedPatterns.contains { regex in
+    regex.firstMatch(in: line, options: [], range: range) != nil
+  }
 }
 
 private func scanFileForHardcodedStrings(_ path: String) -> [Violation] {
-    guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
-        return []
+  guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
+    return []
+  }
+
+  var violations: [Violation] = []
+  let lines = content.components(separatedBy: .newlines)
+
+  // Track #Preview blocks to skip them
+  var inPreviewBlock = false
+  var previewBraceDepth = 0
+
+  for (index, line) in lines.enumerated() {
+    let lineNumber = index + 1
+
+    // Check if entering a #Preview block
+    if line.contains("#Preview") {
+      inPreviewBlock = true
+      previewBraceDepth = 0
     }
 
-    var violations: [Violation] = []
-    let lines = content.components(separatedBy: .newlines)
+    // Track brace depth when in preview block
+    if inPreviewBlock {
+      previewBraceDepth += line.filter { $0 == "{" }.count
+      previewBraceDepth -= line.filter { $0 == "}" }.count
 
-    // Track #Preview blocks to skip them
-    var inPreviewBlock = false
-    var previewBraceDepth = 0
-
-    for (index, line) in lines.enumerated() {
-        let lineNumber = index + 1
-
-        // Check if entering a #Preview block
-        if line.contains("#Preview") {
-            inPreviewBlock = true
-            previewBraceDepth = 0
-        }
-
-        // Track brace depth when in preview block
-        if inPreviewBlock {
-            previewBraceDepth += line.filter { $0 == "{" }.count
-            previewBraceDepth -= line.filter { $0 == "}" }.count
-
-            // Exit preview block when braces balance (and we've seen at least one open brace)
-            if previewBraceDepth <= 0 && line.contains("}") {
-                inPreviewBlock = false
-            }
-            continue // Skip all lines in preview blocks
-        }
-
-        // Skip allowed patterns
-        if isAllowedLine(line) {
-            continue
-        }
-
-        // Check for violations
-        let range = NSRange(line.startIndex..., in: line)
-
-        for (regex, patternName) in uiPatterns where regex.firstMatch(in: line, options: [], range: range) != nil {
-            // Extract relative path
-            let relativePath = path.components(separatedBy: "/TidexApp/").last ?? path
-
-            violations.append(Violation(
-                file: relativePath,
-                line: lineNumber,
-                code: line,
-                pattern: patternName
-            ))
-            break // One violation per line is enough
-        }
+      // Exit preview block when braces balance (and we've seen at least one open brace)
+      if previewBraceDepth <= 0 && line.contains("}") {
+        inPreviewBlock = false
+      }
+      continue  // Skip all lines in preview blocks
     }
 
-    return violations
+    // Skip allowed patterns
+    if isAllowedLine(line) {
+      continue
+    }
+
+    // Check for violations
+    let range = NSRange(line.startIndex..., in: line)
+
+    for (regex, patternName) in uiPatterns
+    where regex.firstMatch(in: line, options: [], range: range) != nil {
+      // Extract relative path
+      let relativePath = path.components(separatedBy: "/TidexApp/").last ?? path
+
+      violations.append(
+        Violation(
+          file: relativePath,
+          line: lineNumber,
+          code: line,
+          pattern: patternName
+        ))
+      break  // One violation per line is enough
+    }
+  }
+
+  return violations
 }
 
 /// Result of scanning for localization references
 private struct LocalizationReferences {
-    var symbols: Set<String>       // Symbol names like "dashboardTitle"
-    var directKeys: Set<String>    // Direct keys like "common.cancel"
-    var dynamicPrefixes: Set<String>  // Prefixes like "onboarding.paycheck.industry."
+  var symbols: Set<String>  // Symbol names like "dashboardTitle"
+  var directKeys: Set<String>  // Direct keys like "common.cancel"
+  var dynamicPrefixes: Set<String>  // Prefixes like "onboarding.paycheck.industry."
 }
 
-private func extractCaptures(from content: String, using regexes: [NSRegularExpression]) -> Set<String> {
-    var results: Set<String> = []
-    let range = NSRange(content.startIndex..., in: content)
-    for regex in regexes {
-        for match in regex.matches(in: content, options: [], range: range) {
-            if match.numberOfRanges > 1,
-               let captureRange = Range(match.range(at: 1), in: content) {
-                results.insert(String(content[captureRange]))
-            }
-        }
+private func extractCaptures(from content: String, using regexes: [NSRegularExpression]) -> Set<
+  String
+> {
+  var results: Set<String> = []
+  let range = NSRange(content.startIndex..., in: content)
+  for regex in regexes {
+    for match in regex.matches(in: content, options: [], range: range) {
+      if match.numberOfRanges > 1,
+        let captureRange = Range(match.range(at: 1), in: content)
+      {
+        results.insert(String(content[captureRange]))
+      }
     }
-    return results
+  }
+  return results
 }
 
 /// Returns all localization references found in Swift files
 private func findLocalizationReferences(in directory: String) -> LocalizationReferences {
-    let swiftFiles = findSwiftFiles(in: directory)
-    var result = LocalizationReferences(symbols: [], directKeys: [], dynamicPrefixes: [])
+  let swiftFiles = findSwiftFiles(in: directory)
+  var result = LocalizationReferences(symbols: [], directKeys: [], dynamicPrefixes: [])
 
-    let symbolRegexes = [
-        #"Text\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-        #"String\(localized:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-        #"\.([a-zA-Z][a-zA-Z0-9_]*)\("#,
-        #"Key:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-        #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-        #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,
-        #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-        #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#
-    ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
+  let symbolRegexes = [
+    #"Text\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #"String\(localized:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #"\.([a-zA-Z][a-zA-Z0-9_]*)\("#,
+    #"Key:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,
+    #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#,
+  ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
-    let directKeyRegexes = [
-        #"NSLocalizedString\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#
-    ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
+  let directKeyRegexes = [
+    #"NSLocalizedString\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#
+  ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
-    let dynamicKeyRegexes = [
-        #"String\.LocalizationValue\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#,
-        #"=\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#
-    ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
+  let dynamicKeyRegexes = [
+    #"String\.LocalizationValue\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#,
+    #"=\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#,
+  ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
-    for file in swiftFiles {
-        guard let content = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
-        result.symbols.formUnion(extractCaptures(from: content, using: symbolRegexes))
-        result.directKeys.formUnion(extractCaptures(from: content, using: directKeyRegexes))
-        result.dynamicPrefixes.formUnion(extractCaptures(from: content, using: dynamicKeyRegexes))
-    }
+  for file in swiftFiles {
+    guard let content = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
+    result.symbols.formUnion(extractCaptures(from: content, using: symbolRegexes))
+    result.directKeys.formUnion(extractCaptures(from: content, using: directKeyRegexes))
+    result.dynamicPrefixes.formUnion(extractCaptures(from: content, using: dynamicKeyRegexes))
+  }
 
-    return result
+  return result
 }
 
 // MARK: - Orphaned Key Detection
 
-private func findOrphanedKeys(catalogKeys: Set<String>, references: LocalizationReferences) -> [OrphanedKey] {
-    var orphaned: [OrphanedKey] = []
+private func findOrphanedKeys(catalogKeys: Set<String>, references: LocalizationReferences)
+  -> [OrphanedKey]
+{
+  var orphaned: [OrphanedKey] = []
 
-    for key in catalogKeys {
-        let symbolName = keyToSymbolName(key)
+  for key in catalogKeys {
+    let symbolName = keyToSymbolName(key)
 
-        // Skip keys that are just numbers or very short (likely placeholders or format strings)
-        if key.allSatisfy({ $0.isNumber || $0 == "." || $0 == " " }) {
-            continue
-        }
-
-        // Skip keys that contain format specifiers (they might be used via String(format:))
-        if key.contains("%") {
-            continue
-        }
-
-        // Skip keys without dots - these are likely:
-        // - Single-word keys that are placeholders/symbols ("+", "---", "OK")
-        // - Debug strings that don't need localization
-        // Real localization keys use dot notation: "feature.subfeature.key"
-        if !key.contains(".") {
-            continue
-        }
-
-        // Skip admin/debug keys
-        let lowercased = key.lowercased()
-        if lowercased.hasPrefix("admin.") ||
-           lowercased.hasPrefix("debug.") ||
-           lowercased.contains("impersonate") ||
-           lowercased.contains("storekit") {
-            continue
-        }
-
-        // Check if the key is used via any method:
-        // 1. Symbol reference (e.g., .dashboardTitle)
-        if references.symbols.contains(symbolName) {
-            continue
-        }
-
-        // 2. Direct key reference (e.g., NSLocalizedString("common.cancel", ...))
-        if references.directKeys.contains(key) {
-            continue
-        }
-
-        // 3. Dynamic prefix (e.g., "onboarding.paycheck.industry." matches "onboarding.paycheck.industry.retail")
-        let matchesDynamicPrefix = references.dynamicPrefixes.contains { prefix in
-            key.hasPrefix(prefix)
-        }
-        if matchesDynamicPrefix {
-            continue
-        }
-
-        orphaned.append(OrphanedKey(key: key, symbolName: symbolName))
+    // Skip keys that are just numbers or very short (likely placeholders or format strings)
+    if key.allSatisfy({ $0.isNumber || $0 == "." || $0 == " " }) {
+      continue
     }
 
-    return orphaned.sorted { $0.key < $1.key }
+    // Skip keys that contain format specifiers (they might be used via String(format:))
+    if key.contains("%") {
+      continue
+    }
+
+    // Skip keys without dots - these are likely:
+    // - Single-word keys that are placeholders/symbols ("+", "---", "OK")
+    // - Debug strings that don't need localization
+    // Real localization keys use dot notation: "feature.subfeature.key"
+    if !key.contains(".") {
+      continue
+    }
+
+    // Skip admin/debug keys
+    let lowercased = key.lowercased()
+    if lowercased.hasPrefix("admin.") || lowercased.hasPrefix("debug.")
+      || lowercased.contains("impersonate") || lowercased.contains("storekit")
+    {
+      continue
+    }
+
+    // Check if the key is used via any method:
+    // 1. Symbol reference (e.g., .dashboardTitle)
+    if references.symbols.contains(symbolName) {
+      continue
+    }
+
+    // 2. Direct key reference (e.g., NSLocalizedString("common.cancel", ...))
+    if references.directKeys.contains(key) {
+      continue
+    }
+
+    // 3. Dynamic prefix (e.g., "onboarding.paycheck.industry." matches "onboarding.paycheck.industry.retail")
+    let matchesDynamicPrefix = references.dynamicPrefixes.contains { prefix in
+      key.hasPrefix(prefix)
+    }
+    if matchesDynamicPrefix {
+      continue
+    }
+
+    orphaned.append(OrphanedKey(key: key, symbolName: symbolName))
+  }
+
+  return orphaned.sorted { $0.key < $1.key }
 }
 
 // MARK: - Catalog Modification
 
 /// Removes orphaned keys from the String Catalog
 private func removeKeysFromCatalog(keys: [String], catalogPath: String) -> Bool {
-    guard let data = FileManager.default.contents(atPath: catalogPath),
-          var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          var strings = json["strings"] as? [String: Any] else {
-        print("Error: Could not load String Catalog")
-        return false
-    }
+  guard let data = FileManager.default.contents(atPath: catalogPath),
+    var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    var strings = json["strings"] as? [String: Any]
+  else {
+    print("Error: Could not load String Catalog")
+    return false
+  }
 
-    var removedCount = 0
-    for key in keys where strings.removeValue(forKey: key) != nil {
-        removedCount += 1
-    }
+  var removedCount = 0
+  for key in keys where strings.removeValue(forKey: key) != nil {
+    removedCount += 1
+  }
 
-    json["strings"] = strings
+  json["strings"] = strings
 
-    let serializationOptions: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-    guard let updatedData = try? JSONSerialization.data(withJSONObject: json, options: serializationOptions) else {
-        print("Error: Could not serialize updated catalog")
-        return false
-    }
+  let serializationOptions: JSONSerialization.WritingOptions = [
+    .prettyPrinted, .sortedKeys, .withoutEscapingSlashes,
+  ]
+  guard
+    let updatedData = try? JSONSerialization.data(
+      withJSONObject: json, options: serializationOptions)
+  else {
+    print("Error: Could not serialize updated catalog")
+    return false
+  }
 
-    do {
-        try updatedData.write(to: URL(fileURLWithPath: catalogPath))
-        print("✓ Removed \(removedCount) orphaned keys from String Catalog")
-        return true
-    } catch {
-        print("Error: Could not write updated catalog: \(error)")
-        return false
-    }
+  do {
+    try updatedData.write(to: URL(fileURLWithPath: catalogPath))
+    print("✓ Removed \(removedCount) orphaned keys from String Catalog")
+    return true
+  } catch {
+    print("Error: Could not write updated catalog: \(error)")
+    return false
+  }
 }
 
 // MARK: - Main
 
 private func parseArgs() -> Config {
-    let scriptURL = URL(fileURLWithPath: #filePath)
-    let scriptsDir = scriptURL.deletingLastPathComponent()
-    // Search entire ios directory to catch usage in all targets
-    let defaultSearchPath = scriptsDir
-        .appendingPathComponent("..")
-        .standardizedFileURL
-        .path
-    let defaultCatalogPath = scriptsDir
-        .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
-        .standardizedFileURL
-        .path
+  let scriptURL = URL(fileURLWithPath: #filePath)
+  let scriptsDir = scriptURL.deletingLastPathComponent()
+  // Search entire ios directory to catch usage in all targets
+  let defaultSearchPath =
+    scriptsDir
+    .appendingPathComponent("..")
+    .standardizedFileURL
+    .path
+  let defaultCatalogPath =
+    scriptsDir
+    .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
+    .standardizedFileURL
+    .path
 
-    var searchPath = defaultSearchPath
-    var catalogPath = defaultCatalogPath
-    var strict = false
-    var checkHardcoded = true
-    var checkOrphaned = true
-    var jsonOutput = false
-    var removeOrphaned = false
+  var searchPath = defaultSearchPath
+  var catalogPath = defaultCatalogPath
+  var strict = false
+  var checkHardcoded = true
+  var checkOrphaned = true
+  var jsonOutput = false
+  var removeOrphaned = false
 
-    var iterator = CommandLine.arguments.dropFirst().makeIterator()
-    while let arg = iterator.next() {
-        switch arg {
-        case "--path", "-p":
-            searchPath = iterator.next() ?? searchPath
-        case "--catalog", "-c":
-            catalogPath = iterator.next() ?? catalogPath
-        case "--strict", "-s":       strict = true
-        case "--hardcoded-only":     checkOrphaned = false
-        case "--orphaned-only":      checkHardcoded = false
-        case "--json":               jsonOutput = true
-        case "--remove":             removeOrphaned = true; checkHardcoded = false
-        case "--help", "-h":         printHelp(); exit(0)
-        default: continue
-        }
+  var iterator = CommandLine.arguments.dropFirst().makeIterator()
+  while let arg = iterator.next() {
+    switch arg {
+    case "--path", "-p":
+      searchPath = iterator.next() ?? searchPath
+    case "--catalog", "-c":
+      catalogPath = iterator.next() ?? catalogPath
+    case "--strict", "-s": strict = true
+    case "--hardcoded-only": checkOrphaned = false
+    case "--orphaned-only": checkHardcoded = false
+    case "--json": jsonOutput = true
+    case "--remove":
+      removeOrphaned = true
+      checkHardcoded = false
+    case "--help", "-h":
+      printHelp()
+      exit(0)
+    default: continue
     }
+  }
 
-    return Config(
-        searchPath: searchPath,
-        catalogPath: catalogPath,
-        strict: strict,
-        checkHardcoded: checkHardcoded,
-        checkOrphaned: checkOrphaned,
-        jsonOutput: jsonOutput,
-        removeOrphaned: removeOrphaned
-    )
+  return Config(
+    searchPath: searchPath,
+    catalogPath: catalogPath,
+    strict: strict,
+    checkHardcoded: checkHardcoded,
+    checkOrphaned: checkOrphaned,
+    jsonOutput: jsonOutput,
+    removeOrphaned: removeOrphaned
+  )
 }
 
 private func printHelp() {
-    print("""
+  print(
+    """
     audit-strings - Audit localization strings in Swift code
 
     Usage: swift run audit-strings [options]
@@ -529,96 +549,98 @@ private func printHelp() {
 }
 
 private func checkHardcodedStrings(config: Config) -> Bool {
-    print("Scanning for hardcoded strings in: \(config.searchPath)\n")
+  print("Scanning for hardcoded strings in: \(config.searchPath)\n")
 
-    let allViolations = findSwiftFiles(in: config.searchPath)
-        .flatMap { scanFileForHardcodedStrings($0) }
+  let allViolations = findSwiftFiles(in: config.searchPath)
+    .flatMap { scanFileForHardcodedStrings($0) }
 
-    guard !allViolations.isEmpty else {
-        print("✓ No hardcoded strings found!\n")
-        return false
-    }
+  guard !allViolations.isEmpty else {
+    print("✓ No hardcoded strings found!\n")
+    return false
+  }
 
-    let grouped = Dictionary(grouping: allViolations) { $0.file }
-    print("Found \(allViolations.count) potential hardcoded strings:\n")
-    for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
-        print("  \(file):")
-        for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
-        print("")
-    }
-    print("To fix: Use String Catalog symbols instead of literal strings.")
-    print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
-    print("\nTo add a new string:")
-    print("  add-strings --key \"feature.key\" --en \"English\" --nb \"Norwegian\"\n")
-    return true
+  let grouped = Dictionary(grouping: allViolations) { $0.file }
+  print("Found \(allViolations.count) potential hardcoded strings:\n")
+  for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
+    print("  \(file):")
+    for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
+    print("")
+  }
+  print("To fix: Use String Catalog symbols instead of literal strings.")
+  print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
+  print("\nTo add a new string:")
+  print("  add-strings --key \"feature.key\" --en \"English\" --nb \"Norwegian\"\n")
+  return true
 }
 
 private func printOrphanedKeysHumanReadable(_ orphaned: [OrphanedKey]) {
-    print("Found \(orphaned.count) potentially orphaned keys:\n")
-    let grouped = Dictionary(grouping: orphaned) { key -> String in
-        let parts = key.key.split(separator: ".")
-        return parts.first.map(String.init) ?? "other"
-    }
-    for (prefix, keys) in grouped.sorted(by: { $0.key < $1.key }) {
-        print("  \(prefix).*:")
-        for key in keys.prefix(10) { print("    \(key.key)") }
-        if keys.count > 10 { print("    ... and \(keys.count - 10) more") }
-        print("")
-    }
-    print("These keys exist in the String Catalog but weren't found in code.")
-    print("They may be unused and can potentially be removed.")
-    print("\nNote: Some keys may be used dynamically or in other targets.")
-    print("Verify before removing!")
+  print("Found \(orphaned.count) potentially orphaned keys:\n")
+  let grouped = Dictionary(grouping: orphaned) { key -> String in
+    let parts = key.key.split(separator: ".")
+    return parts.first.map(String.init) ?? "other"
+  }
+  for (prefix, keys) in grouped.sorted(by: { $0.key < $1.key }) {
+    print("  \(prefix).*:")
+    for key in keys.prefix(10) { print("    \(key.key)") }
+    if keys.count > 10 { print("    ... and \(keys.count - 10) more") }
+    print("")
+  }
+  print("These keys exist in the String Catalog but weren't found in code.")
+  print("They may be unused and can potentially be removed.")
+  print("\nNote: Some keys may be used dynamically or in other targets.")
+  print("Verify before removing!")
 }
 
 private func checkOrphanedKeys(config: Config) -> Bool {
-    if !config.jsonOutput && !config.removeOrphaned {
-        print("Checking for orphaned keys in String Catalog...\n")
-    }
+  if !config.jsonOutput && !config.removeOrphaned {
+    print("Checking for orphaned keys in String Catalog...\n")
+  }
 
-    let catalogKeys = loadStringCatalogKeys(from: config.catalogPath)
-    guard !catalogKeys.isEmpty else {
-        print("Warning: Could not load String Catalog or it's empty")
-        return false
-    }
+  let catalogKeys = loadStringCatalogKeys(from: config.catalogPath)
+  guard !catalogKeys.isEmpty else {
+    print("Warning: Could not load String Catalog or it's empty")
+    return false
+  }
 
-    let references = findLocalizationReferences(in: config.searchPath)
-    let orphaned = findOrphanedKeys(catalogKeys: catalogKeys, references: references)
+  let references = findLocalizationReferences(in: config.searchPath)
+  let orphaned = findOrphanedKeys(catalogKeys: catalogKeys, references: references)
 
-    guard !orphaned.isEmpty else {
-        print(config.jsonOutput ? "[]" : "✓ No orphaned keys found!")
-        return false
-    }
+  guard !orphaned.isEmpty else {
+    print(config.jsonOutput ? "[]" : "✓ No orphaned keys found!")
+    return false
+  }
 
-    let orphanedKeys = orphaned.map { $0.key }
-    if config.jsonOutput {
-        if let jsonData = try? JSONSerialization.data(withJSONObject: orphanedKeys, options: [.prettyPrinted]),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            print(jsonString)
-        }
-    } else if config.removeOrphaned {
-        print("Removing \(orphaned.count) orphaned keys from String Catalog...")
-        _ = removeKeysFromCatalog(keys: orphanedKeys, catalogPath: config.catalogPath)
-    } else {
-        printOrphanedKeysHumanReadable(orphaned)
+  let orphanedKeys = orphaned.map { $0.key }
+  if config.jsonOutput {
+    if let jsonData = try? JSONSerialization.data(
+      withJSONObject: orphanedKeys, options: [.prettyPrinted]),
+      let jsonString = String(data: jsonData, encoding: .utf8)
+    {
+      print(jsonString)
     }
-    return true
+  } else if config.removeOrphaned {
+    print("Removing \(orphaned.count) orphaned keys from String Catalog...")
+    _ = removeKeysFromCatalog(keys: orphanedKeys, catalogPath: config.catalogPath)
+  } else {
+    printOrphanedKeysHumanReadable(orphaned)
+  }
+  return true
 }
 
 private func run() {
-    let config = parseArgs()
-    var hasIssues = false
+  let config = parseArgs()
+  var hasIssues = false
 
-    if config.checkHardcoded {
-        hasIssues = checkHardcodedStrings(config: config) || hasIssues
-    }
-    if config.checkOrphaned {
-        hasIssues = checkOrphanedKeys(config: config) || hasIssues
-    }
+  if config.checkHardcoded {
+    hasIssues = checkHardcodedStrings(config: config) || hasIssues
+  }
+  if config.checkOrphaned {
+    hasIssues = checkOrphanedKeys(config: config) || hasIssues
+  }
 
-    if config.strict && hasIssues {
-        exit(1)
-    }
+  if config.strict && hasIssues {
+    exit(1)
+  }
 }
 
 run()

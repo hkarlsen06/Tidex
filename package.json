@@ -12,7 +12,8 @@
     "test": "pnpm --filter next test",
     "open-ios": "open ios/Tidex.xcodeproj",
     "localize": "node ios/scripts/translate-xcstrings.mjs",
-    "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh"
+    "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh",
+    "swift-format": "xcrun swift-format --recursive ios/ --in-place"
   },
   "pnpm": {
     "overrides": {

@@ -4,91 +4,91 @@ import Foundation
 
 /// Response from /api/sharing endpoint
 struct SharedShiftsResponse: Codable {
-    let shifts: [SharedShiftData]
-    let settings: SharedUserSettings
-    let payoutTaxSettings: SharedPayoutTaxSettings?
+  let shifts: [SharedShiftData]
+  let settings: SharedUserSettings
+  let payoutTaxSettings: SharedPayoutTaxSettings?
 }
 
 /// A shift with computed payroll data from the API
 struct SharedShiftData: Codable, Identifiable, Equatable {
-    let id: String
-    let user_id: String
-    let shift_date: String
-    let start_time: String
-    let end_time: String
-    let computed: SharedShiftComputed
-    let tax_enabled: Bool?
-    let tax_percentage: Double?
+  let id: String
+  let user_id: String
+  let shift_date: String
+  let start_time: String
+  let end_time: String
+  let computed: SharedShiftComputed
+  let tax_enabled: Bool?
+  let tax_percentage: Double?
 
-    /// Custom supplements (may be null or present)
-    let custom_supplements: CustomSupplementsData?
+  /// Custom supplements (may be null or present)
+  let custom_supplements: CustomSupplementsData?
 
-    /// Recurring shift metadata (for virtual shifts)
-    let recurring_id: String?
-    let recurring_anchor_weekday: Int?
+  /// Recurring shift metadata (for virtual shifts)
+  let recurring_id: String?
+  let recurring_anchor_weekday: Int?
 
-    var isVirtual: Bool {
-        recurring_id != nil
-    }
+  var isVirtual: Bool {
+    recurring_id != nil
+  }
 }
 
 /// Computed payroll data from the API
 struct SharedShiftComputed: Codable, Equatable {
-    let id: String
-    let durationHours: Double
-    let paidHours: Double
-    let basePay: Double
-    let supplementPay: Double
-    let gross: Double
+  let id: String
+  let durationHours: Double
+  let paidHours: Double
+  let basePay: Double
+  let supplementPay: Double
+  let gross: Double
 }
 
 /// User settings from the API response
 struct SharedUserSettings: Codable, Equatable {
-    let payroll_day: Int?
-    let half_tax_month: Int?
-    let monthly_goal: Double?
+  let payroll_day: Int?
+  let half_tax_month: Int?
+  let monthly_goal: Double?
 }
 
 /// Payout tax settings from the API
 struct SharedPayoutTaxSettings: Codable, Equatable {
-    let enabled: Bool
-    let percentage: Double
+  let enabled: Bool
+  let percentage: Double
 }
 
 // MARK: - SharedShiftData to ShiftWithComputations Conversion
 
 extension SharedShiftData {
-    /// Convert to ShiftWithComputations for use with existing UI components
-    func toShiftWithComputations() -> ShiftWithComputations {
-        let shiftRow = ShiftRow(
-            id: id,
-            user_id: user_id,
-            shift_date: shift_date,
-            start_time: start_time,
-            end_time: end_time,
-            custom_supplements: custom_supplements,
-            created_at: nil,
-            recurring_id: recurring_id,
-            recurring_anchor_weekday: recurring_anchor_weekday
-        )
+  /// Convert to ShiftWithComputations for use with existing UI components
+  func toShiftWithComputations() -> ShiftWithComputations {
+    let shiftRow = ShiftRow(
+      id: id,
+      user_id: user_id,
+      shift_date: shift_date,
+      start_time: start_time,
+      end_time: end_time,
+      custom_supplements: custom_supplements,
+      created_at: nil,
+      recurring_id: recurring_id,
+      recurring_anchor_weekday: recurring_anchor_weekday
+    )
 
-        let shiftComputed = ShiftComputed(
-            id: id,
-            durationHours: computed.durationHours,
-            paidHours: computed.paidHours,
-            basePay: computed.basePay,
-            supplementPay: computed.supplementPay,
-            gross: computed.gross,
-            wagePeriods: [], // Not provided by API
-            originalWagePeriods: [], // Not provided by API
-            breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
-        )
+    let shiftComputed = ShiftComputed(
+      id: id,
+      durationHours: computed.durationHours,
+      paidHours: computed.paidHours,
+      basePay: computed.basePay,
+      supplementPay: computed.supplementPay,
+      gross: computed.gross,
+      wagePeriods: [],  // Not provided by API
+      originalWagePeriods: [],  // Not provided by API
+      breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
+    )
 
-        return ShiftWithComputations(
-            shift: shiftRow,
-            computed: shiftComputed,
-            taxEnabled: tax_enabled ?? false,
-            taxPercentage: tax_percentage ?? 0
-        )
-    }
+    return ShiftWithComputations(
+      shift: shiftRow,
+      computed: shiftComputed,
+      taxEnabled: tax_enabled ?? false,
+      taxPercentage: tax_percentage ?? 0
+    )
+  }
 }

@@ -3,12 +3,12 @@ import WidgetKit
 
 @main
 struct TidexShiftWidgetBundle: WidgetBundle {
-    var body: some Widget {
-        ShiftHomeWidget()
-        ShiftLockScreenWidget()
-        ShiftLiveActivity()
-        FriendShiftWidget()
-        TotalCardWidget()
-        FriendsWidget()
-    }
+  var body: some Widget {
+    ShiftHomeWidget()
+    ShiftLockScreenWidget()
+    ShiftLiveActivity()
+    FriendShiftWidget()
+    TotalCardWidget()
+    FriendsWidget()
+  }
 }

@@ -5,287 +5,294 @@ import Foundation
 // MARK: - Models (must match add-strings.swift exactly to avoid mangling JSON)
 
 private struct Catalog: Codable {
-    var sourceLanguage: String
-    var strings: [String: CatalogEntry]
-    var version: String
+  var sourceLanguage: String
+  var strings: [String: CatalogEntry]
+  var version: String
 }
 
 private struct CatalogEntry: Codable {
-    var extractionState: String?
-    var localizations: [String: CatalogLocalization]?
+  var extractionState: String?
+  var localizations: [String: CatalogLocalization]?
 }
 
 private struct CatalogLocalization: Codable {
-    var stringUnit: CatalogStringUnit?
-    var variations: CatalogVariations?
+  var stringUnit: CatalogStringUnit?
+  var variations: CatalogVariations?
 }
 
 private struct CatalogVariations: Codable {
-    var plural: [String: CatalogPluralForm]?
-    var device: [String: CatalogPluralForm]?
+  var plural: [String: CatalogPluralForm]?
+  var device: [String: CatalogPluralForm]?
 }
 
 private struct CatalogPluralForm: Codable {
-    var stringUnit: CatalogStringUnit?
+  var stringUnit: CatalogStringUnit?
 }
 
 private struct CatalogStringUnit: Codable {
-    var state: String
-    var value: String
+  var state: String
+  var value: String
 }
 
 // MARK: - Config
 
 private struct Config {
-    let query: String
-    let searchKeys: Bool
-    let searchValues: Bool
-    let catalogPath: String
-    let showSymbol: Bool
-    let limit: Int?
+  let query: String
+  let searchKeys: Bool
+  let searchValues: Bool
+  let catalogPath: String
+  let showSymbol: Bool
+  let limit: Int?
 }
 
 // MARK: - Errors
 
 private enum SearchError: Error, CustomStringConvertible {
-    case missingArguments
-    case fileNotFound(String)
-    case noResults(String)
+  case missingArguments
+  case fileNotFound(String)
+  case noResults(String)
 
-    var description: String {
-        switch self {
-        case .missingArguments:
-            return """
-            Usage: search-strings <query> [options]
+  var description: String {
+    switch self {
+    case .missingArguments:
+      return """
+        Usage: search-strings <query> [options]
 
-            Searches the string catalog for keys and/or values matching the query.
+        Searches the string catalog for keys and/or values matching the query.
 
-            Examples:
-              search-strings "save"                  Search keys and values
-              search-strings "save" --keys-only      Search keys only
-              search-strings "save" --values-only    Search values only
-              search-strings "lagre" --limit 5       Limit results
+        Examples:
+          search-strings "save"                  Search keys and values
+          search-strings "save" --keys-only      Search keys only
+          search-strings "save" --values-only    Search values only
+          search-strings "lagre" --limit 5       Limit results
 
-            Options:
-              <query>        The search term (case-insensitive substring match)
-              --keys-only    Only search in localization keys
-              --values-only  Only search in translation values
-              --no-symbol    Don't show the Swift symbol name
-              --limit N      Limit the number of results shown
-              --catalog, -c  Path to xcstrings file (defaults to App catalog)
-              --help, -h     Show this help message
-            """
-        case .fileNotFound(let path):
-            return "String catalog not found: \(path)"
-        case .noResults(let query):
-            return "No strings found matching '\(query)'"
-        }
+        Options:
+          <query>        The search term (case-insensitive substring match)
+          --keys-only    Only search in localization keys
+          --values-only  Only search in translation values
+          --no-symbol    Don't show the Swift symbol name
+          --limit N      Limit the number of results shown
+          --catalog, -c  Path to xcstrings file (defaults to App catalog)
+          --help, -h     Show this help message
+        """
+    case .fileNotFound(let path):
+      return "String catalog not found: \(path)"
+    case .noResults(let query):
+      return "No strings found matching '\(query)'"
     }
+  }
 }
 
 // MARK: - Match Result
 
 private struct SearchMatch {
-    let key: String
-    let entry: CatalogEntry
-    let matchedIn: String
+  let key: String
+  let entry: CatalogEntry
+  let matchedIn: String
 }
 
 // MARK: - Main
 
 private func parseArgs() throws -> Config {
-    var query: String?
-    var keysOnly = false
-    var valuesOnly = false
-    var catalogPath: String?
-    var showSymbol = true
-    var limit: Int?
+  var query: String?
+  var keysOnly = false
+  var valuesOnly = false
+  var catalogPath: String?
+  var showSymbol = true
+  var limit: Int?
 
-    var iterator = CommandLine.arguments.dropFirst().makeIterator()
-    while let arg = iterator.next() {
-        switch arg {
-        case "--keys-only", "-k":
-            keysOnly = true
-        case "--values-only", "-v":
-            valuesOnly = true
-        case "--no-symbol":
-            showSymbol = false
-        case "--limit", "-l":
-            limit = iterator.next().flatMap(Int.init)
-        case "--catalog", "-c":
-            catalogPath = iterator.next()
-        case "--help", "-h":
-            throw SearchError.missingArguments
-        default:
-            if !arg.hasPrefix("-") && query == nil {
-                query = arg
-            }
-        }
+  var iterator = CommandLine.arguments.dropFirst().makeIterator()
+  while let arg = iterator.next() {
+    switch arg {
+    case "--keys-only", "-k":
+      keysOnly = true
+    case "--values-only", "-v":
+      valuesOnly = true
+    case "--no-symbol":
+      showSymbol = false
+    case "--limit", "-l":
+      limit = iterator.next().flatMap(Int.init)
+    case "--catalog", "-c":
+      catalogPath = iterator.next()
+    case "--help", "-h":
+      throw SearchError.missingArguments
+    default:
+      if !arg.hasPrefix("-") && query == nil {
+        query = arg
+      }
     }
+  }
 
-    guard let query else {
-        throw SearchError.missingArguments
-    }
+  guard let query else {
+    throw SearchError.missingArguments
+  }
 
-    let scriptURL = URL(fileURLWithPath: #filePath)
-    let scriptsDir = scriptURL.deletingLastPathComponent()
-    let defaultCatalog = scriptsDir
-        .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
-        .standardizedFileURL
-        .path
+  let scriptURL = URL(fileURLWithPath: #filePath)
+  let scriptsDir = scriptURL.deletingLastPathComponent()
+  let defaultCatalog =
+    scriptsDir
+    .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
+    .standardizedFileURL
+    .path
 
-    return Config(
-        query: query,
-        searchKeys: !valuesOnly,
-        searchValues: !keysOnly,
-        catalogPath: catalogPath ?? defaultCatalog,
-        showSymbol: showSymbol,
-        limit: limit
-    )
+  return Config(
+    query: query,
+    searchKeys: !valuesOnly,
+    searchValues: !keysOnly,
+    catalogPath: catalogPath ?? defaultCatalog,
+    showSymbol: showSymbol,
+    limit: limit
+  )
 }
 
 private func generateSymbolName(from key: String) -> String {
-    let parts = key.split(separator: ".")
-    guard let first = parts.first else { return key }
-    let rest = parts.dropFirst().map { part in
-        part.prefix(1).uppercased() + part.dropFirst()
-    }
-    return String(first) + rest.joined()
+  let parts = key.split(separator: ".")
+  guard let first = parts.first else { return key }
+  let rest = parts.dropFirst().map { part in
+    part.prefix(1).uppercased() + part.dropFirst()
+  }
+  return String(first) + rest.joined()
 }
 
-private func searchVariations(_ variations: CatalogVariations, query: String, locale: String) -> [String] {
-    var reasons: [String] = []
-    if let plural = variations.plural {
-        for (_, form) in plural where form.stringUnit?.value.lowercased().contains(query) == true {
-            reasons.append("\(locale)/plural")
-            break
-        }
+private func searchVariations(_ variations: CatalogVariations, query: String, locale: String)
+  -> [String]
+{
+  var reasons: [String] = []
+  if let plural = variations.plural {
+    for (_, form) in plural where form.stringUnit?.value.lowercased().contains(query) == true {
+      reasons.append("\(locale)/plural")
+      break
     }
-    if let device = variations.device {
-        for (_, form) in device where form.stringUnit?.value.lowercased().contains(query) == true {
-            reasons.append("\(locale)/device")
-            break
-        }
+  }
+  if let device = variations.device {
+    for (_, form) in device where form.stringUnit?.value.lowercased().contains(query) == true {
+      reasons.append("\(locale)/device")
+      break
     }
-    return reasons
+  }
+  return reasons
 }
 
 private func findMatches(in catalog: Catalog, config: Config) -> [SearchMatch] {
-    let queryLower = config.query.lowercased()
-    var matches: [SearchMatch] = []
+  let queryLower = config.query.lowercased()
+  var matches: [SearchMatch] = []
 
-    for (key, entry) in catalog.strings {
-        var matchReasons: [String] = []
+  for (key, entry) in catalog.strings {
+    var matchReasons: [String] = []
 
-        if config.searchKeys && key.lowercased().contains(queryLower) {
-            matchReasons.append("key")
-        }
-
-        if config.searchValues, let localizations = entry.localizations {
-            for (locale, localization) in localizations {
-                if let value = localization.stringUnit?.value,
-                   value.lowercased().contains(queryLower) {
-                    matchReasons.append(locale)
-                }
-                if let variations = localization.variations {
-                    matchReasons.append(contentsOf: searchVariations(variations, query: queryLower, locale: locale))
-                }
-            }
-        }
-
-        if !matchReasons.isEmpty {
-            let uniqueReasons = Array(Set(matchReasons)).sorted()
-            matches.append(SearchMatch(key: key, entry: entry, matchedIn: uniqueReasons.joined(separator: ", ")))
-        }
+    if config.searchKeys && key.lowercased().contains(queryLower) {
+      matchReasons.append("key")
     }
 
-    return matches.sorted { $0.key < $1.key }
+    if config.searchValues, let localizations = entry.localizations {
+      for (locale, localization) in localizations {
+        if let value = localization.stringUnit?.value,
+          value.lowercased().contains(queryLower)
+        {
+          matchReasons.append(locale)
+        }
+        if let variations = localization.variations {
+          matchReasons.append(
+            contentsOf: searchVariations(variations, query: queryLower, locale: locale))
+        }
+      }
+    }
+
+    if !matchReasons.isEmpty {
+      let uniqueReasons = Array(Set(matchReasons)).sorted()
+      matches.append(
+        SearchMatch(key: key, entry: entry, matchedIn: uniqueReasons.joined(separator: ", ")))
+    }
+  }
+
+  return matches.sorted { $0.key < $1.key }
 }
 
 private func run() throws {
-    let config = try parseArgs()
+  let config = try parseArgs()
 
-    guard FileManager.default.fileExists(atPath: config.catalogPath) else {
-        throw SearchError.fileNotFound(config.catalogPath)
-    }
+  guard FileManager.default.fileExists(atPath: config.catalogPath) else {
+    throw SearchError.fileNotFound(config.catalogPath)
+  }
 
-    let catalogURL = URL(fileURLWithPath: config.catalogPath)
-    let catalogData = try Data(contentsOf: catalogURL)
-    let catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
+  let catalogURL = URL(fileURLWithPath: config.catalogPath)
+  let catalogData = try Data(contentsOf: catalogURL)
+  let catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
-    var matches = findMatches(in: catalog, config: config)
+  var matches = findMatches(in: catalog, config: config)
 
-    guard !matches.isEmpty else {
-        throw SearchError.noResults(config.query)
-    }
+  guard !matches.isEmpty else {
+    throw SearchError.noResults(config.query)
+  }
 
-    let total = matches.count
-    if let limit = config.limit {
-        matches = Array(matches.prefix(limit))
-    }
+  let total = matches.count
+  if let limit = config.limit {
+    matches = Array(matches.prefix(limit))
+  }
 
-    print("Found \(total) string(s) matching '\(config.query)'")
-    if let limit = config.limit, total > limit {
-        print("(showing first \(limit))")
-    }
-    print("")
+  print("Found \(total) string(s) matching '\(config.query)'")
+  if let limit = config.limit, total > limit {
+    print("(showing first \(limit))")
+  }
+  print("")
 
-    for (index, match) in matches.enumerated() {
-        if index > 0 { print("") }
-        printEntry(key: match.key, entry: match.entry, matchedIn: match.matchedIn, showSymbol: config.showSymbol)
-    }
+  for (index, match) in matches.enumerated() {
+    if index > 0 { print("") }
+    printEntry(
+      key: match.key, entry: match.entry, matchedIn: match.matchedIn, showSymbol: config.showSymbol)
+  }
 }
 
 private func stateIndicator(for state: String) -> String {
-    switch state {
-    case "translated": return "ok"
-    case "needs_review": return "review"
-    case "new": return "new"
-    default: return state
-    }
+  switch state {
+  case "translated": return "ok"
+  case "needs_review": return "review"
+  case "new": return "new"
+  default: return state
+  }
 }
 
 private func formatVariations(_ forms: [String: CatalogPluralForm], kind: String) -> String {
-    let formatted = forms.keys.sorted().map { form -> String in
-        let value = forms[form]?.stringUnit?.value ?? "?"
-        return "\(form)=\"\(value)\""
-    }
-    return "(\(kind)) \(formatted.joined(separator: ", "))"
+  let formatted = forms.keys.sorted().map { form -> String in
+    let value = forms[form]?.stringUnit?.value ?? "?"
+    return "\(form)=\"\(value)\""
+  }
+  return "(\(kind)) \(formatted.joined(separator: ", "))"
 }
 
 private func printEntry(key: String, entry: CatalogEntry, matchedIn: String, showSymbol: Bool) {
-    print("  \(key)")
+  print("  \(key)")
 
-    let state = entry.extractionState ?? "automatic"
-    print("    state: \(state)  |  matched in: \(matchedIn)")
+  let state = entry.extractionState ?? "automatic"
+  print("    state: \(state)  |  matched in: \(matchedIn)")
 
-    if let localizations = entry.localizations {
-        for locale in localizations.keys.sorted() {
-            let localization = localizations[locale]!
-            if let value = localization.stringUnit?.value {
-                let indicator = stateIndicator(for: localization.stringUnit?.state ?? "unknown")
-                print("    \(locale): \"\(value)\" [\(indicator)]")
-            } else if let variations = localization.variations {
-                if let plural = variations.plural {
-                    print("    \(locale): \(formatVariations(plural, kind: "plural"))")
-                }
-                if let device = variations.device {
-                    print("    \(locale): \(formatVariations(device, kind: "device"))")
-                }
-            }
+  if let localizations = entry.localizations {
+    for locale in localizations.keys.sorted() {
+      let localization = localizations[locale]!
+      if let value = localization.stringUnit?.value {
+        let indicator = stateIndicator(for: localization.stringUnit?.state ?? "unknown")
+        print("    \(locale): \"\(value)\" [\(indicator)]")
+      } else if let variations = localization.variations {
+        if let plural = variations.plural {
+          print("    \(locale): \(formatVariations(plural, kind: "plural"))")
         }
-    } else {
-        print("    (no translations)")
+        if let device = variations.device {
+          print("    \(locale): \(formatVariations(device, kind: "device"))")
+        }
+      }
     }
+  } else {
+    print("    (no translations)")
+  }
 
-    if showSymbol {
-        print("    symbol: .\(generateSymbolName(from: key))")
-    }
+  if showSymbol {
+    print("    symbol: .\(generateSymbolName(from: key))")
+  }
 }
 
 do {
-    try run()
+  try run()
 } catch {
-    print("Error: \(error)")
-    exit(1)
+  print("Error: \(error)")
+  exit(1)
 }

@@ -5,338 +5,346 @@ import SwiftUI
 /// Modal sheet for managing sharing relationships
 /// Allows viewing/editing friends, adding new recipients, and controlling settings
 struct ManageSharingSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    @StateObject private var viewModel = ManageSharingViewModel()
+  @Environment(\.dismiss) private var dismiss
 
-    /// User ID to highlight and scroll to (from deep link)
-    var highlightUserId: String?
+  @StateObject private var viewModel = ManageSharingViewModel()
 
-    /// Whether to auto-expand the add friend form and focus the input
-    var autoExpandAddForm: Bool = false
+  /// User ID to highlight and scroll to (from deep link)
+  var highlightUserId: String?
 
-    /// Callback when visibility changes (block/unblock) to refresh the sharer list
-    var onVisibilityChange: (() -> Void)?
+  /// Whether to auto-expand the add friend form and focus the input
+  var autoExpandAddForm: Bool = false
 
-    /// Confirmation dialog state
-    @State private var friendToRemove: Friend?
-    @State private var removeAction: RemoveAction?
+  /// Callback when visibility changes (block/unblock) to refresh the sharer list
+  var onVisibilityChange: (() -> Void)?
 
-    /// Whether the highlighted user is currently pulsing
-    @State private var isHighlightActive = false
+  /// Confirmation dialog state
+  @State private var friendToRemove: Friend?
+  @State private var removeAction: RemoveAction?
 
-    enum RemoveAction {
-        case removeShare    // Revoke their access to my shifts
-        case removeSharer   // Remove them from my friends list
-    }
+  /// Whether the highlighted user is currently pulsing
+  @State private var isHighlightActive = false
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.tidexBackground
-                    .ignoresSafeArea()
+  enum RemoveAction {
+    case removeShare  // Revoke their access to my shifts
+    case removeSharer  // Remove them from my friends list
+  }
 
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            // Description
-                            descriptionSection
+  var body: some View {
+    NavigationStack {
+      ZStack {
+        Color.tidexBackground
+          .ignoresSafeArea()
 
-                            // Error banner
-                            if let error = viewModel.errorMessage {
-                                ErrorBanner(
-                                    message: error,
-                                    onRetry: {
-                                        Task {
-                                            await viewModel.refresh()
-                                        }
-                                    },
-                                    onDismiss: { viewModel.errorMessage = nil }
-                                )
-                            }
+        ScrollViewReader { scrollProxy in
+          ScrollView {
+            VStack(spacing: 20) {
+              // Description
+              descriptionSection
 
-                            // Friend sections
-                            if viewModel.isLoading {
-                                loadingView
-                            } else if viewModel.friends.isEmpty {
-                                emptyState
-                            } else {
-                                friendSections
-                            }
-
-                            // Add friend form
-                            AddFriendForm(
-                                isExpanded: $viewModel.isAddFormExpanded,
-                                identifier: $viewModel.addIdentifier,
-                                showEarnings: $viewModel.addShowEarnings,
-                                error: $viewModel.addError,
-                                isLoading: viewModel.isAdding,
-                                canAdd: viewModel.canAddMore,
-                                capacityDisplay: viewModel.capacityDisplay,
-                                onAdd: {
-                                    Task {
-                                        await viewModel.addFriend()
-                                    }
-                                },
-                                onCancel: {
-                                    viewModel.cancelAddFriend()
-                                }
-                            )
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 32)
-                    }
-                    .refreshable {
-                        await viewModel.refresh()
-                    }
-                    .onChange(of: viewModel.friends) { _, friends in
-                        // Scroll to highlighted user after friends load
-                        scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
-                    }
-                }
-            }
-            .navigationTitle(String(localized: .sharingManageTitle))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(String(localized: .commonDone)) {
-                        dismiss()
-                    }
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
-                }
-            }
-        }
-        .task {
-            await viewModel.loadFriends()
-            if autoExpandAddForm {
-                try? await Task.sleep(for: .milliseconds(300))
-                viewModel.isAddFormExpanded = true
-            }
-        }
-        .confirmationDialog(
-            confirmationTitle,
-            isPresented: .init(
-                get: { friendToRemove != nil },
-                set: { if !$0 { friendToRemove = nil; removeAction = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button(String(localized: .sharingRemove), role: .destructive) {
-                if let friend = friendToRemove, let action = removeAction {
+              // Error banner
+              if let error = viewModel.errorMessage {
+                ErrorBanner(
+                  message: error,
+                  onRetry: {
                     Task {
-                        switch action {
-                        case .removeShare:
-                            await viewModel.removeShare(for: friend)
-                        case .removeSharer:
-                            await viewModel.removeSharer(for: friend)
-                            onVisibilityChange?()
-                        }
+                      await viewModel.refresh()
                     }
+                  },
+                  onDismiss: { viewModel.errorMessage = nil }
+                )
+              }
+
+              // Friend sections
+              if viewModel.isLoading {
+                loadingView
+              } else if viewModel.friends.isEmpty {
+                emptyState
+              } else {
+                friendSections
+              }
+
+              // Add friend form
+              AddFriendForm(
+                isExpanded: $viewModel.isAddFormExpanded,
+                identifier: $viewModel.addIdentifier,
+                showEarnings: $viewModel.addShowEarnings,
+                error: $viewModel.addError,
+                isLoading: viewModel.isAdding,
+                canAdd: viewModel.canAddMore,
+                capacityDisplay: viewModel.capacityDisplay,
+                onAdd: {
+                  Task {
+                    await viewModel.addFriend()
+                  }
+                },
+                onCancel: {
+                  viewModel.cancelAddFriend()
                 }
-                friendToRemove = nil
-                removeAction = nil
+              )
             }
-            Button(String(localized: .commonCancel), role: .cancel) {
-                friendToRemove = nil
-                removeAction = nil
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+          }
+          .refreshable {
+            await viewModel.refresh()
+          }
+          .onChange(of: viewModel.friends) { _, friends in
+            // Scroll to highlighted user after friends load
+            scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
+          }
+        }
+      }
+      .navigationTitle(String(localized: .sharingManageTitle))
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button(String(localized: .commonDone)) {
+            dismiss()
+          }
+          .font(.system(size: 17, weight: .semibold))
+          .foregroundColor(.tidexBlue)
+        }
+      }
+    }
+    .task {
+      await viewModel.loadFriends()
+      if autoExpandAddForm {
+        try? await Task.sleep(for: .milliseconds(300))
+        viewModel.isAddFormExpanded = true
+      }
+    }
+    .confirmationDialog(
+      confirmationTitle,
+      isPresented: .init(
+        get: { friendToRemove != nil },
+        set: {
+          if !$0 {
+            friendToRemove = nil
+            removeAction = nil
+          }
+        }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .sharingRemove), role: .destructive) {
+        if let friend = friendToRemove, let action = removeAction {
+          Task {
+            switch action {
+            case .removeShare:
+              await viewModel.removeShare(for: friend)
+            case .removeSharer:
+              await viewModel.removeSharer(for: friend)
+              onVisibilityChange?()
             }
+          }
         }
-        .onChange(of: viewModel.friends) { _, _ in
-            // Notify parent when friends list changes
-            onVisibilityChange?()
-        }
+        friendToRemove = nil
+        removeAction = nil
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {
+        friendToRemove = nil
+        removeAction = nil
+      }
+    }
+    .onChange(of: viewModel.friends) { _, _ in
+      // Notify parent when friends list changes
+      onVisibilityChange?()
+    }
+  }
+
+  // MARK: - Confirmation Dialog Title
+
+  private var confirmationTitle: String {
+    guard let friend = friendToRemove, let action = removeAction else {
+      return ""
     }
 
-    // MARK: - Confirmation Dialog Title
+    switch action {
+    case .removeShare:
+      return String(localized: .sharingStopSharingWith(friend.displayName))
+    case .removeSharer:
+      return String(localized: .sharingRemoveFromList(friend.displayName))
+    }
+  }
 
-    private var confirmationTitle: String {
-        guard let friend = friendToRemove, let action = removeAction else {
-            return ""
-        }
+  // MARK: - Description Section
 
-        switch action {
-        case .removeShare:
-            return String(localized: .sharingStopSharingWith(friend.displayName))
-        case .removeSharer:
-            return String(localized: .sharingRemoveFromList(friend.displayName))
-        }
+  private var descriptionSection: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(.sharingManageDescription)
+        .font(.system(size: 15))
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 4)
+  }
+
+  // MARK: - Loading View
+
+  private var loadingView: some View {
+    VStack(spacing: 16) {
+      ProgressView()
+        .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+        .scaleEffect(1.2)
+
+      Text(.sharingLoadingFriends)
+        .font(.system(size: 15))
+        .foregroundColor(.tidexTextMuted)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 60)
+  }
+
+  // MARK: - Empty State
+
+  private var emptyState: some View {
+    VStack(spacing: 12) {
+      Image(systemName: "person.2")
+        .font(.system(size: 40))
+        .foregroundColor(.tidexTextMuted)
+
+      Text(.sharingNoFriends)
+        .font(.system(size: 17, weight: .medium))
+        .foregroundColor(.tidexTextPrimary)
+
+      Text(.sharingNoFriendsDescription)
+        .font(.system(size: 15))
+        .foregroundColor(.tidexTextMuted)
+        .multilineTextAlignment(.center)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 40)
+  }
+
+  // MARK: - Friend Sections
+
+  @ViewBuilder
+  private var friendSections: some View {
+    // Mutual shares
+    if !viewModel.mutualFriends.isEmpty {
+      friendSection(
+        title: String(localized: .sharingMutual),
+        friends: viewModel.mutualFriends,
+        sectionType: .mutual
+      )
     }
 
-    // MARK: - Description Section
+    // Outgoing shares (I share with them)
+    if !viewModel.outgoingOnlyFriends.isEmpty {
+      friendSection(
+        title: String(localized: .sharingIShareWith),
+        friends: viewModel.outgoingOnlyFriends,
+        sectionType: .outgoing
+      )
+    }
 
-    private var descriptionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(.sharingManageDescription)
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    // Incoming shares (they share with me)
+    if !viewModel.incomingOnlyFriends.isEmpty {
+      friendSection(
+        title: String(localized: .sharingSharesWithMe),
+        friends: viewModel.incomingOnlyFriends,
+        sectionType: .incoming
+      )
+    }
+  }
+
+  private func friendSection(title: String, friends: [Friend], sectionType: FriendSectionType)
+    -> some View
+  {
+    VStack(alignment: .leading, spacing: 8) {
+      // Section header
+      Text(title)
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundColor(.tidexTextMuted)
+        .textCase(.uppercase)
         .padding(.horizontal, 4)
-    }
 
-    // MARK: - Loading View
+      // Friends list
+      VStack(spacing: 0) {
+        ForEach(Array(friends.enumerated()), id: \.element.id) { index, friend in
+          let isHighlighted = highlightUserId == friend.id && isHighlightActive
 
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(1.2)
-
-            Text(.sharingLoadingFriends)
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextMuted)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "person.2")
-                .font(.system(size: 40))
-                .foregroundColor(.tidexTextMuted)
-
-            Text(.sharingNoFriends)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.tidexTextPrimary)
-
-            Text(.sharingNoFriendsDescription)
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextMuted)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-    }
-
-    // MARK: - Friend Sections
-
-    @ViewBuilder
-    private var friendSections: some View {
-        // Mutual shares
-        if !viewModel.mutualFriends.isEmpty {
-            friendSection(
-                title: String(localized: .sharingMutual),
-                friends: viewModel.mutualFriends,
-                sectionType: .mutual
-            )
-        }
-
-        // Outgoing shares (I share with them)
-        if !viewModel.outgoingOnlyFriends.isEmpty {
-            friendSection(
-                title: String(localized: .sharingIShareWith),
-                friends: viewModel.outgoingOnlyFriends,
-                sectionType: .outgoing
-            )
-        }
-
-        // Incoming shares (they share with me)
-        if !viewModel.incomingOnlyFriends.isEmpty {
-            friendSection(
-                title: String(localized: .sharingSharesWithMe),
-                friends: viewModel.incomingOnlyFriends,
-                sectionType: .incoming
-            )
-        }
-    }
-
-    private func friendSection(title: String, friends: [Friend], sectionType: FriendSectionType) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Section header
-            Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.tidexTextMuted)
-                .textCase(.uppercase)
-                .padding(.horizontal, 4)
-
-            // Friends list
-            VStack(spacing: 0) {
-                ForEach(Array(friends.enumerated()), id: \.element.id) { index, friend in
-                    let isHighlighted = highlightUserId == friend.id && isHighlightActive
-
-                    FriendRow(
-                        friend: friend,
-                        sectionType: sectionType,
-                        isActionInProgress: viewModel.actionInProgress == friend.id,
-                        isHighlighted: isHighlighted,
-                        onToggleMuted: {
-                            Task {
-                                await viewModel.toggleMuted(for: friend)
-                            }
-                        },
-                        onToggleBlocked: {
-                            Task {
-                                await viewModel.toggleBlocked(for: friend)
-                                onVisibilityChange?()
-                            }
-                        },
-                        onToggleEarnings: {
-                            Task {
-                                await viewModel.toggleEarnings(for: friend)
-                            }
-                        },
-                        onShareBack: {
-                            Task {
-                                await viewModel.shareBack(with: friend)
-                            }
-                        },
-                        onRemove: {
-                            // Show confirmation dialog
-                            friendToRemove = friend
-                            removeAction = sectionType == .incoming ? .removeSharer : .removeShare
-                        }
-                    )
-                    .id(friend.id) // For ScrollViewReader
-
-                    // Divider (except last item)
-                    if index < friends.count - 1 {
-                        Divider()
-                            .padding(.leading, 68)
-                    }
-                }
+          FriendRow(
+            friend: friend,
+            sectionType: sectionType,
+            isActionInProgress: viewModel.actionInProgress == friend.id,
+            isHighlighted: isHighlighted,
+            onToggleMuted: {
+              Task {
+                await viewModel.toggleMuted(for: friend)
+              }
+            },
+            onToggleBlocked: {
+              Task {
+                await viewModel.toggleBlocked(for: friend)
+                onVisibilityChange?()
+              }
+            },
+            onToggleEarnings: {
+              Task {
+                await viewModel.toggleEarnings(for: friend)
+              }
+            },
+            onShareBack: {
+              Task {
+                await viewModel.shareBack(with: friend)
+              }
+            },
+            onRemove: {
+              // Show confirmation dialog
+              friendToRemove = friend
+              removeAction = sectionType == .incoming ? .removeSharer : .removeShare
             }
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.tidexSurfacePrimary)
-            )
+          )
+          .id(friend.id)  // For ScrollViewReader
+
+          // Divider (except last item)
+          if index < friends.count - 1 {
+            Divider()
+              .padding(.leading, 68)
+          }
         }
+      }
+      .background(
+        RoundedRectangle(cornerRadius: 12)
+          .fill(Color.tidexSurfacePrimary)
+      )
+    }
+  }
+
+  // MARK: - Highlight Handling
+
+  /// Scroll to the highlighted user if present
+  private func scrollToHighlightedUserIfNeeded(scrollProxy: ScrollViewProxy, friends: [Friend]) {
+    guard let highlightUserId = highlightUserId,
+      friends.contains(where: { $0.id == highlightUserId })
+    else {
+      return
     }
 
-    // MARK: - Highlight Handling
+    // Wait for next run loop to ensure layout is complete, then scroll
+    DispatchQueue.main.async {
+      withAnimation(.easeOut(duration: 0.25)) {
+        scrollProxy.scrollTo(highlightUserId, anchor: .center)
+        isHighlightActive = true
+      }
 
-    /// Scroll to the highlighted user if present
-    private func scrollToHighlightedUserIfNeeded(scrollProxy: ScrollViewProxy, friends: [Friend]) {
-        guard let highlightUserId = highlightUserId,
-              friends.contains(where: { $0.id == highlightUserId }) else {
-            return
+      // Turn off highlight after 3 seconds
+      Task { @MainActor in
+        try? await Task.sleep(for: .seconds(3))
+        withAnimation(.easeOut(duration: 0.3)) {
+          isHighlightActive = false
         }
-
-        // Wait for next run loop to ensure layout is complete, then scroll
-        DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: 0.25)) {
-                scrollProxy.scrollTo(highlightUserId, anchor: .center)
-                isHighlightActive = true
-            }
-
-            // Turn off highlight after 3 seconds
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3))
-                withAnimation(.easeOut(duration: 0.3)) {
-                    isHighlightActive = false
-                }
-            }
-        }
+      }
     }
+  }
 }
 
 // MARK: - Preview
 
 #Preview {
-    ManageSharingSheet()
+  ManageSharingSheet()
 }

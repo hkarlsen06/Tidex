@@ -3,158 +3,160 @@ import SwiftUI
 
 /// Terms and conditions agreement checkbox with links
 struct TermsAgreementView: View {
-    @Binding var isAgreed: Bool
-    var error: String?
+  @Binding var isAgreed: Bool
+  var error: String?
 
-        @State private var safariURL: URL?
+  @State private var safariURL: URL?
 
-    private var termsURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
-    }
+  private var termsURL: URL? {
+    URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
+  }
 
-    private var privacyURL: URL? {
-        URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
-    }
+  private var privacyURL: URL? {
+    URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
+  }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Checkbox with label
-            Button(action: {
-                isAgreed.toggle()
-            }) {
-                HStack(alignment: .top, spacing: 12) {
-                    // Checkbox
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(checkboxBorderColor, lineWidth: 1.5)
-                            .frame(width: 20, height: 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(isAgreed ? Color.tidexBrandPrimary : Color.clear)
-                            )
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      // Checkbox with label
+      Button(action: {
+        isAgreed.toggle()
+      }) {
+        HStack(alignment: .top, spacing: 12) {
+          // Checkbox
+          ZStack {
+            RoundedRectangle(cornerRadius: 4)
+              .stroke(checkboxBorderColor, lineWidth: 1.5)
+              .frame(width: 20, height: 20)
+              .background(
+                RoundedRectangle(cornerRadius: 4)
+                  .fill(isAgreed ? Color.tidexBrandPrimary : Color.clear)
+              )
 
-                        if isAgreed {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
-
-                    // Label with links
-                    termsLabel
-                }
+            if isAgreed {
+              Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
             }
-            .buttonStyle(.plain)
+          }
 
-            // Error message
-            if let error = error, !error.isEmpty {
-                Text(error)
-                    .font(.system(size: 12))
-                    .foregroundColor(.tidexError)
-            }
+          // Label with links
+          termsLabel
         }
-        .fullScreenCover(item: $safariURL) { url in
-            SafariView(url: url)
-                .ignoresSafeArea()
-        }
+      }
+      .buttonStyle(.plain)
+
+      // Error message
+      if let error = error, !error.isEmpty {
+        Text(error)
+          .font(.system(size: 12))
+          .foregroundColor(.tidexError)
+      }
     }
-
-    private var checkboxBorderColor: Color {
-        if error != nil {
-            return .tidexError
-        }
-        return isAgreed ? .tidexBrandPrimary : .tidexBorder
+    .fullScreenCover(item: $safariURL) { url in
+      SafariView(url: url)
+        .ignoresSafeArea()
     }
+  }
 
-    private var termsLabel: some View {
-        // Build the terms text with proper text flow using AttributedString
-        Text(termsAttributedString)
-            .font(.system(size: 14))
-            .environment(\.openURL, OpenURLAction { url in
-                safariURL = url
-                return .handled
-            })
+  private var checkboxBorderColor: Color {
+    if error != nil {
+      return .tidexError
     }
+    return isAgreed ? .tidexBrandPrimary : .tidexBorder
+  }
 
-    private var termsAttributedString: AttributedString {
-        let prefix = String(localized: .signupTermsPrefix)
-        let termsLinkText = String(localized: .signupTermsTermsLink)
-        let andText = String(localized: .signupTermsAnd)
-        let privacyLinkText = String(localized: .signupTermsPrivacyLink)
+  private var termsLabel: some View {
+    // Build the terms text with proper text flow using AttributedString
+    Text(termsAttributedString)
+      .font(.system(size: 14))
+      .environment(
+        \.openURL,
+        OpenURLAction { url in
+          safariURL = url
+          return .handled
+        })
+  }
 
-        var result = AttributedString()
+  private var termsAttributedString: AttributedString {
+    let prefix = String(localized: .signupTermsPrefix)
+    let termsLinkText = String(localized: .signupTermsTermsLink)
+    let andText = String(localized: .signupTermsAnd)
+    let privacyLinkText = String(localized: .signupTermsPrivacyLink)
 
-        // Prefix text
-        var prefixPart = AttributedString(prefix + " ")
-        prefixPart.foregroundColor = .tidexTextSecondary
-        result.append(prefixPart)
+    var result = AttributedString()
 
-        // Terms link
-        var termsPart = AttributedString(termsLinkText)
-        termsPart.foregroundColor = .tidexBlue
-        termsPart.underlineStyle = .single
-        if let url = termsURL {
-            termsPart.link = url
-        }
-        result.append(termsPart)
+    // Prefix text
+    var prefixPart = AttributedString(prefix + " ")
+    prefixPart.foregroundColor = .tidexTextSecondary
+    result.append(prefixPart)
 
-        // Newline + "and " - force second line
-        var andPart = AttributedString("\n" + andText + " ")
-        andPart.foregroundColor = .tidexTextSecondary
-        result.append(andPart)
-
-        // Privacy link
-        var privacyPart = AttributedString(privacyLinkText)
-        privacyPart.foregroundColor = .tidexBlue
-        privacyPart.underlineStyle = .single
-        if let url = privacyURL {
-            privacyPart.link = url
-        }
-        result.append(privacyPart)
-
-        return result
+    // Terms link
+    var termsPart = AttributedString(termsLinkText)
+    termsPart.foregroundColor = .tidexBlue
+    termsPart.underlineStyle = .single
+    if let url = termsURL {
+      termsPart.link = url
     }
+    result.append(termsPart)
+
+    // Newline + "and " - force second line
+    var andPart = AttributedString("\n" + andText + " ")
+    andPart.foregroundColor = .tidexTextSecondary
+    result.append(andPart)
+
+    // Privacy link
+    var privacyPart = AttributedString(privacyLinkText)
+    privacyPart.foregroundColor = .tidexBlue
+    privacyPart.underlineStyle = .single
+    if let url = privacyURL {
+      privacyPart.link = url
+    }
+    result.append(privacyPart)
+
+    return result
+  }
 }
 
 // MARK: - Safari View
 
 /// Wrapper for presenting SFSafariViewController in SwiftUI
 struct SafariView: UIViewControllerRepresentable {
-    let url: URL
+  let url: URL
 
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        SFSafariViewController(url: url)
-    }
+  func makeUIViewController(context: Context) -> SFSafariViewController {
+    SFSafariViewController(url: url)
+  }
 
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+  func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
 // MARK: - URL Identifiable Extension
 
 extension URL: @retroactive Identifiable {
-    public var id: String { absoluteString }
+  public var id: String { absoluteString }
 }
 
 #Preview("Terms Agreement - Unchecked") {
-    VStack {
-        TermsAgreementView(isAgreed: .constant(false))
-    }
-    .padding()
-    .background(Color.tidexBackground)
+  VStack {
+    TermsAgreementView(isAgreed: .constant(false))
+  }
+  .padding()
+  .background(Color.tidexBackground)
 }
 
 #Preview("Terms Agreement - Checked") {
-    VStack {
-        TermsAgreementView(isAgreed: .constant(true))
-    }
-    .padding()
-    .background(Color.tidexBackground)
+  VStack {
+    TermsAgreementView(isAgreed: .constant(true))
+  }
+  .padding()
+  .background(Color.tidexBackground)
 }
 
 #Preview("Terms Agreement - Error") {
-    VStack {
-        TermsAgreementView(isAgreed: .constant(false), error: "You must agree to the terms")
-    }
-    .padding()
-    .background(Color.tidexBackground)
+  VStack {
+    TermsAgreementView(isAgreed: .constant(false), error: "You must agree to the terms")
+  }
+  .padding()
+  .background(Color.tidexBackground)
 }

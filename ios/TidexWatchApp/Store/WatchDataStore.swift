@@ -9,82 +9,83 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataStor
 @MainActor
 @Observable
 final class WatchDataStore {
-    static let shared = WatchDataStore()
+  static let shared = WatchDataStore()
 
-    private(set) var userShift: WatchShiftDTO?
-    private(set) var friendShifts: [WatchShiftDTO] = []
-    private(set) var currencySymbol: String = "kr"
-    private(set) var lastUpdated: Date?
-    private(set) var lastSyncTimestamp: Date?
+  private(set) var userShift: WatchShiftDTO?
+  private(set) var friendShifts: [WatchShiftDTO] = []
+  private(set) var currencySymbol: String = "kr"
+  private(set) var lastUpdated: Date?
+  private(set) var lastSyncTimestamp: Date?
 
-    /// Whether any shift data is available
-    var hasData: Bool {
-        userShift != nil || !friendShifts.isEmpty
-    }
+  /// Whether any shift data is available
+  var hasData: Bool {
+    userShift != nil || !friendShifts.isEmpty
+  }
 
-    /// Formatted "Updated X ago" text
-    var updatedAgoText: String? {
-        guard let lastUpdated = lastUpdated else { return nil }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: lastUpdated, relativeTo: Date())
-    }
+  /// Formatted "Updated X ago" text
+  var updatedAgoText: String? {
+    guard let lastUpdated = lastUpdated else { return nil }
+    let formatter = RelativeDateTimeFormatter()
+    formatter.unitsStyle = .abbreviated
+    return formatter.localizedString(for: lastUpdated, relativeTo: Date())
+  }
 
-    private init() {}
+  private init() {}
 
-    /// Update store with new payload from iPhone
-    func update(from payload: WatchDataPayload) {
-        self.userShift = payload.userShift
-        self.friendShifts = payload.friendShifts
-        self.currencySymbol = payload.currencySymbol
-        self.lastUpdated = payload.timestamp
-        self.lastSyncTimestamp = payload.lastSyncTimestamp
+  /// Update store with new payload from iPhone
+  func update(from payload: WatchDataPayload) {
+    self.userShift = payload.userShift
+    self.friendShifts = payload.friendShifts
+    self.currencySymbol = payload.currencySymbol
+    self.lastUpdated = payload.timestamp
+    self.lastSyncTimestamp = payload.lastSyncTimestamp
 
-        logger.info("Store updated: user=\(payload.userShift != nil), friends=\(payload.friendShifts.count)")
+    logger.info(
+      "Store updated: user=\(payload.userShift != nil), friends=\(payload.friendShifts.count)")
 
-        // Reload complications when data changes
-        WidgetCenter.shared.reloadAllTimelines()
-    }
+    // Reload complications when data changes
+    WidgetCenter.shared.reloadAllTimelines()
+  }
 
-    // MARK: - Localization Helpers
+  // MARK: - Localization Helpers
 
-    /// Localized string for "Shifts" title
-    var shiftsTitle: String {
-        String(localized: .watchShifts)
-    }
+  /// Localized string for "Shifts" title
+  var shiftsTitle: String {
+    String(localized: .watchShifts)
+  }
 
-    /// Localized string for "My Shift" section
-    var myShiftTitle: String {
-        String(localized: .watchMyShift)
-    }
+  /// Localized string for "My Shift" section
+  var myShiftTitle: String {
+    String(localized: .watchMyShift)
+  }
 
-    /// Localized string for "Friends" section
-    var friendsTitle: String {
-        String(localized: .watchFriends)
-    }
+  /// Localized string for "Friends" section
+  var friendsTitle: String {
+    String(localized: .watchFriends)
+  }
 
-    /// Localized string for "No Shifts"
-    var noShiftsTitle: String {
-        String(localized: .watchNoShifts)
-    }
+  /// Localized string for "No Shifts"
+  var noShiftsTitle: String {
+    String(localized: .watchNoShifts)
+  }
 
-    /// Localized string for sync instruction
-    var syncInstructionText: String {
-        String(localized: .watchSyncInstruction)
-    }
+  /// Localized string for sync instruction
+  var syncInstructionText: String {
+    String(localized: .watchSyncInstruction)
+  }
 
-    /// Localized string for "Refresh" button
-    var refreshButtonTitle: String {
-        String(localized: .watchRefresh)
-    }
+  /// Localized string for "Refresh" button
+  var refreshButtonTitle: String {
+    String(localized: .watchRefresh)
+  }
 
-    /// Localized string for "Next Shift"
-    var nextShiftTitle: String {
-        String(localized: .watchNextShift)
-    }
+  /// Localized string for "Next Shift"
+  var nextShiftTitle: String {
+    String(localized: .watchNextShift)
+  }
 
-    /// Localized string for "Shift"
-    var shiftTitle: String {
-        String(localized: .watchShift)
-    }
+  /// Localized string for "Shift"
+  var shiftTitle: String {
+    String(localized: .watchShift)
+  }
 }

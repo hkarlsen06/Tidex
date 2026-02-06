@@ -3,82 +3,80 @@ import SwiftUI
 /// Small stat card for displaying a single metric (hours, shifts, etc.)
 /// Used in a 2-column grid layout
 struct SmallStatCard: View {
-    let title: String
-    let value: String
-    let icon: String
+  let title: String
+  let value: String
+  let icon: String
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header row with title and icon
-            HStack {
-                Text(title)
-                    .font(.tidexLabel)
-                    .foregroundColor(.tidexTextSecondary)
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      // Header row with title and icon
+      HStack {
+        Text(title)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
 
-                Spacer()
+        Spacer()
 
-                Image(systemName: icon)
-                    .font(.tidexBody)
-                    .foregroundColor(.tidexTextMuted)
-            }
+        Image(systemName: icon)
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextMuted)
+      }
 
-            // Value
-            Text(value)
-                .font(.tidexStatSecondary)
-                .foregroundColor(.tidexTextPrimary)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Color.tidexSurfacePrimary)
-        .cornerRadius(24)
-        .tidexCardShadow()
+      // Value
+      Text(value)
+        .font(.tidexStatSecondary)
+        .foregroundColor(.tidexTextPrimary)
+        .minimumScaleFactor(0.6)
+        .lineLimit(1)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(20)
+    .background(Color.tidexSurfacePrimary)
+    .cornerRadius(24)
+    .tidexCardShadow()
+  }
 }
 
 /// Hours stat card with decimal formatting
 struct HoursStatCard: View {
-    let hours: Double
+  let hours: Double
 
-    
-    var body: some View {
-        SmallStatCard(
-            title: String(localized: .statsHours),
-            value: formatHours(hours),
-            icon: "clock"
-        )
-    }
+  var body: some View {
+    SmallStatCard(
+      title: String(localized: .statsHours),
+      value: formatHours(hours),
+      icon: "clock"
+    )
+  }
 
-    private func formatHours(_ hours: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 1
-        formatter.locale = Locale(identifier: "nb_NO")
-        return formatter.string(from: NSNumber(value: hours)) ?? "\(Int(hours))"
-    }
+  private func formatHours(_ hours: Double) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 0
+    formatter.maximumFractionDigits = 1
+    formatter.locale = Locale(identifier: "nb_NO")
+    return formatter.string(from: NSNumber(value: hours)) ?? "\(Int(hours))"
+  }
 }
 
 /// Shifts count stat card
 struct ShiftsStatCard: View {
-    let count: Int
+  let count: Int
 
-    
-    var body: some View {
-        SmallStatCard(
-            title: String(localized: .statsShifts),
-            value: "\(count)",
-            icon: "calendar"
-        )
-    }
+  var body: some View {
+    SmallStatCard(
+      title: String(localized: .statsShifts),
+      value: "\(count)",
+      icon: "calendar"
+    )
+  }
 }
 
 #Preview {
-    HStack(spacing: 12) {
-        HoursStatCard(hours: 60.3)
-        ShiftsStatCard(count: 9)
-    }
-    .padding()
-    .background(Color.tidexBackground)
+  HStack(spacing: 12) {
+    HoursStatCard(hours: 60.3)
+    ShiftsStatCard(count: 9)
+  }
+  .padding()
+  .background(Color.tidexBackground)
 }
