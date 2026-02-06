@@ -13,9 +13,6 @@ struct SubscriptionSettingsView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 24) {
-        // Header
-        headerSection
-
         // Error message
         if let error = viewModel.errorMessage {
           errorBanner(error)
@@ -55,7 +52,6 @@ struct SubscriptionSettingsView: View {
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .subscriptionTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .task {
       await viewModel.loadSubscriptionInfo()
     }
@@ -77,30 +73,6 @@ struct SubscriptionSettingsView: View {
       SubscriptionSafariView(url: url)
         .ignoresSafeArea()
     }
-  }
-
-  // MARK: - Header Section
-
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(
-        viewModel.hasPremiumAccess
-          ? String(localized: .subscriptionTitle)
-          : String(localized: .subscriptionChoosePlanTitle)
-      )
-      .font(.title2)
-      .fontWeight(.bold)
-      .foregroundColor(.tidexTextPrimary)
-
-      Text(
-        viewModel.hasPremiumAccess
-          ? String(localized: .subscriptionSubtitle)
-          : String(localized: .subscriptionChoosePlanSubtitle)
-      )
-      .font(.subheadline)
-      .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   // MARK: - Error Banner
@@ -262,7 +234,6 @@ struct SubscriptionSettingsView: View {
       }
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
     }
   }
 
@@ -360,7 +331,6 @@ struct SubscriptionSettingsView: View {
       .padding(16)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
     }
   }
 

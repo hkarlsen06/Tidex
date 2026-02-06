@@ -8,9 +8,6 @@ struct DataSettingsView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 24) {
-        // Header
-        headerSection
-
         // Success message
         if let success = viewModel.successMessage {
           successBanner(success)
@@ -41,7 +38,6 @@ struct DataSettingsView: View {
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .dataTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .task {
       await viewModel.loadSettings()
     }
@@ -51,22 +47,6 @@ struct DataSettingsView: View {
           viewModel.dismissShareSheet()
         }
     }
-  }
-
-  // MARK: - Header Section
-
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(.dataExportTitle)
-        .font(.title2)
-        .fontWeight(.bold)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.dataExportDescription)
-        .font(.subheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   // MARK: - Success Banner
@@ -292,7 +272,6 @@ struct DataSettingsView: View {
         RoundedRectangle(cornerRadius: 12)
           .stroke(isSelected ? Color.tidexBlue : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
       )
-      .tidexCardShadow(cornerRadius: 12)
     }
     .buttonStyle(.plain)
   }
@@ -422,7 +401,6 @@ struct DataSettingsView: View {
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexSurfacePrimary)
     )
-    .tidexCardShadow(cornerRadius: 12)
   }
 
   // MARK: - About Section

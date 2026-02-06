@@ -5,10 +5,11 @@ import os.log
 private let logger = Logger(subsystem: "no.tidex.app", category: "SettingsView")
 
 /// Settings main menu view
-/// Displays a list of settings options matching the web app's settings navigation
+/// Displays a list of settings options in iOS Settings style
 struct SettingsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.layoutDirection) private var layoutDirection
 
   /// Whether the current user is an admin
   @State private var isAdmin = false
@@ -35,133 +36,166 @@ struct SettingsView: View {
     case admin
   }
 
+  /// Compute user initials from display name for avatar fallback
+  private var userInitials: String {
+    let components = coordinator.userDisplayName.split(separator: " ")
+    if components.count >= 2 {
+      return String(components[0].prefix(1) + components[1].prefix(1)).uppercased()
+    }
+    return String(coordinator.userDisplayName.prefix(1)).uppercased()
+  }
+
   var body: some View {
     NavigationStack(path: $navigationPath) {
-      ScrollView {
-        VStack(spacing: 0) {
-          // Menu items grouped by category
-          VStack(spacing: 24) {
-            // Account & Security group
-            SettingsMenuGroup(title: String(localized: .settingsGroupAccountSecurity)) {
-              SettingsMenuItem(
-                icon: "person.circle",
-                title: String(localized: .settingsMenuAccountLabel),
-                description: String(localized: .settingsMenuAccountDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.profile)
-                }
+      List {
+        // MARK: - Profile Card
+        Section {
+          Button {
+            navigationPath.append(SettingsDestination.profile)
+          } label: {
+            HStack(spacing: 14) {
+              AvatarView(
+                url: coordinator.userAvatarUrl,
+                initials: userInitials,
+                size: 60
               )
 
-              SettingsMenuItem(
-                icon: "lock.shield",
-                title: String(localized: .settingsMenuSecurityLabel),
-                description: String(localized: .settingsMenuSecurityDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.security)
-                }
-              )
+              VStack(alignment: .leading, spacing: 2) {
+                Text(coordinator.userDisplayName)
+                  .font(.system(size: 22, weight: .semibold))
+                  .foregroundColor(.tidexTextPrimary)
 
-              SettingsMenuItem(
-                icon: "creditcard",
-                title: String(localized: .settingsMenuSubscriptionLabel),
-                description: String(localized: .settingsMenuSubscriptionDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.subscription)
-                }
-              )
-            }
-
-            // Preferences group
-            SettingsMenuGroup(title: String(localized: .settingsGroupPreferences)) {
-              SettingsMenuItem(
-                icon: "bell",
-                title: String(localized: .settingsMenuNotificationsLabel),
-                description: String(localized: .settingsMenuNotificationsDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.notifications)
-                }
-              )
-
-              SettingsMenuItem(
-                icon: "paintpalette",
-                title: String(localized: .settingsMenuAppearanceLabel),
-                description: String(localized: .settingsMenuAppearanceDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.appearance)
-                }
-              )
-            }
-
-            // App Settings group
-            SettingsMenuGroup(title: String(localized: .settingsGroupAppSettings)) {
-              SettingsMenuItem(
-                icon: "banknote",
-                title: String(localized: .settingsMenuPayLabel),
-                description: String(localized: .settingsMenuPayDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.pay)
-                }
-              )
-
-              SettingsMenuItem(
-                icon: "repeat.circle",
-                title: String(localized: .settingsMenuRecurringShiftsLabel),
-                description: String(localized: .settingsMenuRecurringShiftsDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.recurringShifts)
-                }
-              )
-            }
-
-            // Data & Support group
-            SettingsMenuGroup(title: String(localized: .settingsGroupDataSupport)) {
-              SettingsMenuItem(
-                icon: "externaldrive",
-                title: String(localized: .settingsMenuDataLabel),
-                description: String(localized: .settingsMenuDataDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.data)
-                }
-              )
-
-              SettingsMenuItem(
-                icon: "message",
-                title: String(localized: .settingsMenuFeedbackLabel),
-                description: String(localized: .settingsMenuFeedbackDescription),
-                action: {
-                  navigationPath.append(SettingsDestination.feedback)
-                }
-              )
-            }
-
-            // Admin section (only visible for admins)
-            if isAdmin {
-              SettingsMenuGroup(title: String(localized: .settingsGroupAdmin)) {
-                SettingsMenuItem(
-                  icon: "shield.lefthalf.filled.badge.checkmark",
-                  title: String(localized: .settingsMenuAdminLabel),
-                  description: String(localized: .settingsMenuAdminDescription),
-                  iconColor: .tidexWarning,
-                  action: {
-                    navigationPath.append(SettingsDestination.admin)
-                  }
-                )
+                Text(.settingsMenuAccountDescription)
+                  .font(.system(size: 14))
+                  .foregroundColor(.tidexTextSecondary)
+                  .lineLimit(1)
               }
+
+              Spacer()
+
+              Image(
+                systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
+              )
+              .font(.system(size: 14, weight: .semibold))
+              .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 6)
+          }
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+
+        // MARK: - Account & Security
+        Section(header: Text(String(localized: .settingsGroupAccountSecurity))) {
+          SettingsMenuItem(
+            icon: "lock.shield",
+            title: String(localized: .settingsMenuSecurityLabel),
+            description: String(localized: .settingsMenuSecurityDescription),
+            iconBackgroundColor: .green
+          ) {
+            navigationPath.append(SettingsDestination.security)
+          }
+
+          SettingsMenuItem(
+            icon: "creditcard",
+            title: String(localized: .settingsMenuSubscriptionLabel),
+            description: String(localized: .settingsMenuSubscriptionDescription),
+            iconBackgroundColor: .orange
+          ) {
+            navigationPath.append(SettingsDestination.subscription)
+          }
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+
+        // MARK: - Preferences
+        Section(header: Text(String(localized: .settingsGroupPreferences))) {
+          SettingsMenuItem(
+            icon: "bell",
+            title: String(localized: .settingsMenuNotificationsLabel),
+            description: String(localized: .settingsMenuNotificationsDescription),
+            iconBackgroundColor: .red
+          ) {
+            navigationPath.append(SettingsDestination.notifications)
+          }
+
+          SettingsMenuItem(
+            icon: "paintpalette",
+            title: String(localized: .settingsMenuAppearanceLabel),
+            description: String(localized: .settingsMenuAppearanceDescription),
+            iconBackgroundColor: .indigo
+          ) {
+            navigationPath.append(SettingsDestination.appearance)
+          }
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+
+        // MARK: - App Settings
+        Section(header: Text(String(localized: .settingsGroupAppSettings))) {
+          SettingsMenuItem(
+            icon: "banknote",
+            title: String(localized: .settingsMenuPayLabel),
+            description: String(localized: .settingsMenuPayDescription),
+            iconBackgroundColor: .green
+          ) {
+            navigationPath.append(SettingsDestination.pay)
+          }
+
+          SettingsMenuItem(
+            icon: "repeat.circle",
+            title: String(localized: .settingsMenuRecurringShiftsLabel),
+            description: String(localized: .settingsMenuRecurringShiftsDescription),
+            iconBackgroundColor: .purple
+          ) {
+            navigationPath.append(SettingsDestination.recurringShifts)
+          }
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+
+        // MARK: - Data & Support
+        Section(header: Text(String(localized: .settingsGroupDataSupport))) {
+          SettingsMenuItem(
+            icon: "externaldrive",
+            title: String(localized: .settingsMenuDataLabel),
+            description: String(localized: .settingsMenuDataDescription),
+            iconBackgroundColor: .gray
+          ) {
+            navigationPath.append(SettingsDestination.data)
+          }
+
+          SettingsMenuItem(
+            icon: "message",
+            title: String(localized: .settingsMenuFeedbackLabel),
+            description: String(localized: .settingsMenuFeedbackDescription),
+            iconBackgroundColor: .tidexBlue
+          ) {
+            navigationPath.append(SettingsDestination.feedback)
+          }
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+
+        // MARK: - Admin
+        if isAdmin {
+          Section(header: Text(String(localized: .settingsGroupAdmin))) {
+            SettingsMenuItem(
+              icon: "shield.lefthalf.filled.badge.checkmark",
+              title: String(localized: .settingsMenuAdminLabel),
+              description: String(localized: .settingsMenuAdminDescription),
+              iconBackgroundColor: .tidexWarning
+            ) {
+              navigationPath.append(SettingsDestination.admin)
             }
           }
-          .padding(.horizontal, 16)
-          .padding(.top, 16)
-
-          // Sign out buttons
-          VStack(spacing: 12) {
-            signOutButton
-            signOutEverywhereButton
-          }
-          .padding(.horizontal, 16)
-          .padding(.top, 32)
-          .padding(.bottom, 40)
+          .listRowBackground(Color.tidexSurfacePrimary)
         }
+
+        // MARK: - Sign Out
+        Section {
+          signOutRow
+          signOutEverywhereRow
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .listStyle(.insetGrouped)
+      .scrollContentBackground(.hidden)
       .background(Color.tidexBackground)
       .toolbar {
         ToolbarItem(placement: .principal) {
@@ -232,72 +266,50 @@ struct SettingsView: View {
     }
   }
 
-  // MARK: - Sign Out Buttons
+  // MARK: - Sign Out Rows
 
   /// Sign out from this device only (local scope)
-  private var signOutButton: some View {
+  private var signOutRow: some View {
     Button {
       Task {
         await signOut()
       }
     } label: {
-      HStack(spacing: 12) {
+      HStack {
+        Spacer()
         if isSigningOut {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-            .frame(width: 20, height: 20)
+            .tint(.tidexError)
+          Text(String(localized: .userMenuLoggingOut))
+            .foregroundColor(.tidexError)
         } else {
-          Image(systemName: "rectangle.portrait.and.arrow.right")
-            .font(.system(size: 16, weight: .medium))
+          Text(String(localized: .userMenuLogout))
+            .foregroundColor(.tidexError)
         }
-
-        Text(
-          isSigningOut
-            ? String(localized: .userMenuLoggingOut)
-            : String(localized: .userMenuLogout)
-        )
-        .font(.system(size: 16, weight: .semibold))
+        Spacer()
       }
-      .foregroundColor(.white)
-      .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
-      .background(Color.tidexError)
-      .cornerRadius(12)
     }
     .disabled(isSigningOut || isSigningOutGlobal)
   }
 
   /// Sign out from ALL devices (global scope)
-  private var signOutEverywhereButton: some View {
+  private var signOutEverywhereRow: some View {
     Button {
       showSignOutEverywhereAlert = true
     } label: {
-      HStack(spacing: 12) {
+      HStack {
+        Spacer()
         if isSigningOutGlobal {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextSecondary))
-            .frame(width: 20, height: 20)
+            .tint(.tidexTextSecondary)
+          Text(String(localized: .userMenuLogoutEverywhereLoading))
+            .foregroundColor(.tidexTextSecondary)
         } else {
-          Image(systemName: "globe")
-            .font(.system(size: 16, weight: .medium))
+          Text(String(localized: .userMenuLogoutEverywhere))
+            .foregroundColor(.tidexTextSecondary)
         }
-
-        Text(
-          isSigningOutGlobal
-            ? String(localized: .userMenuLogoutEverywhereLoading)
-            : String(localized: .userMenuLogoutEverywhere)
-        )
-        .font(.system(size: 16, weight: .semibold))
+        Spacer()
       }
-      .foregroundColor(.tidexTextSecondary)
-      .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .overlay(
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(Color.tidexBorder, lineWidth: 1)
-      )
     }
     .disabled(isSigningOut || isSigningOutGlobal)
   }
@@ -574,58 +586,40 @@ private struct RecurringShiftsSettingsView: View {
   }
 }
 
-// MARK: - Settings Menu Group
-
-/// A group of settings menu items with a section header
-struct SettingsMenuGroup<Content: View>: View {
-  let title: String
-  @ViewBuilder let content: () -> Content
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      // Section header
-      Text(title.uppercased())
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundColor(.tidexTextMuted)
-        .padding(.horizontal, 4)
-
-      // Menu items
-      VStack(spacing: 8) {
-        content()
-      }
-    }
-  }
-}
-
 // MARK: - Settings Menu Item
 
-/// A single settings menu item with icon, title, description, and chevron
+/// A single settings menu item with colored icon background, title, description, and chevron
+/// Designed for use inside a List section (iOS Settings style)
 struct SettingsMenuItem: View {
   let icon: String
   let title: String
   let description: String
-  var iconColor: Color = .tidexBlue
+  var iconBackgroundColor: Color = .tidexBlue
   let action: () -> Void
 
   @Environment(\.layoutDirection) private var layoutDirection
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: Spacing.sm) {
-        // Icon
+      HStack(spacing: 12) {
+        // Icon with colored background
         Image(systemName: icon)
-          .font(.system(size: 20))
-          .foregroundColor(iconColor)
-          .frame(width: 32, height: 32)
+          .font(.system(size: 15, weight: .medium))
+          .foregroundColor(.white)
+          .frame(width: 29, height: 29)
+          .background(
+            iconBackgroundColor,
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+          )
 
         // Title and description
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
           Text(title)
-            .font(.system(size: 16, weight: .medium))
+            .font(.body)
             .foregroundColor(.tidexTextPrimary)
 
           Text(description)
-            .font(.system(size: 13))
+            .font(.caption)
             .foregroundColor(.tidexTextSecondary)
             .lineLimit(1)
         }
@@ -634,16 +628,10 @@ struct SettingsMenuItem: View {
 
         // Chevron
         Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-          .font(.system(size: 14, weight: .medium))
-          .foregroundColor(.tidexTextMuted)
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(.tertiary)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, Spacing.sm)
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
     }
-    .buttonStyle(.plain)
   }
 }
 

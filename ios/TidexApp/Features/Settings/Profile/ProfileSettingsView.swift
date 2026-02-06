@@ -26,29 +26,34 @@ struct ProfileSettingsView: View {
   @State private var showCropSheet = false
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: 24) {
-        // Error banner (for avatar upload, name save, etc.)
-        if let error = viewModel.errorMessage, !viewModel.showEmailChangeSheet {
+    List {
+      // Error banner (for avatar upload, name save, etc.)
+      if let error = viewModel.errorMessage, !viewModel.showEmailChangeSheet {
+        Section {
           ErrorBanner(
             message: error,
             onDismiss: { viewModel.errorMessage = nil }
           )
         }
-
-        // Personal Info Section
-        personalInfoSection
-
-        // Danger Zone Section
-        dangerZoneSection
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+
+      // Personal Info Section
+      Section(header: Text(String(localized: .profilePersonalInfoTitle))) {
+        avatarSection
+        nameField
+        emailField
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
+
+      // Danger Zone Section
+      dangerZoneSection
     }
+    .listStyle(.insetGrouped)
+    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .profileTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .task {
       await viewModel.loadProfile()
     }
@@ -287,39 +292,6 @@ struct ProfileSettingsView: View {
     }
   }
 
-  // MARK: - Personal Info Section
-
-  private var personalInfoSection: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      // Section header
-      Text(.profilePersonalInfoTitle)
-        .font(.title2)
-        .fontWeight(.semibold)
-        .foregroundColor(.tidexTextPrimary)
-
-      VStack(spacing: 20) {
-        // Avatar section
-        avatarSection
-
-        Divider()
-          .background(Color.tidexBorder)
-
-        // Name field
-        nameField
-
-        Divider()
-          .background(Color.tidexBorder)
-
-        // Email field (read-only)
-        emailField
-      }
-      .padding(16)
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
-    }
-  }
-
   // MARK: - Avatar Section
 
   /// Button text for the photo picker - computed to avoid main actor issues in closure
@@ -528,57 +500,43 @@ struct ProfileSettingsView: View {
   // MARK: - Danger Zone Section
 
   private var dangerZoneSection: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      // Section header
-      Text(.profileDangerZoneTitle)
-        .font(.system(size: 14, weight: .semibold))
+    Section(
+      header: Text(String(localized: .profileDangerZoneTitle))
         .foregroundColor(.tidexError)
+    ) {
+      Text(.profileDangerZoneSubtitle)
+        .font(.system(size: 13))
+        .foregroundColor(.tidexTextSecondary)
 
-      VStack(alignment: .leading, spacing: 12) {
-        Text(.profileDangerZoneSubtitle)
-          .font(.system(size: 13))
-          .foregroundColor(.tidexTextSecondary)
+      // Delete account row
+      HStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 4) {
+          Text(.profileDangerZoneDeleteAccountTitle)
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.tidexTextPrimary)
 
-        Divider()
-          .background(Color.tidexError.opacity(0.3))
-
-        // Delete account row
-        HStack(spacing: 16) {
-          VStack(alignment: .leading, spacing: 4) {
-            Text(.profileDangerZoneDeleteAccountTitle)
-              .font(.system(size: 15, weight: .medium))
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.profileDangerZoneDeleteAccountDescription)
-              .font(.system(size: 13))
-              .foregroundColor(.tidexTextSecondary)
-          }
-
-          Spacer()
-
-          Button {
-            viewModel.showDeleteConfirmation = true
-          } label: {
-            Text(.profileDangerZoneDeleteAccountButton)
-              .font(.system(size: 14, weight: .semibold))
-              .foregroundColor(.white)
-              .padding(.horizontal, 16)
-              .padding(.vertical, Spacing.sm)
-              .background(Color.tidexError)
-              .cornerRadius(8)
-          }
-          .disabled(viewModel.isDeletingAccount)
+          Text(.profileDangerZoneDeleteAccountDescription)
+            .font(.system(size: 13))
+            .foregroundColor(.tidexTextSecondary)
         }
+
+        Spacer()
+
+        Button {
+          viewModel.showDeleteConfirmation = true
+        } label: {
+          Text(.profileDangerZoneDeleteAccountButton)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, Spacing.sm)
+            .background(Color.tidexError)
+            .cornerRadius(8)
+        }
+        .disabled(viewModel.isDeletingAccount)
       }
-      .padding(16)
-      .background(Color.tidexSurfacePrimary)
-      .overlay(
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
-      )
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
     }
+    .listRowBackground(Color.tidexSurfacePrimary)
   }
 
   // MARK: - Photo Selection Handler

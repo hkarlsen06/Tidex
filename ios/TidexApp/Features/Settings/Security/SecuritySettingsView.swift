@@ -8,75 +8,77 @@ struct SecuritySettingsView: View {
   @StateObject private var viewModel = SecuritySettingsViewModel()
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: 24) {
-        // Header
-        headerSection
-
-        // Error/Success messages
-        if let error = viewModel.errorMessage {
-          HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.circle.fill")
-              .foregroundColor(.tidexError)
-            Text(error)
-              .font(.system(size: 14))
-              .foregroundColor(.tidexError)
-            Spacer()
-            Button {
-              viewModel.clearMessages()
-            } label: {
-              Image(systemName: "xmark")
-                .font(.system(size: 12, weight: .semibold))
+    List {
+      // Error/Success messages
+      if viewModel.errorMessage != nil || viewModel.successMessage != nil {
+        Section {
+          if let error = viewModel.errorMessage {
+            HStack(spacing: 8) {
+              Image(systemName: "exclamationmark.circle.fill")
                 .foregroundColor(.tidexError)
+              Text(error)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexError)
+              Spacer()
+              Button {
+                viewModel.clearMessages()
+              } label: {
+                Image(systemName: "xmark")
+                  .font(.system(size: 12, weight: .semibold))
+                  .foregroundColor(.tidexError)
+              }
             }
+            .padding(12)
+            .background(Color.tidexError.opacity(0.1))
+            .cornerRadius(8)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
           }
-          .padding(12)
-          .background(Color.tidexError.opacity(0.1))
-          .cornerRadius(8)
-        }
 
-        if let success = viewModel.successMessage {
-          HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundColor(.tidexSuccess)
-            Text(success)
-              .font(.system(size: 14))
-              .foregroundColor(.tidexSuccess)
-            Spacer()
-            Button {
-              viewModel.clearMessages()
-            } label: {
-              Image(systemName: "xmark")
-                .font(.system(size: 12, weight: .semibold))
+          if let success = viewModel.successMessage {
+            HStack(spacing: 8) {
+              Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.tidexSuccess)
+              Text(success)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexSuccess)
+              Spacer()
+              Button {
+                viewModel.clearMessages()
+              } label: {
+                Image(systemName: "xmark")
+                  .font(.system(size: 12, weight: .semibold))
+                  .foregroundColor(.tidexSuccess)
+              }
             }
+            .padding(12)
+            .background(Color.tidexSuccess.opacity(0.1))
+            .cornerRadius(8)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
           }
-          .padding(12)
-          .background(Color.tidexSuccess.opacity(0.1))
-          .cornerRadius(8)
         }
-
-        // Biometric lock section (only show if available)
-        if viewModel.isBiometricAvailable {
-          biometricLockSection
-        }
-
-        // Password section
-        passwordSection
-
-        // Connected accounts section
-        connectedAccountsSection
-
-        // MFA section
-        mfaSection
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+
+      // Biometric lock section (only show if available)
+      if viewModel.isBiometricAvailable {
+        biometricLockSection
+      }
+
+      // Password section
+      passwordSection
+
+      // Connected accounts section
+      connectedAccountsSection
+
+      // MFA section
+      mfaSection
     }
+    .listStyle(.insetGrouped)
+    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .securityTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .task {
       await viewModel.loadSecurityInfo()
     }
@@ -108,48 +110,25 @@ struct SecuritySettingsView: View {
     }
   }
 
-  // MARK: - Header Section
-
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(.securityTitle)
-        .font(.title2)
-        .fontWeight(.bold)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.securitySubtitle)
-        .font(.subheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
   // MARK: - Biometric Lock Section
 
   private var biometricLockSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      // Section header
-      VStack(alignment: .leading, spacing: 4) {
-        Text(.securityBiometricSectionTitle)
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundColor(.tidexTextMuted)
-          .textCase(.uppercase)
-
-        Text(.securityBiometricSectionSubtitle)
-          .font(.system(size: 13))
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      // Biometric toggle card
-      VStack(spacing: 0) {
+    Section(
+      header: Text(String(localized: .securityBiometricSectionTitle)),
+      footer: Text(.securityBiometricSectionSubtitle)
+    ) {
+      if viewModel.isTogglingBiometric {
         HStack(spacing: Spacing.sm) {
           // Icon
-          Image(systemName: viewModel.biometricIconName)
-            .font(.system(size: 20))
-            .foregroundColor(.tidexBlue)
-            .frame(width: 32, height: 32)
+          RoundedRectangle(cornerRadius: 6)
+            .fill(Color.tidexBlue)
+            .frame(width: 29, height: 29)
+            .overlay(
+              Image(systemName: viewModel.biometricIconName)
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+            )
 
-          // Content
           VStack(alignment: .leading, spacing: 2) {
             Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
               .font(.system(size: 16, weight: .medium))
@@ -166,177 +145,171 @@ struct SecuritySettingsView: View {
 
           Spacer()
 
-          // Toggle
-          if viewModel.isTogglingBiometric {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-              .scaleEffect(0.8)
-          } else {
-            Toggle(
-              "",
-              isOn: Binding(
-                get: { viewModel.isBiometricLockEnabled },
-                set: { _ in
-                  Task {
-                    await viewModel.toggleBiometricLock()
-                  }
-                }
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+            .scaleEffect(0.8)
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+      } else {
+        Toggle(
+          isOn: Binding(
+            get: { viewModel.isBiometricLockEnabled },
+            set: { _ in
+              Task {
+                await viewModel.toggleBiometricLock()
+              }
+            }
+          )
+        ) {
+          HStack(spacing: Spacing.sm) {
+            // Icon
+            RoundedRectangle(cornerRadius: 6)
+              .fill(Color.tidexBlue)
+              .frame(width: 29, height: 29)
+              .overlay(
+                Image(systemName: viewModel.biometricIconName)
+                  .font(.system(size: 14))
+                  .foregroundColor(.white)
               )
-            )
-            .labelsHidden()
-            .tint(.tidexBlue)
+
+            VStack(alignment: .leading, spacing: 2) {
+              Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.tidexTextPrimary)
+
+              Text(
+                viewModel.isBiometricLockEnabled
+                  ? String(localized: .securityBiometricEnabled)
+                  : String(localized: .securityBiometricDisabled)
+              )
+              .font(.system(size: 13))
+              .foregroundColor(.tidexTextSecondary)
+            }
           }
         }
-        .padding(16)
+        .tint(.tidexBlue)
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
     }
   }
 
   // MARK: - Password Section
 
   private var passwordSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      // Section header
-      Text(.securityPasswordSectionTitle)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(.tidexTextMuted)
-        .textCase(.uppercase)
+    Section(header: Text(String(localized: .securityPasswordSectionTitle))) {
+      HStack(spacing: Spacing.sm) {
+        // Icon
+        RoundedRectangle(cornerRadius: 6)
+          .fill(Color.orange)
+          .frame(width: 29, height: 29)
+          .overlay(
+            Image(systemName: "lock.fill")
+              .font(.system(size: 14))
+              .foregroundColor(.white)
+          )
 
-      // Password card
-      VStack(spacing: 0) {
-        HStack(spacing: Spacing.sm) {
-          // Icon
-          Image(systemName: "lock.fill")
-            .font(.system(size: 20))
-            .foregroundColor(.tidexBlue)
-            .frame(width: 32, height: 32)
+        // Content
+        VStack(alignment: .leading, spacing: 2) {
+          Text(.securityPasswordTitle)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(.tidexTextPrimary)
 
-          // Content
-          VStack(alignment: .leading, spacing: 2) {
-            Text(.securityPasswordTitle)
-              .font(.system(size: 16, weight: .medium))
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(
-              viewModel.hasPassword
-                ? String(localized: .securityPasswordHasPassword)
-                : String(localized: .securityPasswordNoPassword)
-            )
-            .font(.system(size: 13))
-            .foregroundColor(.tidexTextSecondary)
-          }
-
-          Spacer()
-
-          // Button
-          Button {
-            viewModel.showPasswordForm = true
-          } label: {
-            Text(
-              viewModel.hasPassword
-                ? String(localized: .securityPasswordChange)
-                : String(localized: .securityPasswordSet)
-            )
-            .font(.system(size: 14, weight: .medium))
-            .foregroundColor(viewModel.hasPassword ? .tidexBlue : .white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
-            .cornerRadius(8)
-          }
+          Text(
+            viewModel.hasPassword
+              ? String(localized: .securityPasswordHasPassword)
+              : String(localized: .securityPasswordNoPassword)
+          )
+          .font(.system(size: 13))
+          .foregroundColor(.tidexTextSecondary)
         }
-        .padding(16)
+
+        Spacer()
+
+        // Button
+        Button {
+          viewModel.showPasswordForm = true
+        } label: {
+          Text(
+            viewModel.hasPassword
+              ? String(localized: .securityPasswordChange)
+              : String(localized: .securityPasswordSet)
+          )
+          .font(.system(size: 14, weight: .medium))
+          .foregroundColor(viewModel.hasPassword ? .tidexBlue : .white)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 8)
+          .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
+          .cornerRadius(8)
+        }
       }
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
   // MARK: - Connected Accounts Section
 
   private var connectedAccountsSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      // Section header
-      VStack(alignment: .leading, spacing: 4) {
-        Text(.securityConnectionsSectionTitle)
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundColor(.tidexTextMuted)
-          .textCase(.uppercase)
+    Section(
+      header: Text(String(localized: .securityConnectionsSectionTitle)),
+      footer: Text(.securityConnectionsSectionSubtitle)
+    ) {
+      // Phone connection
+      connectionRow(
+        icon: "phone.fill",
+        iconColor: .green,
+        title: String(localized: .securityConnectionsPhoneTitle),
+        isConnected: viewModel.hasPhoneConnected,
+        connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
+          ?? String(localized: .securityConnectionsPhoneConnected),
+        notConnectedText: String(localized: .securityConnectionsPhoneNotConnected),
+        canDisconnect: viewModel.canUnlinkPhone,
+        onConnect: {
+          viewModel.showPhoneLinkingSheet = true
+        },
+        onDisconnect: {
+          Task { await viewModel.disconnectProvider("phone") }
+        },
+        connectDisabled: false
+      )
+      .listRowBackground(Color.tidexSurfacePrimary)
 
-        Text(.securityConnectionsSectionSubtitle)
-          .font(.system(size: 13))
-          .foregroundColor(.tidexTextSecondary)
-      }
+      // Google connection
+      connectionRow(
+        icon: "g.circle.fill",
+        iconColor: .red,
+        title: String(localized: .securityConnectionsGoogleTitle),
+        isConnected: viewModel.hasGoogleConnected,
+        connectedText: String(localized: .securityConnectionsGoogleConnected),
+        notConnectedText: String(localized: .securityConnectionsGoogleNotConnected),
+        canDisconnect: viewModel.canDisconnectGoogle,
+        onConnect: {
+          Task { await viewModel.connectGoogle() }
+        },
+        onDisconnect: {
+          Task { await viewModel.disconnectProvider("google") }
+        },
+        connectDisabled: false
+      )
+      .listRowBackground(Color.tidexSurfacePrimary)
 
-      // Connection cards
-      VStack(spacing: 2) {
-        // Phone connection
-        connectionRow(
-          icon: "phone.fill",
-          title: String(localized: .securityConnectionsPhoneTitle),
-          isConnected: viewModel.hasPhoneConnected,
-          connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
-            ?? String(localized: .securityConnectionsPhoneConnected),
-          notConnectedText: String(localized: .securityConnectionsPhoneNotConnected),
-          canDisconnect: viewModel.canUnlinkPhone,
-          onConnect: {
-            viewModel.showPhoneLinkingSheet = true
-          },
-          onDisconnect: {
-            Task { await viewModel.disconnectProvider("phone") }
-          },
-          connectDisabled: false
-        )
-
-        Divider()
-          .background(Color.tidexBorder)
-          .padding(.horizontal, 16)
-
-        // Google connection
-        connectionRow(
-          icon: "g.circle.fill",
-          title: String(localized: .securityConnectionsGoogleTitle),
-          isConnected: viewModel.hasGoogleConnected,
-          connectedText: String(localized: .securityConnectionsGoogleConnected),
-          notConnectedText: String(localized: .securityConnectionsGoogleNotConnected),
-          canDisconnect: viewModel.canDisconnectGoogle,
-          onConnect: {
-            Task { await viewModel.connectGoogle() }
-          },
-          onDisconnect: {
-            Task { await viewModel.disconnectProvider("google") }
-          },
-          connectDisabled: false
-        )
-
-        Divider()
-          .background(Color.tidexBorder)
-          .padding(.horizontal, 16)
-
-        // Apple connection
-        connectionRow(
-          icon: "apple.logo",
-          title: String(localized: .securityConnectionsAppleTitle),
-          isConnected: viewModel.hasAppleConnected,
-          connectedText: String(localized: .securityConnectionsAppleConnected),
-          notConnectedText: String(localized: .securityConnectionsAppleNotConnected),
-          canDisconnect: viewModel.canDisconnectApple,
-          onConnect: {
-            Task { await viewModel.connectApple() }
-          },
-          onDisconnect: {
-            Task { await viewModel.disconnectProvider("apple") }
-          },
-          connectDisabled: false
-        )
-      }
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
+      // Apple connection
+      connectionRow(
+        icon: "apple.logo",
+        iconColor: Color(.systemGray),
+        title: String(localized: .securityConnectionsAppleTitle),
+        isConnected: viewModel.hasAppleConnected,
+        connectedText: String(localized: .securityConnectionsAppleConnected),
+        notConnectedText: String(localized: .securityConnectionsAppleNotConnected),
+        canDisconnect: viewModel.canDisconnectApple,
+        onConnect: {
+          Task { await viewModel.connectApple() }
+        },
+        onDisconnect: {
+          Task { await viewModel.disconnectProvider("apple") }
+        },
+        connectDisabled: false
+      )
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
@@ -344,6 +317,7 @@ struct SecuritySettingsView: View {
   // swiftlint:disable:next function_parameter_count
   private func connectionRow(
     icon: String,
+    iconColor: Color,
     title: String,
     isConnected: Bool,
     connectedText: String,
@@ -355,10 +329,14 @@ struct SecuritySettingsView: View {
   ) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      Image(systemName: icon)
-        .font(.system(size: 20))
-        .foregroundColor(.tidexBlue)
-        .frame(width: 32, height: 32)
+      RoundedRectangle(cornerRadius: 6)
+        .fill(iconColor)
+        .frame(width: 29, height: 29)
+        .overlay(
+          Image(systemName: icon)
+            .font(.system(size: 14))
+            .foregroundColor(.white)
+        )
 
       // Content
       VStack(alignment: .leading, spacing: 2) {
@@ -430,114 +408,65 @@ struct SecuritySettingsView: View {
         .disabled(viewModel.isConnectingProvider)
       }
     }
-    .padding(16)
   }
 
   // MARK: - MFA Section
 
   private var mfaSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      // Section header
-      VStack(alignment: .leading, spacing: 4) {
-        Text(.securityMfaSectionTitle)
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundColor(.tidexTextMuted)
-          .textCase(.uppercase)
+    Section(
+      header: Text(String(localized: .securityMfaSectionTitle)),
+      footer: Text(.securityMfaSectionSubtitle)
+    ) {
+      // Enrolled factors
+      if viewModel.mfaFactors.isEmpty {
+        HStack(spacing: Spacing.sm) {
+          RoundedRectangle(cornerRadius: 6)
+            .fill(Color.indigo)
+            .frame(width: 29, height: 29)
+            .overlay(
+              Image(systemName: "shield.slash")
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+            )
 
-        Text(.securityMfaSectionSubtitle)
-          .font(.system(size: 13))
-          .foregroundColor(.tidexTextSecondary)
+          Text(.securityMfaNoFactors)
+            .font(.system(size: 14))
+            .foregroundColor(.tidexTextSecondary)
+
+          Spacer()
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+      } else {
+        ForEach(viewModel.mfaFactors) { factor in
+          mfaFactorRow(factor)
+            .listRowBackground(Color.tidexSurfacePrimary)
+        }
       }
 
-      // MFA card
-      VStack(spacing: 0) {
-        // Enrolled factors
-        if viewModel.mfaFactors.isEmpty {
-          HStack(spacing: Spacing.sm) {
-            Image(systemName: "shield.slash")
-              .font(.system(size: 20))
-              .foregroundColor(.tidexTextMuted)
-              .frame(width: 32, height: 32)
-
-            Text(.securityMfaNoFactors)
-              .font(.system(size: 14))
-              .foregroundColor(.tidexTextSecondary)
-
-            Spacer()
-          }
-          .padding(16)
-        } else {
-          ForEach(viewModel.mfaFactors) { factor in
-            mfaFactorRow(factor)
-
-            if factor.id != viewModel.mfaFactors.last?.id {
-              Divider()
-                .background(Color.tidexBorder)
-                .padding(.horizontal, 16)
-            }
-          }
+      // Add factor button
+      Button {
+        Task {
+          await viewModel.startMFAEnrollment()
         }
-
-        Divider()
-          .background(Color.tidexBorder)
-
-        // Add factor button
-        Button {
-          Task {
-            await viewModel.startMFAEnrollment()
-          }
-        } label: {
-          HStack(spacing: 8) {
-            if viewModel.isEnrollingMFA {
-              ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(0.8)
-            } else {
-              Image(systemName: "plus.circle.fill")
-                .font(.system(size: 18))
-            }
-
-            Text(.securityMfaAddFactor)
-              .font(.system(size: 15, weight: .medium))
-          }
-          .foregroundColor(.tidexBlue)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-        }
-        .disabled(viewModel.isEnrollingMFA)
-      }
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
-
-      // Success/Error messages
-      if let success = viewModel.successMessage {
+      } label: {
         HStack(spacing: 8) {
-          Image(systemName: "checkmark.circle.fill")
-            .foregroundColor(.tidexSuccess)
-          Text(success)
-            .font(.system(size: 13))
-            .foregroundColor(.tidexSuccess)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tidexSuccess.opacity(0.1))
-        .cornerRadius(8)
-      }
+          if viewModel.isEnrollingMFA {
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+              .scaleEffect(0.8)
+          } else {
+            Image(systemName: "plus.circle.fill")
+              .font(.system(size: 18))
+          }
 
-      if let error = viewModel.errorMessage {
-        HStack(spacing: 8) {
-          Image(systemName: "exclamationmark.circle.fill")
-            .foregroundColor(.tidexError)
-          Text(error)
-            .font(.system(size: 13))
-            .foregroundColor(.tidexError)
+          Text(.securityMfaAddFactor)
+            .font(.system(size: 15, weight: .medium))
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tidexError.opacity(0.1))
-        .cornerRadius(8)
+        .foregroundColor(.tidexBlue)
+        .frame(maxWidth: .infinity)
       }
+      .disabled(viewModel.isEnrollingMFA)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
@@ -545,10 +474,14 @@ struct SecuritySettingsView: View {
   private func mfaFactorRow(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      Image(systemName: "iphone")
-        .font(.system(size: 20))
-        .foregroundColor(.tidexBlue)
-        .frame(width: 32, height: 32)
+      RoundedRectangle(cornerRadius: 6)
+        .fill(Color.tidexBlue)
+        .frame(width: 29, height: 29)
+        .overlay(
+          Image(systemName: "iphone")
+            .font(.system(size: 14))
+            .foregroundColor(.white)
+        )
 
       // Content
       VStack(alignment: .leading, spacing: 2) {
@@ -575,7 +508,6 @@ struct SecuritySettingsView: View {
       }
       .disabled(viewModel.isUnenrollingMFA)
     }
-    .padding(16)
   }
 
   // MARK: - Password Form Sheet

@@ -9,9 +9,6 @@ struct FeedbackSettingsView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 24) {
-        // Header
-        headerSection
-
         // Error message
         if let error = viewModel.errorMessage {
           errorBanner(error)
@@ -35,26 +32,9 @@ struct FeedbackSettingsView: View {
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .feedbackTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .task {
       await viewModel.loadData()
     }
-  }
-
-  // MARK: - Header Section
-
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(.feedbackTitle)
-        .font(.title2)
-        .fontWeight(.bold)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.feedbackSubtitle)
-        .font(.subheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   // MARK: - Error Banner
@@ -110,7 +90,6 @@ struct FeedbackSettingsView: View {
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(12)
-    .tidexCardShadow(cornerRadius: 12)
   }
 
   // MARK: - Feedback Form Section
@@ -324,7 +303,6 @@ struct FeedbackSettingsView: View {
       RoundedRectangle(cornerRadius: 12)
         .stroke(Color.tidexBorder, lineWidth: 1)
     )
-    .tidexCardShadow(cornerRadius: 12)
   }
 
   // MARK: - Helpers
