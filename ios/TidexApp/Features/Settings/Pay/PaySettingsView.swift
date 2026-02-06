@@ -21,7 +21,6 @@ struct PaySettingsView: View {
     }
     .navigationTitle(String(localized: .settingsPayTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .sheet(isPresented: $viewModel.showingEditor) {
       WageSnapshotEditorSheet(
         mode: viewModel.editorMode,
@@ -103,9 +102,6 @@ struct PaySettingsView: View {
   private var mainContent: some View {
     ScrollView {
       VStack(spacing: 24) {
-        // Header
-        headerSection
-
         // Wage History Timeline
         WageHistoryTimelineView(
           entries: viewModel.timelineEntries,
@@ -173,25 +169,6 @@ struct PaySettingsView: View {
       .padding(16)
       .background(Color.tidexBlue.opacity(0.1))
       .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-  }
-
-  // MARK: - Header Section
-
-  @ViewBuilder
-  private var headerSection: some View {
-    VStack(spacing: 8) {
-      Text(.settingsPayTitle)
-        .font(.title2)
-        .fontWeight(.bold)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.settingsPaySubtitle)
-        .font(.subheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.center)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.horizontal, 32)
   }
 
   // MARK: - Delete Confirmation Message

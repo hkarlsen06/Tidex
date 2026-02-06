@@ -7,51 +7,29 @@ struct AppearanceSettingsView: View {
   @StateObject private var viewModel = AppearanceSettingsViewModel()
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: 24) {
-        // Header
-        headerSection
-
-        // Error message
-        if let error = viewModel.errorMessage {
+    List {
+      // Error message
+      if let error = viewModel.errorMessage {
+        Section {
           errorBanner(error)
         }
-
-        // Theme selection
-        themeSelectionSection
-
-        // Calendar animation selection
-        calendarAnimationSection
-
-        // Current theme info
-        currentThemeInfo
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+
+      // Theme selection
+      themeSelectionSection
+
+      // Calendar animation selection
+      calendarAnimationSection
     }
+    .listStyle(.insetGrouped)
+    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .appearanceTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(Color.tidexBackground, for: .navigationBar)
     .task {
       await viewModel.loadSettings()
     }
-  }
-
-  // MARK: - Header Section
-
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(.appearanceTitle)
-        .font(.title2)
-        .fontWeight(.bold)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.appearanceSubtitle)
-        .font(.subheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   // MARK: - Error Banner
@@ -84,23 +62,19 @@ struct AppearanceSettingsView: View {
   // MARK: - Theme Selection Section
 
   private var themeSelectionSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      // Section header
-      Text(.appearanceThemeSectionTitle)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(.tidexTextMuted)
-        .textCase(.uppercase)
-
-      // Theme options as cards
-      VStack(spacing: 12) {
-        ForEach(AppTheme.allCases, id: \.self) { theme in
-          themeOptionCard(theme)
-        }
+    Section {
+      ForEach(AppTheme.allCases, id: \.self) { theme in
+        themeOptionRow(theme)
       }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    } header: {
+      Text(String(localized: .appearanceThemeSectionTitle))
+    } footer: {
+      currentThemeInfo
     }
   }
 
-  private func themeOptionCard(_ theme: AppTheme) -> some View {
+  private func themeOptionRow(_ theme: AppTheme) -> some View {
     let isSelected = viewModel.selectedTheme == theme
 
     return Button {
@@ -113,39 +87,22 @@ struct AppearanceSettingsView: View {
         // Theme info
         VStack(alignment: .leading, spacing: 2) {
           Text(themeTitle(theme))
-            .font(.system(size: 16, weight: .medium))
+            .font(.body)
             .foregroundColor(.tidexTextPrimary)
 
           Text(themeDescription(theme))
-            .font(.system(size: 13))
-            .foregroundColor(.tidexTextSecondary)
+            .font(.caption)
+            .foregroundColor(.secondary)
         }
 
         Spacer()
 
         // Selection indicator
-        if isSelected {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 24))
-            .foregroundColor(.tidexBlue)
-        } else {
-          Image(systemName: "circle")
-            .font(.system(size: 24))
-            .foregroundColor(.tidexTextMuted)
-        }
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+          .font(.system(size: 24))
+          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
       }
-      .padding(16)
-      .background(
-        RoundedRectangle(cornerRadius: 12)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(isSelected ? Color.tidexBlue : Color.clear, lineWidth: 2)
-      )
-      .tidexCardShadow(cornerRadius: 12)
     }
-    .buttonStyle(.plain)
   }
 
   private func themePreview(_ theme: AppTheme) -> some View {
@@ -215,23 +172,17 @@ struct AppearanceSettingsView: View {
   // MARK: - Calendar Animation Section
 
   private var calendarAnimationSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      // Section header
-      Text(.appearanceCalendarAnimationSectionTitle)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(.tidexTextMuted)
-        .textCase(.uppercase)
-
-      // Animation style options as cards
-      VStack(spacing: 12) {
-        ForEach(CalendarAnimationStyle.allCases, id: \.self) { style in
-          animationStyleOptionCard(style)
-        }
+    Section {
+      ForEach(CalendarAnimationStyle.allCases, id: \.self) { style in
+        animationStyleOptionRow(style)
       }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    } header: {
+      Text(String(localized: .appearanceCalendarAnimationSectionTitle))
     }
   }
 
-  private func animationStyleOptionCard(_ style: CalendarAnimationStyle) -> some View {
+  private func animationStyleOptionRow(_ style: CalendarAnimationStyle) -> some View {
     let isSelected = viewModel.selectedCalendarAnimationStyle == style
 
     return Button {
@@ -244,39 +195,22 @@ struct AppearanceSettingsView: View {
         // Style info
         VStack(alignment: .leading, spacing: 2) {
           Text(animationStyleTitle(style))
-            .font(.system(size: 16, weight: .medium))
+            .font(.body)
             .foregroundColor(.tidexTextPrimary)
 
           Text(animationStyleDescription(style))
-            .font(.system(size: 13))
-            .foregroundColor(.tidexTextSecondary)
+            .font(.caption)
+            .foregroundColor(.secondary)
         }
 
         Spacer()
 
         // Selection indicator
-        if isSelected {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 24))
-            .foregroundColor(.tidexBlue)
-        } else {
-          Image(systemName: "circle")
-            .font(.system(size: 24))
-            .foregroundColor(.tidexTextMuted)
-        }
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+          .font(.system(size: 24))
+          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
       }
-      .padding(16)
-      .background(
-        RoundedRectangle(cornerRadius: 12)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(isSelected ? Color.tidexBlue : Color.clear, lineWidth: 2)
-      )
-      .tidexCardShadow(cornerRadius: 12)
     }
-    .buttonStyle(.plain)
   }
 
   private func animationStylePreview(_ style: CalendarAnimationStyle) -> some View {
@@ -321,20 +255,15 @@ struct AppearanceSettingsView: View {
   // MARK: - Current Theme Info
 
   private var currentThemeInfo: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      // Info text
-      HStack(spacing: 8) {
-        Image(systemName: "info.circle")
-          .font(.system(size: 14))
-          .foregroundColor(.tidexTextMuted)
+    HStack(spacing: 8) {
+      Image(systemName: "info.circle")
+        .font(.system(size: 14))
+        .foregroundColor(.tidexTextMuted)
 
-        Text(currentThemeInfoText)
-          .font(.system(size: 13))
-          .foregroundColor(.tidexTextMuted)
-      }
+      Text(currentThemeInfoText)
+        .font(.system(size: 13))
+        .foregroundColor(.tidexTextMuted)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.top, 8)
   }
 
   private var currentThemeInfoText: String {
