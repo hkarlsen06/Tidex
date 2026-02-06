@@ -458,7 +458,8 @@ private struct ShiftPreviewCard: View {
 
 /// Shown when no one has shared shifts with the user
 struct SharerListEmptyState: View {
-    
+    var onAddFriend: (() -> Void)?
+
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.2.slash")
@@ -474,6 +475,24 @@ struct SharerListEmptyState: View {
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+
+            if let onAddFriend {
+                Button(action: onAddFriend) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(.sharingAddFriend)
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.tidexBlue)
+                    .cornerRadius(10)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 80)

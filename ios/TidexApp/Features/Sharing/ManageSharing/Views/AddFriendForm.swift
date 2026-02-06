@@ -147,6 +147,14 @@ struct AddFriendForm: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.tidexSurfacePrimary)
         )
+        .onChange(of: isExpanded) { _, expanded in
+            if expanded {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(150))
+                    isFocused = true
+                }
+            }
+        }
     }
 }
 

@@ -13,11 +13,6 @@ struct StatsView: View {
     // Haptic feedback
     private let selectionHaptic = UISelectionFeedbackGenerator()
 
-    // iPad detection - hide logo on iPad
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
-    }
-
     /// Shared refresh action used by pull-to-refresh and sync retry UI.
     private func refreshStatsContent() async {
         AppearanceTracker.shared.reset()
@@ -60,16 +55,8 @@ struct StatsView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .iPadToolbarBackground(Color.tidexBackground)
+            .iPadToolbarBackground()
             .toolbar {
-                if !isIPad {
-                    ToolbarItem(placement: .principal) {
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
                         displayName: coordinator.userDisplayName,

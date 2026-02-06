@@ -28,11 +28,6 @@ struct DashboardView: View {
     /// Haptic feedback generator
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
-    // iPad detection - hide logo on iPad
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -76,16 +71,8 @@ struct DashboardView: View {
                 }
             )
             .navigationBarTitleDisplayMode(.inline)
-            .iPadToolbarBackground(Color.tidexBackground)
+            .iPadToolbarBackground()
             .toolbar {
-                if !isIPad {
-                    ToolbarItem(placement: .principal) {
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
                         displayName: coordinator.userDisplayName,

@@ -22,6 +22,9 @@ struct SharingView: View {
     /// User ID to highlight in the manage sheet (from deep link)
     @State private var highlightUserId: String?
 
+    /// Whether to auto-expand the add friend form when the manage sheet opens
+    @State private var autoExpandAddForm = false
+
     /// Dates to highlight in the calendar (from shared shift notification)
     @State private var highlightDates: Set<String> = []
 
@@ -48,7 +51,7 @@ struct SharingView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .iPadToolbarBackground(Color.tidexBackground)
+            .iPadToolbarBackground()
             .toolbar {
                 // Back button when viewing a sharer
                 ToolbarItem(placement: .topBarLeading) {
@@ -69,17 +72,11 @@ struct SharingView: View {
                     }
                 }
 
-                // Title area - show logo on main list, sharer info when viewing a sharer (iPhone only)
+                // Title area - show sharer info when viewing a sharer (iPhone only)
                 ToolbarItem(placement: .principal) {
                     if let sharer = viewModel.selectedSharer, !isIPad {
                         // Show sharer info in center on iPhone
                         sharerToolbarInfo(sharer: sharer)
-                    } else if !isIPad {
-                        // Logo on main friends list - hidden on iPad
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
                     }
                 }
 
@@ -126,11 +123,13 @@ struct SharingView: View {
             }
         }
         .sheet(isPresented: $showManageSheet, onDismiss: {
-            // Clear highlight when sheet is dismissed
+            // Clear state when sheet is dismissed
             highlightUserId = nil
+            autoExpandAddForm = false
         }) {
             ManageSharingSheet(
                 highlightUserId: highlightUserId,
+                autoExpandAddForm: autoExpandAddForm,
                 onVisibilityChange: {
                     // Refresh sharers list when visibility changes (block/unblock)
                     Task {
@@ -290,6 +289,10 @@ struct SharingView: View {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.selectSharer(sharer)
                         }
+                    },
+                    onAddFriend: {
+                        autoExpandAddForm = true
+                        showManageSheet = true
                     }
                 )
             }
