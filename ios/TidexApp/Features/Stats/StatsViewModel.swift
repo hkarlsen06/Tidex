@@ -38,6 +38,7 @@ final class StatsViewModel: ObservableObject {
     private let statsService: StatsService
     private let settingsRepository: SettingsRepository
     private let monthContext: SharedMonthContext
+    private let syncCoordinator: SyncCoordinator
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
@@ -45,11 +46,13 @@ final class StatsViewModel: ObservableObject {
     init(
         statsService: StatsService? = nil,
         settingsRepository: SettingsRepository? = nil,
-        monthContext: SharedMonthContext? = nil
+        monthContext: SharedMonthContext? = nil,
+        syncCoordinator: SyncCoordinator? = nil
     ) {
         self.statsService = statsService ?? StatsService.shared
         self.settingsRepository = settingsRepository ?? SettingsRepository.shared
         self.monthContext = monthContext ?? SharedMonthContext.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
 
         // Initialize from shared context
         self.displayYear = self.monthContext.displayYear
@@ -132,8 +135,25 @@ final class StatsViewModel: ObservableObject {
         isLoading = false
     }
 
-    /// Refresh stats (recompute from local data)
+    /// Refresh stats by syncing first, then recomputing from local data
     func refresh() async {
+        logger.info("Pull-to-refresh: triggering sync then local stats recompute")
+
+        do {
+            let session = try await AuthSessionManager.shared.getSession()
+            let syncResult = await syncCoordinator.sync(
+                reason: .manualRefresh,
+                userId: session.normalizedUserId
+            )
+
+            if !syncResult.success, let errorMessage = syncResult.error {
+                logger.warning("Stats refresh sync had issues: \(errorMessage)")
+            }
+        } catch {
+            // Continue with local recompute so refresh still updates visible data.
+            logger.error("Stats refresh sync failed before recompute: \(error.localizedDescription)")
+        }
+
         // Clear cache to force recomputation
         statsService.clearCache()
         await loadStats()

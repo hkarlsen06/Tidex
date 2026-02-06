@@ -18,6 +18,12 @@ struct StatsView: View {
         UIDevice.current.userInterfaceIdiom == .pad
     }
 
+    /// Shared refresh action used by pull-to-refresh and sync retry UI.
+    private func refreshStatsContent() async {
+        AppearanceTracker.shared.reset()
+        await viewModel.refresh()
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -41,6 +47,17 @@ struct StatsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // Pass user's currency to all child views
                 .userCurrency(viewModel.currency)
+
+                // Sync status indicator (shows when syncing, failed, or offline)
+                VStack {
+                    SyncStatusIndicator {
+                        Task {
+                            await refreshStatsContent()
+                        }
+                    }
+                    .padding(.top, 8)
+                    Spacer()
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)
@@ -74,71 +91,72 @@ struct StatsView: View {
 
     @ViewBuilder
     private func statsContent(stats: StatsData) -> some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                sectionHeader(.statsSectionOverview)
+        PullToRefreshContainer(onRefresh: {
+            await refreshStatsContent()
+        }) {
+            ScrollView {
+                VStack(spacing: 16) {
+                    sectionHeader(.statsSectionOverview)
 
-                // Monthly Earnings Card (large)
-                MonthlyEarningsCard(
-                    grossEarnings: stats.currentMonth.totalEarnings,
-                    netEarnings: stats.currentMonth.totalEarningsNet,
-                    taxEnabled: stats.tax.enabled,
-                    percentageChange: stats.percentageChange
+                    // Monthly Earnings Card (large)
+                    MonthlyEarningsCard(
+                        grossEarnings: stats.currentMonth.totalEarnings,
+                        netEarnings: stats.currentMonth.totalEarningsNet,
+                        taxEnabled: stats.tax.enabled,
+                        percentageChange: stats.percentageChange
+                    )
+
+                    // Hours and Shifts cards (side by side)
+                    HStack(spacing: 12) {
+                        HoursStatCard(hours: stats.currentMonth.totalHours)
+                        ShiftsStatCard(count: stats.currentMonth.shiftCount)
+                    }
+
+                    // Monthly Goal Card
+                    if stats.monthlyGoal.enabled {
+                        MonthlyGoalCard(goal: stats.monthlyGoal)
+                    } else {
+                        MonthlyGoalEmptyCard()
+                    }
+
+                    sectionHeader(.statsSectionCharts)
+
+                    // Weekly Chart (This Week or Best Week)
+                    weeklyChartSection(stats: stats)
+
+                    // Monthly Progress Chart
+                    if !stats.thisMonthCumulative.isEmpty {
+                        MonthlyProgressChart(data: stats.thisMonthCumulative)
+                    } else {
+                        MonthlyProgressChartEmpty()
+                    }
+
+                    // Yearly Income Chart
+                    yearlyIncomeChartSection(stats: stats)
+
+                    // Employment Percentage Chart
+                    if let employment = stats.employment,
+                       employment.monthlyData.contains(where: { $0.averagePercentage > 0 }) {
+                        EmploymentPercentageChart(data: employment)
+                    } else {
+                        EmploymentPercentageChartEmpty()
+                    }
+
+                    // Bottom spacing for floating month picker
+                    Spacer()
+                        .frame(height: MonthPickerLayout.totalBottomInset + 24)
+                }
+                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .monthSwipeGesture(
+                    onSwipeLeft: { viewModel.goToNextMonth() },
+                    onSwipeRight: { viewModel.goToPreviousMonth() },
+                    isEnabled: true
                 )
-
-                // Hours and Shifts cards (side by side)
-                HStack(spacing: 12) {
-                    HoursStatCard(hours: stats.currentMonth.totalHours)
-                    ShiftsStatCard(count: stats.currentMonth.shiftCount)
-                }
-
-                // Monthly Goal Card
-                if stats.monthlyGoal.enabled {
-                    MonthlyGoalCard(goal: stats.monthlyGoal)
-                } else {
-                    MonthlyGoalEmptyCard()
-                }
-
-                sectionHeader(.statsSectionCharts)
-
-                // Weekly Chart (This Week or Best Week)
-                weeklyChartSection(stats: stats)
-
-                // Monthly Progress Chart
-                if !stats.thisMonthCumulative.isEmpty {
-                    MonthlyProgressChart(data: stats.thisMonthCumulative)
-                } else {
-                    MonthlyProgressChartEmpty()
-                }
-
-                // Yearly Income Chart
-                yearlyIncomeChartSection(stats: stats)
-
-                // Employment Percentage Chart
-                if let employment = stats.employment,
-                   employment.monthlyData.contains(where: { $0.averagePercentage > 0 }) {
-                    EmploymentPercentageChart(data: employment)
-                } else {
-                    EmploymentPercentageChartEmpty()
-                }
-
-                // Bottom spacing for floating month picker
-                Spacer()
-                    .frame(height: MonthPickerLayout.totalBottomInset + 24)
             }
-            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .monthSwipeGesture(
-                onSwipeLeft: { viewModel.goToNextMonth() },
-                onSwipeRight: { viewModel.goToPreviousMonth() },
-                isEnabled: true
-            )
-        }
-        .refreshable {
-            await viewModel.refresh()
         }
     }
 
@@ -215,46 +233,47 @@ struct StatsView: View {
 
     @ViewBuilder
     private var loadingView: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Skeleton for Monthly Earnings Card
-                skeletonCard(height: 200)
+        PullToRefreshContainer(onRefresh: {
+            await refreshStatsContent()
+        }) {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Skeleton for Monthly Earnings Card
+                    skeletonCard(height: 200)
 
-                // Skeleton for Hours and Shifts cards
-                HStack(spacing: 12) {
-                    skeletonCard(height: 100)
-                    skeletonCard(height: 100)
+                    // Skeleton for Hours and Shifts cards
+                    HStack(spacing: 12) {
+                        skeletonCard(height: 100)
+                        skeletonCard(height: 100)
+                    }
+
+                    // Skeleton for Monthly Goal Card
+                    skeletonCard(height: 140)
+
+                    // Skeleton for Weekly Chart
+                    skeletonCard(height: 260)
+
+                    // Skeleton for Monthly Progress Chart
+                    skeletonCard(height: 280)
+
+                    // Skeleton for Yearly Income Chart
+                    skeletonCard(height: 280)
+
+                    // Bottom spacing for floating month picker
+                    Spacer()
+                        .frame(height: MonthPickerLayout.totalBottomInset + 24)
                 }
-
-                // Skeleton for Monthly Goal Card
-                skeletonCard(height: 140)
-
-                // Skeleton for Weekly Chart
-                skeletonCard(height: 260)
-
-                // Skeleton for Monthly Progress Chart
-                skeletonCard(height: 280)
-
-                // Skeleton for Yearly Income Chart
-                skeletonCard(height: 280)
-
-                // Bottom spacing for floating month picker
-                Spacer()
-                    .frame(height: MonthPickerLayout.totalBottomInset + 24)
+                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .monthSwipeGesture(
+                    onSwipeLeft: { viewModel.goToNextMonth() },
+                    onSwipeRight: { viewModel.goToPreviousMonth() },
+                    isEnabled: true
+                )
             }
-            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .monthSwipeGesture(
-                onSwipeLeft: { viewModel.goToNextMonth() },
-                onSwipeRight: { viewModel.goToPreviousMonth() },
-                isEnabled: true
-            )
-        }
-        .refreshable {
-            await viewModel.refresh()
         }
     }
 
@@ -286,7 +305,7 @@ struct StatsView: View {
 
             Button {
                 Task {
-                    await viewModel.refresh()
+                    await refreshStatsContent()
                 }
             } label: {
                 Text(.commonRetry)

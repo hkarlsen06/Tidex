@@ -135,12 +135,12 @@ struct PayrollCard: View {
             // Progress bar overlay - fills from left based on progress
             // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
             // The clipShape on the parent handles the rounded corners
-            if hasProgress {
-                GeometryReader { geometry in
-                    Rectangle()
-                        .fill(Color.tidexBlue.opacity(0.1))
-                        .frame(width: geometry.size.width * (animatedProgress / 100))
-                }
+            // Always rendered (width 0 is invisible) so animatedProgress can animate to zero
+            // when navigating away from the current month
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(Color.tidexBlue.opacity(0.1))
+                    .frame(width: geometry.size.width * (animatedProgress / 100))
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
