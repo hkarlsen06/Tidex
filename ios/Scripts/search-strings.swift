@@ -85,16 +85,10 @@ private enum SearchError: Error, CustomStringConvertible {
 
 // MARK: - Match Result
 
-private struct MatchResult {
+private struct SearchMatch {
     let key: String
     let entry: CatalogEntry
-    let matchedIn: MatchLocation
-}
-
-private enum MatchLocation {
-    case key
-    case value(language: String)
-    case both
+    let matchedIn: String
 }
 
 // MARK: - Main
@@ -117,9 +111,7 @@ private func parseArgs() throws -> Config {
         case "--no-symbol":
             showSymbol = false
         case "--limit", "-l":
-            if let next = iterator.next(), let n = Int(next) {
-                limit = n
-            }
+            limit = iterator.next().flatMap(Int.init)
         case "--catalog", "-c":
             catalogPath = iterator.next()
         case "--help", "-h":
@@ -161,6 +153,55 @@ private func generateSymbolName(from key: String) -> String {
     return String(first) + rest.joined()
 }
 
+private func searchVariations(_ variations: CatalogVariations, query: String, locale: String) -> [String] {
+    var reasons: [String] = []
+    if let plural = variations.plural {
+        for (_, form) in plural where form.stringUnit?.value.lowercased().contains(query) == true {
+            reasons.append("\(locale)/plural")
+            break
+        }
+    }
+    if let device = variations.device {
+        for (_, form) in device where form.stringUnit?.value.lowercased().contains(query) == true {
+            reasons.append("\(locale)/device")
+            break
+        }
+    }
+    return reasons
+}
+
+private func findMatches(in catalog: Catalog, config: Config) -> [SearchMatch] {
+    let queryLower = config.query.lowercased()
+    var matches: [SearchMatch] = []
+
+    for (key, entry) in catalog.strings {
+        var matchReasons: [String] = []
+
+        if config.searchKeys && key.lowercased().contains(queryLower) {
+            matchReasons.append("key")
+        }
+
+        if config.searchValues, let localizations = entry.localizations {
+            for (locale, localization) in localizations {
+                if let value = localization.stringUnit?.value,
+                   value.lowercased().contains(queryLower) {
+                    matchReasons.append(locale)
+                }
+                if let variations = localization.variations {
+                    matchReasons.append(contentsOf: searchVariations(variations, query: queryLower, locale: locale))
+                }
+            }
+        }
+
+        if !matchReasons.isEmpty {
+            let uniqueReasons = Array(Set(matchReasons)).sorted()
+            matches.append(SearchMatch(key: key, entry: entry, matchedIn: uniqueReasons.joined(separator: ", ")))
+        }
+    }
+
+    return matches.sorted { $0.key < $1.key }
+}
+
 private func run() throws {
     let config = try parseArgs()
 
@@ -172,57 +213,7 @@ private func run() throws {
     let catalogData = try Data(contentsOf: catalogURL)
     let catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
-    let queryLower = config.query.lowercased()
-    var matches: [(key: String, entry: CatalogEntry, matchedIn: String)] = []
-
-    for (key, entry) in catalog.strings {
-        var matchReasons: [String] = []
-
-        // Search in key
-        if config.searchKeys && key.lowercased().contains(queryLower) {
-            matchReasons.append("key")
-        }
-
-        // Search in values
-        if config.searchValues, let localizations = entry.localizations {
-            for (locale, localization) in localizations {
-                if let value = localization.stringUnit?.value,
-                   value.lowercased().contains(queryLower) {
-                    matchReasons.append(locale)
-                }
-                // Also search in plural/device variations
-                if let variations = localization.variations {
-                    if let plural = variations.plural {
-                        for (_, form) in plural {
-                            if let value = form.stringUnit?.value,
-                               value.lowercased().contains(queryLower) {
-                                matchReasons.append("\(locale)/plural")
-                                break
-                            }
-                        }
-                    }
-                    if let device = variations.device {
-                        for (_, form) in device {
-                            if let value = form.stringUnit?.value,
-                               value.lowercased().contains(queryLower) {
-                                matchReasons.append("\(locale)/device")
-                                break
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if !matchReasons.isEmpty {
-            // Deduplicate reasons
-            let uniqueReasons = Array(Set(matchReasons)).sorted()
-            matches.append((key: key, entry: entry, matchedIn: uniqueReasons.joined(separator: ", ")))
-        }
-    }
-
-    // Sort by key
-    matches.sort { $0.key < $1.key }
+    var matches = findMatches(in: catalog, config: config)
 
     guard !matches.isEmpty else {
         throw SearchError.noResults(config.query)
@@ -245,42 +236,41 @@ private func run() throws {
     }
 }
 
+private func stateIndicator(for state: String) -> String {
+    switch state {
+    case "translated": return "ok"
+    case "needs_review": return "review"
+    case "new": return "new"
+    default: return state
+    }
+}
+
+private func formatVariations(_ forms: [String: CatalogPluralForm], kind: String) -> String {
+    let formatted = forms.keys.sorted().map { form -> String in
+        let value = forms[form]?.stringUnit?.value ?? "?"
+        return "\(form)=\"\(value)\""
+    }
+    return "(\(kind)) \(formatted.joined(separator: ", "))"
+}
+
 private func printEntry(key: String, entry: CatalogEntry, matchedIn: String, showSymbol: Bool) {
-    // Key and match info
     print("  \(key)")
 
-    // Extraction state
     let state = entry.extractionState ?? "automatic"
     print("    state: \(state)  |  matched in: \(matchedIn)")
 
-    // Translations
     if let localizations = entry.localizations {
         for locale in localizations.keys.sorted() {
             let localization = localizations[locale]!
             if let value = localization.stringUnit?.value {
-                let translationState = localization.stringUnit?.state ?? "unknown"
-                let stateIndicator: String
-                switch translationState {
-                case "translated": stateIndicator = "ok"
-                case "needs_review": stateIndicator = "review"
-                case "new": stateIndicator = "new"
-                default: stateIndicator = translationState
-                }
-                print("    \(locale): \"\(value)\" [\(stateIndicator)]")
+                let indicator = stateIndicator(for: localization.stringUnit?.state ?? "unknown")
+                print("    \(locale): \"\(value)\" [\(indicator)]")
             } else if let variations = localization.variations {
                 if let plural = variations.plural {
-                    let forms = plural.keys.sorted().map { form -> String in
-                        let value = plural[form]?.stringUnit?.value ?? "?"
-                        return "\(form)=\"\(value)\""
-                    }
-                    print("    \(locale): (plural) \(forms.joined(separator: ", "))")
+                    print("    \(locale): \(formatVariations(plural, kind: "plural"))")
                 }
                 if let device = variations.device {
-                    let forms = device.keys.sorted().map { form -> String in
-                        let value = device[form]?.stringUnit?.value ?? "?"
-                        return "\(form)=\"\(value)\""
-                    }
-                    print("    \(locale): (device) \(forms.joined(separator: ", "))")
+                    print("    \(locale): \(formatVariations(device, kind: "device"))")
                 }
             }
         }
@@ -288,10 +278,8 @@ private func printEntry(key: String, entry: CatalogEntry, matchedIn: String, sho
         print("    (no translations)")
     }
 
-    // Swift symbol
     if showSymbol {
-        let symbol = generateSymbolName(from: key)
-        print("    symbol: .\(symbol)")
+        print("    symbol: .\(generateSymbolName(from: key))")
     }
 }
 

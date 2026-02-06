@@ -1,4 +1,5 @@
 #!/usr/bin/env swift
+// swiftlint:disable file_length
 
 import Foundation
 
@@ -292,88 +293,50 @@ private struct LocalizationReferences {
     var dynamicPrefixes: Set<String>  // Prefixes like "onboarding.paycheck.industry."
 }
 
+private func extractCaptures(from content: String, using regexes: [NSRegularExpression]) -> Set<String> {
+    var results: Set<String> = []
+    let range = NSRange(content.startIndex..., in: content)
+    for regex in regexes {
+        for match in regex.matches(in: content, options: [], range: range) {
+            if match.numberOfRanges > 1,
+               let captureRange = Range(match.range(at: 1), in: content) {
+                results.insert(String(content[captureRange]))
+            }
+        }
+    }
+    return results
+}
+
 /// Returns all localization references found in Swift files
 private func findLocalizationReferences(in directory: String) -> LocalizationReferences {
     let swiftFiles = findSwiftFiles(in: directory)
     var result = LocalizationReferences(symbols: [], directKeys: [], dynamicPrefixes: [])
 
-    // Patterns for symbol-based localization:
-    // - Text(.symbolName)
-    // - String(localized: .symbolName)
-    // - .symbolName( for format strings that become functions
-    // - titleKey: .symbolName, descriptionKey: .symbolName (common in SwiftUI)
-    // - return .symbolName (switch cases)
-    // - label: .symbolName (view parameters)
-    // - anyFunction(.symbolName) - symbol as function argument
-    let symbolPatterns = [
+    let symbolRegexes = [
         #"Text\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
         #"String\(localized:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-        #"\.([a-zA-Z][a-zA-Z0-9_]*)\("#,  // Format string functions
-        #"Key:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,  // titleKey: .symbol, descriptionKey: .symbol
-        #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,  // return .symbol
-        #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,  // parameter: .symbol, or parameter: .symbol)
-        #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,  // assignment = .symbol
-        #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#  // func(.symbol) - symbol as sole argument
-    ]
+        #"\.([a-zA-Z][a-zA-Z0-9_]*)\("#,
+        #"Key:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+        #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+        #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,
+        #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+        #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#
+    ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
-    // Patterns for direct key usage:
-    // - NSLocalizedString("key.name", ...)
-    let directKeyPatterns = [
+    let directKeyRegexes = [
         #"NSLocalizedString\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#
-    ]
+    ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
-    // Patterns for dynamic key construction:
-    // - String.LocalizationValue("prefix.\(variable)")
-    // - let key = "prefix.\(variable)" (then used with LocalizationValue)
-    // We extract the static prefix before the interpolation
-    let dynamicKeyPatterns = [
+    let dynamicKeyRegexes = [
         #"String\.LocalizationValue\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#,
-        #"=\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#  // key = "prefix.\(
-    ]
-
-    let symbolRegexes = symbolPatterns.compactMap { try? NSRegularExpression(pattern: $0, options: []) }
-    let directKeyRegexes = directKeyPatterns.compactMap { try? NSRegularExpression(pattern: $0, options: []) }
-    let dynamicKeyRegexes = dynamicKeyPatterns.compactMap { try? NSRegularExpression(pattern: $0, options: []) }
+        #"=\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#
+    ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
     for file in swiftFiles {
-        guard let content = try? String(contentsOfFile: file, encoding: .utf8) else {
-            continue
-        }
-
-        let range = NSRange(content.startIndex..., in: content)
-
-        // Find symbol references
-        for regex in symbolRegexes {
-            let matches = regex.matches(in: content, options: [], range: range)
-            for match in matches {
-                if match.numberOfRanges > 1,
-                   let symbolRange = Range(match.range(at: 1), in: content) {
-                    result.symbols.insert(String(content[symbolRange]))
-                }
-            }
-        }
-
-        // Find direct key references
-        for regex in directKeyRegexes {
-            let matches = regex.matches(in: content, options: [], range: range)
-            for match in matches {
-                if match.numberOfRanges > 1,
-                   let keyRange = Range(match.range(at: 1), in: content) {
-                    result.directKeys.insert(String(content[keyRange]))
-                }
-            }
-        }
-
-        // Find dynamic key prefixes
-        for regex in dynamicKeyRegexes {
-            let matches = regex.matches(in: content, options: [], range: range)
-            for match in matches {
-                if match.numberOfRanges > 1,
-                   let prefixRange = Range(match.range(at: 1), in: content) {
-                    result.dynamicPrefixes.insert(String(content[prefixRange]))
-                }
-            }
-        }
+        guard let content = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
+        result.symbols.formUnion(extractCaptures(from: content, using: symbolRegexes))
+        result.directKeys.formUnion(extractCaptures(from: content, using: directKeyRegexes))
+        result.dynamicPrefixes.formUnion(extractCaptures(from: content, using: dynamicKeyRegexes))
     }
 
     return result
@@ -451,15 +414,14 @@ private func removeKeysFromCatalog(keys: [String], catalogPath: String) -> Bool 
     }
 
     var removedCount = 0
-    for key in keys {
-        if strings.removeValue(forKey: key) != nil {
-            removedCount += 1
-        }
+    for key in keys where strings.removeValue(forKey: key) != nil {
+        removedCount += 1
     }
 
     json["strings"] = strings
 
-    guard let updatedData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]) else {
+    let serializationOptions: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+    guard let updatedData = try? JSONSerialization.data(withJSONObject: json, options: serializationOptions) else {
         print("Error: Could not serialize updated catalog")
         return false
     }
@@ -501,25 +463,16 @@ private func parseArgs() -> Config {
     while let arg = iterator.next() {
         switch arg {
         case "--path", "-p":
-            if let value = iterator.next() { searchPath = value }
+            searchPath = iterator.next() ?? searchPath
         case "--catalog", "-c":
-            if let value = iterator.next() { catalogPath = value }
-        case "--strict", "-s":
-            strict = true
-        case "--hardcoded-only":
-            checkOrphaned = false
-        case "--orphaned-only":
-            checkHardcoded = false
-        case "--json":
-            jsonOutput = true
-        case "--remove":
-            removeOrphaned = true
-            checkHardcoded = false  // Only check orphaned when removing
-        case "--help", "-h":
-            printHelp()
-            exit(0)
-        default:
-            continue
+            catalogPath = iterator.next() ?? catalogPath
+        case "--strict", "-s":       strict = true
+        case "--hardcoded-only":     checkOrphaned = false
+        case "--orphaned-only":      checkHardcoded = false
+        case "--json":               jsonOutput = true
+        case "--remove":             removeOrphaned = true; checkHardcoded = false
+        case "--help", "-h":         printHelp(); exit(0)
+        default: continue
         }
     }
 
@@ -575,115 +528,92 @@ private func printHelp() {
     """)
 }
 
+private func checkHardcodedStrings(config: Config) -> Bool {
+    print("Scanning for hardcoded strings in: \(config.searchPath)\n")
+
+    let allViolations = findSwiftFiles(in: config.searchPath)
+        .flatMap { scanFileForHardcodedStrings($0) }
+
+    guard !allViolations.isEmpty else {
+        print("✓ No hardcoded strings found!\n")
+        return false
+    }
+
+    let grouped = Dictionary(grouping: allViolations) { $0.file }
+    print("Found \(allViolations.count) potential hardcoded strings:\n")
+    for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
+        print("  \(file):")
+        for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
+        print("")
+    }
+    print("To fix: Use String Catalog symbols instead of literal strings.")
+    print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
+    print("\nTo add a new string:")
+    print("  add-strings --key \"feature.key\" --en \"English\" --nb \"Norwegian\"\n")
+    return true
+}
+
+private func printOrphanedKeysHumanReadable(_ orphaned: [OrphanedKey]) {
+    print("Found \(orphaned.count) potentially orphaned keys:\n")
+    let grouped = Dictionary(grouping: orphaned) { key -> String in
+        let parts = key.key.split(separator: ".")
+        return parts.first.map(String.init) ?? "other"
+    }
+    for (prefix, keys) in grouped.sorted(by: { $0.key < $1.key }) {
+        print("  \(prefix).*:")
+        for key in keys.prefix(10) { print("    \(key.key)") }
+        if keys.count > 10 { print("    ... and \(keys.count - 10) more") }
+        print("")
+    }
+    print("These keys exist in the String Catalog but weren't found in code.")
+    print("They may be unused and can potentially be removed.")
+    print("\nNote: Some keys may be used dynamically or in other targets.")
+    print("Verify before removing!")
+}
+
+private func checkOrphanedKeys(config: Config) -> Bool {
+    if !config.jsonOutput && !config.removeOrphaned {
+        print("Checking for orphaned keys in String Catalog...\n")
+    }
+
+    let catalogKeys = loadStringCatalogKeys(from: config.catalogPath)
+    guard !catalogKeys.isEmpty else {
+        print("Warning: Could not load String Catalog or it's empty")
+        return false
+    }
+
+    let references = findLocalizationReferences(in: config.searchPath)
+    let orphaned = findOrphanedKeys(catalogKeys: catalogKeys, references: references)
+
+    guard !orphaned.isEmpty else {
+        print(config.jsonOutput ? "[]" : "✓ No orphaned keys found!")
+        return false
+    }
+
+    let orphanedKeys = orphaned.map { $0.key }
+    if config.jsonOutput {
+        if let jsonData = try? JSONSerialization.data(withJSONObject: orphanedKeys, options: [.prettyPrinted]),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            print(jsonString)
+        }
+    } else if config.removeOrphaned {
+        print("Removing \(orphaned.count) orphaned keys from String Catalog...")
+        _ = removeKeysFromCatalog(keys: orphanedKeys, catalogPath: config.catalogPath)
+    } else {
+        printOrphanedKeysHumanReadable(orphaned)
+    }
+    return true
+}
+
 private func run() {
     let config = parseArgs()
     var hasIssues = false
 
-    // MARK: Check for hardcoded strings
     if config.checkHardcoded {
-        print("Scanning for hardcoded strings in: \(config.searchPath)")
-        print("")
-
-        let swiftFiles = findSwiftFiles(in: config.searchPath)
-        var allViolations: [Violation] = []
-
-        for file in swiftFiles {
-            let violations = scanFileForHardcodedStrings(file)
-            allViolations.append(contentsOf: violations)
-        }
-
-        if allViolations.isEmpty {
-            print("✓ No hardcoded strings found!")
-        } else {
-            hasIssues = true
-
-            // Group by file
-            let grouped = Dictionary(grouping: allViolations) { $0.file }
-
-            print("Found \(allViolations.count) potential hardcoded strings:\n")
-
-            for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
-                print("  \(file):")
-                for violation in violations {
-                    print("    L\(violation.line): \(violation.pattern)")
-                }
-                print("")
-            }
-
-            print("To fix: Use String Catalog symbols instead of literal strings.")
-            print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
-            print("")
-            print("To add a new string:")
-            print("  add-strings --key \"feature.key\" --en \"English\" --nb \"Norwegian\"")
-        }
-        print("")
+        hasIssues = checkHardcodedStrings(config: config) || hasIssues
     }
-
-    // MARK: Check for orphaned keys
     if config.checkOrphaned {
-        if !config.jsonOutput && !config.removeOrphaned {
-            print("Checking for orphaned keys in String Catalog...")
-            print("")
-        }
-
-        let catalogKeys = loadStringCatalogKeys(from: config.catalogPath)
-        if catalogKeys.isEmpty {
-            print("Warning: Could not load String Catalog or it's empty")
-        } else {
-            let references = findLocalizationReferences(in: config.searchPath)
-            let orphaned = findOrphanedKeys(catalogKeys: catalogKeys, references: references)
-
-            if orphaned.isEmpty {
-                if !config.jsonOutput {
-                    print("✓ No orphaned keys found!")
-                } else {
-                    print("[]")
-                }
-            } else {
-                hasIssues = true
-                let orphanedKeys = orphaned.map { $0.key }
-
-                // JSON output mode
-                if config.jsonOutput {
-                    if let jsonData = try? JSONSerialization.data(withJSONObject: orphanedKeys, options: [.prettyPrinted]),
-                       let jsonString = String(data: jsonData, encoding: .utf8) {
-                        print(jsonString)
-                    }
-                }
-                // Remove mode
-                else if config.removeOrphaned {
-                    print("Removing \(orphaned.count) orphaned keys from String Catalog...")
-                    _ = removeKeysFromCatalog(keys: orphanedKeys, catalogPath: config.catalogPath)
-                }
-                // Default: human-readable output
-                else {
-                    print("Found \(orphaned.count) potentially orphaned keys:\n")
-
-                    // Group by prefix for readability
-                    let grouped = Dictionary(grouping: orphaned) { key -> String in
-                        let parts = key.key.split(separator: ".")
-                        return parts.first.map(String.init) ?? "other"
-                    }
-
-                    for (prefix, keys) in grouped.sorted(by: { $0.key < $1.key }) {
-                        print("  \(prefix).*:")
-                        for key in keys.prefix(10) {  // Limit output per group
-                            print("    \(key.key)")
-                        }
-                        if keys.count > 10 {
-                            print("    ... and \(keys.count - 10) more")
-                        }
-                        print("")
-                    }
-
-                    print("These keys exist in the String Catalog but weren't found in code.")
-                    print("They may be unused and can potentially be removed.")
-                    print("")
-                    print("Note: Some keys may be used dynamically or in other targets.")
-                    print("Verify before removing!")
-                }
-            }
-        }
+        hasIssues = checkOrphanedKeys(config: config) || hasIssues
     }
 
     if config.strict && hasIssues {

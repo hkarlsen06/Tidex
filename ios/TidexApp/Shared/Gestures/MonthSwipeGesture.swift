@@ -388,9 +388,9 @@ private struct SwipeGestureView: UIViewRepresentable {
 
             switch gesture.direction {
             case .left:
-                isRTL ? onSwipeRight() : onSwipeLeft()
+                if isRTL { onSwipeRight() } else { onSwipeLeft() }
             case .right:
-                isRTL ? onSwipeLeft() : onSwipeRight()
+                if isRTL { onSwipeLeft() } else { onSwipeRight() }
             default:
                 break
             }

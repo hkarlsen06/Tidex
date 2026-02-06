@@ -97,10 +97,10 @@ private func parseArgs() throws -> Config {
 
     func flushEntry() throws {
         guard let key = currentKey else { return }
-        guard let en = currentEn, let nb = currentNb else {
+        guard let english = currentEn, let norwegian = currentNb else {
             throw AddStringError.incompleteEntry(key)
         }
-        entries.append(StringEntry(key: key, englishValue: en, norwegianValue: nb))
+        entries.append(StringEntry(key: key, englishValue: english, norwegianValue: norwegian))
         currentKey = nil
         currentEn = nil
         currentNb = nil
@@ -147,6 +147,66 @@ private func parseArgs() throws -> Config {
     )
 }
 
+private enum EntryResult {
+    case added
+    case updated
+    case skipped
+}
+
+private func processEntry(_ entry: StringEntry, in catalog: inout Catalog) -> EntryResult {
+    if var existingEntry = catalog.strings[entry.key] {
+        var localizations = existingEntry.localizations ?? [:]
+        var added: [String] = []
+
+        if localizations["en"] == nil {
+            localizations["en"] = CatalogLocalization(
+                stringUnit: CatalogStringUnit(state: "translated", value: entry.englishValue)
+            )
+            added.append("en")
+        }
+        if localizations["nb"] == nil {
+            localizations["nb"] = CatalogLocalization(
+                stringUnit: CatalogStringUnit(state: "translated", value: entry.norwegianValue)
+            )
+            added.append("nb")
+        }
+
+        guard !added.isEmpty else {
+            print("  Skipped '\(entry.key)' (already has en + nb translations)")
+            return .skipped
+        }
+
+        existingEntry.localizations = localizations
+        catalog.strings[entry.key] = existingEntry
+        print("  Updated '\(entry.key)' — added missing: \(added.joined(separator: ", "))")
+        return .updated
+    }
+
+    let newEntry = CatalogEntry(
+        extractionState: "manual",
+        localizations: [
+            "en": CatalogLocalization(
+                stringUnit: CatalogStringUnit(state: "translated", value: entry.englishValue)
+            ),
+            "nb": CatalogLocalization(
+                stringUnit: CatalogStringUnit(state: "translated", value: entry.norwegianValue)
+            )
+        ]
+    )
+    catalog.strings[entry.key] = newEntry
+    print("  Added '\(entry.key)'")
+    return .added
+}
+
+private func writeCatalog(_ catalog: Catalog, to path: String) throws {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    let outputData = try encoder.encode(catalog)
+    var outputString = String(data: outputData, encoding: .utf8)!
+    outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
+    try outputString.write(toFile: path, atomically: true, encoding: .utf8)
+}
+
 private func run() throws {
     let config = try parseArgs()
 
@@ -154,7 +214,6 @@ private func run() throws {
         throw AddStringError.fileNotFound(config.catalogPath)
     }
 
-    // Read catalog
     let catalogURL = URL(fileURLWithPath: config.catalogPath)
     let catalogData = try Data(contentsOf: catalogURL)
     var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
@@ -163,84 +222,27 @@ private func run() throws {
     var updatedCount = 0
 
     for entry in config.entries {
-        if var existingEntry = catalog.strings[entry.key] {
-            // Key exists - check if we need to add missing translations
-            var localizations = existingEntry.localizations ?? [:]
-            var added: [String] = []
-
-            if localizations["en"] == nil {
-                localizations["en"] = CatalogLocalization(
-                    stringUnit: CatalogStringUnit(state: "translated", value: entry.englishValue)
-                )
-                added.append("en")
-            }
-
-            if localizations["nb"] == nil {
-                localizations["nb"] = CatalogLocalization(
-                    stringUnit: CatalogStringUnit(state: "translated", value: entry.norwegianValue)
-                )
-                added.append("nb")
-            }
-
-            if added.isEmpty {
-                print("  Skipped '\(entry.key)' (already has en + nb translations)")
-                continue
-            }
-
-            existingEntry.localizations = localizations
-            catalog.strings[entry.key] = existingEntry
-            updatedCount += 1
-            print("  Updated '\(entry.key)' — added missing: \(added.joined(separator: ", "))")
-        } else {
-            // Create new entry
-            let newEntry = CatalogEntry(
-                extractionState: "manual",
-                localizations: [
-                    "en": CatalogLocalization(
-                        stringUnit: CatalogStringUnit(state: "translated", value: entry.englishValue)
-                    ),
-                    "nb": CatalogLocalization(
-                        stringUnit: CatalogStringUnit(state: "translated", value: entry.norwegianValue)
-                    )
-                ]
-            )
-
-            catalog.strings[entry.key] = newEntry
-            addedCount += 1
-            print("  Added '\(entry.key)'")
+        switch processEntry(entry, in: &catalog) {
+        case .added: addedCount += 1
+        case .updated: updatedCount += 1
+        case .skipped: break
         }
     }
 
-    // Write back (pretty printed)
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    let outputData = try encoder.encode(catalog)
+    try writeCatalog(catalog, to: config.catalogPath)
 
-    // JSONEncoder escapes forward slashes by default, but xcstrings files don't
-    var outputString = String(data: outputData, encoding: .utf8)!
-    outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
-
-    try outputString.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)
-
-    // Summary
     print("")
-    if addedCount > 0 || updatedCount > 0 {
-        var parts: [String] = []
-        if addedCount > 0 { parts.append("\(addedCount) added") }
-        if updatedCount > 0 { parts.append("\(updatedCount) updated") }
-        print("Done: \(parts.joined(separator: ", "))")
-    }
+    var parts: [String] = []
+    if addedCount > 0 { parts.append("\(addedCount) added") }
+    if updatedCount > 0 { parts.append("\(updatedCount) updated") }
+    if !parts.isEmpty { print("Done: \(parts.joined(separator: ", "))") }
 
-    // Show usage hints for new entries
     if addedCount > 0 {
-        print("")
-        print("Usage in code:")
+        print("\nUsage in code:")
         for entry in config.entries {
-            let symbolName = generateSymbolName(from: entry.key)
-            print("  Text(.\(symbolName))")
+            print("  Text(.\(generateSymbolName(from: entry.key)))")
         }
-        print("")
-        print("Remember to run translate-xcstrings.mjs to add other languages!")
+        print("\nRemember to run translate-xcstrings.mjs to add other languages!")
     }
 }
 
