@@ -90,17 +90,12 @@ struct ShiftsView: View {
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
     private let celebrationHaptic = UINotificationFeedbackGenerator()
 
-    // iPad detection - hide logo on iPad
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
-    }
-
     // Orientation tracking for iPad landscape layout
     @ObservedObject private var orientationTracker = OrientationTracker.shared
 
     /// Whether to show iPad landscape side-by-side layout (calendar + list)
     private var isIPadLandscape: Bool {
-        isIPad && orientationTracker.isLandscape
+        UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
     }
 
     // MARK: - Body
@@ -140,16 +135,8 @@ struct ShiftsView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .iPadToolbarBackground(Color.tidexBackground)
+            .iPadToolbarBackground()
             .toolbar {
-                if !isIPad {
-                    ToolbarItem(placement: .principal) {
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
-                    }
-                }
                 // Share button (only in calendar view, not list view)
                 if !showListView {
                     ToolbarItem(placement: .topBarLeading) {

@@ -23,11 +23,6 @@ struct AddShiftView: View {
         }
     }
 
-    // iPad detection - hide logo on iPad
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
-    }
-
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
@@ -121,9 +116,7 @@ struct AddShiftView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .iPadToolbarBackground(Color.tidexBackground)
+            .iPadToolbarBackground()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)

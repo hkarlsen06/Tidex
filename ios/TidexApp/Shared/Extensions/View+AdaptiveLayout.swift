@@ -156,18 +156,9 @@ private var isIPad: Bool {
 // MARK: - iPad-Only View Modifiers
 
 extension View {
-    /// Applies toolbar background visibility only on iPad
-    /// On iPhone, the toolbar background behavior remains unchanged
-    @ViewBuilder
-    func iPadToolbarBackground(_ color: Color) -> some View {
-        if isIPad {
-            self
-                .toolbarBackgroundVisibility(.visible, for: .navigationBar)
-                .toolbarBackground(color, for: .navigationBar)
-        } else {
-            self
-                .toolbarBackground(color, for: .navigationBar)
-        }
+    /// Keeps the system default toolbar appearance (no custom color/material override).
+    func iPadToolbarBackground() -> some View {
+        self
     }
 
     /// Disables toolbar animations only on iPad

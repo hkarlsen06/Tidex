@@ -14,6 +14,7 @@ struct SharerListView: View {
     let isLoadingPreviews: Bool
     let isRefreshing: Bool
     let onSelectSharer: (SharedUser) -> Void
+    var onAddFriend: (() -> Void)?
 
     
     /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
@@ -99,7 +100,7 @@ struct SharerListView: View {
             if isLoading && sharers.isEmpty {
                 loadingState
             } else if sharers.isEmpty {
-                SharerListEmptyState()
+                SharerListEmptyState(onAddFriend: onAddFriend)
             } else {
                 sharersList
             }

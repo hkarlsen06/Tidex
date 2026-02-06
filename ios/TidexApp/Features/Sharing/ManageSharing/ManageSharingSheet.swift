@@ -12,6 +12,9 @@ struct ManageSharingSheet: View {
     /// User ID to highlight and scroll to (from deep link)
     var highlightUserId: String?
 
+    /// Whether to auto-expand the add friend form and focus the input
+    var autoExpandAddForm: Bool = false
+
     /// Callback when visibility changes (block/unblock) to refresh the sharer list
     var onVisibilityChange: (() -> Void)?
 
@@ -107,6 +110,10 @@ struct ManageSharingSheet: View {
         }
         .task {
             await viewModel.loadFriends()
+            if autoExpandAddForm {
+                try? await Task.sleep(for: .milliseconds(300))
+                viewModel.isAddFormExpanded = true
+            }
         }
         .confirmationDialog(
             confirmationTitle,
