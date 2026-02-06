@@ -12,6 +12,14 @@ struct WorkPatternAnalyzer {
     static let minimumWeeksRequired = 4
   }
 
+  /// Detailed analysis result including diagnostics
+  enum AnalysisResult {
+    case success(WorkPattern)
+    case insufficientData(weeksFound: Int)
+    case noShifts
+    case noPatternDetected
+  }
+
   struct DayPattern {
     let weekday: Int
     let frequency: Double
@@ -25,18 +33,30 @@ struct WorkPatternAnalyzer {
   /// - Parameter userId: User ID
   /// - Returns: WorkPattern if sufficient data exists, otherwise nil
   static func analyze(for userId: String) -> WorkPattern? {
+    switch analyzeDetailed(for: userId) {
+    case .success(let pattern):
+      return pattern
+    default:
+      return nil
+    }
+  }
+
+  /// Analyze shift history with detailed result including diagnostics
+  /// - Parameter userId: User ID
+  /// - Returns: AnalysisResult with pattern or reason for failure
+  static func analyzeDetailed(for userId: String) -> AnalysisResult {
     let calendar = Calendar.current
     let now = Date()
     let endDate = calendar.startOfDay(for: now)
     guard let startDate = calendar.date(byAdding: .weekOfYear, value: -analysisWeeks, to: endDate)
     else {
-      return nil
+      return .noShifts
     }
 
     let combinedShifts = combinedShifts(for: userId, startDate: startDate, endDate: endDate)
     guard !combinedShifts.isEmpty else {
       logger.info("No shifts available for pattern analysis")
-      return nil
+      return .noShifts
     }
 
     // Compute weeks-with-data in the analysis window
@@ -51,7 +71,7 @@ struct WorkPatternAnalyzer {
     let weeksCount = weeksWithData.count
     guard weeksCount >= WorkPattern.minimumWeeksRequired else {
       logger.info("Insufficient weeks for pattern analysis: \(weeksCount)")
-      return nil
+      return .insufficientData(weeksFound: weeksCount)
     }
 
     // Group shifts by weekday
@@ -86,10 +106,10 @@ struct WorkPatternAnalyzer {
 
     if typicalWorkDays.isEmpty {
       logger.info("No typical work days detected")
-      return nil
+      return .noPatternDetected
     }
 
-    return WorkPattern(typicalWorkDays: typicalWorkDays, computedAt: now)
+    return .success(WorkPattern(typicalWorkDays: typicalWorkDays, computedAt: now))
   }
 
   // MARK: - Combined Shifts

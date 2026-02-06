@@ -303,10 +303,35 @@ struct NotificationSettingsView: View {
     } header: {
       Text(.notificationsSmartSectionTitle)
     } footer: {
-      Text(.notificationsSmartSectionSubtitle)
+      smartStatusFooter
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
+  }
+
+  @ViewBuilder
+  private var smartStatusFooter: some View {
+    if let status = viewModel.smartStatus {
+      switch status {
+      case .active(let scheduledCount, let workDays):
+        Text(.notificationsSmartStatusActive(scheduledCount, workDays))
+          .foregroundColor(.tidexSuccess)
+      case .insufficientData(let weeksFound, let weeksRequired):
+        let weeksNeeded = weeksRequired - weeksFound
+        Text(.notificationsSmartStatusInsufficientData(weeksNeeded, weeksFound, weeksRequired))
+          .foregroundColor(.orange)
+      case .noShifts:
+        Text(.notificationsSmartStatusNoShifts)
+          .foregroundColor(.orange)
+      case .noPatternDetected:
+        Text(.notificationsSmartStatusNoPattern)
+          .foregroundColor(.orange)
+      case .disabled, .permissionDenied:
+        Text(.notificationsSmartSectionSubtitle)
+      }
+    } else {
+      Text(.notificationsSmartSectionSubtitle)
+    }
   }
 
   private var sharedShiftsSection: some View {

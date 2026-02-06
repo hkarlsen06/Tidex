@@ -66,6 +66,9 @@ final class NotificationSettingsViewModel: ObservableObject {
     }
   }
 
+  /// Current status of smart notifications
+  @Published var smartStatus: SmartNotificationScheduler.Status?
+
   /// Loading state
   @Published var isLoading: Bool = false
 
@@ -120,6 +123,9 @@ final class NotificationSettingsViewModel: ObservableObject {
     sharedShiftsEnabled = preferences.sharedShiftsEnabled
     smartNotificationsEnabled = preferences.smartNotificationsEnabled ?? true
     isInitialLoad = false
+
+    // Load smart notification status
+    smartStatus = await SmartNotificationScheduler.shared.getStatus(for: userId)
 
     isLoading = false
     logger.info("Loaded notification preferences")
@@ -366,6 +372,7 @@ final class NotificationSettingsViewModel: ObservableObject {
       } else {
         await SmartNotificationScheduler.shared.cancelAllSmartNotifications()
       }
+      smartStatus = await SmartNotificationScheduler.shared.getStatus(for: userId)
     }
 
     logger.info("Updated smart notifications: \(self.smartNotificationsEnabled)")

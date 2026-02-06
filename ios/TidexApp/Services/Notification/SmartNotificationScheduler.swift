@@ -16,9 +16,61 @@ final class SmartNotificationScheduler {
   private static let morningHour = 8
   private static let eveningOffsetMinutes = 120
 
+  /// Status of smart notifications for display in settings
+  enum Status {
+    case active(scheduledCount: Int, workDays: Int)
+    case insufficientData(weeksFound: Int, weeksRequired: Int)
+    case noShifts
+    case noPatternDetected
+    case disabled
+    case permissionDenied
+  }
+
   private init() {}
 
   // MARK: - Public API
+
+  /// Get the current status of smart notifications without scheduling
+  func getStatus(for userId: String) async -> Status {
+    let center = UNUserNotificationCenter.current()
+    let settings = await center.notificationSettings()
+
+    guard
+      settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+        || settings.authorizationStatus == .ephemeral
+    else {
+      return .permissionDenied
+    }
+
+    let prefsRepository = NotificationPreferencesRepository.shared
+    let preferences = prefsRepository.getOrCreatePreferences(for: userId)
+
+    guard preferences.smartNotificationsEnabled ?? true else {
+      return .disabled
+    }
+
+    let analysisResult = WorkPatternAnalyzer.analyzeDetailed(for: userId)
+
+    switch analysisResult {
+    case .noShifts:
+      return .noShifts
+    case .insufficientData(let weeksFound):
+      return .insufficientData(
+        weeksFound: weeksFound,
+        weeksRequired: WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired
+      )
+    case .noPatternDetected:
+      return .noPatternDetected
+    case .success(let pattern):
+      let pendingRequests = await center.pendingNotificationRequests()
+      let scheduledCount = pendingRequests.filter { request in
+        let id = request.identifier
+        return id.hasPrefix(Self.morningIdentifierPrefix)
+          || id.hasPrefix(Self.eveningIdentifierPrefix)
+      }.count
+      return .active(scheduledCount: scheduledCount, workDays: pattern.typicalWorkDays.count)
+    }
+  }
 
   func scheduleSmartNotifications(for userId: String) async {
     logger.info("Scheduling smart notifications for user \(userId.prefix(8))...")
@@ -289,6 +341,48 @@ final class SmartNotificationScheduler {
 
     return months
   }
+
+  // MARK: - Debug Testing
+
+  #if DEBUG
+    enum TestNotificationType {
+      case morning
+      case evening
+    }
+
+    /// Schedule a test notification that fires 5 seconds from now
+    func scheduleTestNotification(type: TestNotificationType) async -> Bool {
+      let now = Date()
+      let dateISO = now.toISODateString()
+
+      let content: UNMutableNotificationContent
+      let identifier: String
+
+      switch type {
+      case .morning:
+        content = buildMorningContent(date: now)
+        identifier = "smart-test-morning-\(Int(now.timeIntervalSince1970))"
+      case .evening:
+        content = buildEveningContent(dateISO: dateISO)
+        identifier = "smart-test-evening-\(Int(now.timeIntervalSince1970))"
+      }
+
+      // Use time interval trigger for precise short delays
+      // (UNCalendarNotificationTrigger only has minute-level granularity)
+      let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+      let request = UNNotificationRequest(
+        identifier: identifier, content: content, trigger: trigger)
+
+      do {
+        try await UNUserNotificationCenter.current().add(request)
+        logger.debug("Scheduled test notification: \(identifier)")
+        return true
+      } catch {
+        logger.error("Failed to schedule test notification: \(error.localizedDescription)")
+        return false
+      }
+    }
+  #endif
 }
 
 // MARK: - App Locale Helper
