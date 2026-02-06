@@ -56,17 +56,22 @@ struct PayrollCard: View {
             .foregroundColor(.tidexBlue)
         }
       } else {
-        // Separate day number for animation
-        HStack(spacing: 0) {
-          Text(payrollDay)
-            .contentTransition(.numericText())
-          Text(payrollDaySuffix)
-          Text(" ")
-          Text(payrollMonth)
+        HStack(spacing: 4) {
+          Text(dateParts.dayName)
+            .font(.system(size: 20, weight: .medium))
+            .foregroundColor(.tidexTextPrimary)
+          Text("·")
+            .foregroundColor(.tidexTextMuted)
+          HStack(spacing: 0) {
+            Text(dateParts.dayNumber)
+              .contentTransition(.numericText())
+            Text(" ")
+            Text(dateParts.monthName)
+          }
+          .font(.system(size: 20, weight: .medium))
+          .foregroundColor(.tidexTextMuted)
         }
-        .font(.system(size: 20, weight: .medium))
-        .foregroundColor(.tidexTextPrimary)
-        .animation(.spring(duration: 0.8, bounce: 0), value: payrollDay)
+        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
       }
     } leadingBottom: {
       // Row 2: Label with calendar icon
@@ -154,21 +159,11 @@ struct PayrollCard: View {
 
   // MARK: - Formatting
 
-  /// Day number (e.g., "10")
-  private var payrollDay: String {
-    FormatterCache.dayFormatter(locale: .appLocale).string(from: payrollDate)
-  }
-
-  /// Day suffix for languages that use it (e.g., "." for Norwegian)
-  private var payrollDaySuffix: String {
-    String(localized: .commonDaySuffix)
-  }
-
-  /// Month name (e.g., "februar")
-  private var payrollMonth: String {
-    FormatterCache.monthNameFormatter(locale: .appLocale)
-      .string(from: payrollDate)
-      .lowercased()
+  private var dateParts: ShiftCardDateParts {
+    ShiftCardFormatter.dateParts(
+      for: payrollDate.toISODateString(),
+      locale: Locale.appLocale
+    )
   }
 
   private func formatCurrency(_ amount: Double) -> String {

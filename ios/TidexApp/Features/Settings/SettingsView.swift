@@ -68,7 +68,7 @@ struct SettingsView: View {
                 Text(.settingsMenuAccountDescription)
                   .font(.system(size: 14))
                   .foregroundColor(.tidexTextSecondary)
-                  .lineLimit(1)
+                  .lineLimit(2)
               }
 
               Spacer()
@@ -275,8 +275,16 @@ struct SettingsView: View {
         await signOut()
       }
     } label: {
-      HStack {
-        Spacer()
+      HStack(spacing: 12) {
+        Image(systemName: "rectangle.portrait.and.arrow.right")
+          .font(.system(size: 15, weight: .medium))
+          .foregroundColor(.white)
+          .frame(width: 29, height: 29)
+          .background(
+            Color.tidexError,
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+          )
+
         if isSigningOut {
           ProgressView()
             .tint(.tidexError)
@@ -286,6 +294,7 @@ struct SettingsView: View {
           Text(String(localized: .userMenuLogout))
             .foregroundColor(.tidexError)
         }
+
         Spacer()
       }
     }
@@ -297,8 +306,16 @@ struct SettingsView: View {
     Button {
       showSignOutEverywhereAlert = true
     } label: {
-      HStack {
-        Spacer()
+      HStack(spacing: 12) {
+        Image(systemName: "rectangle.portrait.and.arrow.right.fill")
+          .font(.system(size: 15, weight: .medium))
+          .foregroundColor(.white)
+          .frame(width: 29, height: 29)
+          .background(
+            Color.gray,
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+          )
+
         if isSigningOutGlobal {
           ProgressView()
             .tint(.tidexTextSecondary)
@@ -308,6 +325,7 @@ struct SettingsView: View {
           Text(String(localized: .userMenuLogoutEverywhere))
             .foregroundColor(.tidexTextSecondary)
         }
+
         Spacer()
       }
     }
@@ -623,7 +641,7 @@ struct SettingsMenuItem: View {
           Text(description)
             .font(.caption)
             .foregroundColor(.tidexTextSecondary)
-            .lineLimit(1)
+            .lineLimit(2)
         }
 
         Spacer()
