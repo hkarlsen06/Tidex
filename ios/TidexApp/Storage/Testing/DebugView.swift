@@ -183,8 +183,10 @@
       let pending = await center.pendingNotificationRequests()
 
       let smartRequests = pending.filter { request in
-        request.identifier.hasPrefix("smart-morning-") || request.identifier.hasPrefix(
-          "smart-evening-") || request.identifier.hasPrefix("smart-test-")
+        request.identifier.hasPrefix("smart-morning-")
+          || request.identifier.hasPrefix(
+            "smart-evening-")
+          || request.identifier.hasPrefix("smart-test-")
       }
       pendingSmartCount = smartRequests.count
 

@@ -28,9 +28,6 @@ final class PaySettingsViewModel: ObservableObject {
   /// Error message to display
   @Published var errorMessage: String?
 
-  /// Success message to display
-  @Published var successMessage: String?
-
   // MARK: - Currency
 
   /// User's current currency
@@ -208,6 +205,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       // Refresh UI
       refreshData()
+      Haptics.play(.success)
       closeEditor()
 
       logger.info("Created new wage snapshot")
@@ -251,6 +249,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       // Refresh UI
       refreshData()
+      Haptics.play(.success)
       closeEditor()
 
       logger.info("Updated wage snapshot: \(id)")
@@ -294,6 +293,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       // Refresh UI
       refreshData()
+      Haptics.play(.success)
       closeEditor()
 
       logger.info("Deleted wage snapshot: \(snapshot.id)")
@@ -394,6 +394,7 @@ final class PaySettingsViewModel: ObservableObject {
       logger.info("Updated monthly goal to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update monthly goal: \(error.localizedDescription)")
+      errorMessage = String(localized: .settingsPayErrorSaveFailed)
     }
   }
 
@@ -426,6 +427,7 @@ final class PaySettingsViewModel: ObservableObject {
       logger.info("Updated payroll day to: \(value)")
     } catch {
       logger.error("Failed to update payroll day: \(error.localizedDescription)")
+      errorMessage = String(localized: .settingsPayErrorSaveFailed)
     }
   }
 
@@ -443,6 +445,7 @@ final class PaySettingsViewModel: ObservableObject {
       logger.info("Updated half tax month to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update half tax month: \(error.localizedDescription)")
+      errorMessage = String(localized: .settingsPayErrorSaveFailed)
     }
   }
 
@@ -465,14 +468,14 @@ final class PaySettingsViewModel: ObservableObject {
       logger.info("Updated currency to: \(value)")
     } catch {
       logger.error("Failed to update currency: \(error.localizedDescription)")
+      errorMessage = String(localized: .settingsPayErrorSaveFailed)
     }
   }
 
   // MARK: - Message Clearing
 
-  func clearMessages() {
+  func clearError() {
     errorMessage = nil
-    successMessage = nil
   }
 }
 

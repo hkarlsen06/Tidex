@@ -66,11 +66,11 @@ struct PaySettingsView: View {
       String(localized: .commonError),
       isPresented: .init(
         get: { viewModel.errorMessage != nil },
-        set: { if !$0 { viewModel.clearMessages() } }
+        set: { if !$0 { viewModel.clearError() } }
       )
     ) {
       Button(String(localized: .commonOk)) {
-        viewModel.clearMessages()
+        viewModel.clearError()
       }
     } message: {
       if let error = viewModel.errorMessage {

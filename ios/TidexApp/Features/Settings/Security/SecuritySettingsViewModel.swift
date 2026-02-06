@@ -653,6 +653,9 @@ final class SecuritySettingsViewModel: ObservableObject {
     // return the old factor on subsequent loads.
     _ = try? await supabase.auth.refreshSession()
 
+    // Re-fetch factors from server to confirm deletion and ensure consistency
+    await loadMFAFactors()
+
     isUnenrollingMFA = false
   }
 
