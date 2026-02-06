@@ -213,15 +213,16 @@ enum FriendsAPIClient {
                 return lhsPriority < rhsPriority
             }
 
-            // Same status - sort by date
-            guard let lhsDate = lhs.shiftDate, let rhsDate = rhs.shiftDate else {
+            // Same status - sort by date/time when possible
+            guard let lhsDateTime = shiftDateTime(shiftDate: lhs.shiftDate, time: lhs.startTime),
+                  let rhsDateTime = shiftDateTime(shiftDate: rhs.shiftDate, time: rhs.startTime) else {
                 return lhs.shiftDate != nil // Put shifts before no-shifts
             }
 
             if lhs.status == .upcoming {
-                return lhsDate < rhsDate // Upcoming: soonest first
+                return lhsDateTime < rhsDateTime // Upcoming: soonest first
             } else if lhs.status == .past {
-                return lhsDate > rhsDate // Past: most recent first
+                return lhsDateTime > rhsDateTime // Past: most recent first
             }
 
             return false
@@ -327,6 +328,24 @@ enum FriendsAPIClient {
             return first + second
         }
         return String(name.prefix(2).uppercased())
+    }
+
+    private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {
+        guard let shiftDate, let time else { return nil }
+        let dateParts = shiftDate.split(separator: "-").compactMap { Int($0) }
+        let timeParts = time.split(separator: ":").compactMap { Int($0) }
+        guard dateParts.count == 3, timeParts.count >= 2 else { return nil }
+
+        var components = DateComponents()
+        components.year = dateParts[0]
+        components.month = dateParts[1]
+        components.day = dateParts[2]
+        components.hour = timeParts[0]
+        components.minute = timeParts[1]
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar.date(from: components)
     }
 }
 // swiftlint:enable function_body_length

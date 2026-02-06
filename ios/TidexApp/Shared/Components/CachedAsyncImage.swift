@@ -48,8 +48,10 @@ final class ImageCache: @unchecked Sendable {
         memoryCache.totalCostLimit = 50 * 1024 * 1024  // 50MB max
 
         // Setup disk cache directory
-        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            fatalError("Unable to access caches directory")
+        let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
+        if cacheDir == fileManager.temporaryDirectory {
+            logger.error("⚠️ Falling back to temporary directory for image cache")
         }
         diskCacheDirectory = cacheDir.appendingPathComponent("ImageCache", isDirectory: true)
 

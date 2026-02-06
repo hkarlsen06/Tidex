@@ -285,7 +285,7 @@ final class NotificationSettingsViewModel: ObservableObject {
             return String(localized: .notificationReminderHoursBefore(Int(hours)))
         } else {
             // Mixed hours and minutes
-            return "\(hours) \(String(localized: .commonHoursShort)) \(mins) min \(String(localized: .commonBefore))"
+            return "\(hours) \(String(localized: .commonHoursShort)) \(mins) \(String(localized: .commonMinutesShort)) \(String(localized: .commonBefore))"
         }
     }
 
