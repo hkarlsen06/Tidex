@@ -56,9 +56,6 @@ final class SubscriptionSettingsViewModel: ObservableObject {
   /// Error message
   @Published var errorMessage: String?
 
-  /// Success/info message (for restore feedback)
-  @Published var successMessage: String?
-
   // MARK: - Computed Properties
 
   /// Display name for the current tier
@@ -249,7 +246,6 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     isLoading = true
     isRestoring = true
     errorMessage = nil
-    successMessage = nil
 
     // Track StoreKit tier before restore (not effectiveTier which includes server cache)
     let storeKitTierBefore = storeKitManager.currentTier
@@ -267,17 +263,14 @@ final class SubscriptionSettingsViewModel: ObservableObject {
       if storeKitTierAfter != .free && storeKitTierAfter != storeKitTierBefore {
         // StoreKit found a new subscription
         logger.info("Purchases restored from Apple, StoreKit tier: \(storeKitTierAfter.rawValue)")
-        successMessage = String(localized: .subscriptionRestoreSuccess)
         Haptics.playSubscriptionSuccess()
       } else if storeKitTierAfter != .free {
         // StoreKit already had this subscription (re-synced)
         logger.info("Purchases synced, StoreKit tier unchanged: \(storeKitTierAfter.rawValue)")
-        successMessage = String(localized: .subscriptionRestoreSuccess)
         Haptics.play(.success)
       } else {
         // No Apple purchases found in StoreKit
         logger.info("No Apple purchases to restore (StoreKit tier: free)")
-        successMessage = String(localized: .subscriptionRestoreNoPurchases)
       }
     } catch {
       logger.error("Failed to restore purchases: \(error.localizedDescription)")

@@ -35,7 +35,7 @@ struct ImpersonationTabView: View {
   private func stopImpersonation() async {
     do {
       try await impersonationManager.stopImpersonation()
-      viewModel.successMessage = "Impersonation ended"
+      Haptics.play(.success)
     } catch {
       viewModel.errorMessage = error.localizedDescription
     }

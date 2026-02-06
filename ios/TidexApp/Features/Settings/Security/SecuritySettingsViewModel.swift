@@ -45,8 +45,6 @@ final class SecuritySettingsViewModel: ObservableObject {
 
   /// Error message to display
   @Published var errorMessage: String?
-  /// Success message to display
-  @Published var successMessage: String?
 
   /// Password form state
   @Published var showPasswordForm = false
@@ -201,7 +199,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       // Request reauthentication via phone OTP
       try await supabase.auth.signInWithOTP(phone: phone)
       otpSent = true
-      successMessage = String(localized: .securityPasswordCodeSent)
+      Haptics.play(.success)
     } catch {
       logger.error("Failed to request OTP: \(error)")
       errorMessage = String(localized: .securityPasswordErrorsOtpFailed)
@@ -271,10 +269,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       // Refresh session
       _ = try? await supabase.auth.refreshSession()
 
-      successMessage =
-        hasPassword
-        ? String(localized: .securityPasswordSuccessUpdated)
-        : String(localized: .securityPasswordSuccessSet)
+      Haptics.play(.success)
 
       // Reset form
       resetPasswordForm()
@@ -377,7 +372,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       }
 
       if linkingSucceeded {
-        successMessage = String(localized: .securityConnectionsSuccessConnected)
+        Haptics.play(.success)
       } else {
         // No tokens or code found - something went wrong
         logger.warning("No tokens or code in callback URL")
@@ -436,7 +431,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       // Unlink the identity
       try await supabase.auth.unlinkIdentity(identity)
 
-      successMessage = String(localized: .securityConnectionsSuccessDisconnected)
+      Haptics.play(.success)
 
       // Reload to update state
       await loadSecurityInfo()
@@ -472,7 +467,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
       // Move to OTP step
       phoneLinkStep = .otp
-      successMessage = String(localized: .securityPhoneLinkingCodeSent)
+      Haptics.play(.success)
 
     } catch {
       logger.error("Failed to initiate phone linking: \(error)")
@@ -508,7 +503,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       // Refresh session
       _ = try? await supabase.auth.refreshSession()
 
-      successMessage = String(localized: .securityPhoneLinkingSuccess)
+      Haptics.play(.success)
 
       // Reset phone linking state
       resetPhoneLinkingForm()
@@ -585,7 +580,7 @@ final class SecuritySettingsViewModel: ObservableObject {
         )
       )
 
-      successMessage = String(localized: .securityMfaSuccessEnrolled)
+      Haptics.play(.success)
 
       // Reset enrollment state
       resetMFAEnrollment()
@@ -641,7 +636,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       return
     }
 
-    successMessage = String(localized: .securityMfaSuccessUnenrolled)
+    Haptics.play(.success)
     showUnenrollConfirmation = false
     factorToUnenroll = nil
 
@@ -662,7 +657,6 @@ final class SecuritySettingsViewModel: ObservableObject {
   /// Clear messages
   func clearMessages() {
     errorMessage = nil
-    successMessage = nil
   }
 
   // MARK: - Biometric Lock Management
@@ -675,12 +669,12 @@ final class SecuritySettingsViewModel: ObservableObject {
     if isBiometricLockEnabled {
       // Disable - no authentication required
       biometricService.disableBiometricLock()
-      successMessage = String(localized: .securityBiometricSuccessDisabled)
+      Haptics.play(.success)
     } else {
       // Enable - requires authentication
       let success = await biometricService.enableBiometricLock()
       if success {
-        successMessage = String(localized: .securityBiometricSuccessEnabled)
+        Haptics.play(.success)
       } else {
         errorMessage = String(localized: .securityBiometricErrorsAuthFailed)
       }

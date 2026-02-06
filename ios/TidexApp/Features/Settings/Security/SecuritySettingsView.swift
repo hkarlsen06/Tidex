@@ -9,54 +9,29 @@ struct SecuritySettingsView: View {
 
   var body: some View {
     List {
-      // Error/Success messages
-      if viewModel.errorMessage != nil || viewModel.successMessage != nil {
+      // Error message
+      if let error = viewModel.errorMessage {
         Section {
-          if let error = viewModel.errorMessage {
-            HStack(spacing: 8) {
-              Image(systemName: "exclamationmark.circle.fill")
+          HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.circle.fill")
+              .foregroundColor(.tidexError)
+            Text(error)
+              .font(.system(size: 14))
+              .foregroundColor(.tidexError)
+            Spacer()
+            Button {
+              viewModel.clearMessages()
+            } label: {
+              Image(systemName: "xmark")
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.tidexError)
-              Text(error)
-                .font(.system(size: 14))
-                .foregroundColor(.tidexError)
-              Spacer()
-              Button {
-                viewModel.clearMessages()
-              } label: {
-                Image(systemName: "xmark")
-                  .font(.system(size: 12, weight: .semibold))
-                  .foregroundColor(.tidexError)
-              }
             }
-            .padding(12)
-            .background(Color.tidexError.opacity(0.1))
-            .cornerRadius(8)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
           }
-
-          if let success = viewModel.successMessage {
-            HStack(spacing: 8) {
-              Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.tidexSuccess)
-              Text(success)
-                .font(.system(size: 14))
-                .foregroundColor(.tidexSuccess)
-              Spacer()
-              Button {
-                viewModel.clearMessages()
-              } label: {
-                Image(systemName: "xmark")
-                  .font(.system(size: 12, weight: .semibold))
-                  .foregroundColor(.tidexSuccess)
-              }
-            }
-            .padding(12)
-            .background(Color.tidexSuccess.opacity(0.1))
-            .cornerRadius(8)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-          }
+          .padding(12)
+          .background(Color.tidexError.opacity(0.1))
+          .cornerRadius(8)
+          .listRowBackground(Color.clear)
+          .listRowInsets(EdgeInsets())
         }
       }
 
@@ -546,14 +521,6 @@ struct SecuritySettingsView: View {
               .frame(maxWidth: .infinity, alignment: .leading)
           }
 
-          // Success message
-          if let success = viewModel.successMessage {
-            Text(success)
-              .font(.system(size: 13))
-              .foregroundColor(.tidexSuccess)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-
           // Submit button
           if viewModel.hasPassword || !viewModel.hasPhoneConnected || viewModel.otpSent {
             Button {
@@ -953,14 +920,6 @@ struct SecuritySettingsView: View {
             Text(error)
               .font(.system(size: 13))
               .foregroundColor(.tidexError)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-
-          // Success message
-          if let success = viewModel.successMessage {
-            Text(success)
-              .font(.system(size: 13))
-              .foregroundColor(.tidexSuccess)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
 

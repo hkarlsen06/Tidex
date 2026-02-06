@@ -42,6 +42,7 @@ final class CalendarExportService {
   ///   - calendarName: Name for the Tidex calendar
   ///   - eventTitle: Title for each calendar event
   /// - Returns: Number of events created
+  @discardableResult
   func exportShifts(
     _ shifts: [ExportedShift],
     calendarName: String,

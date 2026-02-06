@@ -32,9 +32,6 @@ struct AdminSettingsView: View {
       if let error = viewModel.errorMessage {
         MessageBanner(message: error, type: .error) { viewModel.clearMessages() }
       }
-      if let success = viewModel.successMessage {
-        MessageBanner(message: success, type: .success) { viewModel.clearMessages() }
-      }
 
       // Tab content
       TabContent(viewModel: viewModel)

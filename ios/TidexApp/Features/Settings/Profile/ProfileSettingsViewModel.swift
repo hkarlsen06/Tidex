@@ -40,8 +40,6 @@ final class ProfileSettingsViewModel: ObservableObject {
 
   /// Error message to display
   @Published var errorMessage: String?
-  /// Success message to display
-  @Published var successMessage: String?
 
   /// Email change state
   @Published var showEmailChangeSheet = false
@@ -548,6 +546,5 @@ final class ProfileSettingsViewModel: ObservableObject {
   /// Clear messages
   func clearMessages() {
     errorMessage = nil
-    successMessage = nil
   }
 }
