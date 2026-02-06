@@ -115,10 +115,8 @@ private func shouldSkipKey(_ key: String) -> Bool {
 
     // Skip keys matching patterns (case-insensitive)
     let lowercaseKey = key.lowercased()
-    for pattern in skipKeyPatterns {
-        if lowercaseKey.contains(pattern.lowercased()) {
-            return true
-        }
+    for pattern in skipKeyPatterns where lowercaseKey.contains(pattern.lowercased()) {
+        return true
     }
 
     // Skip format specifier strings (e.g., "%@", "%lld", "→ %@")

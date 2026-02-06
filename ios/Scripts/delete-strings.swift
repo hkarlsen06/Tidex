@@ -149,10 +149,8 @@ private func run() throws {
 
     // Validate all keys exist first
     var notFound: [String] = []
-    for key in config.keys {
-        if catalog.strings[key] == nil {
-            notFound.append(key)
-        }
+    for key in config.keys where catalog.strings[key] == nil {
+        notFound.append(key)
     }
 
     if !notFound.isEmpty {

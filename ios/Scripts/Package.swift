@@ -16,7 +16,7 @@ let allFiles: [String] = [
     "generate-appstore-metadata.mjs",
     "reset-translations.mjs",
     "translate-xcstrings.mjs",
-    "appstore-metadata-source.json",
+    "appstore-metadata-source.json"
 ]
 
 func excluding(_ source: String) -> [String] {
