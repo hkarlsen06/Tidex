@@ -425,6 +425,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     /// Refresh dashboard data via sync then local reload
     /// Called by pull-to-refresh - triggers network sync, then reloads from local
     func refresh() async {
+        // SwiftUI .refreshable can cancel the parent task when the view hierarchy changes.
+        // Run refresh work in an unstructured task so sync can complete reliably.
+        let refreshTask = Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            await self.performRefresh()
+        }
+
+        _ = await refreshTask.result
+    }
+
+    /// Performs pull-to-refresh sync and local reload.
+    private func performRefresh() async {
         logger.info("🔄 Pull-to-refresh: triggering sync then local reload")
 
         // Store current data as fallback in case of failure

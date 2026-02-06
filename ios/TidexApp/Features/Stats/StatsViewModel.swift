@@ -137,6 +137,18 @@ final class StatsViewModel: ObservableObject {
 
     /// Refresh stats by syncing first, then recomputing from local data
     func refresh() async {
+        // SwiftUI .refreshable can cancel the parent task when the view hierarchy changes.
+        // Run refresh work in an unstructured task so sync can complete reliably.
+        let refreshTask = Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            await self.performRefresh()
+        }
+
+        _ = await refreshTask.result
+    }
+
+    /// Performs pull-to-refresh sync and local recompute.
+    private func performRefresh() async {
         logger.info("Pull-to-refresh: triggering sync then local stats recompute")
 
         do {
