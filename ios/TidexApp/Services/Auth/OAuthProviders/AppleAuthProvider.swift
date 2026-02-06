@@ -22,10 +22,11 @@ final class AppleAuthProvider: NSObject {
     /// - Parameter anchor: The window to present the sign-in sheet
     /// - Returns: The identity token and optional name from Apple
     func signIn(from anchor: UIWindow? = nil) async throws -> SignInResult {
-        guard let resolvedAnchor = anchor ?? UIApplication.shared.connectedScenes
+        let keyWindow = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } else {
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+        guard let resolvedAnchor = anchor ?? keyWindow else {
             throw AppleAuthError.presentationAnchorUnavailable
         }
         self.presentationAnchor = resolvedAnchor
@@ -129,8 +130,9 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
                 .first {
                 return UIWindow(windowScene: windowScene)
             }
-            assertionFailure("Unexpected: no window scene available for auth presentation")
-            return UIWindow(frame: .zero)
+            // No window scene available — should never happen in practice.
+            // This is a programming error, so we'll trigger a fatal error.
+            fatalError("No window scene available for Apple Sign-In presentation. This should never happen.")
         }
     }
 }

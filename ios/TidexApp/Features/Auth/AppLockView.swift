@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Full-screen lock overlay shown when biometric lock is enabled and app is locked
 struct AppLockView: View {
-        @ObservedObject private var biometricService = BiometricAuthService.shared
+    @ObservedObject private var biometricService = BiometricAuthService.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var isAuthenticating = false
 
@@ -75,14 +76,23 @@ struct AppLockView: View {
         }
         .ignoresSafeArea()
         .task {
-            // Auto-trigger biometric prompt on appear
+            // Auto-trigger biometric prompt on appear (fresh launch)
             await unlock()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Re-trigger biometric prompt when returning from background.
+            // .task only fires on first appear; if the view was inserted while
+            // backgrounded, it won't re-fire when the app becomes active.
+            if newPhase == .active {
+                Task { await unlock() }
+            }
         }
     }
 
     private func unlock() async {
+        guard !isAuthenticating else { return }
         isAuthenticating = true
-        _ = await biometricService.authenticate(reason: .unlocking)
+        _ = await biometricService.authenticate()
         isAuthenticating = false
     }
 }

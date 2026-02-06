@@ -75,10 +75,11 @@ final class OAuthWebAuthSession: NSObject {
 
     private func performWebAuth(url: URL) async throws -> URL {
         // Get the presentation anchor
-        guard let resolvedAnchor = UIApplication.shared.connectedScenes
+        let keyWindow = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } else {
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+        guard let resolvedAnchor = keyWindow else {
             throw OAuthWebAuthError.presentationAnchorUnavailable
         }
         presentationAnchor = resolvedAnchor
@@ -191,14 +192,27 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
             if let keyWindow {
                 return keyWindow
             }
-            // Create window from first available scene (required in iOS 26+)
+            // Create window from first available scene
             if let windowScene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .first {
                 return UIWindow(windowScene: windowScene)
             }
+            // Fallback: try to get any window from any scene
+            // This should never happen in practice since we already checked for window scenes above
+            if let anyWindow = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .flatMap({ $0.windows })
+                .first {
+                return anyWindow
+            }
+            // Last resort: create a new window from the first available window scene
+            // Even if we couldn't find one above, try one more time with a fresh query
             assertionFailure("Unexpected: no window scene available for auth presentation")
-            return UIWindow(frame: .zero)
+            let windowScene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first!
+            return UIWindow(windowScene: windowScene)
         }
     }
 }
