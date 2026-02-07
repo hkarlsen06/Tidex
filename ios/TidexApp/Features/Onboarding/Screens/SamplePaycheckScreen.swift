@@ -60,7 +60,7 @@ struct SamplePaycheckScreen: View {
 
       // Breakdown card with entrance animation - constrained for iPad
       breakdownCard
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Spacing.lg)
         .adaptiveContentWidth()
         .offset(y: showBreakdown ? 0 : 40)
         .opacity(showBreakdown ? 1 : 0)
@@ -70,7 +70,7 @@ struct SamplePaycheckScreen: View {
 
       // Sample label with entrance animation
       Text(.onboardingPaycheckSampleLabel)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
         .multilineTextAlignment(.center)
         .offset(y: showSampleLabel ? 0 : 20)
@@ -136,22 +136,22 @@ struct SamplePaycheckScreen: View {
 
       Divider()
         .background(Color.tidexBorder)
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.xxs)
 
       // Net pay row (highlighted)
       HStack {
         Text(.onboardingPaycheckNet)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
         Text(formatCurrency(sampleData.netPay))
-          .font(.system(size: 18, weight: .bold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexSuccess)
       }
-      .padding(.vertical, 12)
-      .padding(.horizontal, 16)
+      .padding(.vertical, Spacing.sm)
+      .padding(.horizontal, Spacing.md)
     }
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -165,17 +165,17 @@ struct SamplePaycheckScreen: View {
   private func breakdownRow(label: String, amount: Double, isPositive: Bool) -> some View {
     HStack {
       Text(label)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Spacer()
 
       Text("\(isPositive ? "" : "-")\(formatCurrency(amount))")
-        .font(.system(size: 15, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(isPositive ? .tidexTextPrimary : .tidexTextSecondary)
     }
-    .padding(.vertical, 12)
-    .padding(.horizontal, 16)
+    .padding(.vertical, Spacing.sm)
+    .padding(.horizontal, Spacing.md)
   }
 
   // MARK: - Formatting

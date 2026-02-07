@@ -166,7 +166,7 @@ struct WageyView: View {
 
   @ViewBuilder
   private func entitlementSyncBanner(_ message: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       if viewModel.isSyncingEntitlement {
         ProgressView()
           .scaleEffect(0.8)
@@ -183,7 +183,7 @@ struct WageyView: View {
       }
 
       Text(message)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextPrimary)
 
       Spacer()
@@ -192,11 +192,11 @@ struct WageyView: View {
         viewModel.dismissEntitlementSyncMessage()
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 11, weight: .semibold))
+          .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(.horizontal, 16)
+    .padding(.horizontal, Spacing.md)
     .padding(.vertical, 10)
     .background(Color.tidexSurfaceSecondary)
   }
@@ -285,13 +285,13 @@ struct WageyView: View {
   private var headerTitle: some View {
     VStack(spacing: 2) {
       Text(localizedConversationTitle)
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(1)
 
       if shouldShowUsageSubtitle {
         Text(String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount))))
-          .font(.system(size: 11))
+          .font(.tidexMicro)
           .foregroundColor(
             viewModel.remainingMessagesCount <= 3 ? .tidexWarning : .tidexTextSecondary
           )
@@ -304,7 +304,7 @@ struct WageyView: View {
       dismiss()
     } label: {
       Image(systemName: "xmark")
-        .font(.system(size: 16, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -315,7 +315,7 @@ struct WageyView: View {
       showHistory = true
     } label: {
       Image(systemName: "clock.arrow.circlepath")
-        .font(.system(size: 17, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
     }
   }
@@ -326,7 +326,7 @@ struct WageyView: View {
       viewModel.startNewConversation()
     } label: {
       Image(systemName: "square.and.pencil")
-        .font(.system(size: 17, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
         .offset(y: -1)
     }

@@ -20,7 +20,7 @@ struct OnboardingButton: View {
       action()
     } label: {
       Text(title)
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .frame(maxWidth: .infinity)
         .frame(height: 54)
         .foregroundColor(style == .primary ? .white : .tidexBlue)
@@ -51,12 +51,12 @@ private struct SnappyOnboardingButtonStyle: ButtonStyle {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     OnboardingButton(title: "Create Account", action: {})
 
     OnboardingButton(title: "Already have an account? Log in", action: {}, style: .secondary)
   }
-  .padding(.horizontal, 24)
+  .padding(.horizontal, Spacing.lg)
   .frame(maxHeight: .infinity)
   .background(Color.tidexBackground)
 }

@@ -14,7 +14,7 @@ struct WageHistoryTimelineView: View {
       // Header with add button
       HStack {
         Text(.settingsPayTimelineTitle)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -23,23 +23,23 @@ struct WageHistoryTimelineView: View {
           UIImpactFeedbackGenerator(style: .light).impactOccurred()
           onAddNew()
         }) {
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             Image(systemName: "plus")
-              .font(.system(size: 14, weight: .semibold))
+              .font(.tidexLabelStrong)
 
             Text(.settingsPayTimelineAddNew)
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
           }
           .foregroundColor(.tidexBlue)
         }
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 16)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.md)
 
       if entries.isEmpty {
         // Empty state
         emptyState
-          .padding(.bottom, 16)
+          .padding(.bottom, Spacing.md)
       } else {
         // Timeline entries
         VStack(spacing: 0) {
@@ -55,7 +55,7 @@ struct WageHistoryTimelineView: View {
             )
           }
         }
-        .padding(.bottom, 16)
+        .padding(.bottom, Spacing.md)
       }
     }
     .background(Color.tidexSurfacePrimary)
@@ -67,19 +67,19 @@ struct WageHistoryTimelineView: View {
 
   @ViewBuilder
   private var emptyState: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       Image(systemName: "clock.badge.questionmark")
         .font(.system(size: 32))
         .foregroundColor(.tidexTextMuted)
 
       Text(.settingsPayTimelineEmpty)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
-    .padding(.vertical, 32)
-    .padding(.horizontal, 16)
+    .padding(.vertical, Spacing.xl)
+    .padding(.horizontal, Spacing.md)
   }
 
   // MARK: - Helpers
@@ -159,17 +159,17 @@ private struct TimelineEntryRow: View {
       // Timeline indicator (dot and lines) - no vertical padding
       timelineIndicator
         .frame(width: 40)
-        .padding(.leading, 16)
+        .padding(.leading, Spacing.md)
 
       // Content with vertical padding
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           // Title: wage rate or change description
           titleView
 
           // Date range
           Text(entry.dateRange)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -181,13 +181,13 @@ private struct TimelineEntryRow: View {
           onEdit()
         }) {
           Image(systemName: "pencil")
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
-            .padding(8)
+            .padding(Spacing.xs)
         }
       }
       .padding(.vertical, verticalPadding)
-      .padding(.trailing, 16)
+      .padding(.trailing, Spacing.md)
     }
     .background(
       entry.type == .current

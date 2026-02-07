@@ -11,7 +11,7 @@ struct OAuthButtonsView: View {
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Native Apple Sign-In Button
       NativeAppleSignInButton(action: onAppleTap, isLoading: isLoading)
         .frame(height: 50)
@@ -73,7 +73,7 @@ private struct GoogleSignInButton: View {
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
       action()
     } label: {
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         GoogleLogo()
           .frame(width: 18, height: 18)
 
@@ -259,14 +259,14 @@ private struct GoogleRedPath: Shape {
 }
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     OAuthButtonsView(
       onGoogleTap: {},
       onAppleTap: {}
     )
 
     // Show Google logo standalone for verification
-    HStack(spacing: 20) {
+    HStack(spacing: Spacing.mlg) {
       GoogleLogo()
         .frame(width: 24, height: 24)
 

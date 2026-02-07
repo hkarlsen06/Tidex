@@ -139,7 +139,7 @@ enum CalendarGridHelper {
   // MARK: - Grid Columns
 
   /// Standard 7-column grid for calendar
-  static let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+  static let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xxs), count: 7)
 
   // MARK: - Formatting
 

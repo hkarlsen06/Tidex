@@ -79,7 +79,7 @@ struct SharedShiftsListView: View {
                 ))
             Spacer()
           }
-          .padding(.top, 16)
+          .padding(.top, Spacing.md)
         }
       }
     }
@@ -142,12 +142,12 @@ struct SharedShiftsListView: View {
   @ViewBuilder
   private var shiftListContent: some View {
     if shifts.isEmpty {
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         Image(systemName: "calendar.badge.minus")
           .font(.system(size: 48))
           .foregroundColor(.tidexTextMuted)
         Text(.shiftsEmptyNoShiftsThisMonth)
-          .font(.system(size: 17, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -232,18 +232,18 @@ struct SharedShiftsListView: View {
 
   /// Screenshot notification bubble (matches SyncStatusIndicator styling)
   private var screenshotBubble: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "camera.viewfinder")
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       Text(.sharingScreenshotTaken)
-        .font(.system(size: 13, weight: .medium))
+        .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
 
       if showNotifiedIcon {
         Image(systemName: "bell.and.waves.left.and.right")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexBlue)
           .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) {
             content, value in
@@ -262,8 +262,8 @@ struct SharedShiftsListView: View {
           .transition(.scale.combined(with: .opacity))
       }
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(20)
     .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
@@ -272,12 +272,12 @@ struct SharedShiftsListView: View {
   // MARK: - States
 
   private var loadingState: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       ProgressView()
         .scaleEffect(1.2)
 
       Text(.sharingLoadingShifts)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

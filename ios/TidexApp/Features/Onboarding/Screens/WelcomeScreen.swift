@@ -91,7 +91,7 @@ struct WelcomeScreen: View {
   private var ghostedPaycheckPreview: some View {
     // Deliberately obscured UI - "I can tell this is real, but I'm not allowed to read it yet"
     ZStack {
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         // Fake header bar
         RoundedRectangle(cornerRadius: 4)
           .fill(Color.tidexTextSecondary)
@@ -137,8 +137,8 @@ struct WelcomeScreen: View {
             .frame(width: 60, height: 6)
         }
       }
-      .padding(.horizontal, 24)
-      .padding(.vertical, 20)
+      .padding(.horizontal, Spacing.lg)
+      .padding(.vertical, Spacing.mlg)
       .frame(width: 280)
       .background(Color.tidexSurfacePrimary)
       .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -168,7 +168,7 @@ struct WelcomeScreen: View {
 
   @ViewBuilder
   private var textContent: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Headline - sized to never truncate on any device
       Text(.onboardingWelcomeTitle)
         .font(.tidexLargeTitle)
@@ -196,7 +196,7 @@ struct WelcomeScreen: View {
         .opacity(showSubheadline ? 1 : 0)
         .offset(y: showSubheadline ? 0 : 6)
     }
-    .padding(.horizontal, 40)
+    .padding(.horizontal, Spacing.xxl)
     .adaptiveContentWidth()
   }
 }

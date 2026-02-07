@@ -72,11 +72,11 @@ struct OnboardingRateSlider: View {
 
   @ViewBuilder
   private var compactLayout: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Current value display: "Your hourly rate" on left, "200 kr/t" on right
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Text(.onboardingSliderLabel)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
 
         Spacer()
@@ -87,26 +87,26 @@ struct OnboardingRateSlider: View {
         } else if isCurrencyPrefix {
           // Prefix currencies: "$200/hr"
           Text(currencySymbol)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextMuted)
           tappableValue(formatValueWithDecimals(value))
           Text(hourSuffix)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
         } else {
           // Suffix currencies: "200 kr/t"
           tappableValue(formatValueWithDecimals(value))
           Text("\(currencySymbol)\(hourSuffix)")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextMuted)
         }
       }
 
       sliderControl
 
-      minMaxLabels(fontSize: 11)
+      minMaxLabels(font: .tidexMicro)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
   }
@@ -115,14 +115,14 @@ struct OnboardingRateSlider: View {
 
   @ViewBuilder
   private var fullLayout: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Label
       Text(.onboardingPersonalizeWageLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Slider card
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Current value display (currency-aware)
         HStack {
           if showingCustomInput {
@@ -130,24 +130,24 @@ struct OnboardingRateSlider: View {
           } else if isCurrencyPrefix {
             // Prefix currencies: "$200 per hour"
             Text(currencySymbol)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextSecondary)
 
             tappableValueFull(formatValueWithDecimals(value))
 
             Text(.commonPerHour)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextMuted)
           } else {
             // Suffix currencies: "200 kr per time"
             tappableValueFull(formatValueWithDecimals(value))
 
             Text(currencySymbol)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextSecondary)
 
             Text(.commonPerHour)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextMuted)
           }
 
@@ -156,15 +156,15 @@ struct OnboardingRateSlider: View {
 
         sliderControl
 
-        minMaxLabels(fontSize: 12)
+        minMaxLabels(font: .tidexCaptionRegular)
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
       // Helper text
       Text(.onboardingPersonalizeWageHelper)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -186,16 +186,16 @@ struct OnboardingRateSlider: View {
   }
 
   @ViewBuilder
-  private func minMaxLabels(fontSize: CGFloat) -> some View {
+  private func minMaxLabels(font: Font) -> some View {
     HStack {
       Text(formatCurrencyLabel(minValue))
-        .font(.system(size: fontSize))
+        .font(font)
         .foregroundColor(.tidexTextMuted)
 
       Spacer()
 
       Text(formatCurrencyLabel(maxValue))
-        .font(.system(size: fontSize))
+        .font(font)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -241,10 +241,10 @@ struct OnboardingRateSlider: View {
       }
     }) {
       Text(text)
-        .font(.system(size: 24, weight: .bold))
+        .font(.tidexLargeTitle)
         .foregroundColor(.tidexBlue)
         .contentTransition(.numericText())
-        .padding(.horizontal, 4)
+        .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, 2)
         .background(Color.tidexBlue.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -278,15 +278,15 @@ struct OnboardingRateSlider: View {
 
   @ViewBuilder
   private var customInputField: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
-        .font(.system(size: 24, weight: .bold))
+        .font(.tidexLargeTitle)
         .foregroundColor(.tidexBlue)
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.trailing)
         .focused($isInputFocused)
         .frame(width: 80)
-        .padding(.horizontal, 4)
+        .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, 2)
         .background(Color.tidexBlue.opacity(0.15))
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -316,7 +316,7 @@ struct OnboardingRateSlider: View {
 
   @ViewBuilder
   private var customInputFieldFull: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
         .font(.system(size: 28, weight: .bold))
         .foregroundColor(.tidexBlue)

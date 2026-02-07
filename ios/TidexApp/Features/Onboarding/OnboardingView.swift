@@ -55,7 +55,7 @@ struct OnboardingView: View {
           reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
 
         // Bottom controls area - constrained for iPad
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) {
           // Hourly rate slider (only on page 2)
           if currentPage == 1 {
             OnboardingRateSlider(value: $hourlyRate)
@@ -79,9 +79,9 @@ struct OnboardingView: View {
             )
           }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Spacing.lg)
         .adaptiveContentWidth()
-        .padding(.bottom, 32)
+        .padding(.bottom, Spacing.xl)
         .animation(
           reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
       }
@@ -97,14 +97,14 @@ struct OnboardingView: View {
               }
             } label: {
               Text(.onboardingSkip)
-                .font(.system(size: 16, weight: .medium))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextSecondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.xs)
             }
             .tidexGlass(shape: .capsule, interactive: true)
-            .padding(.trailing, 24)
-            .padding(.top, 16)
+            .padding(.trailing, Spacing.lg)
+            .padding(.top, Spacing.md)
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
           }
         }

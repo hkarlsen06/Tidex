@@ -125,7 +125,7 @@ struct TotalCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: 4) {
+    VStack(spacing: Spacing.xxs) {
       // Percentage change indicator (top) - fixed height for consistent card size
       percentageIndicator
         .frame(height: 22)  // Match the 18pt font line height
@@ -139,9 +139,9 @@ struct TotalCard: View {
         .frame(height: 24)  // Fixed height for subtitle area
     }
     .frame(maxWidth: .infinity)
-    .padding(.horizontal, 24)
-    .padding(.top, 20)
-    .padding(.bottom, 16)
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.mlg)
+    .padding(.bottom, Spacing.md)
     .background(
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexSurfacePrimary)
@@ -160,12 +160,12 @@ struct TotalCard: View {
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 48, height: 14)
     } else {
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Image(systemName: isPositive ? "arrow.up" : "arrow.down")
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .contentTransition(.symbolEffect(.replace))
         Text(formattedPercentage)
-          .font(.system(size: 18, weight: .semibold))
+          .font(.tidexHeadline)
           .contentTransition(.numericText(value: displayPercentage))
       }
       .foregroundColor(isPositive ? .tidexBlue : .tidexTextSecondary)
@@ -178,7 +178,7 @@ struct TotalCard: View {
   private var subtitleContent: some View {
     switch subtitleType {
     case .earnedToDate(let amount):
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         CurrencyCountUpText(
           amount: amount,
           duration: 0.8,
@@ -187,11 +187,11 @@ struct TotalCard: View {
         )
         Text(String(localized: .dashboardEarnedToDate))
       }
-      .font(.system(size: 18, weight: .regular))
+      .font(.tidexBody)
       .foregroundColor(.tidexTextSecondary)
 
     case .beforeTax(let amount):
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         CurrencyCountUpText(
           amount: amount,
           duration: 0.8,
@@ -200,7 +200,7 @@ struct TotalCard: View {
         )
         Text(String(localized: .dashboardBeforeTax))
       }
-      .font(.system(size: 18, weight: .regular))
+      .font(.tidexBody)
       .foregroundColor(.tidexTextSecondary)
 
     case .plannedCount(let count):
@@ -209,7 +209,7 @@ struct TotalCard: View {
         ? String(localized: .dashboardShiftPlanned)
         : String(localized: .dashboardShiftsPlanned)
       Text("\(count) \(plannedLabel)")
-        .font(.system(size: 18, weight: .regular))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextSecondary)
         .contentTransition(.numericText(value: Double(count)))
         .animation(.spring(duration: 0.8, bounce: 0), value: count)
@@ -220,7 +220,7 @@ struct TotalCard: View {
         ? String(localized: .dashboardShift)
         : String(localized: .dashboardShifts)
       Text("\(count) \(shiftsLabel)")
-        .font(.system(size: 18, weight: .regular))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextSecondary)
         .contentTransition(.numericText(value: Double(count)))
         .animation(.spring(duration: 0.8, bounce: 0), value: count)
@@ -255,7 +255,7 @@ struct TotalCard: View {
         animateChanges: true,
         format: { CurrencyConfig.format($0, currency: currency) }
       )
-      .font(.system(size: 88, weight: .bold))
+      .font(.tidexHeroAmount)
       .foregroundColor(.tidexBlue)
       .minimumScaleFactor(0.4)
       .lineLimit(1)
@@ -274,7 +274,7 @@ struct TotalCard: View {
 }
 
 #Preview {
-  VStack(spacing: 12) {
+  VStack(spacing: Spacing.sm) {
     // Case 1: Has future shifts AND real earned amount → "7 500 kr hittil"
     TotalCard(
       gross: 15000,
@@ -335,6 +335,6 @@ struct TotalCard: View {
       taxEnabled: false
     )
   }
-  .padding(.horizontal, 24)
+  .padding(.horizontal, Spacing.lg)
   .background(Color.tidexBackground)
 }

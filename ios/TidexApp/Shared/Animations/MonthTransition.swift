@@ -354,7 +354,7 @@ struct MonthYearPickerSheet: View {
               .font(.subheadline)
               .fontWeight(.medium)
               .foregroundColor(isShowingCurrentMonth ? .tidexTextMuted : .tidexBlue)
-              .padding(.horizontal, 12)
+              .padding(.horizontal, Spacing.sm)
               .padding(.vertical, 6)
               .background(
                 Color.tidexBlue.opacity(isShowingCurrentMonth ? 0.05 : 0.1),
@@ -453,7 +453,7 @@ struct AnimatedMonthHeader: View {
   // MARK: - Compact Layout (for Add tab)
 
   private var compactLayout: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       // Previous button
       pillNavigationButton(icon: previousIcon, action: onPrevious)
 

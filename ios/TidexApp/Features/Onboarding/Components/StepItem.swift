@@ -45,7 +45,7 @@ struct StepItem: View {
   private let connectorHeight: CGFloat = 20
 
   var body: some View {
-    HStack(alignment: .top, spacing: 16) {
+    HStack(alignment: .top, spacing: Spacing.md) {
       // Left column: Icon + connector line (vertically stacked, centered)
       VStack(spacing: 0) {
         // Icon circle with optional check pulse
@@ -64,7 +64,7 @@ struct StepItem: View {
           }
 
           Image(systemName: icon)
-            .font(.system(size: 18, weight: .semibold))
+            .font(.tidexHeadline)
             .foregroundColor(.tidexBlue)
             .opacity(progressState.contentOpacity)
         }
@@ -86,12 +86,12 @@ struct StepItem: View {
       // Right column: Text content (vertically centered to icon)
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
-          .font(.system(size: 17, weight: .semibold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
           .opacity(progressState.contentOpacity)
 
         Text(description)
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .opacity(progressState.contentOpacity * 0.9)
       }
@@ -164,7 +164,7 @@ extension StepItem {
       showConnector: false
     )
   }
-  .padding(.horizontal, 24)
+  .padding(.horizontal, Spacing.lg)
   .frame(maxHeight: .infinity)
   .background(Color.tidexBackground)
 }

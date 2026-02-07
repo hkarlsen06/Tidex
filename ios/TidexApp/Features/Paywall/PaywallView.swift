@@ -26,7 +26,7 @@ struct PaywallView: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           // Context header (if provided)
           if let context = localizedContext {
             contextHeader(context)
@@ -37,10 +37,10 @@ struct PaywallView: View {
             selection: $viewModel.billingPeriod,
             yearlySavingsPercent: viewModel.yearlySavingsPercent(for: .pro)
           )
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
 
           // Plan cards
-          VStack(spacing: 16) {
+          VStack(spacing: Spacing.md) {
             // Pro plan
             PlanCard(
               tier: .pro,
@@ -71,12 +71,12 @@ struct PaywallView: View {
               }
             )
           }
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
 
           // Error display
           if let error = viewModel.error {
             errorView(error)
-              .padding(.horizontal, 24)
+              .padding(.horizontal, Spacing.lg)
           }
 
           // Restore purchases button
@@ -84,18 +84,18 @@ struct PaywallView: View {
             Task { await viewModel.restorePurchases() }
           }) {
             Text(.paywallRestorePurchases)
-              .font(.system(size: 15, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexBlue)
           }
           .disabled(viewModel.isLoading)
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
 
           // Legal links
           legalLinks
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xl)
         }
-        .padding(.top, 24)
+        .padding(.top, Spacing.lg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .paywallTitle))
@@ -104,7 +104,7 @@ struct PaywallView: View {
         ToolbarItem(placement: .topBarTrailing) {
           Button(action: { dismiss() }) {
             Image(systemName: "xmark")
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextMuted)
           }
         }
@@ -130,32 +130,32 @@ struct PaywallView: View {
 
   @ViewBuilder
   private func contextHeader(_ context: PaywallContext) -> some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       Image(systemName: context.icon)
         .font(.system(size: 48))
         .foregroundColor(.tidexBlue)
 
       Text(context.title)
-        .font(.system(size: 20, weight: .bold))
+        .font(.tidexTitle2)
         .foregroundColor(.tidexTextPrimary)
 
       Text(context.message)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
-    .padding(.horizontal, 32)
-    .padding(.bottom, 8)
+    .padding(.horizontal, Spacing.xl)
+    .padding(.bottom, Spacing.xs)
   }
 
   @ViewBuilder
   private func errorView(_ error: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
         .foregroundColor(.tidexError)
 
       Text(error)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
 
       Spacer()
@@ -165,18 +165,18 @@ struct PaywallView: View {
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 
   // swiftlint:disable force_unwrapping
   private var legalLinks: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       Link(
         String(localized: .paywallTermsOfUse), destination: URL(string: "https://tidex.no/terms")!
       )
-      .font(.system(size: 13))
+      .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
 
       Text("•")
@@ -186,7 +186,7 @@ struct PaywallView: View {
         String(localized: .paywallPrivacyPolicy),
         destination: URL(string: "https://tidex.no/privacy")!
       )
-      .font(.system(size: 13))
+      .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
     }
   }
@@ -196,12 +196,12 @@ struct PaywallView: View {
     ZStack {
       Color.tidexBackground.opacity(0.8)
 
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         ProgressView()
           .scaleEffect(1.2)
 
         Text(.paywallLoading)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
       }
     }

@@ -49,10 +49,10 @@ struct UserMenuButton: View {
   // MARK: - Menu Button Label
 
   private var menuButton: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       // First name only, truncates if too long
       Text(firstName)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(1)
         .truncationMode(.tail)
@@ -62,8 +62,8 @@ struct UserMenuButton: View {
       profileImage
     }
     .padding(.leading, 6)
-    .padding(.trailing, 4)
-    .padding(.vertical, 4)
+    .padding(.trailing, Spacing.xxs)
+    .padding(.vertical, Spacing.xxs)
     // Fixed height prevents toolbar layout shifts on iPad
     .iPadFixedHeight(36)
   }
@@ -165,7 +165,7 @@ struct UserMenuButton: View {
         .fill(Color.tidexBlue.opacity(0.2))
 
       Text(displayName.prefix(1).uppercased())
-        .font(.system(size: 12, weight: .semibold))
+        .font(.tidexCaptionStrong)
         .foregroundColor(.tidexBlue)
     }
     .frame(width: 28, height: 28)
@@ -179,7 +179,7 @@ struct UserMenuButton: View {
     Color.tidexBackground
       .ignoresSafeArea()
 
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       // Shows "John"
       UserMenuButton(
         displayName: "John Doe",

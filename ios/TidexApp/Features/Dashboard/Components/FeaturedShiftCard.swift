@@ -26,10 +26,6 @@ struct FeaturedShiftCard: View {
     shift.taxEnabled && shift.taxAmount > 0
   }
 
-  private var formattedHours: String {
-    ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.appLocale)
-  }
-
   private var dateParts: ShiftCardDateParts {
     ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.appLocale)
   }
@@ -63,47 +59,35 @@ struct FeaturedShiftCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       // Main card content
       ShiftCardContentLayout(centerTrailing: !showBreakdown) {
         // Row 1: Day name and date
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(dateParts.dayName)
-            .font(.system(size: 20, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
           Text("·")
             .foregroundColor(.tidexTextMuted)
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             Text(dateParts.dayNumber)
               .contentTransition(.numericText())
             Text(dateParts.monthName)
           }
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
         }
-        .fixedSize(horizontal: true, vertical: false)
         .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
       } leadingBottom: {
-        // Row 2: Time range and hours
-        HStack(spacing: 8) {
-          if isRTL {
-            hoursLabel
-            arrowLabel
-            timeRangeLabel
-          } else {
-            timeRangeLabel
-            arrowLabel
-            hoursLabel
-          }
-        }
-        .environment(\.layoutDirection, .leftToRight)
+        // Row 2: Time range
+        timeRangeLabel
       } trailingTop: {
         // Net/gross amount
         let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
         HStack(spacing: 2) {
           if showIncreaseHighlight {
             Text("+")
-              .font(.system(size: 22, weight: .semibold))
+              .font(.tidexTitle)
               .tracking(-0.5)
               .foregroundColor(.tidexBlue)
           }
@@ -113,28 +97,28 @@ struct FeaturedShiftCard: View {
             animateOnAppear: true,
             animateChanges: true
           )
-          .font(.system(size: 22, weight: .semibold))
+          .font(.tidexTitle)
           .tracking(-0.5)
           .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
         }
       } trailingBottom: {
         // Breakdown (gross - tax) when tax enabled
         if showBreakdown {
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             Text(formatPlainAmount(shift.grossPay))
               .contentTransition(.numericText(value: shift.grossPay))
             Text("−")
             Text(formatPlainAmount(shift.taxAmount))
               .contentTransition(.numericText(value: shift.taxAmount))
           }
-          .font(.system(size: 14, weight: .regular))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
           .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
           .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
         }
       }
-      .padding(.horizontal, 20)
-      .padding(.vertical, 24)
+      .padding(.horizontal, Spacing.mlg)
+      .padding(.vertical, Spacing.lg)
       .background(Color.tidexSurfacePrimary)
       .overlay(alignment: .leading) {
         // Progress bar overlay - fills from left based on progress (for active shifts)
@@ -172,7 +156,7 @@ struct FeaturedShiftCard: View {
           HStack(spacing: 6) {
             if isBestShift {
               Image(systemName: "star.fill")
-                .font(.system(size: 12))
+                .font(.tidexCaptionRegular)
                 .foregroundColor(.tidexBlue)
             } else {
               Circle()
@@ -180,7 +164,7 @@ struct FeaturedShiftCard: View {
                 .frame(width: 7, height: 7)
             }
             Text(text)
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexTextSecondary)
           }
         } else {
@@ -206,7 +190,7 @@ struct FeaturedShiftCard: View {
   }
 
   private var timeRangeLabel: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       if isRTL {
         timeRangeTextLabel
         clockIcon
@@ -217,25 +201,9 @@ struct FeaturedShiftCard: View {
     }
   }
 
-  private var hoursLabel: some View {
-    Text(formattedHours)
-      .font(.system(size: 14, weight: .medium))
-      .foregroundColor(.tidexTextMuted)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-  }
-
-  private var arrowLabel: some View {
-    Text(isRTL ? "←" : "→")
-      .font(.system(size: 14, weight: .medium))
-      .foregroundColor(.tidexTextMuted)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-  }
-
   private var timeRangeTextLabel: some View {
     Text(timeRangeText)
-      .font(.system(size: 14, weight: .regular))
+      .font(.tidexSubheadline)
       .foregroundColor(.tidexTextPrimary)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
@@ -244,14 +212,14 @@ struct FeaturedShiftCard: View {
 
   private var clockIcon: some View {
     Image(systemName: "clock")
-      .font(.system(size: 14, weight: .regular))
+      .font(.tidexSubheadline)
       .foregroundColor(.tidexTextMuted)
   }
 }
 
 // Preview disabled - requires full app context
 // #Preview {
-//     VStack(spacing: 16) {
+//     VStack(spacing: Spacing.md) {
 //         FeaturedShiftCard(shift: mockShift, isToday: true, isBestShift: false)
 //         FeaturedShiftCard(shift: mockShift, isToday: false, isBestShift: true)
 //     }

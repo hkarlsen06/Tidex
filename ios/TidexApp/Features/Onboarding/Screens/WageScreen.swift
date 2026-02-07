@@ -26,19 +26,19 @@ struct WageScreen: View {
                   UIImpactFeedbackGenerator(style: .light).impactOccurred()
                   onBack()
                 }) {
-                  HStack(spacing: 4) {
+                  HStack(spacing: Spacing.xxs) {
                     Image(systemName: "chevron.left")
-                      .font(.system(size: 16, weight: .semibold))
+                      .font(.tidexButton)
                     Text(.commonBack)
-                      .font(.system(size: 16))
+                      .font(.tidexBody)
                   }
                   .foregroundColor(.tidexBlue)
                 }
                 .buttonStyle(.plain)
                 Spacer()
               }
-              .padding(.horizontal, 24)
-              .padding(.top, 16)
+              .padding(.horizontal, Spacing.lg)
+              .padding(.top, Spacing.md)
               .adaptiveContentWidth()
             }
 
@@ -46,18 +46,18 @@ struct WageScreen: View {
               .frame(height: onBack != nil ? 24 : 60)
 
             // Header
-            VStack(spacing: 12) {
+            VStack(spacing: Spacing.sm) {
               Text(.onboardingWageTitle)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
               Text(.onboardingWageSubtitle)
-                .font(.system(size: 17))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, Spacing.xl)
             .adaptiveContentWidth()
 
             Spacer()
@@ -65,7 +65,7 @@ struct WageScreen: View {
 
             // Wage type toggle
             wageTypeToggle
-              .padding(.horizontal, 24)
+              .padding(.horizontal, Spacing.lg)
               .adaptiveContentWidth()
 
             Spacer()
@@ -80,7 +80,7 @@ struct WageScreen: View {
                 customWageContent
               }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, Spacing.lg)
             .adaptiveContentWidth()
 
             // Bottom padding to account for fixed button
@@ -107,8 +107,8 @@ struct WageScreen: View {
               onContinue()
             }
           )
-          .padding(.horizontal, 24)
-          .padding(.bottom, 32)
+          .padding(.horizontal, Spacing.lg)
+          .padding(.bottom, Spacing.xl)
           .adaptiveContentWidth()
           .background(Color.tidexBackground)
         }
@@ -156,7 +156,7 @@ struct WageScreen: View {
 
   @ViewBuilder
   private var wageTypeToggle: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       WageTypeButton(
         title: String(localized: .onboardingWageCustom),
         isSelected: data.wageType == .custom,
@@ -191,12 +191,12 @@ struct WageScreen: View {
 
   @ViewBuilder
   private var tariffSelector: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Tariff type picker (when multiple types available)
       if !data.availableTariffTypes.isEmpty {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
           Text(.settingsPayEditorTariffTypeLabel)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
 
           Menu {
@@ -221,14 +221,14 @@ struct WageScreen: View {
             HStack {
               VStack(alignment: .leading, spacing: 2) {
                 Text(selectedTariffTypeName)
-                  .font(.system(size: 16, weight: .medium))
+                  .font(.tidexBodyMedium)
                   .foregroundColor(.tidexTextPrimary)
 
                 if let version = data.currentTariffVersion {
                   Text(
                     "\(String(localized: .settingsPayEditorTariffEffectiveDate)): \(formatEffectiveDate(version.effective_date))"
                   )
-                  .font(.system(size: 13))
+                  .font(.tidexFootnote)
                   .foregroundColor(.tidexTextSecondary)
                 }
               }
@@ -236,10 +236,10 @@ struct WageScreen: View {
               Spacer()
 
               Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
             }
-            .padding(12)
+            .padding(Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
@@ -251,7 +251,7 @@ struct WageScreen: View {
       }
 
       // Tariff level picker
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         ForEach(tariffLevels) { level in
           TariffLevelRow(
             level: level,
@@ -286,7 +286,7 @@ struct WageScreen: View {
 
   @ViewBuilder
   private var customWageContent: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       // Currency selector
       CurrencySelector(selectedCurrency: $data.currency)
 
@@ -356,7 +356,7 @@ private struct WageTypeButton: View {
       action()
     }) {
       Text(title)
-        .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
+        .font(isSelected ? .tidexButton : .tidexBodyMedium)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(maxWidth: .infinity)
         .frame(height: 48)
@@ -384,13 +384,13 @@ private struct TariffLevelRow: View {
       action()
     }) {
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(level.displayName)
-            .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
+            .font(isSelected ? .tidexButton : .tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(level.formattedRate)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -409,7 +409,7 @@ private struct TariffLevelRow: View {
           }
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
       .overlay(

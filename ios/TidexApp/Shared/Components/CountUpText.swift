@@ -227,7 +227,7 @@ struct CurrencyCountUpText: View {
 // MARK: - Previews
 
 #Preview("Currency") {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     CurrencyCountUpText(amount: 24650)
       .font(.system(size: 48, weight: .bold))
       .foregroundColor(.tidexBlue)
@@ -241,7 +241,7 @@ struct CurrencyCountUpText: View {
 }
 
 #Preview("Custom Format") {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     CountUpText(targetValue: 142.5, format: { String(format: "%.1f timer", $0) })
       .font(.system(size: 32, weight: .semibold))
       .foregroundColor(.tidexTextPrimary)
@@ -267,12 +267,12 @@ struct CurrencyCountUpText: View {
     @State private var amount: Double = 1234
 
     var body: some View {
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         CurrencyCountUpText(amount: amount)
           .font(.system(size: 48, weight: .bold))
           .foregroundColor(.tidexBlue)
 
-        HStack(spacing: 16) {
+        HStack(spacing: Spacing.md) {
           Button("-500") { amount = max(0, amount - 500) }
           Button("+500") { amount += 500 }
           Button("Random") { amount = Double.random(in: 1000...50000) }

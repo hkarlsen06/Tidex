@@ -104,7 +104,7 @@ struct ShiftModeToggle: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     ShiftModeToggle(mode: .constant(.single))
     ShiftModeToggle(mode: .constant(.recurring))
   }

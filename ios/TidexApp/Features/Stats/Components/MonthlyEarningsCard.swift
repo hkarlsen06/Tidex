@@ -36,7 +36,7 @@ struct MonthlyEarningsCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Title, amount, and after tax label grouped tightly
       VStack(alignment: .leading, spacing: 2) {
         Text(.statsMonthlyEarnings)
@@ -65,7 +65,7 @@ struct MonthlyEarningsCard: View {
 
       // Percentage change indicator
       if hasChange || percentageChange == nil {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           if hasChange {
             Image(
               systemName: isPositive ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis"
@@ -81,11 +81,11 @@ struct MonthlyEarningsCard: View {
           }
         }
         .foregroundColor(hasChange ? (isPositive ? .tidexSuccess : .tidexError) : .tidexTextMuted)
-        .padding(.top, 4)
+        .padding(.top, Spacing.xxs)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(24)
+    .padding(Spacing.lg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -99,7 +99,7 @@ struct MonthlyEarningsCard: View {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     // With tax and negative change
     MonthlyEarningsCard(
       grossEarnings: 13772,

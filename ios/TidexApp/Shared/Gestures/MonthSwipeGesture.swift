@@ -509,7 +509,7 @@ private class SwipeContainerView: UIView {
             }
           }
         ) {
-          VStack(spacing: 20) {
+          VStack(spacing: Spacing.mlg) {
             Text("Swipe left/right")
               .font(.headline)
               .foregroundColor(.tidexTextPrimary)

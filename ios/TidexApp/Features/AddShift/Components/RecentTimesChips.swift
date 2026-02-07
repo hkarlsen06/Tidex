@@ -132,8 +132,8 @@ private struct RecentTimeChip: View {
         .font(.system(size: 13, weight: .medium, design: .monospaced))
         .foregroundColor(isSelected ? .white : .tidexBlue)
         .environment(\.layoutDirection, .leftToRight)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
         .background(isSelected ? Color.tidexBlue : Color.tidexBlue.opacity(0.1))
         .clipShape(Capsule())
     }
@@ -144,14 +144,14 @@ private struct RecentTimeChip: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     RecentTimesChips(
       onSelect: { range in
         print("Selected: \(range.displayLabel)")
       },
       availableWidth: 350
     )
-    .padding(.horizontal, 16)
+    .padding(.horizontal, Spacing.md)
     .background(Color.tidexBackground)
   }
 }

@@ -14,7 +14,7 @@ struct PrimaryButton: View {
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
       action()
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         if isLoading {
           ProgressView()
             .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -66,7 +66,7 @@ struct LoadingButton: View {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     PrimaryButton(title: "Log in", action: {})
 
     PrimaryButton(title: "Loading...", action: {}, isLoading: true)

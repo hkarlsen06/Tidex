@@ -212,12 +212,12 @@ struct ShiftsCalendarView: View {
       )
 
       CalendarWeekdayHeader()
-        .padding(.bottom, 8)
+        .padding(.bottom, Spacing.xs)
 
       calendarGrid
 
       actionBar
-        .padding(.top, 12)
+        .padding(.top, Spacing.sm)
     }
   }
 
@@ -264,7 +264,7 @@ struct ShiftsCalendarView: View {
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: monthNumber)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: 4) {
+    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
       ForEach(days, id: \.id) { dayInfo in
         let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
         let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
@@ -570,7 +570,7 @@ struct ShiftsCalendarView: View {
 
   @ViewBuilder
   private var copyMoveBar: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       if isCopying || isMoving {
         ProgressView()
           .progressViewStyle(CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .orange))
@@ -582,12 +582,12 @@ struct ShiftsCalendarView: View {
             ? String(localized: .shiftsCopying)
             : String(localized: .shiftsMoving)
         )
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
         .frame(maxWidth: .infinity)
       } else {
         Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(isCopyMode ? .tidexBlue : .orange)
           .frame(width: 36)
 
@@ -596,7 +596,7 @@ struct ShiftsCalendarView: View {
             ? String(localized: .shiftsSelectCopyTarget)
             : String(localized: .shiftsSelectMoveTarget)
         )
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
         .frame(maxWidth: .infinity)
       }
@@ -606,9 +606,9 @@ struct ShiftsCalendarView: View {
         onCancelCopyMove?()
       } label: {
         Text(.commonCancel)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.white)
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
           .padding(.vertical, Spacing.sm)
           .background(Capsule().fill(Color.tidexBrandPrimary))
       }
@@ -622,7 +622,7 @@ struct ShiftsCalendarView: View {
 
   @ViewBuilder
   private var singleSelectionBar: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       deleteButton
 
       if !confirmingDelete {
@@ -631,7 +631,7 @@ struct ShiftsCalendarView: View {
           onCopy?()
         } label: {
           Image(systemName: "doc.on.doc")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
             .frame(width: 44)
             .frame(maxHeight: .infinity)
@@ -648,7 +648,7 @@ struct ShiftsCalendarView: View {
           onEdit?()
         } label: {
           Image(systemName: "pencil")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
             .frame(width: 44)
             .frame(maxHeight: .infinity)
@@ -662,9 +662,9 @@ struct ShiftsCalendarView: View {
         } label: {
           HStack(spacing: 6) {
             Image(systemName: "info.circle")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
             Text(.shiftsDetails)
-              .font(.system(size: 14, weight: .semibold))
+              .font(.tidexLabelStrong)
           }
           .foregroundColor(.white)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -678,9 +678,9 @@ struct ShiftsCalendarView: View {
         } label: {
           HStack(spacing: 6) {
             Image(systemName: "arrow.left.arrow.right")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
             Text(.shiftsMove)
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
           }
           .foregroundColor(.orange)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -696,7 +696,7 @@ struct ShiftsCalendarView: View {
 
   @ViewBuilder
   private var multiSelectionBar: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       deleteButton
 
       if confirmingDelete {
@@ -708,9 +708,9 @@ struct ShiftsCalendarView: View {
         } label: {
           HStack(spacing: 6) {
             Image(systemName: "xmark")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
             Text(.commonCancel)
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
           }
           .foregroundColor(.tidexTextSecondary)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -742,12 +742,12 @@ struct ShiftsCalendarView: View {
             .scaleEffect(0.7)
         } else {
           Image(systemName: "trash")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
         }
 
         if confirmingDelete {
           Text(.shiftsConfirm)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
         }
       }
       .foregroundColor(confirmingDelete ? .white : .red)
@@ -768,9 +768,9 @@ struct ShiftsCalendarView: View {
     } label: {
       HStack(spacing: 6) {
         Image(systemName: "xmark")
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
         Text(.commonCancel)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
       }
       .foregroundColor(.white)
       .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -28,19 +28,19 @@ struct SupplementsScreen: View {
                   UIImpactFeedbackGenerator(style: .light).impactOccurred()
                   onBack()
                 }) {
-                  HStack(spacing: 4) {
+                  HStack(spacing: Spacing.xxs) {
                     Image(systemName: "chevron.left")
-                      .font(.system(size: 16, weight: .semibold))
+                      .font(.tidexButton)
                     Text(.commonBack)
-                      .font(.system(size: 16))
+                      .font(.tidexBody)
                   }
                   .foregroundColor(.tidexBlue)
                 }
                 .buttonStyle(.plain)
                 Spacer()
               }
-              .padding(.horizontal, 24)
-              .padding(.top, 16)
+              .padding(.horizontal, Spacing.lg)
+              .padding(.top, Spacing.md)
               .adaptiveContentWidth()
             }
 
@@ -48,18 +48,18 @@ struct SupplementsScreen: View {
               .frame(height: onBack != nil ? 24 : 60)
 
             // Header
-            VStack(spacing: 12) {
+            VStack(spacing: Spacing.sm) {
               Text(.onboardingSupplementsTitle)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
               Text(.onboardingSupplementsSubtitle)
-                .font(.system(size: 17))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, Spacing.xl)
             .adaptiveContentWidth()
 
             Spacer()
@@ -67,7 +67,7 @@ struct SupplementsScreen: View {
 
             // Supplement rules list
             if !data.supplementRules.isEmpty {
-              VStack(spacing: 12) {
+              VStack(spacing: Spacing.sm) {
                 ForEach(data.supplementRules) { rule in
                   SupplementRuleCard(
                     rule: rule,
@@ -85,7 +85,7 @@ struct SupplementsScreen: View {
                   )
                 }
               }
-              .padding(.horizontal, 24)
+              .padding(.horizontal, Spacing.lg)
               .adaptiveContentWidth()
 
               Spacer()
@@ -98,11 +98,11 @@ struct SupplementsScreen: View {
               editingRule = nil
               showingRuleEditor = true
             }) {
-              HStack(spacing: 8) {
+              HStack(spacing: Spacing.xs) {
                 Image(systemName: "plus.circle.fill")
                   .font(.system(size: 20))
                 Text(.onboardingSupplementsAddRule)
-                  .font(.system(size: 16, weight: .medium))
+                  .font(.tidexBodyMedium)
               }
               .foregroundColor(.tidexBlue)
               .frame(maxWidth: .infinity)
@@ -115,7 +115,7 @@ struct SupplementsScreen: View {
               )
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, Spacing.lg)
             .adaptiveContentWidth()
 
             // Info text when no rules
@@ -124,10 +124,10 @@ struct SupplementsScreen: View {
                 .frame(height: 24)
 
               Text(.onboardingSupplementsHint)
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, Spacing.xl)
                 .adaptiveContentWidth()
             }
 
@@ -137,7 +137,7 @@ struct SupplementsScreen: View {
         }
 
         // Bottom buttons
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           OnboardingButton(
             title: String(localized: .commonContinue),
             action: {
@@ -151,12 +151,12 @@ struct SupplementsScreen: View {
             onSkip()
           }) {
             Text(.onboardingSupplementsSkip)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextSecondary)
           }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 32)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.bottom, Spacing.xl)
         .adaptiveContentWidth()
       }
     }
@@ -190,23 +190,23 @@ private struct SupplementRuleCard: View {
   let onDelete: () -> Void
 
   var body: some View {
-    HStack(spacing: 12) {
-      VStack(alignment: .leading, spacing: 4) {
+    HStack(spacing: Spacing.sm) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(rule.daysDescription)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
 
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           Text(rule.timeDescription)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
 
           Text("•")
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
 
           Text(rule.valueDescription(locale: locale, currency: currency))
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexSuccess)
         }
       }
@@ -219,7 +219,7 @@ private struct SupplementRuleCard: View {
         onEdit()
       }) {
         Image(systemName: "pencil")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexBlue)
           .frame(width: 36, height: 36)
           .background(Color.tidexBlue.opacity(0.1))
@@ -237,7 +237,7 @@ private struct SupplementRuleCard: View {
         onDelete()
       }) {
         Image(systemName: "trash")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexError)
           .frame(width: 36, height: 36)
           .background(Color.tidexError.opacity(0.1))
@@ -245,7 +245,7 @@ private struct SupplementRuleCard: View {
       }
       .buttonStyle(.plain)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
   }

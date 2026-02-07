@@ -18,11 +18,11 @@ struct ChatMessageList: View {
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        LazyVStack(spacing: 12) {
+        LazyVStack(spacing: Spacing.sm) {
           // Empty state when no messages
           if messages.isEmpty && !isStreaming {
             emptyStateView
-              .padding(.top, 40)
+              .padding(.top, Spacing.xxl)
           } else {
             // Message bubbles
             ForEach(messages) { message in
@@ -47,8 +47,8 @@ struct ChatMessageList: View {
             .frame(height: 1)
             .id("bottom")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.md)
       }
       .onChange(of: messages.count) { _, _ in
         scrollToBottom(proxy: proxy)
@@ -83,14 +83,14 @@ struct ChatMessageList: View {
   }
 
   private var emptyStateView: some View {
-    VStack(spacing: 32) {
+    VStack(spacing: Spacing.xl) {
       VStack(spacing: 6) {
         Text(.wageyEmptyStateTitle)
-          .font(.system(size: 24, weight: .bold))
+          .font(.tidexLargeTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(.wageyEmptyStateSubtitle)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
@@ -102,7 +102,7 @@ struct ChatMessageList: View {
         }
       }
     }
-    .padding(.horizontal, 24)
+    .padding(.horizontal, Spacing.lg)
   }
 
   private func suggestionRow(icon: String, text: String) -> some View {
@@ -117,7 +117,7 @@ struct ChatMessageList: View {
           .frame(width: 24)
 
         Text(text)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextPrimary)
           .lineLimit(2)
           .multilineTextAlignment(.leading)
@@ -125,10 +125,10 @@ struct ChatMessageList: View {
         Spacer(minLength: 0)
 
         Image(systemName: "chevron.right")
-          .font(.system(size: 12, weight: .semibold))
+          .font(.tidexCaptionStrong)
           .foregroundColor(.tidexTextMuted)
       }
-      .padding(.horizontal, 16)
+      .padding(.horizontal, Spacing.md)
       .padding(.vertical, 14)
       .background(Color.tidexSurfacePrimary)
       .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -144,14 +144,14 @@ struct ChatMessageList: View {
       copyConversation()
     } label: {
       Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(showCopiedConfirmation ? .tidexSuccess : .tidexTextMuted)
         .contentTransition(.symbolEffect(.replace))
     }
     .buttonStyle(.plain)
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.leading, 18)
-    .padding(.top, 4)
+    .padding(.top, Spacing.xxs)
   }
 
   private func copyConversation() {

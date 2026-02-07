@@ -34,15 +34,15 @@ struct WageSourceSelector: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Section header
       Text(.settingsPayEditorWageSource)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Toggle buttons: Tariff vs Custom (only show if tariff is available)
       if showTariffOption {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           WageTypeToggleButton(
             title: String(localized: .onboardingWageTariff),
             icon: "building.2",
@@ -88,7 +88,7 @@ struct WageSourceSelector: View {
 
   @ViewBuilder
   private var tariffLevelPicker: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       ForEach(tariffLevels) { level in
         TariffLevelSelectionRow(
           level: level,
@@ -126,16 +126,16 @@ struct WageSourceSelector: View {
 
     HStack {
       Text(.settingsPayEditorCurrentWage)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Spacer()
 
       Text(formatWage(currentWage))
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexBrandPrimary.opacity(0.08))
     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
@@ -170,13 +170,13 @@ private struct WageTypeToggleButton: View {
 
   var body: some View {
     Button(action: action) {
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Image(systemName: icon)
           .font(.system(size: 20))
           .foregroundColor(isSelected ? .tidexBrandPrimary : .tidexTextMuted)
 
         Text(title)
-          .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+          .font(isSelected ? .tidexLabelStrong : .tidexLabel)
           .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
       }
       .frame(maxWidth: .infinity)
@@ -205,11 +205,11 @@ private struct TariffLevelSelectionRow: View {
       HStack {
         VStack(alignment: .leading, spacing: 2) {
           Text(level.displayName)
-            .font(.system(size: 15, weight: isSelected ? .semibold : .medium))
+            .font(isSelected ? .tidexLabelStrong : .tidexLabel)
             .foregroundColor(.tidexTextPrimary)
 
           Text(level.formattedRate)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -228,7 +228,7 @@ private struct TariffLevelSelectionRow: View {
           }
         }
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       .overlay(

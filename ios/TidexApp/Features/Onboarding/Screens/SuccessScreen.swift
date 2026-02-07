@@ -30,14 +30,14 @@ struct SuccessScreen: View {
           .frame(height: 32)
 
         // Header and content - constrained for iPad
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           Text(statusTitle)
             .font(.system(size: 28, weight: .bold))
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.center)
 
           Text(statusSubtitle)
-            .font(.system(size: 17))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
 
@@ -47,13 +47,13 @@ struct SuccessScreen: View {
 
             // Reassurance line
             Text(.onboardingSuccessReassurance)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextMuted)
               .multilineTextAlignment(.center)
-              .padding(.horizontal, 16)
+              .padding(.horizontal, Spacing.md)
           }
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, Spacing.xl)
         .adaptiveContentWidth()
         .opacity(contentVisible ? 1 : 0)
         .offset(y: contentVisible ? 0 : 20)
@@ -64,14 +64,14 @@ struct SuccessScreen: View {
             .frame(height: 24)
 
           errorBanner(message: errorMessage)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, Spacing.lg)
             .adaptiveContentWidth()
         }
 
         Spacer()
 
         // Bottom button(s)
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           // Go to Dashboard button
           OnboardingButton(
             title: String(localized: .onboardingSuccessButton),
@@ -90,14 +90,14 @@ struct SuccessScreen: View {
               onRetry()
             }) {
               Text(.commonRetry)
-                .font(.system(size: 16, weight: .medium))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexBlue)
             }
           }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Spacing.lg)
         .adaptiveContentWidth()
-        .padding(.bottom, 32)
+        .padding(.bottom, Spacing.xl)
         .opacity(contentVisible ? 1 : 0)
       }
     }
@@ -185,19 +185,19 @@ struct SuccessScreen: View {
 
   @ViewBuilder
   private func errorBanner(message: String) -> some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexError)
 
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .lineLimit(3)
 
       Spacer()
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexError.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
   }

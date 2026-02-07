@@ -86,7 +86,7 @@ struct ShareableCalendarView: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Header with month name and totals
       headerRow
 
@@ -97,16 +97,16 @@ struct ShareableCalendarView: View {
       calendarGrid
 
       // Tidex branding
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         LogoWatermark(opacity: 1.0)
           .frame(width: 14, height: 14)
         Text("Tidex")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextMuted)
       }
-      .padding(.top, 8)
+      .padding(.top, Spacing.xs)
     }
-    .padding(20)
+    .padding(Spacing.mlg)
     .frame(width: 402)  // Match iPhone 16/17 screen width for proper scaling
     .background(Color.tidexBackground)
     .environment(\.colorScheme, colorScheme)
@@ -120,7 +120,7 @@ struct ShareableCalendarView: View {
       // Month name + Year
       HStack(spacing: 6) {
         Text(monthName)
-          .font(.system(size: 20, weight: .semibold))
+          .font(.tidexTitle2)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(year))
@@ -137,7 +137,7 @@ struct ShareableCalendarView: View {
         earningsSkeleton
       }
     }
-    .padding(.horizontal, 4)
+    .padding(.horizontal, Spacing.xxs)
   }
 
   /// Earnings display - shows monthly totals
@@ -148,18 +148,18 @@ struct ShareableCalendarView: View {
     VStack(alignment: .trailing, spacing: 2) {
       if monthlyTotals.gross == 0 {
         Text("—")
-          .font(.system(size: 17, weight: .semibold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
       } else {
         Text(CurrencyConfig.format(displayAmount, currency: currency))
-          .font(.system(size: 17, weight: .semibold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
       }
 
       // Gross line (only when tax enabled and has value)
       if hasTaxEnabled && monthlyTotals.gross > 0 {
         Text(CurrencyConfig.format(monthlyTotals.gross, currency: currency))
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -169,7 +169,7 @@ struct ShareableCalendarView: View {
   /// Skeleton bars to replace earnings when hidden
   @ViewBuilder
   private var earningsSkeleton: some View {
-    VStack(alignment: .trailing, spacing: 4) {
+    VStack(alignment: .trailing, spacing: Spacing.xxs) {
       // Main amount skeleton
       RoundedRectangle(cornerRadius: 4)
         .fill(Color.tidexTextMuted.opacity(0.3))
@@ -191,7 +191,7 @@ struct ShareableCalendarView: View {
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: month)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: 4) {
+    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
       ForEach(days, id: \.id) { dayInfo in
         let isToday = dayInfo.dateISO == todayISO()
 
@@ -237,14 +237,14 @@ struct CalendarShareOptionsSheet: View {
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       // Title
       Text(.shiftsShareTitle)
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
-        .padding(.top, 16)
+        .padding(.top, Spacing.md)
 
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         // Show earnings option
         Button {
           onShowEarnings()
@@ -255,11 +255,11 @@ struct CalendarShareOptionsSheet: View {
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareShowEarnings)
-              .font(.system(size: 17, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()
           }
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
             RoundedRectangle(cornerRadius: 14)
@@ -278,11 +278,11 @@ struct CalendarShareOptionsSheet: View {
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareHideEarnings)
-              .font(.system(size: 17, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()
           }
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
             RoundedRectangle(cornerRadius: 14)
@@ -291,7 +291,7 @@ struct CalendarShareOptionsSheet: View {
         }
         .buttonStyle(.plain)
       }
-      .padding(.horizontal, 20)
+      .padding(.horizontal, Spacing.mlg)
 
       Spacer()
     }

@@ -22,19 +22,19 @@ struct MFASetupScreen: View {
               UIImpactFeedbackGenerator(style: .light).impactOccurred()
               onBack()
             }) {
-              HStack(spacing: 4) {
+              HStack(spacing: Spacing.xxs) {
                 Image(systemName: "chevron.left")
-                  .font(.system(size: 16, weight: .semibold))
+                  .font(.tidexButton)
                 Text(.commonBack)
-                  .font(.system(size: 16))
+                  .font(.tidexBody)
               }
               .foregroundColor(.tidexBlue)
             }
             .buttonStyle(.plain)
             Spacer()
           }
-          .padding(.horizontal, 24)
-          .padding(.top, 16)
+          .padding(.horizontal, Spacing.lg)
+          .padding(.top, Spacing.md)
           .adaptiveContentWidth()
         }
 
@@ -50,21 +50,21 @@ struct MFASetupScreen: View {
             .font(.system(size: 56))
             .foregroundColor(.tidexBlue)
         }
-        .padding(.bottom, 32)
+        .padding(.bottom, Spacing.xl)
 
         // Header
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           Text(.onboardingMfaTitle)
             .font(.system(size: 28, weight: .bold))
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.center)
 
           Text(.onboardingMfaSubtitle)
-            .font(.system(size: 17))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, Spacing.xl)
         .adaptiveContentWidth()
 
         Spacer()
@@ -72,13 +72,13 @@ struct MFASetupScreen: View {
 
         // Benefits card
         benefitsCard
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
           .adaptiveContentWidth()
 
         Spacer()
 
         // Bottom buttons
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           OnboardingButton(
             title: String(localized: .onboardingMfaSetup),
             action: {
@@ -92,12 +92,12 @@ struct MFASetupScreen: View {
             onSkip()
           }) {
             Text(.onboardingMfaSkip)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextSecondary)
           }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 32)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.bottom, Spacing.xl)
         .adaptiveContentWidth()
       }
     }
@@ -107,7 +107,7 @@ struct MFASetupScreen: View {
 
   @ViewBuilder
   private var benefitsCard: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       BenefitRow(
         icon: "lock.shield",
         title: String(localized: .onboardingMfaBenefit1Title),
@@ -126,7 +126,7 @@ struct MFASetupScreen: View {
         description: String(localized: .onboardingMfaBenefit3Desc)
       )
     }
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
   }
@@ -140,7 +140,7 @@ private struct BenefitRow: View {
   let description: String
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
+    HStack(alignment: .top, spacing: Spacing.sm) {
       Image(systemName: icon)
         .font(.system(size: 20))
         .foregroundColor(.tidexBlue)
@@ -148,11 +148,11 @@ private struct BenefitRow: View {
 
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
-          .font(.system(size: 15, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
 
         Text(description)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
       }
     }

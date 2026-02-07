@@ -9,13 +9,13 @@ struct ErrorBanner: View {
   var onDismiss: (() -> Void)? = nil
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
+    HStack(alignment: .top, spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
         .foregroundColor(.tidexError)
-        .font(.system(size: 16))
+        .font(.tidexBody)
 
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.leading)
 
@@ -24,7 +24,7 @@ struct ErrorBanner: View {
       if let onRetry = onRetry {
         Button(action: onRetry) {
           Text(.commonRetry)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
         }
         .buttonStyle(.plain)
@@ -34,12 +34,12 @@ struct ErrorBanner: View {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.tidexCaptionStrong)
         }
         .buttonStyle(.plain)
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexError.opacity(0.15))
     .overlay(
       RoundedRectangle(cornerRadius: 10)
@@ -55,13 +55,13 @@ struct SuccessBanner: View {
   var onDismiss: (() -> Void)? = nil
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
+    HStack(alignment: .top, spacing: Spacing.sm) {
       Image(systemName: "checkmark.circle.fill")
         .foregroundColor(.tidexSuccess)
-        .font(.system(size: 16))
+        .font(.tidexBody)
 
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.leading)
 
@@ -71,12 +71,12 @@ struct SuccessBanner: View {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.tidexCaptionStrong)
         }
         .buttonStyle(.plain)
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSuccess.opacity(0.15))
     .overlay(
       RoundedRectangle(cornerRadius: 10)
@@ -87,7 +87,7 @@ struct SuccessBanner: View {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     ErrorBanner(
       message: "Invalid email or password. Please try again.",
       onRetry: {},

@@ -12,7 +12,7 @@ struct ImpersonationBanner: View {
   @State private var isLoading = false
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       // Warning icon
       Image(systemName: "person.crop.circle.badge.exclamationmark")
         .font(.system(size: 24))
@@ -21,7 +21,7 @@ struct ImpersonationBanner: View {
       // Info text
       VStack(alignment: .leading, spacing: 2) {
         Text("Impersonating: \(targetName)")
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundStyle(Color.tidexTextPrimary)
 
         if let expiresAt {
@@ -42,17 +42,17 @@ struct ImpersonationBanner: View {
             .frame(width: 16, height: 16)
         } else {
           Text("Stop")
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
         }
       }
       .disabled(isLoading)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 8)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.xs)
       .background(Color.tidexError)
       .foregroundStyle(.white)
       .cornerRadius(8)
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexWarning.opacity(0.15))
     .overlay(
       Rectangle()
@@ -72,7 +72,7 @@ private struct ExpirationText: View {
 
   var body: some View {
     Text(timeRemaining)
-      .font(.system(size: 12))
+      .font(.tidexCaptionRegular)
       .foregroundStyle(isExpiringSoon ? Color.tidexError : Color.tidexTextSecondary)
       .onAppear { updateTimeRemaining() }
       .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
@@ -109,7 +109,7 @@ private struct ExpirationText: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     ImpersonationBanner(
       targetName: "John Doe",
       expiresAt: Date().addingTimeInterval(3600),

@@ -27,7 +27,7 @@ struct RecurringPreviewSheet: View {
 
           // Scrollable list of projected dates
           ScrollView {
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: Spacing.xs) {
               ForEach(Array(viewModel.cachedProjectedDates.prefix(50).enumerated()), id: \.offset) {
                 _, dateISO in
                 ProjectedShiftRow(
@@ -116,23 +116,23 @@ private struct SummaryHeader: View {
   }
 
   var body: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
-          HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+          HStack(spacing: Spacing.xs) {
             Text(titleText)
-              .font(.system(size: 24, weight: .bold))
+              .font(.tidexLargeTitle)
               .foregroundColor(.tidexTextPrimary)
 
             if isIndefinite {
               Image(systemName: "infinity")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.tidexHeadline)
                 .foregroundColor(.tidexBlue)
             }
           }
 
           Text(subtitleText)
-            .font(.system(size: 16))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextSecondary)
             .environment(\.layoutDirection, .leftToRight)
         }
@@ -159,15 +159,15 @@ private struct ConflictBadge: View {
   let count: Int
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
 
       Text(String(localized: .previewConflictBadge(count)))
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
     }
     .foregroundColor(.white)
-    .padding(.horizontal, 12)
+    .padding(.horizontal, Spacing.sm)
     .padding(.vertical, 6)
     .background(Color.tidexWarning)
     .clipShape(Capsule())
@@ -188,15 +188,15 @@ private struct ConflictWarning: View {
   }
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle")
         .foregroundColor(.tidexWarning)
 
       Text(warningText)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexWarning.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -234,14 +234,14 @@ private struct ProjectedShiftRow: View {
 
   var body: some View {
     HStack {
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(formattedDate)
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(hasConflict ? .tidexTextMuted : .tidexTextPrimary)
           .strikethrough(hasConflict)
 
         Text(timeRangeText)
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(hasConflict ? .tidexTextMuted : .tidexTextSecondary)
           .strikethrough(hasConflict)
           .environment(\.layoutDirection, .leftToRight)
@@ -257,7 +257,7 @@ private struct ProjectedShiftRow: View {
           .foregroundColor(.tidexSuccess)
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(hasConflict ? Color.tidexWarning.opacity(0.05) : Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     .opacity(hasConflict ? 0.6 : 1.0)
@@ -279,15 +279,15 @@ private struct MoreShiftsIndicator: View {
   }
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       if isIndefinite {
         Image(systemName: "infinity")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexBlue)
       }
 
       Text(displayText)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
     }
     .padding()
@@ -305,14 +305,14 @@ private struct ActionButtons: View {
   let onConfirm: () -> Void
 
   var body: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       // Cancel button
       Button(action: onCancel) {
         Text(.previewCancel)
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextSecondary)
           .frame(maxWidth: .infinity)
-          .padding(.vertical, 16)
+          .padding(.vertical, Spacing.md)
       }
       .disabled(isLoading)
 
@@ -322,13 +322,13 @@ private struct ActionButtons: View {
           ProgressView()
             .progressViewStyle(CircularProgressViewStyle(tint: .white))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, Spacing.md)
         } else {
           Text(.previewConfirm)
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, Spacing.md)
         }
       }
       .background(Color.tidexBlue)

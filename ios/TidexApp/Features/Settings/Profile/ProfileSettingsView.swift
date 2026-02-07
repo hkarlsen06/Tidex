@@ -148,7 +148,7 @@ struct ProfileSettingsView: View {
 
   private var emailChangeSheet: some View {
     NavigationStack {
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         if viewModel.emailChangeSent {
           // Success state
           emailChangeSentView
@@ -159,7 +159,7 @@ struct ProfileSettingsView: View {
 
         Spacer()
       }
-      .padding(24)
+      .padding(Spacing.lg)
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .profileEmailChangeTitle))
       .navigationBarTitleDisplayMode(.inline)
@@ -175,22 +175,22 @@ struct ProfileSettingsView: View {
   }
 
   private var emailChangeInputView: some View {
-    VStack(alignment: .leading, spacing: 20) {
+    VStack(alignment: .leading, spacing: Spacing.mlg) {
       // Instructions
       Text(.profileEmailChangeInstructions)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       // Current email (read-only)
       VStack(alignment: .leading, spacing: 6) {
         Text(.profileEmailChangeCurrentEmailLabel)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
 
         Text(viewModel.email)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextMuted)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.sm)
           .frame(maxWidth: .infinity, alignment: .leading)
           .background(Color.tidexSurfaceSecondary.opacity(0.5))
@@ -200,18 +200,18 @@ struct ProfileSettingsView: View {
       // New email input
       VStack(alignment: .leading, spacing: 6) {
         Text(.profileEmailChangeNewEmailLabel)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
 
         TextField(
           String(localized: .profileEmailChangeNewEmailPlaceholder), text: $viewModel.newEmail
         )
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
         .keyboardType(.emailAddress)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .cornerRadius(8)
@@ -220,7 +220,7 @@ struct ProfileSettingsView: View {
       // Error message
       if let error = viewModel.errorMessage {
         Text(error)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexError)
       }
 
@@ -241,7 +241,7 @@ struct ProfileSettingsView: View {
               ? String(localized: .profileEmailChangeSending)
               : String(localized: .profileEmailChangeSendConfirmation))
         }
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.white)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
@@ -253,7 +253,7 @@ struct ProfileSettingsView: View {
   }
 
   private var emailChangeSentView: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       // Success icon
       ZStack {
         Circle()
@@ -266,13 +266,13 @@ struct ProfileSettingsView: View {
       }
 
       // Success message
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.profileEmailChangeConfirmationSent)
-          .font(.system(size: 18, weight: .semibold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
 
         Text(.profileEmailChangeConfirmationMessage)
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
@@ -282,7 +282,7 @@ struct ProfileSettingsView: View {
         viewModel.resetEmailChangeState()
       } label: {
         Text(.commonDone)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.white)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
@@ -314,26 +314,26 @@ struct ProfileSettingsView: View {
           .scaleEffect(0.8)
       } else {
         Image(systemName: "arrow.left.arrow.right")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
       }
       Text(uploadButtonText)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
     }
     .foregroundColor(.tidexBlue)
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexBlue.opacity(0.1))
     .cornerRadius(8)
   }
 
   private var avatarSection: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       // Avatar
       avatarView
         .frame(width: 80, height: 80)
 
       // Buttons
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
         Button {
           showImageSourcePicker = true
         } label: {
@@ -347,13 +347,13 @@ struct ProfileSettingsView: View {
           } label: {
             HStack(spacing: 6) {
               Image(systemName: "trash")
-                .font(.system(size: 12, weight: .medium))
+                .font(.tidexCaption)
               Text(.profilePersonalInfoRemoveImage)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
             }
             .foregroundColor(.tidexError)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
             .background(Color.tidexError.opacity(0.1))
             .cornerRadius(8)
           }
@@ -397,7 +397,7 @@ struct ProfileSettingsView: View {
         .fill(Color.tidexBlue.opacity(0.2))
 
       Text(viewModel.initials)
-        .font(.system(size: 24, weight: .semibold))
+        .font(.tidexLargeTitle)
         .foregroundColor(.tidexBlue)
     }
   }
@@ -405,21 +405,21 @@ struct ProfileSettingsView: View {
   // MARK: - Name Field
 
   private var nameField: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack {
         Text(.profilePersonalInfoNameLabel)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
         Spacer()
 
         if viewModel.isSavingName {
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             ProgressView()
               .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
               .scaleEffect(0.6)
             Text(.commonSaving)
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
           }
         }
@@ -428,9 +428,9 @@ struct ProfileSettingsView: View {
       TextField(
         String(localized: .profilePersonalInfoNamePlaceholder), text: $viewModel.displayName
       )
-      .font(.system(size: 16))
+      .font(.tidexBody)
       .foregroundColor(.tidexTextPrimary)
-      .padding(.horizontal, 12)
+      .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .cornerRadius(8)
@@ -443,10 +443,10 @@ struct ProfileSettingsView: View {
   // MARK: - Email Field
 
   private var emailField: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack {
         Text(.profilePersonalInfoEmailLabel)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
         Spacer()
@@ -456,7 +456,7 @@ struct ProfileSettingsView: View {
             viewModel.showEmailChangeSheet = true
           } label: {
             Text(.profileEmailChangeChangeButton)
-              .font(.system(size: 13, weight: .medium))
+              .font(.tidexFootnoteMedium)
               .foregroundColor(.tidexBlue)
           }
         }
@@ -464,18 +464,18 @@ struct ProfileSettingsView: View {
 
       HStack {
         Text(viewModel.email)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
         if !viewModel.canChangeEmail {
           Image(systemName: "lock.fill")
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
       }
-      .padding(.horizontal, 12)
+      .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary.opacity(0.5))
       .cornerRadius(8)
@@ -483,15 +483,15 @@ struct ProfileSettingsView: View {
       // Show appropriate hint based on user's auth type
       if viewModel.isOAuthOnly {
         Text(.profileEmailChangeOauthOnlyHint)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       } else if viewModel.canChangeEmail {
         Text(.profileEmailChangeCanChangeHint)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       } else {
         Text(.profilePersonalInfoEmailHint)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -505,18 +505,18 @@ struct ProfileSettingsView: View {
         .foregroundColor(.tidexError)
     ) {
       Text(.profileDangerZoneSubtitle)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
 
       // Delete account row
-      HStack(spacing: 16) {
-        VStack(alignment: .leading, spacing: 4) {
+      HStack(spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.profileDangerZoneDeleteAccountTitle)
-            .font(.system(size: 15, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextPrimary)
 
           Text(.profileDangerZoneDeleteAccountDescription)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -526,9 +526,9 @@ struct ProfileSettingsView: View {
           viewModel.showDeleteConfirmation = true
         } label: {
           Text(.profileDangerZoneDeleteAccountButton)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
             .foregroundColor(.white)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexError)
             .cornerRadius(8)

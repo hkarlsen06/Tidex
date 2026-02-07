@@ -24,6 +24,9 @@ enum Spacing {
   /// 16pt - 2 units, standard content spacing
   static let md: CGFloat = 16
 
+  /// 20pt - 2.5 units, card inset spacing
+  static let mlg: CGFloat = 20
+
   /// 24pt - 3 units, large spacing (section gaps)
   static let lg: CGFloat = 24
 

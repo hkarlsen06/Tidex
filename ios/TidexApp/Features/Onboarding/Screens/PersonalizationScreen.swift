@@ -30,32 +30,32 @@ struct PersonalizationScreen: View {
             .frame(height: 60)
 
           // Header - constrained for iPad
-          VStack(spacing: 12) {
+          VStack(spacing: Spacing.sm) {
             Text(.onboardingPersonalizeTitle)
               .font(.system(size: 28, weight: .bold))
               .foregroundColor(.tidexTextPrimary)
               .multilineTextAlignment(.center)
 
             Text(.onboardingPersonalizeSubtitle)
-              .font(.system(size: 17))
+              .font(.tidexBody)
               .foregroundColor(.tidexTextSecondary)
               .multilineTextAlignment(.center)
           }
-          .padding(.horizontal, 32)
+          .padding(.horizontal, Spacing.xl)
           .adaptiveContentWidth()
 
           Spacer()
             .frame(height: 48)
 
           // Form - constrained for iPad
-          VStack(spacing: 24) {
+          VStack(spacing: Spacing.lg) {
             // Hourly wage slider
             OnboardingRateSlider(value: $hourlyWage, style: .full)
 
             // Payroll day picker
             payrollDayPicker
           }
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
           .adaptiveContentWidth()
 
           Spacer()
@@ -66,7 +66,7 @@ struct PersonalizationScreen: View {
             title: String(localized: .commonContinue),
             action: validateAndContinue
           )
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
           .adaptiveContentWidth()
 
           Spacer()
@@ -88,9 +88,9 @@ struct PersonalizationScreen: View {
 
   @ViewBuilder
   private var payrollDayPicker: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.onboardingPersonalizePaydayLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Horizontal scroll with day options
@@ -104,7 +104,7 @@ struct PersonalizationScreen: View {
               }
             } label: {
               Text(day == 28 ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
-                .font(.system(size: 16, weight: payrollDay == day ? .semibold : .medium))
+                .font(payrollDay == day ? .tidexButton : .tidexBodyMedium)
                 .foregroundColor(payrollDay == day ? .white : .tidexTextSecondary)
                 .frame(minWidth: 56, minHeight: 44)
                 .background(
@@ -122,7 +122,7 @@ struct PersonalizationScreen: View {
       }
 
       Text(.onboardingPersonalizePaydayHelper)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
     }
   }

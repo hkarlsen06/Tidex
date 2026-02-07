@@ -16,7 +16,7 @@ struct TidexTextField: View {
   @FocusState private var isFocused: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       // Label
       Text(label)
         .font(.tidexLabel)
@@ -31,7 +31,7 @@ struct TidexTextField: View {
         .textInputAutocapitalization(autocapitalization)
         .autocorrectionDisabled(!autocorrection)
         .focused($isFocused)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .overlay(
@@ -65,7 +65,7 @@ struct TidexTextField: View {
 }
 
 #Preview {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     TidexTextField(
       label: "Email",
       placeholder: "name@example.com",

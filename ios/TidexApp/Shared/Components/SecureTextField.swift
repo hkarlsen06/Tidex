@@ -13,10 +13,10 @@ struct SecureTextField: View {
   @FocusState private var isFocused: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       // Label
       Text(label)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Field with toggle
@@ -30,7 +30,7 @@ struct SecureTextField: View {
               .textContentType(.password)
           }
         }
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
         .focused($isFocused)
         .textInputAutocapitalization(.never)
@@ -45,11 +45,11 @@ struct SecureTextField: View {
         } label: {
           Image(systemName: isSecure ? "eye" : "eye.slash")
             .foregroundColor(.tidexTextMuted)
-            .font(.system(size: 16))
+            .font(.tidexBody)
         }
         .buttonStyle(.plain)
       }
-      .padding(.horizontal, 16)
+      .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
@@ -62,7 +62,7 @@ struct SecureTextField: View {
       // Error message
       if let error = error, !error.isEmpty {
         Text(error)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
       }
     }
@@ -80,7 +80,7 @@ struct SecureTextField: View {
 }
 
 #Preview {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     SecureTextField(
       label: "Password",
       placeholder: "Enter your password",

@@ -19,7 +19,7 @@ struct ChatMessageBubble: View {
         Spacer(minLength: 40)
       }
 
-      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 8) {
+      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Spacing.xs) {
         // Render content blocks in chronological order
         ForEach(Array(message.contentBlocks.enumerated()), id: \.offset) { _, block in
           switch block {
@@ -54,10 +54,10 @@ struct ChatMessageBubble: View {
 
   private func userMessageContent(text: String) -> some View {
     Text(text)
-      .font(.system(size: 16))
+      .font(.tidexBody)
       .foregroundColor(.white)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
       .background(Color.tidexBlue)
       .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
       .contextMenu {
@@ -71,8 +71,8 @@ struct ChatMessageBubble: View {
 
   private func assistantMessageContent(text: String) -> some View {
     FormattedMessageContent(content: text)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfacePrimary)
       .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
       .contextMenu {
@@ -209,7 +209,7 @@ struct ImageViewerOverlay: View {
                   .fill(Color.black.opacity(0.3))
               )
           }
-          .padding(20)
+          .padding(Spacing.mlg)
         }
         Spacer()
       }
@@ -234,7 +234,7 @@ struct TypingIndicatorView: View {
           .opacity(dotScales[index] ? 1.0 : 0.4)
       }
     }
-    .padding(.horizontal, 16)
+    .padding(.horizontal, Spacing.md)
     .padding(.vertical, 14)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -268,7 +268,7 @@ struct StreamingMessageBubble: View {
 
   var body: some View {
     HStack {
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
         // If no content blocks yet, show typing indicator
         if contentBlocks.isEmpty {
           TypingIndicatorView()
@@ -304,16 +304,16 @@ struct StreamingMessageBubble: View {
         markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
       {
         Text(attributedString)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
       } else {
         Text(text)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
       }
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.sm)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
   }
@@ -322,7 +322,7 @@ struct StreamingMessageBubble: View {
 // MARK: - Previews
 
 #Preview("User Message") {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     ChatMessageBubble(
       message: ChatMessage(
         id: "1",
@@ -348,7 +348,7 @@ struct StreamingMessageBubble: View {
 
 #Preview("With Table") {
   ScrollView {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       ChatMessageBubble(
         message: ChatMessage(
           id: "1",

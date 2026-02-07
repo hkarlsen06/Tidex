@@ -33,10 +33,6 @@ struct ShiftRowCard: View {
     shift.taxEnabled && shift.taxAmount > 0
   }
 
-  private var formattedHours: String {
-    ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.appLocale)
-  }
-
   private var dateParts: ShiftCardDateParts {
     ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.appLocale)
   }
@@ -70,36 +66,24 @@ struct ShiftRowCard: View {
   private var cardContent: some View {
     ShiftCardContentLayout(centerTrailing: !showBreakdown && !excludedFromTotal) {
       // Row 1: Day name and date
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Text(dateParts.dayName)
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
         Text("·")
           .foregroundColor(.tidexTextMuted)
         Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
       }
-      .fixedSize(horizontal: true, vertical: false)
     } leadingBottom: {
-      // Row 2: Time range and hours
-      HStack(spacing: 8) {
-        if isRTL {
-          hoursLabel
-          arrowLabel
-          timeRangeLabel
-        } else {
-          timeRangeLabel
-          arrowLabel
-          hoursLabel
-        }
-      }
-      .environment(\.layoutDirection, .leftToRight)
+      // Row 2: Time range
+      timeRangeLabel
     } trailingTop: {
       // Net/gross amount
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
       Text(formatCurrency(displayAmount))
-        .font(.system(size: 22, weight: .semibold))
+        .font(.tidexTitle)
         .tracking(-0.5)
         .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
         .strikethrough(excludedFromTotal, color: .tidexTextMuted)
@@ -107,21 +91,21 @@ struct ShiftRowCard: View {
       // When excluded from total, show excluded label instead of breakdown
       if excludedFromTotal {
         Text(.shiftsExcludedFromTotal)
-          .font(.system(size: 11, weight: .medium))
+          .font(.tidexMicro)
           .foregroundColor(.tidexWarning)
       } else if showBreakdown {
         // Breakdown (gross - tax) when tax enabled
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(formatPlainAmount(shift.grossPay))
           Text("−")
           Text(formatPlainAmount(shift.taxAmount))
         }
-        .font(.system(size: 14, weight: .regular))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 20)
+    .padding(.horizontal, Spacing.mlg)
+    .padding(.vertical, Spacing.mlg)
     .background(
       RoundedRectangle(cornerRadius: 24)
         .fill(hasConflict ? Color.tidexWarning.opacity(0.08) : Color.tidexSurfacePrimary)
@@ -149,7 +133,7 @@ struct ShiftRowCard: View {
   }
 
   private var timeRangeLabel: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       if isRTL {
         timeRangeTextLabel
         statusIcon
@@ -160,25 +144,9 @@ struct ShiftRowCard: View {
     }
   }
 
-  private var hoursLabel: some View {
-    Text(formattedHours)
-      .font(.system(size: 14, weight: .medium))
-      .foregroundColor(.tidexTextMuted)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-  }
-
-  private var arrowLabel: some View {
-    Text(isRTL ? "←" : "→")
-      .font(.system(size: 14, weight: .medium))
-      .foregroundColor(.tidexTextMuted)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-  }
-
   private var timeRangeTextLabel: some View {
     Text(timeRangeText)
-      .font(.system(size: 14, weight: .regular))
+      .font(.tidexSubheadline)
       .foregroundColor(.tidexTextPrimary)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
@@ -195,7 +163,7 @@ struct ShiftRowCard: View {
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .font(.system(size: 13, weight: .regular))
+    .font(.tidexFootnote)
   }
 }
 

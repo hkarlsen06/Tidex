@@ -15,11 +15,11 @@ struct OTPInputField: View {
   private let digitCount = 6
 
   var body: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       // Visual digit boxes with hidden TextField overlay
       ZStack {
         // Visual digit boxes (behind the text field)
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           ForEach(0..<digitCount, id: \.self) { index in
             DigitBox(
               digit: getDigit(at: index),
@@ -53,7 +53,7 @@ struct OTPInputField: View {
       // Error message
       if let error = error, !error.isEmpty {
         Text(error)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
           .transition(.opacity.combined(with: .move(edge: .top)))
       }
@@ -152,7 +152,7 @@ private struct DigitBox: View {
 }
 
 #Preview {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     OTPInputField(code: .constant(""))
 
     OTPInputField(code: .constant("123"))

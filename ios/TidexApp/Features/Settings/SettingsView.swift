@@ -65,11 +65,11 @@ struct SettingsView: View {
 
               VStack(alignment: .leading, spacing: 2) {
                 Text(coordinator.userDisplayName)
-                  .font(.system(size: 22, weight: .semibold))
+                  .font(.tidexTitle)
                   .foregroundColor(.tidexTextPrimary)
 
                 Text(.settingsMenuAccountDescription)
-                  .font(.system(size: 14))
+                  .font(.tidexSubheadline)
                   .foregroundColor(.tidexTextSecondary)
                   .lineLimit(2)
               }
@@ -79,7 +79,7 @@ struct SettingsView: View {
               Image(
                 systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
               )
-              .font(.system(size: 14, weight: .semibold))
+              .font(.tidexLabelStrong)
               .foregroundStyle(.tertiary)
             }
             .padding(.vertical, 6)
@@ -219,11 +219,11 @@ struct SettingsView: View {
         ToolbarItem(placement: .principal) {
           VStack(spacing: 2) {
             Text(.settingsTitle)
-              .font(.system(size: 17, weight: .semibold))
+              .font(.tidexHeadline)
               .foregroundColor(.tidexTextPrimary)
 
             Text(.settingsSubtitle)
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextSecondary)
           }
         }
@@ -233,7 +233,7 @@ struct SettingsView: View {
             dismiss()
           } label: {
             Image(systemName: "xmark")
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundStyle(Color.tidexTextMuted)
           }
         }
@@ -297,9 +297,9 @@ struct SettingsView: View {
         await signOut()
       }
     } label: {
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         Image(systemName: "rectangle.portrait.and.arrow.right")
-          .font(.system(size: 13, weight: .medium))
+          .font(.system(size: 14))
           .foregroundColor(.white)
           .frame(width: 29, height: 29)
           .background(
@@ -328,9 +328,9 @@ struct SettingsView: View {
     Button {
       showSignOutEverywhereAlert = true
     } label: {
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         Image(systemName: "rectangle.portrait.and.arrow.right.fill")
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.white)
           .frame(width: 29, height: 29)
           .background(
@@ -400,7 +400,7 @@ private struct RecurringShiftsSettingsView: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
+      VStack(alignment: .leading, spacing: Spacing.mlg) {
         headerSection
 
         if let errorMessage {
@@ -411,7 +411,7 @@ private struct RecurringShiftsSettingsView: View {
           ProgressView()
             .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
             .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.top, 24)
+            .padding(.top, Spacing.lg)
         } else if recurringShifts.isEmpty {
           emptyState
         } else {
@@ -422,8 +422,8 @@ private struct RecurringShiftsSettingsView: View {
           }
         }
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .settingsRecurringShiftsTitle))
@@ -459,7 +459,7 @@ private struct RecurringShiftsSettingsView: View {
   }
 
   private var headerSection: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
       Text(.settingsRecurringShiftsTitle)
         .font(.title2)
         .fontWeight(.bold)
@@ -473,18 +473,18 @@ private struct RecurringShiftsSettingsView: View {
   }
 
   private var emptyState: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       Text(.settingsRecurringShiftsEmptyTitle)
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity, alignment: .leading)
 
       Text(.settingsRecurringShiftsEmptyDescription)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(12)
     .tidexCardShadow(cornerRadius: 12)
@@ -497,9 +497,9 @@ private struct RecurringShiftsSettingsView: View {
       impactHaptic.impactOccurred()
       recurringShiftToEdit = recurring
     } label: {
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
         Text(verbatim: "\(recurring.cleanStartTime) - \(recurring.cleanEndTime)")
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
 
         HStack(spacing: 6) {
@@ -511,11 +511,11 @@ private struct RecurringShiftsSettingsView: View {
             Text(String(localized: .settingsRecurringShiftsExcludedCount(exclusionCount)))
           }
         }
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(12)
       .tidexCardShadow(cornerRadius: 12)
@@ -525,16 +525,16 @@ private struct RecurringShiftsSettingsView: View {
 
   @ViewBuilder
   private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Spacer()
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexError.opacity(0.1))
@@ -643,10 +643,10 @@ struct SettingsMenuItem: View {
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 12) {
-        // Icon with colored background
+      HStack(spacing: Spacing.sm) {
+        // Icon with colored background (fixed size to fit 29x29 container)
         Image(systemName: icon)
-          .font(.system(size: 13, weight: .medium))
+          .font(.system(size: 14))
           .foregroundColor(.white)
           .frame(width: 29, height: 29)
           .background(
@@ -670,7 +670,7 @@ struct SettingsMenuItem: View {
 
         // Chevron
         Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundStyle(.tertiary)
       }
     }

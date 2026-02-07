@@ -77,9 +77,6 @@ struct ShiftsView: View {
   @State private var shareImageURL: URL?
   @Environment(\.colorScheme) private var colorScheme
 
-  // Screenshot detection state
-  @State private var showScreenshotPrompt = false
-
   // View mode toggle (calendar vs list) - persisted across app launches
   @AppStorage("shiftsViewMode") private var showListView = false
   @State private var tabTransitionOffset: CGFloat = 0
@@ -130,7 +127,7 @@ struct ShiftsView: View {
               await viewModel.refresh()
             }
           }
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
           Spacer()
         }
       }
@@ -145,7 +142,7 @@ struct ShiftsView: View {
               showingShareOptions = true
             } label: {
               Image(systemName: "square.and.arrow.up")
-                .font(.system(size: 16, weight: .medium))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
                 .offset(y: -1)
             }
@@ -170,15 +167,6 @@ struct ShiftsView: View {
     }
     .task {
       await viewModel.loadShifts()
-    }
-    // Screenshot detection - prompt user to use share button instead
-    .onReceive(
-      NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
-    ) { _ in
-      // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
-      if selectedTab == .shifts && !showListView {
-        showScreenshotPrompt = true
-      }
     }
     .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
       // Reload shifts when they change (e.g., after adding a shift)
@@ -310,19 +298,9 @@ struct ShiftsView: View {
       }
       .allowsHitTesting(false)
     }
-    // Screenshot share prompt overlay (fullScreenCover to appear above tab bar)
-    .fullScreenCover(isPresented: $showScreenshotPrompt) {
-      ScreenshotSharePromptOverlay(
-        onDismiss: {
-          showScreenshotPrompt = false
-        },
-        onUseShareButton: {
-          showScreenshotPrompt = false
-          showingShareOptions = true
-        }
-      )
-      .presentationBackground(.clear)
-      .interactiveDismissDisabled()
+    // Listen for "use share button" from the screenshot prompt overlay (hosted in MainTabView)
+    .onReceive(NotificationCenter.default.publisher(for: .screenshotPromptUseShareButton)) { _ in
+      showingShareOptions = true
     }
     // Trigger celebration when shifts are added (check on view appear and when month matches)
     .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
@@ -750,7 +728,7 @@ struct ShiftsView: View {
   /// Side-by-side layout for iPad landscape: calendar on left, shifts list on right
   @ViewBuilder
   private var iPadLandscapeContent: some View {
-    HStack(spacing: 48) {
+    HStack(spacing: Spacing.xxxl) {
       Spacer()
 
       // Left side: Calendar
@@ -876,7 +854,7 @@ struct ShiftsView: View {
                 conflictDates: viewModel.conflictDates,
                 excludedFromTotalIds: viewModel.excludedFromTotalIds
               )
-              .padding(.horizontal, 16)
+              .padding(.horizontal, Spacing.md)
             }
             .offset(y: tabTransitionOffset)
             .opacity(tabTransitionOpacity)
@@ -916,8 +894,8 @@ struct ShiftsView: View {
             selectedTab = .add
           }
         )
-        .padding(.horizontal, 16)
-        .padding(.top, 40)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.xxl)
         .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
       }
       .refreshable {
@@ -1084,7 +1062,7 @@ struct ShiftsView: View {
                 excludedFromTotalIds: viewModel.excludedFromTotalIds
               )
               .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-              .padding(.horizontal, 16)
+              .padding(.horizontal, Spacing.md)
             }
             .offset(y: tabTransitionOffset)
             .opacity(tabTransitionOpacity)
@@ -1128,8 +1106,8 @@ struct ShiftsView: View {
           }
         )
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, 16)
-        .padding(.top, 40)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.xxl)
         // Add bottom padding for floating MonthPicker
         .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
       }
@@ -1321,7 +1299,7 @@ struct ShiftsView: View {
   private func shiftCardRow(shift: ShiftWithComputations) -> some View {
     let isNextUpcoming = viewModel.nextUpcomingShift?.id == shift.id
 
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       ShiftRowCard(
         shift: shift,
         isToday: shift.shiftDate == todayISO(),
@@ -1370,13 +1348,13 @@ struct ShiftsView: View {
   // MARK: - Loading View
 
   private var loadingView: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       ProgressView()
         .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
         .scaleEffect(1.2)
 
       Text(.commonLoading)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -1387,17 +1365,17 @@ struct ShiftsView: View {
 
   @ViewBuilder
   private func errorView(error: Error) -> some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 48))
         .foregroundColor(.tidexWarning)
 
       Text(.shiftsLoadError)
-        .font(.system(size: 16, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
       Text(error.localizedDescription)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
@@ -1405,16 +1383,16 @@ struct ShiftsView: View {
         Task { await viewModel.loadShifts() }
       } label: {
         Text(.commonRetry)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))
           .cornerRadius(8)
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-    .padding(.horizontal, 40)
+    .padding(.horizontal, Spacing.xxl)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }

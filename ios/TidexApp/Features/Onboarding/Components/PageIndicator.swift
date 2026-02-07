@@ -6,7 +6,7 @@ struct PageIndicator: View {
   let currentPage: Int
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       ForEach(0..<totalPages, id: \.self) { index in
         Circle()
           .fill(index == currentPage ? Color.tidexBlue : Color.tidexTextMuted.opacity(0.4))
@@ -19,7 +19,7 @@ struct PageIndicator: View {
 }
 
 #Preview {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     PageIndicator(totalPages: 4, currentPage: 0)
     PageIndicator(totalPages: 4, currentPage: 1)
     PageIndicator(totalPages: 4, currentPage: 2)

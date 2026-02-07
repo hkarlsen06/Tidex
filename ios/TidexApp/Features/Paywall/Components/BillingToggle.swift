@@ -46,7 +46,7 @@ struct BillingToggle: View {
     Button(action: action) {
       HStack(spacing: 6) {
         Text(title)
-          .font(.system(size: 15, weight: isSelected ? .semibold : .medium))
+          .font(isSelected ? .tidexLabelStrong : .tidexLabel)
           .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
 
         if let badge = badge {
@@ -75,7 +75,7 @@ struct BillingToggle: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     BillingToggle(selection: .constant(.monthly), yearlySavingsPercent: 17)
     BillingToggle(selection: .constant(.yearly), yearlySavingsPercent: 17)
     BillingToggle(selection: .constant(.monthly), yearlySavingsPercent: nil)

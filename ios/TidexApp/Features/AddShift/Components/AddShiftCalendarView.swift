@@ -14,7 +14,7 @@ struct AddShiftCalendarView: View {
   }
 
   private let calendar = Calendar.current
-  private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+  private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xxs), count: 7)
 
   var body: some View {
     VStack(spacing: 0) {
@@ -29,7 +29,7 @@ struct AddShiftCalendarView: View {
 
       // Weekday headers
       weekdayHeaderRow
-        .padding(.bottom, 8)
+        .padding(.bottom, Spacing.xs)
 
       // Calendar grid
       calendarGrid
@@ -115,7 +115,7 @@ struct AddShiftCalendarView: View {
     HStack(spacing: 0) {
       ForEach(weekdaySymbols.indices, id: \.self) { index in
         Text(weekdaySymbols[index])
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity)
       }
@@ -140,7 +140,7 @@ struct AddShiftCalendarView: View {
   private var calendarGrid: some View {
     let days = daysInMonth()
 
-    LazyVGrid(columns: columns, spacing: 4) {
+    LazyVGrid(columns: columns, spacing: Spacing.xxs) {
       ForEach(days, id: \.id) { dayInfo in
         AddShiftCalendarDayCell(
           dayInfo: dayInfo,
@@ -335,7 +335,7 @@ private struct AddShiftCalendarDayCell: View {
       Image(systemName: "checkmark")
         .font(.system(size: 16, weight: .bold))
         .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-        .padding(.top, 8)
+        .padding(.top, Spacing.xs)
     }
   }
 }

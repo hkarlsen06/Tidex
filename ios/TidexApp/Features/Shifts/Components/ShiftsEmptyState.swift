@@ -40,7 +40,7 @@ struct ShiftsEmptyState: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       Spacer()
 
       // Icon - changes based on period
@@ -59,11 +59,11 @@ struct ShiftsEmptyState: View {
         .font(.tidexBody)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
-        .padding(.horizontal, 40)
+        .padding(.horizontal, Spacing.xxl)
 
       // Action buttons based on period
       actionButtons
-        .padding(.top, 8)
+        .padding(.top, Spacing.xs)
 
       Spacer()
     }
@@ -130,14 +130,14 @@ struct ShiftsEmptyState: View {
       EmptyView()
     case .current, .future:
       Button(action: onAddShift) {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           Image(systemName: "plus")
             .font(.tidexCaptionStrong)
           Text(.shiftsEmptyAddShift)
             .font(.tidexButton)
         }
         .foregroundColor(.white)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexBlue)
         .cornerRadius(12)

@@ -107,7 +107,7 @@ struct CalendarViewModeToggle: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     CalendarViewModeToggle(
       viewMode: .constant(.hours),
       currency: "kr"

@@ -33,10 +33,10 @@ struct AcceptTermsView: View {
 
           // Header section
           headerSection
-            .padding(.bottom, 40)
+            .padding(.bottom, Spacing.xxl)
 
           // Main content
-          VStack(spacing: 24) {
+          VStack(spacing: Spacing.lg) {
             // Error banner
             if let error = error {
               ErrorBanner(
@@ -54,7 +54,7 @@ struct AcceptTermsView: View {
             // Action buttons
             actionButtonsSection
           }
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
 
           Spacer(minLength: 60)
         }
@@ -72,7 +72,7 @@ struct AcceptTermsView: View {
   // MARK: - Header Section
 
   private var headerSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Document icon for terms
       ZStack {
         Circle()
@@ -94,13 +94,13 @@ struct AcceptTermsView: View {
   // MARK: - Instructions Section
 
   private var instructionsSection: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       Text(
         isUpdate
           ? String(localized: .acceptTermsUpdatedTitle)
           : String(localized: .acceptTermsTitle)
       )
-      .font(.system(size: 22, weight: .bold))
+      .font(.tidexTitle)
       .foregroundColor(.tidexTextPrimary)
       .multilineTextAlignment(.center)
 
@@ -109,7 +109,7 @@ struct AcceptTermsView: View {
           ? String(localized: .acceptTermsUpdatedDescription)
           : String(localized: .acceptTermsDescription)
       )
-      .font(.system(size: 15))
+      .font(.tidexSubheadline)
       .foregroundColor(.tidexTextSecondary)
       .multilineTextAlignment(.center)
 
@@ -118,10 +118,10 @@ struct AcceptTermsView: View {
           ? String(localized: .acceptTermsUpdatedExplanation)
           : String(localized: .acceptTermsExplanation)
       )
-      .font(.system(size: 13))
+      .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
       .multilineTextAlignment(.center)
-      .padding(.top, 4)
+      .padding(.top, Spacing.xxs)
     }
   }
 
@@ -136,16 +136,16 @@ struct AcceptTermsView: View {
       } label: {
         HStack {
           Image(systemName: "doc.text")
-            .font(.system(size: 16))
+            .font(.tidexBody)
           Text(.acceptTermsViewTerms)
-            .font(.system(size: 17))
+            .font(.tidexBody)
           Spacer()
           Image(systemName: "arrow.up.right")
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
         .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, 14)
       }
       .disabled(isProcessing)
@@ -160,16 +160,16 @@ struct AcceptTermsView: View {
       } label: {
         HStack {
           Image(systemName: "shield")
-            .font(.system(size: 16))
+            .font(.tidexBody)
           Text(.acceptTermsViewPrivacy)
-            .font(.system(size: 17))
+            .font(.tidexBody)
           Spacer()
           Image(systemName: "arrow.up.right")
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
         .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, 14)
       }
       .disabled(isProcessing)
@@ -181,7 +181,7 @@ struct AcceptTermsView: View {
   // MARK: - Action Buttons Section
 
   private var actionButtonsSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Accept button
       PrimaryButton(
         title: String(localized: .acceptTermsAcceptButton),
@@ -194,7 +194,7 @@ struct AcceptTermsView: View {
         declineTerms()
       } label: {
         Text(.acceptTermsDeclineButton)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
       }
       .buttonStyle(.plain)

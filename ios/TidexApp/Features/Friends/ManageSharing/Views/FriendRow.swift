@@ -51,14 +51,14 @@ struct FriendRow: View {
   // MARK: - Row Content
 
   private var rowContent: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       // Avatar
       avatarView
 
       // Name and contact info
       VStack(alignment: .leading, spacing: 2) {
         Text(friend.displayName)
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
           .lineLimit(1)
           .multilineTextAlignment(.leading)
@@ -73,7 +73,7 @@ struct FriendRow: View {
         .font(.system(size: 20))
         .foregroundColor(.tidexTextMuted)
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, Spacing.xxs)
     .contentShape(Rectangle())
   }
 
@@ -83,7 +83,7 @@ struct FriendRow: View {
   private var subtitleView: some View {
     if let contactInfo = friend.contactInfo {
       Text(contactInfo)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
         .lineLimit(1)
     }

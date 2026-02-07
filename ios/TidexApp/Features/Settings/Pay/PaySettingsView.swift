@@ -86,12 +86,12 @@ struct PaySettingsView: View {
 
   @ViewBuilder
   private var loadingView: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       ProgressView()
         .progressViewStyle(CircularProgressViewStyle(tint: .tidexBrandPrimary))
 
       Text(.commonLoading)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
   }
@@ -101,22 +101,22 @@ struct PaySettingsView: View {
   @ViewBuilder
   private var mainContent: some View {
     ScrollView {
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         // Wage History Timeline
         WageHistoryTimelineView(
           entries: viewModel.timelineEntries,
           onAddNew: { viewModel.openCreateEditor() },
           onEdit: { snapshot in viewModel.openEditEditor(snapshot: snapshot) }
         )
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
 
         // Tip box
         tipBox
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
 
         // Divider
         Divider()
-          .padding(.horizontal, 32)
+          .padding(.horizontal, Spacing.xl)
 
         // Global Pay Settings
         GlobalPaySettingsCard(
@@ -131,13 +131,13 @@ struct PaySettingsView: View {
             await viewModel.updateCurrency(value)
           }
         )
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
 
         // Bottom padding
         Spacer()
-          .frame(height: 40)
+          .frame(height: Spacing.xxl)
       }
-      .padding(.vertical, 24)
+      .padding(.vertical, Spacing.lg)
     }
     .refreshable {
       await viewModel.loadData()
@@ -154,7 +154,7 @@ struct PaySettingsView: View {
 
     // Make the tip label bold
     if let range = result.range(of: tipLabel) {
-      result[range].font = .system(size: 14, weight: .semibold)
+      result[range].font = .tidexLabelStrong
     }
 
     return result
@@ -163,10 +163,10 @@ struct PaySettingsView: View {
   @ViewBuilder
   private var tipBox: some View {
     Text(tipText)
-      .font(.system(size: 14))
+      .font(.tidexSubheadline)
       .foregroundColor(.tidexBlue)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexBlue.opacity(0.1))
       .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }

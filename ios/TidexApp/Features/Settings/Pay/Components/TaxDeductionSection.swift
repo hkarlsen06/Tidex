@@ -13,16 +13,16 @@ struct TaxDeductionSection: View {
   @FocusState private var isPercentageInputFocused: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Section header with toggle
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.settingsPayEditorTaxTitle)
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexTextPrimary)
 
           Text(.settingsPayEditorTaxDescription)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -49,14 +49,14 @@ struct TaxDeductionSection: View {
 
   @ViewBuilder
   private var percentageInput: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorTaxPercentage)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         // Quick percentage buttons
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           ForEach([0, 20, 22, 25, 30], id: \.self) { value in
             QuickPercentageButton(
               value: value,
@@ -72,18 +72,18 @@ struct TaxDeductionSection: View {
         }
 
         // Slider with value display
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           // Tappable value display
           if showingPercentageInput {
             HStack(spacing: 2) {
               TextField("", text: $percentageInputText)
-                .font(.system(size: 20, weight: .bold))
+                .font(.tidexTitle2)
                 .foregroundColor(.tidexBlue)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .focused($isPercentageInputFocused)
                 .frame(width: 50)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spacing.xxs)
                 .padding(.vertical, 2)
                 .background(Color.tidexBlue.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -107,7 +107,7 @@ struct TaxDeductionSection: View {
                 }
 
               Text("%")
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexTextMuted)
             }
           } else {
@@ -121,16 +121,16 @@ struct TaxDeductionSection: View {
             }) {
               HStack(spacing: 2) {
                 Text(formatPercentageValue(percentage))
-                  .font(.system(size: 20, weight: .bold))
+                  .font(.tidexTitle2)
                   .foregroundColor(.tidexBlue)
                   .contentTransition(.numericText())
-                  .padding(.horizontal, 4)
+                  .padding(.horizontal, Spacing.xxs)
                   .padding(.vertical, 2)
                   .background(Color.tidexBlue.opacity(0.08))
                   .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
                 Text("%")
-                  .font(.system(size: 14, weight: .medium))
+                  .font(.tidexLabel)
                   .foregroundColor(.tidexTextMuted)
               }
             }
@@ -149,7 +149,7 @@ struct TaxDeductionSection: View {
           )
           .tint(.tidexBlue)
         }
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       }
@@ -188,7 +188,7 @@ private struct QuickPercentageButton: View {
   var body: some View {
     Button(action: action) {
       Text("\(value)%")
-        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(maxWidth: .infinity)
         .frame(height: 36)

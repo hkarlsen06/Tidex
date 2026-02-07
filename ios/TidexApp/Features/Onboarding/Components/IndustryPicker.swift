@@ -73,7 +73,7 @@ struct IndustryPicker: View {
           }
         } label: {
           Text(industry.localizedName())
-            .font(.system(size: 14, weight: selection == industry ? .semibold : .medium))
+            .font(selection == industry ? .tidexLabelStrong : .tidexLabel)
             .foregroundColor(selection == industry ? .tidexTextPrimary : .tidexTextMuted)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
@@ -94,7 +94,7 @@ struct IndustryPicker: View {
 }
 
 #Preview {
-  VStack(spacing: 24) {
+  VStack(spacing: Spacing.lg) {
     IndustryPicker(selection: .constant(.retail))
     IndustryPicker(selection: .constant(.restaurant))
     IndustryPicker(selection: .constant(.healthcare))

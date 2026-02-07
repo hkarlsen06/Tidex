@@ -5,6 +5,9 @@ import SwiftUI
 extension Notification.Name {
   /// Posted when a tab is tapped while already selected
   static let tabReselected = Notification.Name("tabReselected")
+
+  /// Posted by the screenshot prompt overlay when user taps "Use Share Button"
+  static let screenshotPromptUseShareButton = Notification.Name("screenshotPromptUseShareButton")
 }
 
 /// Main tab view for authenticated users
@@ -34,6 +37,9 @@ struct MainTabView: View {
 
   // State for Wagey AI chat sheet (home tab)
   @State private var showWageySheet = false
+
+  // Screenshot share prompt state (presented as overlay to keep content visible)
+  @State private var showScreenshotPrompt = false
 
   // View mode toggle (calendar vs list) - persisted across app launches
   // Shared with ShiftsView via @AppStorage
@@ -200,6 +206,28 @@ struct MainTabView: View {
           }
         )
       }
+
+      // Screenshot share prompt overlay - above tab bar, keeps content visible
+      if showScreenshotPrompt {
+        ScreenshotSharePromptOverlay(
+          onDismiss: {
+            showScreenshotPrompt = false
+          },
+          onUseShareButton: {
+            showScreenshotPrompt = false
+            NotificationCenter.default.post(name: .screenshotPromptUseShareButton, object: nil)
+          }
+        )
+      }
+    }
+    // Screenshot detection - prompt user to use share button instead
+    .onReceive(
+      NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
+    ) { _ in
+      // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
+      if selectedTab == .shifts && !showListView {
+        showScreenshotPrompt = true
+      }
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
       handlePendingDeepLink(deepLink)
@@ -242,7 +270,7 @@ struct MainTabView: View {
 
   @ViewBuilder
   private var sharedMonthPickerOverlay: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       // Wagey button - only on Home tab
       if selectedTab == .home {
         Button {
@@ -250,7 +278,7 @@ struct MainTabView: View {
           showWageySheet = true
         } label: {
           Image(systemName: "sparkles")
-            .font(.system(size: 20, weight: .semibold))
+            .font(.tidexTitle2)
             .foregroundColor(.tidexBlue)
             .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
             .contentShape(Rectangle())
@@ -267,7 +295,7 @@ struct MainTabView: View {
           showListView.toggle()
         } label: {
           Image(systemName: showListView ? "calendar" : "list.bullet")
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexBlue)
             .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
             .contentShape(Rectangle())
@@ -320,7 +348,7 @@ struct MainTabView: View {
                 .scaleEffect(0.9)
             } else {
               Image(systemName: "plus")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.tidexHeadline)
                 .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
             }
           }

@@ -10,7 +10,7 @@ struct ImpersonationTabView: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         // Active impersonation banner
         if impersonationManager.isImpersonating {
           ActiveImpersonationCard(
@@ -28,7 +28,7 @@ struct ImpersonationTabView: View {
         // Instructions
         InstructionsCard()
       }
-      .padding(16)
+      .padding(Spacing.md)
     }
   }
 
@@ -52,24 +52,24 @@ private struct ActiveImpersonationCard: View {
   @State private var isLoading = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack {
         Image(systemName: "person.crop.circle.badge.exclamationmark")
           .font(.system(size: 20))
           .foregroundStyle(Color.tidexWarning)
         Text("Active Impersonation")
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundStyle(Color.tidexWarning)
       }
 
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text("Impersonating: **\(targetName)**")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundStyle(Color.tidexTextPrimary)
 
         if let expiresAt {
           Text("Expires: \(expiresAt, style: .relative)")
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundStyle(Color.tidexTextSecondary)
         }
       }
@@ -86,14 +86,14 @@ private struct ActiveImpersonationCard: View {
           Text(isLoading ? "Stopping..." : "Stop Impersonation")
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, Spacing.sm)
         .background(Color.tidexError)
         .foregroundStyle(.white)
         .cornerRadius(8)
       }
       .disabled(isLoading)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexWarning.opacity(0.1))
     .cornerRadius(12)
     .overlay(
@@ -109,7 +109,7 @@ private struct StartImpersonationSection: View {
   @ObservedObject var viewModel: AdminSettingsViewModel
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       Text("Impersonate User")
         .font(.headline)
         .foregroundStyle(Color.tidexTextPrimary)
@@ -123,7 +123,7 @@ private struct StartImpersonationSection: View {
       // Start button
       StartButton(viewModel: viewModel)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(12)
     .tidexCardShadow(cornerRadius: 12)
@@ -136,7 +136,7 @@ private struct UserSelectionField: View {
   @ObservedObject var viewModel: AdminSettingsViewModel
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text("Target User")
         .font(.subheadline)
         .foregroundStyle(Color.tidexTextMuted)
@@ -169,11 +169,11 @@ private struct SelectedUserChip: View {
     HStack {
       VStack(alignment: .leading, spacing: 2) {
         Text(user.displayName)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundStyle(Color.tidexTextPrimary)
         if let email = user.email, email != user.displayName {
           Text(email)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundStyle(Color.tidexTextMuted)
         }
       }
@@ -183,7 +183,7 @@ private struct SelectedUserChip: View {
           .foregroundStyle(Color.tidexTextMuted)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
     .cornerRadius(8)
   }
@@ -209,7 +209,7 @@ private struct UserSearchField: View {
         ProgressView().scaleEffect(0.8)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
     .cornerRadius(8)
   }
@@ -229,21 +229,21 @@ private struct UserSearchResults: View {
           HStack {
             VStack(alignment: .leading, spacing: 2) {
               Text(user.displayName)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundStyle(Color.tidexTextPrimary)
               if let email = user.email, email != user.displayName {
                 Text(email)
-                  .font(.system(size: 12))
+                  .font(.tidexCaptionRegular)
                   .foregroundStyle(Color.tidexTextMuted)
               }
             }
             Spacer()
             Image(systemName: "chevron.right")
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundStyle(Color.tidexTextMuted)
           }
           .padding(.vertical, 10)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .contentShape(Rectangle())
         }
         if user.id != viewModel.impersonationUserSearchResults.last?.id {
@@ -266,7 +266,7 @@ private struct ReasonInputField: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack {
         Text("Reason")
           .font(.subheadline)
@@ -278,7 +278,7 @@ private struct ReasonInputField: View {
 
       TextField("Why are you impersonating this user?", text: $viewModel.impersonationReason)
         .textFieldStyle(.plain)
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .cornerRadius(8)
 
@@ -314,7 +314,7 @@ private struct StartButton: View {
         Text(viewModel.isStartingImpersonation ? "Starting..." : "Start Impersonation")
       }
       .frame(maxWidth: .infinity)
-      .padding(.vertical, 12)
+      .padding(.vertical, Spacing.sm)
       .background(canStart ? Color.tidexWarning : Color.tidexWarning.opacity(0.5))
       .foregroundStyle(.white)
       .cornerRadius(8)
@@ -327,23 +327,23 @@ private struct StartButton: View {
 
 private struct InstructionsCard: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack {
         Image(systemName: "info.circle")
           .foregroundStyle(Color.tidexInfo)
         Text("About Impersonation")
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundStyle(Color.tidexTextPrimary)
       }
 
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
         InstructionRow(text: "Allows viewing the app as the target user")
         InstructionRow(text: "All actions are logged for audit purposes")
         InstructionRow(text: "Session expires after 1 hour")
         InstructionRow(text: "Some sensitive actions are blocked")
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexInfo.opacity(0.1))
     .cornerRadius(12)
   }
@@ -353,11 +353,11 @@ private struct InstructionRow: View {
   let text: String
 
   var body: some View {
-    HStack(alignment: .top, spacing: 8) {
+    HStack(alignment: .top, spacing: Spacing.xs) {
       Text("•")
         .foregroundStyle(Color.tidexTextMuted)
       Text(text)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextSecondary)
     }
   }

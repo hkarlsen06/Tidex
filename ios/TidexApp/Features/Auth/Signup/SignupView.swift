@@ -14,10 +14,10 @@ struct SignupView: View {
 
           // Header section
           headerSection
-            .padding(.bottom, 40)
+            .padding(.bottom, Spacing.xxl)
 
           // Main content
-          VStack(spacing: 24) {
+          VStack(spacing: Spacing.lg) {
             // Error/Success banners
             if let error = viewModel.errorMessage {
               ErrorBanner(
@@ -41,14 +41,14 @@ struct SignupView: View {
               SignupOTPForm(viewModel: viewModel)
             }
           }
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
 
           Spacer(minLength: 60)
 
           // Footer
           if viewModel.currentStep == .input {
             footerView
-              .padding(.bottom, 40)
+              .padding(.bottom, Spacing.xxl)
           }
         }
         .frame(minHeight: geometry.size.height)
@@ -69,7 +69,7 @@ struct SignupView: View {
   // MARK: - Header Section
 
   private var headerSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Full wordmark
       Image("TidexWordmark")
         .resizable()
@@ -78,7 +78,7 @@ struct SignupView: View {
 
       // Subtitle
       Text(.signupSubtitle)
-        .font(.system(size: 17))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
@@ -88,7 +88,7 @@ struct SignupView: View {
 
   @ViewBuilder
   private var inputStepContent: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // OAuth buttons
       OAuthButtonsView(
         onGoogleTap: { Task { await viewModel.signUpWithGoogle() } },
@@ -98,7 +98,7 @@ struct SignupView: View {
 
       // Divider
       dividerView
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
 
       // Email/phone form or reveal button
       if viewModel.showEmailForm {
@@ -117,11 +117,11 @@ struct SignupView: View {
         viewModel.showEmailForm = true
       }
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "envelope")
-          .font(.system(size: 16))
+          .font(.tidexBody)
         Text(.signupEmailOrPhoneReveal)
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
       }
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity)
@@ -135,13 +135,13 @@ struct SignupView: View {
   // MARK: - Divider
 
   private var dividerView: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       Rectangle()
         .fill(Color.tidexBorderSubtle)
         .frame(height: 1)
 
       Text(.loginSeparator)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
 
       Rectangle()
@@ -153,16 +153,16 @@ struct SignupView: View {
   // MARK: - Footer
 
   private var footerView: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       Text(.signupHasAccount)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Button(action: {
         onNavigateToLogin?()
       }) {
         Text(.signupLogin)
-          .font(.system(size: 15, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexBlue)
       }
       .buttonStyle(.plain)
@@ -177,18 +177,18 @@ struct SignupForm: View {
   @ObservedObject var viewModel: SignupViewModel
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Name fields side by side
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         // First name
         VStack(spacing: 0) {
           TextField(String(localized: .signupFirstNamePlaceholder), text: $viewModel.firstName)
-            .font(.system(size: 17))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextPrimary)
             .textContentType(.givenName)
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.md)
             .padding(.vertical, 14)
         }
         .background(Color.tidexSurfacePrimary)
@@ -197,12 +197,12 @@ struct SignupForm: View {
         // Last name
         VStack(spacing: 0) {
           TextField(String(localized: .signupLastNamePlaceholder), text: $viewModel.lastName)
-            .font(.system(size: 17))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextPrimary)
             .textContentType(.familyName)
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.md)
             .padding(.vertical, 14)
         }
         .background(Color.tidexSurfacePrimary)
@@ -212,18 +212,18 @@ struct SignupForm: View {
       // Name error messages
       if let firstNameError = viewModel.fieldErrors.firstName {
         Text(firstNameError)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexError)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
       }
 
       if let lastNameError = viewModel.fieldErrors.lastName {
         Text(lastNameError)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexError)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
       }
 
       // Email/Phone and Password in grouped style
@@ -254,23 +254,23 @@ struct SignupForm: View {
       // Error messages
       if let emailError = viewModel.fieldErrors.emailOrPhone {
         Text(emailError)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexError)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
       }
 
       if let passwordError = viewModel.fieldErrors.password {
         Text(passwordError)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexError)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
       }
 
       // Password hint
       Text(.signupPasswordHint)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -293,15 +293,15 @@ struct SignupOTPForm: View {
   @ObservedObject var viewModel: SignupViewModel
 
   var body: some View {
-    VStack(spacing: 24) {
+    VStack(spacing: Spacing.lg) {
       // OTP explanation
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.otpTitle)
-          .font(.system(size: 22, weight: .bold))
+          .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
@@ -322,12 +322,12 @@ struct SignupOTPForm: View {
       )
 
       // Resend and back links
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         Button(action: {
           Task { await viewModel.resendOTP() }
         }) {
           Text(.otpResendCode)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexBlue)
         }
         .buttonStyle(.plain)
@@ -336,11 +336,11 @@ struct SignupOTPForm: View {
         Button(action: {
           viewModel.backToInput()
         }) {
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             Image(systemName: "chevron.left")
-              .font(.system(size: 12, weight: .medium))
+              .font(.tidexCaption)
             Text(.signupBackToSignup)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
           }
           .foregroundColor(.tidexTextSecondary)
         }

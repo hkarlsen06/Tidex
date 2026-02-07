@@ -251,7 +251,7 @@ struct IPadLandscapeChecker {
 // MARK: - Preview
 
 #Preview("Adaptive Width Demo") {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     Text("Form Width (480pt)")
       .padding()
       .background(Color.blue.opacity(0.2))

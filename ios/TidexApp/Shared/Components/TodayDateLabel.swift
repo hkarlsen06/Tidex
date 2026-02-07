@@ -9,21 +9,21 @@ struct TodayDateLabel: View {
   )
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       Circle()
         .fill(Color.tidexBlue)
         .frame(width: 7, height: 7)
       Text(parts.dayName)
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
       Text("\u{00B7}")
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextMuted)
       Text("\(parts.dayNumber) \(parts.monthName)")
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextSecondary)
     }
     .fixedSize()
-    .padding(.leading, 4)
+    .padding(.leading, Spacing.xxs)
   }
 }

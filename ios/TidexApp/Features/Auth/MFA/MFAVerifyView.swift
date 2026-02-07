@@ -19,10 +19,10 @@ struct MFAVerifyView: View {
 
       // Header section
       headerSection
-        .padding(.bottom, 32)
+        .padding(.bottom, Spacing.xl)
 
       // Main content
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         // Error banner
         if let error = viewModel.errorMessage {
           ErrorBanner(
@@ -57,7 +57,7 @@ struct MFAVerifyView: View {
         // Back to login
         backButton
       }
-      .padding(.horizontal, 24)
+      .padding(.horizontal, Spacing.lg)
 
       Spacer()
     }
@@ -75,7 +75,7 @@ struct MFAVerifyView: View {
   // MARK: - Header Section
 
   private var headerSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Lock icon for MFA
       ZStack {
         Circle()
@@ -97,22 +97,22 @@ struct MFAVerifyView: View {
   // MARK: - Instructions Section
 
   private var instructionsSection: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       Text(.mfaTitle)
-        .font(.system(size: 22, weight: .bold))
+        .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.mfaSubtitle)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       // Show factor name if available
       if let factorName = viewModel.factor.friendlyName {
         Text(factorName)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextMuted)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, 6)
           .background(Color.tidexSurfaceSecondary)
           .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -126,11 +126,11 @@ struct MFAVerifyView: View {
     Button(action: {
       Task { await viewModel.signOutAndReturn() }
     }) {
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Image(systemName: "chevron.left")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
         Text(.mfaBackToLogin)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
     }

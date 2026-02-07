@@ -99,19 +99,19 @@ struct ShiftSupplementRuleCard: View {
   }
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       // Badge and content
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
         // Badge
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           Text(
             rule.isCustom
               ? String(localized: .supplementsCustom)
               : String(localized: .supplementsTariff)
           )
-          .font(.system(size: 11, weight: .medium))
+          .font(.tidexMicro)
           .foregroundColor(rule.isCustom ? .tidexBlue : .tidexTextSecondary)
-          .padding(.horizontal, 8)
+          .padding(.horizontal, Spacing.xs)
           .padding(.vertical, 3)
           .background(
             Capsule()
@@ -125,34 +125,34 @@ struct ShiftSupplementRuleCard: View {
         }
 
         // Time range
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(rule.from)
-            .font(.system(size: 16, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text("–")
-            .font(.system(size: 16))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextMuted)
 
           Text(rule.to)
-            .font(.system(size: 16, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
         }
 
         // Value
         Text(rule.formattedValue(currency: currency))
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
       }
 
       Spacer()
 
       // Actions
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         // Edit button
         Button(action: onEdit) {
           Image(systemName: "pencil")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
             .frame(width: 36, height: 36)
             .background(Color.tidexBlue.opacity(0.1))
@@ -163,7 +163,7 @@ struct ShiftSupplementRuleCard: View {
         // Delete button
         Button(action: onDelete) {
           Image(systemName: "trash")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexError)
             .frame(width: 36, height: 36)
             .background(Color.tidexError.opacity(0.1))
@@ -172,7 +172,7 @@ struct ShiftSupplementRuleCard: View {
         .buttonStyle(.plain)
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     .tidexCardShadow(cornerRadius: 12)
@@ -269,7 +269,7 @@ struct SupplementRuleEditorSheet: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           // Time section
           timeSection
 
@@ -279,7 +279,7 @@ struct SupplementRuleEditorSheet: View {
           // Value section
           valueSection
         }
-        .padding(24)
+        .padding(Spacing.lg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(
@@ -309,16 +309,16 @@ struct SupplementRuleEditorSheet: View {
 
   @ViewBuilder
   private var timeSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsTimeLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: 16) {
+      HStack(spacing: Spacing.md) {
         // From time
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.onboardingSupplementsFrom)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
 
           DatePicker(
@@ -330,14 +330,14 @@ struct SupplementRuleEditorSheet: View {
           .labelsHidden()
         }
         .frame(maxWidth: .infinity)
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
         // To time
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.onboardingSupplementsTo)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
 
           DatePicker(
@@ -349,7 +349,7 @@ struct SupplementRuleEditorSheet: View {
           .labelsHidden()
         }
         .frame(maxWidth: .infinity)
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       }
@@ -360,12 +360,12 @@ struct SupplementRuleEditorSheet: View {
 
   @ViewBuilder
   private var typeSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsTypeLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         // Fixed rate button
         Button {
           UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -374,13 +374,13 @@ struct SupplementRuleEditorSheet: View {
             value = defaultValue(for: .fixed)
           }
         } label: {
-          VStack(spacing: 4) {
+          VStack(spacing: Spacing.xxs) {
             Text(.onboardingSupplementsFixedRate)
-              .font(.system(size: 14, weight: supplementType == .fixed ? .semibold : .medium))
+              .font(supplementType == .fixed ? .tidexLabelStrong : .tidexLabel)
               .foregroundColor(supplementType == .fixed ? .tidexTextPrimary : .tidexTextSecondary)
 
             Text(hourRateSuffix)
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
           }
           .frame(maxWidth: .infinity)
@@ -407,13 +407,13 @@ struct SupplementRuleEditorSheet: View {
             value = defaultValue(for: .percent)
           }
         } label: {
-          VStack(spacing: 4) {
+          VStack(spacing: Spacing.xxs) {
             Text(.onboardingSupplementsPercentRate)
-              .font(.system(size: 14, weight: supplementType == .percent ? .semibold : .medium))
+              .font(supplementType == .percent ? .tidexLabelStrong : .tidexLabel)
               .foregroundColor(supplementType == .percent ? .tidexTextPrimary : .tidexTextSecondary)
 
             Text("%")
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
           }
           .frame(maxWidth: .infinity)
@@ -439,13 +439,13 @@ struct SupplementRuleEditorSheet: View {
 
   @ViewBuilder
   private var valueSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsValueLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Quick value buttons
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         ForEach(quickValues, id: \.self) { quickValue in
           Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -454,10 +454,10 @@ struct SupplementRuleEditorSheet: View {
             }
           } label: {
             Text(supplementType == .fixed ? "+\(Int(quickValue))" : "\(Int(quickValue))%")
-              .font(.system(size: 14, weight: value == quickValue ? .semibold : .medium))
+              .font(value == quickValue ? .tidexLabelStrong : .tidexLabel)
               .foregroundColor(value == quickValue ? .white : .tidexTextSecondary)
-              .padding(.horizontal, 12)
-              .padding(.vertical, 8)
+              .padding(.horizontal, Spacing.sm)
+              .padding(.vertical, Spacing.xs)
               .background(
                 value == quickValue ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary
               )
@@ -472,19 +472,19 @@ struct SupplementRuleEditorSheet: View {
       }
 
       // Slider with value display
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         HStack {
           if showingValueInput {
             // Editable input field
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.xxs) {
               TextField("", text: $valueInputText)
-                .font(.system(size: 24, weight: .bold))
+                .font(.tidexLargeTitle)
                 .foregroundColor(.tidexBlue)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.leading)
                 .focused($isValueInputFocused)
                 .frame(width: 80)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spacing.xxs)
                 .padding(.vertical, 2)
                 .background(Color.tidexBlue.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -508,7 +508,7 @@ struct SupplementRuleEditorSheet: View {
                 }
 
               Text(supplementType == .fixed ? hourRateSuffix : "%")
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexTextMuted)
             }
           } else {
@@ -522,10 +522,10 @@ struct SupplementRuleEditorSheet: View {
               }
             } label: {
               Text(formatValueWithDecimals(value))
-                .font(.system(size: 24, weight: .bold))
+                .font(.tidexLargeTitle)
                 .foregroundColor(.tidexBlue)
                 .contentTransition(.numericText())
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spacing.xxs)
                 .padding(.vertical, 2)
                 .background(Color.tidexBlue.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -533,7 +533,7 @@ struct SupplementRuleEditorSheet: View {
             .buttonStyle(.plain)
 
             Text(supplementType == .fixed ? hourRateSuffix : "%")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexTextMuted)
           }
           Spacer()
@@ -551,7 +551,7 @@ struct SupplementRuleEditorSheet: View {
         )
         .tint(.tidexBlue)
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -628,7 +628,7 @@ struct SupplementRuleEditorSheet: View {
 // MARK: - Preview
 
 #Preview("Rule Card") {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     ShiftSupplementRuleCard(
       rule: CustomSupplementRuleWithId(
         from: "21:00",

@@ -12,7 +12,7 @@ struct SubscriptionSettingsView: View {
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         // Error message
         if let error = viewModel.errorMessage {
           errorBanner(error)
@@ -39,10 +39,10 @@ struct SubscriptionSettingsView: View {
 
         // Legal links
         legalLinks
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .subscriptionTitle))
@@ -74,22 +74,22 @@ struct SubscriptionSettingsView: View {
 
   @ViewBuilder
   private func errorBanner(_ error: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.circle.fill")
         .foregroundColor(.tidexError)
       Text(error)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Spacer()
       Button {
         viewModel.errorMessage = nil
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 12, weight: .semibold))
+          .font(.tidexCaptionStrong)
           .foregroundColor(.tidexError)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .cornerRadius(8)
   }
@@ -97,24 +97,24 @@ struct SubscriptionSettingsView: View {
   // MARK: - Grandfathered Banner
 
   private var grandfatheredBanner: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "star.fill")
-        .font(.system(size: 20))
+        .font(.tidexTitle2)
         .foregroundColor(.tidexWarning)
 
       VStack(alignment: .leading, spacing: 2) {
         Text(.subscriptionEarlySupporterTitle)
-          .font(.system(size: 15, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
 
         Text(.subscriptionEarlySupporterDescription)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
       }
 
       Spacer()
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexWarning.opacity(0.1))
     .overlay(
       RoundedRectangle(cornerRadius: 12)
@@ -126,10 +126,10 @@ struct SubscriptionSettingsView: View {
   // MARK: - Current Plan Section
 
   private var currentPlanSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Section header
       Text(.subscriptionCurrentPlanSectionTitle)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextMuted)
         .textCase(.uppercase)
 
@@ -137,9 +137,9 @@ struct SubscriptionSettingsView: View {
       VStack(spacing: 0) {
         // Plan name and status
         HStack {
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(viewModel.tierDisplayName)
-              .font(.system(size: 20, weight: .bold))
+              .font(.tidexTitle2)
               .foregroundColor(.tidexTextPrimary)
 
             if viewModel.hasActiveSubscription {
@@ -152,7 +152,7 @@ struct SubscriptionSettingsView: View {
           // Tier icon
           tierIcon
         }
-        .padding(16)
+        .padding(Spacing.md)
 
         Divider()
           .background(Color.tidexBorder)
@@ -160,18 +160,18 @@ struct SubscriptionSettingsView: View {
         // Price and billing
         if viewModel.hasActiveSubscription {
           HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
               Text(.subscriptionCurrentPlanPrice)
-                .font(.system(size: 13))
+                .font(.tidexFootnote)
                 .foregroundColor(.tidexTextSecondary)
 
               if let price = viewModel.priceDisplayText {
                 Text("\(price) \(viewModel.billingPeriodText)")
-                  .font(.system(size: 16, weight: .semibold))
+                  .font(.tidexButton)
                   .foregroundColor(.tidexTextPrimary)
               } else {
                 Text(viewModel.billingPeriodText.capitalized)
-                  .font(.system(size: 16, weight: .semibold))
+                  .font(.tidexButton)
                   .foregroundColor(.tidexTextPrimary)
               }
             }
@@ -180,18 +180,18 @@ struct SubscriptionSettingsView: View {
 
             // Renewal date
             if let renewalDate = viewModel.formattedRenewalDate {
-              VStack(alignment: .trailing, spacing: 4) {
+              VStack(alignment: .trailing, spacing: Spacing.xxs) {
                 Text(.subscriptionCurrentPlanRenews)
-                  .font(.system(size: 13))
+                  .font(.tidexFootnote)
                   .foregroundColor(.tidexTextSecondary)
 
                 Text(renewalDate)
-                  .font(.system(size: 16, weight: .semibold))
+                  .font(.tidexButton)
                   .foregroundColor(.tidexTextPrimary)
               }
             }
           }
-          .padding(16)
+          .padding(Spacing.md)
         }
       }
       .background(Color.tidexSurfacePrimary)
@@ -206,10 +206,10 @@ struct SubscriptionSettingsView: View {
         ? String(localized: .subscriptionStatusActive)
         : String(localized: .subscriptionStatusInactive)
     )
-    .font(.system(size: 12, weight: .medium))
+    .font(.tidexCaption)
     .foregroundColor(isActive ? .tidexSuccess : .tidexTextMuted)
-    .padding(.horizontal, 8)
-    .padding(.vertical, 4)
+    .padding(.horizontal, Spacing.xs)
+    .padding(.vertical, Spacing.xxs)
     .background(isActive ? Color.tidexSuccess.opacity(0.15) : Color.tidexSurfaceSecondary)
     .cornerRadius(6)
   }
@@ -222,7 +222,7 @@ struct SubscriptionSettingsView: View {
         .frame(width: 48, height: 48)
 
       Image(systemName: tierIconName)
-        .font(.system(size: 22))
+        .font(.tidexTitle)
         .foregroundColor(tierColor)
     }
   }
@@ -252,23 +252,23 @@ struct SubscriptionSettingsView: View {
   // MARK: - Features Section
 
   private var featuresSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Section header
       Text(.subscriptionFeaturesSectionTitle)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextMuted)
         .textCase(.uppercase)
 
       // Features card
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
         ForEach(currentFeatures, id: \.self) { feature in
-          HStack(spacing: 12) {
+          HStack(spacing: Spacing.sm) {
             Image(systemName: "checkmark.circle.fill")
-              .font(.system(size: 18))
+              .font(.tidexHeadline)
               .foregroundColor(.tidexSuccess)
 
             Text(feature)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
 
             Spacer()
@@ -277,20 +277,20 @@ struct SubscriptionSettingsView: View {
 
         // Lifetime access note for grandfathered users
         if viewModel.isGrandfathered {
-          HStack(spacing: 12) {
+          HStack(spacing: Spacing.sm) {
             Image(systemName: "infinity.circle.fill")
-              .font(.system(size: 18))
+              .font(.tidexHeadline)
               .foregroundColor(.tidexWarning)
 
             Text(.subscriptionFeaturesLifetimeAccess)
-              .font(.system(size: 15, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexWarning)
 
             Spacer()
           }
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(12)
     }
@@ -324,7 +324,7 @@ struct SubscriptionSettingsView: View {
   // MARK: - Action Buttons Section
 
   private var actionButtonsSection: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Manage subscription button (for users with active subscription)
       if viewModel.hasActiveSubscription {
         Button {
@@ -332,9 +332,9 @@ struct SubscriptionSettingsView: View {
         } label: {
           HStack {
             Image(systemName: "gearshape.fill")
-              .font(.system(size: 16))
+              .font(.tidexBody)
             Text(.subscriptionActionsManage)
-              .font(.system(size: 16, weight: .semibold))
+              .font(.tidexButton)
           }
           .foregroundColor(.tidexBlue)
           .frame(maxWidth: .infinity)
@@ -351,13 +351,13 @@ struct SubscriptionSettingsView: View {
         } label: {
           HStack {
             Image(systemName: "crown.fill")
-              .font(.system(size: 16))
+              .font(.tidexBody)
             Text(
               viewModel.effectiveTier == .free
                 ? String(localized: .subscriptionActionsSubscribe)
                 : String(localized: .subscriptionActionsUpgrade)
             )
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
           }
           .foregroundColor(.white)
           .frame(maxWidth: .infinity)
@@ -378,7 +378,7 @@ struct SubscriptionSettingsView: View {
       }
     } label: {
       Text(.paywallRestorePurchases)
-        .font(.system(size: 15, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexBlue)
     }
     .disabled(viewModel.isLoading)
@@ -397,12 +397,12 @@ struct SubscriptionSettingsView: View {
   }
 
   private var legalLinks: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       Button {
         safariURL = termsURL
       } label: {
         Text(.paywallTermsOfUse)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
       }
 
@@ -413,7 +413,7 @@ struct SubscriptionSettingsView: View {
         safariURL = privacyURL
       } label: {
         Text(.paywallPrivacyPolicy)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -425,7 +425,7 @@ struct SubscriptionSettingsView: View {
     ZStack {
       Color.tidexBackground.opacity(0.8)
 
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         ProgressView()
           .scaleEffect(1.2)
 
@@ -434,7 +434,7 @@ struct SubscriptionSettingsView: View {
             ? String(localized: .subscriptionRestoreLoading)
             : String(localized: .commonLoading)
         )
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
       }
     }
