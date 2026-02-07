@@ -127,10 +127,6 @@ final class AppearanceManager: ObservableObject {
         window.overrideUserInterfaceStyle = style
         // Also set on root view controller (UIHostingController) to ensure SwiftUI picks it up
         window.rootViewController?.overrideUserInterfaceStyle = style
-        // Ensure window background matches launch screen to prevent black flash
-        if window.backgroundColor == nil {
-          window.backgroundColor = UIColor(named: "LaunchBackground")
-        }
         logger.debug(
           "Applied \(self.theme.rawValue) (style: \(String(describing: style.rawValue))) to window and rootVC"
         )

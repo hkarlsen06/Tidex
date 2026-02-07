@@ -57,23 +57,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   ) -> Bool {
     launchLog.info("[Launch] AppDelegate.didFinishLaunching START")
 
-    // Prevent black flash between launch screen and first SwiftUI frame.
-    // UIWindow's default backgroundColor is nil (renders as black). If SwiftUI's first
-    // frame is delayed for any reason, the black window background shows through.
-    // Setting it to match the launch screen ensures a seamless transition.
-    NotificationCenter.default.addObserver(
-      forName: UIScene.willEnterForegroundNotification,
-      object: nil,
-      queue: .main
-    ) { _ in
-      for scene in UIApplication.shared.connectedScenes {
-        guard let windowScene = scene as? UIWindowScene else { continue }
-        for window in windowScene.windows where window.backgroundColor == nil {
-          window.backgroundColor = UIColor(named: "LaunchBackground")
-        }
-      }
-    }
-
     // --- Synchronous (must complete before launch finishes) ---
 
     // Must be set before any notifications arrive
