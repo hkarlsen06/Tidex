@@ -99,14 +99,11 @@ struct ManageSharingSheet: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color.tidexBackground)
-        .refreshable {
-          await viewModel.refresh()
-        }
         .onChange(of: viewModel.friends) { _, friends in
           scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
         }
       }
-      .navigationTitle(String(localized: .sharingManageTitle))
+      .navigationTitle(String(localized: .sharingSeeFriends))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
@@ -274,6 +271,16 @@ struct ManageSharingSheet: View {
         Task {
           await viewModel.toggleOwnerMuted(for: friend)
         }
+      },
+      onToggleBlocked: {
+        Task {
+          await viewModel.toggleBlocked(for: friend)
+          onVisibilityChange?()
+        }
+      },
+      onRemove: {
+        friendToRemove = friend
+        removeAction = sectionType == .incoming ? .removeSharer : .removeShare
       }
     )
     .id(friend.id)

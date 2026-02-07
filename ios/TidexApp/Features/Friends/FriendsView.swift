@@ -276,9 +276,9 @@ struct SharingView: View {
             showManageSheet = true
           }) {
             HStack(spacing: 6) {
-              Image(systemName: "gearshape")
+              Image(systemName: "person.2")
                 .font(.system(size: 14))
-              Text(.sharingManageTitle)
+              Text(.sharingSeeFriends)
                 .font(.system(size: 14, weight: .medium))
             }
             .foregroundColor(.tidexTextPrimary)
