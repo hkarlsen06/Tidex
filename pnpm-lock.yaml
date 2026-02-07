@@ -85,7 +85,7 @@ importers:
         specifier: ^0.8.0
         version: 0.8.0(@supabase/supabase-js@2.95.2)
       '@supabase/supabase-js':
-        specifier: 2.95.2
+        specifier: ^2.95.2
         version: 2.95.2
       '@tailwindcss/postcss':
         specifier: ^4.1.18
