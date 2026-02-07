@@ -5,11 +5,17 @@ private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 /// Scene delegate for handling UIScene lifecycle events
 /// Primarily used for Home Screen quick actions (app icon shortcuts)
+///
+/// IMPORTANT: Do NOT implement `scene(_:willConnectTo:options:)` here.
+/// In a SwiftUI `@main App` lifecycle, the framework manages window creation.
+/// Implementing that method on a UIWindowSceneDelegate can intermittently prevent
+/// SwiftUI from attaching its root view, causing a black screen on first launch.
+/// Cold-start quick actions are handled in AppDelegate.configurationForConnecting instead.
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
   // MARK: - Quick Action Types
 
-  private enum QuickActionType: String {
+  enum QuickActionType: String {
     case add = "no.tidex.app.shortcut.add"
     case friends = "no.tidex.app.shortcut.friends"
     case stats = "no.tidex.app.shortcut.stats"
@@ -41,31 +47,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
   // MARK: - UIWindowSceneDelegate
 
-  /// Called when a new scene session is being created (cold start)
-  /// Check for shortcut item in connection options
-  func scene(
-    _ scene: UIScene,
-    willConnectTo session: UISceneSession,
-    options connectionOptions: UIScene.ConnectionOptions
-  ) {
-    launchLog.info("[Launch] SceneDelegate.scene willConnectTo START")
-    // Register dynamic shortcuts with localized titles
-    registerDynamicShortcuts()
-
-    // Handle quick action from cold start
-    if let shortcutItem = connectionOptions.shortcutItem {
-      handleQuickAction(shortcutItem)
-    }
-    launchLog.info("[Launch] SceneDelegate.scene willConnectTo END")
-  }
-
   /// Called when user selects a quick action while app is running (warm launch)
   func windowScene(
     _ windowScene: UIWindowScene,
     performActionFor shortcutItem: UIApplicationShortcutItem,
     completionHandler: @escaping (Bool) -> Void
   ) {
-    let handled = handleQuickAction(shortcutItem)
+    let handled = Self.handleQuickAction(shortcutItem)
     completionHandler(handled)
   }
 
@@ -73,7 +61,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
   /// Register dynamic shortcuts with localized titles
   /// Uses existing tab name translations from Localizable.xcstrings
-  private func registerDynamicShortcuts() {
+  static func registerDynamicShortcuts() {
     let shortcuts: [UIApplicationShortcutItem] = [
       UIApplicationShortcutItem(
         type: QuickActionType.add.rawValue,
@@ -101,7 +89,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   // MARK: - Quick Action Handling
 
   @discardableResult
-  private func handleQuickAction(_ shortcutItem: UIApplicationShortcutItem) -> Bool {
+  static func handleQuickAction(_ shortcutItem: UIApplicationShortcutItem) -> Bool {
     guard let actionType = QuickActionType(rawValue: shortcutItem.type) else {
       return false
     }

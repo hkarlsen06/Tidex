@@ -3,9 +3,37 @@ import SwiftUI
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
-/// Root view that manages the app's navigation based on authentication state
-/// Handles transitions between: Loading -> Onboarding -> Login -> MFA -> Post-Auth Onboarding -> Dashboard
+/// Root view wrapper that ensures a seamless launch experience.
+///
+/// The first SwiftUI frame renders a lightweight `LoadingView` with zero singleton
+/// dependencies. This guarantees the frame is committed before iOS removes the
+/// launch storyboard, preventing the black-flash issue that can occur when
+/// `@ObservedObject` singletons trigger heavy initialization during the first body
+/// evaluation.
+///
+/// After the initial frame is on screen, `isReady` flips and `RootContent` is
+/// created, which initializes `AppCoordinator`, `BiometricAuthService`, etc.
 struct RootView: View {
+  @State private var isReady = false
+
+  var body: some View {
+    if isReady {
+      RootContent()
+    } else {
+      LoadingView()
+        .task {
+          // The .task fires after the view has appeared on screen.
+          // Flipping isReady triggers RootContent creation (with singletons)
+          // while LoadingView is already visible — no black gap.
+          isReady = true
+        }
+    }
+  }
+}
+
+/// Actual root content that manages the app's navigation based on authentication state.
+/// Handles transitions between: Loading -> Onboarding -> Login -> MFA -> Post-Auth Onboarding -> Dashboard
+private struct RootContent: View {
   // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
   @ObservedObject private var coordinator = AppCoordinator.shared
   @ObservedObject private var biometricService = BiometricAuthService.shared
@@ -106,7 +134,7 @@ struct RootView: View {
     // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
     // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
     .onAppear {
-      launchLog.info("[Launch] RootView.onAppear – appState=\(String(describing: coordinator.appState))")
+      launchLog.info("[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
     }
     .onAppear {
       Task { @MainActor in
