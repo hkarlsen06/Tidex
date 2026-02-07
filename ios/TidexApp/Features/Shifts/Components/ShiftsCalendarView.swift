@@ -615,7 +615,6 @@ struct ShiftsCalendarView: View {
       .buttonStyle(.plain)
       .disabled(isCopying || isMoving)
     }
-    .frame(height: 41)
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
@@ -634,7 +633,7 @@ struct ShiftsCalendarView: View {
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
             .frame(width: 44)
-            .frame(maxHeight: .infinity)
+            .padding(.vertical, Spacing.sm)
             .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
         }
         .buttonStyle(.plain)
@@ -651,7 +650,7 @@ struct ShiftsCalendarView: View {
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
             .frame(width: 44)
-            .frame(maxHeight: .infinity)
+            .padding(.vertical, Spacing.sm)
             .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
         }
         .buttonStyle(.plain)
@@ -667,7 +666,8 @@ struct ShiftsCalendarView: View {
               .font(.tidexLabelStrong)
           }
           .foregroundColor(.white)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.sm)
           .background(Capsule().fill(Color.tidexBrandPrimary))
         }
         .buttonStyle(.plain)
@@ -683,13 +683,13 @@ struct ShiftsCalendarView: View {
               .font(.tidexLabel)
           }
           .foregroundColor(.orange)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.sm)
           .background(Capsule().fill(Color.orange.opacity(0.1)))
         }
         .buttonStyle(.plain)
       }
     }
-    .frame(height: 41)
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
@@ -713,13 +713,13 @@ struct ShiftsCalendarView: View {
               .font(.tidexLabel)
           }
           .foregroundColor(.tidexTextSecondary)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.sm)
           .background(Capsule().fill(Color.tidexSurfaceSecondary.opacity(0.8)))
         }
         .buttonStyle(.plain)
       }
     }
-    .frame(height: 41)
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
@@ -752,7 +752,8 @@ struct ShiftsCalendarView: View {
       }
       .foregroundColor(confirmingDelete ? .white : .red)
       .frame(width: confirmingDelete ? nil : 44)
-      .frame(maxWidth: confirmingDelete ? .infinity : nil, maxHeight: .infinity)
+      .frame(maxWidth: confirmingDelete ? .infinity : nil)
+      .padding(.vertical, Spacing.sm)
       .padding(.horizontal, confirmingDelete ? 16 : 0)
       .background(Capsule().fill(confirmingDelete ? Color.red : Color.red.opacity(0.1)))
     }
@@ -773,7 +774,8 @@ struct ShiftsCalendarView: View {
           .font(.tidexLabelStrong)
       }
       .foregroundColor(.white)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, Spacing.sm)
       .background(Capsule().fill(Color.tidexBrandPrimary))
     }
     .buttonStyle(.plain)
