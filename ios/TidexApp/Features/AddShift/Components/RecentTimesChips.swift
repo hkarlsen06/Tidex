@@ -129,7 +129,7 @@ private struct RecentTimeChip: View {
   var body: some View {
     Button(action: onTap) {
       Text(timeRangeText)
-        .font(.system(size: 13, weight: .medium, design: .monospaced))
+        .font(.tidexMonoCaption)
         .foregroundColor(isSelected ? .white : .tidexBlue)
         .environment(\.layoutDirection, .leftToRight)
         .padding(.horizontal, Spacing.sm)

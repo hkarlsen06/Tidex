@@ -339,9 +339,9 @@ struct NumericTimeInput: View {
     .padding(.vertical, Spacing.sm)
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .strokeBorder(
           isFocused ? Color.tidexBlue : Color.tidexBorder,
           lineWidth: isFocused ? 2 : 1
@@ -624,7 +624,7 @@ struct TimePickerRow: View {
     .padding(Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 

@@ -27,7 +27,7 @@ struct GetStartedScreen: View {
       // Header and subheadline - constrained for iPad
       VStack(spacing: Spacing.sm) {
         Text(.onboardingGetstartedTitle)
-          .font(.system(size: 28, weight: .bold))
+          .font(.tidexScreenTitle)
           .foregroundColor(.tidexTextPrimary)
           .multilineTextAlignment(.center)
 

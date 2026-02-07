@@ -82,11 +82,11 @@ struct SharedShiftRow: View {
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, Spacing.mlg)
     .background(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .strokeBorder(
           isToday ? Color.tidexBlue : Color.clear,
           lineWidth: isToday ? 2 : 0
@@ -97,7 +97,7 @@ struct SharedShiftRow: View {
 
   @ViewBuilder
   private var earningsView: some View {
-    VStack(alignment: .trailing, spacing: 2) {
+    VStack(alignment: .trailing, spacing: Spacing.micro) {
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
       Text(formatCurrency(displayAmount))
         .font(.tidexTitle)
@@ -118,7 +118,7 @@ struct SharedShiftRow: View {
   }
 
   private var hiddenEarningsIndicator: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Spacing.xxxs) {
       Image(systemName: "eye.slash.fill")
         .font(.tidexSubheadline)
       Text(.sharingHidden)

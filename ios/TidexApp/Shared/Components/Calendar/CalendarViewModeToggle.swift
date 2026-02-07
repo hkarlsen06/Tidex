@@ -40,7 +40,7 @@ struct CalendarViewModeToggle: View {
           }
         }
       } label: {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.xxxs) {
           Text("--:--")
           Image(systemName: "clock")
             .font(.tidexCaptionStrong)
@@ -96,7 +96,7 @@ struct CalendarViewModeToggle: View {
         .buttonStyle(.plain)
       }
     }
-    .padding(4)
+    .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
     .onAppear {
       toggleHaptic.prepare()

@@ -585,7 +585,7 @@ struct ShiftDetailsSheet: View {
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
     }
@@ -690,7 +690,7 @@ struct ShiftDetailsSheet: View {
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
     }
@@ -718,7 +718,7 @@ struct ShiftDetailsSheet: View {
     }
     .padding(Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexError.opacity(0.1))
     )
   }
@@ -748,7 +748,7 @@ struct ShiftDetailsSheet: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(hasChanges ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-        .cornerRadius(12)
+        .cornerRadius(CornerRadius.lg)
       }
       .disabled(isSaving || !hasChanges)
 
@@ -762,7 +762,7 @@ struct ShiftDetailsSheet: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
       }
       .disabled(isSaving)
     }
@@ -790,7 +790,7 @@ struct ShiftDetailsSheet: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
         }
       }
 
@@ -813,7 +813,7 @@ struct ShiftDetailsSheet: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
         }
       }
 
@@ -888,7 +888,7 @@ struct ShiftDetailsSheet: View {
             impactHaptic.impactOccurred()
             showingSupplementsEditor = true
           } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.xxxs) {
               Image(systemName: "slider.horizontal.3")
                 .font(.tidexFootnote)
               Text(.supplementsEditButton)
@@ -898,14 +898,14 @@ struct ShiftDetailsSheet: View {
             .padding(.vertical, Spacing.xs)
             .frame(maxWidth: .infinity)
             .background(Color.tidexBlue.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
           }
           .buttonStyle(.plain)
         }
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
     }
@@ -954,7 +954,7 @@ struct ShiftDetailsSheet: View {
   /// A single supplement segment row showing time range, hours × rate, and amount
   @ViewBuilder
   private func supplementSegmentRow(_ segment: SupplementSegment) -> some View {
-    VStack(spacing: 6) {
+    VStack(spacing: Spacing.xxxs) {
       // Time range and hours × rate
       HStack {
         Text(segmentTimeRange(segment))
@@ -984,7 +984,7 @@ struct ShiftDetailsSheet: View {
     }
     .padding(Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexSurfaceSecondary.opacity(0.4))
     )
   }
@@ -1030,7 +1030,7 @@ struct ShiftDetailsSheet: View {
         .font(.tidexBody)
         .foregroundColor(.tidexBlue)
 
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(.shiftsRecurringShift)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
@@ -1043,7 +1043,7 @@ struct ShiftDetailsSheet: View {
     }
     .padding(Spacing.md)
     .background(
-      RoundedRectangle(cornerRadius: 16)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexBlue.opacity(0.1))
     )
   }
@@ -1065,7 +1065,7 @@ struct ShiftDetailsSheet: View {
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexError)
-      .cornerRadius(12)
+      .cornerRadius(CornerRadius.lg)
     }
     .padding(.top, Spacing.xs)
   }
@@ -1128,7 +1128,7 @@ private struct ShareOptionsSheet: View {
         Button {
           onShowEarnings()
         } label: {
-          HStack(spacing: 14) {
+          HStack(spacing: Spacing.msm) {
             Image(systemName: "eye")
               .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
@@ -1141,7 +1141,7 @@ private struct ShareOptionsSheet: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
               .fill(Color.tidexSurfacePrimary)
           )
         }
@@ -1151,7 +1151,7 @@ private struct ShareOptionsSheet: View {
         Button {
           onHideEarnings()
         } label: {
-          HStack(spacing: 14) {
+          HStack(spacing: Spacing.msm) {
             Image(systemName: "eye.slash")
               .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
@@ -1164,7 +1164,7 @@ private struct ShareOptionsSheet: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
               .fill(Color.tidexSurfacePrimary)
           )
         }

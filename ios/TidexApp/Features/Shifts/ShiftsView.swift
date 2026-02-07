@@ -680,7 +680,7 @@ struct ShiftsView: View {
       Image(
         systemName: viewModel.isSelectionModeEnabled ? "checkmark.circle.fill" : "checkmark.circle"
       )
-      .font(.system(size: 18, weight: .medium))
+      .font(.tidexHeadline)
       .foregroundColor(viewModel.isSelectionModeEnabled ? .tidexBrandPrimary : .tidexTextPrimary)
     }
     .buttonStyle(.plain)
@@ -896,7 +896,7 @@ struct ShiftsView: View {
         )
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.xxl)
-        .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
+        .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md)
       }
       .refreshable {
         await refreshShiftsContent()
@@ -926,7 +926,7 @@ struct ShiftsView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.clear)
-        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
         .refreshable {
           await refreshShiftsContent()
         }
@@ -1109,7 +1109,7 @@ struct ShiftsView: View {
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.xxl)
         // Add bottom padding for floating MonthPicker
-        .padding(.bottom, MonthPickerLayout.totalBottomInset + 16)
+        .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md)
       }
       .refreshable {
         await refreshShiftsContent()
@@ -1227,7 +1227,7 @@ struct ShiftsView: View {
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .frame(maxWidth: .infinity)
       // Add bottom padding so last items can scroll above the floating MonthPicker
-      .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+      .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
       .opacity(listReady ? 1 : 0)
       .onAppear {
         scrollToTodayItem(using: proxy)
@@ -1388,7 +1388,7 @@ struct ShiftsView: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)

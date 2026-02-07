@@ -108,7 +108,7 @@ struct OnboardingRateSlider: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
   }
 
   // MARK: - Full Layout (with label and helper)
@@ -160,7 +160,7 @@ struct OnboardingRateSlider: View {
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
       // Helper text
       Text(.onboardingPersonalizeWageHelper)
@@ -245,9 +245,9 @@ struct OnboardingRateSlider: View {
         .foregroundColor(.tidexBlue)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxs)
-        .padding(.vertical, 2)
+        .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
     .buttonStyle(.plain)
   }
@@ -263,13 +263,13 @@ struct OnboardingRateSlider: View {
       }
     }) {
       Text(text)
-        .font(.system(size: 28, weight: .bold))
+        .font(.tidexScreenTitle)
         .foregroundColor(.tidexBlue)
         .contentTransition(.numericText())
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .padding(.horizontal, Spacing.xxxs)
+        .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
     .buttonStyle(.plain)
   }
@@ -287,11 +287,11 @@ struct OnboardingRateSlider: View {
         .focused($isInputFocused)
         .frame(width: 80)
         .padding(.horizontal, Spacing.xxs)
-        .padding(.vertical, 2)
+        .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
         .overlay(
-          RoundedRectangle(cornerRadius: 6, style: .continuous)
+          RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
             .stroke(Color.tidexBlue, lineWidth: 2)
         )
         .onSubmit {
@@ -318,18 +318,18 @@ struct OnboardingRateSlider: View {
   private var customInputFieldFull: some View {
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
-        .font(.system(size: 28, weight: .bold))
+        .font(.tidexScreenTitle)
         .foregroundColor(.tidexBlue)
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.leading)
         .focused($isInputFocused)
         .frame(width: 100)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .padding(.horizontal, Spacing.xxxs)
+        .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
         .overlay(
-          RoundedRectangle(cornerRadius: 6, style: .continuous)
+          RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
             .stroke(Color.tidexBlue, lineWidth: 2)
         )
         .onSubmit {

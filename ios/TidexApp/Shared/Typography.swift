@@ -30,14 +30,29 @@ extension Font {
     scaledFont(baseSize: 40, weight: .bold, relativeTo: .title)
   }
 
+  /// 104pt bold - Celebration amount (scales with Dynamic Type)
+  static var tidexCelebrationAmount: Font {
+    scaledFont(baseSize: 104, weight: .bold, relativeTo: .largeTitle)
+  }
+
   /// 88pt bold - Hero total card amount (scales with Dynamic Type)
   static var tidexHeroAmount: Font {
     scaledFont(baseSize: 88, weight: .bold, relativeTo: .largeTitle)
   }
 
+  /// 52pt bold - Paycheck/display amounts (scales with Dynamic Type)
+  static var tidexAmountDisplay: Font {
+    scaledFont(baseSize: 52, weight: .bold, relativeTo: .largeTitle)
+  }
+
   /// 32pt bold rounded - Large amounts (scales with Dynamic Type)
   static var tidexAmountLarge: Font {
     scaledFont(baseSize: 32, weight: .bold, relativeTo: .title2, design: .rounded)
+  }
+
+  /// 32pt medium - Medium number displays (scales with Dynamic Type)
+  static var tidexAmountMedium: Font {
+    scaledFont(baseSize: 32, weight: .medium, relativeTo: .title)
   }
 
   // MARK: - Scaled Font Helper
@@ -56,6 +71,11 @@ extension Font {
 
   // MARK: - Headings
 
+  /// 28pt bold - Screen titles, onboarding headings (scales with Dynamic Type)
+  static var tidexScreenTitle: Font {
+    scaledFont(baseSize: 28, weight: .bold, relativeTo: .title)
+  }
+
   /// 24pt bold - Screen titles, primary headings
   static let tidexLargeTitle = Font.system(.title2, design: .default).weight(.bold)
 
@@ -69,6 +89,9 @@ extension Font {
   static let tidexHeadline = Font.system(.headline, design: .default)
 
   // MARK: - Body
+
+  /// 20pt medium - Calendar headers, large body text
+  static let tidexBodyLarge = Font.system(.title3, design: .default).weight(.medium)
 
   /// 16pt regular - Default body text
   static let tidexBody = Font.system(.body, design: .default)
@@ -116,6 +139,41 @@ extension Font {
 
   /// 11pt regular - Smallest readable text (caption2)
   static let tidexMicro = Font.system(.caption2, design: .default)
+
+  // MARK: - Monospaced
+
+  /// 28pt bold monospaced - Percentage displays (scales with Dynamic Type)
+  static var tidexMonoDisplay: Font {
+    scaledFont(baseSize: 28, weight: .bold, relativeTo: .title2, design: .monospaced)
+  }
+
+  /// 24pt semibold monospaced - MFA codes, security codes (scales with Dynamic Type)
+  static var tidexMonoTitle: Font {
+    scaledFont(baseSize: 24, weight: .semibold, relativeTo: .title3, design: .monospaced)
+  }
+
+  /// 16pt bold monospaced - Chart labels
+  static let tidexMonoBody = Font.system(.callout, design: .monospaced).weight(.bold)
+
+  /// 14pt medium monospaced - Code labels
+  static let tidexMonoLabel = Font.system(.subheadline, design: .monospaced).weight(.medium)
+
+  /// 13pt medium monospaced - Time chips, code
+  static let tidexMonoCaption = Font.system(.footnote, design: .monospaced).weight(.medium)
+
+  /// 13pt semibold monospaced - Emphasized code
+  static let tidexMonoCaptionStrong = Font.system(.footnote, design: .monospaced).weight(.semibold)
+
+  /// 13pt regular monospaced - Code blocks
+  static let tidexMonoCaptionRegular = Font.system(.footnote, design: .monospaced)
+
+  /// 11pt regular monospaced - Tool status
+  static let tidexMonoMicro = Font.system(.caption2, design: .monospaced)
+
+  /// 10pt regular monospaced - Tiny tool status (scales with Dynamic Type)
+  static var tidexMonoMicro2: Font {
+    scaledFont(baseSize: 10, weight: .regular, relativeTo: .caption2, design: .monospaced)
+  }
 
   // MARK: - Prices
 

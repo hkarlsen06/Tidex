@@ -39,7 +39,7 @@ struct SamplePaycheckScreen: View {
 
       // Header with entrance animation
       Text(.onboardingPaycheckTitle)
-        .font(.system(size: 20, weight: .medium))
+        .font(.tidexBodyLarge)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
         .offset(y: showHeader ? 0 : 20)
@@ -50,7 +50,7 @@ struct SamplePaycheckScreen: View {
 
       // Large animated total with entrance animation
       CurrencyCountUpText(amount: sampleData.gross, duration: 0.8)
-        .font(.system(size: 52, weight: .bold))
+        .font(.tidexAmountDisplay)
         .foregroundColor(.tidexBlue)
         .scaleEffect(showAmount ? 1 : 0.8)
         .opacity(showAmount ? 1 : 0)
@@ -154,9 +154,9 @@ struct SamplePaycheckScreen: View {
       .padding(.horizontal, Spacing.md)
     }
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
   }

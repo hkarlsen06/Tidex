@@ -57,7 +57,7 @@ struct WelcomeScreen: View {
   private var logoSection: some View {
     ZStack {
       // Soft card glow anchoring the logo - makes it feel grounded
-      RoundedRectangle(cornerRadius: 32, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
         .fill(
           RadialGradient(
             gradient: Gradient(colors: [
@@ -93,7 +93,7 @@ struct WelcomeScreen: View {
     ZStack {
       VStack(spacing: Spacing.xs) {
         // Fake header bar
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
           .fill(Color.tidexTextSecondary)
           .frame(width: 80, height: 8)
 
@@ -141,9 +141,9 @@ struct WelcomeScreen: View {
       .padding(.vertical, Spacing.mlg)
       .frame(width: 280)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
           .stroke(Color.tidexBorder, lineWidth: 1)
       )
 
@@ -160,7 +160,7 @@ struct WelcomeScreen: View {
         endPoint: .bottom
       )
       .frame(width: 280, height: 180)
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .opacity(0.9)
     .blur(radius: 0.5)

@@ -18,7 +18,7 @@ struct FriendCard: View {
         HStack(spacing: Spacing.sm) {
           avatarView
 
-          VStack(alignment: .leading, spacing: 2) {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(sharer.displayName)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
@@ -55,11 +55,11 @@ struct FriendCard: View {
         }
       }
       .background(
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
           .fill(isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
           .strokeBorder(
             isSelected ? Color.tidexBlue : Color.clear,
             lineWidth: 2
@@ -87,11 +87,11 @@ struct FriendCard: View {
     HStack(spacing: Spacing.sm) {
       // Date and time skeleton
       VStack(alignment: .leading, spacing: Spacing.xxs) {
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
           .fill(Color.tidexTextMuted.opacity(0.3))
           .frame(width: 140, height: 14)
 
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
           .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 90, height: 13)
       }
@@ -99,17 +99,17 @@ struct FriendCard: View {
       Spacer()
 
       // Status badge skeleton
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(Color.tidexTextMuted.opacity(0.2))
         .frame(width: 70, height: 24)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .fill(Color.tidexSurfacePrimary)
     )
-    .tidexCardShadow(.subtle, cornerRadius: 12)
+    .tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
     .shimmer(duration: 1.2)
   }
 }
@@ -150,7 +150,7 @@ private struct ShiftPreviewCard: View {
 
       HStack(spacing: Spacing.sm) {
         // Date and time info
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(formattedDate)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextPrimary)
@@ -173,21 +173,21 @@ private struct ShiftPreviewCard: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
           .fill(Color.tidexSurfacePrimary)
       )
       .overlay(
         // Progress bar for active shifts
         GeometryReader { geometry in
           if computed.status == .active {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .fill(Color.green.opacity(0.1))
               .frame(width: geometry.size.width * computed.progress / 100)
               .animation(.linear(duration: 1), value: computed.progress)
           }
         }
       )
-      .tidexCardShadow(.subtle, cornerRadius: 12)
+      .tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
     }
   }
 
@@ -316,7 +316,7 @@ private struct ShiftPreviewCard: View {
         .padding(.horizontal, Spacing.xs)
         .padding(.vertical, Spacing.xxs)
         .background(
-          RoundedRectangle(cornerRadius: 8)
+          RoundedRectangle(cornerRadius: CornerRadius.sm)
             .fill(Color.green.opacity(0.2))
         )
         .foregroundColor(.green)
@@ -329,7 +329,7 @@ private struct ShiftPreviewCard: View {
         .padding(.horizontal, Spacing.xs)
         .padding(.vertical, Spacing.xxs)
         .background(
-          RoundedRectangle(cornerRadius: 8)
+          RoundedRectangle(cornerRadius: CornerRadius.sm)
             .fill(statusBackgroundColor(for: computed.status))
         )
         .foregroundColor(statusTextColor(for: computed.status))
@@ -486,7 +486,7 @@ struct FriendsListEmptyState: View {
 
       if let onAddFriend {
         Button(action: onAddFriend) {
-          HStack(spacing: 6) {
+          HStack(spacing: Spacing.xxxs) {
             Image(systemName: "plus")
               .font(.tidexLabelStrong)
             Text(.sharingAddFriend)
@@ -494,9 +494,9 @@ struct FriendsListEmptyState: View {
           }
           .foregroundColor(.white)
           .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 10)
+          .padding(.vertical, Spacing.xsm)
           .background(Color.tidexBlue)
-          .cornerRadius(10)
+          .cornerRadius(CornerRadius.md)
         }
         .buttonStyle(PlainButtonStyle())
         .padding(.top, Spacing.xxs)

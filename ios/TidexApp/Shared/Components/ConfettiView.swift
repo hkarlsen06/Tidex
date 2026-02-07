@@ -233,7 +233,7 @@ extension ConfettiView.AnimationPhase: Equatable {}
           .padding()
           .background(Color.tidexBlue)
           .foregroundColor(.white)
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
 
           Spacer()
         }

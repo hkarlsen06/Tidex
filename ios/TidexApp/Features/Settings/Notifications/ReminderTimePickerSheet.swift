@@ -55,8 +55,8 @@ struct ReminderTimePickerSheet: View {
           .frame(height: 180)
           .padding(.vertical, Spacing.xs)
           .background(Color.tidexSurfacePrimary)
-          .cornerRadius(12)
-          .tidexCardShadow(cornerRadius: 12)
+          .cornerRadius(CornerRadius.lg)
+          .tidexCardShadow(cornerRadius: CornerRadius.lg)
         }
         .padding(.horizontal)
 
@@ -108,7 +108,7 @@ struct ReminderTimePickerSheet: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
     .padding(.horizontal)
   }
 
@@ -154,7 +154,7 @@ struct ReminderTimePickerSheet: View {
       .frame(maxWidth: .infinity)
       .frame(height: Spacing.buttonHeight)
       .background(Color.tidexError)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .padding(.horizontal, Spacing.lg)
     .padding(.bottom, Spacing.md)

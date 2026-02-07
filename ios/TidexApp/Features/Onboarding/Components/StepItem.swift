@@ -84,7 +84,7 @@ struct StepItem: View {
       .frame(width: iconSize)
 
       // Right column: Text content (vertically centered to icon)
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(title)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)

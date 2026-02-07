@@ -248,7 +248,7 @@
           Text("Status")
           Spacer()
           if syncCoordinator.isSyncing {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
               ProgressView()
                 .progressViewStyle(.circular)
               Text("Syncing...")
@@ -536,7 +536,7 @@
             Text("Sync Cursors (updated_at)")
               .font(.caption.bold())
               .foregroundColor(.secondary)
-              .padding(.top, 4)
+              .padding(.top, Spacing.xxs)
 
             updatedAtCursorRow("Shifts", cursor: state.updatedAtCursor(for: .userShifts))
             updatedAtCursorRow("Recurring", cursor: state.updatedAtCursor(for: .recurringShifts))
@@ -548,7 +548,7 @@
             Text("Legacy Revisions (debug)")
               .font(.caption.bold())
               .foregroundColor(.secondary)
-              .padding(.top, 4)
+              .padding(.top, Spacing.xxs)
             revisionCursorRow("Shifts Rev", revision: state.lastRevisionUserShifts)
             revisionCursorRow("Recurring Rev", revision: state.lastRevisionRecurringShifts)
             revisionCursorRow("Snapshots Rev", revision: state.lastRevisionWageSnapshots)
@@ -575,14 +575,14 @@
     private func summaryRow(_ label: String, total: Int, clean: Int, dirty: Int, conflict: Int)
       -> some View
     {
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         HStack {
           Text(label)
           Spacer()
           Text("\(total)")
             .foregroundColor(.secondary)
         }
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           Label("\(clean)", systemImage: "checkmark.circle")
             .foregroundColor(.green)
             .font(.caption)
@@ -609,7 +609,7 @@
     }
 
     private func updatedAtCursorRow(_ label: String, cursor: SyncCursor) -> some View {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         HStack {
           Text(label)
             .font(.caption)
@@ -634,7 +634,7 @@
     }
 
     private func statusBadge(for status: SyncStatus) -> some View {
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         switch status {
         case .clean:
           Image(systemName: "checkmark.circle.fill")
@@ -673,7 +673,7 @@
           }
         } else if !validationResults.isEmpty {
           ForEach(validationResults) { result in
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
               HStack {
                 Image(systemName: result.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
                   .foregroundColor(result.passed ? .green : .red)
@@ -698,7 +698,7 @@
                 }
               }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, Spacing.xxs)
           }
         } else {
           Text("No validation tests run yet")
@@ -727,7 +727,7 @@
             .foregroundColor(.secondary)
         } else {
           ForEach(testHelper.testLogs.suffix(20).reversed()) { entry in
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.micro) {
               HStack {
                 Text(entry.formattedTimestamp)
                   .font(.caption2.monospaced())
@@ -744,7 +744,7 @@
                   .foregroundColor(.secondary)
               }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, Spacing.micro)
           }
         }
 

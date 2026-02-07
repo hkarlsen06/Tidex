@@ -46,7 +46,7 @@ struct AppLockView: View {
         Button {
           Task { await unlock() }
         } label: {
-          VStack(spacing: 10) {
+          VStack(spacing: Spacing.xsm) {
             if isAuthenticating {
               ProgressView()
                 .controlSize(.regular)

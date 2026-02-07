@@ -31,7 +31,7 @@ struct LoadingOverlay: View {
       }
       .padding(Spacing.xl)
       .background(Color.tidexSurfacePrimary.opacity(0.95))
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .animation(.easeInOut(duration: 0.2), value: isSuccess)
     }
   }

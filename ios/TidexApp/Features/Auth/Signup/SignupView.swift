@@ -127,7 +127,7 @@ struct SignupView: View {
       .frame(maxWidth: .infinity)
       .frame(height: 50)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
   }
@@ -189,10 +189,10 @@ struct SignupForm: View {
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.msm)
         }
         .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
         // Last name
         VStack(spacing: 0) {
@@ -203,10 +203,10 @@ struct SignupForm: View {
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.msm)
         }
         .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       }
 
       // Name error messages
@@ -249,7 +249,7 @@ struct SignupForm: View {
         )
       }
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
       // Error messages
       if let emailError = viewModel.fieldErrors.emailOrPhone {

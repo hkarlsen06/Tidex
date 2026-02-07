@@ -66,7 +66,7 @@ struct WeeklyBarChart: View {
             y: .value("Earnings", day.earnings)
           )
           .foregroundStyle(barColor(for: day, isSelected: selectedDay == day.date))
-          .cornerRadius(6)
+          .cornerRadius(CornerRadius.xs)
         }
       }
       .chartOverlay { proxy in
@@ -112,7 +112,7 @@ struct WeeklyBarChart: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 
@@ -280,15 +280,15 @@ private struct TooltipView: View {
         .foregroundColor(.tidexTextPrimary)
 
       Text(CurrencyConfig.format(dayData.earnings, currency: currency))
-        .font(.system(size: 16, weight: .bold, design: .monospaced))
+        .font(.tidexMonoBody)
         .foregroundColor(.tidexBlue)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
     .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
@@ -314,7 +314,7 @@ struct WeeklyBarChartEmpty: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 }

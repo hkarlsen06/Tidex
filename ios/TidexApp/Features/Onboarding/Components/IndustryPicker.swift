@@ -82,14 +82,14 @@ struct IndustryPicker: View {
                 ? Color.tidexSurfacePrimary
                 : Color.clear
             )
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
         }
         .buttonStyle(.plain)
       }
     }
-    .padding(4)
+    .padding(Spacing.xxs)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 

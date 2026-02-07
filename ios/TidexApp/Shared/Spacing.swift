@@ -12,14 +12,26 @@ import SwiftUI
 enum Spacing {
   // MARK: - Base Units
 
+  /// 2pt - Micro spacing (tight UI elements)
+  static let micro: CGFloat = 2
+
   /// 4pt - Half unit, for tight spacing (icon pairs, compact lists)
   static let xxs: CGFloat = 4
+
+  /// 6pt - Extra small spacing
+  static let xxxs: CGFloat = 6
 
   /// 8pt - Base unit, compact spacing
   static let xs: CGFloat = 8
 
+  /// 10pt - Between xs and sm
+  static let xsm: CGFloat = 10
+
   /// 12pt - 1.5 units, standard small spacing
   static let sm: CGFloat = 12
+
+  /// 14pt - Between sm and md
+  static let msm: CGFloat = 14
 
   /// 16pt - 2 units, standard content spacing
   static let md: CGFloat = 16

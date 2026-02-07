@@ -89,15 +89,15 @@ private struct ActiveImpersonationCard: View {
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexError)
         .foregroundStyle(.white)
-        .cornerRadius(8)
+        .cornerRadius(CornerRadius.sm)
       }
       .disabled(isLoading)
     }
     .padding(Spacing.md)
     .background(Color.tidexWarning.opacity(0.1))
-    .cornerRadius(12)
+    .cornerRadius(CornerRadius.lg)
     .overlay(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .stroke(Color.tidexWarning.opacity(0.3), lineWidth: 1)
     )
   }
@@ -125,8 +125,8 @@ private struct StartImpersonationSection: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(12)
-    .tidexCardShadow(cornerRadius: 12)
+    .cornerRadius(CornerRadius.lg)
+    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 }
 
@@ -167,7 +167,7 @@ private struct SelectedUserChip: View {
 
   var body: some View {
     HStack {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(user.displayName)
           .font(.tidexLabel)
           .foregroundStyle(Color.tidexTextPrimary)
@@ -185,7 +185,7 @@ private struct SelectedUserChip: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 }
 
@@ -211,7 +211,7 @@ private struct UserSearchField: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 }
 
@@ -227,7 +227,7 @@ private struct UserSearchResults: View {
           viewModel.selectImpersonationUser(user)
         } label: {
           HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.micro) {
               Text(user.displayName)
                 .font(.tidexLabel)
                 .foregroundStyle(Color.tidexTextPrimary)
@@ -242,7 +242,7 @@ private struct UserSearchResults: View {
               .font(.tidexCaptionRegular)
               .foregroundStyle(Color.tidexTextMuted)
           }
-          .padding(.vertical, 10)
+          .padding(.vertical, Spacing.xsm)
           .padding(.horizontal, Spacing.sm)
           .contentShape(Rectangle())
         }
@@ -252,7 +252,7 @@ private struct UserSearchResults: View {
       }
     }
     .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 }
 
@@ -280,7 +280,7 @@ private struct ReasonInputField: View {
         .textFieldStyle(.plain)
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(8)
+        .cornerRadius(CornerRadius.sm)
 
       if !viewModel.impersonationReason.isEmpty && !isValidReason {
         Text("Reason must be at least 5 characters")
@@ -317,7 +317,7 @@ private struct StartButton: View {
       .padding(.vertical, Spacing.sm)
       .background(canStart ? Color.tidexWarning : Color.tidexWarning.opacity(0.5))
       .foregroundStyle(.white)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
     }
     .disabled(!canStart)
   }
@@ -345,7 +345,7 @@ private struct InstructionsCard: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexInfo.opacity(0.1))
-    .cornerRadius(12)
+    .cornerRadius(CornerRadius.lg)
   }
 }
 

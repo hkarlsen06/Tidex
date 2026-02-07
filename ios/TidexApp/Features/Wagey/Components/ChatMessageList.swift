@@ -84,7 +84,7 @@ struct ChatMessageList: View {
 
   private var emptyStateView: some View {
     VStack(spacing: Spacing.xl) {
-      VStack(spacing: 6) {
+      VStack(spacing: Spacing.xxxs) {
         Text(.wageyEmptyStateTitle)
           .font(.tidexLargeTitle)
           .foregroundColor(.tidexTextPrimary)
@@ -96,7 +96,7 @@ struct ChatMessageList: View {
       }
 
       // Suggestion list
-      VStack(spacing: 10) {
+      VStack(spacing: Spacing.xsm) {
         ForEach(suggestions, id: \.text) { suggestion in
           suggestionRow(icon: suggestion.icon, text: suggestion.text)
         }
@@ -110,9 +110,9 @@ struct ChatMessageList: View {
       Haptics.play(.light)
       onSuggestionTapped?(text)
     } label: {
-      HStack(spacing: 14) {
+      HStack(spacing: Spacing.msm) {
         Image(systemName: icon)
-          .font(.system(size: 18))
+          .font(.tidexBody)
           .foregroundColor(.tidexBlue)
           .frame(width: 24)
 
@@ -129,9 +129,9 @@ struct ChatMessageList: View {
           .foregroundColor(.tidexTextMuted)
       }
       .padding(.horizontal, Spacing.md)
-      .padding(.vertical, 14)
+      .padding(.vertical, Spacing.msm)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
     }
     .buttonStyle(.plain)
   }

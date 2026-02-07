@@ -87,7 +87,7 @@ struct ResetPasswordView: View {
 
       // Title
       Text("Tidex")
-        .font(.system(size: 28, weight: .bold))
+        .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
     }
   }
@@ -119,7 +119,7 @@ struct ResetPasswordView: View {
           )
         }
         .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
         // Error message
         if let emailError = viewModel.fieldErrors.emailOrPhone {
@@ -236,7 +236,7 @@ struct ResetPasswordView: View {
           )
         }
         .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
         // Error messages
         if let newPasswordError = viewModel.fieldErrors.newPassword {

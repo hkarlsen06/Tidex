@@ -137,7 +137,7 @@ struct WageSourceSelector: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexBrandPrimary.opacity(0.08))
-    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
   }
 
   private func formatWage(_ wage: Double) -> String {
@@ -182,9 +182,9 @@ private struct WageTypeToggleButton: View {
       .frame(maxWidth: .infinity)
       .frame(height: 72)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
           .stroke(
             isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
       )
@@ -203,7 +203,7 @@ private struct TariffLevelSelectionRow: View {
   var body: some View {
     Button(action: action) {
       HStack {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(level.displayName)
             .font(isSelected ? .tidexLabelStrong : .tidexLabel)
             .foregroundColor(.tidexTextPrimary)
@@ -230,9 +230,9 @@ private struct TariffLevelSelectionRow: View {
       }
       .padding(Spacing.sm)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
           .stroke(
             isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
       )

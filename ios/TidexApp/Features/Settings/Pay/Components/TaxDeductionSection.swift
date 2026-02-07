@@ -75,7 +75,7 @@ struct TaxDeductionSection: View {
         HStack(spacing: Spacing.sm) {
           // Tappable value display
           if showingPercentageInput {
-            HStack(spacing: 2) {
+            HStack(spacing: Spacing.micro) {
               TextField("", text: $percentageInputText)
                 .font(.tidexTitle2)
                 .foregroundColor(.tidexBlue)
@@ -84,11 +84,11 @@ struct TaxDeductionSection: View {
                 .focused($isPercentageInputFocused)
                 .frame(width: 50)
                 .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, 2)
+                .padding(.vertical, Spacing.micro)
                 .background(Color.tidexBlue.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
                 .overlay(
-                  RoundedRectangle(cornerRadius: 6, style: .continuous)
+                  RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
                     .stroke(Color.tidexBlue, lineWidth: 2)
                 )
                 .onChange(of: isPercentageInputFocused) { _, focused in
@@ -119,15 +119,15 @@ struct TaxDeductionSection: View {
                 isPercentageInputFocused = true
               }
             }) {
-              HStack(spacing: 2) {
+              HStack(spacing: Spacing.micro) {
                 Text(formatPercentageValue(percentage))
                   .font(.tidexTitle2)
                   .foregroundColor(.tidexBlue)
                   .contentTransition(.numericText())
                   .padding(.horizontal, Spacing.xxs)
-                  .padding(.vertical, 2)
+                  .padding(.vertical, Spacing.micro)
                   .background(Color.tidexBlue.opacity(0.08))
-                  .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
 
                 Text("%")
                   .font(.tidexLabel)
@@ -151,7 +151,7 @@ struct TaxDeductionSection: View {
         }
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       }
     }
   }
@@ -193,9 +193,9 @@ private struct QuickPercentageButton: View {
         .frame(maxWidth: .infinity)
         .frame(height: 36)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
         .overlay(
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
             .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
         )
     }

@@ -42,7 +42,7 @@ private struct NativeAppleSignInButton: View {
       // We ignore this - actual auth is handled by the action
     }
     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .disabled(isLoading)
     .opacity(isLoading ? 0.6 : 1)
     .allowsHitTesting(false)  // Disable built-in tap handling
@@ -78,13 +78,13 @@ private struct GoogleSignInButton: View {
           .frame(width: 18, height: 18)
 
         Text(title)
-          .font(.system(size: 19, weight: .medium))
+          .font(.tidexBodyLarge)
           .foregroundColor(colorScheme == .dark ? .black : .white)
       }
       .frame(maxWidth: .infinity)
       .frame(height: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
     .disabled(isLoading)
@@ -278,7 +278,7 @@ private struct GoogleRedPath: Shape {
     }
     .padding()
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(12)
+    .cornerRadius(CornerRadius.lg)
   }
   .padding()
   .background(Color.tidexBackground)

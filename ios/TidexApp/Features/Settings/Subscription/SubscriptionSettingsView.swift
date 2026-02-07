@@ -91,7 +91,7 @@ struct SubscriptionSettingsView: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Grandfathered Banner
@@ -102,7 +102,7 @@ struct SubscriptionSettingsView: View {
         .font(.tidexTitle2)
         .foregroundColor(.tidexWarning)
 
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(.subscriptionEarlySupporterTitle)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
@@ -117,10 +117,10 @@ struct SubscriptionSettingsView: View {
     .padding(Spacing.md)
     .background(Color.tidexWarning.opacity(0.1))
     .overlay(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .stroke(Color.tidexWarning.opacity(0.3), lineWidth: 1)
     )
-    .cornerRadius(12)
+    .cornerRadius(CornerRadius.lg)
   }
 
   // MARK: - Current Plan Section
@@ -195,7 +195,7 @@ struct SubscriptionSettingsView: View {
         }
       }
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
+      .cornerRadius(CornerRadius.lg)
     }
   }
 
@@ -211,7 +211,7 @@ struct SubscriptionSettingsView: View {
     .padding(.horizontal, Spacing.xs)
     .padding(.vertical, Spacing.xxs)
     .background(isActive ? Color.tidexSuccess.opacity(0.15) : Color.tidexSurfaceSecondary)
-    .cornerRadius(6)
+    .cornerRadius(CornerRadius.xs)
   }
 
   @ViewBuilder
@@ -292,7 +292,7 @@ struct SubscriptionSettingsView: View {
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
+      .cornerRadius(CornerRadius.lg)
     }
   }
 
@@ -340,7 +340,7 @@ struct SubscriptionSettingsView: View {
           .frame(maxWidth: .infinity)
           .frame(height: Spacing.buttonHeight)
           .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
         }
       }
 
@@ -363,7 +363,7 @@ struct SubscriptionSettingsView: View {
           .frame(maxWidth: .infinity)
           .frame(height: Spacing.buttonHeight)
           .background(Color.tidexBlue)
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
         }
       }
     }

@@ -148,14 +148,14 @@ struct CalendarDayCell<Content: View>: View {
     .aspectRatio(1 / 1.3, contentMode: .fill)
     .clipped()
     .background(
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(style.backgroundColor)
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .strokeBorder(style.borderColor, lineWidth: style.borderWidth)
     )
-    .tidexCardShadow(cornerRadius: 8)
+    .tidexCardShadow(cornerRadius: CornerRadius.sm)
     .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
   }
 
@@ -188,7 +188,7 @@ struct CalendarDayCell<Content: View>: View {
         .foregroundColor(color)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .padding(.top, 14)
+      .padding(.top, Spacing.msm)
       .padding(.horizontal, Spacing.xxs)
 
     case .earnings(let amount, let color):
@@ -202,7 +202,7 @@ struct CalendarDayCell<Content: View>: View {
           .allowsTightening(true)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .padding(.top, 14)
+      .padding(.top, Spacing.msm)
       .padding(.horizontal, Spacing.xxs)
 
     case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
@@ -238,7 +238,7 @@ struct CalendarDayCell<Content: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
       }
-      .padding(.top, 14)
+      .padding(.top, Spacing.msm)
       .padding(.horizontal, Spacing.xxs)
 
     case .starIcon(let color):

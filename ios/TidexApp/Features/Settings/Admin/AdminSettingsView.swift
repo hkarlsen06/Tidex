@@ -69,7 +69,7 @@ private struct TabButton: View {
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         Image(systemName: tab.icon)
           .font(.tidexCaptionRegular)
         Text(tab.title)
@@ -79,7 +79,7 @@ private struct TabButton: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
     }
   }
 }
@@ -235,11 +235,11 @@ private struct SqlTabView: View {
         Text("Execute SQL").font(.headline).foregroundColor(.tidexTextPrimary)
 
         TextEditor(text: $viewModel.sqlQuery)
-          .font(.system(size: 13, design: .monospaced))
+          .font(.tidexMonoCaptionRegular)
           .frame(minHeight: 120)
           .padding(Spacing.xs)
           .background(Color.tidexSurfacePrimary)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
 
         Button(action: { Task { await viewModel.executeSql() } }) {
           HStack {
@@ -252,7 +252,7 @@ private struct SqlTabView: View {
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
           .foregroundColor(.white)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
         }
         .disabled(viewModel.sqlIsExecuting)
 
@@ -269,14 +269,14 @@ private struct SqlTabView: View {
               VStack(alignment: .leading, spacing: Spacing.xxs) {
                 ForEach(Array(result.enumerated()), id: \.offset) { _, row in
                   Text(row.map { "\($0.key): \($0.value.stringValue)" }.joined(separator: ", "))
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.tidexMonoMicro)
                     .foregroundColor(.tidexTextSecondary)
                 }
               }
             }
             .padding(Spacing.xs)
             .background(Color.tidexSurfacePrimary)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
           }
         }
       }
@@ -353,7 +353,7 @@ private struct NotificationsTabView: View {
           Text("Send Notification").font(.headline).foregroundColor(.tidexTextPrimary)
 
           // Title fields
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
             Text("Title").font(.subheadline).foregroundColor(.tidexTextMuted)
             TextField("English", text: $viewModel.notificationTitle)
               .textFieldStyle(AdminTextFieldStyle())
@@ -362,7 +362,7 @@ private struct NotificationsTabView: View {
           }
 
           // Body fields
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
             Text("Body").font(.subheadline).foregroundColor(.tidexTextMuted)
             TextField("English", text: $viewModel.notificationBody, axis: .vertical)
               .lineLimit(3...6)
@@ -373,7 +373,7 @@ private struct NotificationsTabView: View {
           }
 
           // Deeplink fields
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
             Text("Deeplink (optional)").font(.subheadline).foregroundColor(.tidexTextMuted)
             TextField("English (e.g. tidex://shifts)", text: $viewModel.notificationDeeplink)
               .textFieldStyle(AdminTextFieldStyle())
@@ -396,7 +396,7 @@ private struct NotificationsTabView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
               // Selected users chips
               if !viewModel.notificationSelectedUsers.isEmpty {
-                FlowLayout(spacing: 6) {
+                FlowLayout(spacing: Spacing.xxxs) {
                   ForEach(viewModel.notificationSelectedUsers) { user in
                     HStack(spacing: Spacing.xxs) {
                       Text(user.email ?? user.name ?? String(user.id.prefix(8)))
@@ -413,7 +413,7 @@ private struct NotificationsTabView: View {
                     .padding(.horizontal, Spacing.xs)
                     .padding(.vertical, Spacing.xxs)
                     .background(Color.tidexSurfaceSecondary)
-                    .cornerRadius(12)
+                    .cornerRadius(CornerRadius.lg)
                   }
                 }
               }
@@ -438,7 +438,7 @@ private struct NotificationsTabView: View {
               }
               .padding(Spacing.xs)
               .background(Color.tidexSurfaceSecondary)
-              .cornerRadius(8)
+              .cornerRadius(CornerRadius.sm)
 
               // Search results
               if !viewModel.notificationUserSearchResults.isEmpty {
@@ -448,7 +448,7 @@ private struct NotificationsTabView: View {
                       viewModel.selectNotificationUser(user)
                     } label: {
                       HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: Spacing.micro) {
                           Text(user.email ?? "No email")
                             .font(.tidexFootnote)
                             .foregroundColor(.tidexTextPrimary)
@@ -469,7 +469,7 @@ private struct NotificationsTabView: View {
                   }
                 }
                 .background(Color.tidexSurfaceSecondary)
-                .cornerRadius(8)
+                .cornerRadius(CornerRadius.sm)
               }
             }
           }
@@ -492,7 +492,7 @@ private struct NotificationsTabView: View {
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexBlue)
             .foregroundColor(.white)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
           }
           .disabled(
             viewModel.isSendingNotification || viewModel.notificationTitle.isEmpty
@@ -504,8 +504,8 @@ private struct NotificationsTabView: View {
         }
         .padding(Spacing.md)
         .background(Color.tidexSurfacePrimary)
-        .cornerRadius(12)
-        .tidexCardShadow(cornerRadius: 12)
+        .cornerRadius(CornerRadius.lg)
+        .tidexCardShadow(cornerRadius: CornerRadius.lg)
 
         // History section
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -633,7 +633,7 @@ private struct AdminTextFieldStyle: TextFieldStyle {
     configuration
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
   }
 }
 
@@ -645,7 +645,7 @@ private struct UserCard: View {
 
   var body: some View {
     Button(action: onTap) {
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: Spacing.xxxs) {
         HStack {
           Text(user.displayName).font(.tidexLabel).foregroundColor(
             .tidexTextPrimary
@@ -668,8 +668,8 @@ private struct UserCard: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(10)
-      .tidexCardShadow(cornerRadius: 10)
+      .cornerRadius(CornerRadius.md)
+      .tidexCardShadow(cornerRadius: CornerRadius.md)
     }
     .buttonStyle(.plain)
   }
@@ -703,8 +703,8 @@ private struct FeedbackCard: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(10)
-      .tidexCardShadow(cornerRadius: 10)
+      .cornerRadius(CornerRadius.md)
+      .tidexCardShadow(cornerRadius: CornerRadius.md)
     }
     .buttonStyle(.plain)
   }
@@ -729,8 +729,8 @@ private struct AuditLogCard: View {
     }
     .padding(Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(8)
-    .tidexCardShadow(cornerRadius: 8)
+    .cornerRadius(CornerRadius.sm)
+    .tidexCardShadow(cornerRadius: CornerRadius.sm)
   }
 }
 
@@ -739,7 +739,7 @@ private struct ShareCard: View {
   let onDelete: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: Spacing.xxxs) {
       HStack {
         VStack(alignment: .leading) {
           Text("Owner: \(share.ownerName ?? share.ownerEmail ?? String(share.ownerId.prefix(8)))")
@@ -765,8 +765,8 @@ private struct ShareCard: View {
     }
     .padding(Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(8)
-    .tidexCardShadow(cornerRadius: 8)
+    .cornerRadius(CornerRadius.sm)
+    .tidexCardShadow(cornerRadius: CornerRadius.sm)
   }
 }
 
@@ -774,7 +774,7 @@ private struct BroadcastCard: View {
   let broadcast: BroadcastRecord
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: Spacing.xxxs) {
       HStack {
         Text(broadcast.title).font(.tidexLabel).foregroundColor(
           .tidexTextPrimary)
@@ -790,8 +790,8 @@ private struct BroadcastCard: View {
     }
     .padding(Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(8)
-    .tidexCardShadow(cornerRadius: 8)
+    .cornerRadius(CornerRadius.sm)
+    .tidexCardShadow(cornerRadius: CornerRadius.sm)
   }
 
   private func statusColor(_ status: String) -> Color {
@@ -812,10 +812,10 @@ private struct Badge: View {
     Text(text)
       .font(.tidexMicro)
       .foregroundColor(color)
-      .padding(.horizontal, 6)
-      .padding(.vertical, 2)
+      .padding(.horizontal, Spacing.xxxs)
+      .padding(.vertical, Spacing.micro)
       .background(color.opacity(0.15))
-      .cornerRadius(4)
+      .cornerRadius(CornerRadius.xxs)
   }
 }
 
@@ -945,8 +945,8 @@ private struct FeedbackResponseSheet: View {
         }
         .padding()
         .background(Color.tidexSurfacePrimary)
-        .cornerRadius(12)
-        .tidexCardShadow(cornerRadius: 12)
+        .cornerRadius(CornerRadius.lg)
+        .tidexCardShadow(cornerRadius: CornerRadius.lg)
 
         if let existingResponse = feedback.response {
           VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -955,7 +955,7 @@ private struct FeedbackResponseSheet: View {
           }
           .padding()
           .background(Color.tidexSuccess.opacity(0.1))
-          .cornerRadius(12)
+          .cornerRadius(CornerRadius.lg)
         }
 
         TextField("Your response...", text: $viewModel.feedbackResponse, axis: .vertical)
@@ -973,7 +973,7 @@ private struct FeedbackResponseSheet: View {
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexBlue)
             .foregroundColor(.white)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
         }
         .disabled(viewModel.feedbackResponse.isEmpty || viewModel.isPerformingAction)
 
@@ -1015,7 +1015,7 @@ private struct CreateShareSheet: View {
             if let owner = viewModel.createShareSelectedOwner {
               // Selected owner chip
               HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Spacing.micro) {
                   Text(owner.displayName)
                     .font(.tidexLabel)
                     .foregroundColor(.tidexTextPrimary)
@@ -1035,7 +1035,7 @@ private struct CreateShareSheet: View {
               }
               .padding(Spacing.sm)
               .background(Color.tidexSurfaceSecondary)
-              .cornerRadius(8)
+              .cornerRadius(CornerRadius.sm)
             } else {
               // Search field
               HStack {
@@ -1056,7 +1056,7 @@ private struct CreateShareSheet: View {
               }
               .padding(Spacing.sm)
               .background(Color.tidexSurfaceSecondary)
-              .cornerRadius(8)
+              .cornerRadius(CornerRadius.sm)
 
               // Search results
               if !viewModel.createShareOwnerResults.isEmpty {
@@ -1073,7 +1073,7 @@ private struct CreateShareSheet: View {
                   }
                 }
                 .background(Color.tidexSurfaceSecondary)
-                .cornerRadius(8)
+                .cornerRadius(CornerRadius.sm)
               }
             }
           }
@@ -1086,7 +1086,7 @@ private struct CreateShareSheet: View {
             if let viewer = viewModel.createShareSelectedViewer {
               // Selected viewer chip
               HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Spacing.micro) {
                   Text(viewer.displayName)
                     .font(.tidexLabel)
                     .foregroundColor(.tidexTextPrimary)
@@ -1106,7 +1106,7 @@ private struct CreateShareSheet: View {
               }
               .padding(Spacing.sm)
               .background(Color.tidexSurfaceSecondary)
-              .cornerRadius(8)
+              .cornerRadius(CornerRadius.sm)
             } else {
               // Search field
               HStack {
@@ -1127,7 +1127,7 @@ private struct CreateShareSheet: View {
               }
               .padding(Spacing.sm)
               .background(Color.tidexSurfaceSecondary)
-              .cornerRadius(8)
+              .cornerRadius(CornerRadius.sm)
 
               // Search results
               if !viewModel.createShareViewerResults.isEmpty {
@@ -1144,7 +1144,7 @@ private struct CreateShareSheet: View {
                   }
                 }
                 .background(Color.tidexSurfaceSecondary)
-                .cornerRadius(8)
+                .cornerRadius(CornerRadius.sm)
               }
             }
           }
@@ -1171,7 +1171,7 @@ private struct CreateShareSheet: View {
                 : Color.tidexBlue.opacity(0.5)
             )
             .foregroundColor(.white)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
           }
           .disabled(
             viewModel.isCreatingShare || viewModel.createShareSelectedOwner == nil
@@ -1197,7 +1197,7 @@ private struct UserSearchResultRow: View {
 
   var body: some View {
     HStack {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(user.displayName)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
@@ -1216,7 +1216,7 @@ private struct UserSearchResultRow: View {
       Image(systemName: "plus.circle.fill")
         .foregroundColor(.tidexBlue)
     }
-    .padding(.vertical, 10)
+    .padding(.vertical, Spacing.xsm)
     .padding(.horizontal, Spacing.sm)
     .contentShape(Rectangle())
   }

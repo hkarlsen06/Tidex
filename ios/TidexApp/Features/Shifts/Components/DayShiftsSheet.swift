@@ -110,7 +110,7 @@ struct DayShiftsSheet: View {
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlue)
         .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, 6)
+        .padding(.vertical, Spacing.xxxs)
         .background(
           Capsule()
             .fill(Color.tidexBlue.opacity(0.1))
@@ -118,7 +118,7 @@ struct DayShiftsSheet: View {
     }
     .padding(Spacing.md)
     .background(
-      RoundedRectangle(cornerRadius: 16)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexSurfaceSecondary)
     )
   }
@@ -132,7 +132,7 @@ struct DayShiftsSheet: View {
     } label: {
       HStack(spacing: Spacing.sm) {
         // Time range
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(formatTimeRange(shift))
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
@@ -146,7 +146,7 @@ struct DayShiftsSheet: View {
         Spacer()
 
         // Earnings
-        VStack(alignment: .trailing, spacing: 2) {
+        VStack(alignment: .trailing, spacing: Spacing.micro) {
           let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
           Text(formatCurrency(displayAmount))
             .font(.tidexHeadline)
@@ -166,7 +166,7 @@ struct DayShiftsSheet: View {
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
     }

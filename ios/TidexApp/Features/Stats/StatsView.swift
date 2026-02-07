@@ -135,7 +135,7 @@ struct StatsView: View {
 
           // Bottom spacing for floating month picker
           Spacer()
-            .frame(height: MonthPickerLayout.totalBottomInset + 24)
+            .frame(height: MonthPickerLayout.totalBottomInset + Spacing.lg)
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, Spacing.md)
@@ -258,7 +258,7 @@ struct StatsView: View {
 
         // Bottom spacing for floating month picker
         Spacer()
-          .frame(height: MonthPickerLayout.totalBottomInset + 24)
+          .frame(height: MonthPickerLayout.totalBottomInset + Spacing.lg)
       }
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, Spacing.md)
@@ -278,11 +278,11 @@ struct StatsView: View {
 
   @ViewBuilder
   private func skeletonCard(height: CGFloat) -> some View {
-    RoundedRectangle(cornerRadius: 16)
+    RoundedRectangle(cornerRadius: CornerRadius.xxl)
       .fill(Color.tidexSurfacePrimary)
       .frame(height: height)
       .overlay(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .stroke(Color.tidexBorderSubtle, lineWidth: 1)
       )
       .shimmer(isActive: true)
@@ -313,7 +313,7 @@ struct StatsView: View {
           .padding(.horizontal, Spacing.lg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)

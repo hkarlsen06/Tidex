@@ -156,7 +156,7 @@ struct SettingsAccordionScreen: View {
             .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
         }
       }
     }
@@ -239,11 +239,11 @@ struct SettingsAccordionScreen: View {
                     .focused($isTaxInputFocused)
                     .frame(width: 60)
                     .padding(.horizontal, Spacing.xxs)
-                    .padding(.vertical, 2)
+                    .padding(.vertical, Spacing.micro)
                     .background(Color.tidexBlue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
                     .overlay(
-                      RoundedRectangle(cornerRadius: 6, style: .continuous)
+                      RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
                         .stroke(Color.tidexBlue, lineWidth: 2)
                     )
                     .onChange(of: isTaxInputFocused) { _, focused in
@@ -275,7 +275,7 @@ struct SettingsAccordionScreen: View {
                     isTaxInputFocused = true
                   }
                 }) {
-                  HStack(spacing: 2) {
+                  HStack(spacing: Spacing.micro) {
                     Text(formatTaxValue(data.taxPercentage))
                       .font(.tidexTitle2)
                       .foregroundColor(.tidexBlue)
@@ -284,10 +284,10 @@ struct SettingsAccordionScreen: View {
                       .font(.tidexLabel)
                       .foregroundColor(.tidexTextMuted)
                   }
-                  .padding(.horizontal, 6)
-                  .padding(.vertical, 2)
+                  .padding(.horizontal, Spacing.xxxs)
+                  .padding(.vertical, Spacing.micro)
                   .background(Color.tidexBlue.opacity(0.08))
-                  .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
                 }
                 .buttonStyle(.plain)
               }
@@ -379,9 +379,9 @@ struct SettingsAccordionScreen: View {
                     .frame(width: 44)
                     .frame(minHeight: 44)
                     .background(Color.tidexBlue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
                     .overlay(
-                      RoundedRectangle(cornerRadius: 10, style: .continuous)
+                      RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
                         .stroke(Color.tidexBlue, lineWidth: 2)
                     )
                     .onChange(of: isPaydayInputFocused) { _, focused in
@@ -427,9 +427,9 @@ struct SettingsAccordionScreen: View {
                     !payrollDayOptions.contains(data.payrollDay)
                       ? Color.tidexBrandPrimary : Color.tidexBackground
                   )
-                  .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
                   .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
                       .stroke(
                         !payrollDayOptions.contains(data.payrollDay)
                           ? Color.clear : Color.tidexBorder, lineWidth: 1)
@@ -578,9 +578,9 @@ private struct PaydayButton: View {
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(minWidth: 56, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
         .overlay(
-          RoundedRectangle(cornerRadius: 10, style: .continuous)
+          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
             .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
         )
     }

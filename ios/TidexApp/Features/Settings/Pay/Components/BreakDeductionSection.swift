@@ -61,7 +61,7 @@ struct BreakDeductionSection: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      VStack(spacing: 6) {
+      VStack(spacing: Spacing.xxxs) {
         ForEach(BreakMethod.allCases, id: \.self) { breakMethod in
           BreakMethodRow(
             method: breakMethod,
@@ -99,7 +99,7 @@ struct BreakDeductionSection: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
   }
 
@@ -138,7 +138,7 @@ struct BreakDeductionSection: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
   }
 
@@ -157,7 +157,7 @@ private struct BreakMethodRow: View {
   var body: some View {
     Button(action: action) {
       HStack {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(methodTitle)
             .font(isSelected ? .tidexLabelStrong : .tidexLabel)
             .foregroundColor(.tidexTextPrimary)
@@ -185,7 +185,7 @@ private struct BreakMethodRow: View {
       }
       .padding(Spacing.xs)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
     }
     .buttonStyle(.plain)
   }

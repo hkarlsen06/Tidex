@@ -51,7 +51,7 @@ struct ShiftCompletionCelebrationView: View {
                 endValue: data.newDisplayValue,
                 duration: 1.0
               )
-              .font(.system(size: 104, weight: .bold))
+              .font(.tidexCelebrationAmount)
               .foregroundColor(.tidexBlue)
               .minimumScaleFactor(0.32)
               .lineLimit(1)
@@ -70,7 +70,7 @@ struct ShiftCompletionCelebrationView: View {
                   .font(.tidexCaptionStrong)
                   .foregroundColor(.tidexBlue)
                   .padding(.horizontal, Spacing.sm)
-                  .padding(.vertical, 6)
+                  .padding(.vertical, Spacing.xxxs)
                   .background(Color.tidexBlue.opacity(0.12))
                   .clipShape(Capsule())
               }

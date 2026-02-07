@@ -143,7 +143,7 @@ struct TotalCard: View {
     .padding(.top, Spacing.mlg)
     .padding(.bottom, Spacing.md)
     .background(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
     )
     .tidexCardShadow()
@@ -156,7 +156,7 @@ struct TotalCard: View {
   private var percentageIndicator: some View {
     if showPercentageDash {
       // Skeleton placeholder bar matching other empty states
-      RoundedRectangle(cornerRadius: 4)
+      RoundedRectangle(cornerRadius: CornerRadius.xxs)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 48, height: 14)
     } else {
@@ -228,7 +228,7 @@ struct TotalCard: View {
     case .none:
       if showDashes {
         // Skeleton placeholder line
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: CornerRadius.xs)
           .fill(Color.tidexTextMuted.opacity(0.3))
           .frame(width: 120, height: 16)
       } else {
@@ -242,7 +242,7 @@ struct TotalCard: View {
   private var mainAmountDisplay: some View {
     if showDashes {
       // Skeleton placeholder line matching the height of the large text
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexBlue.opacity(0.3))
         .frame(width: 200, height: 56)
     } else {

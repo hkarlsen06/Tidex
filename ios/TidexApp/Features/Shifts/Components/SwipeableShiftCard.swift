@@ -98,7 +98,7 @@ struct SwipeableShiftCard<Content: View>: View {
 
   private var editActionBackground: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexBlue)
 
       VStack(spacing: Spacing.xxs) {
@@ -115,7 +115,7 @@ struct SwipeableShiftCard<Content: View>: View {
 
   private var deleteActionBackground: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexError)
 
       VStack(spacing: Spacing.xxs) {
@@ -243,7 +243,7 @@ struct SwipeableShiftCard<Content: View>: View {
           onEdit: { print("Edit \(index)") },
           onDelete: { print("Delete \(index)") }
         ) {
-          RoundedRectangle(cornerRadius: 24)
+          RoundedRectangle(cornerRadius: CornerRadius.card)
             .fill(Color.tidexSurfacePrimary)
             .frame(height: 100)
             .overlay(

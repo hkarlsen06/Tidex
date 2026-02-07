@@ -221,7 +221,7 @@ struct SharingView: View {
           Button(action: {
             showManageSheet = true
           }) {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.xxxs) {
               Image(systemName: "person.2")
                 .font(.tidexSubheadline)
               Text(.sharingSeeFriends)

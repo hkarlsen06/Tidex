@@ -1,7 +1,9 @@
 import Foundation
 import GoogleSignIn
-import SwiftUI
+import os.log
 import UIKit
+
+private let logger = Logger(subsystem: "com.tidex.app", category: "AppLifecycleHandler")
 
 @MainActor
 final class AppLifecycleHandler {
@@ -11,36 +13,52 @@ final class AppLifecycleHandler {
 
   private init() {}
 
-  func handleScenePhase(_ phase: ScenePhase) {
-    switch phase {
-    case .active:
-      AppearanceManager.shared.applyToWindows()
-      // Blur hide is handled by didBecomeActiveNotification (see TidexApp.swift)
-      // for synchronous timing, but do a defensive cleanup here too.
-      PrivacyBlurManager.hide()
-      scheduleLoadingRecoveryIfNeeded()
-      BiometricAuthService.shared.handleAppForeground()
-      AppCoordinator.shared.handleAppForeground()
-      (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
-      (UIApplication.shared.delegate as? AppDelegate)?.endBackgroundTaskIfNeeded()
-    case .inactive:
-      loadingRecoveryTask?.cancel()
-      loadingRecoveryTask = nil
-    // Blur show is handled by willResignActiveNotification (see TidexApp.swift)
-    // for synchronous timing before app switcher snapshot.
-    case .background:
-      loadingRecoveryTask?.cancel()
-      loadingRecoveryTask = nil
-      BiometricAuthService.shared.handleAppBackground()
-      (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
-      // Defensive: ensure blur is shown when entering background.
-      // Primary blur is handled by willResignActiveNotification but
-      // some transitions may skip .inactive.
-      PrivacyBlurManager.showIfNeeded()
-    @unknown default:
-      break
+  // MARK: - Lifecycle Handlers (UIKit notification-driven)
+
+  func handleDidBecomeActive() {
+    AppearanceManager.shared.applyToWindows()
+    PrivacyBlurManager.hide()
+    scheduleLoadingRecoveryIfNeeded()
+    BiometricAuthService.shared.handleAppForeground()
+    AppCoordinator.shared.handleAppForeground()
+    (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
+    (UIApplication.shared.delegate as? AppDelegate)?.endBackgroundTaskIfNeeded()
+    // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
+    // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
+    // objectWillChange on the root ObservableObject does.
+    AppCoordinator.shared.objectWillChange.send()
+
+    // Diagnostic: log window state on next run loop to detect blank-screen conditions
+    DispatchQueue.main.async {
+      for scene in UIApplication.shared.connectedScenes {
+        guard let windowScene = scene as? UIWindowScene else { continue }
+        for (i, window) in windowScene.windows.enumerated() {
+          let rootVC = window.rootViewController
+          let rootView = rootVC?.view
+          logger.info(
+            "[didBecomeActive] window[\(i)] isKey=\(window.isKeyWindow) hidden=\(rootView?.isHidden ?? true) alpha=\(rootView?.alpha ?? 0) frame=\(String(describing: rootView?.frame)) subviews=\(rootView?.subviews.count ?? 0)"
+          )
+        }
+      }
     }
   }
+
+  func handleWillResignActive() {
+    loadingRecoveryTask?.cancel()
+    loadingRecoveryTask = nil
+    PrivacyBlurManager.showIfNeeded()
+  }
+
+  func handleDidEnterBackground() {
+    loadingRecoveryTask?.cancel()
+    loadingRecoveryTask = nil
+    BiometricAuthService.shared.handleAppBackground()
+    (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
+    // Defensive: ensure blur is shown when entering background.
+    PrivacyBlurManager.showIfNeeded()
+  }
+
+  // MARK: - Loading Recovery
 
   private func scheduleLoadingRecoveryIfNeeded() {
     loadingRecoveryTask?.cancel()
@@ -68,6 +86,8 @@ final class AppLifecycleHandler {
       self?.loadingRecoveryTask = nil
     }
   }
+
+  // MARK: - URL Handling
 
   func handleOpenURL(_ url: URL) {
     if GIDSignIn.sharedInstance.handle(url) {

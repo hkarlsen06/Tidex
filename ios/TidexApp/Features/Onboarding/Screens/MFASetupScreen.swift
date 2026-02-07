@@ -55,7 +55,7 @@ struct MFASetupScreen: View {
         // Header
         VStack(spacing: Spacing.sm) {
           Text(.onboardingMfaTitle)
-            .font(.system(size: 28, weight: .bold))
+            .font(.tidexScreenTitle)
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.center)
 
@@ -128,7 +128,7 @@ struct MFASetupScreen: View {
     }
     .padding(Spacing.mlg)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
   }
 }
 
@@ -146,7 +146,7 @@ private struct BenefitRow: View {
         .foregroundColor(.tidexBlue)
         .frame(width: 28, height: 28)
 
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(title)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)

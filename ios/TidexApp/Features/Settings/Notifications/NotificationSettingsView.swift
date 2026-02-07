@@ -73,7 +73,7 @@ struct NotificationSettingsView: View {
         settingsIcon(systemName: permissionIcon, color: permissionIconColor)
 
         // Content
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.notificationsPermissionTitle)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
@@ -161,9 +161,9 @@ struct NotificationSettingsView: View {
           .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
           .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, 6)
+          .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(6)
+          .cornerRadius(CornerRadius.xs)
       }
 
     case .notDetermined:
@@ -177,9 +177,9 @@ struct NotificationSettingsView: View {
           .font(.tidexLabel)
           .foregroundColor(.white)
           .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, 6)
+          .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexBlue)
-          .cornerRadius(6)
+          .cornerRadius(CornerRadius.xs)
       }
 
     @unknown default:
@@ -196,7 +196,7 @@ struct NotificationSettingsView: View {
         HStack(spacing: Spacing.sm) {
           settingsIcon(systemName: "bell.fill", color: .tidexBlue)
 
-          VStack(alignment: .leading, spacing: 2) {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsRemindersTitle)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
@@ -287,7 +287,7 @@ struct NotificationSettingsView: View {
         HStack(spacing: Spacing.sm) {
           settingsIcon(systemName: "brain.head.profile", color: .purple)
 
-          VStack(alignment: .leading, spacing: 2) {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsSmartTitle)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
@@ -340,7 +340,7 @@ struct NotificationSettingsView: View {
         HStack(spacing: Spacing.sm) {
           settingsIcon(systemName: "person.2.fill", color: .green)
 
-          VStack(alignment: .leading, spacing: 2) {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsSharedTitle)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
@@ -370,7 +370,7 @@ struct NotificationSettingsView: View {
       .foregroundColor(.white)
       .frame(width: 29, height: 29)
       .background(color.opacity(0.75))
-      .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
   }
 }
 

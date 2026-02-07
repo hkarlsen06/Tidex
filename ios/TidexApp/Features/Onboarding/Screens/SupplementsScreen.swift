@@ -50,7 +50,7 @@ struct SupplementsScreen: View {
             // Header
             VStack(spacing: Spacing.sm) {
               Text(.onboardingSupplementsTitle)
-                .font(.system(size: 28, weight: .bold))
+                .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
@@ -108,9 +108,9 @@ struct SupplementsScreen: View {
               .frame(maxWidth: .infinity)
               .frame(height: 56)
               .background(Color.tidexBlue.opacity(0.08))
-              .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
               .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
                   .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 1)
               )
             }
@@ -247,7 +247,7 @@ private struct SupplementRuleCard: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 

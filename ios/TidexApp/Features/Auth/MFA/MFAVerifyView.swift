@@ -89,7 +89,7 @@ struct MFAVerifyView: View {
 
       // Title
       Text("Tidex")
-        .font(.system(size: 28, weight: .bold))
+        .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
     }
   }
@@ -113,9 +113,9 @@ struct MFAVerifyView: View {
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextMuted)
           .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, 6)
+          .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexSurfaceSecondary)
-          .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
       }
     }
   }

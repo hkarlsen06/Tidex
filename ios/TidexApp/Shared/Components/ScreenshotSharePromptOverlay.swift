@@ -29,7 +29,7 @@ struct ScreenshotSharePromptOverlay: View {
           Capsule()
             .fill(Color.tidexTextMuted.opacity(0.4))
             .frame(width: 36, height: 5)
-            .padding(.top, 10)
+            .padding(.top, Spacing.xsm)
             .padding(.bottom, Spacing.md)
 
           // Toolbar buttons preview - showing where share button is
@@ -66,7 +66,7 @@ struct ScreenshotSharePromptOverlay: View {
                 .frame(height: 52)
                 .background(Color.tidexSurfacePrimary)
                 .foregroundColor(.tidexTextPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
             }
             .buttonStyle(PromptButtonStyle())
 
@@ -85,17 +85,17 @@ struct ScreenshotSharePromptOverlay: View {
                 .frame(height: 52)
                 .background(Color.tidexBrandPrimary)
                 .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
             }
             .buttonStyle(PromptButtonStyle())
           }
           .padding(.horizontal, Spacing.md)
-          .padding(.bottom, safeBottom + 16)
+          .padding(.bottom, safeBottom + Spacing.md)
         }
         .frame(maxWidth: .infinity)
         .background(
           Color.tidexBackground
-            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
             .shadow(color: .black.opacity(0.15), radius: 20, y: -5)
         )
         .offset(y: showContent ? dragOffset : geometry.size.height + 100)
@@ -138,9 +138,9 @@ struct ScreenshotSharePromptOverlay: View {
   private var toolbarPreview: some View {
     HStack(spacing: Spacing.md) {
       // Share button - emphasized with liquid glass
-      VStack(spacing: 6) {
+      VStack(spacing: Spacing.xxxs) {
         Image(systemName: "square.and.arrow.up")
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyLarge)
           .foregroundColor(.tidexBlue)
           .frame(width: 48, height: 48)
           .tidexGlass(shape: .circle, interactive: true)
@@ -153,7 +153,7 @@ struct ScreenshotSharePromptOverlay: View {
 
       // Selection button - dimmed with liquid glass
       Image(systemName: "checkmark.circle")
-        .font(.system(size: 18, weight: .medium))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextMuted)
         .frame(width: 40, height: 40)
         .tidexGlass(shape: .circle)

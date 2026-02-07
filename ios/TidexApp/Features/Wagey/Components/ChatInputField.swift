@@ -72,7 +72,7 @@ struct ChatInputField: View {
       }
 
       // Input area
-      HStack(alignment: .center, spacing: 10) {
+      HStack(alignment: .center, spacing: Spacing.xsm) {
         // Image picker button (outside the capsule)
         if onSendWithImage != nil {
           imagePickerButton
@@ -106,7 +106,7 @@ struct ChatInputField: View {
             .transition(.scale.combined(with: .opacity))
           }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Spacing.msm)
         .padding(.vertical, Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -152,7 +152,7 @@ struct ChatInputField: View {
           .resizable()
           .scaledToFill()
           .frame(width: 80, height: 80)
-          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
 
         // Remove button
         Button {

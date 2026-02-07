@@ -52,7 +52,7 @@ struct CalendarHeaderRow: View {
 
   @ViewBuilder
   private var monthYearLabel: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Spacing.xxxs) {
       Text(monthName)
         .font(.tidexTitle2)
         .foregroundColor(.tidexTextPrimary)
@@ -63,7 +63,7 @@ struct CalendarHeaderRow: View {
           .foregroundColor(.tidexTextMuted)
       } else {
         Text(String(year))
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyLarge)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -85,7 +85,7 @@ struct CalendarHeaderRow: View {
   @ViewBuilder
   private func totalsView(totals: CalendarHeaderTotals) -> some View {
     if let secondary = totals.secondary {
-      VStack(alignment: .trailing, spacing: 2) {
+      VStack(alignment: .trailing, spacing: Spacing.micro) {
         primaryAmountText(totals.primary)
         animatedAmount(
           secondary,

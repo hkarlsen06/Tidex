@@ -19,7 +19,7 @@ struct ImpersonationBanner: View {
         .foregroundStyle(Color.tidexWarning)
 
       // Info text
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text("Impersonating: \(targetName)")
           .font(.tidexLabelStrong)
           .foregroundStyle(Color.tidexTextPrimary)
@@ -50,7 +50,7 @@ struct ImpersonationBanner: View {
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexError)
       .foregroundStyle(.white)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
     }
     .padding(Spacing.sm)
     .background(Color.tidexWarning.opacity(0.15))

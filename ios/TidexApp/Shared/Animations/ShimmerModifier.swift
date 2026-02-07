@@ -69,34 +69,34 @@ extension View {
   VStack(spacing: Spacing.md) {
     // Skeleton card with shimmer
     VStack(spacing: Spacing.xs) {
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 200, height: 56)
 
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 120, height: 16)
     }
     .padding(Spacing.lg)
     .background(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
     )
     .shimmer()
 
     // Without shimmer for comparison
     VStack(spacing: Spacing.xs) {
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 200, height: 56)
 
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 120, height: 16)
     }
     .padding(Spacing.lg)
     .background(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
     )
   }

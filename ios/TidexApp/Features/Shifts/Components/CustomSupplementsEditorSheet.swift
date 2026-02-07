@@ -394,7 +394,7 @@ struct CustomSupplementsEditorSheet: View {
     }
     .padding(Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexBlue.opacity(0.08))
     )
   }
@@ -456,7 +456,7 @@ struct CustomSupplementsEditorSheet: View {
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(
-        RoundedRectangle(cornerRadius: 12)
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
           .stroke(Color.tidexBlue, style: StrokeStyle(lineWidth: 1.5, dash: [6]))
       )
     }

@@ -32,7 +32,7 @@ struct TodayPlaceholderCard: View {
 
   var body: some View {
     cardContent
-      .contentShape(RoundedRectangle(cornerRadius: 24))
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card))
       .onTapGesture {
         onTap()
       }
@@ -56,7 +56,7 @@ struct TodayPlaceholderCard: View {
       EmptyView()
     } trailingTop: {
       // Placeholder earnings bar (right side)
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 80, height: 20)
     } trailingBottom: {
@@ -65,12 +65,12 @@ struct TodayPlaceholderCard: View {
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, Spacing.mlg)
     .background(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
     )
     .overlay(
       // Blue ring to highlight as today's marker
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .strokeBorder(Color.tidexBlue, lineWidth: 2)
     )
     .tidexCardShadow()

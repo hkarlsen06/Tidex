@@ -577,7 +577,7 @@ struct DashboardView: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)

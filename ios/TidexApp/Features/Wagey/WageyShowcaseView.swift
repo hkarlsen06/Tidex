@@ -185,7 +185,7 @@ struct WageyShowcaseView: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       // Icon
       ZStack {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
           .fill(
             LinearGradient(
               colors: [
@@ -199,7 +199,7 @@ struct WageyShowcaseView: View {
           .frame(width: 44, height: 44)
 
         Image(systemName: icon)
-          .font(.system(size: 18, weight: .medium))
+          .font(.tidexHeadline)
           .foregroundStyle(
             LinearGradient(
               colors: [
@@ -228,9 +228,9 @@ struct WageyShowcaseView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary.opacity(0.5))
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
         .strokeBorder(Color.tidexBorder.opacity(0.5), lineWidth: 1)
     )
   }
@@ -328,9 +328,9 @@ struct WageyShowcaseView: View {
       }
       .padding(Spacing.md)
       .background(Color.tidexBackground)
-      .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous)
           .strokeBorder(Color.tidexBorder.opacity(0.5), lineWidth: 1)
       )
     }
@@ -363,7 +363,7 @@ struct WageyShowcaseView: View {
           endPoint: .trailing
         )
       )
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .shadow(color: Color(red: 0.45, green: 0.4, blue: 0.9).opacity(0.3), radius: 12, y: 6)
     }
   }

@@ -3,15 +3,17 @@ import SwiftUI
 @main
 struct TidexApp: App {
   @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-  @Environment(\.scenePhase) private var scenePhase
 
-  /// UIKit notification publishers for privacy blur.
-  /// Using these instead of ScenePhase ensures the blur is applied/removed synchronously
-  /// before the app switcher captures its screenshot.
-  private let willResignActive = NotificationCenter.default
-    .publisher(for: UIApplication.willResignActiveNotification)
+  /// UIKit notification publishers for lifecycle events.
+  /// Using UIKit notifications instead of @Environment(\.scenePhase) avoids a known
+  /// SwiftUI bug where the view tree stops updating after scene phase transitions
+  /// (e.g. returning from the system screenshot editor).
   private let didBecomeActive = NotificationCenter.default
     .publisher(for: UIApplication.didBecomeActiveNotification)
+  private let willResignActive = NotificationCenter.default
+    .publisher(for: UIApplication.willResignActiveNotification)
+  private let didEnterBackground = NotificationCenter.default
+    .publisher(for: UIApplication.didEnterBackgroundNotification)
 
   var body: some Scene {
     WindowGroup {
@@ -22,14 +24,14 @@ struct TidexApp: App {
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
           AppLifecycleHandler.shared.handleUserActivity(activity)
         }
-        .task(id: scenePhase) {
-          AppLifecycleHandler.shared.handleScenePhase(scenePhase)
+        .onReceive(didBecomeActive) { _ in
+          AppLifecycleHandler.shared.handleDidBecomeActive()
         }
         .onReceive(willResignActive) { _ in
-          PrivacyBlurManager.showIfNeeded()
+          AppLifecycleHandler.shared.handleWillResignActive()
         }
-        .onReceive(didBecomeActive) { _ in
-          PrivacyBlurManager.hide()
+        .onReceive(didEnterBackground) { _ in
+          AppLifecycleHandler.shared.handleDidEnterBackground()
         }
     }
   }

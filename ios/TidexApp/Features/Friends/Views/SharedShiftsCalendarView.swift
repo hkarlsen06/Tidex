@@ -141,13 +141,13 @@ struct SharedShiftsCalendarView: View {
   private var headerRow: some View {
     HStack {
       // Month name + Year
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         Text(monthName)
           .font(.tidexTitle2)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(year))
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyLarge)
           .foregroundColor(.tidexTextMuted)
       }
 
@@ -169,7 +169,7 @@ struct SharedShiftsCalendarView: View {
     let showTax = hasTaxEnabled
     let displayAmount = showTax ? displayTotals.net : displayTotals.gross
 
-    VStack(alignment: .trailing, spacing: 2) {
+    VStack(alignment: .trailing, spacing: Spacing.micro) {
       Text(
         displayTotals.gross == 0 ? "—" : CurrencyConfig.format(displayAmount, currency: currency)
       )
@@ -190,7 +190,7 @@ struct SharedShiftsCalendarView: View {
   private var superimposeLegend: some View {
     HStack(spacing: Spacing.lg) {
       // Both working
-      VStack(spacing: 6) {
+      VStack(spacing: Spacing.xxxs) {
         legendMiniCell(color: .tidexBlue, showOverlapIcon: true)
         Text(.sharingSuperimposeLegendBoth)
           .font(.tidexCaption)
@@ -198,7 +198,7 @@ struct SharedShiftsCalendarView: View {
       }
 
       // Only you
-      VStack(spacing: 6) {
+      VStack(spacing: Spacing.xxxs) {
         legendMiniCell(color: .green, showOverlapIcon: false)
         Text(.sharingSuperimposeLegendOnlyYou)
           .font(.tidexCaption)
@@ -246,15 +246,15 @@ struct SharedShiftsCalendarView: View {
           .font(.system(size: 10, weight: .bold))
       }
       .foregroundColor(color)
-      .padding(.top, 6)
+      .padding(.top, Spacing.xxxs)
     }
     .frame(width: 44, height: 54)
     .background(
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .fill(Color.tidexSurfacePrimary)
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .strokeBorder(Color.tidexTextMuted.opacity(0.2), lineWidth: 0.5)
     )
   }
