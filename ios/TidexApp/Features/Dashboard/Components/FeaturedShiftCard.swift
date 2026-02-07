@@ -174,6 +174,10 @@ struct FeaturedShiftCard: View {
               Image(systemName: "star.fill")
                 .font(.system(size: 12))
                 .foregroundColor(.tidexBlue)
+            } else {
+              Circle()
+                .fill(hasProgress ? Color.green : Color.blue)
+                .frame(width: 7, height: 7)
             }
             Text(text)
               .font(.system(size: 14, weight: .medium))

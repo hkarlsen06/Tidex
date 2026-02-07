@@ -56,7 +56,7 @@ struct MainTabView: View {
 
     var icon: String {
       switch self {
-      case .home: return "house.fill"
+      case .home: return "speedometer"
       case .shifts: return "calendar"
       case .add: return "plus.circle.fill"
       case .stats: return "chart.bar.xaxis"

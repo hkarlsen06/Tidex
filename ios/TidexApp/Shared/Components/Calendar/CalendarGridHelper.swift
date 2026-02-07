@@ -149,10 +149,10 @@ enum CalendarGridHelper {
     return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
   }
 
-  /// Format time string for display (removes seconds, optional leading zero)
-  /// e.g., "08:30:00" -> "8:30"
+  /// Format time string for display (removes seconds, keeps leading zero)
+  /// e.g., "08:30:00" -> "08:30"
   static func formatTime(_ time: String, locale: Locale = .appLocale) -> String {
-    return ShiftCardFormatter.localizedTime(time, locale: locale, format: "H:mm")
+    return ShiftCardFormatter.localizedTime(time, locale: locale, format: "HH:mm")
   }
 
   /// Convert time string to minutes since midnight

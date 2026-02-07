@@ -10,6 +10,9 @@ struct TodayDateLabel: View {
 
   var body: some View {
     HStack(spacing: 4) {
+      Circle()
+        .fill(Color.tidexBlue)
+        .frame(width: 7, height: 7)
       Text(parts.dayName)
         .font(.system(size: 17, weight: .semibold))
         .foregroundColor(.tidexTextPrimary)
