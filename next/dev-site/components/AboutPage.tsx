@@ -67,7 +67,7 @@ export function AboutPage({ dictionary }: AboutPageProps) {
         {/* GitHub CTA */}
         <div className="text-center">
           <a
-            href="https://github.com/kkarlsen06"
+            href="https://github.com/Tidex-Payroll-Shifts"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-8 py-4 text-lg font-semibold text-text-inverse shadow-app-lg transition-transform hover:scale-105"
