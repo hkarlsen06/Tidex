@@ -11,9 +11,9 @@ enum FriendSectionType {
 
 // MARK: - Friend Row
 
-/// A row displaying a friend in the sharing management modal
-/// Shows an inline bell icon for notification toggles, plus earnings toggle or share back button.
-/// Block and remove actions are accessed via swipe gestures on the List row.
+/// A row displaying a friend in the sharing management modal.
+/// Tapping anywhere on the row opens a menu with all available actions.
+/// Block and remove actions are also accessible via swipe gestures on the List row.
 struct FriendRow: View {
   let friend: Friend
   let sectionType: FriendSectionType
@@ -23,14 +23,34 @@ struct FriendRow: View {
   let onShareBack: () -> Void
   let onToggleMuted: () -> Void
   let onToggleOwnerMuted: () -> Void
-
-  @State private var showNotificationPopover = false
+  let onToggleBlocked: () -> Void
+  let onRemove: () -> Void
 
   private var nameLayoutDirection: LayoutDirection {
     friend.displayName.isRightToLeft ? .rightToLeft : .leftToRight
   }
 
   var body: some View {
+    Menu {
+      notificationSection
+      sharingSection
+      actionsSection
+    } label: {
+      rowContent
+    }
+    .buttonStyle(.plain)
+    .disabled(isActionInProgress)
+    .opacity(isActionInProgress ? 0.6 : 1.0)
+    .background(
+      Color.tidexBlue.opacity(isHighlighted ? 0.15 : 0)
+        .animation(
+          .easeInOut(duration: 0.8).repeatCount(3, autoreverses: true), value: isHighlighted)
+    )
+  }
+
+  // MARK: - Row Content
+
+  private var rowContent: some View {
     HStack(spacing: 12) {
       // Avatar
       avatarView
@@ -49,42 +69,23 @@ struct FriendRow: View {
 
       Spacer(minLength: 8)
 
-      // Bell icon + primary action
-      actionButtons
-        .layoutPriority(1)
+      Image(systemName: "ellipsis.circle")
+        .font(.system(size: 20))
+        .foregroundColor(.tidexTextMuted)
     }
     .padding(.vertical, 4)
-    .opacity(isActionInProgress ? 0.6 : 1.0)
-    .background(
-      Color.tidexBlue.opacity(isHighlighted ? 0.15 : 0)
-        .animation(
-          .easeInOut(duration: 0.8).repeatCount(3, autoreverses: true), value: isHighlighted)
-    )
+    .contentShape(Rectangle())
   }
 
   // MARK: - Subtitle
 
   @ViewBuilder
   private var subtitleView: some View {
-    let hasContact = friend.contactInfo != nil
-    let isBlocked = friend.sharesWithMe?.blocked == true
-
-    if hasContact || isBlocked {
-      HStack(spacing: 4) {
-        if let contactInfo = friend.contactInfo {
-          Text(contactInfo)
-            .font(.system(size: 13))
-            .foregroundColor(.tidexTextMuted)
-            .lineLimit(1)
-        }
-
-        if isBlocked {
-          Image(systemName: "eye.slash.fill")
-            .font(.system(size: 10))
-            .foregroundColor(.red.opacity(0.7))
-        }
-      }
-      .multilineTextAlignment(.leading)
+    if let contactInfo = friend.contactInfo {
+      Text(contactInfo)
+        .font(.system(size: 13))
+        .foregroundColor(.tidexTextMuted)
+        .lineLimit(1)
     }
   }
 
@@ -96,91 +97,89 @@ struct FriendRow: View {
       initials: friend.initials,
       size: AvatarView.Size.medium
     )
-  }
-
-  // MARK: - Inline Actions
-
-  @ViewBuilder
-  private var actionButtons: some View {
-    HStack(spacing: 4) {
-      bellButton
-
-      switch sectionType {
-      case .mutual, .outgoing:
-        earningsToggle
-      case .incoming:
-        shareBackButton
+    .overlay(alignment: .bottomTrailing) {
+      if friend.sharesWithMe?.blocked == true {
+        Image(systemName: "eye.slash.fill")
+          .font(.system(size: 10))
+          .foregroundColor(.white)
+          .padding(3)
+          .background(Color.red.opacity(0.85))
+          .clipShape(Circle())
+          .offset(x: 2, y: 2)
       }
     }
   }
 
-  // MARK: - Bell Button
+  // MARK: - Notification Section
 
-  private var bellButton: some View {
-    Button {
-      showNotificationPopover.toggle()
-    } label: {
-      Image(systemName: bellIconName)
-        .font(.system(size: 15))
-        .foregroundColor(bellIconColor)
-        .frame(width: 28, height: 28)
-    }
-    .buttonStyle(PlainButtonStyle())
-    .popover(isPresented: $showNotificationPopover) {
-      NotificationTogglesPopover(
-        friend: friend,
-        sectionType: sectionType,
-        isActionInProgress: isActionInProgress,
-        onToggleMuted: onToggleMuted,
-        onToggleOwnerMuted: onToggleOwnerMuted
-      )
+  @ViewBuilder
+  private var notificationSection: some View {
+    Section(String(localized: .sharingNotificationsTitle)) {
+      if sectionType == .mutual || sectionType == .incoming {
+        Toggle(
+          String(localized: .sharingMenuNotifyMeOfTheirShifts(friend.firstNameOnly)),
+          isOn: .init(
+            get: { !(friend.sharesWithMe?.isMuted ?? true) },
+            set: { _ in onToggleMuted() }
+          )
+        )
+      }
+
+      if sectionType == .mutual || sectionType == .outgoing {
+        Toggle(
+          String(localized: .sharingMenuNotifyThemOfMyShifts(friend.firstNameOnly)),
+          isOn: .init(
+            get: { !(friend.iShareWith?.ownerMuted ?? true) },
+            set: { _ in onToggleOwnerMuted() }
+          )
+        )
+      }
     }
   }
 
-  private var bellIconName: String {
-    let viewerMuted = friend.sharesWithMe?.isMuted ?? false
-    let ownerMuted = friend.iShareWith?.ownerMuted ?? false
-    if viewerMuted || ownerMuted {
-      return "bell.slash"
+  // MARK: - Sharing Section
+
+  @ViewBuilder
+  private var sharingSection: some View {
+    switch sectionType {
+    case .mutual, .outgoing:
+      Section {
+        Toggle(
+          String(localized: .sharingMenuShowThemMyEarnings(friend.firstNameOnly)),
+          isOn: .init(
+            get: { friend.iShareWith?.showEarningsToThem ?? false },
+            set: { _ in onToggleEarnings() }
+          )
+        )
+      }
+    case .incoming:
+      Section {
+        Button { onShareBack() } label: {
+          Label(String(localized: .sharingShareBack), systemImage: "arrowshape.turn.up.left")
+        }
+      }
     }
-    return "bell"
   }
 
-  private var bellIconColor: Color {
-    let viewerMuted = friend.sharesWithMe?.isMuted ?? false
-    let ownerMuted = friend.iShareWith?.ownerMuted ?? false
-    if viewerMuted || ownerMuted {
-      return .tidexTextMuted
-    }
-    return .tidexBlue
-  }
+  // MARK: - Actions Section
 
-  private var earningsToggle: some View {
-    Toggle(
-      "",
-      isOn: .init(
-        get: { friend.iShareWith?.showEarningsToThem ?? false },
-        set: { _ in onToggleEarnings() }
-      )
-    )
-    .labelsHidden()
-    .toggleStyle(SwitchToggleStyle(tint: .tidexBlue))
-    .scaleEffect(0.8)
-    .disabled(isActionInProgress)
-  }
+  @ViewBuilder
+  private var actionsSection: some View {
+    Section {
+      if sectionType == .mutual || sectionType == .incoming {
+        let isBlocked = friend.sharesWithMe?.blocked == true
+        Button { onToggleBlocked() } label: {
+          Label(
+            String(localized: isBlocked ? .sharingMenuShowShifts : .sharingMenuHideShifts),
+            systemImage: isBlocked ? "eye" : "eye.slash"
+          )
+        }
+      }
 
-  private var shareBackButton: some View {
-    Button(action: onShareBack) {
-      Text(.sharingShareBack)
-        .font(.system(size: 12, weight: .medium))
-        .foregroundColor(.white)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, 6)
-        .background(Color.tidexBlue)
-        .cornerRadius(6)
+      Button(role: .destructive) { onRemove() } label: {
+        Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
+      }
     }
-    .buttonStyle(PlainButtonStyle())
-    .disabled(isActionInProgress)
   }
 }
 
@@ -213,7 +212,9 @@ struct FriendRow: View {
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
-        onToggleOwnerMuted: {}
+        onToggleOwnerMuted: {},
+        onToggleBlocked: {},
+        onRemove: {}
       )
     }
 
@@ -237,7 +238,9 @@ struct FriendRow: View {
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
-        onToggleOwnerMuted: {}
+        onToggleOwnerMuted: {},
+        onToggleBlocked: {},
+        onRemove: {}
       )
     }
 
@@ -263,7 +266,9 @@ struct FriendRow: View {
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
-        onToggleOwnerMuted: {}
+        onToggleOwnerMuted: {},
+        onToggleBlocked: {},
+        onRemove: {}
       )
     }
   }

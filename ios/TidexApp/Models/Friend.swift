@@ -94,6 +94,12 @@ struct Friend: Codable, Identifiable, Equatable {
 
   // MARK: - Computed Properties
 
+  /// First name only (first word of displayName), for compact display
+  var firstNameOnly: String {
+    let name = displayName
+    return name.components(separatedBy: " ").first ?? name
+  }
+
   /// Display name for the friend (firstName > email username > phone > "Unknown")
   var displayName: String {
     if let firstName = firstName, !firstName.isEmpty {
