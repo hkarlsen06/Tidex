@@ -25,6 +25,9 @@ struct SharedShiftsListView: View {
 
   @Environment(\.userCurrency) private var currency
 
+  // View mode toggle (synced with Shifts tab)
+  @AppStorage("shiftsViewMode") private var showListView = false
+
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State private var selectedShift: ShiftWithComputations?
 
@@ -38,6 +41,8 @@ struct SharedShiftsListView: View {
       ZStack {
         if isLoading && shifts.isEmpty {
           loadingState
+        } else if showListView {
+          shiftListContent
         } else {
           // Center the calendar vertically like in ShiftsView
           VStack {
@@ -79,6 +84,7 @@ struct SharedShiftsListView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .animation(.none, value: showListView)
     // Using .sheet(item:) guarantees data availability when sheet presents
     .sheet(item: $selectedShift) { shift in
       ShiftDetailsSheet(shift: shift, onDelete: nil)
@@ -91,6 +97,82 @@ struct SharedShiftsListView: View {
     ) { _ in
       Task {
         await reportScreenshot()
+      }
+    }
+  }
+
+  // MARK: - List View
+
+  /// Shifts grouped by ISO week for list display
+  private var weekGroups: [(weekKey: String, weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] {
+    var calendar = Calendar(identifier: .iso8601)
+    calendar.firstWeekday = 2
+    calendar.minimumDaysInFirstWeek = 4
+
+    var weekMap: [String: (weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] = [:]
+
+    for shift in shifts {
+      guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
+      let weekOfYear = calendar.component(.weekOfYear, from: date)
+      let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
+      let weekKey = "\(yearForWeek)-W\(String(format: "%02d", weekOfYear))"
+      let gross = shift.taxEnabled ? shift.netPay : shift.grossPay
+
+      if var existing = weekMap[weekKey] {
+        existing.shifts.append(shift)
+        existing.totalGross += gross
+        weekMap[weekKey] = existing
+      } else {
+        weekMap[weekKey] = (weekNumber: weekOfYear, totalGross: gross, shifts: [shift])
+      }
+    }
+
+    return weekMap.map { (weekKey: $0.key, weekNumber: $0.value.weekNumber, totalGross: $0.value.totalGross, shifts: $0.value.shifts) }
+      .sorted { $0.weekKey < $1.weekKey }
+  }
+
+  @ViewBuilder
+  private var shiftListContent: some View {
+    if shifts.isEmpty {
+      VStack(spacing: 16) {
+        Image(systemName: "calendar.badge.minus")
+          .font(.system(size: 48))
+          .foregroundColor(.tidexTextMuted)
+        Text(.shiftsEmptyNoShiftsThisMonth)
+          .font(.system(size: 17, weight: .medium))
+          .foregroundColor(.tidexTextPrimary)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+    } else {
+      List {
+        ForEach(weekGroups, id: \.weekKey) { weekGroup in
+          Section {
+            ForEach(weekGroup.shifts) { shift in
+              ShiftRowCard(
+                shift: shift,
+                isToday: shift.shiftDate == todayISO(),
+                onTap: { selectedShift = shift }
+              )
+              .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+              .listRowBackground(Color.tidexBackground)
+              .listRowSeparator(.hidden)
+            }
+          } header: {
+            WeekHeaderView(
+              weekNumber: weekGroup.weekNumber,
+              totalGross: sharer.showEarnings ? weekGroup.totalGross : 0
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.tidexBackground)
+          }
+        }
+      }
+      .listStyle(.plain)
+      .scrollContentBackground(.hidden)
+      .background(Color.clear)
+      .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+      .refreshable {
+        // Pull-to-refresh is a no-op here; shifts are fetched by the parent
       }
     }
   }

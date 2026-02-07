@@ -260,8 +260,8 @@ struct MainTabView: View {
         .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
       }
 
-      // View mode toggle button - only on Shifts tab
-      if selectedTab == .shifts {
+      // View mode toggle button - Shifts tab or Friends tab when viewing a friend
+      if selectedTab == .shifts || (selectedTab == .sharing && sharingHasSelectedSharer) {
         Button {
           selectionHaptic.selectionChanged()
           showListView.toggle()
