@@ -1,19 +1,17 @@
-# Redirect unsupported locales to English for legal and marketing pages
-# Cloudflare Pages evaluates redirects before static assets, so we must
-# explicitly pass through supported locales (no, en) to avoid redirect loops.
-# Rules are matched top-to-bottom; first match wins.
+# Cloudflare Pages: all locales use explicit prefix (/no/, /en/)
 
-# Pass through supported locales (serve static files normally)
+# Root paths → Norwegian (default locale)
+/ /no/ 302
+/terms /no/terms/ 302
+/terms/ /no/terms/ 302
+/privacy /no/privacy/ 302
+/privacy/ /no/privacy/ 302
+/security /no/security/ 302
+/security/ /no/security/ 302
+
+# Pass through supported locales
 /no/* /no/:splat 200
 /en/* /en/:splat 200
 
-# Redirect unsupported locales to English
-/:locale/terms/* /en/terms/ 302
-/:locale/terms /en/terms/ 302
-/:locale/privacy/* /en/privacy/ 302
-/:locale/privacy /en/privacy/ 302
-/:locale/security/* /en/security/ 302
-/:locale/security /en/security/ 302
-
-# Root landing page
-/:locale/ /en/ 302
+# Unsupported locales → English
+/:locale/* /en/:splat 302
