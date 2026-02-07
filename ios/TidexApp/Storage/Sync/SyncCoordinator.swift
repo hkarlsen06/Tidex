@@ -92,6 +92,10 @@ final class SyncCoordinator: ObservableObject {
   /// Minimum interval between automatic syncs (in seconds)
   private let minimumSyncInterval: TimeInterval = 60
 
+  /// Maximum time a sync operation can run before being cancelled (in nanoseconds).
+  /// Prevents zombie syncs from holding the syncing lock indefinitely.
+  private static let syncTimeout: UInt64 = 30_000_000_000  // 30 seconds
+
   // MARK: - Private State
 
   /// Sync state for atomic check-and-set operations
@@ -228,14 +232,58 @@ final class SyncCoordinator: ObservableObject {
     }
 
     let startTime = Date()
-    var result: SyncResult
 
+    // Race the sync work against a timeout to prevent zombie syncs
+    // from holding the syncing lock indefinitely.
+    let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
+      group.addTask {
+        await self.performSyncWork(userId: userId, startTime: startTime)
+      }
+      group.addTask {
+        try? await Task.sleep(nanoseconds: Self.syncTimeout)
+        return nil  // timeout signal
+      }
+      let first = await group.next() ?? nil
+      group.cancelAll()
+      return first ?? SyncResult(
+        success: false,
+        tableResults: [],
+        pushResults: [],
+        totalRowsProcessed: 0,
+        totalRowsPushed: 0,
+        totalConflicts: 0,
+        totalAutoMerged: 0,
+        duration: Date().timeIntervalSince(startTime),
+        error: "Sync timed out"
+      )
+    }
+
+    if result.error == "Sync timed out" {
+      logger.error("Sync timed out after 30s, cancelling")
+      await MainActor.run {
+        lastError = "Sync timed out"
+        SyncStatusManager.shared.syncFailed(message: "Sync timed out")
+      }
+    }
+
+    await stateStore.endSync()
+    await MainActor.run {
+      isSyncing = false
+    }
+    return result
+  }
+
+  /// Performs the actual sync work (locale update, pull, push, widget update).
+  /// Extracted so it can be raced against a timeout in `sync()`.
+  private func performSyncWork(userId: String, startTime: Date) async -> SyncResult {
     // Update device locale in user metadata (non-blocking, errors logged but not propagated)
     await updateDeviceLocale()
 
     // Get or create sync state
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     do {
+      try Task.checkCancellation()
+
       let syncState = try await storeActor.getOrCreateSyncState(userId: userId)
       await storeActor.updateSyncState(userId: userId) { state in
         state.markSyncStarted()
@@ -245,6 +293,7 @@ final class SyncCoordinator: ObservableObject {
       var tableResults: [TablePullResult] = []
 
       for table in SyncTable.allCases {
+        try Task.checkCancellation()
         let result = try await pullTable(table, userId: userId, syncState: syncState)
         tableResults.append(result)
         await Task.yield()
@@ -254,6 +303,7 @@ final class SyncCoordinator: ObservableObject {
       var pushResults: [TablePushResult] = []
 
       for table in SyncTable.allCases {
+        try Task.checkCancellation()
         let result = try await pushTable(table, userId: userId)
         pushResults.append(result)
         await Task.yield()
@@ -297,7 +347,7 @@ final class SyncCoordinator: ObservableObject {
         NativeWidgetStorage.updateWidgetStorage(for: userId)
       }
 
-      result = SyncResult(
+      return SyncResult(
         success: true,
         tableResults: tableResults,
         pushResults: pushResults,
@@ -307,6 +357,20 @@ final class SyncCoordinator: ObservableObject {
         totalAutoMerged: totalAutoMerged,
         duration: duration,
         error: nil
+      )
+    } catch is CancellationError {
+      let duration = Date().timeIntervalSince(startTime)
+      logger.warning("Sync cancelled after \(String(format: "%.1f", duration))s")
+      return SyncResult(
+        success: false,
+        tableResults: [],
+        pushResults: [],
+        totalRowsProcessed: 0,
+        totalRowsPushed: 0,
+        totalConflicts: 0,
+        totalAutoMerged: 0,
+        duration: duration,
+        error: "Sync timed out"
       )
     } catch {
       let duration = Date().timeIntervalSince(startTime)
@@ -336,7 +400,7 @@ final class SyncCoordinator: ObservableObject {
         SyncStatusManager.shared.syncFailed(message: userFriendlyMessage)
       }
 
-      result = SyncResult(
+      return SyncResult(
         success: false,
         tableResults: [],
         pushResults: [],
@@ -348,12 +412,6 @@ final class SyncCoordinator: ObservableObject {
         error: userFriendlyMessage
       )
     }
-
-    await stateStore.endSync()
-    await MainActor.run {
-      isSyncing = false
-    }
-    return result
   }
 
   // MARK: - Pull Implementation

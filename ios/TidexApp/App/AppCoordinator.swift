@@ -154,6 +154,7 @@ final class AppCoordinator: ObservableObject {
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
     setupAuthStateListener()
     setupInitialSessionCheck()
+    setupMaxLoadingTimeout()
     launchLog.info("[Launch] AppCoordinator.init END")
   }
 
@@ -168,6 +169,14 @@ final class AppCoordinator: ObservableObject {
   /// Timeout for initial session check (in nanoseconds)
   /// If authStateChanges doesn't emit .initialSession within this time, we check manually
   private static let initialSessionTimeout: UInt64 = 500_000_000  // 0.5 seconds
+
+  /// Timeout for MFA/terms network checks (in nanoseconds)
+  /// If these checks hang (slow network, unresponsive server), fall back to .unauthenticated
+  private static let authCheckTimeout: UInt64 = 10_000_000_000  // 10 seconds
+
+  /// Hard maximum time the app can stay in .loading state (in nanoseconds)
+  /// After this, force transition to .unauthenticated regardless of what's pending
+  private static let maxLoadingTimeout: UInt64 = 15_000_000_000  // 15 seconds
 
   /// Fallback check in case authStateChanges doesn't emit .initialSession promptly
   /// This handles edge cases where the Supabase SDK doesn't emit the initial event
@@ -196,11 +205,43 @@ final class AppCoordinator: ObservableObject {
       // session is non-optional - throws if no session exists
       // Use AuthSessionManager to prevent concurrent refresh race conditions
       _ = try await AuthSessionManager.shared.getSession()
-      await checkMFAAndUpdateState()
+      // Returning user — skip MFA, go straight to terms check
+      await checkTermsAndUpdateState()
     } catch {
       launchLog.info("[Launch] AppCoordinator → .unauthenticated (no session)")
       appState = .unauthenticated
     }
+  }
+
+  /// Hard deadline: if the app is still in .loading after maxLoadingTimeout,
+  /// force a transition out. Prefers .authenticated when a local session exists
+  /// (preserving offline usage) and only falls back to .unauthenticated when
+  /// there is genuinely no session.
+  private func setupMaxLoadingTimeout() {
+    backgroundTasks.append(Task { [weak self] in
+      try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
+      guard let self, !Task.isCancelled else { return }
+      guard self.appState == .loading else { return }
+
+      self.isUpdatingAuthState = false
+
+      if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+        launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
+        self.loadOnboardingStateFromUser(session.user)
+        self.userId = session.user.normalizedId
+        self.initialSyncComplete = false
+        self.appState = .authenticated
+      } else {
+        launchLog.error("[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
+        self.appState = .unauthenticated
+      }
+    })
+  }
+
+  /// Reset auth state update flag. Called by AppLifecycleHandler's recovery mechanism
+  /// to unblock a potentially stuck checkMFAAndUpdateState call.
+  func resetAuthUpdateFlag() {
+    isUpdatingAuthState = false
   }
 
   // MARK: - Auth State Listener
@@ -235,7 +276,10 @@ final class AppCoordinator: ObservableObject {
               self.appState = .authenticated
               self.needsPostUnlockCheck = true
             } else {
-              await self.checkMFAAndUpdateState()
+              // Returning user with existing session — skip MFA (already at AAL2
+              // from a previous login) and go straight to terms check.
+              // MFA is only checked on fresh login (.signedIn).
+              await self.checkTermsAndUpdateState()
             }
           } else {
             self.appState = .unauthenticated
@@ -277,14 +321,46 @@ final class AppCoordinator: ObservableObject {
 
   // MARK: - MFA Check
 
-  /// Check MFA status and update app state accordingly
-  /// Uses isUpdatingAuthState flag to prevent concurrent state updates from race conditions
+  /// Check MFA status and update app state accordingly.
+  /// Uses isUpdatingAuthState flag to prevent concurrent state updates from race conditions.
+  /// Wraps the actual check in a timeout to prevent hanging on slow/unresponsive networks.
   private func checkMFAAndUpdateState() async {
     // Prevent concurrent state updates from timeout vs auth listener race
     guard !isUpdatingAuthState else { return }
     isUpdatingAuthState = true
     defer { isUpdatingAuthState = false }
 
+    let didComplete = await withTaskGroup(of: Bool.self) { group in
+      group.addTask { @MainActor in
+        await self.performMFAAndTermsCheck()
+        return true
+      }
+      group.addTask {
+        try? await Task.sleep(nanoseconds: Self.authCheckTimeout)
+        return false
+      }
+      let result = await group.next() ?? false
+      group.cancelAll()
+      return result
+    }
+
+    if !didComplete {
+      // This method is only called when a session is known to exist, so default to
+      // authenticated rather than kicking the user to the login screen. MFA/terms
+      // will be re-checked on the next foreground or successful network call.
+      launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
+      if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+        loadOnboardingStateFromUser(session.user)
+        userId = session.user.normalizedId
+      }
+      initialSyncComplete = false
+      appState = .authenticated
+    }
+  }
+
+  /// Performs the actual MFA status check and terms verification.
+  /// Extracted from checkMFAAndUpdateState so it can be wrapped in a timeout.
+  private func performMFAAndTermsCheck() async {
     do {
       let mfaStatus = try await authService.getMFAStatus()
 
@@ -603,7 +679,7 @@ final class AppCoordinator: ObservableObject {
   /// Called after successful biometric unlock to run deferred checks and foreground sync.
   ///
   /// When biometric lock is active during `.initialSession`, we skip biometric-gated
-  /// session access and defer MFA/terms checks. After the user successfully authenticates
+  /// session access and defer terms checks. After the user successfully authenticates
   /// via `AppLockView`, this method runs those deferred checks. At this point the SDK's
   /// biometric session is valid, so `withBiometrics` won't prompt again.
   ///
@@ -614,9 +690,10 @@ final class AppCoordinator: ObservableObject {
     if needsPostUnlockCheck {
       needsPostUnlockCheck = false
 
+      // Returning user — skip MFA, just check terms
       runTrackedTask { [weak self] in
         guard let self else { return }
-        await self.checkMFAAndUpdateState()
+        await self.checkTermsAndUpdateState()
       }
     }
 
@@ -746,7 +823,8 @@ final class AppCoordinator: ObservableObject {
 
     do {
       if try await authService.getSession() != nil {
-        await checkMFAAndUpdateState()
+        // Recovery / manual refresh — skip MFA, just check terms
+        await checkTermsAndUpdateState()
       } else {
         appState = .unauthenticated
       }

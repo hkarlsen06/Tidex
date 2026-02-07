@@ -61,6 +61,9 @@ final class AppLifecycleHandler {
         return
       }
 
+      // Reset the auth update flag in case a previous check is stuck,
+      // otherwise checkSession → checkTermsAndUpdateState silently returns.
+      AppCoordinator.shared.resetAuthUpdateFlag()
       await AppCoordinator.shared.checkSession()
       self?.loadingRecoveryTask = nil
     }

@@ -13,8 +13,6 @@ struct PayrollCard: View {
   var progress: Double?
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
-  /// When true, prewarms view graph without triggering animations or side effects
-  var prewarm: Bool = false
 
   @Environment(\.userCurrency) private var currency
 
@@ -92,7 +90,7 @@ struct PayrollCard: View {
         CurrencyCountUpText(
           amount: primaryAmount,
           duration: 0.8,
-          animateOnAppear: !prewarm,
+          animateOnAppear: true,
           animateChanges: true
         )
         .font(.system(size: 22, weight: .semibold))
@@ -149,7 +147,7 @@ struct PayrollCard: View {
     }
     .onAppear {
       // Animate from 0 to current progress on appear (matches CSS animation)
-      if !prewarm, let progress = progress, progress >= 1, progress <= 100 {
+      if let progress = progress, progress >= 1, progress <= 100 {
         withAnimation(.linear(duration: 1.0)) {
           animatedProgress = progress
         }

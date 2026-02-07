@@ -17,8 +17,6 @@ struct TotalCard: View {
   let taxEnabled: Bool
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
-  /// When true, prewarms view graph without triggering animations or side effects
-  var prewarm: Bool = false
 
   @Environment(\.userCurrency) private var currency
 
@@ -184,7 +182,7 @@ struct TotalCard: View {
         CurrencyCountUpText(
           amount: amount,
           duration: 0.8,
-          animateOnAppear: !prewarm,
+          animateOnAppear: true,
           animateChanges: true
         )
         Text(String(localized: .dashboardEarnedToDate))
@@ -197,7 +195,7 @@ struct TotalCard: View {
         CurrencyCountUpText(
           amount: amount,
           duration: 0.8,
-          animateOnAppear: !prewarm,
+          animateOnAppear: true,
           animateChanges: true
         )
         Text(String(localized: .dashboardBeforeTax))
@@ -249,7 +247,7 @@ struct TotalCard: View {
         .frame(width: 200, height: 56)
     } else {
       // Animate count-up on app launch AND on month changes
-      let shouldAnimateOnAppear = !prewarm && !Self.hasPlayedLaunchAnimation
+      let shouldAnimateOnAppear = !Self.hasPlayedLaunchAnimation
       CountUpText(
         targetValue: mainDisplayValue,
         duration: 0.8,
@@ -263,9 +261,7 @@ struct TotalCard: View {
       .lineLimit(1)
       .onAppear {
         // Mark animation as played once we show the actual amount
-        if !prewarm {
-          Self.hasPlayedLaunchAnimation = true
-        }
+        Self.hasPlayedLaunchAnimation = true
       }
     }
   }
