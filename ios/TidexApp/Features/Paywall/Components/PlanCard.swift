@@ -15,7 +15,7 @@ struct PlanCard: View {
   @State private var isSubscribeTapped = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Header with tier name and badge
       HStack {
         tierIcon
@@ -84,7 +84,7 @@ struct PlanCard: View {
         .sensoryFeedback(.impact(flexibility: .soft), trigger: isSubscribeTapped)
       }
     }
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     .overlay(
@@ -154,7 +154,7 @@ struct PlanCard: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     PlanCard(
       tier: .pro,
       product: nil,

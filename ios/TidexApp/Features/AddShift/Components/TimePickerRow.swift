@@ -294,9 +294,9 @@ struct NumericTimeInput: View {
   }
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Text(label)
-        .font(.system(size: 12, weight: .semibold))
+        .font(.tidexCaptionStrong)
         .foregroundColor(.tidexTextMuted)
         .textCase(.uppercase)
         .tracking(0.5)
@@ -335,8 +335,8 @@ struct NumericTimeInput: View {
         }
       }
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 12)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.sm)
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -479,8 +479,8 @@ struct TimeRangePicker: View {
 
   var body: some View {
     GeometryReader { geometry in
-      VStack(spacing: 8) {
-        HStack(spacing: 12) {
+      VStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.sm) {
           NumericTimeInput(
             time: $startTime,
             label: startLabel,
@@ -602,9 +602,9 @@ struct TimePickerRow: View {
   var onTimeChange: (() -> Void)?
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(label)
-        .font(.system(size: 12, weight: .semibold))
+        .font(.tidexCaptionStrong)
         .foregroundColor(.tidexTextMuted)
         .textCase(.uppercase)
         .tracking(0.5)
@@ -621,7 +621,7 @@ struct TimePickerRow: View {
         onTimeChange?()
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -632,7 +632,7 @@ struct TimePickerRow: View {
 
 #Preview {
   NavigationStack {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       TimeRangePicker(
         startTime: .constant(nil),
         endTime: .constant(nil)

@@ -5,15 +5,15 @@ struct PhoneOTPForm: View {
   @ObservedObject var viewModel: LoginViewModel
 
   var body: some View {
-    VStack(spacing: 24) {
+    VStack(spacing: Spacing.lg) {
       // Instructions
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.otpTitle)
-          .font(.system(size: 22, weight: .bold))
+          .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
@@ -38,12 +38,12 @@ struct PhoneOTPForm: View {
       )
 
       // Resend and back links
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         Button(action: {
           Task { await viewModel.resendOTP() }
         }) {
           Text(.otpResendCode)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexBlue)
         }
         .buttonStyle(.plain)
@@ -52,11 +52,11 @@ struct PhoneOTPForm: View {
         Button(action: {
           viewModel.backToInput()
         }) {
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             Image(systemName: "chevron.left")
-              .font(.system(size: 12, weight: .medium))
+              .font(.tidexCaption)
             Text(.otpBackToLogin)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
           }
           .foregroundColor(.tidexTextSecondary)
         }

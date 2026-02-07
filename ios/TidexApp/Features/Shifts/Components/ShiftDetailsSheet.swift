@@ -214,7 +214,7 @@ struct ShiftDetailsSheet: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           // Header with date
           headerSection
 
@@ -252,7 +252,7 @@ struct ShiftDetailsSheet: View {
             lastEditedFooter(date: updatedAt)
           }
         }
-        .padding(20)
+        .padding(Spacing.mlg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(
@@ -267,7 +267,7 @@ struct ShiftDetailsSheet: View {
             Button(String(localized: .commonCancel)) {
               cancelEditing()
             }
-            .font(.system(size: 16, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextSecondary)
           } else {
             Button {
@@ -275,7 +275,7 @@ struct ShiftDetailsSheet: View {
               showingShareOptions = true
             } label: {
               Image(systemName: "square.and.arrow.up")
-                .font(.system(size: 16, weight: .medium))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexBlue)
             }
           }
@@ -285,7 +285,7 @@ struct ShiftDetailsSheet: View {
             Button(String(localized: .commonSave)) {
               saveChanges()
             }
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexBlue)
             .disabled(isSaving || !hasChanges)
             .opacity(isSaving || !hasChanges ? 0.5 : 1)
@@ -293,7 +293,7 @@ struct ShiftDetailsSheet: View {
             Button(String(localized: .commonDone)) {
               dismiss()
             }
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexBlue)
           }
         }
@@ -537,53 +537,53 @@ struct ShiftDetailsSheet: View {
   // MARK: - Sections
 
   private var headerSection: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       // Large date display
       Text(formattedDate)
-        .font(.system(size: 22, weight: .semibold))
+        .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
-    .padding(.vertical, 8)
+    .padding(.vertical, Spacing.xs)
   }
 
   private var timeSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Section header
       HStack {
         Image(systemName: "clock")
           .foregroundColor(.tidexBlue)
         Text(.shiftsTimeSection)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
         Spacer()
       }
 
       // Time details card
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.shiftsTimeRange)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
           Text(formattedTimeRange)
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
             .environment(\.layoutDirection, .leftToRight)
         }
 
         Spacer()
 
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .trailing, spacing: Spacing.xxs) {
           Text(.shiftsDuration)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
           Text(formattedHours)
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: 16)
           .fill(Color.tidexSurfacePrimary)
@@ -594,23 +594,23 @@ struct ShiftDetailsSheet: View {
   // MARK: - Editable Time Section
 
   private var editableTimeSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Section header
       HStack {
         Image(systemName: "pencil")
           .foregroundColor(.tidexBlue)
         Text(.shiftsEditTimeSection)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
         Spacer()
       }
 
       // Editable fields card
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Date picker row
         HStack {
           Text(.shiftsDate)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
           Spacer()
           DatePicker(
@@ -627,7 +627,7 @@ struct ShiftDetailsSheet: View {
         // Start time row
         HStack {
           Text(.shiftsStartTime)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
           Spacer()
           DatePicker(
@@ -646,7 +646,7 @@ struct ShiftDetailsSheet: View {
         // End time row
         HStack {
           Text(.shiftsEndTime)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
           Spacer()
           DatePicker(
@@ -662,33 +662,33 @@ struct ShiftDetailsSheet: View {
 
         // Info about cross-midnight shifts
         if isCrossMidnightShift {
-          HStack(spacing: 8) {
+          HStack(spacing: Spacing.xs) {
             Image(systemName: "moon.fill")
-              .font(.system(size: 12))
+              .font(.tidexCaption)
               .foregroundColor(.tidexBlue)
             Text(.shiftsCrossMidnightInfo)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
             Spacer()
           }
-          .padding(.top, 4)
+          .padding(.top, Spacing.xxs)
         }
 
         // Virtual shift info (will be converted to regular shift)
         if isVirtualShift {
-          HStack(spacing: 8) {
+          HStack(spacing: Spacing.xs) {
             Image(systemName: "info.circle")
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexBlue)
             Text(.shiftsVirtualConversionInfo)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
             Spacer()
           }
-          .padding(.top, 4)
+          .padding(.top, Spacing.xxs)
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: 16)
           .fill(Color.tidexSurfacePrimary)
@@ -707,16 +707,16 @@ struct ShiftDetailsSheet: View {
 
   @ViewBuilder
   private func errorBanner(message: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Spacer()
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexError.opacity(0.1))
@@ -727,22 +727,22 @@ struct ShiftDetailsSheet: View {
 
   /// Action buttons for edit mode
   private var editActionButtons: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Save button
       Button {
         saveChanges()
       } label: {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           if isSaving {
             ProgressView()
               .progressViewStyle(CircularProgressViewStyle(tint: .white))
               .scaleEffect(0.8)
           } else {
             Image(systemName: "checkmark")
-              .font(.system(size: 15, weight: .medium))
+              .font(.tidexLabel)
           }
           Text(.commonSaveChanges)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.tidexLabelStrong)
         }
         .foregroundColor(.white)
         .frame(maxWidth: .infinity)
@@ -757,7 +757,7 @@ struct ShiftDetailsSheet: View {
         cancelEditing()
       } label: {
         Text(.commonCancel)
-          .font(.system(size: 15, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
@@ -766,13 +766,13 @@ struct ShiftDetailsSheet: View {
       }
       .disabled(isSaving)
     }
-    .padding(.top, 8)
+    .padding(.top, Spacing.xs)
   }
 
   /// Action buttons for view mode
   @ViewBuilder
   private var viewModeActionButtons: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Edit button (only show if onUpdate callback is provided)
       if onUpdate != nil {
         Button {
@@ -780,11 +780,11 @@ struct ShiftDetailsSheet: View {
             isEditing = true
           }
         } label: {
-          HStack(spacing: 8) {
+          HStack(spacing: Spacing.xs) {
             Image(systemName: "pencil")
-              .font(.system(size: 15, weight: .medium))
+              .font(.tidexLabel)
             Text(.shiftsEditButton)
-              .font(.system(size: 15, weight: .semibold))
+              .font(.tidexLabelStrong)
           }
           .foregroundColor(.white)
           .frame(maxWidth: .infinity)
@@ -803,11 +803,11 @@ struct ShiftDetailsSheet: View {
             onEditRecurring?(recurringId)
           }
         } label: {
-          HStack(spacing: 8) {
+          HStack(spacing: Spacing.xs) {
             Image(systemName: "repeat")
-              .font(.system(size: 15, weight: .medium))
+              .font(.tidexLabel)
             Text(.shiftsEditRecurringButton)
-              .font(.system(size: 15, weight: .semibold))
+              .font(.tidexLabelStrong)
           }
           .foregroundColor(.tidexBlue)
           .frame(maxWidth: .infinity)
@@ -825,19 +825,19 @@ struct ShiftDetailsSheet: View {
   }
 
   private var earningsSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Section header
       HStack {
         Image(systemName: "creditcard")
           .foregroundColor(.tidexBlue)
         Text(.shiftsEarningsSection)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
         Spacer()
       }
 
       // Earnings card
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         // Base Pay (only show when there are supplements)
         if hasSupplementBreakdown {
           earningsRow(
@@ -890,12 +890,12 @@ struct ShiftDetailsSheet: View {
           } label: {
             HStack(spacing: 6) {
               Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 13))
+                .font(.tidexFootnote)
               Text(.supplementsEditButton)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
             }
             .foregroundColor(.tidexBlue)
-            .padding(.vertical, 8)
+            .padding(.vertical, Spacing.xs)
             .frame(maxWidth: .infinity)
             .background(Color.tidexBlue.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -903,7 +903,7 @@ struct ShiftDetailsSheet: View {
           .buttonStyle(.plain)
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: 16)
           .fill(Color.tidexSurfacePrimary)
@@ -914,19 +914,19 @@ struct ShiftDetailsSheet: View {
   /// Supplement breakdown showing each time period with supplements
   @ViewBuilder
   private var supplementBreakdownSection: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Total supplement header with optional "Customized" badge
       HStack {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           Text(.shiftsTotalSupplement)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
 
           if hasCustomSupplements {
             Text(.shiftsCustomized)
-              .font(.system(size: 11, weight: .medium))
+              .font(.tidexMicro)
               .foregroundColor(.tidexBlue)
-              .padding(.horizontal, 8)
+              .padding(.horizontal, Spacing.xs)
               .padding(.vertical, 3)
               .background(
                 Capsule()
@@ -938,7 +938,7 @@ struct ShiftDetailsSheet: View {
         Spacer()
 
         Text(formatCurrency(shift.computed.supplementPay))
-          .font(.system(size: 15, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
       }
 
@@ -958,31 +958,31 @@ struct ShiftDetailsSheet: View {
       // Time range and hours × rate
       HStack {
         Text(segmentTimeRange(segment))
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextPrimary)
           .environment(\.layoutDirection, .leftToRight)
 
         Spacer()
 
         Text("\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
       }
 
       // Supplement label and amount
       HStack {
         Text(.shiftsSupplementLabel)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
         Text(formatCurrency(segment.amount))
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexSurfaceSecondary.opacity(0.4))
@@ -1013,35 +1013,35 @@ struct ShiftDetailsSheet: View {
   ) -> some View {
     HStack {
       Text(label)
-        .font(.system(size: 15, weight: isHighlighted ? .medium : .regular))
+        .font(isHighlighted ? .tidexLabel : .tidexSubheadline)
         .foregroundColor(isHighlighted ? .tidexTextPrimary : .tidexTextSecondary)
 
       Spacer()
 
       Text(value)
-        .font(.system(size: isHighlighted ? 20 : 15, weight: isHighlighted ? .semibold : .medium))
+        .font(isHighlighted ? .tidexTitle2 : .tidexLabel)
         .foregroundColor(valueColor)
     }
   }
 
   private var virtualShiftBanner: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "repeat")
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexBlue)
 
       VStack(alignment: .leading, spacing: 2) {
         Text(.shiftsRecurringShift)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
         Text(.shiftsRecurringShiftDescription)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
       }
 
       Spacer()
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(
       RoundedRectangle(cornerRadius: 16)
         .fill(Color.tidexBlue.opacity(0.1))
@@ -1051,15 +1051,15 @@ struct ShiftDetailsSheet: View {
   @ViewBuilder
   private func deleteButton(onDelete: @escaping () -> Void, isVirtual: Bool) -> some View {
     Button(action: onDelete) {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: isVirtual ? "minus.circle" : "trash")
-          .font(.system(size: 15, weight: .medium))
+          .font(.tidexLabel)
         Text(
           isVirtual
             ? String(localized: .shiftsExcludeButton)
             : String(localized: .shiftsDeleteButton)
         )
-        .font(.system(size: 15, weight: .semibold))
+        .font(.tidexLabelStrong)
       }
       .foregroundColor(.white)
       .frame(maxWidth: .infinity)
@@ -1067,17 +1067,17 @@ struct ShiftDetailsSheet: View {
       .background(Color.tidexError)
       .cornerRadius(12)
     }
-    .padding(.top, 8)
+    .padding(.top, Spacing.xs)
   }
 
   /// Footer showing when the shift was last edited
   @ViewBuilder
   private func lastEditedFooter(date: Date) -> some View {
     Text(String(localized: .shiftsLastEdited) + " " + formattedLastEdited(date))
-      .font(.system(size: 12))
+      .font(.tidexCaptionRegular)
       .foregroundColor(.tidexTextMuted)
       .frame(maxWidth: .infinity)
-      .padding(.top, 8)
+      .padding(.top, Spacing.xs)
   }
 
   /// Format the last edited date with relative or absolute formatting
@@ -1116,29 +1116,29 @@ private struct ShareOptionsSheet: View {
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       // Title
       Text(.shiftsShareTitle)
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
-        .padding(.top, 16)
+        .padding(.top, Spacing.md)
 
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         // Show earnings option
         Button {
           onShowEarnings()
         } label: {
           HStack(spacing: 14) {
             Image(systemName: "eye")
-              .font(.system(size: 20, weight: .medium))
+              .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareShowEarnings)
-              .font(.system(size: 17, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()
           }
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
             RoundedRectangle(cornerRadius: 14)
@@ -1153,15 +1153,15 @@ private struct ShareOptionsSheet: View {
         } label: {
           HStack(spacing: 14) {
             Image(systemName: "eye.slash")
-              .font(.system(size: 20, weight: .medium))
+              .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareHideEarnings)
-              .font(.system(size: 17, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()
           }
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
             RoundedRectangle(cornerRadius: 14)
@@ -1170,7 +1170,7 @@ private struct ShareOptionsSheet: View {
         }
         .buttonStyle(.plain)
       }
-      .padding(.horizontal, 20)
+      .padding(.horizontal, Spacing.mlg)
 
       Spacer()
     }

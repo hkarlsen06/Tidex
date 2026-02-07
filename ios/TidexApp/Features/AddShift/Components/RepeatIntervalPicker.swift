@@ -16,9 +16,9 @@ struct RepeatIntervalPicker: View {
   }
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Text(.addShiftRepeat)
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
 
       Menu {
@@ -33,13 +33,13 @@ struct RepeatIntervalPicker: View {
           }
         }
       } label: {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(ordinalLabel(interval))
-            .font(.system(size: 16, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexBlue)
 
           Image(systemName: "chevron.up.chevron.down")
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexBlue)
         }
         .padding(.horizontal, Spacing.sm)
@@ -50,14 +50,14 @@ struct RepeatIntervalPicker: View {
 
       Spacer()
     }
-    .padding(.vertical, 8)
+    .padding(.vertical, Spacing.xs)
   }
 }
 
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     RepeatIntervalPicker(interval: .constant(0))
     RepeatIntervalPicker(interval: .constant(1))
     RepeatIntervalPicker(interval: .constant(3))

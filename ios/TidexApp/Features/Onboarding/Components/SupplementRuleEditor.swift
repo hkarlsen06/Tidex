@@ -71,7 +71,7 @@ struct SupplementRuleEditor: View {
           ScrollView {
             if isEditing {
               // Editing mode: normal top-to-bottom layout
-              VStack(spacing: 24) {
+              VStack(spacing: Spacing.lg) {
                 daysSection
                 timeSection
                 typeSection
@@ -80,13 +80,13 @@ struct SupplementRuleEditor: View {
                 Spacer()
                   .frame(height: 80)
               }
-              .padding(24)
+              .padding(Spacing.lg)
             } else {
               // Adding mode: content starts at bottom, pushes up as steps are added
               VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
-                VStack(spacing: 24) {
+                VStack(spacing: Spacing.lg) {
                   // Days selector - always visible
                   daysSection
 
@@ -108,8 +108,8 @@ struct SupplementRuleEditor: View {
                       .transition(.opacity.combined(with: .move(edge: .bottom)))
                   }
                 }
-                .padding(24)
-                .padding(.bottom, 80)
+                .padding(Spacing.lg)
+                .padding(.bottom, Spacing.bottomScrollMargin)
               }
               .frame(minHeight: geometry.size.height - 150)
               .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
@@ -130,8 +130,8 @@ struct SupplementRuleEditor: View {
             )
             .disabled(!canSave)
             .opacity(canSave ? 1 : 0.5)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.xl)
             .background(
               LinearGradient(
                 colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
@@ -171,12 +171,12 @@ struct SupplementRuleEditor: View {
 
   @ViewBuilder
   private var daysSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsDaysLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         ForEach(1...7, id: \.self) { day in
           DayButton(
             day: day,
@@ -203,7 +203,7 @@ struct SupplementRuleEditor: View {
       }
 
       // Quick select buttons
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         QuickSelectButton(title: String(localized: .onboardingSupplementsWeekdays)) {
           editedRule.days = Set([1, 2, 3, 4, 5])
           advanceIfNeeded()
@@ -234,12 +234,12 @@ struct SupplementRuleEditor: View {
 
   @ViewBuilder
   private var timeSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsTimeLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: 16) {
+      HStack(spacing: Spacing.md) {
         TimePickerField(
           label: String(localized: .onboardingSupplementsFrom),
           time: $editedRule.fromTime,
@@ -271,12 +271,12 @@ struct SupplementRuleEditor: View {
 
   @ViewBuilder
   private var typeSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsTypeLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         TypeButton(
           title: String(localized: .onboardingSupplementsFixedRate),
           subtitle: hourRateSuffix,
@@ -316,13 +316,13 @@ struct SupplementRuleEditor: View {
 
   @ViewBuilder
   private var valueSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsValueLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Quick value buttons
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         ForEach(quickValues, id: \.self) { value in
           QuickValueButton(
             value: value,
@@ -339,19 +339,19 @@ struct SupplementRuleEditor: View {
       }
 
       // Slider for fine-tuning
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         HStack {
           if showingValueInput {
             // Editable input field
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.xxs) {
               TextField("", text: $valueInputText)
-                .font(.system(size: 24, weight: .bold))
+                .font(.tidexLargeTitle)
                 .foregroundColor(.tidexBlue)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.leading)
                 .focused($isValueInputFocused)
                 .frame(width: 80)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spacing.xxs)
                 .padding(.vertical, 2)
                 .background(Color.tidexBlue.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -375,7 +375,7 @@ struct SupplementRuleEditor: View {
                 }
 
               Text(editedRule.type == .fixed ? hourRateSuffix : "%")
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexTextMuted)
             }
           } else {
@@ -389,10 +389,10 @@ struct SupplementRuleEditor: View {
               }
             }) {
               Text(formatValueWithDecimals(editedRule.value))
-                .font(.system(size: 24, weight: .bold))
+                .font(.tidexLargeTitle)
                 .foregroundColor(.tidexBlue)
                 .contentTransition(.numericText())
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spacing.xxs)
                 .padding(.vertical, 2)
                 .background(Color.tidexBlue.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -400,7 +400,7 @@ struct SupplementRuleEditor: View {
             .buttonStyle(.plain)
 
             Text(editedRule.type == .fixed ? hourRateSuffix : "%")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexTextMuted)
           }
           Spacer()
@@ -418,7 +418,7 @@ struct SupplementRuleEditor: View {
         )
         .tint(.tidexBlue)
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -501,7 +501,7 @@ private struct DayButton: View {
   var body: some View {
     Button(action: action) {
       Text(dayLabels[day - 1])
-        .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(width: 40, height: 40)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
@@ -527,10 +527,10 @@ private struct QuickSelectButton: View {
       action()
     }) {
       Text(title)
-        .font(.system(size: 13, weight: .medium))
+        .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexBlue)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
         .background(Color.tidexBlue.opacity(0.08))
         .clipShape(Capsule())
     }
@@ -561,9 +561,9 @@ private struct TimePickerField: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
       Text(label)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
 
       DatePicker(
@@ -581,7 +581,7 @@ private struct TimePickerField: View {
       }
     }
     .frame(maxWidth: .infinity)
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
@@ -597,13 +597,13 @@ private struct TypeButton: View {
 
   var body: some View {
     Button(action: action) {
-      VStack(spacing: 4) {
+      VStack(spacing: Spacing.xxs) {
         Text(title)
-          .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+          .font(isSelected ? .tidexLabelStrong : .tidexLabel)
           .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
 
         Text(subtitle)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
       .frame(maxWidth: .infinity)
@@ -631,10 +631,10 @@ private struct QuickValueButton: View {
   var body: some View {
     Button(action: action) {
       Text(type == .fixed ? "+\(Int(value))" : "\(Int(value))%")
-        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
         .clipShape(Capsule())
         .overlay(

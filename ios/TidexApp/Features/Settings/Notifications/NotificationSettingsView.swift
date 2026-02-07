@@ -75,11 +75,11 @@ struct NotificationSettingsView: View {
         // Content
         VStack(alignment: .leading, spacing: 2) {
           Text(.notificationsPermissionTitle)
-            .font(.system(size: 16, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(permissionStatusText)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -142,13 +142,13 @@ struct NotificationSettingsView: View {
     switch viewModel.notificationStatus {
     case .authorized, .provisional, .ephemeral:
       // Show checkmark
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexSuccess)
 
         Text(.notificationsPermissionActive)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexSuccess)
       }
 
@@ -158,9 +158,9 @@ struct NotificationSettingsView: View {
         viewModel.openSystemSettings()
       } label: {
         Text(.notificationsPermissionOpenSettings)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, 6)
           .background(Color.tidexBlue.opacity(0.1))
           .cornerRadius(6)
@@ -174,9 +174,9 @@ struct NotificationSettingsView: View {
         }
       } label: {
         Text(.notificationsPermissionEnable)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.white)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, 6)
           .background(Color.tidexBlue)
           .cornerRadius(6)
@@ -198,11 +198,11 @@ struct NotificationSettingsView: View {
 
           VStack(alignment: .leading, spacing: 2) {
             Text(.notificationsRemindersTitle)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
 
             Text(.notificationsRemindersDescription)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
         }
@@ -238,22 +238,22 @@ struct NotificationSettingsView: View {
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
       viewModel.prepareForEditingTime(at: index)
     } label: {
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         // Bell icon
         Image(systemName: "bell.fill")
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexBlue)
           .frame(width: 24)
 
         // Time label
         Text(viewModel.formatReminderTime(minutes, locale: Locale.current))
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
         Image(systemName: "pencil")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -266,13 +266,13 @@ struct NotificationSettingsView: View {
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
       viewModel.prepareForAddingTime()
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexBlue)
 
         Text(.notificationsRemindersAddTime)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
       }
     }
@@ -289,11 +289,11 @@ struct NotificationSettingsView: View {
 
           VStack(alignment: .leading, spacing: 2) {
             Text(.notificationsSmartTitle)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
 
             Text(.notificationsSmartDescription)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
         }
@@ -342,11 +342,11 @@ struct NotificationSettingsView: View {
 
           VStack(alignment: .leading, spacing: 2) {
             Text(.notificationsSharedTitle)
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
 
             Text(.notificationsSharedDescription)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
         }
@@ -366,7 +366,7 @@ struct NotificationSettingsView: View {
 
   private func settingsIcon(systemName: String, color: Color) -> some View {
     Image(systemName: systemName)
-      .font(.system(size: 13))
+      .font(.tidexFootnote)
       .foregroundColor(.white)
       .frame(width: 29, height: 29)
       .background(color.opacity(0.75))

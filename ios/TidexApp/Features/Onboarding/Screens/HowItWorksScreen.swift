@@ -59,14 +59,14 @@ struct HowItWorksScreen: View {
         )
       }
       .frame(maxWidth: AdaptiveMaxWidth.content)
-      .padding(.horizontal, 40)
+      .padding(.horizontal, Spacing.xxl)
 
       Spacer()
         .frame(height: 28)
 
       // Outcome whisper - centered under the steps
       Text(.onboardingHowOutcome)
-        .font(.system(size: 13, weight: .medium))
+        .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexBlue)
         .opacity(outcomeVisible ? 0.6 : 0)
         .offset(y: outcomeVisible ? 0 : 8)

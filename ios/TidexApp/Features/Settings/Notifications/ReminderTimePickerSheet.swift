@@ -19,12 +19,12 @@ struct ReminderTimePickerSheet: View {
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Picker section with description
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           // Description label
           Text(.notificationsTimePickerDescription)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
 
@@ -53,7 +53,7 @@ struct ReminderTimePickerSheet: View {
             .clipped()
           }
           .frame(height: 180)
-          .padding(.vertical, 8)
+          .padding(.vertical, Spacing.xs)
           .background(Color.tidexSurfacePrimary)
           .cornerRadius(12)
           .tidexCardShadow(cornerRadius: 12)
@@ -70,8 +70,8 @@ struct ReminderTimePickerSheet: View {
           deleteButton(action: onDelete)
         }
       }
-      .padding(.top, 24)
-      .padding(.bottom, 24)
+      .padding(.top, Spacing.lg)
+      .padding(.bottom, Spacing.lg)
       .background(Color.tidexBackground)
       .navigationTitle(
         isEditing
@@ -98,15 +98,15 @@ struct ReminderTimePickerSheet: View {
 
   @ViewBuilder
   private var previewLabel: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: canSave ? "bell.fill" : "bell.slash")
         .foregroundColor(canSave ? .tidexBlue : .tidexTextMuted)
 
       Text(formatPreview())
-        .font(.system(size: 15, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(canSave ? .tidexTextPrimary : .tidexTextMuted)
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
     .cornerRadius(8)
     .padding(.horizontal)
@@ -144,11 +144,11 @@ struct ReminderTimePickerSheet: View {
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
       action()
     }) {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "trash")
-          .font(.system(size: 16))
+          .font(.tidexBody)
         Text(.commonDelete)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
       }
       .foregroundColor(.white)
       .frame(maxWidth: .infinity)
@@ -156,8 +156,8 @@ struct ReminderTimePickerSheet: View {
       .background(Color.tidexError)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
-    .padding(.horizontal, 24)
-    .padding(.bottom, 16)
+    .padding(.horizontal, Spacing.lg)
+    .padding(.bottom, Spacing.md)
   }
 }
 

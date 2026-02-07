@@ -79,14 +79,14 @@ struct ChatInputField: View {
         }
 
         // Text field capsule
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: Spacing.xs) {
           TextField(
             String(localized: .wageyPlaceholder),
             text: $inputText,
             axis: .vertical
           )
           .textFieldStyle(.plain)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
           .lineLimit(1...5)
           .focused($isFocused)
@@ -107,12 +107,12 @@ struct ChatInputField: View {
           }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
       .animation(.easeInOut(duration: 0.15), value: canSend)
     }
     .background(Color.tidexBackground)
@@ -176,21 +176,21 @@ struct ChatInputField: View {
 
       Spacer()
     }
-    .padding(.horizontal, 16)
-    .padding(.top, 8)
+    .padding(.horizontal, Spacing.md)
+    .padding(.top, Spacing.xs)
     .transition(.opacity.combined(with: .scale(scale: 0.9)))
   }
 
   // MARK: - Error Banner
 
   private func errorBanner(message: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
         .foregroundColor(.tidexWarning)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
 
       Text(message)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextPrimary)
 
       Spacer()
@@ -201,12 +201,12 @@ struct ChatInputField: View {
         }
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 11, weight: .semibold))
+          .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
   }
 

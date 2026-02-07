@@ -64,7 +64,7 @@ struct AvatarView: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     // With image URL
     AvatarView(
       url: "https://example.com/avatar.jpg",
@@ -73,14 +73,14 @@ struct AvatarView: View {
     )
 
     // With initials (no URL)
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       AvatarView(url: nil, initials: "JD", size: AvatarView.Size.small)
       AvatarView(url: nil, initials: "AB", size: AvatarView.Size.medium)
       AvatarView(url: nil, initials: "XY", size: AvatarView.Size.large)
     }
 
     // Various initials
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       AvatarView(url: nil, initials: "O", size: AvatarView.Size.medium)
       AvatarView(url: nil, initials: "KH", size: AvatarView.Size.medium)
       AvatarView(url: nil, initials: "?", size: AvatarView.Size.medium)

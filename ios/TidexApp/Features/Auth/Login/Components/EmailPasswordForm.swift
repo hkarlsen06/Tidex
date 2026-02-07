@@ -6,7 +6,7 @@ struct EmailPasswordForm: View {
   var onForgotPassword: (() -> Void)?
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Email/Phone field
       TidexTextField(
         label: String(localized: .loginEmailOrPhoneLabel),
@@ -40,7 +40,7 @@ struct EmailPasswordForm: View {
             onForgotPassword?()
           }) {
             Text(.loginForgotPassword)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexBlue)
           }
           .buttonStyle(.plain)
@@ -50,7 +50,7 @@ struct EmailPasswordForm: View {
       // Phone hint - password is optional for OTP flow
       if viewModel.inputType == .phone {
         Text(.loginPhonePasswordHint)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
       }

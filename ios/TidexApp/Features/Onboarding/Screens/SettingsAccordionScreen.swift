@@ -42,19 +42,19 @@ struct SettingsAccordionScreen: View {
                   UIImpactFeedbackGenerator(style: .light).impactOccurred()
                   onBack()
                 }) {
-                  HStack(spacing: 4) {
+                  HStack(spacing: Spacing.xxs) {
                     Image(systemName: "chevron.left")
-                      .font(.system(size: 16, weight: .semibold))
+                      .font(.tidexButton)
                     Text(.commonBack)
-                      .font(.system(size: 16))
+                      .font(.tidexBody)
                   }
                   .foregroundColor(.tidexBlue)
                 }
                 .buttonStyle(.plain)
                 Spacer()
               }
-              .padding(.horizontal, 24)
-              .padding(.top, 16)
+              .padding(.horizontal, Spacing.lg)
+              .padding(.top, Spacing.md)
               .adaptiveContentWidth()
             }
 
@@ -62,25 +62,25 @@ struct SettingsAccordionScreen: View {
               .frame(height: onBack != nil ? 24 : 60)
 
             // Header
-            VStack(spacing: 12) {
+            VStack(spacing: Spacing.sm) {
               Text(.onboardingSettingsTitle)
-                .font(.system(size: 28, weight: .bold))
+                .font(.tidexLargeTitle)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
               Text(.onboardingSettingsSubtitle)
-                .font(.system(size: 17))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, Spacing.xl)
             .adaptiveContentWidth()
 
             Spacer()
-              .frame(height: 32)
+              .frame(height: Spacing.xl)
 
             // Accordion sections
-            VStack(spacing: 12) {
+            VStack(spacing: Spacing.sm) {
               // Break deduction section
               breakSection
 
@@ -90,11 +90,11 @@ struct SettingsAccordionScreen: View {
               // Payday section
               paydaySection
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, Spacing.lg)
             .adaptiveContentWidth()
 
             Spacer()
-              .frame(height: 48)
+              .frame(height: Spacing.xxxl)
           }
         }
 
@@ -107,8 +107,8 @@ struct SettingsAccordionScreen: View {
               onContinue()
             }
           )
-          .padding(.horizontal, 24)
-          .padding(.bottom, 32)
+          .padding(.horizontal, Spacing.lg)
+          .padding(.bottom, Spacing.xl)
           .adaptiveContentWidth()
           .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
@@ -135,15 +135,15 @@ struct SettingsAccordionScreen: View {
         completeSection(.breakDeduction)
       }
     ) {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         Toggle(isOn: $data.breakEnabled) {
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(.onboardingSettingsBreakEnable)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
 
             Text(.onboardingSettingsBreakHint)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
           }
         }
@@ -151,9 +151,9 @@ struct SettingsAccordionScreen: View {
 
         if data.breakEnabled {
           Text(.onboardingSettingsBreakDefault)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
-            .padding(12)
+            .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexBackground)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -191,28 +191,28 @@ struct SettingsAccordionScreen: View {
         completeSection(.tax)
       }
     ) {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         Toggle(isOn: $data.taxEnabled) {
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(.onboardingSettingsTaxEnable)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
 
             Text(.onboardingSettingsTaxHint)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
           }
         }
         .tint(.tidexBrandPrimary)
 
         if data.taxEnabled {
-          VStack(alignment: .leading, spacing: 12) {
+          VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(.onboardingSettingsTaxPercentage)
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexTextSecondary)
 
             // Tax preset buttons
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
               ForEach(taxPresets, id: \.self) { preset in
                 TaxPresetButton(
                   value: preset,
@@ -230,15 +230,15 @@ struct SettingsAccordionScreen: View {
             HStack {
               if showingTaxInput {
                 // Editable input field
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                   TextField("", text: $taxInputText)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.tidexTitle2)
                     .foregroundColor(.tidexBlue)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.leading)
                     .focused($isTaxInputFocused)
                     .frame(width: 60)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, Spacing.xxs)
                     .padding(.vertical, 2)
                     .background(Color.tidexBlue.opacity(0.15))
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -262,7 +262,7 @@ struct SettingsAccordionScreen: View {
                     }
 
                   Text("%")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tidexLabel)
                     .foregroundColor(.tidexTextMuted)
                 }
               } else {
@@ -277,11 +277,11 @@ struct SettingsAccordionScreen: View {
                 }) {
                   HStack(spacing: 2) {
                     Text(formatTaxValue(data.taxPercentage))
-                      .font(.system(size: 20, weight: .bold))
+                      .font(.tidexTitle2)
                       .foregroundColor(.tidexBlue)
                       .contentTransition(.numericText())
                     Text("%")
-                      .font(.system(size: 14, weight: .medium))
+                      .font(.tidexLabel)
                       .foregroundColor(.tidexTextMuted)
                   }
                   .padding(.horizontal, 6)
@@ -343,9 +343,9 @@ struct SettingsAccordionScreen: View {
         completeSection(.payday)
       }
     ) {
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
         Text(.onboardingSettingsPaydayHint)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
 
         // Horizontal scroll with day options + custom input
@@ -369,9 +369,9 @@ struct SettingsAccordionScreen: View {
 
               // Custom day input button/field
               if showingPaydayInput {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                   TextField("", text: $paydayInputText)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.tidexButton)
                     .foregroundColor(.tidexBlue)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
@@ -410,21 +410,19 @@ struct SettingsAccordionScreen: View {
                     isPaydayInputFocused = true
                   }
                 }) {
-                  HStack(spacing: 4) {
+                  HStack(spacing: Spacing.xxs) {
                     Image(systemName: "pencil")
-                      .font(.system(size: 12))
+                      .font(.tidexCaptionRegular)
                     Text(.onboardingSettingsPaydayOther)
                   }
                   .font(
-                    .system(
-                      size: 14,
-                      weight: !payrollDayOptions.contains(data.payrollDay) ? .semibold : .medium)
+                    !payrollDayOptions.contains(data.payrollDay) ? .tidexLabelStrong : .tidexLabel
                   )
                   .foregroundColor(
                     !payrollDayOptions.contains(data.payrollDay) ? .white : .tidexTextSecondary
                   )
                   .frame(minWidth: 56, minHeight: 44)
-                  .padding(.horizontal, 8)
+                  .padding(.horizontal, Spacing.xs)
                   .background(
                     !payrollDayOptions.contains(data.payrollDay)
                       ? Color.tidexBrandPrimary : Color.tidexBackground
@@ -440,7 +438,7 @@ struct SettingsAccordionScreen: View {
                 .buttonStyle(.plain)
               }
             }
-            .padding(.trailing, 24)  // Extra padding for fade area
+            .padding(.trailing, Spacing.lg)  // Extra padding for fade area
           }
 
           // Trailing fade gradient to hint more content
@@ -456,7 +454,7 @@ struct SettingsAccordionScreen: View {
         // Show current custom value if not a preset
         if !payrollDayOptions.contains(data.payrollDay) && !showingPaydayInput {
           Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexBlue)
         }
       }
@@ -547,10 +545,10 @@ private struct TaxPresetButton: View {
       action()
     }) {
       Text("\(Int(value))%")
-        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
         .clipShape(Capsule())
         .overlay(
@@ -576,7 +574,7 @@ private struct PaydayButton: View {
       action()
     }) {
       Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
-        .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
+        .font(isSelected ? .tidexButton : .tidexBodyMedium)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(minWidth: 56, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)

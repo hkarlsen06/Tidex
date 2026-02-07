@@ -113,11 +113,11 @@ struct SharedShiftsCalendarView: View {
 
       // Weekday headers
       CalendarWeekdayHeader()
-        .padding(.bottom, 8)
+        .padding(.bottom, Spacing.xs)
 
       // Calendar grid
       calendarGrid
-        .padding(.bottom, 12)
+        .padding(.bottom, Spacing.sm)
 
       // View mode toggle (hours/money)
       if showEarnings {
@@ -127,7 +127,7 @@ struct SharedShiftsCalendarView: View {
         )
       }
     }
-    .padding(.horizontal, 16)
+    .padding(.horizontal, Spacing.md)
     .overlay(alignment: .top) {
       if isSuperimposing {
         superimposeLegend
@@ -143,7 +143,7 @@ struct SharedShiftsCalendarView: View {
       // Month name + Year
       HStack(spacing: 6) {
         Text(monthName)
-          .font(.system(size: 20, weight: .semibold))
+          .font(.tidexTitle2)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(year))
@@ -158,8 +158,8 @@ struct SharedShiftsCalendarView: View {
         earningsDisplay
       }
     }
-    .padding(.horizontal, 4)
-    .padding(.bottom, 12)
+    .padding(.horizontal, Spacing.xxs)
+    .padding(.bottom, Spacing.sm)
   }
 
   /// Earnings display - shows monthly totals
@@ -173,12 +173,12 @@ struct SharedShiftsCalendarView: View {
       Text(
         displayTotals.gross == 0 ? "—" : CurrencyConfig.format(displayAmount, currency: currency)
       )
-      .font(.system(size: 17, weight: .semibold))
+      .font(.tidexHeadline)
       .foregroundColor(.tidexTextPrimary)
 
       if showTax && displayTotals.gross > 0 {
         Text(CurrencyConfig.format(displayTotals.gross, currency: currency))
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -188,12 +188,12 @@ struct SharedShiftsCalendarView: View {
 
   /// Legend explaining the color coding when superimpose is active
   private var superimposeLegend: some View {
-    HStack(spacing: 24) {
+    HStack(spacing: Spacing.lg) {
       // Both working
       VStack(spacing: 6) {
         legendMiniCell(color: .tidexBlue, showOverlapIcon: true)
         Text(.sharingSuperimposeLegendBoth)
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextSecondary)
       }
 
@@ -201,7 +201,7 @@ struct SharedShiftsCalendarView: View {
       VStack(spacing: 6) {
         legendMiniCell(color: .green, showOverlapIcon: false)
         Text(.sharingSuperimposeLegendOnlyYou)
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextSecondary)
       }
     }
@@ -217,7 +217,7 @@ struct SharedShiftsCalendarView: View {
           Text("5")
             .font(.system(size: 8, weight: .semibold))
             .foregroundColor(.tidexTextMuted)
-            .padding(.trailing, 4)
+            .padding(.trailing, Spacing.xxs)
             .padding(.top, 3)
         }
         Spacer()
@@ -230,8 +230,8 @@ struct SharedShiftsCalendarView: View {
             Image(systemName: "person.2.fill")
               .font(.system(size: 7, weight: .semibold))
               .foregroundColor(.tidexBlue)
-              .padding(.leading, 4)
-              .padding(.top, 4)
+              .padding(.leading, Spacing.xxs)
+              .padding(.top, Spacing.xxs)
             Spacer()
           }
           Spacer()
@@ -264,7 +264,7 @@ struct SharedShiftsCalendarView: View {
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: month)
 
-    return LazyVGrid(columns: CalendarGridHelper.columns, spacing: 4) {
+    return LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
       ForEach(days, id: \.id) { dayInfo in
         calendarDayView(for: dayInfo)
       }

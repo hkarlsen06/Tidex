@@ -89,15 +89,15 @@ struct ConversationRowView: View {
       Haptics.play(.light)
       onSelect()
     } label: {
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         VStack(alignment: .leading, spacing: 3) {
           Text(localizedTitle)
-            .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
+            .font(isSelected ? .tidexButton : .tidexBody)
             .foregroundColor(.tidexTextPrimary)
             .lineLimit(1)
 
           Text(formattedDate)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
         }
 
@@ -105,12 +105,12 @@ struct ConversationRowView: View {
 
         if isSelected {
           Image(systemName: "checkmark")
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
             .foregroundColor(.tidexBlue)
         }
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

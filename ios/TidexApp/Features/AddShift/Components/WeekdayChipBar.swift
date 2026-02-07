@@ -22,15 +22,15 @@ struct WeekdayChipBar: View {
         // Placeholder when no chips - shows subtle hint
         HStack(spacing: 6) {
           Image(systemName: "star.fill")
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted.opacity(0.5))
           Text(.addShiftSelectAnchorDates)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
         }
       } else {
         ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: 8) {
+          HStack(spacing: Spacing.xs) {
             ForEach(sortedWeekdays, id: \.self) { weekday in
               if let anchorDate = selectedDays[weekday] {
                 WeekdayChip(
@@ -41,7 +41,7 @@ struct WeekdayChipBar: View {
               }
             }
           }
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
         }
       }
     }
@@ -77,22 +77,22 @@ private struct WeekdayChip: View {
   var body: some View {
     HStack(spacing: 6) {
       Text(weekdayName)
-        .font(.system(size: 13, weight: .semibold))
+        .font(.tidexFootnoteStrong)
         .foregroundColor(.tidexBlue)
 
       Text(formattedDate)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextSecondary)
 
       Button(action: onRemove) {
         Image(systemName: "xmark.circle.fill")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexBlue.opacity(0.1))
     .clipShape(Capsule())
   }

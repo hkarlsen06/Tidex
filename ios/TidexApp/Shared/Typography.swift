@@ -30,6 +30,11 @@ extension Font {
     scaledFont(baseSize: 40, weight: .bold, relativeTo: .title)
   }
 
+  /// 88pt bold - Hero total card amount (scales with Dynamic Type)
+  static var tidexHeroAmount: Font {
+    scaledFont(baseSize: 88, weight: .bold, relativeTo: .largeTitle)
+  }
+
   /// 32pt bold rounded - Large amounts (scales with Dynamic Type)
   static var tidexAmountLarge: Font {
     scaledFont(baseSize: 32, weight: .bold, relativeTo: .title2, design: .rounded)
@@ -85,6 +90,17 @@ extension Font {
   /// 14pt semibold - Emphasized labels, action links
   static let tidexLabelStrong = Font.system(.subheadline, design: .default).weight(.semibold)
 
+  // MARK: - Footnote
+
+  /// 13pt regular - Footnote text, tertiary descriptions
+  static let tidexFootnote = Font.system(.footnote, design: .default)
+
+  /// 13pt medium - Emphasized footnote text
+  static let tidexFootnoteMedium = Font.system(.footnote, design: .default).weight(.medium)
+
+  /// 13pt semibold - Strong footnote labels
+  static let tidexFootnoteStrong = Font.system(.footnote, design: .default).weight(.semibold)
+
   // MARK: - Captions
 
   /// 12pt medium - Small labels, badges
@@ -95,6 +111,11 @@ extension Font {
 
   /// 12pt semibold - Badge text, strong captions
   static let tidexCaptionStrong = Font.system(.caption, design: .default).weight(.semibold)
+
+  // MARK: - Micro
+
+  /// 11pt regular - Smallest readable text (caption2)
+  static let tidexMicro = Font.system(.caption2, design: .default)
 
   // MARK: - Prices
 

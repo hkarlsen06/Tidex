@@ -136,7 +136,7 @@ struct WageSnapshotEditorSheet: View {
           .ignoresSafeArea()
 
         ScrollView {
-          VStack(spacing: 24) {
+          VStack(spacing: Spacing.lg) {
             // Date section (or baseline indicator)
             dateSection
 
@@ -199,10 +199,10 @@ struct WageSnapshotEditorSheet: View {
                 .frame(height: 80)
             } else {
               Spacer()
-                .frame(height: 24)
+                .frame(height: Spacing.lg)
             }
           }
-          .padding(.vertical, 24)
+          .padding(.vertical, Spacing.lg)
         }
         .scrollDismissesKeyboard(.interactively)
 
@@ -212,8 +212,8 @@ struct WageSnapshotEditorSheet: View {
             Spacer()
 
             deleteButton
-              .padding(.horizontal, 24)
-              .padding(.bottom, 32)
+              .padding(.horizontal, Spacing.lg)
+              .padding(.bottom, Spacing.xl)
               .background(
                 LinearGradient(
                   colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
@@ -371,12 +371,12 @@ struct WageSnapshotEditorSheet: View {
 
   @ViewBuilder
   private var tariffVersionIndicator: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
       // Tariff type picker - always show when tariff types are loaded
       if !tariffTypes.isEmpty {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.settingsPayEditorTariffTypeLabel)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
 
           Picker(
@@ -399,8 +399,8 @@ struct WageSnapshotEditorSheet: View {
           }
           .pickerStyle(.menu)
           .tint(.tidexBrandPrimary)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 8)
+          .padding(.horizontal, Spacing.sm)
+          .padding(.vertical, Spacing.xs)
           .background(Color.tidexSurfaceSecondary)
           .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
@@ -408,27 +408,27 @@ struct WageSnapshotEditorSheet: View {
 
       // Tariff version info (effective date)
       if let version = tariffVersion {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           Image(systemName: "calendar")
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
 
           Text(.settingsPayEditorTariffEffectiveDate)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
 
           Text(formatEffectiveDate(version.effective_date))
-            .font(.system(size: 12, weight: .medium))
+            .font(.tidexCaption)
             .foregroundColor(.tidexTextSecondary)
 
           Spacer()
         }
       } else if isLoadingTariff {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           ProgressView()
             .scaleEffect(0.7)
           Text(.settingsPayEditorLoadingTariff)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
           Spacer()
         }
@@ -475,9 +475,9 @@ struct WageSnapshotEditorSheet: View {
 
   @ViewBuilder
   private var dateSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.settingsPayEditorFromDateLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       if isBaseline {
@@ -487,17 +487,17 @@ struct WageSnapshotEditorSheet: View {
             .foregroundColor(.tidexWarning)
 
           Text(.settingsPayEditorBaselineIndicator)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextPrimary)
 
           Spacer()
         }
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexWarning.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
         Text(.settingsPayEditorBaselineHelp)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       } else {
         // Date picker
@@ -508,12 +508,12 @@ struct WageSnapshotEditorSheet: View {
         )
         .datePickerStyle(.graphical)
         .tint(.tidexBrandPrimary)
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         Text(.settingsPayEditorFromDateHelp)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -524,10 +524,10 @@ struct WageSnapshotEditorSheet: View {
 
   @ViewBuilder
   private var supplementsSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack {
         Text(.settingsPayEditorSupplementsTitle)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -538,7 +538,7 @@ struct WageSnapshotEditorSheet: View {
             showingSupplementEditor = true
           }) {
             Image(systemName: "plus")
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexBlue)
           }
         }
@@ -547,7 +547,7 @@ struct WageSnapshotEditorSheet: View {
       if usePreset {
         // Read-only preset supplements (from tariff version or fallback)
         Text(.settingsPayEditorSupplementsTariff)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
 
         let presetRules =
@@ -559,9 +559,9 @@ struct WageSnapshotEditorSheet: View {
         // Editable custom supplements
         if supplements.isEmpty {
           Text(.settingsPayEditorSupplementsEmpty)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
-            .padding(12)
+            .padding(Spacing.sm)
             .frame(maxWidth: .infinity)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -580,18 +580,18 @@ struct WageSnapshotEditorSheet: View {
     HStack {
       VStack(alignment: .leading, spacing: 2) {
         Text(formatDays(rule.days))
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
 
         Text("\(rule.from) - \(rule.to)")
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextSecondary)
       }
 
       Spacer()
 
       Text(formatRuleValue(rule))
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexBrandPrimary)
     }
     .padding(Spacing.xs)
@@ -604,18 +604,18 @@ struct WageSnapshotEditorSheet: View {
     HStack {
       VStack(alignment: .leading, spacing: 2) {
         Text(rule.daysDescription)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
 
         Text(rule.timeDescription)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextSecondary)
       }
 
       Spacer()
 
       Text(rule.valueDescription(locale: Locale.current, currency: currency))
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexBrandPrimary)
 
       // Edit button
@@ -624,7 +624,7 @@ struct WageSnapshotEditorSheet: View {
         showingSupplementEditor = true
       }) {
         Image(systemName: "pencil")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
 
@@ -636,7 +636,7 @@ struct WageSnapshotEditorSheet: View {
         }
       }) {
         Image(systemName: "trash")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexError)
       }
     }
@@ -682,17 +682,17 @@ struct WageSnapshotEditorSheet: View {
 
   @ViewBuilder
   private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
         .foregroundColor(.tidexError)
 
       Text(message)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexError)
 
       Spacer()
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
@@ -707,12 +707,12 @@ struct WageSnapshotEditorSheet: View {
         onDelete(snapshot)
       }
     }) {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "trash")
-          .font(.system(size: 16))
+          .font(.tidexBody)
 
         Text(.settingsPayEditorDelete)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
       }
       .foregroundColor(.white)
       .frame(maxWidth: .infinity)

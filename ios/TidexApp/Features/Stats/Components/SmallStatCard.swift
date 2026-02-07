@@ -8,7 +8,7 @@ struct SmallStatCard: View {
   let icon: String
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Header row with title and icon
       HStack {
         Text(title)
@@ -30,7 +30,7 @@ struct SmallStatCard: View {
         .lineLimit(1)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -73,7 +73,7 @@ struct ShiftsStatCard: View {
 }
 
 #Preview {
-  HStack(spacing: 12) {
+  HStack(spacing: Spacing.sm) {
     HoursStatCard(hours: 60.3)
     ShiftsStatCard(count: 9)
   }

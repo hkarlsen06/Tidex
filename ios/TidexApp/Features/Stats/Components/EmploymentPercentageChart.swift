@@ -77,10 +77,10 @@ struct EmploymentPercentageChart: View {
 
   @ViewBuilder
   private var headerView: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       // Title
       Text(.statsChartsEmploymentTitle)
-        .font(.system(size: 18, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
 
       HStack(alignment: .firstTextBaseline) {
@@ -96,7 +96,7 @@ struct EmploymentPercentageChart: View {
         }
 
         Text(.statsChartsEmploymentYearlyAverage)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
 
         Spacer()
@@ -108,7 +108,7 @@ struct EmploymentPercentageChart: View {
         )
       }
     }
-    .padding(20)
+    .padding(Spacing.mlg)
     .padding(.bottom, -4)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
@@ -145,7 +145,7 @@ struct EmploymentPercentageChart: View {
             let isSelected = selectedMonth == monthData?.monthNumber
 
             Text(label)
-              .font(.system(size: 12, weight: (isHighlighted || isSelected) ? .semibold : .regular))
+              .font((isHighlighted || isSelected) ? .tidexCaptionStrong : .tidexCaptionRegular)
               .foregroundColor((isHighlighted || isSelected) ? .tidexBlue : .tidexTextPrimary)
           }
         }
@@ -158,7 +158,7 @@ struct EmploymentPercentageChart: View {
         AxisValueLabel(anchor: .trailing) {
           if let amount = value.as(Double.self) {
             Text("\(Int(amount))%")
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
           }
         }
@@ -167,8 +167,8 @@ struct EmploymentPercentageChart: View {
     .chartYScale(domain: yAxisScale.domain)
     .chartLegend(.hidden)
     .frame(height: 200)
-    .padding(20)
-    .padding(.top, 4)
+    .padding(Spacing.mlg)
+    .padding(.top, Spacing.xxs)
   }
 
   // MARK: - Helpers
@@ -265,23 +265,23 @@ private struct TooltipView: View {
   let monthData: EmploymentMonthlyData
 
   var body: some View {
-    VStack(alignment: .center, spacing: 4) {
+    VStack(alignment: .center, spacing: Spacing.xxs) {
       Text(monthData.fullMonth)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
 
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Text(String(format: "%.1f%%", monthData.averagePercentage))
           .font(.system(size: 16, weight: .bold, design: .monospaced))
           .foregroundColor(.tidexBlue)
 
         Text(.statsChartsEmploymentEmployment)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(8)
     .overlay(
@@ -310,7 +310,7 @@ private struct InfoPopoverButton: View {
     }
     .popover(isPresented: $showPopover) {
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.leading)
         .fixedSize(horizontal: false, vertical: true)
@@ -327,17 +327,17 @@ private struct InfoPopoverButton: View {
 struct EmploymentPercentageChartEmpty: View {
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.statsChartsEmploymentTitle)
-        .font(.system(size: 18, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.statsChartsEmploymentNoData)
-        .font(.system(size: 14, weight: .regular))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -348,7 +348,7 @@ struct EmploymentPercentageChartEmpty: View {
 
 #Preview {
   ScrollView {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       EmploymentPercentageChart(data: EmploymentData.preview)
       EmploymentPercentageChartEmpty()
     }

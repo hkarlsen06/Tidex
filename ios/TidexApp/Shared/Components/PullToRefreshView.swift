@@ -78,7 +78,7 @@ extension View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        VStack(spacing: 20) {
+        VStack(spacing: Spacing.mlg) {
           Text("Pull down to refresh")
             .font(.headline)
             .foregroundColor(.tidexTextPrimary)

@@ -12,22 +12,22 @@ struct SecuritySettingsView: View {
       // Error message
       if let error = viewModel.errorMessage {
         Section {
-          HStack(spacing: 8) {
+          HStack(spacing: Spacing.xs) {
             Image(systemName: "exclamationmark.circle.fill")
               .foregroundColor(.tidexError)
             Text(error)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexError)
             Spacer()
             Button {
               viewModel.clearMessages()
             } label: {
               Image(systemName: "xmark")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.tidexCaptionStrong)
                 .foregroundColor(.tidexError)
             }
           }
-          .padding(12)
+          .padding(Spacing.sm)
           .background(Color.tidexError.opacity(0.1))
           .cornerRadius(8)
           .listRowBackground(Color.clear)
@@ -100,13 +100,13 @@ struct SecuritySettingsView: View {
             .frame(width: 29, height: 29)
             .overlay(
               Image(systemName: viewModel.biometricIconName)
-                .font(.system(size: 13))
+                .font(.tidexFootnote)
                 .foregroundColor(.white)
             )
 
           VStack(alignment: .leading, spacing: 2) {
             Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
 
             Text(
@@ -114,7 +114,7 @@ struct SecuritySettingsView: View {
                 ? String(localized: .securityBiometricEnabled)
                 : String(localized: .securityBiometricDisabled)
             )
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
           }
 
@@ -143,13 +143,13 @@ struct SecuritySettingsView: View {
               .frame(width: 29, height: 29)
               .overlay(
                 Image(systemName: viewModel.biometricIconName)
-                  .font(.system(size: 13))
+                  .font(.tidexFootnote)
                   .foregroundColor(.white)
               )
 
             VStack(alignment: .leading, spacing: 2) {
               Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
-                .font(.system(size: 16, weight: .medium))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
 
               Text(
@@ -157,7 +157,7 @@ struct SecuritySettingsView: View {
                   ? String(localized: .securityBiometricEnabled)
                   : String(localized: .securityBiometricDisabled)
               )
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
             }
           }
@@ -179,14 +179,14 @@ struct SecuritySettingsView: View {
           .frame(width: 29, height: 29)
           .overlay(
             Image(systemName: "lock.fill")
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.white)
           )
 
         // Content
         VStack(alignment: .leading, spacing: 2) {
           Text(.securityPasswordTitle)
-            .font(.system(size: 16, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(
@@ -194,7 +194,7 @@ struct SecuritySettingsView: View {
               ? String(localized: .securityPasswordHasPassword)
               : String(localized: .securityPasswordNoPassword)
           )
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
         }
 
@@ -209,10 +209,10 @@ struct SecuritySettingsView: View {
               ? String(localized: .securityPasswordChange)
               : String(localized: .securityPasswordSet)
           )
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(viewModel.hasPassword ? .tidexBlue : .white)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 8)
+          .padding(.horizontal, Spacing.md)
+          .padding(.vertical, Spacing.xs)
           .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
           .cornerRadius(8)
         }
@@ -309,23 +309,23 @@ struct SecuritySettingsView: View {
         .frame(width: 29, height: 29)
         .overlay(
           Image(systemName: icon)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.white)
         )
 
       // Content
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
 
         Text(isConnected ? connectedText : notConnectedText)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
 
         if isConnected && !canDisconnect {
           Text(.securityConnectionsAddOtherMethod)
-            .font(.system(size: 11))
+            .font(.tidexMicro)
             .foregroundColor(.tidexTextMuted)
         }
       }
@@ -343,9 +343,9 @@ struct SecuritySettingsView: View {
                 .scaleEffect(0.8)
             } else {
               Text(.securityConnectionsDisconnect)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexError)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, 6)
                 .background(Color.tidexError.opacity(0.1))
                 .cornerRadius(6)
@@ -354,13 +354,13 @@ struct SecuritySettingsView: View {
           .disabled(viewModel.isConnectingProvider)
         } else {
           // Connected indicator
-          HStack(spacing: 4) {
+          HStack(spacing: Spacing.xxs) {
             Image(systemName: "checkmark.circle.fill")
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexSuccess)
 
             Text(.securityConnectionsConnected)
-              .font(.system(size: 13, weight: .medium))
+              .font(.tidexFootnoteMedium)
               .foregroundColor(.tidexSuccess)
           }
         }
@@ -372,9 +372,9 @@ struct SecuritySettingsView: View {
               .scaleEffect(0.8)
           } else {
             Text(.securityConnectionsConnect)
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexBlue)
-              .padding(.horizontal, 12)
+              .padding(.horizontal, Spacing.sm)
               .padding(.vertical, 6)
               .background(Color.tidexBlue.opacity(0.1))
               .cornerRadius(6)
@@ -400,12 +400,12 @@ struct SecuritySettingsView: View {
             .frame(width: 29, height: 29)
             .overlay(
               Image(systemName: "shield.slash")
-                .font(.system(size: 13))
+                .font(.tidexFootnote)
                 .foregroundColor(.white)
             )
 
           Text(.securityMfaNoFactors)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
 
           Spacer()
@@ -424,18 +424,18 @@ struct SecuritySettingsView: View {
           await viewModel.startMFAEnrollment()
         }
       } label: {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           if viewModel.isEnrollingMFA {
             ProgressView()
               .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
               .scaleEffect(0.8)
           } else {
             Image(systemName: "plus.circle.fill")
-              .font(.system(size: 18))
+              .font(.tidexHeadline)
           }
 
           Text(.securityMfaAddFactor)
-            .font(.system(size: 15, weight: .medium))
+            .font(.tidexLabel)
         }
         .foregroundColor(.tidexBlue)
         .frame(maxWidth: .infinity)
@@ -454,18 +454,18 @@ struct SecuritySettingsView: View {
         .frame(width: 29, height: 29)
         .overlay(
           Image(systemName: "iphone")
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.white)
         )
 
       // Content
       VStack(alignment: .leading, spacing: 2) {
         Text(factor.displayName)
-          .font(.system(size: 15, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(localized: .securityMfaAddedOn(factor.formattedDate)))
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
 
@@ -477,9 +477,9 @@ struct SecuritySettingsView: View {
         viewModel.showUnenrollConfirmation = true
       } label: {
         Image(systemName: "trash")
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexError)
-          .padding(8)
+          .padding(Spacing.xs)
       }
       .disabled(viewModel.isUnenrollingMFA)
     }
@@ -490,7 +490,7 @@ struct SecuritySettingsView: View {
   private var passwordFormSheet: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           // Instructions
           Text(
             viewModel.hasPassword
@@ -499,7 +499,7 @@ struct SecuritySettingsView: View {
                 ? String(localized: .securityPasswordSetWithPhoneInstructions)
                 : String(localized: .securityPasswordSetInstructions)
           )
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -516,7 +516,7 @@ struct SecuritySettingsView: View {
           // Error message
           if let error = viewModel.errorMessage {
             Text(error)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexError)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
@@ -541,7 +541,7 @@ struct SecuritySettingsView: View {
                       ? String(localized: .securityPasswordUpdate)
                       : String(localized: .securityPasswordSet))
               }
-              .font(.system(size: 16, weight: .semibold))
+              .font(.tidexButton)
               .foregroundColor(.white)
               .frame(maxWidth: .infinity)
               .padding(.vertical, Spacing.sm)
@@ -551,7 +551,7 @@ struct SecuritySettingsView: View {
             .disabled(!canSubmitPassword || viewModel.isSettingPassword)
           }
         }
-        .padding(24)
+        .padding(Spacing.lg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(
@@ -572,7 +572,7 @@ struct SecuritySettingsView: View {
   }
 
   private var phoneOtpSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       if !viewModel.otpSent {
         // Request OTP button
         Button {
@@ -591,7 +591,7 @@ struct SecuritySettingsView: View {
                 ? String(localized: .securityPasswordSendingCode)
                 : String(localized: .securityPasswordRequestCode))
           }
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.white)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
@@ -603,14 +603,14 @@ struct SecuritySettingsView: View {
         // OTP input
         VStack(alignment: .leading, spacing: 6) {
           Text(.securityPasswordOtpLabel)
-            .font(.system(size: 13, weight: .medium))
+            .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextSecondary)
 
           TextField("123456", text: $viewModel.phoneOtp)
-            .font(.system(size: 16))
+            .font(.tidexBody)
             .foregroundColor(.tidexTextPrimary)
             .keyboardType(.numberPad)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
             .cornerRadius(8)
@@ -629,7 +629,7 @@ struct SecuritySettingsView: View {
   }
 
   private var passwordFieldsSection: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // New password
       VStack(alignment: .leading, spacing: 6) {
         Text(
@@ -637,15 +637,15 @@ struct SecuritySettingsView: View {
             ? String(localized: .securityPasswordNewPasswordLabel)
             : String(localized: .securityPasswordPasswordLabel)
         )
-        .font(.system(size: 13, weight: .medium))
+        .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
 
         SecureField(
           String(localized: .securityPasswordPasswordPlaceholder), text: $viewModel.newPassword
         )
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .cornerRadius(8)
@@ -654,15 +654,15 @@ struct SecuritySettingsView: View {
       // Confirm password
       VStack(alignment: .leading, spacing: 6) {
         Text(.securityPasswordConfirmPasswordLabel)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
 
         SecureField(
           String(localized: .securityPasswordPasswordPlaceholder), text: $viewModel.confirmPassword
         )
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .cornerRadius(8)
@@ -670,7 +670,7 @@ struct SecuritySettingsView: View {
 
       // Password hint
       Text(.securityPasswordHint)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -687,7 +687,7 @@ struct SecuritySettingsView: View {
   private var mfaEnrollmentSheet: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           // QR Code - Generated natively from TOTP URI
           if let totpUri = viewModel.mfaTotpUri {
             qrCodeSection(totpUri)
@@ -704,13 +704,13 @@ struct SecuritySettingsView: View {
           // Error message
           if let error = viewModel.errorMessage {
             Text(error)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexError)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
 
           // Buttons
-          VStack(spacing: 12) {
+          VStack(spacing: Spacing.sm) {
             Button {
               Task {
                 await viewModel.verifyMFAEnrollment()
@@ -727,7 +727,7 @@ struct SecuritySettingsView: View {
                     ? String(localized: .securityMfaVerifying)
                     : String(localized: .securityMfaVerify))
               }
-              .font(.system(size: 16, weight: .semibold))
+              .font(.tidexButton)
               .foregroundColor(.white)
               .frame(maxWidth: .infinity)
               .padding(.vertical, Spacing.sm)
@@ -747,13 +747,13 @@ struct SecuritySettingsView: View {
                   Image(systemName: "arrow.up.right.square")
                   Text(.securityMfaOpenInApp)
                 }
-                .font(.system(size: 15, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexBlue)
               }
             }
           }
         }
-        .padding(24)
+        .padding(Spacing.lg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .securityMfaEnrollTitle))
@@ -773,9 +773,9 @@ struct SecuritySettingsView: View {
 
   @ViewBuilder
   private func qrCodeSection(_ totpUri: String) -> some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       Text(.securityMfaScanQR)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
@@ -799,13 +799,13 @@ struct SecuritySettingsView: View {
             .fill(Color.white)
             .frame(width: 200, height: 200)
 
-          VStack(spacing: 8) {
+          VStack(spacing: Spacing.xs) {
             Image(systemName: "qrcode")
               .font(.system(size: 60))
               .foregroundColor(.tidexTextMuted)
 
             Text(.securityMfaUseSecretBelow)
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
               .multilineTextAlignment(.center)
           }
@@ -837,9 +837,9 @@ struct SecuritySettingsView: View {
 
   @ViewBuilder
   private func manualEntrySection(_ secret: String) -> some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       Text(.securityMfaManualEntry)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
 
       // Secret code with copy button
@@ -855,20 +855,20 @@ struct SecuritySettingsView: View {
           UIPasteboard.general.string = secret
         } label: {
           Image(systemName: "doc.on.doc")
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexBlue)
         }
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .cornerRadius(8)
     }
   }
 
   private var verificationCodeSection: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.securityMfaVerifyLabel)
-        .font(.system(size: 13, weight: .medium))
+        .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
 
       // 6-digit code input using OTPInputField style
@@ -877,8 +877,8 @@ struct SecuritySettingsView: View {
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .keyboardType(.numberPad)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .cornerRadius(8)
         .onChange(of: viewModel.mfaVerifyCode) { _, newValue in
@@ -898,14 +898,14 @@ struct SecuritySettingsView: View {
   private var phoneLinkingSheet: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           // Instructions
           Text(
             viewModel.phoneLinkStep == .input
               ? String(localized: .securityPhoneLinkingInstructionEnter)
               : String(localized: .securityPhoneLinkingInstructionVerify)
           )
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -918,7 +918,7 @@ struct SecuritySettingsView: View {
           // Error message
           if let error = viewModel.errorMessage {
             Text(error)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexError)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
@@ -948,7 +948,7 @@ struct SecuritySettingsView: View {
                     ? String(localized: .securityPhoneLinkingSendCode)
                     : String(localized: .securityPhoneLinkingVerify)))
             }
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
@@ -957,7 +957,7 @@ struct SecuritySettingsView: View {
           }
           .disabled(!canSubmitPhoneLinking || viewModel.isLinkingPhone)
         }
-        .padding(24)
+        .padding(Spacing.lg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .securityPhoneLinkingTitle))
@@ -976,24 +976,24 @@ struct SecuritySettingsView: View {
   private var phoneLinkInputSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(.securityPhoneLinkingPhoneLabel)
-        .font(.system(size: 13, weight: .medium))
+        .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         // Country code indicator
         Text("+47")
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
           .cornerRadius(8)
 
         TextField("12345678", text: $viewModel.phoneLinkInput)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
           .keyboardType(.numberPad)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
           .cornerRadius(8)
@@ -1009,20 +1009,20 @@ struct SecuritySettingsView: View {
       }
 
       Text(.securityPhoneLinkingPhoneHint)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
   }
 
   private var phoneLinkOtpSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Show the phone number that code was sent to
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "phone.fill")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexBlue)
         Text(formatPhoneForDisplay(viewModel.phoneLinkInput) ?? "+47 \(viewModel.phoneLinkInput)")
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -1033,18 +1033,18 @@ struct SecuritySettingsView: View {
           viewModel.errorMessage = nil
         } label: {
           Text(.securityPhoneLinkingChangeNumber)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexBlue)
         }
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .cornerRadius(8)
 
       // OTP input
       VStack(alignment: .leading, spacing: 6) {
         Text(.securityPhoneLinkingOtpLabel)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
 
         TextField("123456", text: $viewModel.phoneLinkOtp)
@@ -1052,8 +1052,8 @@ struct SecuritySettingsView: View {
           .foregroundColor(.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .keyboardType(.numberPad)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 12)
+          .padding(.horizontal, Spacing.md)
+          .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
           .cornerRadius(8)
           .onChange(of: viewModel.phoneLinkOtp) { _, newValue in

@@ -11,7 +11,7 @@ struct EmptyShiftCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       // Main card content
       ShiftCardContentLayout(rowSpacing: 8, centerTrailing: true) {
         // Placeholder day name and date
@@ -32,8 +32,8 @@ struct EmptyShiftCard: View {
           .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 60, height: 12)
       }
-      .padding(.horizontal, 20)
-      .padding(.vertical, 24)
+      .padding(.horizontal, Spacing.mlg)
+      .padding(.vertical, Spacing.lg)
       .background(
         RoundedRectangle(cornerRadius: 24)
           .fill(Color.tidexSurfacePrimary)
@@ -53,7 +53,7 @@ struct EmptyShiftCard: View {
             onAddShift()
           } label: {
             Text(.dashboardAddShiftButton)
-              .font(.system(size: 12, weight: .semibold))
+              .font(.tidexCaptionStrong)
               .foregroundColor(.tidexBlue)
               .lineLimit(1)
               .minimumScaleFactor(0.85)
@@ -75,10 +75,10 @@ struct EmptyShiftCard: View {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     EmptyShiftCard(onAddShift: {})
     EmptyShiftCard(isLoading: true)
   }
-  .padding(.horizontal, 24)
+  .padding(.horizontal, Spacing.lg)
   .background(Color.tidexBackground)
 }

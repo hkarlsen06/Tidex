@@ -8,21 +8,21 @@ struct PlaceholderContent: View {
   let description: String
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Image(systemName: icon)
         .font(.system(size: 48))
         .foregroundColor(.tidexTextMuted)
 
       Text(title)
-        .font(.system(size: 20, weight: .semibold))
+        .font(.tidexTitle2)
         .foregroundColor(.tidexTextPrimary)
 
       Text(description)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
-    .padding(.horizontal, 40)
+    .padding(.horizontal, Spacing.xxl)
   }
 }
 

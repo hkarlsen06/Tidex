@@ -66,9 +66,9 @@ extension View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     // Skeleton card with shimmer
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       RoundedRectangle(cornerRadius: 8)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 200, height: 56)
@@ -77,7 +77,7 @@ extension View {
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 120, height: 16)
     }
-    .padding(24)
+    .padding(Spacing.lg)
     .background(
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexSurfacePrimary)
@@ -85,7 +85,7 @@ extension View {
     .shimmer()
 
     // Without shimmer for comparison
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       RoundedRectangle(cornerRadius: 8)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 200, height: 56)
@@ -94,7 +94,7 @@ extension View {
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 120, height: 16)
     }
-    .padding(24)
+    .padding(Spacing.lg)
     .background(
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexSurfacePrimary)

@@ -52,7 +52,7 @@ struct WeeklyBarChart: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Title
       Text(title)
         .font(.tidexHeadline)
@@ -110,7 +110,7 @@ struct WeeklyBarChart: View {
       .frame(height: 200)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -274,17 +274,17 @@ private struct TooltipView: View {
   let currency: String
 
   var body: some View {
-    VStack(alignment: .center, spacing: 4) {
+    VStack(alignment: .center, spacing: Spacing.xxs) {
       Text(dayData.fullDay)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
 
       Text(CurrencyConfig.format(dayData.earnings, currency: currency))
         .font(.system(size: 16, weight: .bold, design: .monospaced))
         .foregroundColor(.tidexBlue)
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(8)
     .overlay(
@@ -302,7 +302,7 @@ struct WeeklyBarChartEmpty: View {
   let title: String
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(title)
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
@@ -312,7 +312,7 @@ struct WeeklyBarChartEmpty: View {
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -323,7 +323,7 @@ struct WeeklyBarChartEmpty: View {
 
 #Preview {
   ScrollView {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // This Week preview
       WeeklyBarChart(
         data: DailyData.previewThisWeek,

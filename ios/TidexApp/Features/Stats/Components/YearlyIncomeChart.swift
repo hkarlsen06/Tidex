@@ -65,10 +65,10 @@ struct YearlyIncomeChart: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Title
       Text(String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))))
-        .font(.system(size: 18, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
 
       // Chart
@@ -123,7 +123,7 @@ struct YearlyIncomeChart: View {
           AxisValueLabel(anchor: .trailing) {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextPrimary)
             }
           }
@@ -134,7 +134,7 @@ struct YearlyIncomeChart: View {
       .frame(height: 200)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -292,17 +292,17 @@ private struct YearlyTooltipView: View {
   let currency: String
 
   var body: some View {
-    VStack(alignment: .center, spacing: 4) {
+    VStack(alignment: .center, spacing: Spacing.xxs) {
       Text(monthData.fullMonth)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
 
       Text(CurrencyConfig.format(monthData.earnings, currency: currency))
         .font(.system(size: 16, weight: .bold, design: .monospaced))
         .foregroundColor(.tidexBlue)
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(8)
     .overlay(
@@ -319,17 +319,17 @@ struct YearlyIncomeChartEmpty: View {
   let focusYear: Int
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))))
-        .font(.system(size: 18, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.statsChartsYearlyIncomeNoData)
-        .font(.system(size: 14, weight: .regular))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -340,7 +340,7 @@ struct YearlyIncomeChartEmpty: View {
 
 #Preview {
   ScrollView {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       YearlyIncomeChart(
         data: MonthlyIncomeData.previewData,
         focusYear: 2026

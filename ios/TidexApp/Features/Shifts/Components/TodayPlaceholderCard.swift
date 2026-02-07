@@ -42,17 +42,16 @@ struct TodayPlaceholderCard: View {
   private var cardContent: some View {
     ShiftCardContentLayout(centerTrailing: true) {
       // Date (left side)
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Text(dateParts.dayName)
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
         Text("·")
           .foregroundColor(.tidexTextMuted)
         Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
       }
-      .fixedSize(horizontal: true, vertical: false)
     } leadingBottom: {
       EmptyView()
     } trailingTop: {
@@ -63,8 +62,8 @@ struct TodayPlaceholderCard: View {
     } trailingBottom: {
       EmptyView()
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 20)
+    .padding(.horizontal, Spacing.mlg)
+    .padding(.vertical, Spacing.mlg)
     .background(
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexSurfacePrimary)
@@ -81,7 +80,7 @@ struct TodayPlaceholderCard: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     TodayPlaceholderCard(onTap: {
       print("Tapped!")
     })

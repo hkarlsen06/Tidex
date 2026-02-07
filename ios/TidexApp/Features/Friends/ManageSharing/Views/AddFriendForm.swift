@@ -18,11 +18,11 @@ struct AddFriendForm: View {
   @FocusState private var isFocused: Bool
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Header with expand button
       HStack {
         Text(.sharingAddFriend)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextMuted)
           .textCase(.uppercase)
 
@@ -30,15 +30,15 @@ struct AddFriendForm: View {
 
         if !isExpanded {
           // Capacity count to the left of the plus button
-          HStack(spacing: 8) {
-            HStack(spacing: 4) {
+          HStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.xxs) {
               Text(capacityDisplay)
-                .font(.system(size: 13, weight: .medium))
+                .font(.tidexFootnoteMedium)
                 .foregroundColor(canAdd ? .tidexTextMuted : .orange)
 
               if !canAdd {
                 Image(systemName: "exclamationmark.circle.fill")
-                  .font(.system(size: 12))
+                  .font(.tidexCaptionRegular)
                   .foregroundColor(.orange)
               }
             }
@@ -66,7 +66,7 @@ struct AddFriendForm: View {
 
       // Expanded form
       if isExpanded {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.sm) {
           // Input field
           VStack(alignment: .leading, spacing: 6) {
             TextField(
@@ -84,7 +84,7 @@ struct AddFriendForm: View {
             // Error message
             if let error = error {
               Text(error)
-                .font(.system(size: 12))
+                .font(.tidexCaptionRegular)
                 .foregroundColor(.red)
             }
           }
@@ -92,24 +92,24 @@ struct AddFriendForm: View {
           // Show earnings toggle
           HStack {
             Image(systemName: "dollarsign.circle")
-              .font(.system(size: 16))
+              .font(.tidexBody)
               .foregroundColor(.tidexTextMuted)
 
             Toggle(String(localized: .sharingShowEarnings), isOn: $showEarnings)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
               .toggleStyle(SwitchToggleStyle(tint: .green))
           }
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
           .disabled(isLoading)
 
           // Action buttons
-          HStack(spacing: 12) {
+          HStack(spacing: Spacing.sm) {
             Spacer()
 
             Button(action: onCancel) {
               Text(.commonCancel)
-                .font(.system(size: 15, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexTextMuted)
             }
             .buttonStyle(PlainButtonStyle())
@@ -123,10 +123,10 @@ struct AddFriendForm: View {
                     .scaleEffect(0.8)
                 }
                 Text(.sharingAdd)
-                  .font(.system(size: 15, weight: .semibold))
+                  .font(.tidexLabelStrong)
               }
               .foregroundColor(.white)
-              .padding(.horizontal, 16)
+              .padding(.horizontal, Spacing.md)
               .padding(.vertical, Spacing.sm)
               .background(
                 identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
@@ -140,10 +140,10 @@ struct AddFriendForm: View {
               identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
           }
         }
-        .padding(.top, 4)
+        .padding(.top, Spacing.xxs)
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .onChange(of: isExpanded) { _, expanded in
       if expanded {
         Task { @MainActor in
@@ -162,17 +162,17 @@ struct TidexTextFieldStyle: TextFieldStyle {
   func _body(configuration: TextField<Self._Label>) -> some View {
     configuration
       .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, 12)
+      .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .cornerRadius(10)
-      .font(.system(size: 16))
+      .font(.tidexBody)
   }
 }
 
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     // Collapsed state
     AddFriendForm(
       isExpanded: .constant(false),

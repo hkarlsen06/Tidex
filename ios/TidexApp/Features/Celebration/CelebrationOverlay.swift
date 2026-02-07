@@ -54,7 +54,7 @@ struct CelebrationOverlay: View {
             .fill(Color.tidexTextMuted.opacity(0.4))
             .frame(width: 36, height: 5)
             .padding(.top, 10)
-            .padding(.bottom, 20)
+            .padding(.bottom, Spacing.mlg)
 
           // Header with large number
           VStack(spacing: Spacing.sm) {
@@ -80,7 +80,7 @@ struct CelebrationOverlay: View {
               .font(.tidexSubheadline)
               .foregroundColor(.tidexTextMuted)
           }
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
 
           // Expandable content - card and "great job"
           if showCard {
@@ -98,7 +98,7 @@ struct CelebrationOverlay: View {
                 .font(.tidexHeadline)
                 .foregroundColor(.tidexTextPrimary)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.md)
             .padding(.top, Spacing.xl)  // More gap to differentiate sections
             .transition(.opacity.combined(with: .move(edge: .bottom)))
           }
@@ -119,7 +119,7 @@ struct CelebrationOverlay: View {
               .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
           }
           .buttonStyle(CelebrationButtonStyle())
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
           .padding(.bottom, safeBottom + 12)
         }
         .frame(height: currentHeight)

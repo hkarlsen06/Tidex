@@ -207,12 +207,12 @@ struct SharingView: View {
 
   private var sharerListView: some View {
     ScrollView {
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Title and manage button row
         HStack {
           // "Friends" / "Venner" title
           Text(.sharingFriendsTitle)
-            .font(.system(size: 20, weight: .bold))
+            .font(.tidexTitle2)
             .foregroundColor(.tidexTextPrimary)
 
           Spacer()
@@ -223,18 +223,18 @@ struct SharingView: View {
           }) {
             HStack(spacing: 6) {
               Image(systemName: "person.2")
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
               Text(.sharingSeeFriends)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
             }
             .foregroundColor(.tidexTextPrimary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
           }
           .buttonStyle(PlainButtonStyle())
           .tidexGlass(shape: .capsule, interactive: true)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
 
         // Sharer list
         SharerListView(
@@ -255,8 +255,8 @@ struct SharingView: View {
         )
       }
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.top, 16)
-      .padding(.bottom, 32)
+      .padding(.top, Spacing.md)
+      .padding(.bottom, Spacing.xl)
       .frame(maxWidth: .infinity)
     }
     .refreshable {
@@ -303,7 +303,7 @@ private struct SharedShiftsDetailView: View {
           viewModel.toggleSuperimpose()
         } label: {
           Image(systemName: "rectangle.on.rectangle")
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
         }
       }

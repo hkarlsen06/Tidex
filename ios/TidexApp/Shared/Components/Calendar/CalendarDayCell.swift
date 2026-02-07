@@ -105,7 +105,7 @@ struct CalendarDayCell<Content: View>: View {
             Text("\(weekNum)")
               .font(.caption2)
               .foregroundColor(.tidexTextMuted)
-              .padding(.leading, 4)
+              .padding(.leading, Spacing.xxs)
               .padding(.top, 3)
             Spacer()
           }
@@ -120,7 +120,7 @@ struct CalendarDayCell<Content: View>: View {
           Text("\(dayInfo.dayNumber)")
             .font(.caption2.weight(.semibold))
             .foregroundColor(style.dayNumberColor)
-            .padding(.trailing, 4)
+            .padding(.trailing, Spacing.xxs)
             .padding(.top, 3)
         }
         Spacer()
@@ -133,7 +133,7 @@ struct CalendarDayCell<Content: View>: View {
             Image(systemName: "person.2.fill")
               .font(.system(size: 9, weight: .semibold))
               .foregroundColor(.tidexBlue)
-              .padding(.leading, 4)
+              .padding(.leading, Spacing.xxs)
               .padding(.top, 5)
             Spacer()
           }
@@ -189,7 +189,7 @@ struct CalendarDayCell<Content: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .padding(.top, 14)
-      .padding(.horizontal, 4)
+      .padding(.horizontal, Spacing.xxs)
 
     case .earnings(let amount, let color):
       GeometryReader { geo in
@@ -203,7 +203,7 @@ struct CalendarDayCell<Content: View>: View {
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .padding(.top, 14)
-      .padding(.horizontal, 4)
+      .padding(.horizontal, Spacing.xxs)
 
     case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
       GeometryReader { geo in
@@ -239,7 +239,7 @@ struct CalendarDayCell<Content: View>: View {
         }
       }
       .padding(.top, 14)
-      .padding(.horizontal, 4)
+      .padding(.horizontal, Spacing.xxs)
 
     case .starIcon(let color):
       VStack {
@@ -247,7 +247,7 @@ struct CalendarDayCell<Content: View>: View {
         Image(systemName: "star.fill")
           .font(.footnote.weight(.bold))
           .foregroundColor(color)
-          .padding(.bottom, 8)
+          .padding(.bottom, Spacing.xs)
       }
 
     case .dot(let color):
@@ -287,8 +287,8 @@ extension CalendarDayCell where Content == EmptyView {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 8) {
-    HStack(spacing: 4) {
+  VStack(spacing: Spacing.xs) {
+    HStack(spacing: Spacing.xxs) {
       CalendarDayCell(
         dayInfo: .inMonth(id: 1, dayNumber: 1, dateISO: "2025-01-01", weekNumber: 1),
         style: .default,

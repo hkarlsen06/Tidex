@@ -28,7 +28,7 @@ struct MonthlyGoalCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Header row with title and settings icon
       HStack {
         Text(.statsMonthlyGoalTitle)
@@ -43,7 +43,7 @@ struct MonthlyGoalCard: View {
       }
 
       // Goal target display
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Text("\(String(localized: .statsMonthlyGoalGoalLabel)):")
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
@@ -60,7 +60,7 @@ struct MonthlyGoalCard: View {
       statusText
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -131,7 +131,7 @@ struct MonthlyGoalCard: View {
 struct MonthlyGoalEmptyCard: View {
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack {
         Text(.statsMonthlyGoalTitle)
           .font(.tidexHeadline)
@@ -149,7 +149,7 @@ struct MonthlyGoalEmptyCard: View {
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -157,7 +157,7 @@ struct MonthlyGoalEmptyCard: View {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     // In progress
     MonthlyGoalCard(
       goal: MonthlyGoal(

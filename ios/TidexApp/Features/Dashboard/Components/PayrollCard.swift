@@ -45,32 +45,32 @@ struct PayrollCard: View {
     ShiftCardContentLayout(centerTrailing: hasPayout && !showBreakdown) {
       // Row 1: Label (leads with purpose, matches shift card title size)
       Text(label)
-        .font(.system(size: 20, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
     } leadingBottom: {
       // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
         HStack(spacing: 6) {
           Image(systemName: "banknote")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
           Text(.dashboardToday)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
           Image(systemName: "party.popper.fill")
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexBlue)
         }
       } else {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Image(systemName: "banknote")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
           Text(dateParts.dayName)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
           Text("·")
-            .font(.system(size: 14, weight: .regular))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
           HStack(spacing: 0) {
             Text(dateParts.dayNumber)
@@ -78,7 +78,7 @@ struct PayrollCard: View {
             Text(" ")
             Text(dateParts.monthName)
           }
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
         }
         .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
@@ -93,7 +93,7 @@ struct PayrollCard: View {
           animateOnAppear: true,
           animateChanges: true
         )
-        .font(.system(size: 22, weight: .semibold))
+        .font(.tidexTitle)
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
       } else {
@@ -104,14 +104,14 @@ struct PayrollCard: View {
     } trailingBottom: {
       // Breakdown (gross - tax) when tax enabled
       if hasPayout && showBreakdown {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(formatPlainAmount(gross))
             .contentTransition(.numericText(value: gross))
           Text("−")
           Text(formatPlainAmount(tax ?? 0))
             .contentTransition(.numericText(value: tax ?? 0))
         }
-        .font(.system(size: 14, weight: .regular))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
         .animation(.spring(duration: 0.8, bounce: 0), value: gross)
         .animation(.spring(duration: 0.8, bounce: 0), value: tax)
@@ -121,8 +121,8 @@ struct PayrollCard: View {
           .frame(width: 70, height: 12)
       }
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 24)
+    .padding(.horizontal, Spacing.mlg)
+    .padding(.vertical, Spacing.lg)
     .background(Color.tidexSurfacePrimary)
     .overlay(alignment: .leading) {
       // Progress bar overlay - fills from left based on progress
@@ -175,7 +175,7 @@ struct PayrollCard: View {
 }
 
 #Preview {
-  VStack(spacing: 12) {
+  VStack(spacing: Spacing.sm) {
     // With tax and progress bar
     PayrollCard(
       payrollDate: Date(),
@@ -207,6 +207,6 @@ struct PayrollCard: View {
       taxEnabled: false
     )
   }
-  .padding(.horizontal, 24)
+  .padding(.horizontal, Spacing.lg)
   .background(Color.tidexBackground)
 }

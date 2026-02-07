@@ -17,12 +17,12 @@ struct TermsAgreementView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       // Checkbox with label
       Button(action: {
         isAgreed.toggle()
       }) {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Spacing.sm) {
           // Checkbox
           ZStack {
             RoundedRectangle(cornerRadius: 4)
@@ -35,7 +35,7 @@ struct TermsAgreementView: View {
 
             if isAgreed {
               Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .bold))
+                .font(.tidexCaptionStrong)
                 .foregroundColor(.white)
             }
           }
@@ -49,7 +49,7 @@ struct TermsAgreementView: View {
       // Error message
       if let error = error, !error.isEmpty {
         Text(error)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
       }
     }
@@ -69,7 +69,7 @@ struct TermsAgreementView: View {
   private var termsLabel: some View {
     // Build the terms text with proper text flow using AttributedString
     Text(termsAttributedString)
-      .font(.system(size: 14))
+      .font(.tidexSubheadline)
       .environment(
         \.openURL,
         OpenURLAction { url in

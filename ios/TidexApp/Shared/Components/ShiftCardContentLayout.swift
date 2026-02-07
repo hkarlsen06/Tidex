@@ -39,26 +39,35 @@ struct ShiftCardContentLayout<
           leadingTop
           leadingBottom
         }
+        .lineLimit(1)
 
-        Spacer()
+        Spacer(minLength: Spacing.xs)
 
         VStack(alignment: .trailing, spacing: rowSpacing) {
           trailingTop
           trailingBottom
         }
+        .fixedSize(horizontal: true, vertical: false)
+        .layoutPriority(1)
       }
     } else {
       // Row-based: each row aligns left/right by baseline
       VStack(spacing: rowSpacing) {
         HStack(alignment: .lastTextBaseline) {
           leadingTop
-          Spacer()
+            .lineLimit(1)
+          Spacer(minLength: Spacing.xs)
           trailingTop
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
         }
         HStack(alignment: .firstTextBaseline) {
           leadingBottom
-          Spacer()
+            .lineLimit(1)
+          Spacer(minLength: Spacing.xs)
           trailingBottom
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
         }
       }
     }

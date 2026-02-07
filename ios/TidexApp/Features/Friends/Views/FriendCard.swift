@@ -15,18 +15,18 @@ struct FriendCard: View {
     Button(action: onTap) {
       VStack(spacing: 0) {
         // Header row: avatar, name, chevron
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           avatarView
 
           VStack(alignment: .leading, spacing: 2) {
             Text(sharer.displayName)
-              .font(.system(size: 17, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
 
             // Contact info (email or phone)
             if let contactInfo = sharer.contactInfo {
               Text(contactInfo)
-                .font(.system(size: 13))
+                .font(.tidexFootnote)
                 .foregroundColor(.tidexTextMuted)
                 .lineLimit(1)
             }
@@ -35,10 +35,10 @@ struct FriendCard: View {
           Spacer()
 
           Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
             .foregroundColor(.tidexTextMuted)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
 
         // Shift preview section - swap between skeleton and real card
@@ -50,8 +50,8 @@ struct FriendCard: View {
               ShiftPreviewCard(shift: shift, status: status)
             }
           }
-          .padding(.horizontal, 12)
-          .padding(.bottom, 12)
+          .padding(.horizontal, Spacing.sm)
+          .padding(.bottom, Spacing.sm)
         }
       }
       .background(
@@ -84,9 +84,9 @@ struct FriendCard: View {
 
   /// Skeleton placeholder for shift preview while refreshing
   private var shiftPreviewSkeleton: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       // Date and time skeleton
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         RoundedRectangle(cornerRadius: 4)
           .fill(Color.tidexTextMuted.opacity(0.3))
           .frame(width: 140, height: 14)
@@ -103,7 +103,7 @@ struct FriendCard: View {
         .fill(Color.tidexTextMuted.opacity(0.2))
         .frame(width: 70, height: 24)
     }
-    .padding(.horizontal, 12)
+    .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -148,25 +148,29 @@ private struct ShiftPreviewCard: View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       let computed = computeStatus(at: context.date)
 
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         // Date and time info
         VStack(alignment: .leading, spacing: 2) {
           Text(formattedDate)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
 
           Text(formattedTimeRange)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
             .environment(\.layoutDirection, .leftToRight)
         }
 
-        Spacer()
+        Spacer(minLength: Spacing.xs)
 
         // Status badge
         statusBadge(computed: computed)
+          .fixedSize(horizontal: true, vertical: false)
+          .layoutPriority(1)
       }
-      .padding(.horizontal, 12)
+      .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(
         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -306,11 +310,11 @@ private struct ShiftPreviewCard: View {
     if isCountingDown(computed) {
       // Show countdown number for final 60 seconds (matches Next.js behavior)
       Text("\(computed.secondsUntilEnd)")
-        .font(.system(size: 16, weight: .medium))
+        .font(.tidexBodyMedium)
         .monospacedDigit()
         .frame(minWidth: 40)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.xxs)
         .background(
           RoundedRectangle(cornerRadius: 8)
             .fill(Color.green.opacity(0.2))
@@ -320,10 +324,10 @@ private struct ShiftPreviewCard: View {
         .animation(.default, value: computed.secondsUntilEnd)
     } else {
       Text(statusText(computed: computed))
-        .font(.system(size: 12, weight: .medium))
+        .font(.tidexCaption)
         .monospacedDigit()
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.xxs)
         .background(
           RoundedRectangle(cornerRadius: 8)
             .fill(statusBackgroundColor(for: computed.status))
@@ -465,37 +469,37 @@ struct FriendsListEmptyState: View {
   var onAddFriend: (() -> Void)?
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Image(systemName: "person.2.slash")
         .font(.system(size: 48))
         .foregroundColor(.tidexTextMuted)
 
       Text(.sharingNoSharers)
-        .font(.system(size: 17, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.sharingNoSharersDescription)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
         .multilineTextAlignment(.center)
-        .padding(.horizontal, 32)
+        .padding(.horizontal, Spacing.xl)
 
       if let onAddFriend {
         Button(action: onAddFriend) {
           HStack(spacing: 6) {
             Image(systemName: "plus")
-              .font(.system(size: 14, weight: .semibold))
+              .font(.tidexLabelStrong)
             Text(.sharingAddFriend)
-              .font(.system(size: 15, weight: .semibold))
+              .font(.tidexLabelStrong)
           }
           .foregroundColor(.white)
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 10)
           .background(Color.tidexBlue)
           .cornerRadius(10)
         }
         .buttonStyle(PlainButtonStyle())
-        .padding(.top, 4)
+        .padding(.top, Spacing.xxs)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -504,7 +508,7 @@ struct FriendsListEmptyState: View {
 }
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     FriendCard(
       sharer: SharedUser(
         id: "1",

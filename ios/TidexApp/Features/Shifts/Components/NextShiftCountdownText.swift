@@ -11,7 +11,7 @@ struct NextShiftCountdownText: View {
 
   var body: some View {
     Text(countdownText)
-      .font(.system(size: 12, weight: .regular))
+      .font(.tidexCaptionRegular)
       .foregroundColor(.tidexTextMuted)
       .onAppear {
         updateCountdown()
@@ -50,7 +50,7 @@ struct NextShiftCountdownText: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     NextShiftCountdownText(
       shift: ShiftWithComputations(
         shift: ShiftRow(

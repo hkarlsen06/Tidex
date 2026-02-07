@@ -101,11 +101,11 @@ struct SwipeableShiftCard<Content: View>: View {
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexBlue)
 
-      VStack(spacing: 4) {
+      VStack(spacing: Spacing.xxs) {
         Image(systemName: "pencil")
           .font(.system(size: 20, weight: .medium))
         Text(.shiftsActionsEdit)
-          .font(.system(size: 11, weight: .medium))
+          .font(.tidexMicro)
       }
       .foregroundColor(.white)
       .opacity(editContentOpacity)
@@ -118,11 +118,11 @@ struct SwipeableShiftCard<Content: View>: View {
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexError)
 
-      VStack(spacing: 4) {
+      VStack(spacing: Spacing.xxs) {
         Image(systemName: "trash")
           .font(.system(size: 20, weight: .medium))
         Text(.shiftsActionsDelete)
-          .font(.system(size: 11, weight: .medium))
+          .font(.tidexMicro)
       }
       .foregroundColor(.white)
       .opacity(deleteContentOpacity)
@@ -237,7 +237,7 @@ struct SwipeableShiftCard<Content: View>: View {
 
 #Preview {
   ScrollView {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       ForEach(0..<10, id: \.self) { index in
         SwipeableShiftCard(
           onEdit: { print("Edit \(index)") },

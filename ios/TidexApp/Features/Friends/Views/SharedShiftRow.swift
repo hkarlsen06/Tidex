@@ -39,24 +39,24 @@ struct SharedShiftRow: View {
   // MARK: - Body
 
   var body: some View {
-    HStack(alignment: .center, spacing: 16) {
+    HStack(alignment: .center, spacing: Spacing.md) {
       // Left side: date and time info
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         // Day name and date
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(dateParts.dayName)
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
           Text("·")
             .foregroundColor(.tidexTextMuted)
           Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextMuted)
         }
         .fixedSize(horizontal: true, vertical: false)
 
         // Time range and hours
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           if isRTL {
             hoursLabel
             arrowLabel
@@ -79,8 +79,8 @@ struct SharedShiftRow: View {
         hiddenEarningsIndicator
       }
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 20)
+    .padding(.horizontal, Spacing.mlg)
+    .padding(.vertical, Spacing.mlg)
     .background(
       RoundedRectangle(cornerRadius: 24)
         .fill(Color.tidexSurfacePrimary)
@@ -100,18 +100,18 @@ struct SharedShiftRow: View {
     VStack(alignment: .trailing, spacing: 2) {
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
       Text(formatCurrency(displayAmount))
-        .font(.system(size: 22, weight: .semibold))
+        .font(.tidexTitle)
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
 
       // Show gross - tax breakdown if tax enabled
       if shift.taxEnabled && shift.taxAmount > 0 {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
           Text(formatCurrency(shift.grossPay))
           Text("−")
           Text(formatCurrency(shift.taxAmount))
         }
-        .font(.system(size: 13, weight: .regular))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
       }
     }
@@ -120,9 +120,9 @@ struct SharedShiftRow: View {
   private var hiddenEarningsIndicator: some View {
     HStack(spacing: 6) {
       Image(systemName: "eye.slash.fill")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
       Text(.sharingHidden)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
     }
     .foregroundColor(.tidexTextMuted)
   }
@@ -146,7 +146,7 @@ struct SharedShiftRow: View {
   }
 
   private var timeRangeLabel: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       if isRTL {
         timeRangeTextLabel
         clockIcon
@@ -159,7 +159,7 @@ struct SharedShiftRow: View {
 
   private var timeRangeTextLabel: some View {
     Text(timeRangeText)
-      .font(.system(size: 14, weight: .regular))
+      .font(.tidexSubheadline)
       .foregroundColor(.tidexTextPrimary)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
@@ -168,13 +168,13 @@ struct SharedShiftRow: View {
 
   private var clockIcon: some View {
     Image(systemName: "clock")
-      .font(.system(size: 13, weight: .regular))
+      .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
   }
 
   private var hoursLabel: some View {
     Text(formattedHours)
-      .font(.system(size: 14, weight: .medium))
+      .font(.tidexLabel)
       .foregroundColor(.tidexTextMuted)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
@@ -182,7 +182,7 @@ struct SharedShiftRow: View {
 
   private var arrowLabel: some View {
     Text(isRTL ? "←" : "→")
-      .font(.system(size: 14, weight: .medium))
+      .font(.tidexLabel)
       .foregroundColor(.tidexTextMuted)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
@@ -190,7 +190,7 @@ struct SharedShiftRow: View {
 }
 
 #Preview {
-  VStack(spacing: 12) {
+  VStack(spacing: Spacing.sm) {
     // With earnings visible
     SharedShiftRow(
       shift: ShiftWithComputations(

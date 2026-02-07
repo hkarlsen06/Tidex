@@ -8,10 +8,10 @@ struct CurrencySelector: View {
   @State private var showingPicker = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       // Label
       Text(.onboardingCurrencyLabel)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       // Selector button
@@ -21,16 +21,16 @@ struct CurrencySelector: View {
       }) {
         HStack {
           Text(CurrencyConfig.get(selectedCurrency).label)
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Spacer()
 
           Image(systemName: "chevron.down")
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
             .foregroundColor(.tidexTextMuted)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -82,18 +82,18 @@ private struct CurrencyPickerSheet: View {
               } header: {
                 HStack {
                   Text(group.label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.tidexFootnoteStrong)
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
                   Spacer()
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                .padding(.horizontal, Spacing.mlg)
+                .padding(.vertical, Spacing.xs)
                 .background(Color.tidexBackground)
               }
             }
           }
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
         }
       }
       .navigationTitle(String(localized: .onboardingCurrencyTitle))
@@ -120,19 +120,19 @@ private struct CurrencyRow: View {
     Button(action: action) {
       HStack {
         Text(option.label)
-          .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
+          .font(isSelected ? .tidexHeadline : .tidexBody)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
         if isSelected {
           Image(systemName: "checkmark")
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexBrandPrimary)
         }
       }
       .contentShape(Rectangle())
-      .padding(.horizontal, 20)
+      .padding(.horizontal, Spacing.mlg)
       .padding(.vertical, Spacing.sm)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.clear)
     }

@@ -29,11 +29,11 @@ struct DurationPicker: View {
   }
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Duration type selector
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Text(String(localized: .addShiftDuration))
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextMuted)
           .textCase(.uppercase)
 
@@ -42,7 +42,7 @@ struct DurationPicker: View {
 
       // Type buttons
       ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           ForEach(DurationType.allCases) { type in
             DurationTypeButton(
               label: type.label,
@@ -121,9 +121,9 @@ private struct DurationTypeButton: View {
   var body: some View {
     Button(action: action) {
       Text(label)
-        .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
+        .font(isSelected ? .tidexLabelStrong : .tidexSubheadline)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
         .clipShape(Capsule())
@@ -143,10 +143,10 @@ private struct IndefiniteDescription: View {
         .foregroundColor(.tidexBlue)
 
       Text(.addShiftIndefiniteHint)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -160,14 +160,14 @@ private struct MonthsSlider: View {
   let onValueChange: () -> Void
 
   var body: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       HStack {
         Text(
           value == 1
             ? String(localized: .addShiftMonthSingular)
             : String(localized: .addShiftMonthPlural(value))
         )
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -184,7 +184,7 @@ private struct MonthsSlider: View {
       )
       .tint(.tidexBlue)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
   }
@@ -197,14 +197,14 @@ private struct YearsSlider: View {
   let onValueChange: () -> Void
 
   var body: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       HStack {
         Text(
           value == 1
             ? String(localized: .addShiftYearSingular)
             : String(localized: .addShiftYearPlural(value))
         )
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -221,7 +221,7 @@ private struct YearsSlider: View {
       )
       .tint(.tidexBlue)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
   }
@@ -234,9 +234,9 @@ private struct EndDatePicker: View {
   let onDateChange: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.addShiftDurationEndDate)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       DatePicker(
@@ -251,7 +251,7 @@ private struct EndDatePicker: View {
         onDateChange()
       }
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
   }
@@ -261,7 +261,7 @@ private struct EndDatePicker: View {
 
 #Preview {
   ScrollView {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       DurationPicker(endCondition: .constant(.months(value: 6)))
       DurationPicker(endCondition: .constant(nil))
     }

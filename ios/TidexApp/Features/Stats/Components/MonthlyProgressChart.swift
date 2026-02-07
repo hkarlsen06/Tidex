@@ -62,10 +62,10 @@ struct MonthlyProgressChart: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Title
       Text(.statsChartsMonthlyProgressTitle)
-        .font(.system(size: 18, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
 
       // Chart
@@ -116,7 +116,7 @@ struct MonthlyProgressChart: View {
             if let day = value.as(Int.self) {
               let isToday = data.first(where: { $0.day == day })?.isToday ?? false
               Text("\(day)")
-                .font(.system(size: 14, weight: isToday ? .semibold : .regular))
+                .font(isToday ? .tidexLabelStrong : .tidexSubheadline)
                 .foregroundColor(isToday ? .tidexBlue : .tidexTextPrimary)
             }
           }
@@ -129,7 +129,7 @@ struct MonthlyProgressChart: View {
           AxisValueLabel(anchor: .trailing) {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextPrimary)
             }
           }
@@ -139,7 +139,7 @@ struct MonthlyProgressChart: View {
       .frame(height: 220)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -186,17 +186,17 @@ struct MonthlyProgressChart: View {
 struct MonthlyProgressChartEmpty: View {
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.statsChartsMonthlyProgressTitle)
-        .font(.system(size: 18, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.statsChartsMonthlyProgressNoData)
-        .font(.system(size: 14, weight: .regular))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(24)
     .tidexCardShadow()
@@ -207,7 +207,7 @@ struct MonthlyProgressChartEmpty: View {
 
 #Preview {
   ScrollView {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       MonthlyProgressChart(data: DailyCumulativeData.previewData)
       MonthlyProgressChartEmpty()
     }

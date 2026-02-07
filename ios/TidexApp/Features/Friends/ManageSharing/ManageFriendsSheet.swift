@@ -38,7 +38,7 @@ struct ManageSharingSheet: View {
           Section {
           } footer: {
             Text(.sharingManageDescription)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
           }
 
           // MARK: - Error Banner
@@ -110,7 +110,7 @@ struct ManageSharingSheet: View {
           Button(String(localized: .commonDone)) {
             dismiss()
           }
-          .font(.system(size: 17, weight: .semibold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexBlue)
         }
       }
@@ -178,13 +178,13 @@ struct ManageSharingSheet: View {
   // MARK: - Loading View
 
   private var loadingView: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       ProgressView()
         .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
         .scaleEffect(1.2)
 
       Text(.sharingLoadingFriends)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
     }
     .frame(maxWidth: .infinity)
@@ -194,22 +194,22 @@ struct ManageSharingSheet: View {
   // MARK: - Empty State
 
   private var emptyState: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       Image(systemName: "person.2")
         .font(.system(size: 40))
         .foregroundColor(.tidexTextMuted)
 
       Text(.sharingNoFriends)
-        .font(.system(size: 17, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.sharingNoFriendsDescription)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
-    .padding(.vertical, 40)
+    .padding(.vertical, Spacing.xxl)
   }
 
   // MARK: - Friend Sections

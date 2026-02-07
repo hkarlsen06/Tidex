@@ -259,7 +259,7 @@ struct CustomSupplementsEditorSheet: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 20) {
+        VStack(spacing: Spacing.mlg) {
           // Info header
           infoHeader
 
@@ -281,7 +281,7 @@ struct CustomSupplementsEditorSheet: View {
           Spacer()
             .frame(height: 100)
         }
-        .padding(20)
+        .padding(Spacing.mlg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .supplementsEditTitle))
@@ -381,18 +381,18 @@ struct CustomSupplementsEditorSheet: View {
 
   @ViewBuilder
   private var infoHeader: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "info.circle")
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexBlue)
 
       Text(.supplementsEditorHint)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Spacer()
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexBlue.opacity(0.08))
@@ -401,26 +401,26 @@ struct CustomSupplementsEditorSheet: View {
 
   @ViewBuilder
   private var emptyState: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       Image(systemName: "plus.circle.dashed")
         .font(.system(size: 40))
         .foregroundColor(.tidexTextMuted)
 
       Text(.supplementsNoRules)
-        .font(.system(size: 15, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       Text(.supplementsNoRulesHint)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
         .multilineTextAlignment(.center)
     }
-    .padding(.vertical, 40)
+    .padding(.vertical, Spacing.xxl)
   }
 
   @ViewBuilder
   private var rulesList: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       ForEach(rules) { rule in
         ShiftSupplementRuleCard(
           rule: rule,
@@ -446,11 +446,11 @@ struct CustomSupplementsEditorSheet: View {
       editingRule = nil
       showingRuleEditor = true
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
-          .font(.system(size: 16))
+          .font(.tidexBody)
         Text(.supplementsAddRule)
-          .font(.system(size: 15, weight: .medium))
+          .font(.tidexLabel)
       }
       .foregroundColor(.tidexBlue)
       .frame(maxWidth: .infinity)
@@ -469,14 +469,14 @@ struct CustomSupplementsEditorSheet: View {
       impactHaptic.impactOccurred()
       resetToStandard()
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "arrow.counterclockwise")
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
         Text(.supplementsResetToStandard)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
       }
       .foregroundColor(.tidexTextSecondary)
-      .padding(.vertical, 12)
+      .padding(.vertical, Spacing.sm)
     }
     .buttonStyle(.plain)
   }

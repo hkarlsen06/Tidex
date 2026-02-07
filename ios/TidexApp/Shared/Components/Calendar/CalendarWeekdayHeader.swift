@@ -10,7 +10,7 @@ struct CalendarWeekdayHeader: View {
     HStack(spacing: 0) {
       ForEach(weekdaySymbols.indices, id: \.self) { index in
         Text(weekdaySymbols[index])
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity)
       }

@@ -11,7 +11,7 @@ struct LoadingOverlay: View {
       Color.black.opacity(0.4)
         .ignoresSafeArea()
 
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         if isSuccess {
           Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 44))
@@ -25,11 +25,11 @@ struct LoadingOverlay: View {
 
         if let message = message {
           Text(message)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextPrimary)
         }
       }
-      .padding(32)
+      .padding(Spacing.xl)
       .background(Color.tidexSurfacePrimary.opacity(0.95))
       .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
       .animation(.easeInOut(duration: 0.2), value: isSuccess)

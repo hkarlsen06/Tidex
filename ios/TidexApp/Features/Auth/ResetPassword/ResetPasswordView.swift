@@ -14,10 +14,10 @@ struct ResetPasswordView: View {
 
           // Header section
           headerSection
-            .padding(.bottom, 40)
+            .padding(.bottom, Spacing.xxl)
 
           // Main content
-          VStack(spacing: 24) {
+          VStack(spacing: Spacing.lg) {
             // Error/Success banners
             if let error = viewModel.errorMessage {
               ErrorBanner(
@@ -45,14 +45,14 @@ struct ResetPasswordView: View {
               successStepContent
             }
           }
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
 
           Spacer(minLength: 60)
 
           // Footer - back to login link
           if viewModel.currentStep == .input {
             footerView
-              .padding(.bottom, 40)
+              .padding(.bottom, Spacing.xxl)
           }
         }
         .frame(minHeight: geometry.size.height)
@@ -73,7 +73,7 @@ struct ResetPasswordView: View {
   // MARK: - Header Section
 
   private var headerSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Key icon for reset password
       ZStack {
         Circle()
@@ -95,20 +95,20 @@ struct ResetPasswordView: View {
   // MARK: - Input Step
 
   private var inputStepContent: some View {
-    VStack(spacing: 24) {
+    VStack(spacing: Spacing.lg) {
       // Instructions
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.resetPasswordTitle)
-          .font(.system(size: 22, weight: .bold))
+          .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(.resetPasswordSubtitle)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
 
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Email/Phone field in grouped style
         VStack(spacing: 0) {
           NativeTextField(
@@ -124,15 +124,15 @@ struct ResetPasswordView: View {
         // Error message
         if let emailError = viewModel.fieldErrors.emailOrPhone {
           Text(emailError)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Spacing.xxs)
         }
 
         // Hint text
         Text(.resetPasswordHint)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -151,15 +151,15 @@ struct ResetPasswordView: View {
   // MARK: - OTP Step
 
   private var otpStepContent: some View {
-    VStack(spacing: 24) {
+    VStack(spacing: Spacing.lg) {
       // Instructions
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.otpTitle)
-          .font(.system(size: 22, weight: .bold))
+          .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
@@ -184,12 +184,12 @@ struct ResetPasswordView: View {
       )
 
       // Resend and back links
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         Button(action: {
           Task { await viewModel.resendOTP() }
         }) {
           Text(.otpResendCode)
-            .font(.system(size: 15))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexBlue)
         }
         .buttonStyle(.plain)
@@ -203,20 +203,20 @@ struct ResetPasswordView: View {
   // MARK: - New Password Step
 
   private var newPasswordStepContent: some View {
-    VStack(spacing: 24) {
+    VStack(spacing: Spacing.lg) {
       // Instructions
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.resetPasswordNewPasswordTitle)
-          .font(.system(size: 22, weight: .bold))
+          .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(.resetPasswordNewPasswordSubtitle)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
 
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Password fields in grouped style
         VStack(spacing: 0) {
           NativeSecureField(
@@ -241,23 +241,23 @@ struct ResetPasswordView: View {
         // Error messages
         if let newPasswordError = viewModel.fieldErrors.newPassword {
           Text(newPasswordError)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Spacing.xxs)
         }
 
         if let confirmError = viewModel.fieldErrors.confirmPassword {
           Text(confirmError)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Spacing.xxs)
         }
 
         // Password hint
         Text(.resetPasswordPasswordHint)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -279,7 +279,7 @@ struct ResetPasswordView: View {
   // MARK: - Success Step
 
   private var successStepContent: some View {
-    VStack(spacing: 24) {
+    VStack(spacing: Spacing.lg) {
       // Success icon
       ZStack {
         Circle()
@@ -292,13 +292,13 @@ struct ResetPasswordView: View {
       }
 
       // Instructions
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         Text(.resetPasswordSuccessTitle)
-          .font(.system(size: 22, weight: .bold))
+          .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(successMessage)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
@@ -325,11 +325,11 @@ struct ResetPasswordView: View {
     Button(action: {
       viewModel.goBack()
     }) {
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Image(systemName: "chevron.left")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
         Text(.commonBack)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
     }
@@ -342,11 +342,11 @@ struct ResetPasswordView: View {
     Button(action: {
       onNavigateToLogin?()
     }) {
-      HStack(spacing: 4) {
+      HStack(spacing: Spacing.xxs) {
         Image(systemName: "chevron.left")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
         Text(.resetPasswordBackToLogin)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
     }

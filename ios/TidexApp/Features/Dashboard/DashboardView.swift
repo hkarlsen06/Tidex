@@ -57,7 +57,7 @@ struct DashboardView: View {
               await viewModel.refresh()
             }
           }
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
           Spacer()
         }
 
@@ -352,7 +352,7 @@ struct DashboardView: View {
           // Animated card content - centered vertically
           animatedCardContent(data: data)
             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.md)
 
           Spacer()
         }
@@ -421,10 +421,10 @@ struct DashboardView: View {
     }()
 
     // Cards stay in place - only numbers animate on month change (like Next.js)
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       // Payroll countdown text - fixed height to prevent layout shift
       Text(countdownManager.payrollCountdownText ?? " ")
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
         .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
         .frame(height: 20)
@@ -503,7 +503,7 @@ struct DashboardView: View {
           Spacer()
 
           // Skeleton cards matching the real dashboard layout
-          VStack(spacing: 12) {
+          VStack(spacing: Spacing.sm) {
             // Placeholder for payroll countdown text
             Color.clear
               .frame(height: 20)
@@ -536,7 +536,7 @@ struct DashboardView: View {
             EmptyShiftCard(isLoading: true)
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
 
           Spacer()
         }
@@ -554,17 +554,17 @@ struct DashboardView: View {
 
   @ViewBuilder
   private func errorView(error: Error) -> some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 48))
         .foregroundColor(.tidexWarning)
 
       Text(.dashboardLoadError)
-        .font(.system(size: 16, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
       Text(error.localizedDescription)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
@@ -572,16 +572,16 @@ struct DashboardView: View {
         Task { await viewModel.loadDashboard() }
       } label: {
         Text(.commonRetry)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
-          .padding(.horizontal, 20)
+          .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))
           .cornerRadius(8)
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-    .padding(.horizontal, 40)
+    .padding(.horizontal, Spacing.xxl)
   }
 
 }

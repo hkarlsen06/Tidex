@@ -76,7 +76,7 @@ struct ToolStatusView: View {
           .frame(width: 14, height: 14)
 
         Text(toolDisplayName)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
 
         if !isExecuting {
@@ -85,12 +85,12 @@ struct ToolStatusView: View {
             .foregroundColor(.tidexTextMuted)
         }
       }
-      .padding(.horizontal, 12)
+      .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
 
       // Expanded details
       if isExpanded {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
           Divider()
             .background(Color.tidexBorder)
 
@@ -109,9 +109,9 @@ struct ToolStatusView: View {
               content: String(localized: .wageyToolTimedOut))
           }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spacing.sm)
         .padding(.bottom, 10)
-        .padding(.top, 4)
+        .padding(.top, Spacing.xxs)
       }
     }
     .background(Color.tidexSurfaceSecondary.opacity(0.6))
@@ -154,9 +154,9 @@ struct ToolStatusView: View {
   // MARK: - Detail Components
 
   private func detailRow(label: String, value: String) -> some View {
-    HStack(alignment: .top, spacing: 8) {
+    HStack(alignment: .top, spacing: Spacing.xs) {
       Text(label)
-        .font(.system(size: 11, weight: .medium))
+        .font(.tidexMicro)
         .foregroundColor(.tidexTextMuted)
         .frame(width: 60, alignment: .leading)
 
@@ -167,16 +167,16 @@ struct ToolStatusView: View {
   }
 
   private func detailSection(label: String, content: String) -> some View {
-    VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
       Text(label)
-        .font(.system(size: 11, weight: .medium))
+        .font(.tidexMicro)
         .foregroundColor(.tidexTextMuted)
 
       ScrollView(.horizontal, showsIndicators: false) {
         Text(content)
           .font(.system(size: 10, design: .monospaced))
           .foregroundColor(.tidexTextPrimary)
-          .padding(8)
+          .padding(Spacing.xs)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
       .background(Color.tidexSurfacePrimary)
@@ -207,12 +207,12 @@ struct ToolStatusView: View {
     } else if succeeded {
       // Checkmark on success
       Image(systemName: "checkmark.circle.fill")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexSuccess)
     } else {
       // X mark on failure (explicit failure or timeout)
       Image(systemName: "xmark.circle.fill")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
     }
   }
@@ -221,7 +221,7 @@ struct ToolStatusView: View {
 // MARK: - Previews
 
 #Preview("Executing") {
-  VStack(spacing: 12) {
+  VStack(spacing: Spacing.sm) {
     ToolStatusView(
       toolCall: ToolCall(
         id: "1",
@@ -247,7 +247,7 @@ struct ToolStatusView: View {
 
 #Preview("Completed - Success") {
   ScrollView {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       ToolStatusView(
         toolCall: ToolCall(
           id: "1",
@@ -276,7 +276,7 @@ struct ToolStatusView: View {
 
 #Preview("Completed - Failed") {
   ScrollView {
-    VStack(spacing: 12) {
+    VStack(spacing: Spacing.sm) {
       ToolStatusView(
         toolCall: ToolCall(
           id: "1",

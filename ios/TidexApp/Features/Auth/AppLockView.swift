@@ -38,7 +38,7 @@ struct AppLockView: View {
           .font(.subheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
-          .padding(.horizontal, 48)
+          .padding(.horizontal, Spacing.xxxl)
 
         Spacer()
 

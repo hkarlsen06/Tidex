@@ -7,7 +7,7 @@ struct DataSettingsView: View {
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         // Error message
         if let error = viewModel.errorMessage {
           errorBanner(error)
@@ -27,8 +27,8 @@ struct DataSettingsView: View {
         // About section
         aboutSection
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .dataTitle))
@@ -47,13 +47,13 @@ struct DataSettingsView: View {
   // MARK: - Error Banner
 
   private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexError)
 
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
 
       Spacer()
@@ -62,11 +62,11 @@ struct DataSettingsView: View {
         viewModel.clearError()
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .cornerRadius(8)
   }
@@ -74,18 +74,18 @@ struct DataSettingsView: View {
   // MARK: - Syncing Indicator
 
   private var syncingIndicator: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       ProgressView()
         .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
         .scaleEffect(0.8)
 
       Text(.dataExportSyncing)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Spacer()
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexBlue.opacity(0.1))
     .cornerRadius(8)
   }
@@ -93,19 +93,19 @@ struct DataSettingsView: View {
   // MARK: - Period Selection Section
 
   private var periodSelectionSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Section header
       Text(.dataExportPeriodLabel)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextMuted)
         .textCase(.uppercase)
 
       Text(.dataExportPeriodDescription)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
 
       // Preset buttons
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         ForEach([ExportPeriodPreset.lastMonth, .currentMonth, .currentYear], id: \.self) { preset in
           presetButton(preset)
         }
@@ -117,7 +117,7 @@ struct DataSettingsView: View {
           .fill(Color.tidexBorder)
           .frame(height: 1)
         Text(String(localized: .commonOr).uppercased())
-          .font(.system(size: 11, weight: .medium))
+          .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
         Rectangle()
           .fill(Color.tidexBorder)
@@ -136,10 +136,10 @@ struct DataSettingsView: View {
       viewModel.selectedPreset = preset
     } label: {
       Text(presetLabel(preset))
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, Spacing.sm)
         .background(
           RoundedRectangle(cornerRadius: 8)
             .fill(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
@@ -176,17 +176,17 @@ struct DataSettingsView: View {
     return Button {
       viewModel.selectedPreset = .custom
     } label: {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         Text(.dataExportCustomPeriod)
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
 
         // Date pickers in a balanced row
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           // From date
           VStack(alignment: .leading, spacing: 6) {
             Text(.dataExportFromLabel)
-              .font(.system(size: 11, weight: .semibold))
+              .font(.tidexMicro)
               .foregroundColor(.tidexTextMuted)
               .textCase(.uppercase)
 
@@ -206,7 +206,7 @@ struct DataSettingsView: View {
           // To date
           VStack(alignment: .leading, spacing: 6) {
             Text(.dataExportToLabel)
-              .font(.system(size: 11, weight: .semibold))
+              .font(.tidexMicro)
               .foregroundColor(.tidexTextMuted)
               .textCase(.uppercase)
 
@@ -227,11 +227,11 @@ struct DataSettingsView: View {
         // Error message for invalid range
         if viewModel.isCustomRangeInvalid {
           Text(.dataExportDateRangeError)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexError)
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: 12)
           .fill(Color.tidexSurfacePrimary)
@@ -247,7 +247,7 @@ struct DataSettingsView: View {
   // MARK: - Export Buttons Section
 
   private var exportButtonsSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // PDF Export
       exportCard(
         icon: "doc.text.fill",
@@ -312,9 +312,9 @@ struct DataSettingsView: View {
     buttonColor: Color,
     action: @escaping () -> Void
   ) -> some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Header row with icon and title
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         // Icon in colored background
         Image(systemName: icon)
           .font(.system(size: 20, weight: .medium))
@@ -326,7 +326,7 @@ struct DataSettingsView: View {
           )
 
         Text(title)
-          .font(.system(size: 17, weight: .semibold))
+          .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -334,24 +334,24 @@ struct DataSettingsView: View {
 
       // Description
       Text(description)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       // Full-width button
       Button(action: action) {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           if isLoading {
             ProgressView()
               .progressViewStyle(CircularProgressViewStyle(tint: .white))
               .scaleEffect(0.8)
           } else {
             Image(systemName: "square.and.arrow.down")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
           }
 
           Text(buttonLabel)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.tidexLabelStrong)
         }
         .foregroundColor(.white)
         .frame(maxWidth: .infinity)
@@ -364,7 +364,7 @@ struct DataSettingsView: View {
       .buttonStyle(.plain)
       .disabled(!viewModel.canExport || isLoading)
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexSurfacePrimary)
@@ -374,17 +374,17 @@ struct DataSettingsView: View {
   // MARK: - About Section
 
   private var aboutSection: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.dataExportAboutTitle)
-        .font(.system(size: 14, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextMuted)
 
       Text(.dataExportAboutDescription)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.top, 8)
+    .padding(.top, Spacing.xs)
   }
 }
 

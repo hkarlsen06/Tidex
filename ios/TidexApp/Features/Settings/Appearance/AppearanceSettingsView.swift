@@ -35,13 +35,13 @@ struct AppearanceSettingsView: View {
   // MARK: - Error Banner
 
   private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexError)
 
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
 
       Spacer()
@@ -50,11 +50,11 @@ struct AppearanceSettingsView: View {
         viewModel.clearError()
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .cornerRadius(8)
   }
@@ -80,7 +80,7 @@ struct AppearanceSettingsView: View {
     return Button {
       viewModel.selectedTheme = theme
     } label: {
-      HStack(spacing: 16) {
+      HStack(spacing: Spacing.md) {
         // Theme preview
         themePreview(theme)
 
@@ -188,7 +188,7 @@ struct AppearanceSettingsView: View {
     return Button {
       viewModel.selectedCalendarAnimationStyle = style
     } label: {
-      HStack(spacing: 16) {
+      HStack(spacing: Spacing.md) {
         // Animation style preview
         animationStylePreview(style)
 
@@ -255,13 +255,13 @@ struct AppearanceSettingsView: View {
   // MARK: - Current Theme Info
 
   private var currentThemeInfo: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "info.circle")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
 
       Text(currentThemeInfoText)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
     }
   }

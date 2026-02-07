@@ -21,10 +21,10 @@ struct GlobalPaySettingsCard: View {
   @State private var showingCurrencyPicker = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 20) {
+    VStack(alignment: .leading, spacing: Spacing.mlg) {
       // Section header
       Text(.settingsPayGlobalTitle)
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
 
       // Currency selector
@@ -39,7 +39,7 @@ struct GlobalPaySettingsCard: View {
       // Half-tax month
       halfTaxMonthPicker
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     .tidexCardShadow()
@@ -88,9 +88,9 @@ struct GlobalPaySettingsCard: View {
 
   @ViewBuilder
   private var currencyInput: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayGlobalCurrency)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       Button(action: {
@@ -101,22 +101,22 @@ struct GlobalPaySettingsCard: View {
       }) {
         HStack {
           Text(CurrencyConfig.get(currency).label)
-            .font(.system(size: 16))
+            .font(.tidexBody)
             .foregroundColor(canChangeCurrency ? .tidexTextPrimary : .tidexTextMuted)
 
           Spacer()
 
           if canChangeCurrency {
             Image(systemName: "chevron.down")
-              .font(.system(size: 14, weight: .medium))
+              .font(.tidexLabel)
               .foregroundColor(.tidexTextMuted)
           } else {
             Image(systemName: "lock.fill")
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
           }
         }
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       }
@@ -125,7 +125,7 @@ struct GlobalPaySettingsCard: View {
 
       if !canChangeCurrency {
         Text(.settingsPayCurrencyTariffWarning)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
     }
@@ -135,9 +135,9 @@ struct GlobalPaySettingsCard: View {
 
   @ViewBuilder
   private var monthlyGoalInput: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayGlobalMonthlyGoal)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       HStack {
@@ -146,7 +146,7 @@ struct GlobalPaySettingsCard: View {
           text: $monthlyGoalText
         )
         .keyboardType(.numberPad)
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
         .onChange(of: monthlyGoalText) { _, newValue in
           // Filter to digits only
@@ -164,15 +164,15 @@ struct GlobalPaySettingsCard: View {
         }
 
         Text(currency)
-          .font(.system(size: 14))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
       Text(.settingsPayGlobalMonthlyGoalHelper)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -181,14 +181,14 @@ struct GlobalPaySettingsCard: View {
 
   @ViewBuilder
   private var payrollDayInput: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayGlobalPayrollDay)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       HStack {
         Text(formatPayrollDay(payrollDay))
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -205,12 +205,12 @@ struct GlobalPaySettingsCard: View {
           onUpdatePayrollDay(newValue)
         }
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
       Text(.settingsPayGlobalPayrollDayHelper)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -238,9 +238,9 @@ struct GlobalPaySettingsCard: View {
 
   @ViewBuilder
   private var halfTaxMonthPicker: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayGlobalHalfTaxMonth)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       Picker("", selection: $halfTaxMonth) {
@@ -254,7 +254,7 @@ struct GlobalPaySettingsCard: View {
       .pickerStyle(.menu)
       .tint(.tidexBlue)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       .onChange(of: halfTaxMonth) { _, newValue in
@@ -265,7 +265,7 @@ struct GlobalPaySettingsCard: View {
       }
 
       Text(.settingsPayGlobalHalfTaxMonthHelper)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
   }
@@ -304,18 +304,18 @@ private struct CurrencyPickerSheet: View {
               } header: {
                 HStack {
                   Text(group.label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.tidexFootnoteStrong)
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
                   Spacer()
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                .padding(.horizontal, Spacing.mlg)
+                .padding(.vertical, Spacing.xs)
                 .background(Color.tidexBackground)
               }
             }
           }
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
         }
       }
       .navigationTitle(String(localized: .settingsPayGlobalCurrencyTitle))
@@ -342,20 +342,20 @@ private struct CurrencyRow: View {
     Button(action: action) {
       HStack {
         Text(option.label)
-          .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
+          .font(isSelected ? .tidexHeadline : .tidexBody)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
         if isSelected {
           Image(systemName: "checkmark")
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexBrandPrimary)
         }
       }
       .contentShape(Rectangle())
-      .padding(.horizontal, 20)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Spacing.mlg)
+      .padding(.vertical, Spacing.sm)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.clear)
     }
     .buttonStyle(.plain)

@@ -31,8 +31,8 @@ struct CalendarHeaderRow: View {
 
         trailingContent(totals: totals, alignment: .center)
       }
-      .padding(.horizontal, 4)
-      .padding(.bottom, 12)
+      .padding(.horizontal, Spacing.xxs)
+      .padding(.bottom, Spacing.sm)
     } else {
       HStack(alignment: .firstTextBaseline) {
         monthYearLabel
@@ -45,8 +45,8 @@ struct CalendarHeaderRow: View {
           trailingAccessory
         }
       }
-      .padding(.horizontal, 4)
-      .padding(.bottom, 12)
+      .padding(.horizontal, Spacing.xxs)
+      .padding(.bottom, Spacing.sm)
     }
   }
 
@@ -54,12 +54,12 @@ struct CalendarHeaderRow: View {
   private var monthYearLabel: some View {
     HStack(spacing: 6) {
       Text(monthName)
-        .font(.system(size: 20, weight: .semibold))
+        .font(.tidexTitle2)
         .foregroundColor(.tidexTextPrimary)
 
       if let selectionCount {
         Text("(\(selectionCount))")
-          .font(.system(size: 20, weight: .semibold))
+          .font(.tidexTitle2)
           .foregroundColor(.tidexTextMuted)
       } else {
         Text(String(year))
@@ -74,7 +74,7 @@ struct CalendarHeaderRow: View {
   private func trailingContent(totals: CalendarHeaderTotals, alignment: VerticalAlignment)
     -> some View
   {
-    HStack(alignment: alignment, spacing: 8) {
+    HStack(alignment: alignment, spacing: Spacing.xs) {
       if let trailingAccessory {
         trailingAccessory
       }
@@ -91,7 +91,7 @@ struct CalendarHeaderRow: View {
           secondary,
           animateFrom: lastDisplayedSecondary > 0 ? lastDisplayedSecondary : nil
         )
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
         .onChange(of: secondary) { _, newValue in
           lastDisplayedSecondary = newValue
@@ -114,7 +114,7 @@ struct CalendarHeaderRow: View {
         amount,
         animateFrom: lastDisplayedPrimary > 0 ? lastDisplayedPrimary : nil
       )
-      .font(.system(size: 17, weight: .semibold))
+      .font(.tidexHeadline)
       .foregroundColor(.tidexTextPrimary)
       .onChange(of: amount) { _, newValue in
         lastDisplayedPrimary = newValue
@@ -126,7 +126,7 @@ struct CalendarHeaderRow: View {
       }
     } else {
       Text("—")
-        .font(.system(size: 17, weight: .semibold))
+        .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
     }
   }

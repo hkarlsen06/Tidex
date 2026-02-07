@@ -13,46 +13,46 @@ struct SyncStatusIndicator: View {
       EmptyView()
 
     case .syncing:
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         ProgressView()
           .progressViewStyle(CircularProgressViewStyle())
           .scaleEffect(0.8)
 
         Text(.syncSyncing)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(20)
       .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
 
     case .failed(_, let lastSync):
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "exclamationmark.icloud")
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexWarning)
 
         if let lastSync = lastSync {
           Text(String(localized: .syncFailedWithLastSync(formatRelativeTime(lastSync))))
-            .font(.system(size: 13, weight: .medium))
+            .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextSecondary)
         } else {
           Text(.syncSyncFailed)
-            .font(.system(size: 13, weight: .medium))
+            .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextSecondary)
         }
 
         Button(action: onRetry) {
           Text(.commonRetry)
-            .font(.system(size: 13, weight: .semibold))
+            .font(.tidexFootnoteStrong)
             .foregroundColor(.tidexBlue)
         }
         .buttonStyle(.plain)
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
       .background(Color.tidexWarning.opacity(0.12))
       .overlay(
         RoundedRectangle(cornerRadius: 20)
@@ -61,17 +61,17 @@ struct SyncStatusIndicator: View {
       .cornerRadius(20)
 
     case .offline:
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "wifi.slash")
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
 
         Text(.syncOffline)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextMuted)
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(20)
     }
@@ -96,7 +96,7 @@ struct SyncStatusIndicator: View {
 }
 
 #Preview("Syncing") {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     SyncStatusIndicator(onRetry: {})
   }
   .padding()
@@ -107,7 +107,7 @@ struct SyncStatusIndicator: View {
 }
 
 #Preview("Failed") {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     SyncStatusIndicator(onRetry: {})
   }
   .padding()
@@ -118,7 +118,7 @@ struct SyncStatusIndicator: View {
 }
 
 #Preview("Offline") {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     SyncStatusIndicator(onRetry: {})
   }
   .padding()

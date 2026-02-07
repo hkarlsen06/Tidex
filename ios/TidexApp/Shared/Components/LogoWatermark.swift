@@ -90,7 +90,7 @@ struct LogoWatermark: View {
 }
 
 #Preview {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     LogoWatermark()
       .frame(width: 64, height: 64)
 

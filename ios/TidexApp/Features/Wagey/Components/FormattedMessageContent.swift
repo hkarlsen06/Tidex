@@ -8,7 +8,7 @@ struct FormattedMessageContent: View {
   let content: String
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       ForEach(Array(parseContent().enumerated()), id: \.offset) { _, segment in
         switch segment {
         case .text(let text):
@@ -28,7 +28,7 @@ struct FormattedMessageContent: View {
     Rectangle()
       .fill(Color.tidexBorder)
       .frame(height: 1)
-      .padding(.vertical, 4)
+      .padding(.vertical, Spacing.xxs)
   }
 
   // MARK: - Text Rendering
@@ -40,11 +40,11 @@ struct FormattedMessageContent: View {
       options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     ) {
       Text(attributedString)
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
     } else {
       Text(text)
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
     }
   }
@@ -69,8 +69,8 @@ struct FormattedMessageContent: View {
               Text(colIndex < headerRow.count ? headerRow[colIndex] : "")
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundColor(.tidexTextPrimary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, Spacing.xs)
             }
           }
           .background(Color.tidexSurfaceSecondary.opacity(0.5))
@@ -82,7 +82,7 @@ struct FormattedMessageContent: View {
                 Text(colIndex < row.count ? row[colIndex] : "")
                   .font(.system(size: 13, design: .monospaced))
                   .foregroundColor(colIndex == 0 ? .tidexTextPrimary : .tidexTextSecondary)
-                  .padding(.horizontal, 12)
+                  .padding(.horizontal, Spacing.sm)
                   .padding(.vertical, 6)
               }
             }

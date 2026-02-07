@@ -297,12 +297,12 @@ private struct MFAEnrollmentSheet: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.lg) {
           if isEnrolling {
             ProgressView()
               .progressViewStyle(.circular)
             Text(.onboardingMfaEnrolling)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
           } else if totpUri != nil {
             // Show QR code and verification input
@@ -312,16 +312,16 @@ private struct MFAEnrollmentSheet: View {
             ProgressView()
               .progressViewStyle(.circular)
             Text(.onboardingMfaEnrolling)
-              .font(.system(size: 15))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
           }
 
           if let error = errorMessage {
             Text(error)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexError)
               .multilineTextAlignment(.center)
-              .padding(.horizontal, 24)
+              .padding(.horizontal, Spacing.lg)
           }
         }
       }
@@ -346,9 +346,9 @@ private struct MFAEnrollmentSheet: View {
   @ViewBuilder
   private func mfaVerificationView() -> some View {
     ScrollView {
-      VStack(spacing: 20) {
+      VStack(spacing: Spacing.mlg) {
         Text(.onboardingMfaScanQR)
-          .font(.system(size: 17))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
           .multilineTextAlignment(.center)
 
@@ -370,7 +370,7 @@ private struct MFAEnrollmentSheet: View {
             .frame(width: 200, height: 200)
             .overlay(
               Text(.onboardingMfaQrCodeUnavailable)
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -381,14 +381,14 @@ private struct MFAEnrollmentSheet: View {
           Button(action: {
             addToiCloudKeychain(uri: totpUri, secret: secret)
           }) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
               Image(systemName: "key.fill")
-                .font(.system(size: 16))
+                .font(.tidexBody)
               Text(.onboardingMfaAddToPasswords)
-                .font(.system(size: 15, weight: .medium))
+                .font(.tidexLabel)
             }
             .foregroundColor(.tidexBlue)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexBlue.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -396,12 +396,12 @@ private struct MFAEnrollmentSheet: View {
         }
 
         if let secret = secret {
-          VStack(spacing: 4) {
+          VStack(spacing: Spacing.xxs) {
             Text(.onboardingMfaManualEntry)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
 
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
               Text(secret)
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundColor(.tidexTextSecondary)
@@ -411,19 +411,19 @@ private struct MFAEnrollmentSheet: View {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
               }) {
                 Image(systemName: "doc.on.doc")
-                  .font(.system(size: 14))
+                  .font(.tidexSubheadline)
                   .foregroundColor(.tidexBlue)
               }
             }
-            .padding(8)
+            .padding(Spacing.xs)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 6))
           }
         }
 
-        VStack(spacing: 8) {
+        VStack(spacing: Spacing.xs) {
           Text(.onboardingMfaEnterCode)
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
 
           TextField("000000", text: $verificationCode)
@@ -431,14 +431,14 @@ private struct MFAEnrollmentSheet: View {
             .multilineTextAlignment(.center)
             .font(.system(size: 24, weight: .semibold, design: .monospaced))
             .frame(width: 160)
-            .padding(12)
+            .padding(Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
 
         Button(action: verifyCode) {
           Text(.onboardingMfaVerify)
-            .font(.system(size: 17, weight: .semibold))
+            .font(.tidexHeadline)
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 54)
@@ -449,9 +449,9 @@ private struct MFAEnrollmentSheet: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .disabled(verificationCode.count != 6)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Spacing.lg)
       }
-      .padding(24)
+      .padding(Spacing.lg)
     }
   }
 

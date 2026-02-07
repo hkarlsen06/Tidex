@@ -50,7 +50,7 @@ struct StatsView: View {
               await refreshStatsContent()
             }
           }
-          .padding(.top, 8)
+          .padding(.top, Spacing.xs)
           Spacer()
         }
       }
@@ -84,7 +84,7 @@ struct StatsView: View {
   private func statsContent(stats: StatsData) -> some View {
     ScrollViewReader { proxy in
       ScrollView {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) {
           Color.clear.frame(height: 0).id("stats-top")
           sectionHeader(.statsSectionOverview)
 
@@ -97,7 +97,7 @@ struct StatsView: View {
           )
 
           // Hours and Shifts cards (side by side)
-          HStack(spacing: 12) {
+          HStack(spacing: Spacing.sm) {
             HoursStatCard(hours: stats.currentMonth.totalHours)
             ShiftsStatCard(count: stats.currentMonth.shiftCount)
           }
@@ -138,8 +138,8 @@ struct StatsView: View {
             .frame(height: MonthPickerLayout.totalBottomInset + 24)
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.md)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .monthSwipeGesture(
@@ -165,7 +165,7 @@ struct StatsView: View {
       .font(.tidexLabelStrong)
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.top, 8)
+      .padding(.top, Spacing.xs)
   }
 
   // MARK: - Weekly Chart Section
@@ -234,12 +234,12 @@ struct StatsView: View {
   @ViewBuilder
   private var loadingView: some View {
     ScrollView {
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Skeleton for Monthly Earnings Card
         skeletonCard(height: 200)
 
         // Skeleton for Hours and Shifts cards
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           skeletonCard(height: 100)
           skeletonCard(height: 100)
         }
@@ -261,8 +261,8 @@ struct StatsView: View {
           .frame(height: MonthPickerLayout.totalBottomInset + 24)
       }
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, 16)
-      .padding(.top, 16)
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.md)
       .frame(maxWidth: .infinity)
       .contentShape(Rectangle())
       .monthSwipeGesture(
@@ -292,13 +292,13 @@ struct StatsView: View {
 
   @ViewBuilder
   private func errorView(error: Error) -> some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 48))
         .foregroundColor(.tidexTextMuted)
 
       Text(.statsErrorsCouldNotUpdate)
-        .font(.system(size: 16, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
@@ -308,10 +308,10 @@ struct StatsView: View {
         }
       } label: {
         Text(.commonRetry)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.white)
-          .padding(.horizontal, 24)
-          .padding(.vertical, 12)
+          .padding(.horizontal, Spacing.lg)
+          .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
           .cornerRadius(8)
       }

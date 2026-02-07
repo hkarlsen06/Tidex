@@ -33,7 +33,7 @@ struct EditRecurringCalendarView: View {
     VStack(spacing: 0) {
       // Weekday headers
       CalendarWeekdayHeader()
-        .padding(.bottom, 8)
+        .padding(.bottom, Spacing.xs)
 
       // Calendar grid
       calendarGrid
@@ -41,7 +41,7 @@ struct EditRecurringCalendarView: View {
       // Instructions
       if selectedDays.isEmpty {
         CalendarInstructions()
-          .padding(.top, 16)
+          .padding(.top, Spacing.md)
       }
     }
   }
@@ -53,7 +53,7 @@ struct EditRecurringCalendarView: View {
     let days = CalendarGridHelper.daysInMonth(for: displayMonth)
     let projectedDatesSet = Set(projectedDates)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: 4) {
+    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
       ForEach(days, id: \.id) { dayInfo in
         let isAnchor = dayInfo.dateISO.map { isAnchorDate($0) } ?? false
         let isProjected = dayInfo.dateISO.map { projectedDatesSet.contains($0) } ?? false
@@ -188,21 +188,21 @@ struct EditRecurringCalendarView: View {
 private struct CalendarInstructions: View {
 
   var body: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: Spacing.xs) {
       Image(systemName: "calendar.badge.plus")
         .font(.system(size: 24))
         .foregroundColor(.tidexTextMuted)
 
       Text(.addShiftTapToSetAnchors)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       Text(.addShiftOneAnchorPerWeekday)
-        .font(.system(size: 12))
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
-    .padding(20)
+    .padding(Spacing.mlg)
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

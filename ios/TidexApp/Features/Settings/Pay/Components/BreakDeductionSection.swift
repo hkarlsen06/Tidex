@@ -11,16 +11,16 @@ struct BreakDeductionSection: View {
   @Binding var deductionMinutes: Int
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       // Section header with toggle
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.settingsPayEditorBreakTitle)
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexTextPrimary)
 
           Text(.settingsPayEditorBreakDescription)
-            .font(.system(size: 13))
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -36,7 +36,7 @@ struct BreakDeductionSection: View {
 
       // Settings (only shown when enabled)
       if enabled {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) {
           // Break method picker
           breakMethodPicker
 
@@ -56,9 +56,9 @@ struct BreakDeductionSection: View {
 
   @ViewBuilder
   private var breakMethodPicker: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorBreakMethod)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       VStack(spacing: 6) {
@@ -82,14 +82,14 @@ struct BreakDeductionSection: View {
 
   @ViewBuilder
   private var thresholdInput: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorBreakThreshold)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       HStack {
         Text(formatThreshold(thresholdHours))
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -97,7 +97,7 @@ struct BreakDeductionSection: View {
         Stepper("", value: $thresholdHours, in: 1...12, step: 0.5)
           .labelsHidden()
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
@@ -121,14 +121,14 @@ struct BreakDeductionSection: View {
 
   @ViewBuilder
   private var deductionInput: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorBreakDeduction)
-        .font(.system(size: 14, weight: .medium))
+        .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       HStack {
         Text(formatDeduction(deductionMinutes))
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -136,7 +136,7 @@ struct BreakDeductionSection: View {
         Stepper("", value: $deductionMinutes, in: 5...120, step: 5)
           .labelsHidden()
       }
-      .padding(12)
+      .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
@@ -159,11 +159,11 @@ private struct BreakMethodRow: View {
       HStack {
         VStack(alignment: .leading, spacing: 2) {
           Text(methodTitle)
-            .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+            .font(isSelected ? .tidexLabelStrong : .tidexLabel)
             .foregroundColor(.tidexTextPrimary)
 
           Text(methodDescription)
-            .font(.system(size: 12))
+            .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextSecondary)
             .lineLimit(2)
         }

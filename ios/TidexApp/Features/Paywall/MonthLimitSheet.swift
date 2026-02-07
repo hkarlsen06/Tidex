@@ -52,8 +52,8 @@ struct MonthLimitSheet: View {
           .symbolRenderingMode(.hierarchical)
           .foregroundStyle(.white.opacity(0.9))
       }
-      .padding(.top, 16)
-      .padding(.trailing, 20)
+      .padding(.top, Spacing.md)
+      .padding(.trailing, Spacing.mlg)
     }
     .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
       PaywallView(contextType: .monthLimit)
@@ -89,9 +89,9 @@ struct MonthLimitSheet: View {
         .offset(x: 130, y: 60)
 
       // Content
-      VStack(spacing: 20) {
+      VStack(spacing: Spacing.mlg) {
         Spacer()
-          .frame(height: 20)
+          .frame(height: Spacing.mlg)
 
         // Icon with glow effect
         ZStack {
@@ -119,20 +119,20 @@ struct MonthLimitSheet: View {
 
         // Title
         Text(.monthLimitUpgradeHeadline)
-          .font(.system(size: 26, weight: .bold, design: .rounded))
+          .font(.tidexLargeTitle)
           .foregroundStyle(.white)
           .multilineTextAlignment(.center)
 
         // Subtitle
         Text(.monthLimitUpgradeSubheadline)
-          .font(.system(size: 16))
+          .font(.tidexBody)
           .foregroundStyle(.white.opacity(0.85))
           .multilineTextAlignment(.center)
 
         Spacer()
           .frame(height: 24)
       }
-      .padding(.horizontal, 32)
+      .padding(.horizontal, Spacing.xl)
     }
     .frame(height: 280)
   }
@@ -143,7 +143,7 @@ struct MonthLimitSheet: View {
     VStack(spacing: 28) {
       // Features list in a card
       featuresSection
-        .padding(.top, 8)
+        .padding(.top, Spacing.xs)
 
       // Primary CTA - View Plans
       Button(action: {
@@ -151,12 +151,12 @@ struct MonthLimitSheet: View {
         tierBeforePaywall = EntitlementService.shared.effectiveTier
         showPaywall = true
       }) {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           Text(.monthLimitViewPlansButton)
-            .font(.system(size: 17, weight: .semibold))
+            .font(.tidexHeadline)
 
           Image(systemName: "arrow.right")
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
         }
         .frame(maxWidth: .infinity)
       }
@@ -182,15 +182,15 @@ struct MonthLimitSheet: View {
       // Delete section
       deleteSection
     }
-    .padding(.horizontal, 24)
+    .padding(.horizontal, Spacing.lg)
     .padding(.top, 28)
-    .padding(.bottom, 32)
+    .padding(.bottom, Spacing.xl)
   }
 
   // MARK: - Features Section
 
   private var featuresSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       featureRow(
         icon: "calendar.badge.plus",
         text: String(localized: .monthLimitFeature1)
@@ -204,7 +204,7 @@ struct MonthLimitSheet: View {
         text: String(localized: .monthLimitFeature3)
       )
     }
-    .padding(20)
+    .padding(Spacing.mlg)
     .background(Color.tidexSurfaceSecondary.opacity(0.5))
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     .overlay(
@@ -216,7 +216,7 @@ struct MonthLimitSheet: View {
   private func featureRow(icon: String, text: String) -> some View {
     HStack(spacing: Spacing.sm) {
       Image(systemName: icon)
-        .font(.system(size: 18, weight: .medium))
+        .font(.tidexHeadline)
         .foregroundStyle(
           LinearGradient(
             colors: [
@@ -230,7 +230,7 @@ struct MonthLimitSheet: View {
         .frame(width: 28)
 
       Text(text)
-        .font(.system(size: 15, weight: .medium))
+        .font(.tidexLabel)
         .foregroundStyle(Color.tidexTextPrimary)
 
       Spacer()
@@ -240,13 +240,13 @@ struct MonthLimitSheet: View {
   // MARK: - Divider
 
   private var dividerWithOr: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       Rectangle()
         .fill(Color.tidexBorder.opacity(0.5))
         .frame(height: 1)
 
       Text(.monthLimitOr)
-        .font(.system(size: 12, weight: .semibold))
+        .font(.tidexCaptionStrong)
         .foregroundStyle(Color.tidexTextMuted)
         .textCase(.uppercase)
         .tracking(0.5)
@@ -268,17 +268,17 @@ struct MonthLimitSheet: View {
       }) {
         HStack(spacing: 6) {
           Text(.monthLimitDeleteShiftsLink)
-            .font(.system(size: 15, weight: .medium))
+            .font(.tidexLabel)
 
           Image(systemName: "chevron.down")
-            .font(.system(size: 12, weight: .semibold))
+            .font(.tidexCaptionStrong)
         }
         .foregroundStyle(Color.tidexTextMuted)
       }
       .disabled(isDeleting)
     } else {
       // Expanded delete section
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         // Header with collapse button
         HStack(alignment: .top, spacing: Spacing.sm) {
           ZStack {
@@ -287,17 +287,17 @@ struct MonthLimitSheet: View {
               .frame(width: 40, height: 40)
 
             Image(systemName: "trash")
-              .font(.system(size: 16, weight: .medium))
+              .font(.tidexBodyMedium)
               .foregroundStyle(Color.tidexTextMuted)
           }
 
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(.monthLimitDeleteTitle)
-              .font(.system(size: 15, weight: .semibold))
+              .font(.tidexLabelStrong)
               .foregroundStyle(Color.tidexTextPrimary)
 
             Text(deleteExplanationText)
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundStyle(Color.tidexTextSecondary)
               .lineSpacing(2)
           }
@@ -312,7 +312,7 @@ struct MonthLimitSheet: View {
             }
           }) {
             Image(systemName: "chevron.up")
-              .font(.system(size: 12, weight: .semibold))
+              .font(.tidexCaptionStrong)
               .foregroundStyle(Color.tidexTextMuted)
               .frame(width: 28, height: 28)
               .background(Color.tidexTextMuted.opacity(0.1))
@@ -325,10 +325,10 @@ struct MonthLimitSheet: View {
           Button(action: { withAnimation(.spring(response: 0.3)) { showConfirmDelete = true } }) {
             HStack(spacing: 6) {
               Image(systemName: "trash")
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
 
               Text(.monthLimitDeleteButton)
-                .font(.system(size: 15, weight: .medium))
+                .font(.tidexLabel)
             }
             .frame(maxWidth: .infinity)
           }
@@ -350,11 +350,11 @@ struct MonthLimitSheet: View {
         if let error = error {
           HStack(spacing: Spacing.xs) {
             Image(systemName: "exclamationmark.triangle.fill")
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundStyle(Color.tidexError)
 
             Text(error)
-              .font(.system(size: 13, weight: .medium))
+              .font(.tidexFootnoteMedium)
               .foregroundStyle(Color.tidexError)
           }
           .padding(Spacing.sm)
@@ -380,11 +380,11 @@ struct MonthLimitSheet: View {
       // Warning message
       HStack(alignment: .top, spacing: Spacing.xs) {
         Image(systemName: "exclamationmark.triangle.fill")
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundStyle(Color.tidexError)
 
         Text(confirmDeleteMessage)
-          .font(.system(size: 13, weight: .medium))
+          .font(.tidexFootnoteMedium)
           .foregroundStyle(Color.tidexError)
           .lineSpacing(2)
       }
@@ -398,7 +398,7 @@ struct MonthLimitSheet: View {
         // Cancel
         Button(action: { withAnimation(.spring(response: 0.3)) { showConfirmDelete = false } }) {
           Text(.monthLimitCancelDelete)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.tidexLabelStrong)
             .frame(maxWidth: .infinity)
         }
         .frame(height: 44)
@@ -415,7 +415,7 @@ struct MonthLimitSheet: View {
               .frame(maxWidth: .infinity)
           } else {
             Text(confirmDeleteButtonText)
-              .font(.system(size: 14, weight: .semibold))
+              .font(.tidexLabelStrong)
               .frame(maxWidth: .infinity)
           }
         }

@@ -30,19 +30,19 @@ struct ScreenshotSharePromptOverlay: View {
             .fill(Color.tidexTextMuted.opacity(0.4))
             .frame(width: 36, height: 5)
             .padding(.top, 10)
-            .padding(.bottom, 16)
+            .padding(.bottom, Spacing.md)
 
           // Toolbar buttons preview - showing where share button is
           toolbarPreview
-            .padding(.bottom, 16)
+            .padding(.bottom, Spacing.md)
 
           // Title
           Text(.screenshotShareTitle)
             .font(.tidexTitle2)
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+            .padding(.horizontal, Spacing.mlg)
+            .padding(.bottom, Spacing.xs)
 
           // Description
           Text(.screenshotShareDescription)
@@ -51,17 +51,17 @@ struct ScreenshotSharePromptOverlay: View {
             .multilineTextAlignment(.center)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.mlg)
 
           // Side-by-side buttons
-          HStack(spacing: 12) {
+          HStack(spacing: Spacing.sm) {
             // Dismiss button - secondary action
             Button {
               dismiss()
             } label: {
               Text(.screenshotShareDismiss)
-                .font(.system(size: 17, weight: .medium))
+                .font(.tidexBodyMedium)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(Color.tidexSurfacePrimary)
@@ -80,7 +80,7 @@ struct ScreenshotSharePromptOverlay: View {
               }
             } label: {
               Text(.screenshotShareUseButton)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.tidexHeadline)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(Color.tidexBrandPrimary)
@@ -89,7 +89,7 @@ struct ScreenshotSharePromptOverlay: View {
             }
             .buttonStyle(PromptButtonStyle())
           }
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
           .padding(.bottom, safeBottom + 16)
         }
         .frame(maxWidth: .infinity)
@@ -136,7 +136,7 @@ struct ScreenshotSharePromptOverlay: View {
   /// Shows the toolbar buttons with emphasis on the share button
   @ViewBuilder
   private var toolbarPreview: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       // Share button - emphasized with liquid glass
       VStack(spacing: 6) {
         Image(systemName: "square.and.arrow.up")

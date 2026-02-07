@@ -15,14 +15,14 @@ struct AccordionSectionView<Content: View>: View {
     VStack(spacing: 0) {
       // Header
       HStack {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(title)
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundColor(.tidexTextPrimary)
 
           if !isExpanded, let summary = summary {
             Text(summary)
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
           }
         }
@@ -36,19 +36,19 @@ struct AccordionSectionView<Content: View>: View {
             .foregroundColor(.tidexSuccess)
         } else if isExpanded {
           Image(systemName: "chevron.up")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
         } else {
           Image(systemName: "chevron.down")
-            .font(.system(size: 14, weight: .medium))
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
 
       // Content (when expanded)
       if isExpanded {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) {
           content()
 
           if let onContinue = onContinue {
@@ -57,7 +57,7 @@ struct AccordionSectionView<Content: View>: View {
               onContinue()
             }) {
               Text(.commonContinue)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.tidexLabelStrong)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
@@ -67,8 +67,8 @@ struct AccordionSectionView<Content: View>: View {
             .buttonStyle(.plain)
           }
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+        .padding(.horizontal, Spacing.md)
+        .padding(.bottom, Spacing.md)
         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
       }
     }
@@ -84,7 +84,7 @@ struct AccordionSectionView<Content: View>: View {
 // MARK: - Preview
 
 #Preview {
-  VStack(spacing: 16) {
+  VStack(spacing: Spacing.md) {
     AccordionSectionView(
       title: "Break Deduction",
       summary: "Enabled • 30 min for 5.5h+ shifts",

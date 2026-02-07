@@ -56,7 +56,7 @@ struct WageyUsageBar: View {
 // MARK: - Previews
 
 #Preview("Low Usage") {
-  VStack(spacing: 20) {
+  VStack(spacing: Spacing.mlg) {
     WageyUsageBar(used: 5, limit: 40)
     WageyUsageBar(used: 20, limit: 40)
     WageyUsageBar(used: 32, limit: 40)

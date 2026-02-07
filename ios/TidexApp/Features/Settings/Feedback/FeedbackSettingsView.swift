@@ -8,7 +8,7 @@ struct FeedbackSettingsView: View {
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 24) {
+      VStack(spacing: Spacing.lg) {
         // Error message
         if let error = viewModel.errorMessage {
           errorBanner(error)
@@ -26,8 +26,8 @@ struct FeedbackSettingsView: View {
           feedbackHistorySection
         }
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 24)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .feedbackTitle))
@@ -40,13 +40,13 @@ struct FeedbackSettingsView: View {
   // MARK: - Error Banner
 
   private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexError)
 
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
 
       Spacer()
@@ -55,11 +55,11 @@ struct FeedbackSettingsView: View {
         viewModel.clearError()
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 12, weight: .medium))
+          .font(.tidexCaption)
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .cornerRadius(8)
   }
@@ -67,13 +67,13 @@ struct FeedbackSettingsView: View {
   // MARK: - Success Card
 
   private var successCard: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Image(systemName: "checkmark.circle.fill")
         .font(.system(size: 48))
         .foregroundColor(.tidexSuccess)
 
       Text(.feedbackSuccess)
-        .font(.system(size: 16, weight: .medium))
+        .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
 
@@ -81,12 +81,12 @@ struct FeedbackSettingsView: View {
         viewModel.resetSuccess()
       } label: {
         Text(.feedbackSubmitAnother)
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
       }
-      .padding(.top, 8)
+      .padding(.top, Spacing.xs)
     }
-    .padding(32)
+    .padding(Spacing.xl)
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(12)
@@ -95,14 +95,14 @@ struct FeedbackSettingsView: View {
   // MARK: - Feedback Form Section
 
   private var feedbackFormSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Text editor
       TextEditor(text: $viewModel.message)
-        .font(.system(size: 16))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
         .scrollContentBackground(.hidden)
         .frame(minHeight: 160)
-        .padding(12)
+        .padding(Spacing.sm)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(12)
         .overlay(
@@ -112,10 +112,10 @@ struct FeedbackSettingsView: View {
         .overlay(alignment: .topLeading) {
           if viewModel.message.isEmpty {
             Text(.feedbackPlaceholder)
-              .font(.system(size: 16))
+              .font(.tidexBody)
               .foregroundColor(.tidexTextMuted)
-              .padding(.horizontal, 16)
-              .padding(.vertical, 20)
+              .padding(.horizontal, Spacing.md)
+              .padding(.vertical, Spacing.mlg)
               .allowsHitTesting(false)
           }
         }
@@ -126,7 +126,7 @@ struct FeedbackSettingsView: View {
         Spacer()
 
         Text(viewModel.characterCountText)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(viewModel.isOverLimit ? .tidexError : .tidexTextMuted)
       }
 
@@ -136,7 +136,7 @@ struct FeedbackSettingsView: View {
           await viewModel.submitFeedback()
         }
       } label: {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
           if viewModel.isSubmitting {
             ProgressView()
               .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -148,7 +148,7 @@ struct FeedbackSettingsView: View {
               ? String(localized: .feedbackSending)
               : String(localized: .feedbackSubmit)
           )
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
         }
         .foregroundColor(.white)
         .frame(maxWidth: .infinity)
@@ -163,14 +163,14 @@ struct FeedbackSettingsView: View {
   // MARK: - Feedback History Section
 
   private var feedbackHistorySection: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Section header
       Text(.feedbackHistoryTitle)
-        .font(.system(size: 16, weight: .semibold))
+        .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
 
       // History items
-      VStack(spacing: 8) {
+      VStack(spacing: Spacing.xs) {
         ForEach(Array(viewModel.feedbackHistory.enumerated()), id: \.element.id) { index, item in
           feedbackHistoryItem(item)
             .offset(y: historyAnimated ? 0 : -20)
@@ -199,32 +199,32 @@ struct FeedbackSettingsView: View {
           viewModel.toggleExpanded(item.id)
         }
       } label: {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.sm) {
           // Content
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: Spacing.xxs) {
             // Date and status row
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
               Text(
                 "\(String(localized: .feedbackHistorySubmittedOn)) \(item.formattedDate(locale: locale))"
               )
-              .font(.system(size: 12))
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
 
               // Response status badge
               if item.response != nil {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                   Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 10))
+                    .font(.tidexMicro)
                   Text(.feedbackHistoryRespondedOn)
-                    .font(.system(size: 11))
+                    .font(.tidexMicro)
                 }
                 .foregroundColor(.tidexSuccess)
               } else {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                   Image(systemName: "clock")
-                    .font(.system(size: 10))
+                    .font(.tidexMicro)
                   Text(.feedbackHistoryNoResponse)
-                    .font(.system(size: 11))
+                    .font(.tidexMicro)
                 }
                 .foregroundColor(.tidexTextMuted)
               }
@@ -232,7 +232,7 @@ struct FeedbackSettingsView: View {
 
             // Message preview
             Text(truncateMessage(item.message))
-              .font(.system(size: 14))
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
               .lineLimit(1)
           }
@@ -241,49 +241,49 @@ struct FeedbackSettingsView: View {
 
           // Chevron
           Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-            .font(.system(size: 12, weight: .medium))
+            .font(.tidexCaption)
             .foregroundColor(.tidexTextMuted)
         }
-        .padding(12)
+        .padding(Spacing.sm)
       }
       .buttonStyle(.plain)
 
       // Expanded content
       if isExpanded {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
           // Full message
           Text(item.message)
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextPrimary)
-            .padding(12)
+            .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexSurfaceSecondary)
             .cornerRadius(8)
 
           // Response (if any)
           if let response = item.response {
-            VStack(alignment: .leading, spacing: 8) {
-              HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+              HStack(spacing: Spacing.xs) {
                 Image(systemName: "message.fill")
-                  .font(.system(size: 12))
+                  .font(.tidexCaptionRegular)
                   .foregroundColor(.tidexSuccess)
 
                 Text(.feedbackHistoryResponse)
-                  .font(.system(size: 13, weight: .medium))
+                  .font(.tidexFootnoteMedium)
                   .foregroundColor(.tidexSuccess)
 
                 if let responseDate = item.formattedResponseDate(locale: locale) {
                   Text("(\(responseDate))")
-                    .font(.system(size: 12))
+                    .font(.tidexCaptionRegular)
                     .foregroundColor(.tidexSuccess.opacity(0.8))
                 }
               }
 
               Text(response)
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextPrimary)
             }
-            .padding(12)
+            .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexSuccess.opacity(0.1))
             .overlay(
@@ -293,8 +293,8 @@ struct FeedbackSettingsView: View {
             .cornerRadius(8)
           }
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.bottom, Spacing.sm)
       }
     }
     .background(Color.tidexSurfacePrimary)

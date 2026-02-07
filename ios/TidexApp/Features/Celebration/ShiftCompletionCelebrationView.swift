@@ -69,7 +69,7 @@ struct ShiftCompletionCelebrationView: View {
                 Text(badgeText)
                   .font(.tidexCaptionStrong)
                   .foregroundColor(.tidexBlue)
-                  .padding(.horizontal, 12)
+                  .padding(.horizontal, Spacing.sm)
                   .padding(.vertical, 6)
                   .background(Color.tidexBlue.opacity(0.12))
                   .clipShape(Capsule())

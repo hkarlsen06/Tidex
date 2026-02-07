@@ -27,7 +27,7 @@ struct WageyShowcaseView: View {
           heroSection
 
           // Content
-          VStack(spacing: 32) {
+          VStack(spacing: Spacing.xl) {
             // Features grid
             featuresSection
 
@@ -37,9 +37,9 @@ struct WageyShowcaseView: View {
             // Try button
             tryButton
           }
-          .padding(.horizontal, 24)
-          .padding(.top, 32)
-          .padding(.bottom, 48)
+          .padding(.horizontal, Spacing.lg)
+          .padding(.top, Spacing.xl)
+          .padding(.bottom, Spacing.xxxl)
         }
       }
       .background(Color.tidexBackground)
@@ -51,14 +51,14 @@ struct WageyShowcaseView: View {
           onClose()
         } label: {
           Image(systemName: "xmark")
-            .font(.system(size: 16, weight: .semibold))
+            .font(.tidexButton)
             .foregroundStyle(Color.white.opacity(0.9))
             .frame(width: 32, height: 32)
             .background(Color.white.opacity(0.2))
             .clipShape(Circle())
         }
-        .padding(.top, 16)
-        .padding(.trailing, 20)
+        .padding(.top, Spacing.md)
+        .padding(.trailing, Spacing.mlg)
       }
     }
   }
@@ -91,7 +91,7 @@ struct WageyShowcaseView: View {
         .offset(x: 120, y: 50)
 
       // Content
-      VStack(spacing: 20) {
+      VStack(spacing: Spacing.mlg) {
         // Extra space for status bar
         Spacer()
           .frame(height: 60)
@@ -120,21 +120,21 @@ struct WageyShowcaseView: View {
 
         // Title
         Text(.wageyShowcaseHeroTitle)
-          .font(.system(size: 32, weight: .bold, design: .rounded))
+          .font(.tidexAmountLarge)
           .foregroundStyle(.white)
 
         // Subtitle
         Text(.wageyShowcaseHeroSubtitle)
-          .font(.system(size: 17, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundStyle(.white.opacity(0.9))
 
         // Description
         Text(.wageyShowcaseHeroDescription)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundStyle(.white.opacity(0.8))
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
-          .padding(.horizontal, 32)
+          .padding(.horizontal, Spacing.xl)
 
         Spacer()
           .frame(height: 32)
@@ -146,12 +146,12 @@ struct WageyShowcaseView: View {
   // MARK: - Features Section
 
   private var featuresSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Text(.wageyShowcaseFeaturesTitle)
-        .font(.system(size: 22, weight: .bold))
+        .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
 
-      LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+      LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.sm) {
         featureCard(
           icon: "message.fill",
           titleKey: .wageyShowcaseFeaturesNaturalLanguageTitle,
@@ -182,7 +182,7 @@ struct WageyShowcaseView: View {
   private func featureCard(
     icon: String, titleKey: LocalizedStringResource, descriptionKey: LocalizedStringResource
   ) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       // Icon
       ZStack {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -213,20 +213,20 @@ struct WageyShowcaseView: View {
       }
 
       // Text
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(String(localized: titleKey))
-          .font(.system(size: 15, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(localized: descriptionKey))
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
           .lineLimit(3)
           .fixedSize(horizontal: false, vertical: true)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(16)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary.opacity(0.5))
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     .overlay(
@@ -296,21 +296,21 @@ struct WageyShowcaseView: View {
   }
 
   private var examplesSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       Text(.wageyShowcaseExamplesTitle)
-        .font(.system(size: 22, weight: .bold))
+        .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
 
-      VStack(spacing: 16) {
+      VStack(spacing: Spacing.md) {
         ForEach(Array(exampleMessages.enumerated()), id: \.offset) { index, conversation in
-          VStack(spacing: 8) {
+          VStack(spacing: Spacing.xs) {
             ForEach(conversation) { message in
-              VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
+              VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Spacing.xxs) {
                 // Name label
                 Text(message.role == .user ? userName : "Wagey")
-                  .font(.system(size: 11, weight: .semibold))
+                  .font(.tidexMicro)
                   .foregroundColor(.tidexTextMuted)
-                  .padding(.horizontal, 4)
+                  .padding(.horizontal, Spacing.xxs)
 
                 // Actual message bubble
                 ChatMessageBubble(message: message)
@@ -322,11 +322,11 @@ struct WageyShowcaseView: View {
           // Divider between conversations (except after last)
           if index < exampleMessages.count - 1 {
             Divider()
-              .padding(.vertical, 4)
+              .padding(.vertical, Spacing.xxs)
           }
         }
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(Color.tidexBackground)
       .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
       .overlay(
@@ -343,12 +343,12 @@ struct WageyShowcaseView: View {
       Haptics.playSubscriptionSuccess()
       onTryWagey()
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "play.fill")
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
 
         Text(.wageyShowcaseHeroTryButton)
-          .font(.system(size: 17, weight: .semibold))
+          .font(.tidexHeadline)
       }
       .frame(maxWidth: .infinity)
       .frame(height: 56)

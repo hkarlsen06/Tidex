@@ -131,7 +131,7 @@ struct RecurringShiftEditorSheet: View {
         let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
 
         ScrollView {
-          VStack(spacing: 20) {
+          VStack(spacing: Spacing.mlg) {
             // Header with title and optional reset button
             headerSection
 
@@ -194,8 +194,8 @@ struct RecurringShiftEditorSheet: View {
             actionButtons
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, 16)
-          .padding(.top, 16)
+          .padding(.horizontal, Spacing.md)
+          .padding(.top, Spacing.md)
           .frame(maxWidth: .infinity)
           .frame(minHeight: availableHeight, alignment: .top)
         }
@@ -214,14 +214,14 @@ struct RecurringShiftEditorSheet: View {
           Button(String(localized: .commonCancel)) {
             dismiss()
           }
-          .font(.system(size: 16, weight: .medium))
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextSecondary)
         }
         ToolbarItem(placement: .topBarTrailing) {
           Button(String(localized: .commonSave)) {
             saveChanges()
           }
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexBlue)
           .disabled(isSaving || !hasChanges || !canSave)
           .opacity(isSaving || !hasChanges || !canSave ? 0.5 : 1)
@@ -249,13 +249,13 @@ struct RecurringShiftEditorSheet: View {
 
   private var headerSection: some View {
     HStack {
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(.recurringEditTitle)
           .font(.system(size: 28, weight: .bold))
           .foregroundColor(.tidexTextPrimary)
 
         Text(.addShiftHeaderSubtitle)
-          .font(.system(size: 15))
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
       }
 
@@ -272,7 +272,7 @@ struct RecurringShiftEditorSheet: View {
         }
       }
     }
-    .padding(.bottom, 8)
+    .padding(.bottom, Spacing.xs)
   }
 
   private var actionButtons: some View {
@@ -280,17 +280,17 @@ struct RecurringShiftEditorSheet: View {
     Button {
       saveChanges()
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         if isSaving {
           ProgressView()
             .progressViewStyle(CircularProgressViewStyle(tint: .white))
             .scaleEffect(0.8)
         } else {
           Image(systemName: "checkmark")
-            .font(.system(size: 15, weight: .medium))
+            .font(.tidexLabel)
         }
         Text(.commonSaveChanges)
-          .font(.system(size: 15, weight: .semibold))
+          .font(.tidexLabelStrong)
       }
       .foregroundColor(.white)
       .frame(maxWidth: .infinity)
@@ -299,31 +299,31 @@ struct RecurringShiftEditorSheet: View {
       .cornerRadius(12)
     }
     .disabled(isSaving || !hasChanges || !canSave)
-    .padding(.top, 8)
-    .padding(.bottom, 80)  // Extra bottom padding to clear the month picker
+    .padding(.top, Spacing.xs)
+    .padding(.bottom, Spacing.bottomScrollMargin)  // Extra bottom padding to clear the month picker
   }
 
   private var exclusionsSection: some View {
     VStack(alignment: .leading, spacing: 10) {
       Text(.recurringExclusionsTitle)
-        .font(.system(size: 15, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
 
       Text(.recurringExclusionsDescription)
-        .font(.system(size: 13))
+        .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
 
       if editedExclusions.isEmpty {
         Text(.recurringExclusionsNone)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, 10)
           .background(Color.tidexSurfaceSecondary)
           .cornerRadius(10)
       } else {
-        VStack(spacing: 8) {
+        VStack(spacing: Spacing.xs) {
           ForEach(editedExclusions, id: \.self) { dateISO in
             exclusionRow(dateISO: dateISO)
           }
@@ -333,14 +333,14 @@ struct RecurringShiftEditorSheet: View {
   }
 
   private func exclusionRow(dateISO: String) -> some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       VStack(alignment: .leading, spacing: 2) {
         Text(formattedExclusionDate(dateISO))
-          .font(.system(size: 14, weight: .medium))
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
 
         Text(verbatim: dateISO)
-          .font(.system(size: 12))
+          .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
 
@@ -351,16 +351,16 @@ struct RecurringShiftEditorSheet: View {
         editedExclusions = normalizeExclusions(editedExclusions)
       } label: {
         Text(.recurringRestoreDateButton)
-          .font(.system(size: 13, weight: .semibold))
+          .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexBlue)
-          .padding(.horizontal, 12)
+          .padding(.horizontal, Spacing.sm)
           .padding(.vertical, 7)
           .background(Color.tidexBlue.opacity(0.12))
           .cornerRadius(8)
       }
       .buttonStyle(.plain)
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(10)
     .overlay(
@@ -371,16 +371,16 @@ struct RecurringShiftEditorSheet: View {
 
   @ViewBuilder
   private func errorBanner(message: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Text(message)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Spacer()
     }
-    .padding(12)
+    .padding(Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12)
         .fill(Color.tidexError.opacity(0.1))

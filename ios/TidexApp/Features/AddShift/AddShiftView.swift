@@ -50,7 +50,7 @@ struct AddShiftView: View {
                     focusedTimeField: $focusedTimeField
                   )
                   .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                  .padding(.horizontal, 16)
+                  .padding(.horizontal, Spacing.md)
                   .offset(y: tabTransitionOffset)
                   .opacity(tabTransitionOpacity)
 
@@ -74,14 +74,14 @@ struct AddShiftView: View {
             case .recurring:
               // Recurring mode: Scrollable content (more elements)
               ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: Spacing.lg) {
                   RecurringShiftContent(
                     viewModel: viewModel, scrollProxy: scrollProxy,
                     focusedTimeField: $focusedTimeField)
                 }
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.md)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: availableHeight, alignment: .center)
                 .offset(y: tabTransitionOffset)
@@ -121,7 +121,7 @@ struct AddShiftView: View {
             onDismiss: { viewModel.error = nil }
           )
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
           .padding(.bottom, MonthPickerLayout.totalBottomInset + 8)
           .transition(.move(edge: .bottom).combined(with: .opacity))
         }
@@ -152,11 +152,11 @@ struct AddShiftView: View {
           }
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
-          .padding(.horizontal, 16)
+          .padding(.horizontal, Spacing.md)
           .padding(.vertical, 10)
           .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.3))
-          .padding(.trailing, 16)
-          .padding(.bottom, 8)
+          .padding(.trailing, Spacing.md)
+          .padding(.bottom, Spacing.xs)
         }
       }
       .iPadToolbarTransaction()
@@ -288,7 +288,7 @@ private struct SingleShiftContent: View {
         scrollId: "singleTimePicker",
         focusedFieldBinding: $focusedTimeField
       )
-      .padding(.top, 12)
+      .padding(.top, Spacing.sm)
     }
   }
 }
@@ -301,7 +301,7 @@ private struct RecurringShiftContent: View {
   @Binding var focusedTimeField: TimeInputField?
 
   var body: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: Spacing.mlg) {
       DurationPicker(endCondition: $viewModel.endCondition)
 
       RepeatIntervalPicker(interval: $viewModel.repeatInterval)
@@ -337,7 +337,7 @@ private struct RecurringShiftContent: View {
       )
     }
     // Extra bottom padding to clear the month picker
-    .padding(.bottom, 80)
+    .padding(.bottom, Spacing.bottomScrollMargin)
   }
 }
 

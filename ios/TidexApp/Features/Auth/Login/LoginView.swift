@@ -17,10 +17,10 @@ struct LoginView: View {
 
           // Header section
           headerSection
-            .padding(.bottom, 40)
+            .padding(.bottom, Spacing.xxl)
 
           // Main content
-          VStack(spacing: 24) {
+          VStack(spacing: Spacing.lg) {
             // Error/Success banners
             if let error = viewModel.errorMessage {
               ErrorBanner(
@@ -44,14 +44,14 @@ struct LoginView: View {
               PhoneOTPForm(viewModel: viewModel)
             }
           }
-          .padding(.horizontal, 24)
+          .padding(.horizontal, Spacing.lg)
 
           Spacer(minLength: 60)
 
           // Footer
           if viewModel.currentStep == .input {
             footerView
-              .padding(.bottom, 40)
+              .padding(.bottom, Spacing.xxl)
           }
         }
         .frame(minHeight: geometry.size.height)
@@ -69,7 +69,7 @@ struct LoginView: View {
   // MARK: - Header Section
 
   private var headerSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Full wordmark
       Image("TidexWordmark")
         .resizable()
@@ -88,7 +88,7 @@ struct LoginView: View {
 
   @ViewBuilder
   private var inputStepContent: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // OAuth buttons
       OAuthButtonsView(
         onGoogleTap: { Task { await viewModel.signInWithGoogle() } },
@@ -98,7 +98,7 @@ struct LoginView: View {
 
       // Divider
       dividerView
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
 
       // Email/phone form or reveal button
       if viewModel.showEmailForm {
@@ -112,7 +112,7 @@ struct LoginView: View {
   // MARK: - Email Form Section
 
   private var emailFormSection: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: Spacing.md) {
       // Form fields in a grouped style
       VStack(spacing: 0) {
         // Email/Phone field
@@ -146,7 +146,7 @@ struct LoginView: View {
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
       }
 
       if let passwordError = viewModel.fieldErrors.password {
@@ -154,7 +154,7 @@ struct LoginView: View {
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, Spacing.xxs)
       }
 
       // Forgot password link (only for email login)
@@ -199,7 +199,7 @@ struct LoginView: View {
         viewModel.showEmailForm = true
       }
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: Spacing.xs) {
         Image(systemName: "envelope")
           .font(.tidexBodyMedium)
         Text(.loginEmailOrPhoneReveal)
@@ -217,13 +217,13 @@ struct LoginView: View {
   // MARK: - Divider
 
   private var dividerView: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: Spacing.md) {
       Rectangle()
         .fill(Color.tidexBorderSubtle)
         .frame(height: 1)
 
       Text(.loginSeparator)
-        .font(.system(size: 14))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
 
       Rectangle()
@@ -235,9 +235,9 @@ struct LoginView: View {
   // MARK: - Footer
 
   private var footerView: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Spacing.xxs) {
       Text(.loginNoAccount)
-        .font(.system(size: 15))
+        .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Button(action: {
@@ -293,7 +293,7 @@ struct NativeSecureField: View {
   @State private var isSecure: Bool = true
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Spacing.sm) {
       if isSecure {
         SecureField(placeholder, text: $text)
           .font(.tidexBody)

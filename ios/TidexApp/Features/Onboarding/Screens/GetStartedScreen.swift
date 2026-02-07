@@ -25,24 +25,24 @@ struct GetStartedScreen: View {
         .frame(height: 32)
 
       // Header and subheadline - constrained for iPad
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         Text(.onboardingGetstartedTitle)
           .font(.system(size: 28, weight: .bold))
           .foregroundColor(.tidexTextPrimary)
           .multilineTextAlignment(.center)
 
         Text(.onboardingGetstartedSubtitle)
-          .font(.system(size: 17))
+          .font(.tidexBody)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
-      .padding(.horizontal, 32)
+      .padding(.horizontal, Spacing.xl)
       .adaptiveContentWidth()
 
       Spacer()
 
       // CTAs - constrained for iPad
-      VStack(spacing: 12) {
+      VStack(spacing: Spacing.sm) {
         OnboardingButton(
           title: String(localized: .onboardingGetstartedSignup),
           action: onCreateAccount
@@ -54,9 +54,9 @@ struct GetStartedScreen: View {
           style: .secondary
         )
       }
-      .padding(.horizontal, 24)
+      .padding(.horizontal, Spacing.lg)
       .adaptiveContentWidth()
-      .padding(.bottom, 24)
+      .padding(.bottom, Spacing.lg)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }

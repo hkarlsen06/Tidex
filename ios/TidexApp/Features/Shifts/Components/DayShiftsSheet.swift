@@ -46,18 +46,18 @@ struct DayShiftsSheet: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) {
           // Summary header
           summaryHeader
 
           // Shift cards
-          VStack(spacing: 12) {
+          VStack(spacing: Spacing.sm) {
             ForEach(shifts) { shift in
               shiftCard(shift)
             }
           }
         }
-        .padding(20)
+        .padding(Spacing.mlg)
       }
       .background(Color.tidexBackground)
       .navigationTitle(formattedDate)
@@ -67,7 +67,7 @@ struct DayShiftsSheet: View {
           Button(String(localized: .commonDone)) {
             dismiss()
           }
-          .font(.system(size: 16, weight: .semibold))
+          .font(.tidexButton)
           .foregroundColor(.tidexBlue)
         }
       }
@@ -77,14 +77,14 @@ struct DayShiftsSheet: View {
   // MARK: - Summary Header
 
   private var summaryHeader: some View {
-    HStack(spacing: 24) {
+    HStack(spacing: Spacing.lg) {
       // Total hours
-      VStack(spacing: 4) {
+      VStack(spacing: Spacing.xxs) {
         Text(formattedHours(totalHours))
-          .font(.system(size: 24, weight: .semibold))
+          .font(.tidexLargeTitle)
           .foregroundColor(.tidexTextPrimary)
         Text(.shiftsDaySheetHours)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
       }
 
@@ -94,12 +94,12 @@ struct DayShiftsSheet: View {
         .frame(width: 1, height: 40)
 
       // Total earnings
-      VStack(spacing: 4) {
+      VStack(spacing: Spacing.xxs) {
         Text(formatCurrency(totalEarnings))
-          .font(.system(size: 24, weight: .semibold))
+          .font(.tidexLargeTitle)
           .foregroundColor(.tidexTextPrimary)
         Text(.shiftsDaySheetEarnings)
-          .font(.system(size: 13))
+          .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
       }
 
@@ -107,16 +107,16 @@ struct DayShiftsSheet: View {
 
       // Shift count badge
       Text("\(shifts.count)")
-        .font(.system(size: 15, weight: .semibold))
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlue)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spacing.sm)
         .padding(.vertical, 6)
         .background(
           Capsule()
             .fill(Color.tidexBlue.opacity(0.1))
         )
     }
-    .padding(16)
+    .padding(Spacing.md)
     .background(
       RoundedRectangle(cornerRadius: 16)
         .fill(Color.tidexSurfaceSecondary)
@@ -130,16 +130,16 @@ struct DayShiftsSheet: View {
     Button {
       onShiftTapped(shift)
     } label: {
-      HStack(spacing: 12) {
+      HStack(spacing: Spacing.sm) {
         // Time range
         VStack(alignment: .leading, spacing: 2) {
           Text(formatTimeRange(shift))
-            .font(.system(size: 17, weight: .medium))
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
             .environment(\.layoutDirection, .leftToRight)
 
           Text(formattedHours(shift.paidHours))
-            .font(.system(size: 14))
+            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
         }
 
@@ -149,22 +149,22 @@ struct DayShiftsSheet: View {
         VStack(alignment: .trailing, spacing: 2) {
           let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
           Text(formatCurrency(displayAmount))
-            .font(.system(size: 18, weight: .semibold))
+            .font(.tidexHeadline)
             .foregroundColor(.tidexTextPrimary)
 
           if shift.taxEnabled && shift.taxAmount > 0 {
             Text("-\(formatCurrency(shift.taxAmount))")
-              .font(.system(size: 13))
+              .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
           }
         }
 
         // Chevron
         Image(systemName: "chevron.right")
-          .font(.system(size: 14, weight: .semibold))
+          .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextMuted)
       }
-      .padding(16)
+      .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: 16)
           .fill(Color.tidexSurfacePrimary)
