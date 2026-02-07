@@ -506,7 +506,8 @@ struct TimeRangePicker: View {
           onSelect: { range in
             applyTimeRange(range)
           },
-          availableWidth: geometry.size.width
+          availableWidth: geometry.size.width,
+          activeRangeId: activeRangeId
         )
       }
     }
@@ -527,10 +528,28 @@ struct TimeRangePicker: View {
     }
   }
 
-  /// Apply a recent time range to the inputs
+  /// ID of the currently active time range chip, if start/end match a chip's times
+  private var activeRangeId: String? {
+    guard let start = startTime, let end = endTime else { return nil }
+    let startHHmm = formatDateToHHmm(start)
+    let endHHmm = formatDateToHHmm(end)
+    return "\(startHHmm)-\(endHHmm)"
+  }
+
+  /// Apply a recent time range to the inputs, or clear if already active (toggle)
   private func applyTimeRange(_ timeRange: TimeRangeCount) {
     // Dismiss keyboard by clearing focus
     focusController.focus(nil as TimeInputField?)
+
+    // Toggle: if this chip is already active, clear the times
+    if timeRange.id == activeRangeId {
+      startTime = nil
+      endTime = nil
+
+      let generator = UIImpactFeedbackGenerator(style: .light)
+      generator.impactOccurred()
+      return
+    }
 
     // Parse start time
     if let start = parseTimeFromHHmm(timeRange.startTime) {
@@ -544,6 +563,13 @@ struct TimeRangePicker: View {
     // Haptic feedback
     let generator = UIImpactFeedbackGenerator(style: .light)
     generator.impactOccurred()
+  }
+
+  /// Format a Date to HH:mm string for comparison
+  private func formatDateToHHmm(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm"
+    return formatter.string(from: date)
   }
 
   /// Parse HH:mm string to Date
