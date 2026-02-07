@@ -20,6 +20,10 @@ struct MainTabView: View {
 
   @State private var selectedTab: Tab = .home
 
+  // Tracks whether the first re-tap on a scrollable tab already triggered scroll-to-top.
+  // On the next re-tap, we navigate to the current month instead.
+  @State private var pendingCurrentMonthTab: Tab?
+
   // State for shared month picker overlay
   @State private var isKeyboardVisible = false
   @State private var sharingHasSelectedSharer = false
@@ -71,8 +75,8 @@ struct MainTabView: View {
     }
   }
 
-  /// Custom binding that detects tab reselection and posts notification
-  /// For the Add tab, tapping while already selected triggers the add action
+  /// Custom binding that detects tab reselection
+  /// Re-tapping scrollable tabs scrolls to top first, then navigates to current month
   private var tabSelection: Binding<Tab> {
     Binding(
       get: { selectedTab },
@@ -81,19 +85,29 @@ struct MainTabView: View {
         selectionHaptic.selectionChanged()
 
         if newTab == selectedTab {
-          if newTab == .add {
-            // Add tab tapped while already on it - trigger add action
-            addShiftCoordinator.triggerAdd()
-          } else {
-            // Other tab tapped again - post notification for scroll-to-top etc.
+          if newTab == .sharing {
+            // Sharing tab - keep existing behavior (deselect sharer)
             NotificationCenter.default.post(
-              name: .tabReselected,
-              object: nil,
-              userInfo: ["tab": newTab]
-            )
+              name: .tabReselected, object: nil, userInfo: ["tab": newTab])
+          } else if tabHasScrollableContent(newTab) && pendingCurrentMonthTab != newTab {
+            // Scrollable tab, first re-tap - scroll to top
+            NotificationCenter.default.post(
+              name: .tabReselected, object: nil, userInfo: ["tab": newTab])
+            pendingCurrentMonthTab = newTab
+          } else if !monthContext.isCurrentMonth {
+            // Not on current month - navigate there
+            monthContext.goToCurrentMonth()
+            pendingCurrentMonthTab = nil
+          } else {
+            // Already on current month - scroll to today/relevant item
+            NotificationCenter.default.post(
+              name: .tabReselected, object: nil,
+              userInfo: ["tab": newTab, "scrollToToday": true])
+            pendingCurrentMonthTab = nil
           }
         } else {
           selectedTab = newTab
+          pendingCurrentMonthTab = nil
         }
       }
     )
@@ -335,6 +349,15 @@ struct MainTabView: View {
 
   private var monthPickerTransition: AnyTransition {
     reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity)
+  }
+
+  /// Whether this tab has scrollable list content that should scroll-to-top before navigating to current month
+  private func tabHasScrollableContent(_ tab: Tab) -> Bool {
+    switch tab {
+    case .shifts: return showListView
+    case .stats: return true
+    default: return false
+    }
   }
 
   /// Current transition phase for month picker animations

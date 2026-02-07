@@ -82,8 +82,10 @@ struct StatsView: View {
 
   @ViewBuilder
   private func statsContent(stats: StatsData) -> some View {
+    ScrollViewReader { proxy in
     ScrollView {
       VStack(spacing: 16) {
+        Color.clear.frame(height: 0).id("stats-top")
         sectionHeader(.statsSectionOverview)
 
         // Monthly Earnings Card (large)
@@ -149,6 +151,13 @@ struct StatsView: View {
     .refreshable {
       await refreshStatsContent()
     }
+    .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+      guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
+        tab == .stats
+      else { return }
+      withAnimation { proxy.scrollTo("stats-top", anchor: .top) }
+    }
+    }  // ScrollViewReader
   }
 
   private func sectionHeader(_ title: LocalizedStringResource) -> some View {
