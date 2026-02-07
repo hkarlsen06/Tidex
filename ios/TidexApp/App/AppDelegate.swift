@@ -56,6 +56,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     launchLog.info("[Launch] AppDelegate.didFinishLaunching START")
+
+    // Prevent black flash between launch screen and first SwiftUI frame.
+    // UIWindow's default backgroundColor is nil (renders as black). If SwiftUI's first
+    // frame is delayed for any reason, the black window background shows through.
+    // Setting it to match the launch screen ensures a seamless transition.
+    NotificationCenter.default.addObserver(
+      forName: UIScene.willEnterForegroundNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      for scene in UIApplication.shared.connectedScenes {
+        guard let windowScene = scene as? UIWindowScene else { continue }
+        for window in windowScene.windows where window.backgroundColor == nil {
+          window.backgroundColor = UIColor(named: "LaunchBackground")
+        }
+      }
+    }
+
     Task { @MainActor in
       AppWarmup.shared.start()
     }
@@ -83,6 +101,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Activate Watch Connectivity for Apple Watch companion app
     WatchConnectivityManager.shared.activateSession()
 
+    // Register dynamic Home Screen shortcuts (localized titles)
+    SceneDelegate.registerDynamicShortcuts()
+
     // Always register for remote notifications on launch
     // Ensures APNs token stays fresh (e.g., after TestFlight → App Store transition)
     application.registerForRemoteNotifications()
@@ -99,6 +120,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     options: UIScene.ConnectionOptions
   ) -> UISceneConfiguration {
     launchLog.info("[Launch] AppDelegate.configurationForConnecting")
+
+    // Handle cold-start quick action (user launched app via Home Screen shortcut)
+    // This is handled here instead of SceneDelegate.scene(_:willConnectTo:options:)
+    // because implementing that method on UIWindowSceneDelegate can intermittently
+    // prevent SwiftUI from creating its window, causing a black screen on first launch.
+    if let shortcutItem = options.shortcutItem {
+      SceneDelegate.handleQuickAction(shortcutItem)
+    }
+
     let config = UISceneConfiguration(
       name: "Default Configuration", sessionRole: connectingSceneSession.role)
     config.delegateClass = SceneDelegate.self
