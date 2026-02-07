@@ -392,21 +392,6 @@ struct MainTabView: View {
       if selectedTab != .add {
         selectedTab = .add
       }
-    case .tab(let quickActionTab):
-      // Switch to the specified tab (from Home Screen quick actions)
-      let targetTab: Tab
-      switch quickActionTab {
-      case .add:
-        targetTab = .add
-      case .stats:
-        targetTab = .stats
-      case .sharing:
-        targetTab = .sharing
-      }
-      if selectedTab != targetTab {
-        selectedTab = targetTab
-      }
-      coordinator.clearPendingDeepLink()
     case .feedback:
       // Open feedback sheet for users viewing their feedback responses
       showFeedbackSheet = true

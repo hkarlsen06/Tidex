@@ -101,9 +101,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Activate Watch Connectivity for Apple Watch companion app
     WatchConnectivityManager.shared.activateSession()
 
-    // Register dynamic Home Screen shortcuts (localized titles)
-    SceneDelegate.registerDynamicShortcuts()
-
     // Always register for remote notifications on launch
     // Ensures APNs token stays fresh (e.g., after TestFlight → App Store transition)
     application.registerForRemoteNotifications()
@@ -112,28 +109,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return true
   }
 
-  // MARK: - Scene Configuration
-
-  func application(
-    _ application: UIApplication,
-    configurationForConnecting connectingSceneSession: UISceneSession,
-    options: UIScene.ConnectionOptions
-  ) -> UISceneConfiguration {
-    launchLog.info("[Launch] AppDelegate.configurationForConnecting")
-
-    // Handle cold-start quick action (user launched app via Home Screen shortcut)
-    // This is handled here instead of SceneDelegate.scene(_:willConnectTo:options:)
-    // because implementing that method on UIWindowSceneDelegate can intermittently
-    // prevent SwiftUI from creating its window, causing a black screen on first launch.
-    if let shortcutItem = options.shortcutItem {
-      SceneDelegate.handleQuickAction(shortcutItem)
-    }
-
-    let config = UISceneConfiguration(
-      name: "Default Configuration", sessionRole: connectingSceneSession.role)
-    config.delegateClass = SceneDelegate.self
-    return config
-  }
+  // WARNING: Do NOT override configurationForConnecting to set a custom UIWindowSceneDelegate.
+  // In a SwiftUI @main App lifecycle, SwiftUI manages window creation via its own internal
+  // scene delegate. Setting a custom delegateClass replaces it, and if that delegate doesn't
+  // fully manage the window, SwiftUI's fallback is unreliable — causing a permanent black
+  // screen on launch.
 
   // MARK: - Background Tasks for Live Activity
 
