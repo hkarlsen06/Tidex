@@ -113,7 +113,7 @@ struct MonthLimitSheet: View {
             .frame(width: 72, height: 72)
 
           Image(systemName: "sparkles")
-            .font(.system(size: 32, weight: .medium))
+            .font(.tidexAmountMedium)
             .foregroundStyle(.white)
         }
 
@@ -172,7 +172,7 @@ struct MonthLimitSheet: View {
           endPoint: .trailing
         )
       )
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .shadow(color: Color(red: 0.45, green: 0.4, blue: 0.9).opacity(0.3), radius: 12, y: 6)
       .disabled(isDeleting)
 
@@ -206,9 +206,9 @@ struct MonthLimitSheet: View {
     }
     .padding(Spacing.mlg)
     .background(Color.tidexSurfaceSecondary.opacity(0.5))
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
         .strokeBorder(Color.tidexBorder.opacity(0.5), lineWidth: 1)
     )
   }
@@ -266,7 +266,7 @@ struct MonthLimitSheet: View {
       Button(action: {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { showDeleteSection = true }
       }) {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.xxxs) {
           Text(.monthLimitDeleteShiftsLink)
             .font(.tidexLabel)
 
@@ -323,7 +323,7 @@ struct MonthLimitSheet: View {
         if !showConfirmDelete {
           // Initial delete button
           Button(action: { withAnimation(.spring(response: 0.3)) { showConfirmDelete = true } }) {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.xxxs) {
               Image(systemName: "trash")
                 .font(.tidexLabel)
 
@@ -335,9 +335,9 @@ struct MonthLimitSheet: View {
           .frame(height: 48)
           .foregroundStyle(Color.tidexError)
           .background(Color.tidexError.opacity(0.08))
-          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .strokeBorder(Color.tidexError.opacity(0.2), lineWidth: 1)
           )
           .disabled(isDeleting)
@@ -360,14 +360,14 @@ struct MonthLimitSheet: View {
           .padding(Spacing.sm)
           .frame(maxWidth: .infinity, alignment: .leading)
           .background(Color.tidexError.opacity(0.08))
-          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         }
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary.opacity(0.4))
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
           .strokeBorder(Color.tidexBorder.opacity(0.5), lineWidth: 1)
       )
     }
@@ -391,7 +391,7 @@ struct MonthLimitSheet: View {
       .padding(Spacing.sm)
       .frame(maxWidth: .infinity, alignment: .leading)
       .background(Color.tidexError.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
       // Action buttons
       HStack(spacing: Spacing.xs) {
@@ -404,7 +404,7 @@ struct MonthLimitSheet: View {
         .frame(height: 44)
         .foregroundStyle(Color.tidexTextSecondary)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .disabled(isDeleting)
 
         // Confirm delete
@@ -422,7 +422,7 @@ struct MonthLimitSheet: View {
         .frame(height: 44)
         .foregroundStyle(.white)
         .background(Color.tidexError)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .disabled(isDeleting)
       }
     }

@@ -33,7 +33,7 @@ struct OnboardingButton: View {
             }
           }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
     }
     .buttonStyle(SnappyOnboardingButtonStyle())
     .disabled(!isEnabled)

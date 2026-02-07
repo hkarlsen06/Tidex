@@ -69,7 +69,7 @@ struct EmploymentPercentageChart: View {
       chartView
     }
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 
@@ -87,11 +87,11 @@ struct EmploymentPercentageChart: View {
         // Yearly average percentage
         if let average = data.yearlyAverage {
           Text(String(format: "%.1f%%", average))
-            .font(.system(size: 28, weight: .bold, design: .monospaced))
+            .font(.tidexMonoDisplay)
             .foregroundColor(.tidexTextPrimary)
         } else {
           Text("---")
-            .font(.system(size: 28, weight: .bold, design: .monospaced))
+            .font(.tidexMonoDisplay)
             .foregroundColor(.tidexTextMuted)
         }
 
@@ -109,7 +109,7 @@ struct EmploymentPercentageChart: View {
       }
     }
     .padding(Spacing.mlg)
-    .padding(.bottom, -4)
+    .padding(.bottom, -Spacing.xxs)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
   }
@@ -125,7 +125,7 @@ struct EmploymentPercentageChart: View {
           y: .value("Percentage", month.averagePercentage)
         )
         .foregroundStyle(barColor(for: month, isSelected: selectedMonth == month.monthNumber))
-        .cornerRadius(6)
+        .cornerRadius(CornerRadius.xs)
       }
     }
     .chartOverlay { proxy in
@@ -272,7 +272,7 @@ private struct TooltipView: View {
 
       HStack(spacing: Spacing.xxs) {
         Text(String(format: "%.1f%%", monthData.averagePercentage))
-          .font(.system(size: 16, weight: .bold, design: .monospaced))
+          .font(.tidexMonoBody)
           .foregroundColor(.tidexBlue)
 
         Text(.statsChartsEmploymentEmployment)
@@ -283,9 +283,9 @@ private struct TooltipView: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
     .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
@@ -305,7 +305,7 @@ private struct InfoPopoverButton: View {
       showPopover.toggle()
     } label: {
       Image(systemName: "info.circle")
-        .font(.system(size: 18))
+        .font(.tidexBody)
         .foregroundColor(.tidexTextMuted)
     }
     .popover(isPresented: $showPopover) {
@@ -339,7 +339,7 @@ struct EmploymentPercentageChartEmpty: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 }

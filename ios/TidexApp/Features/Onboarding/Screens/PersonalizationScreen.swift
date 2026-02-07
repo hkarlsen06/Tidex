@@ -32,7 +32,7 @@ struct PersonalizationScreen: View {
           // Header - constrained for iPad
           VStack(spacing: Spacing.sm) {
             Text(.onboardingPersonalizeTitle)
-              .font(.system(size: 28, weight: .bold))
+              .font(.tidexScreenTitle)
               .foregroundColor(.tidexTextPrimary)
               .multilineTextAlignment(.center)
 
@@ -110,9 +110,9 @@ struct PersonalizationScreen: View {
                 .background(
                   payrollDay == day ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
                 .overlay(
-                  RoundedRectangle(cornerRadius: 10, style: .continuous)
+                  RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
                     .stroke(payrollDay == day ? Color.clear : Color.tidexBorder, lineWidth: 1)
                 )
             }

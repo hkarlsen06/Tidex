@@ -31,9 +31,9 @@ struct BillingToggle: View {
         }
       }
     }
-    .padding(4)
+    .padding(Spacing.xxs)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 
   @ViewBuilder
@@ -44,19 +44,19 @@ struct BillingToggle: View {
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         Text(title)
           .font(isSelected ? .tidexLabelStrong : .tidexLabel)
           .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
 
         if let badge = badge {
           Text(badge)
-            .font(.system(size: 11, weight: .bold))
+            .font(.tidexMicro.bold())
             .foregroundColor(.white)
-            .padding(.horizontal, 6)
+            .padding(.horizontal, Spacing.xxxs)
             .padding(.vertical, 3)
             .background(Color.tidexSuccess)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
         }
       }
       .frame(maxWidth: .infinity)
@@ -66,7 +66,7 @@ struct BillingToggle: View {
           ? Color.tidexBackground
           : Color.clear
       )
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
     .buttonStyle(.plain)
   }

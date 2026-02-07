@@ -137,7 +137,7 @@ struct ShareableShiftCard: View {
     .padding(Spacing.mlg)
     .frame(width: 360)  // Fixed width for consistent sharing
     .background(Color.tidexBackground)
-    .clipShape(RoundedRectangle(cornerRadius: 24))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
   }
 
   // MARK: - Header Section
@@ -192,7 +192,7 @@ struct ShareableShiftCard: View {
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
     }
@@ -258,7 +258,7 @@ struct ShareableShiftCard: View {
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
     }
@@ -307,7 +307,7 @@ struct ShareableShiftCard: View {
 
   @ViewBuilder
   private func supplementSegmentRow(_ segment: ShareableSupplementSegment) -> some View {
-    VStack(spacing: 6) {
+    VStack(spacing: Spacing.xxxs) {
       // Time range and hours × rate
       HStack {
         Text(segmentTimeRange(segment))
@@ -337,7 +337,7 @@ struct ShareableShiftCard: View {
     }
     .padding(Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexSurfaceSecondary.opacity(0.4))
     )
   }

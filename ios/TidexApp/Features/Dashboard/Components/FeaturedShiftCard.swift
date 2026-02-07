@@ -84,7 +84,7 @@ struct FeaturedShiftCard: View {
       } trailingTop: {
         // Net/gross amount
         let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-        HStack(spacing: 2) {
+        HStack(spacing: Spacing.micro) {
           if showIncreaseHighlight {
             Text("+")
               .font(.tidexTitle)
@@ -132,7 +132,7 @@ struct FeaturedShiftCard: View {
           }
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 24))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
       .tidexCardShadow()
       .onChange(of: progress) { _, newValue in
         // Animate to new progress value
@@ -153,7 +153,7 @@ struct FeaturedShiftCard: View {
       // Uses fixed height to prevent layout shift during transitions
       Group {
         if let text = footerText {
-          HStack(spacing: 6) {
+          HStack(spacing: Spacing.xxxs) {
             if isBestShift {
               Image(systemName: "star.fill")
                 .font(.tidexCaptionRegular)
@@ -169,7 +169,7 @@ struct FeaturedShiftCard: View {
           }
         } else {
           // Skeleton placeholder bar matching other empty states
-          RoundedRectangle(cornerRadius: 4)
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.3))
             .frame(width: 80, height: 14)
         }

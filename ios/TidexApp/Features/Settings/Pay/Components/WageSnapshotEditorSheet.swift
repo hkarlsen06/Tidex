@@ -402,7 +402,7 @@ struct WageSnapshotEditorSheet: View {
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xs)
           .background(Color.tidexSurfaceSecondary)
-          .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
         }
       }
 
@@ -494,7 +494,7 @@ struct WageSnapshotEditorSheet: View {
         }
         .padding(Spacing.sm)
         .background(Color.tidexWarning.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
 
         Text(.settingsPayEditorBaselineHelp)
           .font(.tidexCaptionRegular)
@@ -510,7 +510,7 @@ struct WageSnapshotEditorSheet: View {
         .tint(.tidexBrandPrimary)
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
         Text(.settingsPayEditorFromDateHelp)
           .font(.tidexCaptionRegular)
@@ -564,7 +564,7 @@ struct WageSnapshotEditorSheet: View {
             .padding(Spacing.sm)
             .frame(maxWidth: .infinity)
             .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
         } else {
           ForEach(supplements) { rule in
             customSupplementRow(rule)
@@ -578,7 +578,7 @@ struct WageSnapshotEditorSheet: View {
   @ViewBuilder
   private func presetSupplementRow(_ rule: SupplementRule) -> some View {
     HStack {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(formatDays(rule.days))
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
@@ -596,13 +596,13 @@ struct WageSnapshotEditorSheet: View {
     }
     .padding(Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
   }
 
   @ViewBuilder
   private func customSupplementRow(_ rule: OnboardingSupplementRule) -> some View {
     HStack {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(rule.daysDescription)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
@@ -642,7 +642,7 @@ struct WageSnapshotEditorSheet: View {
     }
     .padding(Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
   }
 
   private func formatDays(_ days: [Int]) -> String {
@@ -694,7 +694,7 @@ struct WageSnapshotEditorSheet: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
-    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
   }
 
   // MARK: - Delete Button
@@ -718,7 +718,7 @@ struct WageSnapshotEditorSheet: View {
       .frame(maxWidth: .infinity)
       .frame(height: Spacing.buttonHeight)
       .background(Color.tidexError)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
   }
 

@@ -56,14 +56,14 @@ struct SettingsView: View {
           Button {
             navigationPath.append(SettingsDestination.profile)
           } label: {
-            HStack(spacing: 14) {
+            HStack(spacing: Spacing.msm) {
               AvatarView(
                 url: coordinator.userAvatarUrl,
                 initials: userInitials,
                 size: 60
               )
 
-              VStack(alignment: .leading, spacing: 2) {
+              VStack(alignment: .leading, spacing: Spacing.micro) {
                 Text(coordinator.userDisplayName)
                   .font(.tidexTitle)
                   .foregroundColor(.tidexTextPrimary)
@@ -82,7 +82,7 @@ struct SettingsView: View {
               .font(.tidexLabelStrong)
               .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, Spacing.xxxs)
           }
         }
         .listRowBackground(Color.tidexSurfacePrimary)
@@ -217,7 +217,7 @@ struct SettingsView: View {
       .background(Color.tidexBackground)
       .toolbar {
         ToolbarItem(placement: .principal) {
-          VStack(spacing: 2) {
+          VStack(spacing: Spacing.micro) {
             Text(.settingsTitle)
               .font(.tidexHeadline)
               .foregroundColor(.tidexTextPrimary)
@@ -304,7 +304,7 @@ struct SettingsView: View {
           .frame(width: 29, height: 29)
           .background(
             Color.tidexError.opacity(0.75),
-            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
           )
 
         if isSigningOut {
@@ -335,7 +335,7 @@ struct SettingsView: View {
           .frame(width: 29, height: 29)
           .background(
             Color.gray.opacity(0.75),
-            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
           )
 
         if isSigningOutGlobal {
@@ -415,7 +415,7 @@ private struct RecurringShiftsSettingsView: View {
         } else if recurringShifts.isEmpty {
           emptyState
         } else {
-          VStack(spacing: 10) {
+          VStack(spacing: Spacing.xsm) {
             ForEach(recurringShifts, id: \.id) { recurring in
               recurringShiftRow(recurring)
             }
@@ -486,8 +486,8 @@ private struct RecurringShiftsSettingsView: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(12)
-    .tidexCardShadow(cornerRadius: 12)
+    .cornerRadius(CornerRadius.lg)
+    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 
   private func recurringShiftRow(_ recurring: RecurringShiftRow) -> some View {
@@ -502,7 +502,7 @@ private struct RecurringShiftsSettingsView: View {
           .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
 
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.xxxs) {
           Text(weekdaySummary(for: recurring.selected_days))
           Text("•")
           Text(repeatLabel(for: recurring.repeat_interval_weeks))
@@ -517,8 +517,8 @@ private struct RecurringShiftsSettingsView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(12)
-      .tidexCardShadow(cornerRadius: 12)
+      .cornerRadius(CornerRadius.lg)
+      .tidexCardShadow(cornerRadius: CornerRadius.lg)
     }
     .buttonStyle(.plain)
   }
@@ -536,7 +536,7 @@ private struct RecurringShiftsSettingsView: View {
     }
     .padding(Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexError.opacity(0.1))
     )
   }
@@ -651,7 +651,7 @@ struct SettingsMenuItem: View {
           .frame(width: 29, height: 29)
           .background(
             iconBackgroundColor.opacity(0.75),
-            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
           )
 
         // Title and description

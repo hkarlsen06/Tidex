@@ -138,7 +138,7 @@ struct LoginView: View {
         )
       }
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
       // Error messages
       if let emailError = viewModel.fieldErrors.emailOrPhone {
@@ -209,7 +209,7 @@ struct LoginView: View {
       .frame(maxWidth: .infinity)
       .frame(height: 50)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
   }

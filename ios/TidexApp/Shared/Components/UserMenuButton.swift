@@ -61,7 +61,7 @@ struct UserMenuButton: View {
       // Profile picture or initial
       profileImage
     }
-    .padding(.leading, 6)
+    .padding(.leading, Spacing.xxxs)
     .padding(.trailing, Spacing.xxs)
     .padding(.vertical, Spacing.xxs)
     // Fixed height prevents toolbar layout shifts on iPad
@@ -94,7 +94,7 @@ struct UserMenuButton: View {
       }
     }
     .frame(width: 28, height: 28)
-    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     .onChange(of: avatarUrl) { oldUrl, newUrl in
       // If URL changes, cancel any in-progress load and reload
       if newUrl != loadedUrl {
@@ -161,7 +161,7 @@ struct UserMenuButton: View {
 
   private var initialAvatar: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 10)
+      RoundedRectangle(cornerRadius: CornerRadius.md)
         .fill(Color.tidexBlue.opacity(0.2))
 
       Text(displayName.prefix(1).uppercased())

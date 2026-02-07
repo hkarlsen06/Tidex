@@ -48,7 +48,7 @@ struct WageScreen: View {
             // Header
             VStack(spacing: Spacing.sm) {
               Text(.onboardingWageTitle)
-                .font(.system(size: 28, weight: .bold))
+                .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
@@ -219,7 +219,7 @@ struct WageScreen: View {
             }
           } label: {
             HStack {
-              VStack(alignment: .leading, spacing: 2) {
+              VStack(alignment: .leading, spacing: Spacing.micro) {
                 Text(selectedTariffTypeName)
                   .font(.tidexBodyMedium)
                   .foregroundColor(.tidexTextPrimary)
@@ -241,9 +241,9 @@ struct WageScreen: View {
             }
             .padding(Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
             .overlay(
-              RoundedRectangle(cornerRadius: 10, style: .continuous)
+              RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
                 .stroke(Color.tidexBorder, lineWidth: 1)
             )
           }
@@ -361,9 +361,9 @@ private struct WageTypeButton: View {
         .frame(maxWidth: .infinity)
         .frame(height: 48)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .overlay(
-          RoundedRectangle(cornerRadius: 12, style: .continuous)
+          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
             .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
         )
     }
@@ -411,9 +411,9 @@ private struct TariffLevelRow: View {
       }
       .padding(Spacing.md)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
           .stroke(
             isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
       )

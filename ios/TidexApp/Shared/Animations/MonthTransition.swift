@@ -355,7 +355,7 @@ struct MonthYearPickerSheet: View {
               .fontWeight(.medium)
               .foregroundColor(isShowingCurrentMonth ? .tidexTextMuted : .tidexBlue)
               .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, 6)
+              .padding(.vertical, Spacing.xxxs)
               .background(
                 Color.tidexBlue.opacity(isShowingCurrentMonth ? 0.05 : 0.1),
                 in: Capsule()
@@ -538,7 +538,7 @@ struct AnimatedMonthHeader: View {
     .overlay(alignment: .trailing) {
       edgeNavigationButton(icon: nextIcon, action: onNext)
     }
-    .padding(.horizontal, 10)
+    .padding(.horizontal, Spacing.xsm)
     .padding(.vertical, Spacing.sm)
     .contentShape(Rectangle())
     .gesture(swipeGesture)
@@ -554,7 +554,7 @@ struct AnimatedMonthHeader: View {
   /// Reusable month/year label for ViewThatFits (default layout - horizontal)
   @ViewBuilder
   private func monthYearLabel(yearText: String) -> some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Spacing.xxxs) {
       Text(monthName.capitalized)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)

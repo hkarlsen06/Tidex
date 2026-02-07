@@ -25,7 +25,7 @@ struct SyncStatusIndicator: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(20)
+      .cornerRadius(CornerRadius.xxxl)
       .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
 
     case .failed(_, let lastSync):
@@ -55,10 +55,10 @@ struct SyncStatusIndicator: View {
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexWarning.opacity(0.12))
       .overlay(
-        RoundedRectangle(cornerRadius: 20)
+        RoundedRectangle(cornerRadius: CornerRadius.xxxl)
           .stroke(Color.tidexWarning.opacity(0.25), lineWidth: 1)
       )
-      .cornerRadius(20)
+      .cornerRadius(CornerRadius.xxxl)
 
     case .offline:
       HStack(spacing: Spacing.xs) {
@@ -73,7 +73,7 @@ struct SyncStatusIndicator: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(20)
+      .cornerRadius(CornerRadius.xxxl)
     }
   }
 

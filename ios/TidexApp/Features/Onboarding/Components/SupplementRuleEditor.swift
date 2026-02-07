@@ -352,11 +352,11 @@ struct SupplementRuleEditor: View {
                 .focused($isValueInputFocused)
                 .frame(width: 80)
                 .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, 2)
+                .padding(.vertical, Spacing.micro)
                 .background(Color.tidexBlue.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
                 .overlay(
-                  RoundedRectangle(cornerRadius: 6, style: .continuous)
+                  RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
                     .stroke(Color.tidexBlue, lineWidth: 2)
                 )
                 .onChange(of: isValueInputFocused) { _, focused in
@@ -393,9 +393,9 @@ struct SupplementRuleEditor: View {
                 .foregroundColor(.tidexBlue)
                 .contentTransition(.numericText())
                 .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, 2)
+                .padding(.vertical, Spacing.micro)
                 .background(Color.tidexBlue.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
             }
             .buttonStyle(.plain)
 
@@ -420,7 +420,7 @@ struct SupplementRuleEditor: View {
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
   }
 
@@ -583,7 +583,7 @@ private struct TimePickerField: View {
     .frame(maxWidth: .infinity)
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
   }
 }
 
@@ -609,9 +609,9 @@ private struct TypeButton: View {
       .frame(maxWidth: .infinity)
       .frame(height: 64)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
           .stroke(
             isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
       )

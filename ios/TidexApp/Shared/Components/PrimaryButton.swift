@@ -32,7 +32,7 @@ struct PrimaryButton: View {
           : Color.tidexBrandPrimary
       )
       .foregroundColor(.white)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyPrimaryButtonStyle())
     .disabled(isDisabled || isLoading)

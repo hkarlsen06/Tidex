@@ -205,7 +205,7 @@ struct RecurringShiftEditorSheet: View {
           isEnabled: true
         )
         .scrollDismissesKeyboard(.interactively)
-        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
       }
       .background(Color.tidexBackground)
       .navigationBarTitleDisplayMode(.inline)
@@ -251,7 +251,7 @@ struct RecurringShiftEditorSheet: View {
     HStack {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(.recurringEditTitle)
-          .font(.system(size: 28, weight: .bold))
+          .font(.tidexScreenTitle)
           .foregroundColor(.tidexTextPrimary)
 
         Text(.addShiftHeaderSubtitle)
@@ -296,7 +296,7 @@ struct RecurringShiftEditorSheet: View {
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(hasChanges && canSave ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-      .cornerRadius(12)
+      .cornerRadius(CornerRadius.lg)
     }
     .disabled(isSaving || !hasChanges || !canSave)
     .padding(.top, Spacing.xs)
@@ -304,7 +304,7 @@ struct RecurringShiftEditorSheet: View {
   }
 
   private var exclusionsSection: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: Spacing.xsm) {
       Text(.recurringExclusionsTitle)
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
@@ -319,9 +319,9 @@ struct RecurringShiftEditorSheet: View {
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, 10)
+          .padding(.vertical, Spacing.xsm)
           .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(10)
+          .cornerRadius(CornerRadius.md)
       } else {
         VStack(spacing: Spacing.xs) {
           ForEach(editedExclusions, id: \.self) { dateISO in
@@ -334,7 +334,7 @@ struct RecurringShiftEditorSheet: View {
 
   private func exclusionRow(dateISO: String) -> some View {
     HStack(spacing: Spacing.sm) {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(formattedExclusionDate(dateISO))
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
@@ -356,15 +356,15 @@ struct RecurringShiftEditorSheet: View {
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, 7)
           .background(Color.tidexBlue.opacity(0.12))
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
       }
       .buttonStyle(.plain)
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(10)
+    .cornerRadius(CornerRadius.md)
     .overlay(
-      RoundedRectangle(cornerRadius: 10)
+      RoundedRectangle(cornerRadius: CornerRadius.md)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
   }
@@ -382,7 +382,7 @@ struct RecurringShiftEditorSheet: View {
     }
     .padding(Spacing.sm)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexError.opacity(0.1))
     )
   }

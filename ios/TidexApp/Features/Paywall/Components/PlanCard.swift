@@ -22,7 +22,7 @@ struct PlanCard: View {
           .font(.system(size: 24))
           .foregroundColor(tierColor)
 
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           // Use App Store Connect localized name if available
           Text(product?.displayName ?? tierName)
             .font(.tidexTitle2)
@@ -73,7 +73,7 @@ struct PlanCard: View {
         .frame(height: 48)
         .foregroundColor(.white)
         .background(product != nil ? tierColor : Color.tidexTextMuted)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .disabled(product == nil || isPurchasing || isSubscribeTapped)
         .onChange(of: isPurchasing) { _, newValue in
           // Reset local tap state when purchase state changes
@@ -86,15 +86,15 @@ struct PlanCard: View {
     }
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
         .strokeBorder(
           isCurrentPlan ? tierColor.opacity(0.5) : Color.clear,
           lineWidth: 2
         )
     )
-    .tidexCardShadow(cornerRadius: 16)
+    .tidexCardShadow(cornerRadius: CornerRadius.xxl)
   }
 
   // MARK: - Computed Properties
@@ -130,7 +130,7 @@ struct PlanCard: View {
 
   @ViewBuilder
   private func priceView(for product: Product) -> some View {
-    VStack(alignment: .trailing, spacing: 2) {
+    VStack(alignment: .trailing, spacing: Spacing.micro) {
       Text(product.displayPrice)
         .font(.tidexPrice)
         .foregroundColor(.tidexTextPrimary)

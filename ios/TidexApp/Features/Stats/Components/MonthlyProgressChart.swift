@@ -141,7 +141,7 @@ struct MonthlyProgressChart: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 
@@ -198,7 +198,7 @@ struct MonthlyProgressChartEmpty: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 }

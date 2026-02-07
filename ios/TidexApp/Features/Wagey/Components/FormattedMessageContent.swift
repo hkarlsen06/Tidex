@@ -67,7 +67,7 @@ struct FormattedMessageContent: View {
           GridRow {
             ForEach(0..<columnCount, id: \.self) { colIndex in
               Text(colIndex < headerRow.count ? headerRow[colIndex] : "")
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .font(.tidexMonoCaptionStrong)
                 .foregroundColor(.tidexTextPrimary)
                 .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, Spacing.xs)
@@ -80,10 +80,10 @@ struct FormattedMessageContent: View {
             GridRow {
               ForEach(0..<columnCount, id: \.self) { colIndex in
                 Text(colIndex < row.count ? row[colIndex] : "")
-                  .font(.system(size: 13, design: .monospaced))
+                  .font(.tidexMonoCaptionRegular)
                   .foregroundColor(colIndex == 0 ? .tidexTextPrimary : .tidexTextSecondary)
                   .padding(.horizontal, Spacing.sm)
-                  .padding(.vertical, 6)
+                  .padding(.vertical, Spacing.xxxs)
               }
             }
             .background(
@@ -92,9 +92,9 @@ struct FormattedMessageContent: View {
           }
         }
         .background(Color.tidexSurfaceSecondary.opacity(0.3))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
         .overlay(
-          RoundedRectangle(cornerRadius: 8)
+          RoundedRectangle(cornerRadius: CornerRadius.sm)
             .stroke(Color.tidexBorder.opacity(0.5), lineWidth: 1)
         )
       }
@@ -307,7 +307,7 @@ struct FormattedMessageContent: View {
     )
     .padding()
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 18))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble))
   }
   .padding()
   .background(Color.tidexBackground)
@@ -328,7 +328,7 @@ struct FormattedMessageContent: View {
     )
     .padding()
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 18))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble))
   }
   .padding()
   .background(Color.tidexBackground)
@@ -341,7 +341,7 @@ struct FormattedMessageContent: View {
   )
   .padding()
   .background(Color.tidexSurfacePrimary)
-  .clipShape(RoundedRectangle(cornerRadius: 18))
+  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble))
   .padding()
   .background(Color.tidexBackground)
 }

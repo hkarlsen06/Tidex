@@ -174,8 +174,8 @@ struct ShiftSupplementRuleCard: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    .tidexCardShadow(cornerRadius: 12)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 }
 
@@ -332,7 +332,7 @@ struct SupplementRuleEditorSheet: View {
         .frame(maxWidth: .infinity)
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
 
         // To time
         VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -351,7 +351,7 @@ struct SupplementRuleEditorSheet: View {
         .frame(maxWidth: .infinity)
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       }
     }
   }
@@ -389,9 +389,9 @@ struct SupplementRuleEditorSheet: View {
             supplementType == .fixed
               ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary
           )
-          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .stroke(
                 supplementType == .fixed ? Color.tidexBrandPrimary : Color.tidexBorder,
                 lineWidth: supplementType == .fixed ? 2 : 1)
@@ -422,9 +422,9 @@ struct SupplementRuleEditorSheet: View {
             supplementType == .percent
               ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary
           )
-          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .stroke(
                 supplementType == .percent ? Color.tidexBrandPrimary : Color.tidexBorder,
                 lineWidth: supplementType == .percent ? 2 : 1)
@@ -485,11 +485,11 @@ struct SupplementRuleEditorSheet: View {
                 .focused($isValueInputFocused)
                 .frame(width: 80)
                 .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, 2)
+                .padding(.vertical, Spacing.micro)
                 .background(Color.tidexBlue.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
                 .overlay(
-                  RoundedRectangle(cornerRadius: 6, style: .continuous)
+                  RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
                     .stroke(Color.tidexBlue, lineWidth: 2)
                 )
                 .onChange(of: isValueInputFocused) { _, focused in
@@ -526,9 +526,9 @@ struct SupplementRuleEditorSheet: View {
                 .foregroundColor(.tidexBlue)
                 .contentTransition(.numericText())
                 .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, 2)
+                .padding(.vertical, Spacing.micro)
                 .background(Color.tidexBlue.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
             }
             .buttonStyle(.plain)
 
@@ -553,7 +553,7 @@ struct SupplementRuleEditorSheet: View {
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
   }
 

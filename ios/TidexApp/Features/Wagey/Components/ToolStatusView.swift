@@ -71,7 +71,7 @@ struct ToolStatusView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       // Compact pill header
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         statusIcon
           .frame(width: 14, height: 14)
 
@@ -110,7 +110,7 @@ struct ToolStatusView: View {
           }
         }
         .padding(.horizontal, Spacing.sm)
-        .padding(.bottom, 10)
+        .padding(.bottom, Spacing.xsm)
         .padding(.top, Spacing.xxs)
       }
     }
@@ -161,7 +161,7 @@ struct ToolStatusView: View {
         .frame(width: 60, alignment: .leading)
 
       Text(value)
-        .font(.system(size: 11, design: .monospaced))
+        .font(.tidexMonoMicro)
         .foregroundColor(.tidexTextPrimary)
     }
   }
@@ -174,13 +174,13 @@ struct ToolStatusView: View {
 
       ScrollView(.horizontal, showsIndicators: false) {
         Text(content)
-          .font(.system(size: 10, design: .monospaced))
+          .font(.tidexMonoMicro2)
           .foregroundColor(.tidexTextPrimary)
           .padding(Spacing.xs)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
   }
 

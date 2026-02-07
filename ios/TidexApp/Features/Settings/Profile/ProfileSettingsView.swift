@@ -182,7 +182,7 @@ struct ProfileSettingsView: View {
         .foregroundColor(.tidexTextSecondary)
 
       // Current email (read-only)
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: Spacing.xxxs) {
         Text(.profileEmailChangeCurrentEmailLabel)
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
@@ -194,11 +194,11 @@ struct ProfileSettingsView: View {
           .padding(.vertical, Spacing.sm)
           .frame(maxWidth: .infinity, alignment: .leading)
           .background(Color.tidexSurfaceSecondary.opacity(0.5))
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
       }
 
       // New email input
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: Spacing.xxxs) {
         Text(.profileEmailChangeNewEmailLabel)
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
@@ -214,7 +214,7 @@ struct ProfileSettingsView: View {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(8)
+        .cornerRadius(CornerRadius.sm)
       }
 
       // Error message
@@ -246,7 +246,7 @@ struct ProfileSettingsView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(viewModel.newEmail.isEmpty ? Color.tidexBlue.opacity(0.5) : Color.tidexBlue)
-        .cornerRadius(10)
+        .cornerRadius(CornerRadius.md)
       }
       .disabled(viewModel.newEmail.isEmpty || viewModel.isChangingEmail)
     }
@@ -287,7 +287,7 @@ struct ProfileSettingsView: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .cornerRadius(10)
+          .cornerRadius(CornerRadius.md)
       }
     }
   }
@@ -307,7 +307,7 @@ struct ProfileSettingsView: View {
 
   /// Upload button label - extracted to avoid main actor isolation issues in PhotosPicker closure
   private var uploadButtonLabel: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Spacing.xxxs) {
       if viewModel.isUploadingAvatar {
         ProgressView()
           .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
@@ -323,7 +323,7 @@ struct ProfileSettingsView: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexBlue.opacity(0.1))
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 
   private var avatarSection: some View {
@@ -345,7 +345,7 @@ struct ProfileSettingsView: View {
           Button {
             showRemoveAvatarConfirmation = true
           } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.xxxs) {
               Image(systemName: "trash")
                 .font(.tidexCaption)
               Text(.profilePersonalInfoRemoveImage)
@@ -355,7 +355,7 @@ struct ProfileSettingsView: View {
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xs)
             .background(Color.tidexError.opacity(0.1))
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
           }
           .disabled(viewModel.isUploadingAvatar)
         }
@@ -385,7 +385,7 @@ struct ProfileSettingsView: View {
             )
         }
       )
-      .clipShape(RoundedRectangle(cornerRadius: 16))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
     } else {
       initialAvatar
     }
@@ -393,7 +393,7 @@ struct ProfileSettingsView: View {
 
   private var initialAvatar: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 16)
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexBlue.opacity(0.2))
 
       Text(viewModel.initials)
@@ -433,7 +433,7 @@ struct ProfileSettingsView: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
       .onChange(of: viewModel.displayName) { _, _ in
         viewModel.onNameChanged()
       }
@@ -478,7 +478,7 @@ struct ProfileSettingsView: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary.opacity(0.5))
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
 
       // Show appropriate hint based on user's auth type
       if viewModel.isOAuthOnly {
@@ -531,7 +531,7 @@ struct ProfileSettingsView: View {
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexError)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
         }
         .disabled(viewModel.isDeletingAccount)
       }

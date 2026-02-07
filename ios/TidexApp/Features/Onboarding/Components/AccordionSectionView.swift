@@ -62,7 +62,7 @@ struct AccordionSectionView<Content: View>: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(Color.tidexBrandPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
             }
             .buttonStyle(.plain)
           }
@@ -73,9 +73,9 @@ struct AccordionSectionView<Content: View>: View {
       }
     }
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(isExpanded ? Color.tidexBrandPrimary.opacity(0.3) : Color.tidexBorder, lineWidth: 1)
     )
   }

@@ -56,7 +56,7 @@ struct AppearanceSettingsView: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Theme Selection Section
@@ -85,7 +85,7 @@ struct AppearanceSettingsView: View {
         themePreview(theme)
 
         // Theme info
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(themeTitle(theme))
             .font(.body)
             .foregroundColor(.tidexTextPrimary)
@@ -122,7 +122,7 @@ struct AppearanceSettingsView: View {
 
     return ZStack {
       // Background
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(
           isDark
             ? Color(red: 0.1, green: 0.1, blue: 0.15) : Color(red: 0.95, green: 0.95, blue: 0.97)
@@ -131,7 +131,7 @@ struct AppearanceSettingsView: View {
 
       // Icon
       Image(systemName: themeIcon(theme))
-        .font(.system(size: 20, weight: .medium))
+        .font(.tidexBodyLarge)
         .foregroundColor(isDark ? .white : Color(red: 0.2, green: 0.2, blue: 0.25))
     }
   }
@@ -193,7 +193,7 @@ struct AppearanceSettingsView: View {
         animationStylePreview(style)
 
         // Style info
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(animationStyleTitle(style))
             .font(.body)
             .foregroundColor(.tidexTextPrimary)
@@ -215,12 +215,12 @@ struct AppearanceSettingsView: View {
 
   private func animationStylePreview(_ style: CalendarAnimationStyle) -> some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(Color.tidexBlue.opacity(0.1))
         .frame(width: 48, height: 48)
 
       Image(systemName: animationStyleIcon(style))
-        .font(.system(size: 20, weight: .medium))
+        .font(.tidexBodyLarge)
         .foregroundColor(.tidexBlue)
     }
   }

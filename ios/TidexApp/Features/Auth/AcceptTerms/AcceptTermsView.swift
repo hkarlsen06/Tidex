@@ -86,7 +86,7 @@ struct AcceptTermsView: View {
 
       // Title
       Text("Tidex")
-        .font(.system(size: 28, weight: .bold))
+        .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
     }
   }
@@ -146,7 +146,7 @@ struct AcceptTermsView: View {
         }
         .foregroundColor(.tidexTextPrimary)
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 14)
+        .padding(.vertical, Spacing.msm)
       }
       .disabled(isProcessing)
 
@@ -170,12 +170,12 @@ struct AcceptTermsView: View {
         }
         .foregroundColor(.tidexTextPrimary)
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 14)
+        .padding(.vertical, Spacing.msm)
       }
       .disabled(isProcessing)
     }
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 
   // MARK: - Action Buttons Section

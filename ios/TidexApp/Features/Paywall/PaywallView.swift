@@ -167,7 +167,7 @@ struct PaywallView: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
   }
 
   // swiftlint:disable force_unwrapping

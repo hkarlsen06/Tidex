@@ -42,10 +42,10 @@ struct ErrorBanner: View {
     .padding(Spacing.md)
     .background(Color.tidexError.opacity(0.15))
     .overlay(
-      RoundedRectangle(cornerRadius: 10)
+      RoundedRectangle(cornerRadius: CornerRadius.md)
         .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
     )
-    .cornerRadius(10)
+    .cornerRadius(CornerRadius.md)
   }
 }
 
@@ -79,10 +79,10 @@ struct SuccessBanner: View {
     .padding(Spacing.md)
     .background(Color.tidexSuccess.opacity(0.15))
     .overlay(
-      RoundedRectangle(cornerRadius: 10)
+      RoundedRectangle(cornerRadius: CornerRadius.md)
         .stroke(Color.tidexSuccess.opacity(0.3), lineWidth: 1)
     )
-    .cornerRadius(10)
+    .cornerRadius(CornerRadius.md)
   }
 }
 

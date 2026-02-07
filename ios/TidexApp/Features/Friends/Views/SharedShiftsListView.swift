@@ -178,7 +178,7 @@ struct SharedShiftsListView: View {
       .listStyle(.plain)
       .scrollContentBackground(.hidden)
       .background(Color.clear)
-      .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+      .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
       .refreshable {
         // Pull-to-refresh is a no-op here; shifts are fetched by the parent
       }
@@ -265,7 +265,7 @@ struct SharedShiftsListView: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(20)
+    .cornerRadius(CornerRadius.xxxl)
     .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
   }
 

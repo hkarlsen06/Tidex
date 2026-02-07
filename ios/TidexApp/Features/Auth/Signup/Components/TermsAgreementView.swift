@@ -25,11 +25,11 @@ struct TermsAgreementView: View {
         HStack(alignment: .top, spacing: Spacing.sm) {
           // Checkbox
           ZStack {
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: CornerRadius.xxs)
               .stroke(checkboxBorderColor, lineWidth: 1.5)
               .frame(width: 20, height: 20)
               .background(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: CornerRadius.xxs)
                   .fill(isAgreed ? Color.tidexBrandPrimary : Color.clear)
               )
 

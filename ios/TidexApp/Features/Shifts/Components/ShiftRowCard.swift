@@ -55,7 +55,7 @@ struct ShiftRowCard: View {
     // Use a simple view with tap gesture instead of Button
     // Button adds its own gesture recognizer that conflicts with SwipeableShiftCard
     cardContent
-      .contentShape(RoundedRectangle(cornerRadius: 24))
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card))
       .onTapGesture {
         onTap?()
       }
@@ -107,12 +107,12 @@ struct ShiftRowCard: View {
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, Spacing.mlg)
     .background(
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(hasConflict ? Color.tidexWarning.opacity(0.08) : Color.tidexSurfacePrimary)
     )
     .overlay(
       // Border: today (blue), conflict (orange), or none
-      RoundedRectangle(cornerRadius: 24)
+      RoundedRectangle(cornerRadius: CornerRadius.card)
         .strokeBorder(
           isToday ? Color.tidexBlue : (hasConflict ? Color.tidexWarning.opacity(0.5) : Color.clear),
           lineWidth: isToday ? 2 : (hasConflict ? 1 : 0)

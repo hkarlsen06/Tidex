@@ -50,7 +50,7 @@ struct PayrollCard: View {
     } leadingBottom: {
       // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.xxxs) {
           Image(systemName: "banknote")
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
@@ -97,7 +97,7 @@ struct PayrollCard: View {
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
       } else {
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: CornerRadius.xs)
           .fill(Color.tidexTextMuted.opacity(0.3))
           .frame(width: 100, height: 20)
       }
@@ -116,7 +116,7 @@ struct PayrollCard: View {
         .animation(.spring(duration: 0.8, bounce: 0), value: gross)
         .animation(.spring(duration: 0.8, bounce: 0), value: tax)
       } else if !hasPayout {
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
           .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 70, height: 12)
       }
@@ -136,7 +136,7 @@ struct PayrollCard: View {
           .frame(width: geometry.size.width * (animatedProgress / 100))
       }
     }
-    .clipShape(RoundedRectangle(cornerRadius: 24))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
     .tidexCardShadow()
     .shimmer(isActive: isLoading)
     .onChange(of: progress) { _, newValue in

@@ -59,8 +59,8 @@ struct WageHistoryTimelineView: View {
       }
     }
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    .tidexCardShadow(cornerRadius: 12)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 
   // MARK: - Empty State
@@ -303,7 +303,7 @@ private struct TimelineEntryRow: View {
 
   @ViewBuilder
   private var changesTitle: some View {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: Spacing.micro) {
       ForEach(nonWageChanges) { change in
         Text(rtlAdjustedChangeDescription(change.description))
           .font(

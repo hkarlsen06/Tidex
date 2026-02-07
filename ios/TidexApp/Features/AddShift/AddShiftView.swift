@@ -96,7 +96,7 @@ struct AddShiftView: View {
                 await refreshAddContent()
               }
               .scrollDismissesKeyboard(.interactively)
-              .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + 16, for: .scrollContent)
+              .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
               .onTapGesture {
                 hideKeyboard()
               }
@@ -122,7 +122,7 @@ struct AddShiftView: View {
           )
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
           .padding(.horizontal, Spacing.md)
-          .padding(.bottom, MonthPickerLayout.totalBottomInset + 8)
+          .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
           .transition(.move(edge: .bottom).combined(with: .opacity))
         }
       }
@@ -153,7 +153,7 @@ struct AddShiftView: View {
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
           .padding(.horizontal, Spacing.md)
-          .padding(.vertical, 10)
+          .padding(.vertical, Spacing.xsm)
           .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.3))
           .padding(.trailing, Spacing.md)
           .padding(.bottom, Spacing.xs)

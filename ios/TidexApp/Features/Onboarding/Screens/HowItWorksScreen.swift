@@ -17,7 +17,7 @@ struct HowItWorksScreen: View {
 
       // Header - feels like a destination
       Text(.onboardingHowTitle)
-        .font(.system(size: 28, weight: .bold))
+        .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .lineSpacing(4)

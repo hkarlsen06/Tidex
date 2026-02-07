@@ -68,7 +68,7 @@ struct DataSettingsView: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Syncing Indicator
@@ -87,7 +87,7 @@ struct DataSettingsView: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexBlue.opacity(0.1))
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Period Selection Section
@@ -141,7 +141,7 @@ struct DataSettingsView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(
-          RoundedRectangle(cornerRadius: 8)
+          RoundedRectangle(cornerRadius: CornerRadius.sm)
             .fill(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
         )
     }
@@ -184,7 +184,7 @@ struct DataSettingsView: View {
         // Date pickers in a balanced row
         HStack(spacing: Spacing.sm) {
           // From date
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
             Text(.dataExportFromLabel)
               .font(.tidexMicro)
               .foregroundColor(.tidexTextMuted)
@@ -204,7 +204,7 @@ struct DataSettingsView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
 
           // To date
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
             Text(.dataExportToLabel)
               .font(.tidexMicro)
               .foregroundColor(.tidexTextMuted)
@@ -233,11 +233,11 @@ struct DataSettingsView: View {
       }
       .padding(Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: 12)
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
           .fill(Color.tidexSurfacePrimary)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 12)
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
           .stroke(isSelected ? Color.tidexBlue : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
       )
     }
@@ -321,7 +321,7 @@ struct DataSettingsView: View {
           .foregroundColor(iconColor)
           .frame(width: 40, height: 40)
           .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: CornerRadius.md)
               .fill(iconColor.opacity(0.15))
           )
 
@@ -357,7 +357,7 @@ struct DataSettingsView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(
-          RoundedRectangle(cornerRadius: 10)
+          RoundedRectangle(cornerRadius: CornerRadius.md)
             .fill(viewModel.canExport ? buttonColor : buttonColor.opacity(0.5))
         )
       }
@@ -366,7 +366,7 @@ struct DataSettingsView: View {
     }
     .padding(Spacing.md)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexSurfacePrimary)
     )
   }

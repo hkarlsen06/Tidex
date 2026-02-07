@@ -29,7 +29,7 @@ struct SecuritySettingsView: View {
           }
           .padding(Spacing.sm)
           .background(Color.tidexError.opacity(0.1))
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
           .listRowBackground(Color.clear)
           .listRowInsets(EdgeInsets())
         }
@@ -95,7 +95,7 @@ struct SecuritySettingsView: View {
       if viewModel.isTogglingBiometric {
         HStack(spacing: Spacing.sm) {
           // Icon
-          RoundedRectangle(cornerRadius: 6)
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
             .fill(Color.tidexBlue.opacity(0.75))
             .frame(width: 29, height: 29)
             .overlay(
@@ -104,7 +104,7 @@ struct SecuritySettingsView: View {
                 .foregroundColor(.white)
             )
 
-          VStack(alignment: .leading, spacing: 2) {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
@@ -138,7 +138,7 @@ struct SecuritySettingsView: View {
         ) {
           HStack(spacing: Spacing.sm) {
             // Icon
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: CornerRadius.xs)
               .fill(Color.tidexBlue.opacity(0.75))
               .frame(width: 29, height: 29)
               .overlay(
@@ -147,7 +147,7 @@ struct SecuritySettingsView: View {
                   .foregroundColor(.white)
               )
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.micro) {
               Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
@@ -174,7 +174,7 @@ struct SecuritySettingsView: View {
     Section(header: Text(String(localized: .securityPasswordSectionTitle))) {
       HStack(spacing: Spacing.sm) {
         // Icon
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: CornerRadius.xs)
           .fill(Color.orange.opacity(0.75))
           .frame(width: 29, height: 29)
           .overlay(
@@ -184,7 +184,7 @@ struct SecuritySettingsView: View {
           )
 
         // Content
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.securityPasswordTitle)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
@@ -214,7 +214,7 @@ struct SecuritySettingsView: View {
           .padding(.horizontal, Spacing.md)
           .padding(.vertical, Spacing.xs)
           .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
         }
       }
       .listRowBackground(Color.tidexSurfacePrimary)
@@ -304,7 +304,7 @@ struct SecuritySettingsView: View {
   ) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .fill(iconColor.opacity(0.75))
         .frame(width: 29, height: 29)
         .overlay(
@@ -314,7 +314,7 @@ struct SecuritySettingsView: View {
         )
 
       // Content
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(title)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
@@ -346,9 +346,9 @@ struct SecuritySettingsView: View {
                 .font(.tidexLabel)
                 .foregroundColor(.tidexError)
                 .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 6)
+                .padding(.vertical, Spacing.xxxs)
                 .background(Color.tidexError.opacity(0.1))
-                .cornerRadius(6)
+                .cornerRadius(CornerRadius.xs)
             }
           }
           .disabled(viewModel.isConnectingProvider)
@@ -375,9 +375,9 @@ struct SecuritySettingsView: View {
               .font(.tidexLabel)
               .foregroundColor(.tidexBlue)
               .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, 6)
+              .padding(.vertical, Spacing.xxxs)
               .background(Color.tidexBlue.opacity(0.1))
-              .cornerRadius(6)
+              .cornerRadius(CornerRadius.xs)
           }
         }
         .disabled(viewModel.isConnectingProvider)
@@ -395,7 +395,7 @@ struct SecuritySettingsView: View {
       // Enrolled factors
       if viewModel.mfaFactors.isEmpty {
         HStack(spacing: Spacing.sm) {
-          RoundedRectangle(cornerRadius: 6)
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
             .fill(Color.indigo.opacity(0.75))
             .frame(width: 29, height: 29)
             .overlay(
@@ -449,7 +449,7 @@ struct SecuritySettingsView: View {
   private func mfaFactorRow(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      RoundedRectangle(cornerRadius: 6)
+      RoundedRectangle(cornerRadius: CornerRadius.xs)
         .fill(Color.tidexBlue.opacity(0.75))
         .frame(width: 29, height: 29)
         .overlay(
@@ -459,7 +459,7 @@ struct SecuritySettingsView: View {
         )
 
       // Content
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(factor.displayName)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
@@ -546,7 +546,7 @@ struct SecuritySettingsView: View {
               .frame(maxWidth: .infinity)
               .padding(.vertical, Spacing.sm)
               .background(canSubmitPassword ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-              .cornerRadius(10)
+              .cornerRadius(CornerRadius.md)
             }
             .disabled(!canSubmitPassword || viewModel.isSettingPassword)
           }
@@ -596,12 +596,12 @@ struct SecuritySettingsView: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .cornerRadius(10)
+          .cornerRadius(CornerRadius.md)
         }
         .disabled(viewModel.isSettingPassword)
       } else {
         // OTP input
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.xxxs) {
           Text(.securityPasswordOtpLabel)
             .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextSecondary)
@@ -613,7 +613,7 @@ struct SecuritySettingsView: View {
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
             .onChange(of: viewModel.phoneOtp) { _, newValue in
               // Limit to 6 digits
               let filtered = newValue.filter { $0.isNumber }
@@ -631,7 +631,7 @@ struct SecuritySettingsView: View {
   private var passwordFieldsSection: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
       // New password
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: Spacing.xxxs) {
         Text(
           viewModel.hasPassword
             ? String(localized: .securityPasswordNewPasswordLabel)
@@ -648,11 +648,11 @@ struct SecuritySettingsView: View {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(8)
+        .cornerRadius(CornerRadius.sm)
       }
 
       // Confirm password
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: Spacing.xxxs) {
         Text(.securityPasswordConfirmPasswordLabel)
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
@@ -665,7 +665,7 @@ struct SecuritySettingsView: View {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(8)
+        .cornerRadius(CornerRadius.sm)
       }
 
       // Password hint
@@ -734,7 +734,7 @@ struct SecuritySettingsView: View {
               .background(
                 viewModel.mfaVerifyCode.count == 6 ? Color.tidexBlue : Color.tidexBlue.opacity(0.5)
               )
-              .cornerRadius(10)
+              .cornerRadius(CornerRadius.md)
             }
             .disabled(viewModel.mfaVerifyCode.count != 6 || viewModel.isVerifyingMFA)
 
@@ -743,7 +743,7 @@ struct SecuritySettingsView: View {
               Button {
                 UIApplication.shared.open(url)
               } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: Spacing.xxxs) {
                   Image(systemName: "arrow.up.right.square")
                   Text(.securityMfaOpenInApp)
                 }
@@ -787,15 +787,15 @@ struct SecuritySettingsView: View {
           .scaledToFit()
           .frame(width: 200, height: 200)
           .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
               .fill(Color.white)
-              .padding(-8)
+              .padding(-Spacing.xs)
           )
-          .clipShape(RoundedRectangle(cornerRadius: 12))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg))
       } else {
         // Fallback if QR generation fails
         ZStack {
-          RoundedRectangle(cornerRadius: 12)
+          RoundedRectangle(cornerRadius: CornerRadius.lg)
             .fill(Color.white)
             .frame(width: 200, height: 200)
 
@@ -845,7 +845,7 @@ struct SecuritySettingsView: View {
       // Secret code with copy button
       HStack {
         Text(secret)
-          .font(.system(size: 13, design: .monospaced))
+          .font(.tidexMonoCaptionRegular)
           .foregroundColor(.tidexTextPrimary)
           .lineLimit(1)
 
@@ -861,7 +861,7 @@ struct SecuritySettingsView: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
     }
   }
 
@@ -873,14 +873,14 @@ struct SecuritySettingsView: View {
 
       // 6-digit code input using OTPInputField style
       TextField("000000", text: $viewModel.mfaVerifyCode)
-        .font(.system(size: 24, weight: .semibold, design: .monospaced))
+        .font(.tidexMonoTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .keyboardType(.numberPad)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(8)
+        .cornerRadius(CornerRadius.sm)
         .onChange(of: viewModel.mfaVerifyCode) { _, newValue in
           // Limit to 6 digits
           let filtered = newValue.filter { $0.isNumber }
@@ -953,7 +953,7 @@ struct SecuritySettingsView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
             .background(canSubmitPhoneLinking ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-            .cornerRadius(10)
+            .cornerRadius(CornerRadius.md)
           }
           .disabled(!canSubmitPhoneLinking || viewModel.isLinkingPhone)
         }
@@ -974,7 +974,7 @@ struct SecuritySettingsView: View {
   }
 
   private var phoneLinkInputSection: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: Spacing.xxxs) {
       Text(.securityPhoneLinkingPhoneLabel)
         .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
@@ -987,7 +987,7 @@ struct SecuritySettingsView: View {
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
 
         TextField("12345678", text: $viewModel.phoneLinkInput)
           .font(.tidexBody)
@@ -996,7 +996,7 @@ struct SecuritySettingsView: View {
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
           .onChange(of: viewModel.phoneLinkInput) { _, newValue in
             // Limit to 8 digits (Norwegian phone numbers)
             let filtered = newValue.filter { $0.isNumber }
@@ -1039,23 +1039,23 @@ struct SecuritySettingsView: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(8)
+      .cornerRadius(CornerRadius.sm)
 
       // OTP input
-      VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: Spacing.xxxs) {
         Text(.securityPhoneLinkingOtpLabel)
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
 
         TextField("123456", text: $viewModel.phoneLinkOtp)
-          .font(.system(size: 24, weight: .semibold, design: .monospaced))
+          .font(.tidexMonoTitle)
           .foregroundColor(.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .keyboardType(.numberPad)
           .padding(.horizontal, Spacing.md)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(8)
+          .cornerRadius(CornerRadius.sm)
           .onChange(of: viewModel.phoneLinkOtp) { _, newValue in
             // Limit to 6 digits
             let filtered = newValue.filter { $0.isNumber }

@@ -149,7 +149,7 @@ private struct IndefiniteDescription: View {
     .padding(Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 
@@ -186,7 +186,7 @@ private struct MonthsSlider: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 
@@ -223,7 +223,7 @@ private struct YearsSlider: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 
@@ -253,7 +253,7 @@ private struct EndDatePicker: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 

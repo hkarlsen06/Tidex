@@ -62,7 +62,7 @@ struct MonthlyGoalCard: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 
@@ -73,12 +73,12 @@ struct MonthlyGoalCard: View {
     GeometryReader { geometry in
       ZStack(alignment: .leading) {
         // Background track
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: CornerRadius.xs)
           .fill(Color.tidexSurfaceSecondary)
           .frame(height: 12)
 
         // Progress fill with gradient
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: CornerRadius.xs)
           .fill(progressGradient)
           .frame(
             width: max(0, geometry.size.width * (clampedPercentage / 100)),
@@ -151,7 +151,7 @@ struct MonthlyGoalEmptyCard: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.mlg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 }

@@ -56,7 +56,7 @@ struct FriendRow: View {
       avatarView
 
       // Name and contact info
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(friend.displayName)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)

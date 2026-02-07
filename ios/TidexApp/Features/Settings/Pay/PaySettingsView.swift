@@ -168,7 +168,7 @@ struct PaySettingsView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.md)
       .background(Color.tidexBlue.opacity(0.1))
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
   }
 
   // MARK: - Delete Confirmation Message

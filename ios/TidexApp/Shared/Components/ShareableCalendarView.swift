@@ -118,13 +118,13 @@ struct ShareableCalendarView: View {
   private var headerRow: some View {
     HStack {
       // Month name + Year
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         Text(monthName)
           .font(.tidexTitle2)
           .foregroundColor(.tidexTextPrimary)
 
         Text(String(year))
-          .font(.system(size: 20, weight: .medium))
+          .font(.tidexBodyLarge)
           .foregroundColor(.tidexTextMuted)
       }
 
@@ -145,7 +145,7 @@ struct ShareableCalendarView: View {
   private var earningsDisplay: some View {
     let displayAmount = hasTaxEnabled ? monthlyTotals.net : monthlyTotals.gross
 
-    VStack(alignment: .trailing, spacing: 2) {
+    VStack(alignment: .trailing, spacing: Spacing.micro) {
       if monthlyTotals.gross == 0 {
         Text("—")
           .font(.tidexHeadline)
@@ -171,7 +171,7 @@ struct ShareableCalendarView: View {
   private var earningsSkeleton: some View {
     VStack(alignment: .trailing, spacing: Spacing.xxs) {
       // Main amount skeleton
-      RoundedRectangle(cornerRadius: 4)
+      RoundedRectangle(cornerRadius: CornerRadius.xxs)
         .fill(Color.tidexTextMuted.opacity(0.3))
         .frame(width: 72, height: 17)
 
@@ -249,9 +249,9 @@ struct CalendarShareOptionsSheet: View {
         Button {
           onShowEarnings()
         } label: {
-          HStack(spacing: 14) {
+          HStack(spacing: Spacing.msm) {
             Image(systemName: "eye")
-              .font(.system(size: 20, weight: .medium))
+              .font(.tidexBodyLarge)
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareShowEarnings)
@@ -262,7 +262,7 @@ struct CalendarShareOptionsSheet: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
               .fill(Color.tidexSurfacePrimary)
           )
         }
@@ -272,9 +272,9 @@ struct CalendarShareOptionsSheet: View {
         Button {
           onHideEarnings()
         } label: {
-          HStack(spacing: 14) {
+          HStack(spacing: Spacing.msm) {
             Image(systemName: "eye.slash")
-              .font(.system(size: 20, weight: .medium))
+              .font(.tidexBodyLarge)
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareHideEarnings)
@@ -285,7 +285,7 @@ struct CalendarShareOptionsSheet: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, 18)
           .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
               .fill(Color.tidexSurfacePrimary)
           )
         }

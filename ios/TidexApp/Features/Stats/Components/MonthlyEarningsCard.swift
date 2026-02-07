@@ -38,7 +38,7 @@ struct MonthlyEarningsCard: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       // Title, amount, and after tax label grouped tightly
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(.statsMonthlyEarnings)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
@@ -87,7 +87,7 @@ struct MonthlyEarningsCard: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.lg)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(24)
+    .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
   }
 

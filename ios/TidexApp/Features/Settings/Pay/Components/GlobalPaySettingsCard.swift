@@ -41,7 +41,7 @@ struct GlobalPaySettingsCard: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .tidexCardShadow()
     .onAppear {
       initializeFromSettings()
@@ -118,7 +118,7 @@ struct GlobalPaySettingsCard: View {
         }
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       }
       .buttonStyle(.plain)
       .disabled(!canChangeCurrency)
@@ -169,7 +169,7 @@ struct GlobalPaySettingsCard: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
 
       Text(.settingsPayGlobalMonthlyGoalHelper)
         .font(.tidexCaptionRegular)
@@ -207,7 +207,7 @@ struct GlobalPaySettingsCard: View {
       }
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
 
       Text(.settingsPayGlobalPayrollDayHelper)
         .font(.tidexCaptionRegular)
@@ -256,7 +256,7 @@ struct GlobalPaySettingsCard: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       .onChange(of: halfTaxMonth) { _, newValue in
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         Task {

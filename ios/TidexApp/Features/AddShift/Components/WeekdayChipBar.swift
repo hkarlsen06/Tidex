@@ -20,7 +20,7 @@ struct WeekdayChipBar: View {
     ZStack {
       if selectedDays.isEmpty {
         // Placeholder when no chips - shows subtle hint
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.xxxs) {
           Image(systemName: "star.fill")
             .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted.opacity(0.5))
@@ -75,7 +75,7 @@ private struct WeekdayChip: View {
   }
 
   var body: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Spacing.xxxs) {
       Text(weekdayName)
         .font(.tidexFootnoteStrong)
         .foregroundColor(.tidexBlue)

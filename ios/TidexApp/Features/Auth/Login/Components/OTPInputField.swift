@@ -115,17 +115,17 @@ private struct DigitBox: View {
   var body: some View {
     ZStack {
       // Background
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(Color.tidexSurfaceSecondary)
 
       // Border
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
         .stroke(borderColor, lineWidth: isCurrentPosition ? 2 : 1)
 
       // Digit or cursor
       if let digit = digit {
         Text(digit)
-          .font(.system(size: 24, weight: .semibold, design: .monospaced))
+          .font(.tidexMonoTitle)
           .foregroundColor(.tidexTextPrimary)
       } else if isCurrentPosition && cursorVisible {
         // Blinking cursor

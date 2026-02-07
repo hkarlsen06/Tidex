@@ -359,9 +359,9 @@ private struct MFAEnrollmentSheet: View {
             .resizable()
             .scaledToFit()
             .frame(width: 200, height: 200)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg))
             .background(
-              RoundedRectangle(cornerRadius: 12)
+              RoundedRectangle(cornerRadius: CornerRadius.lg)
                 .fill(Color.white)
             )
         } else {
@@ -373,7 +373,7 @@ private struct MFAEnrollmentSheet: View {
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg))
         }
 
         // Add to Passwords button
@@ -391,7 +391,7 @@ private struct MFAEnrollmentSheet: View {
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexBlue.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
           }
         }
 
@@ -403,7 +403,7 @@ private struct MFAEnrollmentSheet: View {
 
             HStack(spacing: Spacing.xs) {
               Text(secret)
-                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                .font(.tidexMonoLabel)
                 .foregroundColor(.tidexTextSecondary)
 
               Button(action: {
@@ -417,7 +417,7 @@ private struct MFAEnrollmentSheet: View {
             }
             .padding(Spacing.xs)
             .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs))
           }
         }
 
@@ -429,11 +429,11 @@ private struct MFAEnrollmentSheet: View {
           TextField("000000", text: $verificationCode)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
-            .font(.system(size: 24, weight: .semibold, design: .monospaced))
+            .font(.tidexMonoTitle)
             .frame(width: 160)
             .padding(Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
         }
 
         Button(action: verifyCode) {
@@ -446,7 +446,7 @@ private struct MFAEnrollmentSheet: View {
               verificationCode.count == 6
                 ? Color.tidexBrandPrimary : Color.tidexBrandPrimary.opacity(0.5)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
         }
         .disabled(verificationCode.count != 6)
         .padding(.horizontal, Spacing.lg)

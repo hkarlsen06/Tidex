@@ -197,7 +197,7 @@ struct WageyView: View {
       }
     }
     .padding(.horizontal, Spacing.md)
-    .padding(.vertical, 10)
+    .padding(.vertical, Spacing.xsm)
     .background(Color.tidexSurfaceSecondary)
   }
 
@@ -283,7 +283,7 @@ struct WageyView: View {
   }
 
   private var headerTitle: some View {
-    VStack(spacing: 2) {
+    VStack(spacing: Spacing.micro) {
       Text(localizedConversationTitle)
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)

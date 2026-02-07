@@ -616,7 +616,7 @@ struct ShiftsCalendarView: View {
       .disabled(isCopying || isMoving)
     }
     .frame(height: 41)
-    .padding(4)
+    .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
 
@@ -660,7 +660,7 @@ struct ShiftsCalendarView: View {
           toggleHaptic.impactOccurred()
           onDetails?()
         } label: {
-          HStack(spacing: 6) {
+          HStack(spacing: Spacing.xxxs) {
             Image(systemName: "info.circle")
               .font(.tidexLabel)
             Text(.shiftsDetails)
@@ -676,7 +676,7 @@ struct ShiftsCalendarView: View {
           toggleHaptic.impactOccurred()
           onMove?()
         } label: {
-          HStack(spacing: 6) {
+          HStack(spacing: Spacing.xxxs) {
             Image(systemName: "arrow.left.arrow.right")
               .font(.tidexLabel)
             Text(.shiftsMove)
@@ -690,7 +690,7 @@ struct ShiftsCalendarView: View {
       }
     }
     .frame(height: 41)
-    .padding(4)
+    .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
 
@@ -706,7 +706,7 @@ struct ShiftsCalendarView: View {
           toggleHaptic.impactOccurred()
           onClearSelection?()
         } label: {
-          HStack(spacing: 6) {
+          HStack(spacing: Spacing.xxxs) {
             Image(systemName: "xmark")
               .font(.tidexLabel)
             Text(.commonCancel)
@@ -720,7 +720,7 @@ struct ShiftsCalendarView: View {
       }
     }
     .frame(height: 41)
-    .padding(4)
+    .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
 
@@ -735,7 +735,7 @@ struct ShiftsCalendarView: View {
         onDelete?()
       }
     } label: {
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         if isDeleting {
           ProgressView()
             .progressViewStyle(CircularProgressViewStyle(tint: confirmingDelete ? .white : .red))
@@ -766,7 +766,7 @@ struct ShiftsCalendarView: View {
       toggleHaptic.impactOccurred()
       onCancelDelete?()
     } label: {
-      HStack(spacing: 6) {
+      HStack(spacing: Spacing.xxxs) {
         Image(systemName: "xmark")
           .font(.tidexLabel)
         Text(.commonCancel)

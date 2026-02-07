@@ -59,7 +59,7 @@ struct ChatMessageBubble: View {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexBlue)
-      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
       .contextMenu {
         Button {
           UIPasteboard.general.string = text
@@ -74,7 +74,7 @@ struct ChatMessageBubble: View {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
       .contextMenu {
         Button {
           UIPasteboard.general.string = text
@@ -91,9 +91,9 @@ struct ChatMessageBubble: View {
           .resizable()
           .scaledToFill()
           .frame(maxWidth: 200, maxHeight: 200)
-          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .strokeBorder(
                 isUser ? Color.white.opacity(0.2) : Color.tidexBorder,
                 lineWidth: 1
@@ -235,9 +235,9 @@ struct TypingIndicatorView: View {
       }
     }
     .padding(.horizontal, Spacing.md)
-    .padding(.vertical, 14)
+    .padding(.vertical, Spacing.msm)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
     .onAppear {
       for index in 0..<3 {
         withAnimation(
@@ -315,7 +315,7 @@ struct StreamingMessageBubble: View {
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.sm)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
   }
 }
 

@@ -32,7 +32,7 @@ struct SuccessScreen: View {
         // Header and content - constrained for iPad
         VStack(spacing: Spacing.sm) {
           Text(statusTitle)
-            .font(.system(size: 28, weight: .bold))
+            .font(.tidexScreenTitle)
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.center)
 
@@ -199,7 +199,7 @@ struct SuccessScreen: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexError.opacity(0.1))
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 
   // MARK: - Animation Sequence

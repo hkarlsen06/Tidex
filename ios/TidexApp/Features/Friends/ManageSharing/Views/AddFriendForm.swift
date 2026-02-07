@@ -68,7 +68,7 @@ struct AddFriendForm: View {
       if isExpanded {
         VStack(spacing: Spacing.sm) {
           // Input field
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
             TextField(
               String(localized: .sharingEmailOrPhone),
               text: $identifier
@@ -116,7 +116,7 @@ struct AddFriendForm: View {
             .disabled(isLoading)
 
             Button(action: onAdd) {
-              HStack(spacing: 6) {
+              HStack(spacing: Spacing.xxxs) {
                 if isLoading {
                   ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -133,7 +133,7 @@ struct AddFriendForm: View {
                   ? Color.tidexBlue.opacity(0.5)
                   : Color.tidexBlue
               )
-              .cornerRadius(8)
+              .cornerRadius(CornerRadius.sm)
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(
@@ -164,7 +164,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(10)
+      .cornerRadius(CornerRadius.md)
       .font(.tidexBody)
   }
 }

@@ -61,7 +61,7 @@ struct FeedbackSettingsView: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(8)
+    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Success Card
@@ -89,7 +89,7 @@ struct FeedbackSettingsView: View {
     .padding(Spacing.xl)
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(12)
+    .cornerRadius(CornerRadius.lg)
   }
 
   // MARK: - Feedback Form Section
@@ -104,9 +104,9 @@ struct FeedbackSettingsView: View {
         .frame(minHeight: 160)
         .padding(Spacing.sm)
         .background(Color.tidexSurfacePrimary)
-        .cornerRadius(12)
+        .cornerRadius(CornerRadius.lg)
         .overlay(
-          RoundedRectangle(cornerRadius: 12)
+          RoundedRectangle(cornerRadius: CornerRadius.lg)
             .stroke(Color.tidexBorder, lineWidth: 1)
         )
         .overlay(alignment: .topLeading) {
@@ -154,7 +154,7 @@ struct FeedbackSettingsView: View {
         .frame(maxWidth: .infinity)
         .frame(height: Spacing.buttonHeight)
         .background(viewModel.canSubmit ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-        .cornerRadius(12)
+        .cornerRadius(CornerRadius.lg)
       }
       .disabled(!viewModel.canSubmit)
     }
@@ -258,7 +258,7 @@ struct FeedbackSettingsView: View {
             .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexSurfaceSecondary)
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
 
           // Response (if any)
           if let response = item.response {
@@ -287,10 +287,10 @@ struct FeedbackSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexSuccess.opacity(0.1))
             .overlay(
-              RoundedRectangle(cornerRadius: 8)
+              RoundedRectangle(cornerRadius: CornerRadius.sm)
                 .stroke(Color.tidexSuccess.opacity(0.3), lineWidth: 1)
             )
-            .cornerRadius(8)
+            .cornerRadius(CornerRadius.sm)
           }
         }
         .padding(.horizontal, Spacing.sm)
@@ -298,9 +298,9 @@ struct FeedbackSettingsView: View {
       }
     }
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(12)
+    .cornerRadius(CornerRadius.lg)
     .overlay(
-      RoundedRectangle(cornerRadius: 12)
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
         .stroke(Color.tidexBorder, lineWidth: 1)
     )
   }

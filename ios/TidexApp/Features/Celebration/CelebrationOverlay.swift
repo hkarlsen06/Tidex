@@ -53,7 +53,7 @@ struct CelebrationOverlay: View {
           Capsule()
             .fill(Color.tidexTextMuted.opacity(0.4))
             .frame(width: 36, height: 5)
-            .padding(.top, 10)
+            .padding(.top, Spacing.xsm)
             .padding(.bottom, Spacing.mlg)
 
           // Header with large number
@@ -71,7 +71,7 @@ struct CelebrationOverlay: View {
               currency: data.currency,
               isAnimating: startCountUp
             )
-            .font(.system(size: 88, weight: .bold))
+            .font(.tidexHeroAmount)
             .foregroundColor(.tidexBlue)
             .minimumScaleFactor(0.4)
             .lineLimit(1)
@@ -116,17 +116,17 @@ struct CelebrationOverlay: View {
               .frame(height: Spacing.buttonHeight)
               .background(Color.tidexBrandPrimary)
               .foregroundColor(.white)
-              .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
           }
           .buttonStyle(CelebrationButtonStyle())
           .padding(.horizontal, Spacing.md)
-          .padding(.bottom, safeBottom + 12)
+          .padding(.bottom, safeBottom + Spacing.sm)
         }
         .frame(height: currentHeight)
         .frame(maxWidth: .infinity)
         .background(
           Color.tidexBackground
-            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
             .shadow(color: .black.opacity(0.15), radius: 20, y: -5)
         )
         .offset(y: showContent ? dragOffset : currentHeight)

@@ -53,10 +53,10 @@ struct SecureTextField: View {
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: 10)
+        RoundedRectangle(cornerRadius: CornerRadius.md)
           .stroke(borderColor, lineWidth: 1)
       )
-      .cornerRadius(10)
+      .cornerRadius(CornerRadius.md)
       .contentShape(Rectangle())
 
       // Error message

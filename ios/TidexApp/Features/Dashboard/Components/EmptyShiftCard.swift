@@ -20,22 +20,22 @@ struct EmptyShiftCard: View {
           .frame(width: 140, height: 16)
       } leadingBottom: {
         // Placeholder time range
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
           .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 100, height: 12)
       } trailingTop: {
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: CornerRadius.xs)
           .fill(Color.tidexTextMuted.opacity(0.3))
           .frame(width: 80, height: 20)
       } trailingBottom: {
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
           .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 60, height: 12)
       }
       .padding(.horizontal, Spacing.mlg)
       .padding(.vertical, Spacing.lg)
       .background(
-        RoundedRectangle(cornerRadius: 24)
+        RoundedRectangle(cornerRadius: CornerRadius.card)
           .fill(Color.tidexSurfacePrimary)
       )
       .tidexCardShadow()
@@ -44,7 +44,7 @@ struct EmptyShiftCard: View {
       // Footer area below the card - fixed height to match FeaturedShiftCard
       Group {
         if isLoading {
-          RoundedRectangle(cornerRadius: 4)
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.3))
             .frame(width: 80, height: 14)
         } else if let onAddShift {
@@ -57,14 +57,14 @@ struct EmptyShiftCard: View {
               .foregroundColor(.tidexBlue)
               .lineLimit(1)
               .minimumScaleFactor(0.85)
-              .padding(.horizontal, 10)
+              .padding(.horizontal, Spacing.xsm)
               .padding(.vertical, 3)
               .background(Color.tidexBlue.opacity(0.12))
               .clipShape(Capsule())
           }
           .buttonStyle(.plain)
         } else {
-          RoundedRectangle(cornerRadius: 4)
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.3))
             .frame(width: 80, height: 14)
         }
