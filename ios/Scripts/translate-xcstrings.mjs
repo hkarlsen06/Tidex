@@ -127,7 +127,7 @@ async function saveAndExit() {
 
   if (currentFileData && currentFilePath) {
     try {
-      await fs.writeFile(currentFilePath, JSON.stringify(currentFileData, null, 2) + "\n");
+      await fs.writeFile(currentFilePath, xcstringsStringify(currentFileData));
       console.log(`✓ Saved: ${currentFilePath}`);
     } catch (error) {
       console.error(`✗ Failed to save: ${error.message}`);
@@ -386,6 +386,25 @@ function deepSet(obj, path, value) {
   current[path[path.length - 1]] = value;
 }
 
+// Recursively sort all object keys to match Xcode's alphabetical ordering
+function sortKeysDeep(obj) {
+  if (Array.isArray(obj)) return obj.map(sortKeysDeep);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.keys(obj).sort().map((k) => [k, sortKeysDeep(obj[k])])
+    );
+  }
+  return obj;
+}
+
+// Serialize xcstrings data to match Xcode's exact formatting:
+// - Sorted keys (alphabetical)
+// - Spaced colons ("key" : "value" instead of "key": "value")
+function xcstringsStringify(data) {
+  const json = JSON.stringify(sortKeysDeep(data), null, 2);
+  return json.replace(/^(\s*"(?:[^"\\]|\\.)*"): /gm, "$1 : ") + "\n";
+}
+
 async function translateXcstrings(filePath) {
   console.log(`\nProcessing: ${filePath}`);
 
@@ -550,7 +569,7 @@ async function translateXcstrings(filePath) {
     }
 
     // Save progress after English translations
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+    await fs.writeFile(filePath, xcstringsStringify(data));
     console.log(`✓ Added ${stringsNeedingEnglish.length} English translations from Norwegian`);
   }
 
@@ -710,7 +729,7 @@ async function translateXcstrings(filePath) {
         ? `done (${skippedThisLang} skipped), saving...`
         : "done, saving...",
     });
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+    await fs.writeFile(filePath, xcstringsStringify(data));
     langBar.update({ status: "saved" });
 
     completedLangs++;

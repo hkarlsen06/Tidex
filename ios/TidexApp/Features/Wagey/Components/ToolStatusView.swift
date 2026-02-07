@@ -70,45 +70,37 @@ struct ToolStatusView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // Header row (always visible)
-      HStack(spacing: 8) {
-        // Status icon
+      // Compact pill header
+      HStack(spacing: 6) {
         statusIcon
-          .frame(width: 16, height: 16)
+          .frame(width: 14, height: 14)
 
-        // Tool name
         Text(toolDisplayName)
           .font(.system(size: 13, weight: .medium))
           .foregroundColor(.tidexTextSecondary)
 
-        Spacer()
-
-        // Chevron indicator (only show when not executing)
         if !isExecuting {
           Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 9, weight: .bold))
             .foregroundColor(.tidexTextMuted)
         }
       }
       .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.vertical, 7)
 
-      // Expanded details (within the same container)
+      // Expanded details
       if isExpanded {
         VStack(alignment: .leading, spacing: 8) {
           Divider()
             .background(Color.tidexBorder)
 
-          // Tool name (raw API name)
           detailRow(label: "Tool", value: toolCall.name)
 
-          // Arguments (if present)
           if let arguments = toolCall.arguments, !arguments.isEmpty {
             detailSection(
               label: String(localized: .wageyToolRequest), content: formatJSON(arguments))
           }
 
-          // Result (if present)
           if let result = toolCall.result {
             detailSection(label: String(localized: .wageyToolResponse), content: formatJSON(result))
           } else if isTimedOut {
@@ -122,22 +114,34 @@ struct ToolStatusView: View {
         .padding(.top, 4)
       }
     }
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    .contentShape(Rectangle())
+    .background(Color.tidexSurfaceSecondary.opacity(0.6))
+    .clipShape(RoundedRectangle(cornerRadius: isExpanded ? 14 : 100, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: isExpanded ? 14 : 100, style: .continuous))
     .onTapGesture {
-      // Only allow expansion when not executing
       guard !isExecuting else { return }
       Haptics.play(.light)
       withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
         isExpanded.toggle()
       }
     }
+    .contextMenu {
+      Button {
+        var text = toolDisplayName
+        if let args = toolCall.arguments, !args.isEmpty {
+          text += "\n\n\(String(localized: .wageyToolRequest)):\n\(formatJSON(args))"
+        }
+        if let result = toolCall.result {
+          text += "\n\n\(String(localized: .wageyToolResponse)):\n\(formatJSON(result))"
+        }
+        UIPasteboard.general.string = text
+      } label: {
+        Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+      }
+    }
     .onAppear {
       appearedAt = Date()
     }
     .onReceive(timer) { _ in
-      // Check for timeout only if still executing
       if toolCall.result == nil && !isTimedOut {
         let elapsed = Date().timeIntervalSince(appearedAt)
         if elapsed >= timeoutSeconds {

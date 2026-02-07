@@ -34,6 +34,9 @@ struct SettingsView: View {
     case data
     case feedback
     case admin
+    #if DEBUG
+      case debug
+    #endif
   }
 
   /// Compute user initials from display name for avatar fallback
@@ -193,6 +196,21 @@ struct SettingsView: View {
           signOutEverywhereRow
         }
         .listRowBackground(Color.tidexSurfacePrimary)
+
+        // MARK: - Debug (DEBUG builds only)
+        #if DEBUG
+          Section(header: Text("Debug")) {
+            SettingsMenuItem(
+              icon: "ladybug",
+              title: "Debug",
+              description: "Sync, StoreKit, and notification diagnostics",
+              iconBackgroundColor: .pink
+            ) {
+              navigationPath.append(SettingsDestination.debug)
+            }
+          }
+          .listRowBackground(Color.tidexSurfacePrimary)
+        #endif
       }
       .listStyle(.insetGrouped)
       .scrollContentBackground(.hidden)
@@ -243,6 +261,10 @@ struct SettingsView: View {
             FeedbackSettingsView()
           case .admin:
             AdminSettingsView()
+          #if DEBUG
+            case .debug:
+              SyncDebugView()
+          #endif
           }
         }
         .toolbarRole(.editor)
@@ -277,11 +299,11 @@ struct SettingsView: View {
     } label: {
       HStack(spacing: 12) {
         Image(systemName: "rectangle.portrait.and.arrow.right")
-          .font(.system(size: 15, weight: .medium))
+          .font(.system(size: 13, weight: .medium))
           .foregroundColor(.white)
           .frame(width: 29, height: 29)
           .background(
-            Color.tidexError,
+            Color.tidexError.opacity(0.75),
             in: RoundedRectangle(cornerRadius: 6, style: .continuous)
           )
 
@@ -308,11 +330,11 @@ struct SettingsView: View {
     } label: {
       HStack(spacing: 12) {
         Image(systemName: "rectangle.portrait.and.arrow.right.fill")
-          .font(.system(size: 15, weight: .medium))
+          .font(.system(size: 13, weight: .medium))
           .foregroundColor(.white)
           .frame(width: 29, height: 29)
           .background(
-            Color.gray,
+            Color.gray.opacity(0.75),
             in: RoundedRectangle(cornerRadius: 6, style: .continuous)
           )
 
@@ -624,11 +646,11 @@ struct SettingsMenuItem: View {
       HStack(spacing: 12) {
         // Icon with colored background
         Image(systemName: icon)
-          .font(.system(size: 15, weight: .medium))
+          .font(.system(size: 13, weight: .medium))
           .foregroundColor(.white)
           .frame(width: 29, height: 29)
           .background(
-            iconBackgroundColor,
+            iconBackgroundColor.opacity(0.75),
             in: RoundedRectangle(cornerRadius: 6, style: .continuous)
           )
 

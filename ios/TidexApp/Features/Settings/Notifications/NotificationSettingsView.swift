@@ -366,10 +366,10 @@ struct NotificationSettingsView: View {
 
   private func settingsIcon(systemName: String, color: Color) -> some View {
     Image(systemName: systemName)
-      .font(.system(size: 15))
+      .font(.system(size: 13))
       .foregroundColor(.white)
       .frame(width: 29, height: 29)
-      .background(color)
+      .background(color.opacity(0.75))
       .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
   }
 }

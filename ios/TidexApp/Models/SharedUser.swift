@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Sharer Data
 
 /// A user who has shared their shifts with the current user
-struct SharedUser: Codable, Identifiable, Equatable {
+struct SharedUser: Codable, Identifiable, Equatable, Hashable {
   let id: String
   let email: String?
   let phone: String?

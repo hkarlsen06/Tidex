@@ -61,10 +61,6 @@ struct ChatInputField: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // Top border
-      Divider()
-        .background(Color.tidexBorder)
-
       // Image preview (if attached)
       if let image = attachedImage, let uiImage = UIImage(data: image.data) {
         imagePreview(uiImage: uiImage)
@@ -76,40 +72,48 @@ struct ChatInputField: View {
       }
 
       // Input area
-      HStack(alignment: .center, spacing: 12) {
-        // Image picker button (only show if callback is provided)
+      HStack(alignment: .center, spacing: 10) {
+        // Image picker button (outside the capsule)
         if onSendWithImage != nil {
           imagePickerButton
         }
 
-        // Text input
-        TextField(
-          String(localized: .wageyPlaceholder),
-          text: $inputText,
-          axis: .vertical
-        )
-        .textFieldStyle(.plain)
-        .font(.system(size: 16))
-        .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1...5)
-        .focused($isFocused)
-        .disabled(disabled)
-        .submitLabel(.return)
-        .onSubmit {
-          sendMessage()
-        }
+        // Text field capsule
+        HStack(alignment: .center, spacing: 8) {
+          TextField(
+            String(localized: .wageyPlaceholder),
+            text: $inputText,
+            axis: .vertical
+          )
+          .textFieldStyle(.plain)
+          .font(.system(size: 16))
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1...5)
+          .focused($isFocused)
+          .disabled(disabled)
+          .submitLabel(.return)
+          .onSubmit {
+            sendMessage()
+          }
 
-        // Send button
-        Button(action: sendMessage) {
-          Image(systemName: "arrow.up.circle.fill")
-            .font(.system(size: 32))
-            .foregroundColor(canSend ? .tidexBlue : .tidexTextMuted)
+          // Send button (inside capsule, appears when content ready)
+          if canSend {
+            Button(action: sendMessage) {
+              Image(systemName: "arrow.up.circle.fill")
+                .font(.system(size: 28))
+                .foregroundColor(.tidexBlue)
+            }
+            .transition(.scale.combined(with: .opacity))
+          }
         }
-        .disabled(!canSend)
-        .animation(.easeInOut(duration: 0.15), value: canSend)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.tidexSurfacePrimary)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .animation(.easeInOut(duration: 0.15), value: canSend)
     }
     .background(Color.tidexBackground)
     .safeAreaPadding(.bottom)

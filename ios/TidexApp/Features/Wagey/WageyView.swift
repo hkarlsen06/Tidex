@@ -5,14 +5,13 @@ import SwiftUI
 struct WageyView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   /// Shared ViewModel for managing chat state
   /// Using shared instance ensures conversation persists when dismissing and reopening Wagey
   private let viewModel = WageyViewModel.shared
 
-  /// Sidebar visibility state
-  @State private var showSidebar = false
+  /// Whether to show the conversation history sheet
+  @State private var showHistory = false
 
   /// Whether to show the showcase for first-time free users
   /// Initialize based on ViewModel state so it shows immediately
@@ -58,36 +57,29 @@ struct WageyView: View {
 
   private var chatInterface: some View {
     NavigationStack {
-      ZStack(alignment: .leading) {
-        // Main chat content
-        mainContent
-          .disabled(showSidebar && horizontalSizeClass == .compact)
+      mainContent
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .principal) {
+            headerTitle
+          }
 
-        // Sidebar overlay for compact width (iPhone)
-        if showSidebar && horizontalSizeClass == .compact {
-          sidebarOverlay
-        }
-      }
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .principal) {
-          headerTitle
-        }
+          // Left side: close button
+          ToolbarItem(placement: .topBarLeading) {
+            closeButton
+          }
 
-        // Left side: history button, then new chat button
-        ToolbarItem(placement: .topBarLeading) {
-          sidebarButton
+          // Right side: new chat, then history
+          ToolbarItem(placement: .topBarTrailing) {
+            newChatButton
+          }
+          ToolbarItem(placement: .topBarTrailing) {
+            historyButton
+          }
         }
-        ToolbarSpacer(.fixed, placement: .topBarLeading)
-        ToolbarItem(placement: .topBarLeading) {
-          newChatButton
-        }
-
-        // Right side: close button
-        ToolbarItem(placement: .topBarTrailing) {
-          closeButton
-        }
-      }
+    }
+    .sheet(isPresented: $showHistory) {
+      conversationHistorySheet
     }
     .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
       PaywallView(contextType: .wageyLimit)
@@ -109,8 +101,6 @@ struct WageyView: View {
       }
     }
     .onChange(of: viewModel.limitReached) { _, isLimitReached in
-      // Show paywall when limit is reached (e.g., server responds with limit error)
-      // But only if user is on free tier - don't show if already subscribed
       let currentTier = EntitlementService.shared.effectiveTier
       if isLimitReached && !showPaywall && currentTier == .free {
         tierBeforePaywall = currentTier
@@ -118,7 +108,6 @@ struct WageyView: View {
       }
     }
     .task {
-      // Fetch wagey usage from profile on view appear
       await viewModel.fetchWageyUsage()
     }
   }
@@ -143,9 +132,6 @@ struct WageyView: View {
 
   private var mainContent: some View {
     VStack(spacing: 0) {
-      // Usage bar (always show for all tiers)
-      usageBar
-
       // Entitlement sync banner (when server/StoreKit mismatch detected)
       if let syncMessage = viewModel.entitlementSyncMessage {
         entitlementSyncBanner(syncMessage)
@@ -174,23 +160,6 @@ struct WageyView: View {
       )
     }
     .background(Color.tidexBackground)
-  }
-
-  // MARK: - Usage Bar
-
-  private var usageBar: some View {
-    VStack(spacing: 0) {
-      WageyUsageBar(
-        used: viewModel.messagesUsed,
-        limit: viewModel.messageLimit
-      )
-      .padding(.horizontal, 16)
-      .padding(.vertical, 8)
-
-      Divider()
-        .foregroundColor(.tidexBorder)
-    }
-    .background(Color.tidexSurfacePrimary)
   }
 
   // MARK: - Entitlement Sync Banner
@@ -264,45 +233,35 @@ struct WageyView: View {
     }
   }
 
-  // MARK: - Sidebar Overlay (iPhone)
+  // MARK: - Conversation History Sheet
 
-  private var sidebarOverlay: some View {
-    ZStack(alignment: .leading) {
-      // Dimmed background
-      Color.black.opacity(0.4)
-        .ignoresSafeArea()
-        .onTapGesture {
-          withAnimation(.easeInOut(duration: 0.25)) {
-            showSidebar = false
-          }
-        }
-
-      // Sidebar
+  private var conversationHistorySheet: some View {
+    NavigationStack {
       ConversationSidebarView(
         conversations: viewModel.conversations,
         currentConversationId: viewModel.currentConversationId,
         onSelectConversation: { id in
           viewModel.loadConversation(id: id)
-          withAnimation(.easeInOut(duration: 0.25)) {
-            showSidebar = false
-          }
+          showHistory = false
         },
         onNewConversation: {
           viewModel.startNewConversation()
-          withAnimation(.easeInOut(duration: 0.25)) {
-            showSidebar = false
-          }
+          showHistory = false
         },
         onDeleteConversation: { id in
           viewModel.deleteConversation(id: id)
         }
       )
-      .frame(width: 280)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-      .shadow(color: Color.black.opacity(0.2), radius: 10, x: 2, y: 0)
-      .transition(.move(edge: .leading))
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button(String(localized: .commonDone)) {
+            showHistory = false
+          }
+        }
+      }
     }
+    .presentationDetents([.medium, .large])
+    .presentationDragIndicator(.visible)
   }
 
   // MARK: - Header Components
@@ -316,19 +275,26 @@ struct WageyView: View {
     return title
   }
 
-  private var headerTitle: some View {
-    HStack(spacing: 8) {
-      VStack(spacing: 2) {
-        Text(localizedConversationTitle)
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
+  /// Show usage subtitle only when nearing the limit (>= 50% used)
+  private var shouldShowUsageSubtitle: Bool {
+    guard viewModel.messageLimit > 0 else { return false }
+    let usage = Double(viewModel.messagesUsed) / Double(viewModel.messageLimit)
+    return usage >= 0.5
+  }
 
-        if viewModel.wageyInvocations != nil || viewModel.messagesUsed > 0 {
-          Text(String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount))))
-            .font(.system(size: 11))
-            .foregroundColor(.tidexTextSecondary)
-        }
+  private var headerTitle: some View {
+    VStack(spacing: 2) {
+      Text(localizedConversationTitle)
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundColor(.tidexTextPrimary)
+        .lineLimit(1)
+
+      if shouldShowUsageSubtitle {
+        Text(String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount))))
+          .font(.system(size: 11))
+          .foregroundColor(
+            viewModel.remainingMessagesCount <= 3 ? .tidexWarning : .tidexTextSecondary
+          )
       }
     }
   }
@@ -343,16 +309,14 @@ struct WageyView: View {
     }
   }
 
-  private var sidebarButton: some View {
+  private var historyButton: some View {
     Button {
       Haptics.play(.light)
-      withAnimation(.easeInOut(duration: 0.25)) {
-        showSidebar.toggle()
-      }
+      showHistory = true
     } label: {
       Image(systemName: "clock.arrow.circlepath")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundColor(.tidexBlue)
+        .font(.system(size: 17, weight: .medium))
+        .foregroundColor(.tidexTextSecondary)
     }
   }
 
@@ -361,12 +325,13 @@ struct WageyView: View {
       Haptics.play(.light)
       viewModel.startNewConversation()
     } label: {
-      Image(systemName: "plus.bubble")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundColor(.tidexBlue)
+      Image(systemName: "square.and.pencil")
+        .font(.system(size: 17, weight: .medium))
+        .foregroundColor(.tidexTextSecondary)
+        .offset(y: -1)
     }
     .disabled(viewModel.messages.isEmpty && !viewModel.isStreaming)
-    .opacity(viewModel.messages.isEmpty && !viewModel.isStreaming ? 0.5 : 1)
+    .opacity(viewModel.messages.isEmpty && !viewModel.isStreaming ? 0.4 : 1)
   }
 }
 
