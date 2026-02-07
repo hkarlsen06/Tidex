@@ -72,16 +72,21 @@ struct ChatMessageList: View {
 
   // MARK: - Empty State
 
-  private var emptyStateView: some View {
-    VStack(spacing: 24) {
-      // Wagey icon
-      Image(systemName: "sparkles")
-        .font(.system(size: 48))
-        .foregroundColor(.tidexBlue)
+  /// Suggestion card data pairing an icon with the localized text
+  private var suggestions: [(icon: String, text: String)] {
+    [
+      ("calendar.badge.plus", String(localized: .wageyEmptyStateSuggestion1)),
+      ("chart.bar.fill", String(localized: .wageyEmptyStateSuggestion2)),
+      ("list.clipboard.fill", String(localized: .wageyEmptyStateSuggestion3)),
+      ("banknote.fill", String(localized: .wageyEmptyStateSuggestion4)),
+    ]
+  }
 
-      VStack(spacing: 8) {
+  private var emptyStateView: some View {
+    VStack(spacing: 32) {
+      VStack(spacing: 6) {
         Text(.wageyEmptyStateTitle)
-          .font(.system(size: 20, weight: .semibold))
+          .font(.system(size: 24, weight: .bold))
           .foregroundColor(.tidexTextPrimary)
 
         Text(.wageyEmptyStateSubtitle)
@@ -90,30 +95,43 @@ struct ChatMessageList: View {
           .multilineTextAlignment(.center)
       }
 
-      // Suggestion chips
-      VStack(spacing: 12) {
-        suggestionChip(String(localized: .wageyEmptyStateSuggestion1))
-        suggestionChip(String(localized: .wageyEmptyStateSuggestion2))
-        suggestionChip(String(localized: .wageyEmptyStateSuggestion3))
-        suggestionChip(String(localized: .wageyEmptyStateSuggestion4))
+      // Suggestion list
+      VStack(spacing: 10) {
+        ForEach(suggestions, id: \.text) { suggestion in
+          suggestionRow(icon: suggestion.icon, text: suggestion.text)
+        }
       }
-      .padding(.top, 8)
     }
     .padding(.horizontal, 24)
   }
 
-  private func suggestionChip(_ text: String) -> some View {
+  private func suggestionRow(icon: String, text: String) -> some View {
     Button {
       Haptics.play(.light)
       onSuggestionTapped?(text)
     } label: {
-      Text(text)
-        .font(.system(size: 14))
-        .foregroundColor(.tidexBlue)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.tidexBlue.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      HStack(spacing: 14) {
+        Image(systemName: icon)
+          .font(.system(size: 18))
+          .foregroundColor(.tidexBlue)
+          .frame(width: 24)
+
+        Text(text)
+          .font(.system(size: 15))
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
+
+        Spacer(minLength: 0)
+
+        Image(systemName: "chevron.right")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(.tidexTextMuted)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
     .buttonStyle(.plain)
   }
@@ -125,20 +143,14 @@ struct ChatMessageList: View {
       Haptics.play(.light)
       copyConversation()
     } label: {
-      HStack(spacing: 6) {
-        Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
-          .font(.system(size: 13, weight: .medium))
-        Text(showCopiedConfirmation ? .wageyConversationCopied : .wageyCopyConversation)
-          .font(.system(size: 13, weight: .medium))
-      }
-      .foregroundColor(showCopiedConfirmation ? .tidexSuccess : .tidexTextSecondary)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundColor(showCopiedConfirmation ? .tidexSuccess : .tidexTextMuted)
+        .contentTransition(.symbolEffect(.replace))
     }
     .buttonStyle(.plain)
     .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.leading, 18)
     .padding(.top, 4)
   }
 

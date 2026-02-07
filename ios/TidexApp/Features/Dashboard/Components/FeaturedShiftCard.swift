@@ -176,7 +176,7 @@ struct FeaturedShiftCard: View {
                 .foregroundColor(.tidexBlue)
             } else {
               Circle()
-                .fill(hasProgress ? Color.green : Color.blue)
+                .fill(hasProgress ? Color.green : (isToday ? Color.blue : Color.tidexTextMuted))
                 .frame(width: 7, height: 7)
             }
             Text(text)

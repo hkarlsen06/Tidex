@@ -154,7 +154,9 @@ struct FriendRow: View {
       }
     case .incoming:
       Section {
-        Button { onShareBack() } label: {
+        Button {
+          onShareBack()
+        } label: {
           Label(String(localized: .sharingShareBack), systemImage: "arrowshape.turn.up.left")
         }
       }
@@ -168,7 +170,9 @@ struct FriendRow: View {
     Section {
       if sectionType == .mutual || sectionType == .incoming {
         let isBlocked = friend.sharesWithMe?.blocked == true
-        Button { onToggleBlocked() } label: {
+        Button {
+          onToggleBlocked()
+        } label: {
           Label(
             String(localized: isBlocked ? .sharingMenuShowShifts : .sharingMenuHideShifts),
             systemImage: isBlocked ? "eye" : "eye.slash"
@@ -176,7 +180,9 @@ struct FriendRow: View {
         }
       }
 
-      Button(role: .destructive) { onRemove() } label: {
+      Button(role: .destructive) {
+        onRemove()
+      } label: {
         Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
       }
     }

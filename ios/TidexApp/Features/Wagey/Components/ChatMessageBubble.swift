@@ -60,15 +60,28 @@ struct ChatMessageBubble: View {
       .padding(.vertical, 12)
       .background(Color.tidexBlue)
       .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .contextMenu {
+        Button {
+          UIPasteboard.general.string = text
+        } label: {
+          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+        }
+      }
   }
 
   private func assistantMessageContent(text: String) -> some View {
-    // For assistant messages, use FormattedMessageContent for rich formatting (tables, markdown)
     FormattedMessageContent(content: text)
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
       .background(Color.tidexSurfacePrimary)
       .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .contextMenu {
+        Button {
+          UIPasteboard.general.string = text
+        } label: {
+          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+        }
+      }
   }
 
   private func imageContent(attachment: ImageAttachment, isUser: Bool) -> some View {
@@ -89,6 +102,13 @@ struct ChatMessageBubble: View {
           .onTapGesture {
             selectedImage = uiImage
             showImageViewer = true
+          }
+          .contextMenu {
+            Button {
+              UIPasteboard.general.image = uiImage
+            } label: {
+              Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+            }
           }
       }
     }
@@ -198,92 +218,104 @@ struct ImageViewerOverlay: View {
   }
 }
 
+// MARK: - Typing Indicator
+
+/// Three pulsing dots indicator, similar to iMessage typing indicator
+struct TypingIndicatorView: View {
+  @State private var dotScales: [Bool] = [false, false, false]
+
+  var body: some View {
+    HStack(spacing: 5) {
+      ForEach(0..<3, id: \.self) { index in
+        Circle()
+          .fill(Color.tidexTextMuted)
+          .frame(width: 7, height: 7)
+          .scaleEffect(dotScales[index] ? 1.0 : 0.5)
+          .opacity(dotScales[index] ? 1.0 : 0.4)
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 14)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .onAppear {
+      for index in 0..<3 {
+        withAnimation(
+          .easeInOut(duration: 0.5)
+            .repeatForever(autoreverses: true)
+            .delay(Double(index) * 0.15)
+        ) {
+          dotScales[index] = true
+        }
+      }
+    }
+  }
+}
+
 // MARK: - Streaming Message Bubble
 
 /// A bubble showing the currently streaming assistant response
 struct StreamingMessageBubble: View {
   let contentBlocks: [ContentBlock]
 
-  /// Whether to show the cursor animation
-  @State private var showCursor = true
-
-  /// Check if the last block is a text block (cursor should appear after it)
-  private var lastBlockIsText: Bool {
-    if case .text = contentBlocks.last {
-      return true
+  /// Whether any text block has content
+  private var hasAnyText: Bool {
+    contentBlocks.contains { block in
+      if case .text(let text) = block, !text.isEmpty { return true }
+      return false
     }
-    return false
   }
 
   var body: some View {
     HStack {
       VStack(alignment: .leading, spacing: 8) {
-        // Render content blocks in chronological order
-        ForEach(Array(contentBlocks.enumerated()), id: \.offset) { index, block in
-          switch block {
-          case .text(let text):
-            // Show cursor after the last text block
-            let isLastBlock = index == contentBlocks.count - 1
-            streamingTextView(text: text, showCursor: isLastBlock)
-          case .toolCall(let toolCall):
-            ToolStatusView(toolCall: toolCall)
-          case .image:
-            // Images are not expected in assistant streaming messages
-            EmptyView()
+        // If no content blocks yet, show typing indicator
+        if contentBlocks.isEmpty {
+          TypingIndicatorView()
+        } else {
+          // Render content blocks in chronological order
+          ForEach(Array(contentBlocks.enumerated()), id: \.offset) { _, block in
+            switch block {
+            case .text(let text):
+              if !text.isEmpty {
+                streamingTextView(text: text)
+              }
+            case .toolCall(let toolCall):
+              ToolStatusView(toolCall: toolCall)
+            case .image:
+              EmptyView()
+            }
           }
-        }
 
-        // If no blocks yet or last block isn't text, show empty text with cursor
-        if contentBlocks.isEmpty || !lastBlockIsText {
-          streamingTextView(text: "", showCursor: true)
+          // If blocks exist but no text yet (e.g., only tool calls), show typing indicator
+          if !hasAnyText {
+            TypingIndicatorView()
+          }
         }
       }
 
       Spacer(minLength: 40)
     }
-    .onAppear {
-      startCursorAnimation()
-    }
   }
 
-  private func streamingTextView(text: String, showCursor: Bool) -> some View {
-    HStack(alignment: .bottom, spacing: 0) {
-      // Try to render markdown for the streaming text
-      if !text.isEmpty {
-        if let attributedString = try? AttributedString(
-          markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
-        {
-          Text(attributedString)
-            .font(.system(size: 16))
-            .foregroundColor(.tidexTextPrimary)
-        } else {
-          Text(text)
-            .font(.system(size: 16))
-            .foregroundColor(.tidexTextPrimary)
-        }
-      }
-
-      // Blinking cursor (only shown on the last text block)
-      if showCursor {
-        Text("|")
-          .font(.system(size: 16, weight: .medium))
-          .foregroundColor(.tidexBlue)
-          .opacity(self.showCursor ? 1 : 0)
+  private func streamingTextView(text: String) -> some View {
+    Group {
+      if let attributedString = try? AttributedString(
+        markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+      {
+        Text(attributedString)
+          .font(.system(size: 16))
+          .foregroundColor(.tidexTextPrimary)
+      } else {
+        Text(text)
+          .font(.system(size: 16))
+          .foregroundColor(.tidexTextPrimary)
       }
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-  }
-
-  private func startCursorAnimation() {
-    // Simple cursor blink animation
-    Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-      withAnimation(.easeInOut(duration: 0.1)) {
-        showCursor.toggle()
-      }
-    }
   }
 }
 
@@ -373,7 +405,13 @@ struct StreamingMessageBubble: View {
   .background(Color.tidexBackground)
 }
 
-#Preview("Streaming") {
+#Preview("Streaming - Typing") {
+  StreamingMessageBubble(contentBlocks: [])
+    .padding()
+    .background(Color.tidexBackground)
+}
+
+#Preview("Streaming - With Text") {
   StreamingMessageBubble(
     contentBlocks: [
       .text("I'm looking up your shifts for this week..."),

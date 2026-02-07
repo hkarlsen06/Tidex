@@ -11,6 +11,8 @@ struct UserMenuButton: View {
   let displayName: String
   /// Optional profile picture URL
   let avatarUrl: String?
+  /// Whether tapping opens settings (true) or is display-only (false)
+  var interactive: Bool = true
   /// Cached profile image (downloaded once, then reused)
   @State private var cachedImage: UIImage?
   /// Whether image download is in progress
@@ -19,101 +21,21 @@ struct UserMenuButton: View {
   @State private var loadedUrl: String?
   /// Task for loading image (allows cancellation when URL changes)
   @State private var loadTask: Task<Void, Never>?
-  #if DEBUG
-    /// Whether to show the sync debug sheet
-    @State private var showSyncDebug = false
-  #endif
   /// Whether to show the settings sheet
   @State private var showSettings = false
-  /// Whether to show the subscription sheet
-  @State private var showSubscription = false
-  /// Whether to show the account/profile sheet
-  @State private var showAccount = false
-  /// Whether to show the feedback sheet
-  @State private var showFeedback = false
 
   var body: some View {
-    Menu {
-      // Account button
-      Button {
-        showAccount = true
-      } label: {
-        Label(
-          String(localized: .settingsMenuAccountLabel),
-          systemImage: "person.circle"
-        )
-      }
-
-      // Settings button
+    if interactive {
       Button {
         showSettings = true
       } label: {
-        Label(
-          String(localized: .userMenuSettings),
-          systemImage: "gearshape"
-        )
+        menuButton
       }
-
-      // Subscription button
-      Button {
-        showSubscription = true
-      } label: {
-        Label(
-          String(localized: .subscriptionTitle),
-          systemImage: "creditcard"
-        )
+      .sheet(isPresented: $showSettings) {
+        SettingsView()
       }
-
-      Divider()
-
-      // Send Feedback button
-      Button {
-        showFeedback = true
-      } label: {
-        Label(
-          String(localized: .feedbackTitle),
-          systemImage: "message"
-        )
-      }
-
-      // Debug button (DEBUG builds only)
-      #if DEBUG
-        Button {
-          showSyncDebug = true
-        } label: {
-          Label(
-            "Debug",
-            systemImage: "ladybug"
-          )
-        }
-      #endif
-    } label: {
+    } else {
       menuButton
-    }
-    #if DEBUG
-      .sheet(isPresented: $showSyncDebug) {
-        NavigationStack {
-          SyncDebugView()
-        }
-      }
-    #endif
-    .sheet(isPresented: $showSettings) {
-      SettingsView()
-    }
-    .sheet(isPresented: $showAccount) {
-      NavigationStack {
-        ProfileSettingsView()
-      }
-    }
-    .sheet(isPresented: $showSubscription) {
-      NavigationStack {
-        SubscriptionSettingsView()
-      }
-    }
-    .sheet(isPresented: $showFeedback) {
-      NavigationStack {
-        FeedbackSettingsView()
-      }
     }
   }
 

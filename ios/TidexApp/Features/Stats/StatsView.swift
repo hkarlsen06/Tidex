@@ -83,80 +83,80 @@ struct StatsView: View {
   @ViewBuilder
   private func statsContent(stats: StatsData) -> some View {
     ScrollViewReader { proxy in
-    ScrollView {
-      VStack(spacing: 16) {
-        Color.clear.frame(height: 0).id("stats-top")
-        sectionHeader(.statsSectionOverview)
+      ScrollView {
+        VStack(spacing: 16) {
+          Color.clear.frame(height: 0).id("stats-top")
+          sectionHeader(.statsSectionOverview)
 
-        // Monthly Earnings Card (large)
-        MonthlyEarningsCard(
-          grossEarnings: stats.currentMonth.totalEarnings,
-          netEarnings: stats.currentMonth.totalEarningsNet,
-          taxEnabled: stats.tax.enabled,
-          percentageChange: stats.percentageChange
+          // Monthly Earnings Card (large)
+          MonthlyEarningsCard(
+            grossEarnings: stats.currentMonth.totalEarnings,
+            netEarnings: stats.currentMonth.totalEarningsNet,
+            taxEnabled: stats.tax.enabled,
+            percentageChange: stats.percentageChange
+          )
+
+          // Hours and Shifts cards (side by side)
+          HStack(spacing: 12) {
+            HoursStatCard(hours: stats.currentMonth.totalHours)
+            ShiftsStatCard(count: stats.currentMonth.shiftCount)
+          }
+
+          // Monthly Goal Card
+          if stats.monthlyGoal.enabled {
+            MonthlyGoalCard(goal: stats.monthlyGoal)
+          } else {
+            MonthlyGoalEmptyCard()
+          }
+
+          sectionHeader(.statsSectionCharts)
+
+          // Weekly Chart (This Week or Best Week)
+          weeklyChartSection(stats: stats)
+
+          // Monthly Progress Chart
+          if !stats.thisMonthCumulative.isEmpty {
+            MonthlyProgressChart(data: stats.thisMonthCumulative)
+          } else {
+            MonthlyProgressChartEmpty()
+          }
+
+          // Yearly Income Chart
+          yearlyIncomeChartSection(stats: stats)
+
+          // Employment Percentage Chart
+          if let employment = stats.employment,
+            employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
+          {
+            EmploymentPercentageChart(data: employment)
+          } else {
+            EmploymentPercentageChartEmpty()
+          }
+
+          // Bottom spacing for floating month picker
+          Spacer()
+            .frame(height: MonthPickerLayout.totalBottomInset + 24)
+        }
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .monthSwipeGesture(
+          onSwipeLeft: { viewModel.goToNextMonth() },
+          onSwipeRight: { viewModel.goToPreviousMonth() },
+          isEnabled: true
         )
-
-        // Hours and Shifts cards (side by side)
-        HStack(spacing: 12) {
-          HoursStatCard(hours: stats.currentMonth.totalHours)
-          ShiftsStatCard(count: stats.currentMonth.shiftCount)
-        }
-
-        // Monthly Goal Card
-        if stats.monthlyGoal.enabled {
-          MonthlyGoalCard(goal: stats.monthlyGoal)
-        } else {
-          MonthlyGoalEmptyCard()
-        }
-
-        sectionHeader(.statsSectionCharts)
-
-        // Weekly Chart (This Week or Best Week)
-        weeklyChartSection(stats: stats)
-
-        // Monthly Progress Chart
-        if !stats.thisMonthCumulative.isEmpty {
-          MonthlyProgressChart(data: stats.thisMonthCumulative)
-        } else {
-          MonthlyProgressChartEmpty()
-        }
-
-        // Yearly Income Chart
-        yearlyIncomeChartSection(stats: stats)
-
-        // Employment Percentage Chart
-        if let employment = stats.employment,
-          employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
-        {
-          EmploymentPercentageChart(data: employment)
-        } else {
-          EmploymentPercentageChartEmpty()
-        }
-
-        // Bottom spacing for floating month picker
-        Spacer()
-          .frame(height: MonthPickerLayout.totalBottomInset + 24)
       }
-      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, 16)
-      .padding(.top, 16)
-      .frame(maxWidth: .infinity)
-      .contentShape(Rectangle())
-      .monthSwipeGesture(
-        onSwipeLeft: { viewModel.goToNextMonth() },
-        onSwipeRight: { viewModel.goToPreviousMonth() },
-        isEnabled: true
-      )
-    }
-    .refreshable {
-      await refreshStatsContent()
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
-      guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
-        tab == .stats
-      else { return }
-      withAnimation { proxy.scrollTo("stats-top", anchor: .top) }
-    }
+      .refreshable {
+        await refreshStatsContent()
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+        guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
+          tab == .stats
+        else { return }
+        withAnimation { proxy.scrollTo("stats-top", anchor: .top) }
+      }
     }  // ScrollViewReader
   }
 

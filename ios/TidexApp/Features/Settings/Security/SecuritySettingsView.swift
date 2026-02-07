@@ -96,11 +96,11 @@ struct SecuritySettingsView: View {
         HStack(spacing: Spacing.sm) {
           // Icon
           RoundedRectangle(cornerRadius: 6)
-            .fill(Color.tidexBlue)
+            .fill(Color.tidexBlue.opacity(0.75))
             .frame(width: 29, height: 29)
             .overlay(
               Image(systemName: viewModel.biometricIconName)
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .foregroundColor(.white)
             )
 
@@ -139,11 +139,11 @@ struct SecuritySettingsView: View {
           HStack(spacing: Spacing.sm) {
             // Icon
             RoundedRectangle(cornerRadius: 6)
-              .fill(Color.tidexBlue)
+              .fill(Color.tidexBlue.opacity(0.75))
               .frame(width: 29, height: 29)
               .overlay(
                 Image(systemName: viewModel.biometricIconName)
-                  .font(.system(size: 14))
+                  .font(.system(size: 13))
                   .foregroundColor(.white)
               )
 
@@ -175,11 +175,11 @@ struct SecuritySettingsView: View {
       HStack(spacing: Spacing.sm) {
         // Icon
         RoundedRectangle(cornerRadius: 6)
-          .fill(Color.orange)
+          .fill(Color.orange.opacity(0.75))
           .frame(width: 29, height: 29)
           .overlay(
             Image(systemName: "lock.fill")
-              .font(.system(size: 14))
+              .font(.system(size: 13))
               .foregroundColor(.white)
           )
 
@@ -305,11 +305,11 @@ struct SecuritySettingsView: View {
     HStack(spacing: Spacing.sm) {
       // Icon
       RoundedRectangle(cornerRadius: 6)
-        .fill(iconColor)
+        .fill(iconColor.opacity(0.75))
         .frame(width: 29, height: 29)
         .overlay(
           Image(systemName: icon)
-            .font(.system(size: 14))
+            .font(.system(size: 13))
             .foregroundColor(.white)
         )
 
@@ -396,11 +396,11 @@ struct SecuritySettingsView: View {
       if viewModel.mfaFactors.isEmpty {
         HStack(spacing: Spacing.sm) {
           RoundedRectangle(cornerRadius: 6)
-            .fill(Color.indigo)
+            .fill(Color.indigo.opacity(0.75))
             .frame(width: 29, height: 29)
             .overlay(
               Image(systemName: "shield.slash")
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .foregroundColor(.white)
             )
 
@@ -450,11 +450,11 @@ struct SecuritySettingsView: View {
     HStack(spacing: Spacing.sm) {
       // Icon
       RoundedRectangle(cornerRadius: 6)
-        .fill(Color.tidexBlue)
+        .fill(Color.tidexBlue.opacity(0.75))
         .frame(width: 29, height: 29)
         .overlay(
           Image(systemName: "iphone")
-            .font(.system(size: 14))
+            .font(.system(size: 13))
             .foregroundColor(.white)
         )
 

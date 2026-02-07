@@ -103,8 +103,8 @@ struct PaywallView: View {
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
           Button(action: { dismiss() }) {
-            Image(systemName: "xmark.circle.fill")
-              .font(.system(size: 28))
+            Image(systemName: "xmark")
+              .font(.system(size: 16, weight: .medium))
               .foregroundColor(.tidexTextMuted)
           }
         }

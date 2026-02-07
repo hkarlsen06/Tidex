@@ -104,12 +104,15 @@ struct SharedShiftsListView: View {
   // MARK: - List View
 
   /// Shifts grouped by ISO week for list display
-  private var weekGroups: [(weekKey: String, weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] {
+  private var weekGroups:
+    [(weekKey: String, weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])]
+  {
     var calendar = Calendar(identifier: .iso8601)
     calendar.firstWeekday = 2
     calendar.minimumDaysInFirstWeek = 4
 
-    var weekMap: [String: (weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] = [:]
+    var weekMap: [String: (weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] =
+      [:]
 
     for shift in shifts {
       guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
@@ -127,8 +130,13 @@ struct SharedShiftsListView: View {
       }
     }
 
-    return weekMap.map { (weekKey: $0.key, weekNumber: $0.value.weekNumber, totalGross: $0.value.totalGross, shifts: $0.value.shifts) }
-      .sorted { $0.weekKey < $1.weekKey }
+    return weekMap.map {
+      (
+        weekKey: $0.key, weekNumber: $0.value.weekNumber, totalGross: $0.value.totalGross,
+        shifts: $0.value.shifts
+      )
+    }
+    .sorted { $0.weekKey < $1.weekKey }
   }
 
   @ViewBuilder

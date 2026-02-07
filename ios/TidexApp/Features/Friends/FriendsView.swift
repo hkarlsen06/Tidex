@@ -1,12 +1,10 @@
 import SwiftUI
-import UIKit
 
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
 struct SharingView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.userCurrency) private var currency
-  @Environment(\.layoutDirection) private var layoutDirection
 
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab
@@ -15,6 +13,9 @@ struct SharingView: View {
   @Binding var hasSelectedSharer: Bool
 
   @StateObject private var viewModel = SharingViewModel()
+
+  /// Navigation path for push navigation (friend detail slides in from right)
+  @State private var navigationPath = NavigationPath()
 
   /// State for showing the manage sharing sheet
   @State private var showManageSheet = false
@@ -34,83 +35,40 @@ struct SharingView: View {
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
 
-  // iPad detection - hide logo on iPad
-  private var isIPad: Bool {
-    UIDevice.current.userInterfaceIdiom == .pad
-  }
-
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $navigationPath) {
       ZStack {
         // Background that fills entire screen including safe areas
         Color.tidexBackground
           .ignoresSafeArea()
 
-        // Main content - month picker is now in shared overlay
-        contentView
+        // Always show sharer list as root content
+        sharerListView
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .navigationBarTitleDisplayMode(.inline)
       .iPadToolbarBackground()
       .toolbar {
-        // Date label or back button when viewing a sharer
         ToolbarItem(placement: .topBarLeading) {
-          if viewModel.selectedSharer == nil {
-            TodayDateLabel()
-          }
+          TodayDateLabel()
         }
         .sharedBackgroundVisibility(.hidden)
-        ToolbarItem(placement: .topBarLeading) {
-          if viewModel.selectedSharer != nil {
-            Button(action: {
-              withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.deselectSharer()
-              }
-            }) {
-              HStack(spacing: 6) {
-                Image(
-                  systemName: layoutDirection == .rightToLeft ? "chevron.right" : "chevron.left"
-                )
-                .font(.system(size: 16, weight: .semibold))
-                Text(.commonBack)
-                  .font(.system(size: 17))
-              }
-              .foregroundColor(.tidexBlue)
-            }
-          }
-        }
-
-        // Title area - show sharer info when viewing a sharer (iPhone only)
-        ToolbarItem(placement: .principal) {
-          if let sharer = viewModel.selectedSharer, !isIPad {
-            // Show sharer info in center on iPhone
-            sharerToolbarInfo(sharer: sharer)
-          }
-        }
-
-        // Trailing area - superimpose toggle on iPhone, sharer info on iPad
-        ToolbarItem(placement: .topBarTrailing) {
-          if let sharer = viewModel.selectedSharer {
-            if isIPad {
-              // Show sharer info on right side for iPad
-              sharerToolbarInfo(sharer: sharer)
-            } else {
-              // Show superimpose toggle button on iPhone
-              superimposeToggleButton
-            }
-          }
-        }
 
         ToolbarItem(placement: .topBarTrailing) {
-          // Only show when not viewing a sharer
-          if viewModel.selectedSharer == nil {
-            // User menu only
-            UserMenuButton(
-              displayName: coordinator.userDisplayName,
-              avatarUrl: coordinator.userAvatarUrl
-            )
-          }
+          UserMenuButton(
+            displayName: coordinator.userDisplayName,
+            avatarUrl: coordinator.userAvatarUrl
+          )
         }
+      }
+      .navigationDestination(for: SharedUser.self) { sharer in
+        SharedShiftsDetailView(
+          sharer: sharer,
+          viewModel: viewModel,
+          highlightDates: $highlightDates,
+          highlightShiftIds: $highlightShiftIds
+        )
+        .toolbarRole(.editor)
       }
       .iPadToolbarTransaction()
     }
@@ -122,14 +80,13 @@ struct SharingView: View {
       // navigate back to the sharer list
       guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
         tab == .sharing,
-        viewModel.selectedSharer != nil
+        !navigationPath.isEmpty
       else {
         return
       }
 
-      withAnimation(.easeInOut(duration: 0.2)) {
-        viewModel.deselectSharer()
-      }
+      navigationPath = NavigationPath()
+      viewModel.deselectSharer()
     }
     .sheet(
       isPresented: $showManageSheet,
@@ -157,11 +114,17 @@ struct SharingView: View {
       // Handle any pending deep link on initial appearance
       handlePendingDeepLink(coordinator.pendingDeepLink)
       // Sync initial state
-      hasSelectedSharer = viewModel.selectedSharer != nil
+      hasSelectedSharer = !navigationPath.isEmpty
     }
-    .onChange(of: viewModel.selectedSharer) { _, sharer in
+    .onChange(of: navigationPath) { _, path in
       // Sync sharer selection state with parent for shared month picker visibility
-      hasSelectedSharer = sharer != nil
+      let hasSharer = !path.isEmpty
+      hasSelectedSharer = hasSharer
+
+      // When user navigates back (automatic back button or swipe), deselect sharer
+      if !hasSharer && viewModel.selectedSharer != nil {
+        viewModel.deselectSharer()
+      }
     }
   }
 
@@ -182,9 +145,9 @@ struct SharingView: View {
 
           // Find and select the sharer
           if let sharer = viewModel.sharers.first(where: { $0.id == sharerId }) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-              viewModel.selectSharer(sharer)
-            }
+            navigationPath = NavigationPath()
+            viewModel.selectSharer(sharer)
+            navigationPath.append(sharer)
 
             // Extract shift IDs for precise highlighting (excludes deleted shifts)
             if let changes = changes, !changes.isEmpty {
@@ -244,19 +207,6 @@ struct SharingView: View {
     }
   }
 
-  // MARK: - Content View
-
-  @ViewBuilder
-  private var contentView: some View {
-    if viewModel.selectedSharer != nil {
-      // Show shifts for selected sharer
-      sharedShiftsView
-    } else {
-      // Show sharer list
-      sharerListView
-    }
-  }
-
   // MARK: - Sharer List
 
   private var sharerListView: some View {
@@ -299,9 +249,8 @@ struct SharingView: View {
           isLoadingPreviews: viewModel.isLoadingPreviews,
           isRefreshing: viewModel.isRefreshing,
           onSelectSharer: { sharer in
-            withAnimation(.easeInOut(duration: 0.2)) {
-              viewModel.selectSharer(sharer)
-            }
+            viewModel.selectSharer(sharer)
+            navigationPath.append(sharer)
           },
           onAddFriend: {
             autoExpandAddForm = true
@@ -319,11 +268,23 @@ struct SharingView: View {
     }
   }
 
-  // MARK: - Shared Shifts View
+}
 
-  @ViewBuilder
-  private var sharedShiftsView: some View {
-    if let sharer = viewModel.selectedSharer {
+// MARK: - Shared Shifts Detail View (pushed from friend list)
+
+/// Detail view shown when tapping a friend card
+/// Displays the friend's shifts in a calendar/list with month navigation
+private struct SharedShiftsDetailView: View {
+  let sharer: SharedUser
+  @ObservedObject var viewModel: SharingViewModel
+  @Binding var highlightDates: Set<String>
+  @Binding var highlightShiftIds: Set<String>
+
+  var body: some View {
+    ZStack {
+      Color.tidexBackground
+        .ignoresSafeArea()
+
       SharedShiftsListView(
         sharer: sharer,
         shifts: viewModel.sharedShifts,
@@ -337,156 +298,32 @@ struct SharingView: View {
       )
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .frame(maxWidth: .infinity)
-      .monthSwipeGesture(
-        onSwipeLeft: {
-          viewModel.goToNextMonth()
-        },
-        onSwipeRight: {
-          viewModel.goToPreviousMonth()
-        }
-      )
-      .background(
-        EdgeSwipeBackGesture {
-          withAnimation(.easeInOut(duration: 0.2)) {
-            viewModel.deselectSharer()
-          }
-        }
-      )
     }
-  }
-
-  // MARK: - Helper Views
-
-  /// Sharer name and avatar for toolbar display
-  private func sharerToolbarInfo(sharer: SharedUser) -> some View {
-    HStack(spacing: 8) {
-      AvatarView(
-        url: sharer.avatarUrl,
-        initials: sharer.initials,
-        size: AvatarView.Size.small
-      )
-
-      Text(sharer.firstNameOnly)
-        .font(.system(size: 17, weight: .semibold))
-        .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
-        .truncationMode(.tail)
-    }
-  }
-
-  /// Superimpose toggle button in the toolbar
-  /// Allows overlaying user's own shifts on friend's calendar
-  private var superimposeToggleButton: some View {
-    Button {
-      viewModel.toggleSuperimpose()
-    } label: {
-      Image(systemName: "rectangle.on.rectangle")
-        .font(.system(size: 17, weight: .medium))
-        .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
-    }
-  }
-
-}
-
-// MARK: - Edge Swipe Back Gesture
-
-/// A UIViewRepresentable that adds a screen edge pan gesture for back navigation
-/// Uses UIScreenEdgePanGestureRecognizer to detect swipes from the left edge
-private struct EdgeSwipeBackGesture: UIViewRepresentable {
-  let onSwipeBack: () -> Void
-
-  func makeUIView(context: Context) -> UIView {
-    let view = EdgeSwipeView()
-    view.backgroundColor = .clear
-
-    let edgeGesture = UIScreenEdgePanGestureRecognizer(
-      target: context.coordinator,
-      action: #selector(Coordinator.handleEdgeSwipe(_:))
-    )
-    edgeGesture.edges = .left
-    edgeGesture.delaysTouchesBegan = false
-    edgeGesture.delaysTouchesEnded = false
-    view.addGestureRecognizer(edgeGesture)
-
-    context.coordinator.view = view
-
-    return view
-  }
-
-  func updateUIView(_: UIView, context: Context) {
-    context.coordinator.onSwipeBack = onSwipeBack
-  }
-
-  func makeCoordinator() -> Coordinator {
-    Coordinator(onSwipeBack: onSwipeBack)
-  }
-
-  class Coordinator: NSObject {
-    var onSwipeBack: () -> Void
-    weak var view: UIView?
-    private let haptic = UIImpactFeedbackGenerator(style: .medium)
-    private var hasTriggeredAction = false
-
-    init(onSwipeBack: @escaping () -> Void) {
-      self.onSwipeBack = onSwipeBack
-      super.init()
-      haptic.prepare()
-    }
-
-    @objc func handleEdgeSwipe(_ gesture: UIScreenEdgePanGestureRecognizer) {
-      guard let view = view else { return }
-
-      let translation = gesture.translation(in: view)
-      let threshold: CGFloat = 80
-
-      switch gesture.state {
-      case .changed:
-        // Trigger haptic when threshold is reached
-        if translation.x >= threshold && !hasTriggeredAction {
-          haptic.impactOccurred()
-          hasTriggeredAction = true
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      // Superimpose toggle
+      ToolbarItem(placement: .topBarTrailing) {
+        Button {
+          viewModel.toggleSuperimpose()
+        } label: {
+          Image(systemName: "rectangle.on.rectangle")
+            .font(.system(size: 17, weight: .medium))
+            .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
         }
-      case .ended, .cancelled:
-        if hasTriggeredAction || translation.x >= threshold {
-          onSwipeBack()
-        }
-        hasTriggeredAction = false
-        haptic.prepare()
-      default:
-        break
+      }
+
+      ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+      // Friend display using UserMenuButton in display-only mode
+      ToolbarItem(placement: .topBarTrailing) {
+        UserMenuButton(
+          displayName: sharer.displayName,
+          avatarUrl: sharer.avatarUrl,
+          interactive: false
+        )
+        .fixedSize(horizontal: true, vertical: false)
       }
     }
-  }
-}
-
-/// A UIView that moves its gesture recognizers to the parent scroll view
-private class EdgeSwipeView: UIView {
-  private var movedGestures = false
-
-  override func didMoveToWindow() {
-    super.didMoveToWindow()
-
-    guard !movedGestures, window != nil else { return }
-    movedGestures = true
-
-    // Find parent scroll view and add gesture there for better recognition
-    if let scrollView = findScrollView() {
-      gestureRecognizers?.forEach { gesture in
-        removeGestureRecognizer(gesture)
-        scrollView.addGestureRecognizer(gesture)
-      }
-    }
-  }
-
-  private func findScrollView() -> UIScrollView? {
-    var view: UIView? = superview
-    while let current = view {
-      if let scrollView = current as? UIScrollView {
-        return scrollView
-      }
-      view = current.superview
-    }
-    return nil
   }
 }
 

@@ -129,16 +129,9 @@ struct SharedShiftsCalendarView: View {
     }
     .padding(.horizontal, 16)
     .overlay(alignment: .top) {
-      // Superimpose legend (floats above header when active)
       if isSuperimposing {
         superimposeLegend
-          .padding(.vertical, 6)
-          .background(
-            Capsule()
-              .fill(Color.tidexSurfacePrimary)
-              .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
-          )
-          .offset(y: -44)
+          .offset(y: -86)
       }
     }
   }
@@ -195,26 +188,75 @@ struct SharedShiftsCalendarView: View {
 
   /// Legend explaining the color coding when superimpose is active
   private var superimposeLegend: some View {
-    HStack(spacing: 16) {
-      HStack(spacing: 4) {
-        Circle()
-          .fill(Color.tidexBlue)
-          .frame(width: 8, height: 8)
-        Text(.sharingSuperimposeLegendBlue)
-          .font(.system(size: 12))
-          .foregroundColor(.tidexTextMuted)
+    HStack(spacing: 24) {
+      // Both working
+      VStack(spacing: 6) {
+        legendMiniCell(color: .tidexBlue, showOverlapIcon: true)
+        Text(.sharingSuperimposeLegendBoth)
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(.tidexTextSecondary)
       }
 
-      HStack(spacing: 4) {
-        Circle()
-          .fill(Color.green)
-          .frame(width: 8, height: 8)
-        Text(.sharingSuperimposeLegendGreen)
-          .font(.system(size: 12))
-          .foregroundColor(.tidexTextMuted)
+      // Only you
+      VStack(spacing: 6) {
+        legendMiniCell(color: .green, showOverlapIcon: false)
+        Text(.sharingSuperimposeLegendOnlyYou)
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(.tidexTextSecondary)
       }
     }
-    .padding(.horizontal, 12)
+  }
+
+  /// Miniature calendar cell used in the superimpose legend
+  private func legendMiniCell(color: Color, showOverlapIcon: Bool) -> some View {
+    ZStack {
+      // Day number (top-right, like real cells)
+      VStack {
+        HStack {
+          Spacer()
+          Text("5")
+            .font(.system(size: 8, weight: .semibold))
+            .foregroundColor(.tidexTextMuted)
+            .padding(.trailing, 4)
+            .padding(.top, 3)
+        }
+        Spacer()
+      }
+
+      // Overlap icon (top-left, like real cells)
+      if showOverlapIcon {
+        VStack {
+          HStack {
+            Image(systemName: "person.2.fill")
+              .font(.system(size: 7, weight: .semibold))
+              .foregroundColor(.tidexBlue)
+              .padding(.leading, 4)
+              .padding(.top, 4)
+            Spacer()
+          }
+          Spacer()
+        }
+      }
+
+      // Time text (centered, like real cells)
+      VStack(spacing: 0) {
+        Text("09:00")
+          .font(.system(size: 10, weight: .bold))
+        Text("17:00")
+          .font(.system(size: 10, weight: .bold))
+      }
+      .foregroundColor(color)
+      .padding(.top, 6)
+    }
+    .frame(width: 44, height: 54)
+    .background(
+      RoundedRectangle(cornerRadius: 6)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 6)
+        .strokeBorder(Color.tidexTextMuted.opacity(0.2), lineWidth: 0.5)
+    )
   }
 
   // MARK: - Calendar Grid
