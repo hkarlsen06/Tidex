@@ -55,7 +55,7 @@ struct ShiftCardContentLayout<
           Spacer()
           trailingTop
         }
-        HStack(alignment: .lastTextBaseline) {
+        HStack(alignment: .firstTextBaseline) {
           leadingBottom
           Spacer()
           trailingBottom
