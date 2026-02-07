@@ -1,9 +1,13 @@
 # Redirect unsupported locales to English for legal and marketing pages
-# These only apply when the requested file doesn't exist (i.e., non-no/en locales)
-# Netlify serves existing static files before applying redirects, so /no/* and /en/* paths
-# will serve their static files, while /de/*, /fr/*, etc. will redirect to English
+# Cloudflare Pages evaluates redirects before static assets, so we must
+# explicitly pass through supported locales (no, en) to avoid redirect loops.
+# Rules are matched top-to-bottom; first match wins.
 
-# Legal pages
+# Pass through supported locales (serve static files normally)
+/no/* /no/:splat 200
+/en/* /en/:splat 200
+
+# Redirect unsupported locales to English
 /:locale/terms/* /en/terms/ 302
 /:locale/terms /en/terms/ 302
 /:locale/privacy/* /en/privacy/ 302
