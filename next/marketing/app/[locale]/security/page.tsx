@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MarketingLegalPage } from '../../../components/MarketingLegalPage';
 import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
-import { defaultLocale, locales, type Locale } from '@/lib/i18n/config';
+import { locales, type Locale } from '@/lib/i18n/config';
 
 interface LocaleSecurityPageProps {
   params: Promise<{ locale: string }>;
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: LocaleSecurityPageProps): Pro
   }
 
   const dictionary = getMarketingDictionary(locale as Locale);
-  const url = locale === defaultLocale ? 'https://tidex.no/security' : `https://tidex.no/${locale}/security`;
+  const url = `https://tidex.no/${locale}/security`;
 
   return {
     title: dictionary.legal.security.meta.title,
