@@ -74,36 +74,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       }
     }
 
-    Task { @MainActor in
-      AppWarmup.shared.start()
-    }
+    // --- Synchronous (must complete before launch finishes) ---
 
-    // Set notification center delegate
+    // Must be set before any notifications arrive
     UNUserNotificationCenter.current().delegate = self
 
-    // Preload all feedback sounds
-    Haptics.prepareSounds()
-
-    // Clear expired images from cache (1-hour TTL)
-    ImageCache.shared.clearExpired()
-
-    // Register background task for shift checking (Live Activity auto-start)
+    // Apple requires BGTask handlers to be registered before app finishes launching
     registerBackgroundTasks()
 
-    // Schedule Live Activity for the next upcoming shift
-    // Uses cached shift data from App Group storage (synced when app is used)
-    scheduleNextShiftLiveActivity()
-
-    // Check immediately if there's an ongoing shift that needs a Live Activity
-    // This handles the case where app launches during a shift
-    checkAndStartLiveActivityIfNeeded()
-
-    // Activate Watch Connectivity for Apple Watch companion app
+    // Apple recommends activating WCSession early in launch
     WatchConnectivityManager.shared.activateSession()
 
-    // Always register for remote notifications on launch
-    // Ensures APNs token stays fresh (e.g., after TestFlight → App Store transition)
+    // Trivial async system call
     application.registerForRemoteNotifications()
+
+    // --- Deferred (fire-and-forget, never blocks launch or first frame) ---
+
+    Task { @MainActor [weak self] in
+      Haptics.prepareSounds()
+      ImageCache.shared.clearExpired()
+      self?.scheduleNextShiftLiveActivity()
+      self?.checkAndStartLiveActivityIfNeeded()
+    }
 
     launchLog.info("[Launch] AppDelegate.didFinishLaunching END")
     return true
