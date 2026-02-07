@@ -44,7 +44,7 @@ struct PayrollCard: View {
   }
 
   var body: some View {
-    ShiftCardContentLayout(rowSpacing: 2, centerTrailing: hasPayout && !showBreakdown) {
+    ShiftCardContentLayout(centerTrailing: hasPayout && !showBreakdown) {
       // Row 1: Label (leads with purpose, matches shift card title size)
       Text(label)
         .font(.system(size: 20, weight: .medium))
@@ -57,7 +57,7 @@ struct PayrollCard: View {
             .font(.system(size: 14, weight: .medium))
             .foregroundColor(.tidexBlue)
           Text(.dashboardToday)
-            .font(.system(size: 15, weight: .medium))
+            .font(.system(size: 14, weight: .medium))
             .foregroundColor(.tidexTextSecondary)
           Image(systemName: "party.popper.fill")
             .font(.system(size: 13))
@@ -69,9 +69,10 @@ struct PayrollCard: View {
             .font(.system(size: 14, weight: .medium))
             .foregroundColor(.tidexBlue)
           Text(dateParts.dayName)
-            .font(.system(size: 15, weight: .medium))
+            .font(.system(size: 14, weight: .medium))
             .foregroundColor(.tidexTextSecondary)
           Text("·")
+            .font(.system(size: 14, weight: .regular))
             .foregroundColor(.tidexTextMuted)
           HStack(spacing: 0) {
             Text(dateParts.dayNumber)
@@ -79,7 +80,7 @@ struct PayrollCard: View {
             Text(" ")
             Text(dateParts.monthName)
           }
-          .font(.system(size: 15, weight: .medium))
+          .font(.system(size: 14, weight: .medium))
           .foregroundColor(.tidexTextMuted)
         }
         .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
