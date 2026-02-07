@@ -727,4 +727,22 @@ final class SharingService: ObservableObject {
 
     logger.info("Successfully toggled muted status")
   }
+
+  /// Toggle owner_muted status for a specific viewer
+  /// Owner can update owner_muted directly via Supabase (RLS allows this)
+  func toggleOwnerMuted(viewerId: String, ownerMuted: Bool) async throws {
+    let session = try await AuthSessionManager.shared.getSession()
+    let userId = session.normalizedUserId
+
+    logger.info("Toggling owner_muted for viewer \(viewerId) to \(ownerMuted)")
+
+    try await supabase
+      .from("shift_shares")
+      .update(["owner_muted": ownerMuted])
+      .eq("owner_id", value: userId)
+      .eq("viewer_id", value: viewerId)
+      .execute()
+
+    logger.info("Successfully toggled owner_muted status")
+  }
 }

@@ -264,6 +264,16 @@ struct ManageSharingSheet: View {
         Task {
           await viewModel.shareBack(with: friend)
         }
+      },
+      onToggleMuted: {
+        Task {
+          await viewModel.toggleMuted(for: friend)
+        }
+      },
+      onToggleOwnerMuted: {
+        Task {
+          await viewModel.toggleOwnerMuted(for: friend)
+        }
       }
     )
     .id(friend.id)
@@ -294,20 +304,6 @@ struct ManageSharingSheet: View {
           )
         }
         .tint(friend.sharesWithMe?.blocked == true ? .green : .orange)
-
-        Button {
-          Task {
-            await viewModel.toggleMuted(for: friend)
-          }
-        } label: {
-          Label(
-            String(
-              localized: friend.sharesWithMe?.isMuted == true
-                ? .sharingSwipeUnmute : .sharingSwipeMute),
-            systemImage: friend.sharesWithMe?.isMuted == true ? "bell" : "bell.slash"
-          )
-        }
-        .tint(friend.sharesWithMe?.isMuted == true ? .blue : .gray)
       }
     }
   }

@@ -13,11 +13,7 @@ struct EmptyShiftCard: View {
   var body: some View {
     VStack(spacing: 8) {
       // Main card content
-      ShiftCardContentLayout(
-        columnSpacing: 16,
-        leadingSpacing: 8,
-        trailingSpacing: 6
-      ) {
+      ShiftCardContentLayout(rowSpacing: 8, centerTrailing: true) {
         // Placeholder day name and date
         RoundedRectangle(cornerRadius: 5)
           .fill(Color.tidexTextMuted.opacity(0.3))

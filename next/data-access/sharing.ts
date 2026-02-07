@@ -65,6 +65,7 @@ export type Friend = {
   readonly iShareWith: {
     readonly showEarningsToThem: boolean;
     readonly sharedAt: string;
+    readonly ownerMuted: boolean;
   } | null;
 };
 
@@ -1037,6 +1038,7 @@ async function getAllFriendsInternal(userId: string): Promise<Friend[]> {
           ? {
               showEarningsToThem: recipient.showEarnings,
               sharedAt: recipient.sharedAt,
+              ownerMuted: recipient.ownerMuted,
             }
           : null,
       });

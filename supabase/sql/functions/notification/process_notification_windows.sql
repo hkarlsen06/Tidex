@@ -150,6 +150,7 @@ BEGIN
     LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
     WHERE ss.owner_id = v_window.owner_id
       AND ss.muted = FALSE
+      AND ss.owner_muted = FALSE
       AND COALESCE(np.shared_shifts_enabled, TRUE) = TRUE
     ON CONFLICT (idempotency_key) DO NOTHING;
 

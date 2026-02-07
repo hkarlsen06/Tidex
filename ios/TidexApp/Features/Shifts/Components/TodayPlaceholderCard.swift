@@ -40,7 +40,7 @@ struct TodayPlaceholderCard: View {
 
   @ViewBuilder
   private var cardContent: some View {
-    ShiftCardContentLayout {
+    ShiftCardContentLayout(centerTrailing: true) {
       // Date (left side)
       HStack(spacing: 4) {
         Text(dateParts.dayName)

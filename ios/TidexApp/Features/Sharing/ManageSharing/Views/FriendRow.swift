@@ -12,8 +12,8 @@ enum FriendSectionType {
 // MARK: - Friend Row
 
 /// A row displaying a friend in the sharing management modal
-/// Only the earnings toggle (mutual/outgoing) or share back button (incoming) is shown inline.
-/// Mute, block, and remove actions are accessed via swipe gestures on the List row.
+/// Shows an inline bell icon for notification toggles, plus earnings toggle or share back button.
+/// Block and remove actions are accessed via swipe gestures on the List row.
 struct FriendRow: View {
   let friend: Friend
   let sectionType: FriendSectionType
@@ -21,6 +21,10 @@ struct FriendRow: View {
   var isHighlighted: Bool = false
   let onToggleEarnings: () -> Void
   let onShareBack: () -> Void
+  let onToggleMuted: () -> Void
+  let onToggleOwnerMuted: () -> Void
+
+  @State private var showNotificationPopover = false
 
   private var nameLayoutDirection: LayoutDirection {
     friend.displayName.isRightToLeft ? .rightToLeft : .leftToRight
@@ -45,7 +49,7 @@ struct FriendRow: View {
 
       Spacer(minLength: 8)
 
-      // Only the primary action inline
+      // Bell icon + primary action
       actionButtons
         .layoutPriority(1)
     }
@@ -63,22 +67,15 @@ struct FriendRow: View {
   @ViewBuilder
   private var subtitleView: some View {
     let hasContact = friend.contactInfo != nil
-    let isMuted = friend.sharesWithMe?.isMuted == true
     let isBlocked = friend.sharesWithMe?.blocked == true
 
-    if hasContact || isMuted || isBlocked {
+    if hasContact || isBlocked {
       HStack(spacing: 4) {
         if let contactInfo = friend.contactInfo {
           Text(contactInfo)
             .font(.system(size: 13))
             .foregroundColor(.tidexTextMuted)
             .lineLimit(1)
-        }
-
-        if isMuted {
-          Image(systemName: "bell.slash.fill")
-            .font(.system(size: 10))
-            .foregroundColor(.tidexTextMuted)
         }
 
         if isBlocked {
@@ -101,16 +98,61 @@ struct FriendRow: View {
     )
   }
 
-  // MARK: - Inline Action
+  // MARK: - Inline Actions
 
   @ViewBuilder
   private var actionButtons: some View {
-    switch sectionType {
-    case .mutual, .outgoing:
-      earningsToggle
-    case .incoming:
-      shareBackButton
+    HStack(spacing: 4) {
+      bellButton
+
+      switch sectionType {
+      case .mutual, .outgoing:
+        earningsToggle
+      case .incoming:
+        shareBackButton
+      }
     }
+  }
+
+  // MARK: - Bell Button
+
+  private var bellButton: some View {
+    Button {
+      showNotificationPopover.toggle()
+    } label: {
+      Image(systemName: bellIconName)
+        .font(.system(size: 15))
+        .foregroundColor(bellIconColor)
+        .frame(width: 28, height: 28)
+    }
+    .buttonStyle(PlainButtonStyle())
+    .popover(isPresented: $showNotificationPopover) {
+      NotificationTogglesPopover(
+        friend: friend,
+        sectionType: sectionType,
+        isActionInProgress: isActionInProgress,
+        onToggleMuted: onToggleMuted,
+        onToggleOwnerMuted: onToggleOwnerMuted
+      )
+    }
+  }
+
+  private var bellIconName: String {
+    let viewerMuted = friend.sharesWithMe?.isMuted ?? false
+    let ownerMuted = friend.iShareWith?.ownerMuted ?? false
+    if viewerMuted || ownerMuted {
+      return "bell.slash"
+    }
+    return "bell"
+  }
+
+  private var bellIconColor: Color {
+    let viewerMuted = friend.sharesWithMe?.isMuted ?? false
+    let ownerMuted = friend.iShareWith?.ownerMuted ?? false
+    if viewerMuted || ownerMuted {
+      return .tidexTextMuted
+    }
+    return .tidexBlue
   }
 
   private var earningsToggle: some View {
@@ -169,7 +211,9 @@ struct FriendRow: View {
         sectionType: .mutual,
         isActionInProgress: false,
         onToggleEarnings: {},
-        onShareBack: {}
+        onShareBack: {},
+        onToggleMuted: {},
+        onToggleOwnerMuted: {}
       )
     }
 
@@ -191,7 +235,9 @@ struct FriendRow: View {
         sectionType: .outgoing,
         isActionInProgress: false,
         onToggleEarnings: {},
-        onShareBack: {}
+        onShareBack: {},
+        onToggleMuted: {},
+        onToggleOwnerMuted: {}
       )
     }
 
@@ -215,7 +261,9 @@ struct FriendRow: View {
         sectionType: .incoming,
         isActionInProgress: false,
         onToggleEarnings: {},
-        onShareBack: {}
+        onShareBack: {},
+        onToggleMuted: {},
+        onToggleOwnerMuted: {}
       )
     }
   }

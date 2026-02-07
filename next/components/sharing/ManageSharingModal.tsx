@@ -219,6 +219,7 @@ export function ManageSharingModal({
                 iShareWith: {
                   showEarningsToThem: false,
                   sharedAt: new Date().toISOString(),
+                  ownerMuted: false,
                 },
               }
             : f,
