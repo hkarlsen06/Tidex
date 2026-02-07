@@ -1,4 +1,7 @@
+import os
 import UIKit
+
+private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 /// Scene delegate for handling UIScene lifecycle events
 /// Primarily used for Home Screen quick actions (app icon shortcuts)
@@ -45,6 +48,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     willConnectTo session: UISceneSession,
     options connectionOptions: UIScene.ConnectionOptions
   ) {
+    launchLog.info("[Launch] SceneDelegate.scene willConnectTo START")
     // Register dynamic shortcuts with localized titles
     registerDynamicShortcuts()
 
@@ -52,6 +56,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     if let shortcutItem = connectionOptions.shortcutItem {
       handleQuickAction(shortcutItem)
     }
+    launchLog.info("[Launch] SceneDelegate.scene willConnectTo END")
   }
 
   /// Called when user selects a quick action while app is running (warm launch)
