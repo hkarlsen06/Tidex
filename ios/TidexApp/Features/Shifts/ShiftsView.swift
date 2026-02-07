@@ -1257,6 +1257,17 @@ struct ShiftsView: View {
       .onDisappear {
         listReady = false
       }
+      .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+        guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
+          tab == .shifts, showListView
+        else { return }
+        let scrollToToday = notification.userInfo?["scrollToToday"] as? Bool ?? false
+        if scrollToToday {
+          withAnimation { scrollToTodayItem(using: proxy) }
+        } else if let firstId = weekGroupsWithPlaceholder.first?.items.first?.id {
+          withAnimation { proxy.scrollTo(firstId, anchor: .top) }
+        }
+      }
     }
   }
 
