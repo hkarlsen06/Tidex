@@ -101,7 +101,7 @@ struct SharerListView: View {
       if isLoading && sharers.isEmpty {
         loadingState
       } else if sharers.isEmpty {
-        SharerListEmptyState(onAddFriend: onAddFriend)
+        FriendsListEmptyState(onAddFriend: onAddFriend)
       } else {
         sharersList
       }
@@ -125,7 +125,7 @@ struct SharerListView: View {
     VStack(alignment: .leading, spacing: 12) {
       // Sharers - sorted by shift proximity
       ForEach(sortedSharers) { sharer in
-        SharerRow(
+        FriendCard(
           sharer: sharer,
           preview: shiftPreviews[sharer.id],
           isSelected: selectedSharer?.id == sharer.id,

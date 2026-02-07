@@ -236,6 +236,8 @@ extension Color {
 
 /// Shadow elevation levels for cards
 enum TidexShadowLevel {
+  /// Very light shadow for nested/inner cards
+  case subtle
   /// Subtle shadow for standard cards (shift cards, settings rows)
   case card
   /// Medium shadow for modals and popovers
@@ -293,6 +295,8 @@ struct TidexCardShadowModifier: ViewModifier {
       return custom
     }
     switch level {
+    case .subtle:
+      return 12
     case .card:
       return 24
     case .elevated:
@@ -305,6 +309,8 @@ struct TidexCardShadowModifier: ViewModifier {
   /// Glow opacity for dark mode rim effect
   private var glowOpacity: Double {
     switch level {
+    case .subtle:
+      return 0.06
     case .card:
       return 0.08
     case .elevated:
@@ -318,6 +324,8 @@ struct TidexCardShadowModifier: ViewModifier {
     switch colorScheme {
     case .light:
       switch level {
+      case .subtle:
+        return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.06)
       case .card:
         return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.10)
       case .elevated:
@@ -327,6 +335,8 @@ struct TidexCardShadowModifier: ViewModifier {
       }
     case .dark:
       switch level {
+      case .subtle:
+        return Color.black.opacity(0.15)
       case .card:
         return Color.black.opacity(0.30)
       case .elevated:
@@ -341,6 +351,8 @@ struct TidexCardShadowModifier: ViewModifier {
 
   private var shadowRadius: CGFloat {
     switch level {
+    case .subtle:
+      return colorScheme == .light ? 4 : 3
     case .card:
       return colorScheme == .light ? 8 : 6
     case .elevated:
@@ -352,6 +364,8 @@ struct TidexCardShadowModifier: ViewModifier {
 
   private var shadowY: CGFloat {
     switch level {
+    case .subtle:
+      return colorScheme == .light ? 1 : 1
     case .card:
       return colorScheme == .light ? 2 : 2
     case .elevated:

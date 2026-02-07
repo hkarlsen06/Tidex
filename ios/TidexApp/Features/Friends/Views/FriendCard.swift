@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// A row displaying a user who shares their shifts with the current user
+/// A card displaying a friend who shares their shifts with the current user
 /// Shows their name, avatar, and a preview of their next/active/past shift
-struct SharerRow: View {
+struct FriendCard: View {
   let sharer: SharedUser
   let preview: SharerShiftPreview?
   let isSelected: Bool
@@ -107,8 +107,9 @@ struct SharerRow: View {
     .padding(.vertical, Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .fill(Color.tidexSurfaceSecondary.opacity(0.5))
+        .fill(Color.tidexSurfacePrimary)
     )
+    .tidexCardShadow(.subtle, cornerRadius: 12)
     .shimmer(duration: 1.2)
   }
 }
@@ -169,7 +170,7 @@ private struct ShiftPreviewCard: View {
       .padding(.vertical, Spacing.sm)
       .background(
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(Color.tidexSurfaceSecondary.opacity(0.5))
+          .fill(Color.tidexSurfacePrimary)
       )
       .overlay(
         // Progress bar for active shifts
@@ -182,6 +183,7 @@ private struct ShiftPreviewCard: View {
           }
         }
       )
+      .tidexCardShadow(.subtle, cornerRadius: 12)
     }
   }
 
@@ -459,7 +461,7 @@ private struct ShiftPreviewCard: View {
 // MARK: - Empty State
 
 /// Shown when no one has shared shifts with the user
-struct SharerListEmptyState: View {
+struct FriendsListEmptyState: View {
   var onAddFriend: (() -> Void)?
 
   var body: some View {
@@ -503,7 +505,7 @@ struct SharerListEmptyState: View {
 
 #Preview {
   VStack(spacing: 16) {
-    SharerRow(
+    FriendCard(
       sharer: SharedUser(
         id: "1",
         email: "john@example.com",
@@ -521,7 +523,7 @@ struct SharerListEmptyState: View {
       onTap: {}
     )
 
-    SharerRow(
+    FriendCard(
       sharer: SharedUser(
         id: "2",
         email: "jane@example.com",
