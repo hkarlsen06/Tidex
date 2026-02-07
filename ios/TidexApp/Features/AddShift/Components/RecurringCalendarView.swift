@@ -75,7 +75,7 @@ struct RecurringCalendarView: View {
   }
 
   private var resetButton: AnyView? {
-    guard viewModel.hasContent, let onReset else { return nil }
+    guard let onReset else { return nil }
     return AnyView(
       Button(action: onReset) {
         Image(systemName: "arrow.counterclockwise.circle.fill")
@@ -83,6 +83,9 @@ struct RecurringCalendarView: View {
           .foregroundColor(.tidexBlue)
       }
       .buttonStyle(.plain)
+      .opacity(viewModel.hasContent ? 1 : 0)
+      .allowsHitTesting(viewModel.hasContent)
+      .animation(.easeInOut(duration: 0.2), value: viewModel.hasContent)
     )
   }
 

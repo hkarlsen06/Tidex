@@ -30,6 +30,9 @@ struct RecentTimesChips: View {
   /// Available width for laying out chips (passed from parent)
   let availableWidth: CGFloat
 
+  /// ID of the currently active time range (matches TimeRangeCount.id)
+  var activeRangeId: String?
+
   /// Shifts repository for querying shift data
   private let shiftsRepository = ShiftsRepository.shared
 
@@ -60,7 +63,7 @@ struct RecentTimesChips: View {
       } else {
         HStack(spacing: chipSpacing) {
           ForEach(visibleRanges) { range in
-            RecentTimeChip(range: range) {
+            RecentTimeChip(range: range, isSelected: range.id == activeRangeId) {
               onSelect(range)
             }
           }
@@ -109,6 +112,7 @@ struct RecentTimesChips: View {
 
 private struct RecentTimeChip: View {
   let range: TimeRangeCount
+  let isSelected: Bool
   let onTap: () -> Void
 
   @Environment(\.layoutDirection) private var layoutDirection
@@ -126,11 +130,11 @@ private struct RecentTimeChip: View {
     Button(action: onTap) {
       Text(timeRangeText)
         .font(.system(size: 13, weight: .medium, design: .monospaced))
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(isSelected ? .white : .tidexBlue)
         .environment(\.layoutDirection, .leftToRight)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.tidexBlue.opacity(0.1))
+        .background(isSelected ? Color.tidexBlue : Color.tidexBlue.opacity(0.1))
         .clipShape(Capsule())
     }
     .buttonStyle(.plain)
