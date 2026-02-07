@@ -44,22 +44,33 @@ struct PayrollCard: View {
   }
 
   var body: some View {
-    ShiftCardContentLayout {
-      // Row 1: Date display
+    ShiftCardContentLayout(rowSpacing: 2, centerTrailing: hasPayout && !showBreakdown) {
+      // Row 1: Label (leads with purpose, matches shift card title size)
+      Text(label)
+        .font(.system(size: 20, weight: .medium))
+        .foregroundColor(.tidexTextPrimary)
+    } leadingBottom: {
+      // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
+          Image(systemName: "banknote")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexBlue)
           Text(.dashboardToday)
-            .font(.system(size: 20, weight: .medium))
-            .foregroundColor(.tidexTextPrimary)
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.tidexTextSecondary)
           Image(systemName: "party.popper.fill")
-            .font(.system(size: 18))
+            .font(.system(size: 13))
             .foregroundColor(.tidexBlue)
         }
       } else {
         HStack(spacing: 4) {
+          Image(systemName: "banknote")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexBlue)
           Text(dateParts.dayName)
-            .font(.system(size: 20, weight: .medium))
-            .foregroundColor(.tidexTextPrimary)
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.tidexTextSecondary)
           Text("·")
             .foregroundColor(.tidexTextMuted)
           HStack(spacing: 0) {
@@ -68,20 +79,10 @@ struct PayrollCard: View {
             Text(" ")
             Text(dateParts.monthName)
           }
-          .font(.system(size: 20, weight: .medium))
+          .font(.system(size: 15, weight: .medium))
           .foregroundColor(.tidexTextMuted)
         }
         .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
-      }
-    } leadingBottom: {
-      // Row 2: Label with calendar icon
-      HStack(spacing: 4) {
-        Image(systemName: "calendar")
-          .font(.system(size: 14, weight: .regular))
-          .foregroundColor(.tidexTextMuted)
-        Text(label)
-          .font(.system(size: 14, weight: .regular))
-          .foregroundColor(.tidexTextPrimary)
       }
     } trailingTop: {
       // Right side: amount
@@ -97,7 +98,6 @@ struct PayrollCard: View {
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
       } else {
-        // Skeleton for amount
         RoundedRectangle(cornerRadius: 6)
           .fill(Color.tidexTextMuted.opacity(0.3))
           .frame(width: 100, height: 20)
@@ -117,7 +117,6 @@ struct PayrollCard: View {
         .animation(.spring(duration: 0.8, bounce: 0), value: gross)
         .animation(.spring(duration: 0.8, bounce: 0), value: tax)
       } else if !hasPayout {
-        // Skeleton for breakdown
         RoundedRectangle(cornerRadius: 4)
           .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 70, height: 12)

@@ -65,10 +65,30 @@ struct Friend: Codable, Identifiable, Equatable {
     let showEarningsToThem: Bool
     /// When I started sharing with them (ISO date string)
     let sharedAt: String
+    /// Whether I've muted notifications to them about my shift changes
+    let ownerMuted: Bool
+
+    init(showEarningsToThem: Bool, sharedAt: String, ownerMuted: Bool = false) {
+      self.showEarningsToThem = showEarningsToThem
+      self.sharedAt = sharedAt
+      self.ownerMuted = ownerMuted
+    }
+
+    init(from decoder: Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      showEarningsToThem = try container.decode(Bool.self, forKey: .showEarningsToThem)
+      sharedAt = try container.decode(String.self, forKey: .sharedAt)
+      ownerMuted = try container.decodeIfPresent(Bool.self, forKey: .ownerMuted) ?? false
+    }
 
     /// Create a copy with updated earnings visibility
     func with(showEarningsToThem: Bool) -> IShareWith {
-      IShareWith(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt)
+      IShareWith(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt, ownerMuted: ownerMuted)
+    }
+
+    /// Create a copy with updated owner muted status
+    func with(ownerMuted: Bool) -> IShareWith {
+      IShareWith(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt, ownerMuted: ownerMuted)
     }
   }
 

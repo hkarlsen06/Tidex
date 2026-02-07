@@ -65,7 +65,7 @@ struct FeaturedShiftCard: View {
   var body: some View {
     VStack(spacing: 8) {
       // Main card content
-      ShiftCardContentLayout {
+      ShiftCardContentLayout(centerTrailing: !showBreakdown) {
         // Row 1: Day name and date
         HStack(spacing: 4) {
           Text(dateParts.dayName)

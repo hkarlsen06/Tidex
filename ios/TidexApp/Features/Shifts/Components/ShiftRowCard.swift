@@ -68,7 +68,7 @@ struct ShiftRowCard: View {
   /// The card's visual content (extracted for cleaner code)
   @ViewBuilder
   private var cardContent: some View {
-    ShiftCardContentLayout {
+    ShiftCardContentLayout(centerTrailing: !showBreakdown && !excludedFromTotal) {
       // Row 1: Day name and date
       HStack(spacing: 4) {
         Text(dateParts.dayName)

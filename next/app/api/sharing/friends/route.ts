@@ -58,7 +58,7 @@ export async function GET() {
     // Fetch recipients (people I share with)
     const { data: outgoingShares, error: outgoingError } = await adminClient
       .from("shift_shares")
-      .select("viewer_id, created_at, show_earnings")
+      .select("viewer_id, created_at, show_earnings, owner_muted")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false });
 
@@ -162,6 +162,7 @@ export async function GET() {
         {
           showEarnings: s.show_earnings,
           sharedAt: s.created_at,
+          ownerMuted: s.owner_muted ?? false,
         },
       ])
     );
@@ -193,6 +194,7 @@ export async function GET() {
           ? {
               showEarningsToThem: recipient.showEarnings,
               sharedAt: recipient.sharedAt,
+              ownerMuted: recipient.ownerMuted,
             }
           : null,
       });

@@ -77,6 +77,8 @@ export type ShareRecipient = {
   readonly sharedAt: string;
   /** Whether this recipient can see your earnings (true) or only hours (false) */
   readonly showEarnings: boolean;
+  /** Whether the owner has muted notifications to this viewer about their shift changes */
+  readonly ownerMuted: boolean;
 };
 
 /**
@@ -561,7 +563,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("viewer_id, created_at, show_earnings")
+                .select("viewer_id, created_at, show_earnings, owner_muted")
                 .eq("owner_id", userId)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
@@ -635,6 +637,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
+              ownerMuted: share.owner_muted ?? false,
             };
           }) as readonly ShareRecipient[];
         }).pipe(

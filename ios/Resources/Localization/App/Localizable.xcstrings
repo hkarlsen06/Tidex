@@ -252786,6 +252786,57 @@
         }
       }
     },
+    "sharing.notifications.notifyThem" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notify %@ about you"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Varsle %@ om deg"
+          }
+        }
+      }
+    },
+    "sharing.notifications.receiveFrom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receive from %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motta fra %@"
+          }
+        }
+      }
+    },
+    "sharing.notifications.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Varsler"
+          }
+        }
+      }
+    },
     "sharing.remove" : {
       "extractionState" : "manual",
       "localizations" : {

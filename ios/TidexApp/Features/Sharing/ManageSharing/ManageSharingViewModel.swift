@@ -278,6 +278,43 @@ final class ManageSharingViewModel: ObservableObject {
       sharesWithMe: sharesWithMe.with(notificationFrequency: newFrequency))
   }
 
+  // MARK: - Toggle Owner Muted Status
+
+  /// Toggle whether the current user sends notifications to a specific viewer about shift changes
+  func toggleOwnerMuted(for friend: Friend) async {
+    guard actionInProgress == nil else { return }
+    guard let iShareWith = friend.iShareWith else { return }
+
+    let newValue = !iShareWith.ownerMuted
+
+    // Optimistic update
+    applyOptimisticOwnerMutedUpdate(friendId: friend.id, ownerMuted: newValue)
+    actionInProgress = friend.id
+
+    do {
+      try await sharingService.toggleOwnerMuted(viewerId: friend.id, ownerMuted: newValue)
+      logger.info("Toggled owner_muted for \(friend.id) to \(newValue)")
+      Haptics.play(.selection)
+    } catch {
+      // Revert on failure
+      applyOptimisticOwnerMutedUpdate(friendId: friend.id, ownerMuted: !newValue)
+      logger.error("Failed to toggle owner_muted: \(error.localizedDescription)")
+      errorMessage = String(localized: .sharingErrorUpdateNotifications)
+      Haptics.play(.error)
+    }
+
+    actionInProgress = nil
+  }
+
+  private func applyOptimisticOwnerMutedUpdate(friendId: String, ownerMuted: Bool) {
+    guard let index = friends.firstIndex(where: { $0.id == friendId }),
+      let iShareWith = friends[index].iShareWith
+    else { return }
+
+    friends[index] = friends[index].with(
+      iShareWith: iShareWith.with(ownerMuted: ownerMuted))
+  }
+
   // MARK: - Remove Share
 
   /// Remove my share with someone (revoke their access to my shifts)
