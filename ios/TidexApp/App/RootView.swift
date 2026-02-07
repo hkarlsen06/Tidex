@@ -1,4 +1,7 @@
+import os
 import SwiftUI
+
+private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 /// Root view that manages the app's navigation based on authentication state
 /// Handles transitions between: Loading -> Onboarding -> Login -> MFA -> Post-Auth Onboarding -> Dashboard
@@ -103,6 +106,9 @@ struct RootView: View {
     // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
     // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
     .onAppear {
+      launchLog.info("[Launch] RootView.onAppear – appState=\(String(describing: coordinator.appState))")
+    }
+    .onAppear {
       Task { @MainActor in
         // Defer storage initialization until after first render to avoid launch stalls.
         await Task.yield()
@@ -145,6 +151,9 @@ struct LoadingView: View {
       }
     }
     .ignoresSafeArea()
+    .onAppear {
+      launchLog.info("[Launch] LoadingView.onAppear – first SwiftUI frame visible")
+    }
   }
 }
 

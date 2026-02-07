@@ -1,7 +1,10 @@
 import Foundation
+import os
 import Supabase
 import SwiftUI
 import UIKit
+
+private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 /// Central coordinator for app-wide authentication state and navigation
 /// Manages the flow: Splash -> Login -> MFA (if needed) -> Dashboard
@@ -153,11 +156,13 @@ final class AppCoordinator: ObservableObject {
     settingsService: SettingsService? = nil,
     syncCoordinator: SyncCoordinator? = nil
   ) {
+    launchLog.info("[Launch] AppCoordinator.init START")
     self.authService = authService ?? AuthService.shared
     self.settingsService = settingsService ?? SettingsService.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
     setupAuthStateListener()
     setupInitialSessionCheck()
+    launchLog.info("[Launch] AppCoordinator.init END")
   }
 
   deinit {
@@ -187,6 +192,7 @@ final class AppCoordinator: ObservableObject {
       // the authStateChanges stream hasn't emitted.
       // This can happen if there's no stored session or the SDK initialization is slow.
       if self.appState == .loading && !self.didReceiveInitialSession {
+        launchLog.warning("[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
         await self.performInitialSessionCheck()
       }
     }
@@ -200,6 +206,7 @@ final class AppCoordinator: ObservableObject {
       _ = try await AuthSessionManager.shared.getSession()
       await checkMFAAndUpdateState()
     } catch {
+      launchLog.info("[Launch] AppCoordinator → .unauthenticated (no session)")
       appState = .unauthenticated
     }
   }
@@ -208,11 +215,13 @@ final class AppCoordinator: ObservableObject {
 
   private func setupAuthStateListener() {
     authStateTask = Task { [weak self] in
+      launchLog.info("[Launch] AppCoordinator authStateChanges loop entered")
       for await (event, session) in supabase.auth.authStateChanges {
         guard let self = self else { return }
 
         switch event {
         case .initialSession:
+          launchLog.info("[Launch] AppCoordinator received .initialSession, hasSession=\(session != nil)")
           // Cancel the timeout task since we received the session event
           self.initialSessionTimeoutTask?.cancel()
           self.initialSessionTimeoutTask = nil
@@ -332,6 +341,7 @@ final class AppCoordinator: ObservableObject {
         // Terms appear up to date - proceed to authenticated immediately
         loadOnboardingStateFromUser(user)
         self.initialSyncComplete = false
+        launchLog.info("[Launch] AppCoordinator → .authenticated")
         self.appState = .authenticated
         await updateUserProfile()
 

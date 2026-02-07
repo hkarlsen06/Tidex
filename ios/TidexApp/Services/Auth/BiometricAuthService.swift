@@ -54,6 +54,8 @@ final class BiometricAuthService: ObservableObject {
   // MARK: - Initialization
 
   private init() {
+    let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
+    launchLog.info("[Launch] BiometricAuthService.init START")
     let availability = supabase.auth.biometricsAvailability()
     isAvailable = availability.isAvailable
     biometricType = availability.biometryType
@@ -79,6 +81,7 @@ final class BiometricAuthService: ObservableObject {
       isLocked = false
       Self.isEnabledStatic = false
     }
+    launchLog.info("[Launch] BiometricAuthService.init END – isLocked=\(self.isLocked), isEnabled=\(sdkEnabled)")
   }
 
   // MARK: - Biometric Availability

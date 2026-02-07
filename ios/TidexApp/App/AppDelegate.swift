@@ -1,8 +1,11 @@
 import ActivityKit
 import BackgroundTasks
+import os
 import Supabase
 import UIKit
 import WatchConnectivity
+
+private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -52,6 +55,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    launchLog.info("[Launch] AppDelegate.didFinishLaunching START")
     Task { @MainActor in
       AppWarmup.shared.start()
     }
@@ -83,6 +87,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Ensures APNs token stays fresh (e.g., after TestFlight → App Store transition)
     application.registerForRemoteNotifications()
 
+    launchLog.info("[Launch] AppDelegate.didFinishLaunching END")
     return true
   }
 
@@ -93,6 +98,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     configurationForConnecting connectingSceneSession: UISceneSession,
     options: UIScene.ConnectionOptions
   ) -> UISceneConfiguration {
+    launchLog.info("[Launch] AppDelegate.configurationForConnecting")
     let config = UISceneConfiguration(
       name: "Default Configuration", sessionRole: connectingSceneSession.role)
     config.delegateClass = SceneDelegate.self

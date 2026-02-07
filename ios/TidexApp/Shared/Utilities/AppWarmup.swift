@@ -1,4 +1,7 @@
+import os
 import SwiftUI
+
+private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 final class AppWarmup {
   static let shared = AppWarmup()
@@ -9,6 +12,7 @@ final class AppWarmup {
   func start() {
     guard !didRun else { return }
     didRun = true
+    launchLog.info("[Launch] AppWarmup.start()")
     warmupFormatters()
     Task { @MainActor [weak self] in
       // Let the first frame render before prewarming offscreen SwiftUI cards.
