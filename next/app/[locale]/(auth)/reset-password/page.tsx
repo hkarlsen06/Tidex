@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { KeyRound } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 import { turnstileLanguages, type Locale } from "@/lib/i18n/config";
 
@@ -45,13 +46,13 @@ import {
   Field,
   FieldLabel,
   FieldError,
-  FieldGroup,
 } from "@/components/app/Field";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
+import { AuthHeader } from "@/components/app/AuthHeader";
+import { GroupedInput, GroupedInputDivider, groupedInputClassName } from "@/components/app/GroupedInput";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type Step = "input" | "otp" | "password";
@@ -320,220 +321,254 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
 
   return (
     <motion.div
-      className="relative w-full"
+      className="relative w-full max-w-md mx-auto"
       variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t.pages.auth.resetPassword.title}</CardTitle>
-          <CardDescription>
-            {step === "input" && t.pages.auth.resetPassword.descriptionInput}
-            {step === "otp" && t.pages.auth.resetPassword.descriptionOtp}
-            {step === "password" && t.pages.auth.resetPassword.descriptionPassword}
-          </CardDescription>
-        </CardHeader>
+      {/* Header: Key icon in blue circle */}
+      <AuthHeader
+        variant="icon"
+        icon={<KeyRound className="h-9 w-9 text-brand-gradient-start" />}
+        title={t.pages.auth.resetPassword.title}
+        subtitle={
+          step === "input"
+            ? t.pages.auth.resetPassword.descriptionInput
+            : step === "otp"
+              ? t.pages.auth.resetPassword.descriptionOtp
+              : t.pages.auth.resetPassword.descriptionPassword
+        }
+      />
 
-        <CardContent>
-          {/* Step 1: Email or Phone Input */}
-          {step === "input" && (
-            <form className="space-y-6" noValidate onSubmit={handleSendOtp}>
-              <Field data-invalid={!!fieldErrors.emailOrPhone}>
-                <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.resetPassword.emailOrPhoneLabel}</FieldLabel>
-                <Input
-                  id="emailOrPhone"
-                  name="emailOrPhone"
-                  type="text"
-                  placeholder={t.pages.auth.resetPassword.emailOrPhonePlaceholder}
-                  value={emailOrPhone}
-                  onChange={(event) => {
-                    resetMessage();
-                    resetFieldErrors();
-                    setEmailOrPhone(event.target.value);
-                  }}
-                  aria-invalid={!!fieldErrors.emailOrPhone}
-                />
-                <FieldError>{fieldErrors.emailOrPhone}</FieldError>
-              </Field>
-
-              {/* Turnstile CAPTCHA Widget */}
-              <div className="flex justify-center">
-                <TurnstileCaptcha
-                  ref={turnstileRef}
-                  execution="render"
-                  appearance="always"
-                  size="flexible"
-                  language={turnstileLanguages[locale as Locale]}
-                  onSuccess={(token) => {
-                    setCaptchaToken(token);
-                    resetMessage();
-                  }}
-                  onError={() => {
-                    setCaptchaToken(null);
-                    setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaFailed });
-                  }}
-                  onExpire={() => {
-                    setCaptchaToken(null);
-                    setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaExpired });
-                  }}
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting || !captchaToken}
-                loading={isSubmitting}
-                size="lg"
-                className="w-full"
-              >
-                {t.pages.auth.resetPassword.sendCodeButton}
-              </Button>
-            </form>
-          )}
-
-          {/* Step 2: OTP */}
-          {step === "otp" && (
-            <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-              <Field data-invalid={!!fieldErrors.otp} className="items-center">
-                <FieldLabel htmlFor="otp" className="sr-only">
-                  {t.pages.auth.resetPassword.otpLabel}
-                </FieldLabel>
-                <InputOTP
-                  maxLength={6}
-                  value={otp}
-                  onChange={(value) => {
-                    resetAll();
-                    setOtp(value);
-                  }}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                {fieldErrors.otp && (
-                  <FieldError className="text-center">{fieldErrors.otp}</FieldError>
-                )}
-              </Field>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                loading={isSubmitting}
-                size="lg"
-                className="w-full"
-              >
-                {t.pages.auth.resetPassword.verifyButton}
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setStep("input");
-                  setOtp("");
-                  resetAll();
+      {/* Main content */}
+      <div className="space-y-6">
+        {/* Step 1: Email or Phone Input */}
+        {step === "input" && (
+          <form className="space-y-6" noValidate onSubmit={handleSendOtp}>
+            <GroupedInput>
+              <Input
+                id="emailOrPhone"
+                name="emailOrPhone"
+                type="text"
+                placeholder={t.pages.auth.resetPassword.emailOrPhonePlaceholder}
+                value={emailOrPhone}
+                onChange={(event) => {
+                  resetMessage();
+                  resetFieldErrors();
+                  setEmailOrPhone(event.target.value);
                 }}
-                className="w-full"
-              >
-                {t.pages.auth.resetPassword.backButton}
-              </Button>
-            </form>
-          )}
+                aria-invalid={!!fieldErrors.emailOrPhone}
+                className={groupedInputClassName}
+              />
+            </GroupedInput>
 
-          {/* Step 3: New Password */}
-          {step === "password" && (
-            <form
-              className="space-y-6"
-              noValidate
-              onSubmit={handleUpdatePassword}
-            >
-              <FieldGroup>
-                <Field data-invalid={!!fieldErrors.password}>
-                  <FieldLabel htmlFor="password">{t.pages.auth.resetPassword.newPasswordLabel}</FieldLabel>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder={t.pages.auth.resetPassword.newPasswordPlaceholder}
-                    value={password}
-                    onChange={(event) => {
-                      resetAll();
-                      setPassword(event.target.value);
-                    }}
-                    aria-invalid={!!fieldErrors.password}
-                  />
-                  <FieldError>{fieldErrors.password}</FieldError>
-                </Field>
+            {fieldErrors.emailOrPhone && (
+              <p className="text-xs text-error px-1">{fieldErrors.emailOrPhone}</p>
+            )}
 
-                <Field data-invalid={!!fieldErrors.confirmPassword}>
-                  <FieldLabel htmlFor="confirmPassword">{t.pages.auth.resetPassword.confirmPasswordLabel}</FieldLabel>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder={t.pages.auth.resetPassword.confirmPasswordPlaceholder}
-                    value={confirmPassword}
-                    onChange={(event) => {
-                      resetAll();
-                      setConfirmPassword(event.target.value);
-                    }}
-                    aria-invalid={!!fieldErrors.confirmPassword}
-                  />
-                  <FieldError>{fieldErrors.confirmPassword}</FieldError>
-                </Field>
-              </FieldGroup>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                loading={isSubmitting}
-                size="lg"
-                className="w-full"
-              >
-                {t.pages.auth.resetPassword.updateButton}
-              </Button>
-            </form>
-          )}
-
-          {/* Message Display */}
-          {message && (
-            <div
-              className={`mt-4 rounded-md px-4 py-3 text-sm font-medium ${
-                message.type === "error"
-                  ? "bg-error-subtle text-error-foreground"
-                  : "bg-success-subtle text-success-foreground"
-              }`}
-              role="status"
-              aria-live="polite"
-            >
-              {message.text}
+            {/* Turnstile CAPTCHA Widget */}
+            <div className="flex justify-center">
+              <TurnstileCaptcha
+                ref={turnstileRef}
+                execution="render"
+                appearance="always"
+                size="flexible"
+                language={turnstileLanguages[locale as Locale]}
+                onSuccess={(token) => {
+                  setCaptchaToken(token);
+                  resetMessage();
+                }}
+                onError={() => {
+                  setCaptchaToken(null);
+                  setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaFailed });
+                }}
+                onExpire={() => {
+                  setCaptchaToken(null);
+                  setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaExpired });
+                }}
+              />
             </div>
-          )}
 
-          {/* Back to login */}
-          <div className="mt-6 text-center">
+            {message && (
+              <div
+                className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                  message.type === "error"
+                    ? "bg-error-subtle text-error-foreground"
+                    : "bg-success-subtle text-success-foreground"
+                }`}
+                role="status"
+                aria-live="polite"
+              >
+                {message.text}
+              </div>
+            )}
+
             <Button
-              asChild
-              variant="link"
-              size="sm"
+              type="submit"
+              disabled={isSubmitting || !captchaToken}
+              loading={isSubmitting}
+              size="lg"
+              className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
             >
-              <Link href={`/${locale}/login`}>
-                {t.pages.auth.resetPassword.backToLogin}
-              </Link>
+              {t.pages.auth.resetPassword.sendCodeButton}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </form>
+        )}
+
+        {/* Step 2: OTP */}
+        {step === "otp" && (
+          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+            <Field data-invalid={!!fieldErrors.otp} className="items-center">
+              <FieldLabel htmlFor="otp" className="sr-only">
+                {t.pages.auth.resetPassword.otpLabel}
+              </FieldLabel>
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => {
+                  resetAll();
+                  setOtp(value);
+                }}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+              {fieldErrors.otp && (
+                <FieldError className="text-center">{fieldErrors.otp}</FieldError>
+              )}
+            </Field>
+
+            {message && (
+              <div
+                className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                  message.type === "error"
+                    ? "bg-error-subtle text-error-foreground"
+                    : "bg-success-subtle text-success-foreground"
+                }`}
+                role="status"
+                aria-live="polite"
+              >
+                {message.text}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              size="lg"
+              className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+            >
+              {t.pages.auth.resetPassword.verifyButton}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStep("input");
+                setOtp("");
+                resetAll();
+              }}
+              className="w-full"
+            >
+              {t.pages.auth.resetPassword.backButton}
+            </Button>
+          </form>
+        )}
+
+        {/* Step 3: New Password */}
+        {step === "password" && (
+          <form
+            className="space-y-6"
+            noValidate
+            onSubmit={handleUpdatePassword}
+          >
+            <GroupedInput>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder={t.pages.auth.resetPassword.newPasswordPlaceholder}
+                value={password}
+                onChange={(event) => {
+                  resetAll();
+                  setPassword(event.target.value);
+                }}
+                aria-invalid={!!fieldErrors.password}
+                className={groupedInputClassName}
+              />
+              <GroupedInputDivider />
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder={t.pages.auth.resetPassword.confirmPasswordPlaceholder}
+                value={confirmPassword}
+                onChange={(event) => {
+                  resetAll();
+                  setConfirmPassword(event.target.value);
+                }}
+                aria-invalid={!!fieldErrors.confirmPassword}
+                className={groupedInputClassName}
+              />
+            </GroupedInput>
+
+            {fieldErrors.password && (
+              <p className="text-xs text-error px-1">{fieldErrors.password}</p>
+            )}
+            {fieldErrors.confirmPassword && (
+              <p className="text-xs text-error px-1">{fieldErrors.confirmPassword}</p>
+            )}
+
+            {message && (
+              <div
+                className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                  message.type === "error"
+                    ? "bg-error-subtle text-error-foreground"
+                    : "bg-success-subtle text-success-foreground"
+                }`}
+                role="status"
+                aria-live="polite"
+              >
+                {message.text}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              size="lg"
+              className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+            >
+              {t.pages.auth.resetPassword.updateButton}
+            </Button>
+          </form>
+        )}
+      </div>
+
+      {/* Back to login */}
+      <div className="mt-10 text-center">
+        <p className="text-sm text-text-secondary">
+          <Link
+            href={`/${locale}/login`}
+            className="font-semibold text-brand-gradient-start hover:underline"
+          >
+            {t.pages.auth.resetPassword.backToLogin}
+          </Link>
+        </p>
+      </div>
 
       <div className="mt-6 flex justify-center">
         <LocaleSwitcher />

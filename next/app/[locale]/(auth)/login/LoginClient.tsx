@@ -5,6 +5,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Mail } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/client';
 import { turnstileLanguages, locales, type Locale } from '@/lib/i18n/config';
 
@@ -41,16 +42,15 @@ import {
   Field,
   FieldLabel,
   FieldError,
-  FieldGroup,
-  FieldSeparator,
 } from '@/components/app/Field';
 import { Input } from '@/components/app/Input';
 import { PasswordInput } from '@/components/app/PasswordInput';
 import { Button } from '@/components/app/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/app/Card';
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/app/InputOTP';
 import { LocaleSwitcher } from '@/components/app/LocaleSwitcher';
+import { AuthHeader } from '@/components/app/AuthHeader';
+import { GroupedInput, GroupedInputDivider, groupedInputClassName } from '@/components/app/GroupedInput';
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
@@ -483,7 +483,7 @@ export default function LoginClient({
 
   return (
     <motion.div
-      className="relative w-full"
+      className="relative w-full max-w-md mx-auto"
       variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
@@ -505,341 +505,323 @@ export default function LoginClient({
             }
           }}
         >
-          <Card className="max-w-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center gap-4">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary"></div>
-                <p className="text-lg font-semibold">
-                  {oauthProvider === 'apple'
-                    ? t.pages.auth.login.waitingForApple
-                    : t.pages.auth.login.waitingForGoogle}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOauthProvider(null);
-                    setMessage(null);
-                  }}
-                  className="text-sm text-text-muted hover:text-text-primary transition-colors"
-                >
-                  {t.common.cancel}
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-surface-primary rounded-xl shadow-lg max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-brand-gradient-start"></div>
+              <p className="text-lg font-semibold">
+                {oauthProvider === 'apple'
+                  ? t.pages.auth.login.waitingForApple
+                  : t.pages.auth.login.waitingForGoogle}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setOauthProvider(null);
+                  setMessage(null);
+                }}
+                className="text-sm text-text-muted hover:text-text-primary transition-colors"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          {/* Title and Logo inline */}
-          <div className="flex items-center justify-between mb-1">
-            <CardTitle className="text-2xl font-bold">{t.pages.auth.login.title}</CardTitle>
-            <Image
-              src="/icons/short-logo-gradient.svg"
-              alt="Tidex"
-              width={32}
-              height={32}
-              priority
-            />
-          </div>
-          {step === 'otp' ? (
-            <CardDescription>
-              {t.pages.auth.login.otpDescription.replace('{phone}', emailOrPhone)}
-            </CardDescription>
-          ) : (
-            <CardDescription>{t.pages.auth.login.subtitle}</CardDescription>
-          )}
-        </CardHeader>
+      {/* Header: Centered wordmark + subtitle */}
+      <AuthHeader
+        variant="wordmark"
+        subtitle={step === 'otp'
+          ? t.pages.auth.login.otpDescription.replace('{phone}', emailOrPhone)
+          : t.pages.auth.login.subtitle}
+      />
 
-        <CardContent>
-          {/* Step 1: Email/Phone and Password Input */}
-          {step === 'input' && (
-            <>
-              {/* OAuth Buttons */}
-              <div className="flex flex-col gap-3 mb-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleGoogleSignIn}
-                  disabled={oauthButtonDisabled}
-                  loading={isOAuthRedirecting}
-                  aria-label={t.pages.auth.login.continueWithGoogle}
-                  className="w-full"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <GoogleIcon />
-                  </span>
-                  Google
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleAppleSignIn}
-                  disabled={oauthButtonDisabled}
-                  loading={isOAuthRedirecting}
-                  aria-label={t.pages.auth.login.continueWithApple}
-                  className="w-full"
-                >
-                  <Image
-                    src="/icons/apple.svg"
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="dark:invert"
-                  />
-                  Apple
-                </Button>
-              </div>
-
-              <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
-
-              <AnimatePresence mode="wait">
-                {!showEmailLogin ? (
-                  <motion.div
-                    key="reveal-button"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="mt-6"
-                  >
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setShowEmailLogin(true)}
-                      className="w-full"
-                    >
-                      {t.pages.auth.login.emailOrPhoneReveal}
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <motion.form
-                    key="login-form"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-4 mt-6"
-                    noValidate
-                    onSubmit={handleSignIn}
-                  >
-                    <FieldGroup>
-                      <Field data-invalid={!!fieldErrors.emailOrPhone}>
-                        <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.usernameLabel}</FieldLabel>
-                        <Input
-                          id="emailOrPhone"
-                          name="emailOrPhone"
-                          type="text"
-                          placeholder={t.pages.auth.login.emailOrPhonePlaceholder}
-                          // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
-                          spellCheck={false}
-                          data-ms-editor="true"
-                          suppressHydrationWarning
-                          autoComplete="username"
-                          value={emailOrPhone}
-                          onChange={(event) => {
-                            resetMessage();
-                            resetFieldErrors();
-                            setEmailOrPhone(event.target.value);
-                          }}
-                          aria-invalid={!!fieldErrors.emailOrPhone}
-                        />
-                        <FieldError>{fieldErrors.emailOrPhone}</FieldError>
-                      </Field>
-
-                      <Field data-invalid={!!fieldErrors.password}>
-                        <div className="flex items-center justify-between">
-                          <FieldLabel htmlFor="password">
-                            {t.pages.auth.login.passwordLabel}
-                          </FieldLabel>
-                          <Link
-                            href={`/${locale}/reset-password`}
-                            className="text-sm text-text-muted hover:text-text-primary transition-colors"
-                          >
-                            {t.pages.auth.login.forgotPassword}
-                          </Link>
-                        </div>
-                        <PasswordInput
-                          id="password"
-                          name="password"
-                          placeholder={t.pages.auth.login.passwordPlaceholder}
-                          autoComplete="current-password"
-                          value={password}
-                          onChange={(event) => {
-                            resetMessage();
-                            resetFieldErrors();
-                            setPassword(event.target.value);
-                          }}
-                          invalid={!!fieldErrors.password}
-                        />
-                        <FieldError>{fieldErrors.password}</FieldError>
-                      </Field>
-                    </FieldGroup>
-
-                    {/* Turnstile CAPTCHA Widget */}
-                    <div className="flex justify-center">
-                      <TurnstileCaptcha
-                        ref={turnstileRef}
-                        execution="render"
-                        appearance="always"
-                        size="flexible"
-                        language={turnstileLanguages[locale as Locale]}
-                        onSuccess={(token) => {
-                          setCaptchaToken(token);
-                          resetMessage();
-                        }}
-                        onError={() => {
-                          setCaptchaToken(null);
-                          setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
-                        }}
-                        onExpire={() => {
-                          setCaptchaToken(null);
-                          setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
-                        }}
-                      />
-                    </div>
-
-                    {message && (
-                      <div
-                        className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                          message.type === 'error'
-                            ? 'bg-error-subtle text-error-foreground'
-                            : 'bg-success-subtle text-success-foreground'
-                        }`}
-                        role="status"
-                        aria-live="polite"
-                      >
-                        {message.text}
-                      </div>
-                    )}
-
-                    {/* Arrow pointing to signup button */}
-                    {showSignupPrompt && (
-                      <div className="flex justify-center animate-bounce">
-                        <svg
-                          className="h-6 w-6 text-error-foreground"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                        </svg>
-                      </div>
-                    )}
-
-                    <Button
-                      type="submit"
-                      disabled={formButtonDisabled}
-                      loading={isSubmitting}
-                      size="lg"
-                      className="w-full"
-                    >
-                      {t.pages.auth.login.submitButton}
-                    </Button>
-                  </motion.form>
-                )}
-              </AnimatePresence>
-            </>
-          )}
-
-          {/* OTP Verification step for phone login */}
-          {step === 'otp' && (
-            <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-              <Field data-invalid={!!fieldErrors.otp} className="items-center">
-                <FieldLabel htmlFor="otp" className="sr-only">
-                  {t.pages.auth.login.otpLabel}
-                </FieldLabel>
-                <InputOTP
-                  maxLength={6}
-                  value={otp}
-                  onChange={(value) => {
-                    resetMessage();
-                    resetFieldErrors();
-                    setOtp(value);
-                  }}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                {fieldErrors.otp && (
-                  <FieldError className="text-center">{fieldErrors.otp}</FieldError>
-                )}
-              </Field>
-
-              {message && (
-                <div
-                  className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                    message.type === 'error'
-                      ? 'bg-error-subtle text-error-foreground'
-                      : 'bg-success-subtle text-success-foreground'
-                  }`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {message.text}
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                disabled={isSubmitting || isOAuthRedirecting}
-                loading={isSubmitting}
-                size="lg"
-                className="w-full"
-              >
-                {t.pages.auth.login.verifyButton}
-              </Button>
-
-              <Button
+      {/* Main content */}
+      <div className="space-y-6">
+        {/* Step 1: Email/Phone and Password Input */}
+        {step === 'input' && (
+          <>
+            {/* OAuth Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setStep('input');
-                  setOtp('');
+                onClick={handleAppleSignIn}
+                disabled={oauthButtonDisabled}
+                aria-label={t.pages.auth.login.continueWithApple}
+                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                <Image
+                  src="/icons/apple.svg"
+                  alt=""
+                  width={20}
+                  height={20}
+                />
+                Apple
+              </button>
+
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={oauthButtonDisabled}
+                aria-label={t.pages.auth.login.continueWithGoogle}
+                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                <span className="flex h-5 w-5 items-center justify-center">
+                  <GoogleIcon />
+                </span>
+                Google
+              </button>
+            </div>
+
+            {/* "or" divider */}
+            <div className="flex items-center gap-4 my-2">
+              <div className="h-px flex-1 bg-border-subtle" />
+              <span className="text-sm text-text-muted">{t.pages.auth.login.separator}</span>
+              <div className="h-px flex-1 bg-border-subtle" />
+            </div>
+
+            <AnimatePresence mode="wait">
+              {!showEmailLogin ? (
+                <motion.div
+                  key="reveal-button"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailLogin(true)}
+                    className="w-full h-12.5 rounded-xl bg-surface-primary text-text-secondary font-medium flex items-center justify-center gap-2.5 hover:bg-surface-secondary active:scale-[0.98] transition-all"
+                  >
+                    <Mail className="h-5 w-5" />
+                    {t.pages.auth.login.emailOrPhoneReveal}
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.form
+                  key="login-form"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                  noValidate
+                  onSubmit={handleSignIn}
+                >
+                  {/* Grouped email + password fields */}
+                  <GroupedInput>
+                    <Input
+                      id="emailOrPhone"
+                      name="emailOrPhone"
+                      type="text"
+                      placeholder={t.pages.auth.login.emailOrPhonePlaceholder}
+                      spellCheck={false}
+                      data-ms-editor="true"
+                      suppressHydrationWarning
+                      autoComplete="username"
+                      value={emailOrPhone}
+                      onChange={(event) => {
+                        resetMessage();
+                        resetFieldErrors();
+                        setEmailOrPhone(event.target.value);
+                      }}
+                      aria-invalid={!!fieldErrors.emailOrPhone}
+                      className={groupedInputClassName}
+                    />
+                    <GroupedInputDivider />
+                    <PasswordInput
+                      id="password"
+                      name="password"
+                      placeholder={t.pages.auth.login.passwordPlaceholder}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(event) => {
+                        resetMessage();
+                        resetFieldErrors();
+                        setPassword(event.target.value);
+                      }}
+                      invalid={!!fieldErrors.password}
+                      className={groupedInputClassName}
+                    />
+                  </GroupedInput>
+
+                  {/* Field errors */}
+                  {fieldErrors.emailOrPhone && (
+                    <p className="text-xs text-error px-1">{fieldErrors.emailOrPhone}</p>
+                  )}
+                  {fieldErrors.password && (
+                    <p className="text-xs text-error px-1">{fieldErrors.password}</p>
+                  )}
+
+                  {/* Forgot password link */}
+                  <div className="flex justify-end">
+                    <Link
+                      href={`/${locale}/reset-password`}
+                      className="text-sm font-semibold text-brand-gradient-start hover:underline"
+                    >
+                      {t.pages.auth.login.forgotPassword}
+                    </Link>
+                  </div>
+
+                  {/* Turnstile CAPTCHA Widget */}
+                  <div className="flex justify-center">
+                    <TurnstileCaptcha
+                      ref={turnstileRef}
+                      execution="render"
+                      appearance="always"
+                      size="flexible"
+                      language={turnstileLanguages[locale as Locale]}
+                      onSuccess={(token) => {
+                        setCaptchaToken(token);
+                        resetMessage();
+                      }}
+                      onError={() => {
+                        setCaptchaToken(null);
+                        setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
+                      }}
+                      onExpire={() => {
+                        setCaptchaToken(null);
+                        setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
+                      }}
+                    />
+                  </div>
+
+                  {message && (
+                    <div
+                      className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                        message.type === 'error'
+                          ? 'bg-error-subtle text-error-foreground'
+                          : 'bg-success-subtle text-success-foreground'
+                      }`}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {message.text}
+                    </div>
+                  )}
+
+                  {/* Arrow pointing to signup button */}
+                  {showSignupPrompt && (
+                    <div className="flex justify-center animate-bounce">
+                      <svg
+                        className="h-6 w-6 text-error-foreground"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                      </svg>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={formButtonDisabled}
+                    loading={isSubmitting}
+                    size="lg"
+                    className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+                  >
+                    {t.pages.auth.login.submitButton}
+                  </Button>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+
+        {/* OTP Verification step for phone login */}
+        {step === 'otp' && (
+          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+            <Field data-invalid={!!fieldErrors.otp} className="items-center">
+              <FieldLabel htmlFor="otp" className="sr-only">
+                {t.pages.auth.login.otpLabel}
+              </FieldLabel>
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => {
                   resetMessage();
                   resetFieldErrors();
+                  setOtp(value);
                 }}
-                className="w-full"
               >
-                {t.pages.auth.login.backToLogin}
-              </Button>
-            </form>
-          )}
-        </CardContent>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+              {fieldErrors.otp && (
+                <FieldError className="text-center">{fieldErrors.otp}</FieldError>
+              )}
+            </Field>
 
-        {/* Footer with create account link */}
-        {step === 'input' && (
-          <CardFooter className="flex-col border-t bg-surface-secondary rounded-b-3xl pt-6">
-            <p className="text-sm text-text-secondary">
-              {t.pages.auth.login.noAccount}{' '}
-              <Link
-                href={`/${locale}/signup${emailOrPhone ? `?email=${encodeURIComponent(emailOrPhone)}` : ''}`}
-                className="font-semibold text-text-primary hover:underline"
+            {message && (
+              <div
+                className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                  message.type === 'error'
+                    ? 'bg-error-subtle text-error-foreground'
+                    : 'bg-success-subtle text-success-foreground'
+                }`}
+                role="status"
+                aria-live="polite"
               >
-                {t.pages.auth.login.createAccount}
-              </Link>
-            </p>
-          </CardFooter>
+                {message.text}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isSubmitting || isOAuthRedirecting}
+              loading={isSubmitting}
+              size="lg"
+              className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+            >
+              {t.pages.auth.login.verifyButton}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStep('input');
+                setOtp('');
+                resetMessage();
+                resetFieldErrors();
+              }}
+              className="w-full"
+            >
+              {t.pages.auth.login.backToLogin}
+            </Button>
+          </form>
         )}
-      </Card>
+      </div>
+
+      {/* Footer with create account link */}
+      {step === 'input' && (
+        <div className="mt-10 text-center">
+          <p className="text-sm text-text-secondary">
+            {t.pages.auth.login.noAccount}{' '}
+            <Link
+              href={`/${locale}/signup${emailOrPhone ? `?email=${encodeURIComponent(emailOrPhone)}` : ''}`}
+              className="font-semibold text-brand-gradient-start hover:underline"
+            >
+              {t.pages.auth.login.createAccount}
+            </Link>
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 flex justify-center">
         <LocaleSwitcher />

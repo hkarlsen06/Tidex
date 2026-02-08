@@ -2,6 +2,7 @@
 
 import { FormEvent, useState, useEffect, useCallback } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { ShieldCheck } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -37,8 +38,8 @@ import {
   FieldError,
 } from "@/components/app/Field";
 import { Button } from "@/components/app/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
+import { AuthHeader } from "@/components/app/AuthHeader";
 import type { Factor } from "@supabase/supabase-js";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
@@ -210,151 +211,171 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
 
   if (isLoading) {
     return (
-      <div className="relative w-full">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">{t.pages.auth.mfaVerify.title}</CardTitle>
-            <CardDescription>{t.pages.auth.mfaVerify.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary"></div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="relative w-full max-w-md mx-auto">
+        <div className="flex flex-col items-center gap-4 mb-10">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-gradient-start/10">
+            <ShieldCheck className="h-9 w-9 text-brand-gradient-start animate-pulse" />
+          </div>
+          <div className="h-7 w-48 rounded bg-surface-primary/50 animate-pulse" />
+          <div className="h-4 w-64 rounded bg-surface-primary/50 animate-pulse" />
+        </div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-brand-gradient-start"></div>
+        </div>
       </div>
     );
   }
 
   return (
     <motion.div
-      className="relative w-full"
+      className="relative w-full max-w-md mx-auto"
       variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t.pages.auth.mfaVerify.title}</CardTitle>
-          <CardDescription>
-            {selectedFactor
-              ? t.pages.auth.mfaVerify.description
-              : t.pages.auth.mfaVerify.selectFactor}
-          </CardDescription>
-        </CardHeader>
+      {/* Header: Shield icon in blue circle */}
+      <AuthHeader
+        variant="icon"
+        icon={<ShieldCheck className="h-9 w-9 text-brand-gradient-start" />}
+        title={t.pages.auth.mfaVerify.title}
+        subtitle={
+          selectedFactor
+            ? t.pages.auth.mfaVerify.description
+            : t.pages.auth.mfaVerify.selectFactor
+        }
+      />
 
-        <CardContent>
-          {/* Factor Selection */}
-          {!selectedFactor && factors.length > 1 && (
-            <div className="space-y-3">
-              {factors.map((factor) => (
-                <Button
-                  key={factor.id}
-                  variant="outline"
-                  size="lg"
-                  className="w-full justify-start"
-                  onClick={() => handleSelectFactor(factor)}
-                >
-                  {getFactorLabel(factor)}
-                </Button>
-              ))}
-            </div>
-          )}
+      {/* Main content */}
+      <div className="space-y-6">
+        {/* Factor Selection */}
+        {!selectedFactor && factors.length > 1 && (
+          <div className="space-y-3">
+            {factors.map((factor) => (
+              <button
+                key={factor.id}
+                type="button"
+                onClick={() => handleSelectFactor(factor)}
+                className="w-full h-12.5 rounded-xl bg-surface-primary text-text-secondary font-medium flex items-center justify-center gap-2.5 hover:bg-surface-secondary active:scale-[0.98] transition-all"
+              >
+                {getFactorLabel(factor)}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {/* Code Entry */}
-          {selectedFactor && challengeId && (
-            <form className="space-y-6" noValidate onSubmit={handleVerify}>
-              <Field data-invalid={!!fieldError} className="items-center">
-                <FieldLabel htmlFor="otp-input" className="sr-only">
-                  {t.pages.auth.mfaVerify.codeLabel}
-                </FieldLabel>
-                <InputOTP
-                  id="otp-input"
-                  maxLength={6}
-                  value={code}
-                  onChange={(value) => {
-                    setFieldError(null);
-                    setMessage(null);
-                    setCode(value);
-                  }}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                {fieldError && (
-                  <FieldError className="text-center">{fieldError}</FieldError>
-                )}
-              </Field>
+        {/* Code Entry */}
+        {selectedFactor && challengeId && (
+          <form className="space-y-6" noValidate onSubmit={handleVerify}>
+            <Field data-invalid={!!fieldError} className="items-center">
+              <FieldLabel htmlFor="otp-input" className="sr-only">
+                {t.pages.auth.mfaVerify.codeLabel}
+              </FieldLabel>
+              <InputOTP
+                id="otp-input"
+                maxLength={6}
+                value={code}
+                onChange={(value) => {
+                  setFieldError(null);
+                  setMessage(null);
+                  setCode(value);
+                }}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+              {fieldError && (
+                <FieldError className="text-center">{fieldError}</FieldError>
+              )}
+            </Field>
 
+            {message && (
+              <div
+                className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                  message.type === "error"
+                    ? "bg-error-subtle text-error-foreground"
+                    : "bg-success-subtle text-success-foreground"
+                }`}
+                role="status"
+                aria-live="polite"
+              >
+                {message.text}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              size="lg"
+              className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+            >
+              {t.pages.auth.mfaVerify.verifyButton}
+            </Button>
+
+            {/* Back button for factor selection */}
+            {factors.length > 1 && (
               <Button
-                type="submit"
-                disabled={isSubmitting}
-                loading={isSubmitting}
-                size="lg"
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedFactor(null);
+                  setCode("");
+                  setChallengeId(null);
+                  setFieldError(null);
+                  setMessage(null);
+                }}
                 className="w-full"
               >
-                {t.pages.auth.mfaVerify.verifyButton}
+                {t.pages.auth.mfaVerify.selectFactor}
               </Button>
+            )}
+          </form>
+        )}
 
-              {/* Back button for factor selection */}
-              {factors.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedFactor(null);
-                    setCode("");
-                    setChallengeId(null);
-                    setFieldError(null);
-                    setMessage(null);
-                  }}
-                  className="w-full"
-                >
-                  {t.pages.auth.mfaVerify.selectFactor}
-                </Button>
-              )}
-            </form>
-          )}
-
-          {/* Message Display */}
-          {message && (
-            <div
-              className={`mt-4 rounded-md px-4 py-3 text-sm font-medium ${
-                message.type === "error"
-                  ? "bg-error-subtle text-error-foreground"
-                  : "bg-success-subtle text-success-foreground"
-              }`}
-              role="status"
-              aria-live="polite"
-            >
-              {message.text}
-            </div>
-          )}
-
-          {/* Back to login button - signs out first */}
-          <div className="mt-6 text-center">
-            <Button
-              variant="link"
-              size="sm"
-              onClick={handleBackToLogin}
-              disabled={isSigningOut}
-              loading={isSigningOut}
-            >
-              {t.pages.auth.mfaVerify.backToLogin}
-            </Button>
+        {/* Message Display (when no form is showing) */}
+        {!selectedFactor && message && (
+          <div
+            className={`rounded-lg px-4 py-3 text-sm font-medium ${
+              message.type === "error"
+                ? "bg-error-subtle text-error-foreground"
+                : "bg-success-subtle text-success-foreground"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {message.text}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
+
+      {/* Back to login */}
+      <div className="mt-10 text-center">
+        <button
+          type="button"
+          onClick={handleBackToLogin}
+          disabled={isSigningOut}
+          className="text-sm font-semibold text-brand-gradient-start hover:underline disabled:opacity-60"
+        >
+          {isSigningOut ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              {t.pages.auth.mfaVerify.backToLogin}
+            </span>
+          ) : (
+            t.pages.auth.mfaVerify.backToLogin
+          )}
+        </button>
+      </div>
 
       <div className="mt-6 flex justify-center">
         <LocaleSwitcher />

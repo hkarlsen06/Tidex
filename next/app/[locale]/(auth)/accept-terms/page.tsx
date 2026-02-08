@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import { supabase } from '@/lib/supabase/browser';
 import { useTranslations } from '@/lib/i18n/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
 import { Button } from '@/components/app/Button';
 import { LegalModal } from '@/components/legal/LegalModal';
 import { LocaleSwitcher } from '@/components/app/LocaleSwitcher';
+import { AuthHeader } from '@/components/app/AuthHeader';
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -126,65 +125,58 @@ export default function AcceptTermsPage({
 
   return (
     <motion.div
-      className="relative w-full"
+      className="relative w-full max-w-md mx-auto"
       variants={cardVariants}
       initial="hidden"
       animate="visible"
     >
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between mb-1">
-            <CardTitle className="text-2xl font-bold">{content.title}</CardTitle>
-            <Image
-              src="/icons/short-logo-gradient.svg"
-              alt="Tidex"
-              width={32}
-              height={32}
-              priority
-            />
+      {/* Header: Centered wordmark */}
+      <AuthHeader
+        variant="wordmark"
+        subtitle={content.description}
+      />
+
+      {/* Main content */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold text-foreground text-center">{content.title}</h2>
+
+        <p className="text-sm text-text-secondary text-center">
+          {content.explanation}
+        </p>
+
+        {error && (
+          <div
+            className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
+            role="alert"
+          >
+            {error}
           </div>
-          <CardDescription>{content.description}</CardDescription>
-        </CardHeader>
+        )}
 
-        <CardContent className="space-y-6">
-          <p className="text-sm text-text-secondary">
-            {content.explanation}
-          </p>
+        <div className="flex flex-col gap-3">
+          <Button
+            type="button"
+            size="lg"
+            onClick={() => setLegalModalOpen(true)}
+            disabled={isProcessing}
+            className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+          >
+            {content.reviewTermsButton}
+          </Button>
 
-          {error && (
-            <div
-              className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-3">
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => setLegalModalOpen(true)}
-              disabled={isProcessing}
-              className="w-full"
-            >
-              {content.reviewTermsButton}
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleDecline}
-              disabled={isProcessing}
-              loading={isProcessing}
-              className="w-full text-text-muted"
-            >
-              {t.pages.auth.acceptTerms.declineButton}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleDecline}
+            disabled={isProcessing}
+            loading={isProcessing}
+            className="w-full text-text-muted"
+          >
+            {t.pages.auth.acceptTerms.declineButton}
+          </Button>
+        </div>
+      </div>
 
       <div className="mt-6 flex justify-center">
         <LocaleSwitcher />

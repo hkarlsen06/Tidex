@@ -1,6 +1,6 @@
+import Image from 'next/image';
 import { Suspense } from 'react';
 import LoginClient from './LoginClient';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/app/Card';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 
@@ -45,22 +45,25 @@ async function LoginSkeleton({ params }: { params: Promise<{ locale: string }> }
   const t = getTranslations(locale as Locale, ['pages.auth']);
 
   return (
-    <div className="relative w-full">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t.pages.auth.login.skeletonTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="h-10 rounded-md bg-surface-primary/50 animate-pulse"></div>
-              <div className="h-10 rounded-md bg-surface-primary/50 animate-pulse"></div>
-            </div>
-            <div className="h-16.25 rounded-lg bg-surface-primary/50 animate-pulse"></div>
-            <div className="h-10 rounded-md bg-surface-primary/50 animate-pulse"></div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="relative w-full max-w-md mx-auto">
+      <div className="flex flex-col items-center mb-10">
+        <Image
+          src="/icons/wordmark-transparent.webp"
+          alt="Tidex"
+          width={160}
+          height={48}
+          priority
+          className="h-12 w-auto"
+        />
+        <p className="mt-4 text-sm text-text-secondary">{t.pages.auth.login.skeletonTitle}</p>
+      </div>
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <div className="h-12.5 rounded-xl bg-surface-primary/50 animate-pulse"></div>
+          <div className="h-12.5 rounded-xl bg-surface-primary/50 animate-pulse"></div>
+        </div>
+        <div className="h-12 rounded-xl bg-surface-primary/50 animate-pulse"></div>
+      </div>
     </div>
   );
 }

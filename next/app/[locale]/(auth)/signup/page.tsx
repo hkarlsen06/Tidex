@@ -47,18 +47,17 @@ import {
   Field,
   FieldLabel,
   FieldError,
-  FieldGroup,
-  FieldSeparator,
 } from "@/components/app/Field";
 import { Input } from "@/components/app/Input";
 import { PasswordInput } from "@/components/app/PasswordInput";
 import { Button } from "@/components/app/Button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/app/Card";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
 import { Checkbox } from "@/components/app/Checkbox";
 import { LegalModal } from "@/components/legal";
 import { translateError } from "@/lib/errors/translate";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
+import { AuthHeader } from "@/components/app/AuthHeader";
+import { GroupedInput, GroupedInputDivider, groupedInputClassName } from "@/components/app/GroupedInput";
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import("../login/GoogleIcon"), {
@@ -126,7 +125,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     if (!result.success) {
       setOauthProvider(null);
-      // Check if user cancelled (don't show error for cancellation)
       const errorMessage = result.error?.message || '';
       if (errorMessage.includes('cancel') || errorMessage.includes('Cancel')) {
         return;
@@ -142,7 +140,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    // Redirect flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForGoogle,
@@ -151,12 +148,10 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   const handleGoogleSignIn = async () => {
     setMessage(null);
-
     if (!agreedToTerms) {
       setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
       return;
     }
-
     await performGoogleSignIn();
   };
 
@@ -169,7 +164,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     if (!result.success) {
       setOauthProvider(null);
-      // Check if user cancelled (don't show error for cancellation)
       const errorMessage = result.error?.message || '';
       if (errorMessage.includes('cancel') || errorMessage.includes('Cancel')) {
         return;
@@ -185,7 +179,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    // Redirect flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForApple,
@@ -194,12 +187,10 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   const handleAppleSignIn = async () => {
     setMessage(null);
-
     if (!agreedToTerms) {
       setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
       return;
     }
-
     await performAppleSignIn();
   };
 
@@ -210,19 +201,15 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     const errors: FieldErrors = {};
 
-    // Validate all inputs before triggering captcha
     if (!firstName) {
       errors.firstName = t.pages.auth.signup.errors.fillFirstName;
     }
-
     if (!lastName) {
       errors.lastName = t.pages.auth.signup.errors.fillLastName;
     }
-
     if (!emailOrPhone) {
       errors.emailOrPhone = t.pages.auth.signup.errors.fillEmailOrPhone;
     }
-
     if (!agreedToTerms) {
       setMessage({ type: "error", text: t.pages.auth.signup.errors.acceptTerms });
       return;
@@ -234,36 +221,21 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       errors.emailOrPhone = t.pages.auth.signup.errors.invalidEmailOrPhone;
     }
 
-    // Validate based on input type
     if (inputType === "email") {
-      if (!password) {
-        errors.password = t.pages.auth.signup.errors.fillPassword;
-      }
-      if (password && password.length < 6) {
-        errors.password = t.pages.auth.signup.errors.passwordTooShort;
-      }
-      if (emailOrPhone && !isValidEmail(emailOrPhone)) {
-        errors.emailOrPhone = t.pages.auth.signup.errors.invalidEmail;
-      }
+      if (!password) errors.password = t.pages.auth.signup.errors.fillPassword;
+      if (password && password.length < 6) errors.password = t.pages.auth.signup.errors.passwordTooShort;
+      if (emailOrPhone && !isValidEmail(emailOrPhone)) errors.emailOrPhone = t.pages.auth.signup.errors.invalidEmail;
     } else if (inputType === "phone") {
-      if (!isValidNorwegianPhone(emailOrPhone)) {
-        errors.emailOrPhone = t.pages.auth.signup.errors.invalidPhone;
-      }
-      if (!password) {
-        errors.password = t.pages.auth.signup.errors.fillPassword;
-      }
-      if (password && password.length < 6) {
-        errors.password = t.pages.auth.signup.errors.passwordTooShort;
-      }
+      if (!isValidNorwegianPhone(emailOrPhone)) errors.emailOrPhone = t.pages.auth.signup.errors.invalidPhone;
+      if (!password) errors.password = t.pages.auth.signup.errors.fillPassword;
+      if (password && password.length < 6) errors.password = t.pages.auth.signup.errors.passwordTooShort;
     }
 
-    // If there are validation errors, show them and don't trigger captcha
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
 
-    // Require captcha token before submission
     if (!captchaToken) {
       setMessage({ type: "error", text: t.pages.auth.signup.errors.completeCaptcha });
       return;
@@ -272,18 +244,13 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     const fullName = `${firstName} ${lastName}`.trim();
 
     if (inputType === "email") {
-
       setIsSubmitting(true);
 
       const { error } = await supabase.auth.signUp({
         email: emailOrPhone,
         password,
         options: {
-          data: {
-            full_name: fullName,
-            locale: locale,
-            terms_accepted_at: new Date().toISOString(),
-          },
+          data: { full_name: fullName, locale, terms_accepted_at: new Date().toISOString() },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
           captchaToken,
         },
@@ -293,19 +260,13 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
       if (error) {
         setMessage({ type: "error", text: error.message });
-        // Reset captcha token so user can retry with fresh token
         setCaptchaToken(null);
         turnstileRef.current?.reset();
         return;
       }
 
-      // Email verification disabled - sign in immediately and redirect to onboarding
-      setMessage({
-        type: "success",
-        text: t.pages.auth.signup.success.accountCreated,
-      });
+      setMessage({ type: "success", text: t.pages.auth.signup.success.accountCreated });
 
-      // Sign in the user immediately after signup
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: emailOrPhone,
         password,
@@ -323,7 +284,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         router.refresh();
       }, 1000);
     } else {
-      // Phone signup with OTP verification
       setIsSubmitting(true);
 
       try {
@@ -331,13 +291,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
         const { error } = await supabase.auth.signUp({
           phone: phoneE164,
-          password: password,
+          password,
           options: {
-            data: {
-              full_name: fullName,
-              locale: locale,
-              terms_accepted_at: new Date().toISOString(),
-            },
+            data: { full_name: fullName, locale, terms_accepted_at: new Date().toISOString() },
             captchaToken,
           },
         });
@@ -345,34 +301,24 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         setIsSubmitting(false);
 
         if (error) {
-          // Handle specific error for existing user
           if (error.message.includes("already registered") || error.message.includes("already exists") || error.message.includes("User already registered")) {
-            setMessage({
-              type: "error",
-              text: t.pages.auth.signup.errors.phoneAlreadyExists
-            });
+            setMessage({ type: "error", text: t.pages.auth.signup.errors.phoneAlreadyExists });
           } else {
             setMessage({ type: "error", text: error.message });
           }
-          // Reset captcha token so user can retry with fresh token
           setCaptchaToken(null);
           turnstileRef.current?.reset();
           return;
         }
 
-        // Phone signup requires OTP verification to confirm phone ownership
         setStep("otp");
-        setMessage({
-          type: "success",
-          text: t.pages.auth.signup.success.smsSent,
-        });
+        setMessage({ type: "success", text: t.pages.auth.signup.success.smsSent });
       } catch (err) {
         setIsSubmitting(false);
         setMessage({
           type: "error",
           text: err instanceof Error ? err.message : t.pages.auth.signup.errors.genericError,
         });
-        // Reset captcha token so user can retry with fresh token
         setCaptchaToken(null);
         turnstileRef.current?.reset();
       }
@@ -384,14 +330,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     resetAll();
 
     const errors: FieldErrors = {};
-
-    if (otp.length !== 6) {
-      errors.otp = t.pages.auth.signup.errors.fillAllDigits;
-    }
-
-    if (!isValidNorwegianPhone(emailOrPhone)) {
-      errors.otp = t.pages.auth.signup.errors.invalidPhoneNumber;
-    }
+    if (otp.length !== 6) errors.otp = t.pages.auth.signup.errors.fillAllDigits;
+    if (!isValidNorwegianPhone(emailOrPhone)) errors.otp = t.pages.auth.signup.errors.invalidPhoneNumber;
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -402,11 +342,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     try {
       const phoneE164 = normalizePhoneToE164(emailOrPhone);
-      const { error } = await supabase.auth.verifyOtp({
-        phone: phoneE164,
-        token: otp,
-        type: "sms",
-      });
+      const { error } = await supabase.auth.verifyOtp({ phone: phoneE164, token: otp, type: "sms" });
 
       setIsSubmitting(false);
 
@@ -415,12 +351,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         return;
       }
 
-      setMessage({
-        type: "success",
-        text: t.pages.auth.signup.success.accountCreated,
-      });
+      setMessage({ type: "success", text: t.pages.auth.signup.success.accountCreated });
 
-      // Redirect to onboarding
       setTimeout(() => {
         router.replace(`/${locale}/onboarding`);
         router.refresh();
@@ -440,7 +372,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   return (
     <motion.div
-      className="relative w-full"
+      className="relative w-full max-w-md mx-auto"
       variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
@@ -451,306 +383,167 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs"
           role="button"
           tabIndex={0}
-          onClick={() => {
-            setOauthProvider(null);
-            setMessage(null);
-          }}
+          onClick={() => { setOauthProvider(null); setMessage(null); }}
           onKeyDown={(e) => {
-            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
-              setOauthProvider(null);
-              setMessage(null);
-            }
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { setOauthProvider(null); setMessage(null); }
           }}
         >
-          <Card className="max-w-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center gap-4">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary"></div>
-                <p className="text-lg font-semibold">
-                  {oauthProvider === 'apple'
-                    ? t.pages.auth.login.waitingForApple
-                    : t.pages.auth.login.waitingForGoogle}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOauthProvider(null);
-                    setMessage(null);
-                  }}
-                  className="text-sm text-text-muted hover:text-text-primary transition-colors"
-                >
-                  {t.common.cancel}
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-surface-primary rounded-xl shadow-lg max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-brand-gradient-start"></div>
+              <p className="text-lg font-semibold">
+                {oauthProvider === 'apple' ? t.pages.auth.login.waitingForApple : t.pages.auth.login.waitingForGoogle}
+              </p>
+              <button
+                type="button"
+                onClick={() => { setOauthProvider(null); setMessage(null); }}
+                className="text-sm text-text-muted hover:text-text-primary transition-colors"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          {/* Title and Logo inline */}
-          <div className="flex items-center justify-between mb-1">
-            <CardTitle className="text-2xl font-bold">{t.pages.auth.signup.title}</CardTitle>
-            <Image
-              src="/icons/short-logo-gradient.svg"
-              alt="Tidex"
-              width={32}
-              height={32}
-              priority
-            />
-          </div>
-          <CardDescription>
-            {step === "otp"
-              ? t.pages.auth.signup.descriptionOtp.replace('{phone}', emailOrPhone)
-              : t.pages.auth.signup.subtitle}
-          </CardDescription>
-        </CardHeader>
+      {/* Header */}
+      <AuthHeader
+        variant="wordmark"
+        subtitle={step === "otp"
+          ? t.pages.auth.signup.descriptionOtp.replace('{phone}', emailOrPhone)
+          : t.pages.auth.signup.subtitle}
+      />
 
-        <CardContent>
-          {/* Step 1: Input Form */}
-          {step === "input" && (
-            <>
-              {/* OAuth Buttons */}
-              <div className="flex flex-col gap-3 mb-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleGoogleSignIn}
-                  disabled={oauthButtonDisabled}
-                  loading={isOAuthRedirecting}
-                  aria-label={t.pages.auth.login.continueWithGoogle}
-                  className="w-full"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <GoogleIcon />
-                  </span>
-                  Google
-                </Button>
+      <div className="space-y-6">
+        {step === "input" && (
+          <>
+            {/* OAuth Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleAppleSignIn}
+                disabled={oauthButtonDisabled}
+                aria-label={t.pages.auth.login.continueWithApple}
+                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                <Image src="/icons/apple.svg" alt="" width={20} height={20} />
+                Apple
+              </button>
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={oauthButtonDisabled}
+                aria-label={t.pages.auth.login.continueWithGoogle}
+                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                <span className="flex h-5 w-5 items-center justify-center"><GoogleIcon /></span>
+                Google
+              </button>
+            </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleAppleSignIn}
-                  disabled={oauthButtonDisabled}
-                  loading={isOAuthRedirecting}
-                  aria-label={t.pages.auth.login.continueWithApple}
-                  className="w-full"
-                >
-                  <Image
-                    src="/icons/apple.svg"
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="dark:invert"
-                  />
-                  Apple
-                </Button>
-              </div>
+            {/* "or" divider */}
+            <div className="flex items-center gap-4 my-2">
+              <div className="h-px flex-1 bg-border-subtle" />
+              <span className="text-sm text-text-muted">{t.pages.auth.login.separator}</span>
+              <div className="h-px flex-1 bg-border-subtle" />
+            </div>
 
-              <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
-
-              <form ref={formRef} className="space-y-4 mt-6" noValidate onSubmit={handleSignUp}>
-                <FieldGroup>
-                  {/* First name and Last name side by side */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field data-invalid={!!fieldErrors.firstName}>
-                      <FieldLabel htmlFor="firstName">{t.pages.auth.signup.firstNameLabel}</FieldLabel>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        type="text"
-                        value={firstName}
-                        onChange={(event) => {
-                          resetMessage();
-                          resetFieldErrors();
-                          setFirstName(event.target.value);
-                        }}
-                        aria-invalid={!!fieldErrors.firstName}
-                      />
-                      <FieldError>{fieldErrors.firstName}</FieldError>
-                    </Field>
-
-                    <Field data-invalid={!!fieldErrors.lastName}>
-                      <FieldLabel htmlFor="lastName">{t.pages.auth.signup.lastNameLabel}</FieldLabel>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        type="text"
-                        value={lastName}
-                        onChange={(event) => {
-                          resetMessage();
-                          resetFieldErrors();
-                          setLastName(event.target.value);
-                        }}
-                        aria-invalid={!!fieldErrors.lastName}
-                      />
-                      <FieldError>{fieldErrors.lastName}</FieldError>
-                    </Field>
-                  </div>
-
-                  <Field data-invalid={!!fieldErrors.emailOrPhone}>
-                    <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.signup.usernameLabel}</FieldLabel>
-                    <Input
-                      id="emailOrPhone"
-                      name="emailOrPhone"
-                      type="text"
-                      value={emailOrPhone}
-                      onChange={(event) => {
-                        resetMessage();
-                        resetFieldErrors();
-                        setEmailOrPhone(event.target.value);
-                      }}
-                      aria-invalid={!!fieldErrors.emailOrPhone}
-                    />
-                    <FieldError>{fieldErrors.emailOrPhone}</FieldError>
-                  </Field>
-
-                  <Field data-invalid={!!fieldErrors.password}>
-                    <FieldLabel htmlFor="password">{t.pages.auth.signup.passwordLabel}</FieldLabel>
-                    <PasswordInput
-                      id="password"
-                      name="password"
-                      value={password}
-                      onChange={(event) => {
-                        resetMessage();
-                        resetFieldErrors();
-                        setPassword(event.target.value);
-                      }}
-                      invalid={!!fieldErrors.password}
-                    />
-                    <FieldError>{fieldErrors.password}</FieldError>
-                  </Field>
-                </FieldGroup>
-
-                <Card className="bg-surface-primary/50 rounded-lg">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <Checkbox
-                      id="terms"
-                      checked={agreedToTerms}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          // If checking, open modal to read terms
-                          setLegalModalOpen(true);
-                        } else {
-                          // If unchecking, just untick
-                          setAgreedToTerms(false);
-                        }
-                      }}
-                      className="h-6 w-6"
-                    />
-                    <label
-                      htmlFor="terms"
-                      className="text-sm text-text-secondary leading-relaxed cursor-pointer select-none"
-                    >
-                      {t.pages.auth.signup.termsAgreement}{" "}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLegalModalOpen(true);
-                        }}
-                        className="text-brand-primary hover:underline font-medium"
-                      >
-                        {t.pages.auth.signup.termsLink}
-                      </button>
-                    </label>
-                  </CardContent>
-                </Card>
-
-                {/* Turnstile CAPTCHA Widget */}
-                <div className="flex justify-center">
-                  <TurnstileCaptcha
-                    ref={turnstileRef}
-                    execution="render"
-                    appearance="always"
-                    size="flexible"
-                    language={turnstileLanguages[locale as Locale]}
-                    onSuccess={(token) => {
-                      setCaptchaToken(token);
-                      resetMessage();
-                    }}
-                    onError={() => {
-                      setCaptchaToken(null);
-                      setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
-                    }}
-                    onExpire={() => {
-                      setCaptchaToken(null);
-                      setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaExpired });
-                    }}
+            <form ref={formRef} className="space-y-4" noValidate onSubmit={handleSignUp}>
+              {/* Name fields side by side */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-surface-primary rounded-xl overflow-hidden">
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    placeholder={t.pages.auth.signup.firstNameLabel}
+                    value={firstName}
+                    onChange={(e) => { resetMessage(); resetFieldErrors(); setFirstName(e.target.value); }}
+                    aria-invalid={!!fieldErrors.firstName}
+                    className={groupedInputClassName}
                   />
                 </div>
+                <div className="bg-surface-primary rounded-xl overflow-hidden">
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    placeholder={t.pages.auth.signup.lastNameLabel}
+                    value={lastName}
+                    onChange={(e) => { resetMessage(); resetFieldErrors(); setLastName(e.target.value); }}
+                    aria-invalid={!!fieldErrors.lastName}
+                    className={groupedInputClassName}
+                  />
+                </div>
+              </div>
+              {fieldErrors.firstName && <p className="text-xs text-error px-1">{fieldErrors.firstName}</p>}
+              {fieldErrors.lastName && <p className="text-xs text-error px-1">{fieldErrors.lastName}</p>}
 
-                {/* Message Display */}
-                {message && (
-                  <div
-                    className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                      message.type === "error"
-                        ? "bg-error-subtle text-error-foreground"
-                        : "bg-success-subtle text-success-foreground"
-                    }`}
-                    role="status"
-                    aria-live="polite"
-                  >
-                    {message.text}
-                  </div>
-                )}
+              {/* Grouped email + password */}
+              <GroupedInput>
+                <Input
+                  id="emailOrPhone"
+                  name="emailOrPhone"
+                  type="text"
+                  placeholder={t.pages.auth.signup.usernameLabel}
+                  value={emailOrPhone}
+                  onChange={(e) => { resetMessage(); resetFieldErrors(); setEmailOrPhone(e.target.value); }}
+                  aria-invalid={!!fieldErrors.emailOrPhone}
+                  className={groupedInputClassName}
+                />
+                <GroupedInputDivider />
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  placeholder={t.pages.auth.signup.passwordLabel}
+                  value={password}
+                  onChange={(e) => { resetMessage(); resetFieldErrors(); setPassword(e.target.value); }}
+                  invalid={!!fieldErrors.password}
+                  className={groupedInputClassName}
+                />
+              </GroupedInput>
+              {fieldErrors.emailOrPhone && <p className="text-xs text-error px-1">{fieldErrors.emailOrPhone}</p>}
+              {fieldErrors.password && <p className="text-xs text-error px-1">{fieldErrors.password}</p>}
 
-                <Button
-                  type="submit"
-                  disabled={submitButtonDisabled}
-                  loading={isSubmitting}
-                  size="lg"
-                  className="w-full"
-                >
-                  {t.pages.auth.signup.continueButton}
-                </Button>
-              </form>
-            </>
-          )}
-
-          {/* Step 2: OTP Verification (for phone signup) */}
-          {step === "otp" && (
-            <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-              <Field data-invalid={!!fieldErrors.otp} className="items-center">
-                <FieldLabel htmlFor="otp" className="sr-only">
-                  {t.pages.auth.signup.otpLabel}
-                </FieldLabel>
-                <InputOTP
-                  maxLength={6}
-                  value={otp}
-                  onChange={(value) => {
-                    resetAll();
-                    setOtp(value);
+              {/* Terms checkbox */}
+              <div className="bg-surface-primary/50 rounded-xl p-4 flex items-center gap-3">
+                <Checkbox
+                  id="terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => {
+                    if (checked) { setLegalModalOpen(true); } else { setAgreedToTerms(false); }
                   }}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                {fieldErrors.otp && (
-                  <FieldError className="text-center">{fieldErrors.otp}</FieldError>
-                )}
-              </Field>
+                  className="h-6 w-6"
+                />
+                <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed cursor-pointer select-none">
+                  {t.pages.auth.signup.termsAgreement}{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setLegalModalOpen(true); }}
+                    className="text-brand-gradient-start hover:underline font-medium"
+                  >
+                    {t.pages.auth.signup.termsLink}
+                  </button>
+                </label>
+              </div>
 
-              {/* Message Display */}
+              {/* Turnstile CAPTCHA */}
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  ref={turnstileRef}
+                  execution="render"
+                  appearance="always"
+                  size="flexible"
+                  language={turnstileLanguages[locale as Locale]}
+                  onSuccess={(token) => { setCaptchaToken(token); resetMessage(); }}
+                  onError={() => { setCaptchaToken(null); setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed }); }}
+                  onExpire={() => { setCaptchaToken(null); setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaExpired }); }}
+                />
+              </div>
+
               {message && (
                 <div
-                  className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                    message.type === "error"
-                      ? "bg-error-subtle text-error-foreground"
-                      : "bg-success-subtle text-success-foreground"
-                  }`}
+                  className={`rounded-lg px-4 py-3 text-sm font-medium ${message.type === "error" ? "bg-error-subtle text-error-foreground" : "bg-success-subtle text-success-foreground"}`}
                   role="status"
                   aria-live="polite"
                 >
@@ -760,46 +553,69 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={submitButtonDisabled}
                 loading={isSubmitting}
                 size="lg"
-                className="w-full"
+                className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
               >
-                {t.pages.auth.signup.verifyButton}
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setStep("input");
-                  setOtp("");
-                  resetAll();
-                }}
-                className="w-full"
-              >
-                {t.pages.auth.signup.backButton}
+                {t.pages.auth.signup.continueButton}
               </Button>
             </form>
-          )}
-        </CardContent>
-
-        {/* Footer with sign in link */}
-        {step === "input" && (
-          <CardFooter className="flex-col border-t bg-surface-secondary rounded-b-3xl pt-6">
-            <p className="text-sm text-text-secondary">
-              {t.pages.auth.signup.haveAccount}{' '}
-              <Link
-                href={`/${locale}/login`}
-                className="font-semibold text-text-primary hover:underline"
-              >
-                {t.pages.auth.signup.signIn}
-              </Link>
-            </p>
-          </CardFooter>
+          </>
         )}
-      </Card>
+
+        {/* OTP step */}
+        {step === "otp" && (
+          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+            <Field data-invalid={!!fieldErrors.otp} className="items-center">
+              <FieldLabel htmlFor="otp" className="sr-only">{t.pages.auth.signup.otpLabel}</FieldLabel>
+              <InputOTP maxLength={6} value={otp} onChange={(value) => { resetAll(); setOtp(value); }}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+              {fieldErrors.otp && <FieldError className="text-center">{fieldErrors.otp}</FieldError>}
+            </Field>
+
+            {message && (
+              <div
+                className={`rounded-lg px-4 py-3 text-sm font-medium ${message.type === "error" ? "bg-error-subtle text-error-foreground" : "bg-success-subtle text-success-foreground"}`}
+                role="status"
+                aria-live="polite"
+              >
+                {message.text}
+              </div>
+            )}
+
+            <Button type="submit" disabled={isSubmitting} loading={isSubmitting} size="lg" className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90">
+              {t.pages.auth.signup.verifyButton}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setStep("input"); setOtp(""); resetAll(); }} className="w-full">
+              {t.pages.auth.signup.backButton}
+            </Button>
+          </form>
+        )}
+      </div>
+
+      {/* Footer */}
+      {step === "input" && (
+        <div className="mt-10 text-center">
+          <p className="text-sm text-text-secondary">
+            {t.pages.auth.signup.haveAccount}{' '}
+            <Link href={`/${locale}/login`} className="font-semibold text-brand-gradient-start hover:underline">
+              {t.pages.auth.signup.signIn}
+            </Link>
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 flex justify-center">
         <LocaleSwitcher />
