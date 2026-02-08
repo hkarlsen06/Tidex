@@ -255,7 +255,8 @@ enum WageTimelineProcessor {
           type: .tax
         ))
     } else if current.effectiveTaxEnabled
-      && current.effectiveTaxPercentage != previous.effectiveTaxPercentage {
+      && current.effectiveTaxPercentage != previous.effectiveTaxPercentage
+    {
       changes.append(
         WageChange(
           description: String(

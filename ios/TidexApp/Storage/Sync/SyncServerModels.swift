@@ -63,7 +63,8 @@ struct SyncRecurringShiftRow: Codable {
     }
 
     if let minusIndex = cleaned.lastIndex(of: "-"),
-      cleaned.distance(from: cleaned.startIndex, to: minusIndex) > 2 {
+      cleaned.distance(from: cleaned.startIndex, to: minusIndex) > 2
+    {
       cleaned = String(cleaned[..<minusIndex])
     }
 

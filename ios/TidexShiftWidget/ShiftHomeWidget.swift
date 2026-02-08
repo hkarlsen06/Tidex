@@ -28,7 +28,7 @@ private struct TidexWidgetColors {
 private let logoGradientColors = [
   Color(red: 0, green: 212 / 255, blue: 1),  // #00D4FF - cyan (top)
   Color(red: 123 / 255, green: 97 / 255, blue: 1),  // #7B61FF - purple (middle)
-  Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255)  // #9B4DCA - magenta (bottom)
+  Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255),  // #9B4DCA - magenta (bottom)
 ]
 
 // MARK: - Logo Watermark View
@@ -828,7 +828,8 @@ struct ShiftWidgetProvider: TimelineProvider {
     // Find first future shift (including today)
     for shift in sortedShifts {
       if let shiftDate = parseShiftDate(shift.shiftDate),
-        shiftDate >= today {
+        shiftDate >= today
+      {
         return shift
       }
     }
@@ -865,7 +866,8 @@ struct ShiftWidgetProvider: TimelineProvider {
 
     // Tomorrow
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-      calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
+      calendar.isDate(shiftDay, inSameDayAs: tomorrow)
+    {
       return String(localized: .widgetTomorrow)
     }
 

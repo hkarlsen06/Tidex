@@ -16,7 +16,7 @@ let allFiles: [String] = [
   "generate-appstore-metadata.mjs",
   "reset-translations.mjs",
   "translate-xcstrings.mjs",
-  "appstore-metadata-source.json"
+  "appstore-metadata-source.json",
 ]
 
 func excluding(_ source: String) -> [String] {
@@ -31,7 +31,7 @@ let package = Package(
     .executable(name: "add-strings", targets: ["AddStrings"]),
     .executable(name: "audit-strings", targets: ["AuditStrings"]),
     .executable(name: "delete-strings", targets: ["DeleteStrings"]),
-    .executable(name: "search-strings", targets: ["SearchStrings"])
+    .executable(name: "search-strings", targets: ["SearchStrings"]),
   ],
   targets: [
     .executableTarget(
@@ -68,6 +68,6 @@ let package = Package(
       path: ".",
       exclude: excluding("search-strings.swift"),
       sources: ["search-strings.swift"]
-    )
+    ),
   ]
 )

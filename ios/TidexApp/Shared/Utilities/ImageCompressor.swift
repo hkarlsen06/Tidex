@@ -72,7 +72,8 @@ enum ImageCompressor {
   ///   - quality: Compression quality (0.0 - 1.0), defaults to 0.8
   /// - Returns: Compressed image with metadata, or nil if compression fails
   static func compressBestFormat(_ imageData: Data, quality: CGFloat = defaultQuality)
-    -> CompressedImage? {
+    -> CompressedImage?
+  {
     // Try WebP first (best compression)
     if let webpData = convertToWebP(imageData, quality: quality) {
       return CompressedImage(

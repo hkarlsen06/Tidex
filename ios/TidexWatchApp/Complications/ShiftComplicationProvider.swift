@@ -185,7 +185,7 @@ struct TidexShiftComplication: Widget {
       .accessoryCorner,
       .accessoryCircular,
       .accessoryRectangular,
-      .accessoryInline
+      .accessoryInline,
     ])
   }
 }

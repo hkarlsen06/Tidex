@@ -88,7 +88,8 @@ final class AuthService: ObservableObject {
   ///   - fullName: User's full name (optional)
   /// - Returns: The authenticated session (email verification disabled)
   func signUpWithEmail(email: String, password: String, fullName: String? = nil) async throws
-    -> Session {
+    -> Session
+  {
     isLoading = true
     defer { isLoading = false }
 
@@ -231,7 +232,8 @@ final class AuthService: ObservableObject {
   /// - Parameter fullName: Optional name components from Apple (only provided on first sign-in)
   /// - Returns: The authenticated session
   func signInWithApple(idToken: String, fullName: PersonNameComponents? = nil) async throws
-    -> Session {
+    -> Session
+  {
     isLoading = true
     defer { isLoading = false }
 

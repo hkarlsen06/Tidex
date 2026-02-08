@@ -305,7 +305,8 @@ struct WageyShowcaseView: View {
         ForEach(Array(exampleMessages.enumerated()), id: \.offset) { index, conversation in
           VStack(spacing: Spacing.xs) {
             ForEach(conversation) { message in
-              VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Spacing.xxs) {
+              VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Spacing.xxs)
+              {
                 // Name label
                 Text(message.role == .user ? userName : "Wagey")
                   .font(.tidexMicro)

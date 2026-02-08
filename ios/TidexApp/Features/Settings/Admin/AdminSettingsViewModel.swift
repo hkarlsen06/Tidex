@@ -932,7 +932,8 @@ final class AdminSettingsViewModel: ObservableObject {
       if case .serverError(_, let message) = error {
         // Try to extract the message from JSON response
         if let data = message.data(using: .utf8),
-          let json = try? JSONDecoder().decode(AdminActionResponse.self, from: data) {
+          let json = try? JSONDecoder().decode(AdminActionResponse.self, from: data)
+        {
           errorMessage = json.message ?? "Failed to create share"
         } else {
           errorMessage = error.localizedDescription
@@ -1248,7 +1249,8 @@ final class AdminSettingsViewModel: ObservableObject {
   // MARK: - Network Helper
 
   private func makeRequest<T: Decodable>(url: URL, method: String, body: [String: Any]? = nil)
-    async throws -> T {
+    async throws -> T
+  {
     let session = try await AuthSessionManager.shared.getSession()
 
     var request = URLRequest(url: url)
