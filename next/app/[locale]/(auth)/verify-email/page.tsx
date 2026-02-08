@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, Suspense, use, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
+import { Mail } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 import { turnstileLanguages, type Locale } from "@/lib/i18n/config";
 
@@ -28,10 +29,10 @@ const reducedMotionVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
 };
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
+import { AuthHeader } from "@/components/app/AuthHeader";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 
@@ -108,99 +109,82 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
 
   return (
     <motion.div
-      className="relative w-full"
+      className="relative w-full max-w-md mx-auto"
       variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary/10">
-            <svg
-              className="h-8 w-8 text-brand-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      {/* Header: Envelope icon in blue circle */}
+      <AuthHeader
+        variant="icon"
+        icon={<Mail className="h-9 w-9 text-brand-gradient-start" />}
+        title={t.pages.auth.verifyEmail.title}
+        subtitle={email ? t.pages.auth.verifyEmail.description.replace('{email}', email) : t.pages.auth.verifyEmail.descriptionNoEmail}
+      />
+
+      {/* Main content */}
+      <div className="space-y-6">
+        <div className="rounded-xl bg-surface-primary p-4 text-sm text-text-secondary space-y-2">
+          <p className="font-medium text-text-primary">{t.pages.auth.verifyEmail.nextStepsTitle}</p>
+          <ol className="list-decimal list-inside space-y-1 ml-2">
+            <li>{t.pages.auth.verifyEmail.step1}</li>
+            <li>{t.pages.auth.verifyEmail.step2}</li>
+            <li>{t.pages.auth.verifyEmail.step3}</li>
+          </ol>
+        </div>
+
+        <div className="space-y-3">
+          <Button
+            onClick={handleResendEmail}
+            disabled={isResending || !email || isCaptchaValidating}
+            loading={isResending || isCaptchaValidating}
+            size="lg"
+            className="w-full h-12 bg-brand-gradient-start text-white hover:bg-brand-gradient-start/90"
+          >
+            {t.pages.auth.verifyEmail.resendButton}
+          </Button>
+
+          <TurnstileCaptcha
+            ref={turnstileRef}
+            onSuccess={setCaptchaToken}
+            onError={() => {
+              setIsResending(false);
+              setIsCaptchaValidating(false);
+              setMessage({ type: "error", text: t.pages.auth.verifyEmail.errors.captchaFailed });
+            }}
+            execution="execute"
+            language={turnstileLanguages[locale as Locale]}
+            className="hidden"
+          />
+
+          {message && (
+            <div
+              className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                message.type === "error"
+                  ? "bg-error-subtle text-error-foreground"
+                  : "bg-success-subtle text-success-foreground"
+              }`}
+              role="status"
+              aria-live="polite"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <CardTitle className="text-2xl">{t.pages.auth.verifyEmail.title}</CardTitle>
-          <CardDescription>
-            {email ? t.pages.auth.verifyEmail.description.replace('{email}', email) : t.pages.auth.verifyEmail.descriptionNoEmail}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          <div className="rounded-lg bg-surface-primary/50 p-4 text-sm text-text-secondary space-y-2">
-            <p className="font-medium text-text-primary">{t.pages.auth.verifyEmail.nextStepsTitle}</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>{t.pages.auth.verifyEmail.step1}</li>
-              <li>{t.pages.auth.verifyEmail.step2}</li>
-              <li>{t.pages.auth.verifyEmail.step3}</li>
-            </ol>
-          </div>
-
-          <div className="space-y-3">
-            <Button
-              onClick={handleResendEmail}
-              disabled={isResending || !email || isCaptchaValidating}
-              loading={isResending || isCaptchaValidating}
-              variant="outline"
-              size="lg"
-              className="w-full"
-            >
-              {t.pages.auth.verifyEmail.resendButton}
-            </Button>
-
-            <TurnstileCaptcha
-              ref={turnstileRef}
-              onSuccess={setCaptchaToken}
-              onError={() => {
-                setIsResending(false);
-                setIsCaptchaValidating(false);
-                setMessage({ type: "error", text: t.pages.auth.verifyEmail.errors.captchaFailed });
-              }}
-              execution="execute"
-              language={turnstileLanguages[locale as Locale]}
-              className="hidden"
-            />
-
-            {message && (
-              <div
-                className={`rounded-md px-4 py-3 text-sm font-medium ${
-                  message.type === "error"
-                    ? "bg-error-subtle text-error-foreground"
-                    : "bg-success-subtle text-success-foreground"
-                }`}
-                role="status"
-                aria-live="polite"
-              >
-                {message.text}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 border-t border-border">
-            <div className="text-center text-sm text-text-secondary">
-              {t.pages.auth.verifyEmail.wrongEmail}{" "}
-              <Button
-                asChild
-                variant="link"
-                size="sm"
-                className="p-0 h-auto font-medium"
-              >
-                <Link href={`/${locale}/signup`}>{t.pages.auth.verifyEmail.backToSignup}</Link>
-              </Button>
+              {message.text}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-10 text-center">
+        <p className="text-sm text-text-secondary">
+          {t.pages.auth.verifyEmail.wrongEmail}{" "}
+          <Link
+            href={`/${locale}/signup`}
+            className="font-semibold text-brand-gradient-start hover:underline"
+          >
+            {t.pages.auth.verifyEmail.backToSignup}
+          </Link>
+        </p>
+      </div>
 
       <div className="mt-6 flex justify-center">
         <LocaleSwitcher />
@@ -212,40 +196,27 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
   return (
     <Suspense
-      fallback={<VerifyEmailSkeleton params={params} />}
+      fallback={<VerifyEmailSkeleton />}
     >
       <VerifyEmailContent params={params} />
     </Suspense>
   );
 }
 
-function VerifyEmailSkeleton({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale: _locale } = use(params);
-  const { t } = useTranslations();
-
+function VerifyEmailSkeleton() {
   return (
-    <div className="relative w-full">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary/10">
-            <svg
-              className="h-8 w-8 text-brand-primary animate-pulse"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <CardTitle className="text-2xl">{t.pages.auth.verifyEmail.title}</CardTitle>
-          <CardDescription>{t.pages.auth.verifyEmail.loading}</CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="relative w-full max-w-md mx-auto">
+      <div className="flex flex-col items-center gap-4 mb-10">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-gradient-start/10">
+          <Mail className="h-9 w-9 text-brand-gradient-start animate-pulse" />
+        </div>
+        <div className="h-7 w-48 rounded bg-surface-primary/50 animate-pulse" />
+        <div className="h-4 w-64 rounded bg-surface-primary/50 animate-pulse" />
+      </div>
+      <div className="space-y-6">
+        <div className="rounded-xl bg-surface-primary/50 h-32 animate-pulse" />
+        <div className="h-12 rounded-xl bg-surface-primary/50 animate-pulse" />
+      </div>
     </div>
   );
 }
