@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 // Comprehensive payroll documentation based on PAYROLL_ENGINE_SPEC.md
 const payrollDocs = {
-  badge: 'Payroll Engine Specification v1.1',
+  badge: 'PAYROLL ENGINE SPECIFICATION V2.0',
   title: 'How Tidex calculates your pay',
   subtitle:
     'A transparent, auditable reference for every payroll rule we apply. This specification enables re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results.',
