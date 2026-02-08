@@ -12,6 +12,11 @@
 # Pass through static assets (must come before locale catch-all)
 /_next/* /_next/:splat 200
 /icons/* /icons/:splat 200
+/docs/* /docs/:splat 200
+
+# Rewrite /en/payroll to serve docs page (always English)
+/en/payroll /docs/payroll/ 200
+/en/payroll/ /docs/payroll/ 200
 
 # Pass through supported locales
 /no/* /no/:splat 200
