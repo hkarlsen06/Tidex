@@ -77,6 +77,9 @@ export default async function AuthLayout({
   // The dark class enables dark mode CSS variables for child components
   return (
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.auth']}>
+      {/* Force html/body backgrounds dark on auth pages to prevent white bands
+          in mobile Safari overscroll and safe-area regions */}
+      <style>{`html, body { background-color: hsl(222.2 84% 4.9%) !important; }`}</style>
       <div
         className="dark min-h-screen text-foreground antialiased"
         style={{ backgroundColor: 'hsl(222.2 84% 4.9%)' }}
