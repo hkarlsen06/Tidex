@@ -1,0 +1,30 @@
+{
+  "version" : 1,
+  "indentation" : {
+    "spaces" : 2
+  },
+  "tabWidth" : 8,
+  "lineLength" : 100,
+  "maximumBlankLines" : 1,
+  "multiElementCollectionTrailingCommas" : true,
+  "respectsExistingLineBreaks" : true,
+  "reflowMultilineStringLiterals" : "never",
+  "lineBreakBeforeEachArgument" : false,
+  "lineBreakBeforeEachGenericRequirement" : false,
+  "lineBreakBeforeControlFlowKeywords" : false,
+  "lineBreakBetweenDeclarationAttributes" : false,
+  "lineBreakAroundMultilineExpressionChainComponents" : false,
+  "prioritizeKeepingFunctionOutputTogether" : false,
+  "indentSwitchCaseLabels" : false,
+  "indentConditionalCompilationBlocks" : true,
+  "spacesAroundRangeFormationOperators" : false,
+  "spacesBeforeEndOfLineComments" : 2,
+  "fileScopedDeclarationPrivacy" : {
+    "accessLevel" : "private"
+  },
+  "noAssignmentInExpressions" : {
+    "allowedFunctions" : [
+      "XCTAssertNoThrow"
+    ]
+  }
+}

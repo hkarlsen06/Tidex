@@ -181,7 +181,7 @@ struct ShiftLockScreenWidget: Widget {
     .supportedFamilies([
       .accessoryCircular,
       .accessoryRectangular,
-      .accessoryInline
+      .accessoryInline,
     ])
   }
 }

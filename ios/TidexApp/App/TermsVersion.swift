@@ -37,7 +37,8 @@ enum TermsVersion {
     // Check cache first
     if let cached = cachedVersionDate,
       let fetchTime = lastFetchTime,
-      Date().timeIntervalSince(fetchTime) < cacheExpiryInterval {
+      Date().timeIntervalSince(fetchTime) < cacheExpiryInterval
+    {
       return cached
     }
 

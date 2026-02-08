@@ -101,7 +101,8 @@ final class OAuthWebAuthSession: NSObject {
         if let error = error {
           let nsError = error as NSError
           if nsError.domain == ASWebAuthenticationSessionErrorDomain,
-            nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+            nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
+          {
             continuation.resume(throwing: OAuthWebAuthError.userCancelled)
           } else {
             continuation.resume(throwing: OAuthWebAuthError.failed(error.localizedDescription))
@@ -190,7 +191,8 @@ extension OAuthWebAuthSession {
 
 extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
   nonisolated func presentationAnchor(for session: ASWebAuthenticationSession)
-    -> ASPresentationAnchor {
+    -> ASPresentationAnchor
+  {
     MainActor.assumeIsolated {
       if let anchor = presentationAnchor {
         return anchor
@@ -205,7 +207,8 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
       // Create window from first available scene
       if let windowScene = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
-        .first {
+        .first
+      {
         return UIWindow(windowScene: windowScene)
       }
       // Fallback: try to get any window from any scene
@@ -213,7 +216,8 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
       if let anyWindow = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
         .flatMap({ $0.windows })
-        .first {
+        .first
+      {
         return anyWindow
       }
       // Should never happen: an active app always has at least one window scene.

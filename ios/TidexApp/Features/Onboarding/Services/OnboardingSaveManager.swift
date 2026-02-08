@@ -89,7 +89,8 @@ final class OnboardingSaveManager: ObservableObject {
   // MARK: - Private Helpers
 
   private func createBaselineSnapshot(userId: String, data: OnboardingData) async throws
-    -> WageSnapshot {
+    -> WageSnapshot
+  {
     let snapshot = try await snapshotsRepository.createSnapshot(
       userId: userId,
       fromDate: nil,  // nil = baseline snapshot

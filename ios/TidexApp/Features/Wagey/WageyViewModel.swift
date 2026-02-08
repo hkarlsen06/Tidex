@@ -322,7 +322,8 @@ final class WageyViewModel {
   /// Get the current conversation title
   var currentConversationTitle: String {
     if let id = currentConversationId,
-      let conversation = conversations.first(where: { $0.id == id }) {
+      let conversation = conversations.first(where: { $0.id == id })
+    {
       return conversation.title
     }
     return "New Conversation"
@@ -521,7 +522,8 @@ final class WageyViewModel {
     case .text(let content):
       // Append text to the last text block, or create a new one
       if let lastIndex = activeContentBlocks.indices.last,
-        case .text(let existingText) = activeContentBlocks[lastIndex] {
+        case .text(let existingText) = activeContentBlocks[lastIndex]
+      {
         // Append to existing text block
         activeContentBlocks[lastIndex] = .text(existingText + content)
       } else {

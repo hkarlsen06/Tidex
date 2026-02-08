@@ -118,7 +118,8 @@ final class ImpersonationManager: ObservableObject {
   ///   - targetUserId: The user ID to impersonate
   ///   - reason: Reason for impersonation (min 5 chars, required for audit)
   /// - Returns: The impersonation result with session details
-  func startImpersonation(targetUserId: String, reason: String) async throws -> ImpersonationResult {
+  func startImpersonation(targetUserId: String, reason: String) async throws -> ImpersonationResult
+  {
     guard reason.count >= 5 else {
       throw ImpersonationError.reasonTooShort
     }
@@ -262,7 +263,8 @@ final class ImpersonationManager: ObservableObject {
     self.isImpersonating = true
 
     if let expiresAtString = getString(forKey: expiresAtKey),
-      let expiresAtDouble = Double(expiresAtString) {
+      let expiresAtDouble = Double(expiresAtString)
+    {
       self.expiresAt = Date(timeIntervalSince1970: expiresAtDouble)
     }
 
@@ -282,7 +284,8 @@ final class ImpersonationManager: ObservableObject {
   }
 
   private func storeSessionMetadata(sessionId: String, targetUserName: String, expiresAt: Date?)
-    throws {
+    throws
+  {
     try storeString(sessionId, forKey: impersonationSessionIdKey)
     try storeString(targetUserName, forKey: targetUserNameKey)
     if let expiresAt {
