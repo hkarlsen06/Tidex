@@ -2,6 +2,7 @@
 
 @source '../app/**/*.{js,ts,jsx,tsx}';
 @source '../components/**/*.{js,ts,jsx,tsx}';
+@source '../../next/components/payroll-docs/**/*.{js,ts,jsx,tsx}';
 
 @theme {
   --color-brand-gradient-start: hsl(199 89% 48%);

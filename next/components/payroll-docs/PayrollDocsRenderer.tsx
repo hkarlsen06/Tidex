@@ -30,89 +30,36 @@ interface PayrollDocsRendererProps {
   };
 }
 
-// Helper to determine if a heading should have extra spacing above it
-function shouldHaveExtraSpacing(heading: string): boolean {
-  // Patterns that should have extra spacing (they mark new sections/items):
-  // - Numbered items: "1.", "2.", "3.", "4."
-  // - Method labels: "Method 1:", "Method 2:", "Method 3:"
-  // - Step labels: "Step 1:", "Step 2:", "Step 3:", "Step 4:"
-  // - Named sections that follow intro sections
-
-  // Check for numbered/labeled headings
-  if (/^(\d+\.|Method \d+:|Step \d+:)/.test(heading)) {
-    return true;
-  }
-
-  // Specific headings that introduce new concepts and should have spacing
-  const spacedHeadings = [
-    'The algorithm',
-    'Supplement rules',
-    'Preset supplement rules',
-    'Custom supplements',
-    'Overlapping supplements',
-    'Source code',
-    'Default settings',
-    'Threshold',
-    'Break audit',
-    'Precision',
-    'Example: Evening shift with night supplement',
-    'Complete example: Saturday evening',
-  ];
-
-  return spacedHeadings.includes(heading);
-}
-
-// Helper to check if heading is introductory (no extra spacing needed)
-function isIntroductoryHeading(heading: string): boolean {
-  const introHeadings = [
-    'How we resolve the hourly rate',
-    'How shifts become wage periods',
-    'How evening, night, and weekend pay is applied',
-    'Automatic break deductions',
-    'From database to UI',
-    'Transparency by design',
-    'What this guide covers',
-    'Architecture highlights',
-  ];
-
-  return introHeadings.includes(heading);
-}
-
-// Helper to check if a paragraph is an example
 function isExampleText(text: string): boolean {
   return text.startsWith('Example:');
 }
 
 export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
   return (
-    <article className="space-y-12">
+    <article>
       {/* Section Title */}
-      <header>
+      <header className="mb-10 sm:mb-12">
         <h2 className="text-3xl font-bold text-text-primary sm:text-4xl">{section.title}</h2>
       </header>
 
       {/* Subsections */}
-      <div className="space-y-14">
+      <div className="divide-y divide-border-subtle">
         {section.subsections.map((subsection, idx) => {
-          const isFirstSubsection = idx === 0;
-          const needsExtraSpacing =
-            subsection.heading &&
-            !isFirstSubsection &&
-            !isIntroductoryHeading(subsection.heading) &&
-            shouldHaveExtraSpacing(subsection.heading);
-
+          const isFirst = idx === 0;
+          const isLast = idx === section.subsections.length - 1;
           return (
-            <div key={idx} className="space-y-6">
-              {/* Subsection Heading */}
-              {subsection.heading && (
-                <h3
-                  className={`text-xl font-semibold text-text-primary sm:text-2xl ${
-                    needsExtraSpacing ? 'pt-8' : ''
-                  }`}
-                >
-                  {subsection.heading}
-                </h3>
-              )}
+          <div
+            key={idx}
+            className={`space-y-5 ${
+              isFirst && isLast ? '' : isFirst ? 'pb-6 sm:pb-8' : isLast ? 'pt-6 sm:pt-8' : 'py-6 sm:py-8'
+            }`}
+          >
+            {/* Subsection Heading */}
+            {subsection.heading && (
+              <h3 className="text-xl font-semibold text-text-primary sm:text-2xl">
+                {subsection.heading}
+              </h3>
+            )}
 
             {/* Paragraphs */}
             {subsection.paragraphs && subsection.paragraphs.length > 0 && (
@@ -139,7 +86,10 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
             {subsection.list && subsection.list.length > 0 && (
               <ul className="ml-6 space-y-2 list-disc">
                 {subsection.list.map((item, lIdx) => (
-                  <li key={lIdx} className="text-base leading-relaxed text-text-secondary sm:text-lg pl-2">
+                  <li
+                    key={lIdx}
+                    className="text-base leading-relaxed text-text-secondary pl-2 sm:text-lg"
+                  >
                     {item}
                   </li>
                 ))}
@@ -191,16 +141,16 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
 
             {/* Table */}
             {subsection.table && (
-              <figure className="space-y-3">
+              <figure className="overflow-hidden rounded-lg border border-border shadow-xs">
                 {subsection.table.caption && (
-                  <figcaption className="text-base font-medium text-text-primary sm:text-lg">
+                  <figcaption className="border-b border-border bg-surface-secondary px-4 py-3 text-sm font-medium text-text-muted sm:px-6">
                     {subsection.table.caption}
                   </figcaption>
                 )}
-                <div className="overflow-x-auto rounded-lg border border-border shadow-xs">
+                <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-surface-secondary">
+                      <tr className="bg-surface-secondary/50">
                         {subsection.table.headers.map((header, hIdx) => (
                           <th
                             key={hIdx}
@@ -235,9 +185,14 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
 
             {/* Steps (nested structure for algorithms) */}
             {subsection.steps && subsection.steps.length > 0 && (
-              <div className="space-y-8">
-                {subsection.steps.map((step, sIdx) => (
-                  <div key={sIdx} className="border-l-2 border-border pl-6 space-y-4">
+              <div className="divide-y divide-border-subtle">
+                {subsection.steps.map((step, sIdx) => {
+                  const isFirstStep = sIdx === 0;
+                  const isLastStep = sIdx === subsection.steps!.length - 1;
+                  return (
+                  <div key={sIdx} className={`border-l-2 border-border pl-6 space-y-4 ${
+                    isFirstStep && isLastStep ? '' : isFirstStep ? 'pb-6 sm:pb-8' : isLastStep ? 'pt-6 sm:pt-8' : 'py-6 sm:py-8'
+                  }`}>
                     <h4 className="text-lg font-medium text-text-primary sm:text-xl">
                       {step.title}
                     </h4>
@@ -265,7 +220,10 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
                     {step.list && step.list.length > 0 && (
                       <ul className="ml-6 space-y-2 list-disc">
                         {step.list.map((item, lIdx) => (
-                          <li key={lIdx} className="text-base leading-relaxed text-text-secondary pl-2">
+                          <li
+                            key={lIdx}
+                            className="text-base leading-relaxed text-text-secondary pl-2"
+                          >
                             {item}
                           </li>
                         ))}
@@ -294,7 +252,8 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
                       <p className="text-sm italic text-text-muted">{step.note}</p>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
