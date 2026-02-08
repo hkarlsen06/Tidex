@@ -284,7 +284,7 @@ struct RecurringShiftEditorSheet: View {
       HStack(spacing: Spacing.xs) {
         if isSaving {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
             .scaleEffect(0.8)
         } else {
           Image(systemName: "checkmark")
@@ -293,7 +293,7 @@ struct RecurringShiftEditorSheet: View {
         Text(.commonSaveChanges)
           .font(.tidexLabelStrong)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(hasChanges && canSave ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))

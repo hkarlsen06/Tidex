@@ -317,6 +317,8 @@ struct MonthLimitSheet: View {
               .frame(width: 28, height: 28)
               .background(Color.tidexTextMuted.opacity(0.1))
               .clipShape(Circle())
+              .contentShape(Rectangle())
+              .frame(minWidth: 44, minHeight: 44)
           }
         }
 
@@ -411,7 +413,7 @@ struct MonthLimitSheet: View {
         Button(action: handleDeleteConfirm) {
           if isDeleting {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnDanger))
               .frame(maxWidth: .infinity)
           } else {
             Text(confirmDeleteButtonText)
@@ -420,7 +422,7 @@ struct MonthLimitSheet: View {
           }
         }
         .frame(height: 44)
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.tidexTextOnDanger)
         .background(Color.tidexError)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .disabled(isDeleting)

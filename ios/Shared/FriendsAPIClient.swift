@@ -139,7 +139,7 @@ enum FriendsAPIError: Error, LocalizedError, Sendable {
 /// Used by widget and watch to bypass the main app's data flow
 enum FriendsAPIClient {
   /// Base URL for the API
-  private static let baseURL = URL(string: "https://app.tidex.no")!
+  private static let baseURL = URL(string: "https://app.tidex.no")
 
   /// Shared URLSession with reasonable timeouts
   private static let urlSession: URLSession = {
@@ -236,6 +236,9 @@ enum FriendsAPIClient {
 
   private static func fetchSharers(accessToken: String) async throws -> [SharersResponse.SharerData]
   {
+    guard let baseURL else {
+      throw FriendsAPIError.networkError(underlying: "Invalid base URL")
+    }
     let url = baseURL.appendingPathComponent("api/sharing/sharers")
 
     var request = URLRequest(url: url)
@@ -276,6 +279,9 @@ enum FriendsAPIClient {
     sharerIds: [String],
     accessToken: String
   ) async throws -> [PreviewsResponse.PreviewData] {
+    guard let baseURL else {
+      throw FriendsAPIError.networkError(underlying: "Invalid base URL")
+    }
     let previewsURL = baseURL.appendingPathComponent("api/sharing/previews")
     guard var components = URLComponents(url: previewsURL, resolvingAgainstBaseURL: false) else {
       throw FriendsAPIError.networkError(underlying: "Invalid base URL")

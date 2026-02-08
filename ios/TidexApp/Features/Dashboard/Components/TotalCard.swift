@@ -19,6 +19,7 @@ struct TotalCard: View {
   var isLoading: Bool = false
 
   @Environment(\.userCurrency) private var currency
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   /// Tracks whether the launch count-up animation has already played this session.
   /// Static so it persists across view recreations but resets on app restart.
@@ -70,6 +71,10 @@ struct TotalCard: View {
   /// Whether to show a dash instead of percentage (nil or zero means no meaningful comparison)
   private var showPercentageDash: Bool {
     percentageChange == nil || percentageChange == 0
+  }
+
+  private var usesFixedTypographyFrames: Bool {
+    !dynamicTypeSize.isAccessibilitySize
   }
 
   // MARK: - Subtitle Text
@@ -126,17 +131,15 @@ struct TotalCard: View {
 
   var body: some View {
     VStack(spacing: Spacing.xxs) {
-      // Percentage change indicator (top) - fixed height for consistent card size
+      // Use fixed heights for standard text sizes, but allow expansion for accessibility sizes.
       percentageIndicator
-        .frame(height: 22)  // Match the 18pt font line height
+        .frame(height: usesFixedTypographyFrames ? 22 : nil)
 
-      // Main total display (large centered) - fixed height for consistency
       mainAmountDisplay
-        .frame(height: 88)  // Match the 88pt font line height
+        .frame(height: usesFixedTypographyFrames ? 88 : nil)
 
-      // Subtitle row - fixed height for consistent card size
       subtitleContent
-        .frame(height: 24)  // Fixed height for subtitle area
+        .frame(height: usesFixedTypographyFrames ? 24 : nil)
     }
     .frame(maxWidth: .infinity)
     .padding(.horizontal, Spacing.lg)

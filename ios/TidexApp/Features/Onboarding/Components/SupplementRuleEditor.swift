@@ -510,6 +510,8 @@ private struct DayButton: View {
           Circle()
             .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
         )
+        .contentShape(Rectangle())
+        .frame(minWidth: 44, minHeight: 44)
     }
     .buttonStyle(.plain)
   }

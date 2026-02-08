@@ -191,7 +191,7 @@ private struct QuickPercentageButton: View {
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(maxWidth: .infinity)
-        .frame(height: 36)
+        .frame(height: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
         .overlay(

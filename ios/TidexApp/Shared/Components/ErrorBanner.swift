@@ -26,6 +26,8 @@ struct ErrorBanner: View {
           Text(.commonRetry)
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
       }
@@ -35,8 +37,11 @@ struct ErrorBanner: View {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
             .font(.tidexCaptionStrong)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
       }
     }
     .padding(Spacing.md)
@@ -72,8 +77,11 @@ struct SuccessBanner: View {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
             .font(.tidexCaptionStrong)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
       }
     }
     .padding(Spacing.md)

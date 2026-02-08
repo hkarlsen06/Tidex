@@ -439,7 +439,7 @@ private struct MFAEnrollmentSheet: View {
         Button(action: verifyCode) {
           Text(.onboardingMfaVerify)
             .font(.tidexHeadline)
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .frame(maxWidth: .infinity)
             .frame(height: 54)
             .background(

@@ -136,7 +136,7 @@ struct ShiftsEmptyState: View {
           Text(.shiftsEmptyAddShift)
             .font(.tidexButton)
         }
-        .foregroundColor(.white)
+        .foregroundColor(.tidexTextOnBrand)
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexBlue)

@@ -309,7 +309,7 @@ struct StatsView: View {
       } label: {
         Text(.commonRetry)
           .font(.tidexButton)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .padding(.horizontal, Spacing.lg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)

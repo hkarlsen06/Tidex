@@ -150,7 +150,7 @@ struct ReminderTimePickerSheet: View {
         Text(.commonDelete)
           .font(.tidexButton)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
       .frame(height: Spacing.buttonHeight)
       .background(Color.tidexError)

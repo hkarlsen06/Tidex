@@ -18,33 +18,10 @@ struct TermsAgreementView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      // Checkbox with label
-      Button(action: {
-        isAgreed.toggle()
-      }) {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-          // Checkbox
-          ZStack {
-            RoundedRectangle(cornerRadius: CornerRadius.xxs)
-              .stroke(checkboxBorderColor, lineWidth: 1.5)
-              .frame(width: 20, height: 20)
-              .background(
-                RoundedRectangle(cornerRadius: CornerRadius.xxs)
-                  .fill(isAgreed ? Color.tidexBrandPrimary : Color.clear)
-              )
-
-            if isAgreed {
-              Image(systemName: "checkmark")
-                .font(.tidexCaptionStrong)
-                .foregroundColor(.white)
-            }
-          }
-
-          // Label with links
-          termsLabel
-        }
+      HStack(alignment: .top, spacing: Spacing.sm) {
+        checkboxButton
+        termsLabel
       }
-      .buttonStyle(.plain)
 
       // Error message
       if let error = error, !error.isEmpty {
@@ -59,6 +36,38 @@ struct TermsAgreementView: View {
     }
   }
 
+  private var checkboxButton: some View {
+    Button(action: { isAgreed.toggle() }) {
+      ZStack {
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
+          .stroke(checkboxBorderColor, lineWidth: 1.5)
+          .frame(width: 20, height: 20)
+          .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xxs)
+              .fill(isAgreed ? Color.tidexBrandPrimary : Color.clear)
+          )
+
+        if isAgreed {
+          Image(systemName: "checkmark")
+            .font(.tidexCaptionStrong)
+            .foregroundColor(.tidexTextOnBrand)
+        }
+      }
+      .frame(minWidth: 44, minHeight: 44, alignment: .topLeading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(agreementAccessibilityLabel)
+    .accessibilityAddTraits(isAgreed ? .isSelected : [])
+    .accessibilityHint(Text(.signupTermsPrefix))
+  }
+
+  private var agreementAccessibilityLabel: Text {
+    Text(
+      "\(String(localized: .signupTermsTermsLink)) \(String(localized: .signupTermsAnd)) \(String(localized: .signupTermsPrivacyLink))"
+    )
+  }
+
   private var checkboxBorderColor: Color {
     if error != nil {
       return .tidexError
@@ -70,6 +79,7 @@ struct TermsAgreementView: View {
     // Build the terms text with proper text flow using AttributedString
     Text(termsAttributedString)
       .font(.tidexSubheadline)
+      .fixedSize(horizontal: false, vertical: true)
       .environment(
         \.openURL,
         OpenURLAction { url in

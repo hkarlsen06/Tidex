@@ -12,7 +12,13 @@
     "test": "pnpm --filter next test",
     "open-ios": "open ios/Tidex.xcodeproj",
     "localize": "node ios/scripts/translate-xcstrings.mjs",
+    "ios:l10n:add": "swift ios/Scripts/add-strings.swift",
+    "ios:l10n:delete": "swift ios/Scripts/delete-strings.swift",
+    "ios:l10n:search": "swift ios/Scripts/search-strings.swift",
+    "ios:l10n:audit": "swift ios/Scripts/audit-strings.swift",
+    "ios:l10n:validate": "swift ios/Scripts/validate-localization.swift",
     "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh",
+    "swiftlint": "sh -c 'for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use pnpm swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\"' --",
     "swift-format": "xcrun swift-format format --configuration .swift-format --recursive ios/ --in-place --parallel"
   },
   "pnpm": {

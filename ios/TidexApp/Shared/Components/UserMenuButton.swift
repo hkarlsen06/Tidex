@@ -66,12 +66,16 @@ struct UserMenuButton: View {
 
       // Profile picture or initial
       profileImage
+        .accessibilityHidden(true)
     }
     .padding(.leading, Spacing.xxxs)
     .padding(.trailing, Spacing.xxs)
     .padding(.vertical, Spacing.xxs)
+    .frame(minHeight: 44)
+    .contentShape(Rectangle())
     // Fixed height prevents toolbar layout shifts on iPad
-    .iPadFixedHeight(36)
+    .iPadFixedHeight(44)
+    .accessibilityElement(children: .combine)
   }
 
   // MARK: - Profile Image

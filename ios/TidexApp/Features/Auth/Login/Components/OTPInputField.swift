@@ -4,6 +4,8 @@ import UIKit
 /// 6-digit OTP input field with individual digit boxes
 /// Optimized for instant keyboard response
 struct OTPInputField: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   @Binding var code: String
   var error: String? = nil
   var onComplete: (() -> Void)? = nil
@@ -11,6 +13,7 @@ struct OTPInputField: View {
 
   @FocusState private var isFocused: Bool
   @State private var cursorVisible = true
+  @State private var cursorTimer: Timer?
 
   private let digitCount = 6
 
@@ -41,6 +44,7 @@ struct OTPInputField: View {
           .accentColor(.clear)
           .frame(maxWidth: .infinity)
           .frame(height: 56)
+          .accessibilityLabel(Text(String(localized: "security.password.otpLabel")))
           .onChange(of: code) { _, newValue in
             handleCodeChange(newValue)
           }
@@ -65,6 +69,10 @@ struct OTPInputField: View {
       }
       // Start cursor blinking
       startCursorBlink()
+    }
+    .onDisappear {
+      cursorTimer?.invalidate()
+      cursorTimer = nil
     }
   }
 
@@ -96,7 +104,15 @@ struct OTPInputField: View {
   }
 
   private func startCursorBlink() {
-    Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+    cursorTimer?.invalidate()
+    cursorTimer = nil
+
+    guard !reduceMotion else {
+      cursorVisible = true
+      return
+    }
+
+    cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
       cursorVisible.toggle()
     }
   }

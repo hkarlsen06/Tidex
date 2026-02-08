@@ -55,7 +55,7 @@ struct ChatMessageBubble: View {
   private func userMessageContent(text: String) -> some View {
     Text(text)
       .font(.tidexBody)
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnBrand)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexBlue)

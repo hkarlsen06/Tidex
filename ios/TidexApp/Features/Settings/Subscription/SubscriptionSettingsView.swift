@@ -359,7 +359,7 @@ struct SubscriptionSettingsView: View {
             )
             .font(.tidexButton)
           }
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .frame(maxWidth: .infinity)
           .frame(height: Spacing.buttonHeight)
           .background(Color.tidexBlue)

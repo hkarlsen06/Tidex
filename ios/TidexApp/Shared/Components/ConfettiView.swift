@@ -14,6 +14,8 @@ private struct ConfettiParticle: Identifiable {
 /// Confetti celebration overlay view
 /// Displays animated confetti particles when shifts are successfully added
 struct ConfettiView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   /// Whether the confetti animation is active
   let isActive: Bool
 
@@ -54,13 +56,21 @@ struct ConfettiView: View {
     }
     .allowsHitTesting(false)
     .onChange(of: isActive) { _, newValue in
-      if newValue {
+      if newValue && !reduceMotion {
         startAnimation()
+      } else if newValue {
+        particles.removeAll()
+        animationPhase = .complete
+        onComplete?()
       }
     }
     .onAppear {
-      if isActive {
+      if isActive && !reduceMotion {
         startAnimation()
+      } else if isActive {
+        particles.removeAll()
+        animationPhase = .complete
+        onComplete?()
       }
     }
   }
@@ -232,7 +242,7 @@ extension ConfettiView.AnimationPhase: Equatable {}
           }
           .padding()
           .background(Color.tidexBlue)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .cornerRadius(CornerRadius.lg)
 
           Spacer()

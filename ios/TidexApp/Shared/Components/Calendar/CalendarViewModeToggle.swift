@@ -6,6 +6,7 @@ import UIKit
 /// Reusable hours/money toggle bar for calendar views
 /// Uses glass effect for selected state
 struct CalendarViewModeToggle: View {
+  private let controlHeight: CGFloat = 44
   @Binding var viewMode: CalendarViewMode
   let currency: String
   let showMoneyOption: Bool
@@ -49,6 +50,7 @@ struct CalendarViewModeToggle: View {
         .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
+        .frame(height: controlHeight)
         .contentShape(Rectangle())
         .background(
           Group {
@@ -82,6 +84,7 @@ struct CalendarViewModeToggle: View {
             .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
+            .frame(height: controlHeight)
             .contentShape(Rectangle())
             .background(
               Group {

@@ -15,6 +15,8 @@ enum FriendSectionType {
 /// Tapping anywhere on the row opens a menu with all available actions.
 /// Block and remove actions are also accessible via swipe gestures on the List row.
 struct FriendRow: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let friend: Friend
   let sectionType: FriendSectionType
   let isActionInProgress: Bool
@@ -44,7 +46,9 @@ struct FriendRow: View {
     .background(
       Color.tidexBlue.opacity(isHighlighted ? 0.15 : 0)
         .animation(
-          .easeInOut(duration: 0.8).repeatCount(3, autoreverses: true), value: isHighlighted)
+          reduceMotion ? nil : .easeInOut(duration: 0.8).repeatCount(3, autoreverses: true),
+          value: isHighlighted
+        )
     )
   }
 
@@ -103,7 +107,7 @@ struct FriendRow: View {
           .font(.system(size: 10))
           .foregroundColor(.white)
           .padding(3)
-          .background(Color.red.opacity(0.85))
+          .background(Color.tidexError.opacity(0.85))
           .clipShape(Circle())
           .offset(x: 2, y: 2)
       }

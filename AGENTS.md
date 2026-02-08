@@ -50,15 +50,15 @@ Use these skills for specialized tasks:
 
 ## iOS Localization Scripts
 
-Located in `ios/Scripts/`. These are on the system PATH (via `/etc/paths.d/tidex`), so **always run them directly as commands** — never use `./`, `swift run`, or full paths.
+Located in `ios/Scripts/`. Use `pnpm` commands from repo root as the default interface.
 
 **Commands:**
 ```bash
-add-strings --key "feature.key" --en "English" --nb "Norwegian"
-delete-strings --key "feature.key"
-search-strings "query"
-audit-strings
-validate-localization
+pnpm ios:l10n:add -- --key "feature.key" --en "English" --nb "Norwegian"
+pnpm ios:l10n:delete -- --key "feature.key"
+pnpm ios:l10n:search -- "query"
+pnpm ios:l10n:audit
+pnpm ios:l10n:validate
 ```
 
 ## Supabase Edge Functions

@@ -160,6 +160,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     FriendShiftWidgetEntry.placeholder()
   }
 
+  // Required by AppIntentTimelineProvider; this snapshot path intentionally uses cached sync data.
+  // swiftlint:disable:next async_without_await
   func snapshot(for configuration: FriendShiftIntent, in _: Context) async -> FriendShiftWidgetEntry
   {
     if let friend = configuration.friend {

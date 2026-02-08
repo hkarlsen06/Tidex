@@ -107,7 +107,7 @@ struct SwipeableShiftCard<Content: View>: View {
         Text(.shiftsActionsEdit)
           .font(.tidexMicro)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnBrand)
       .opacity(editContentOpacity)
       .scaleEffect(editActionScale)
     }
@@ -124,7 +124,7 @@ struct SwipeableShiftCard<Content: View>: View {
         Text(.shiftsActionsDelete)
           .font(.tidexMicro)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnDanger)
       .opacity(deleteContentOpacity)
       .scaleEffect(deleteActionScale)
     }

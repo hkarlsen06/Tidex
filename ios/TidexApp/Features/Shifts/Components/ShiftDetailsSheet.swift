@@ -735,7 +735,7 @@ struct ShiftDetailsSheet: View {
         HStack(spacing: Spacing.xs) {
           if isSaving {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
               .scaleEffect(0.8)
           } else {
             Image(systemName: "checkmark")
@@ -744,7 +744,7 @@ struct ShiftDetailsSheet: View {
           Text(.commonSaveChanges)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.white)
+        .foregroundColor(.tidexTextOnBrand)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(hasChanges ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
@@ -786,7 +786,7 @@ struct ShiftDetailsSheet: View {
             Text(.shiftsEditButton)
               .font(.tidexLabelStrong)
           }
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
@@ -1061,7 +1061,7 @@ struct ShiftDetailsSheet: View {
         )
         .font(.tidexLabelStrong)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexError)

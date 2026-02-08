@@ -4,6 +4,8 @@ import UIKit
 /// Primary action button with Tidex brand styling
 /// Used for main CTAs like "Log in", "Sign up", etc.
 struct PrimaryButton: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let title: String
   let action: () -> Void
   var isLoading: Bool = false
@@ -17,7 +19,7 @@ struct PrimaryButton: View {
       HStack(spacing: Spacing.xs) {
         if isLoading {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
             .scaleEffect(0.8)
         }
 
@@ -31,22 +33,24 @@ struct PrimaryButton: View {
           ? Color.tidexBrandPrimary.opacity(0.5)
           : Color.tidexBrandPrimary
       )
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnBrand)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
-    .buttonStyle(SnappyPrimaryButtonStyle())
+    .buttonStyle(SnappyPrimaryButtonStyle(reduceMotion: reduceMotion))
     .disabled(isDisabled || isLoading)
-    .animation(.easeInOut(duration: 0.15), value: isLoading)
+    .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLoading)
   }
 }
 
 /// Snappy button style with scale and opacity feedback
 private struct SnappyPrimaryButtonStyle: ButtonStyle {
+  let reduceMotion: Bool
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.97 : 1.0))
       .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: configuration.isPressed)
   }
 }
 

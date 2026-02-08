@@ -20,7 +20,7 @@ struct ImpersonationBanner: View {
 
       // Info text
       VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text("Impersonating: \(targetName)")
+        Text(String(format: String(localized: "Impersonating: %@"), targetName))
           .font(.tidexLabelStrong)
           .foregroundStyle(Color.tidexTextPrimary)
 
@@ -38,10 +38,10 @@ struct ImpersonationBanner: View {
       } label: {
         if isLoading {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnDanger))
             .frame(width: 16, height: 16)
         } else {
-          Text("Stop")
+          Text(String(localized: "Stop"))
             .font(.tidexLabelStrong)
         }
       }
@@ -49,7 +49,7 @@ struct ImpersonationBanner: View {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexError)
-      .foregroundStyle(.white)
+      .foregroundStyle(Color.tidexTextOnDanger)
       .cornerRadius(CornerRadius.sm)
     }
     .padding(Spacing.sm)
@@ -88,7 +88,7 @@ private struct ExpirationText: View {
     let remaining = expiresAt.timeIntervalSinceNow
 
     if remaining <= 0 {
-      timeRemaining = "Session expired"
+      timeRemaining = String(localized: "impersonation.banner.sessionExpiredState")
       return
     }
 
@@ -97,11 +97,19 @@ private struct ExpirationText: View {
     let seconds = Int(remaining) % 60
 
     if hours > 0 {
-      timeRemaining = "Expires in \(hours)h \(minutes)m"
+      timeRemaining =
+        "\(String(localized: "impersonation.banner.expiresInPrefix")) \(hours)\(String(localized: .commonHoursShort)) \(minutes)\(String(localized: .commonMinutesShort))"
     } else if minutes > 0 {
-      timeRemaining = "Expires in \(minutes)m \(seconds)s"
+      timeRemaining = String(
+        format: String(localized: "impersonation.banner.expiresInMinutesSeconds"),
+        minutes,
+        seconds
+      )
     } else {
-      timeRemaining = "Expires in \(seconds)s"
+      timeRemaining = String(
+        format: String(localized: "impersonation.banner.expiresInSeconds"),
+        seconds
+      )
     }
   }
 }

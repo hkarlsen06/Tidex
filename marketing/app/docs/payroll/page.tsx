@@ -66,13 +66,8 @@ const payrollDocs = {
         {
           heading: 'Outputs',
           list: [
-            'durationHours: Raw duration before break deduction',
-            'paidHours: Duration after break deduction',
-            'basePay: Earnings from base hourly rate (NOK)',
-            'supplementPay: Earnings from supplement overlays (NOK)',
-            'gross: Total before tax (basePay + supplementPay)',
-            'taxAmount: Tax deduction (if enabled)',
-            'net: After-tax earnings (gross - taxAmount)',
+            'computeShift output: durationHours, paidHours, basePay, supplementPay, gross, wagePeriods, originalWagePeriods, breakAudit',
+            'Downstream totals output: taxAmount and net (calculated outside computeShift)',
           ],
         },
         {
@@ -81,7 +76,7 @@ const payrollDocs = {
             'Deterministic: Same inputs always produce same outputs',
             'Pure computation: Zero I/O, all inputs explicit',
             'Cross-midnight support: Shifts spanning midnight are calculated as continuous time',
-            'Payout-date-based tax/snapshot: Tax and snapshot selection use payout date, not worked date',
+            'Dual-date snapshot logic: Wage/supplements/breaks use shift date; tax uses payout date',
             'Precision: 3 decimal places for hours, 2 decimal places for currency',
           ],
         },
@@ -111,7 +106,7 @@ const payrollDocs = {
 computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/calc.ts
 
 // Effect-wrapped (with validation)
-computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effect.ts`,
+computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effect.ts (returns Effect<ShiftComputed, ValidationError>)`,
           },
         },
       ],
@@ -188,7 +183,7 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
             headers: ['Column', 'Type', 'Default', 'Purpose'],
             rows: [
               ['user_id', 'uuid', '-', 'Primary key, FK to auth.users'],
-              ['payroll_day', 'integer', '15', 'Day of month (1-31) when payroll is received'],
+              ['payroll_day', 'integer', 'app fallback: 1', 'Day of month (1-31) when payroll is received'],
               ['half_tax_month', 'integer', '-', 'Month (11 or 12) for half-tax; NULL = disabled'],
               ['monthly_goal', 'integer', '20000', 'Monthly earnings goal in NOK'],
             ],
@@ -298,6 +293,7 @@ type WagePeriod = {
   .from("user_shifts")
   .select("*")
   .eq("user_id", userId)
+  .is("deleted_at", null)
   .gte("shift_date", startDate)
   .lte("shift_date", endDate)
   .order("shift_date", { ascending: false })
@@ -311,7 +307,8 @@ type WagePeriod = {
                 content: `const { data: recurringShifts } = await supabase
   .from("recurring_shifts")
   .select("*")
-  .eq("user_id", userId);`,
+  .eq("user_id", userId)
+  .is("deleted_at", null);`,
               },
             },
             {
@@ -356,11 +353,18 @@ type WagePeriod = {
                 content: `// Fetch all user's wage snapshots once
 const snapshots = await getUserWageSnapshots(userId);
 
-// Use binary search for O(log n) lookup per date
+// Wage/supplement/break snapshots (lookup by shift date)
 for (const shiftDate of allDates) {
-  const payoutDate = calculatePayoutDate(year, month, payrollDay);
-  const snapshot = findSnapshotForDate(payoutDate, snapshots);
-  snapshotMap.set(shiftDate, snapshot);
+  const wageSnapshot = findSnapshotForDate(shiftDate, snapshots);
+  wageSnapshotMap.set(shiftDate, wageSnapshot);
+}
+
+// Tax snapshots (lookup by payout date)
+const payoutDates = new Set(allDates.map(d => getPayoutDateForShift(d)));
+for (const shiftDate of allDates) {
+  const payoutDate = getPayoutDateForShift(shiftDate);
+  const taxSnapshot = findSnapshotForDate(payoutDate, snapshots);
+  payoutSnapshotMap.set(payoutDate, taxSnapshot);
 }`,
               },
             },
@@ -401,7 +405,7 @@ if (end <= start) {
 }
 // Duration: 1800 - 1320 = 480 minutes = 8 hours`,
           },
-          note: 'Supplements from both the start day and next day are considered. Time windows are projected into the extended timeline (0-2880 minutes).',
+          note: 'Supplement rules are matched by the shift\'s weekday. For cross-midnight shifts, matching windows are projected into an extended timeline (0-2880 minutes), but rules from the next calendar day are not applied unless they are also configured for the shift weekday.',
         },
         {
           heading: 'Virtual shift identity',
@@ -486,10 +490,10 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
   return isWeekend(date) || isMonday(date) || isPublicHoliday(date, locale);
 }`,
           },
-          note: 'Norwegian holidays include: New Year\'s Day, Labour Day (May 1), Constitution Day (May 17), Christmas Day, Boxing Day, and Easter-based holidays.',
+          note: 'This adjustment is used for payroll date display/countdown UX. Snapshot selection for tax uses calculatePayoutDate() (unadjusted). Holiday detection includes fixed and Easter-based Norwegian public holidays.',
         },
         {
-          heading: 'Snapshot selection algorithm (binary search)',
+          heading: 'Batch snapshot selection algorithm (binary search)',
           code: {
             language: 'typescript',
             content: `function findSnapshotForDate(
@@ -531,6 +535,7 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
             'If none found, use baseline snapshot (from_date = NULL)',
             'If no baseline, return null (calculation will use defaults)',
             'Inclusive from_date: A snapshot with from_date = 2025-02-01 applies to target dates >= 2025-02-01',
+            'Batch lookups use binary search; single-date lookups may use first-match on DESC-sorted snapshots',
           ],
         },
         {
@@ -897,13 +902,14 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
   // Deduct from periods with lowest supplement first
   const order = adjusted
     .map((p, idx) => ({ idx, supplement: p.supplementRate }))
-    .sort((a, b) => a.supplement - b.supplement);
+    .sort((a, b) => a.supplement - b.supplement)
+    .map(o => o.idx);
 
-  for (const { idx } of order) {
+  for (const i of order) {
     if (remaining <= 0) break;
-    const span = adjusted[idx].toMin - adjusted[idx].fromMin;
+    const span = adjusted[i].toMin - adjusted[i].fromMin;
     const cut = Math.min(span, remaining);
-    adjusted[idx].toMin -= cut;
+    adjusted[i].toMin -= cut;
     remaining -= cut;
   }
 }`,
@@ -950,36 +956,27 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
           heading: 'Monthly totals (TotalCard)',
           code: {
             language: 'typescript',
-            content: `const aggregates = shifts.reduce((acc, shift) => ({
+            content: `// Exclude higher-earning overlapping shifts first
+const excludedIds = buildExcludedShiftIds(shifts);
+const included = shifts.filter(s => !excludedIds.has(s.id));
+
+const aggregates = included.reduce((acc, shift) => ({
   totalHours: acc.totalHours + shift.computed.paidHours,
   totalEarnings: acc.totalEarnings + shift.computed.gross,
-}), { totalHours: 0, totalEarnings: 0 });
-
-// Filter: Shifts where startDate <= shift_date <= endDate`,
+}), { totalHours: 0, totalEarnings: 0 });`,
           },
         },
         {
           heading: 'Next payroll (NextPayrollCard)',
-          paragraphs: ['Which shifts are included: Previous month\'s shifts (earnings month = current month - 1)'],
+          paragraphs: ['Which shifts are included: Earnings month is the month before the payroll month currently in view.'],
           code: {
             language: 'typescript',
-            content: `const prevMonth = currentMonth - 1;
-const prevYear = prevMonth === 0 ? currentYear - 1 : currentYear;
-const actualPrevMonth = prevMonth === 0 ? 12 : prevMonth;
+            content: `const payoutDate = calculatePayoutDate(earningsYear, earningsMonth, payrollDay);
+const payoutTax = getTaxSettingsForPayoutDate(wageSnapshots, payoutDate);
 
-// Filter shifts from previous month
-const prevMonthShifts = shifts.filter(s => {
-  const [y, m] = s.shift_date.split('-').map(Number);
-  return y === prevYear && m === actualPrevMonth;
-});
-
-// Get tax settings for current payout
-const payoutDate = calculatePayoutDate(prevYear, actualPrevMonth, payrollDay);
-const snapshot = getSnapshotForDate(payoutDate);
-
-const grossAmount = SUM(shift.computed.gross);
-const taxAmount = snapshot.tax_enabled
-  ? grossAmount * (snapshot.tax_percentage / 100)
+const grossAmount = summarizeShiftTotals({ shifts: earningsMonthShifts }).gross;
+const taxAmount = payoutTax?.enabled
+  ? grossAmount * (payoutTax.percentage / 100)
   : 0;
 const netAmount = grossAmount - taxAmount;`,
           },
@@ -989,15 +986,16 @@ const netAmount = grossAmount - taxAmount;`,
           paragraphs: ['Total earnings including future planned shifts:'],
           code: {
             language: 'typescript',
-            content: `const today = new Date().toISOString().slice(0, 10);
+            content: `const totals = summarizeShiftTotals({
+  shifts: monthShifts,
+  now: new Date(),
+  month: payoutMonth,
+  halfTaxMonth,
+  payoutTaxOverride,
+});
 
-const earnedToDate = shifts
-  .filter(s => s.shift_date <= today)
-  .reduce((sum, s) => sum + s.computed.gross, 0);
-
-const projectedTotal = shifts
-  .reduce((sum, s) => sum + s.computed.gross, 0);
-
+const earnedToDate = taxEnabled ? totals.completedNet : totals.completedGross;
+const projectedTotal = taxEnabled ? totals.net : totals.gross;
 const hasFutureShifts = projectedTotal !== earnedToDate;`,
           },
         },
@@ -1278,11 +1276,12 @@ const snapshot = {
 {
   durationHours: 6.00,
   paidHours: 6.00,
+  // Current engine matches supplements by shift weekday only (Saturday = day 6)
   // 20:00-00:00 (4h) at Saturday rate 110
-  // 00:00-02:00 (2h) at Sunday rate 115
+  // 00:00-02:00 (2h) has no Sunday supplement in this model
   basePay: 1110.00,       // 6h x 185
-  supplementPay: 670.00,  // 4h x 110 + 2h x 115 = 440 + 230
-  gross: 1780.00,
+  supplementPay: 440.00,  // 4h x 110
+  gross: 1550.00,
 }`,
           },
         },

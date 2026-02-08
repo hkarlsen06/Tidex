@@ -233,7 +233,7 @@ struct ProfileSettingsView: View {
         HStack {
           if viewModel.isChangingEmail {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
               .scaleEffect(0.8)
           }
           Text(
@@ -242,7 +242,7 @@ struct ProfileSettingsView: View {
               : String(localized: .profileEmailChangeSendConfirmation))
         }
         .font(.tidexButton)
-        .foregroundColor(.white)
+        .foregroundColor(.tidexTextOnBrand)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(viewModel.newEmail.isEmpty ? Color.tidexBlue.opacity(0.5) : Color.tidexBlue)
@@ -283,7 +283,7 @@ struct ProfileSettingsView: View {
       } label: {
         Text(.commonDone)
           .font(.tidexButton)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
@@ -527,7 +527,7 @@ struct ProfileSettingsView: View {
         } label: {
           Text(.profileDangerZoneDeleteAccountButton)
             .font(.tidexLabelStrong)
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnDanger)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexError)

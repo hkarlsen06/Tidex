@@ -3,6 +3,8 @@ import SwiftUI
 /// Full-screen loading overlay with smooth animations
 /// Used during async operations like login
 struct LoadingOverlay: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   var message: String? = nil
   var isSuccess: Bool = false
 
@@ -16,7 +18,7 @@ struct LoadingOverlay: View {
           Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 44))
             .foregroundColor(.tidexSuccess)
-            .transition(.scale.combined(with: .opacity))
+            .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
         } else {
           ProgressView()
             .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -32,13 +34,18 @@ struct LoadingOverlay: View {
       .padding(Spacing.xl)
       .background(Color.tidexSurfacePrimary.opacity(0.95))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-      .animation(.easeInOut(duration: 0.2), value: isSuccess)
+      .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isSuccess)
+      .accessibilityElement(children: .combine)
+      .accessibilityLabel(
+        message ?? String(localized: isSuccess ? "common.done" : "common.loading"))
     }
   }
 }
 
 /// View modifier for applying loading overlay with smooth transitions
 struct LoadingModifier: ViewModifier {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let isLoading: Bool
   var isSuccess: Bool = false
   var message: String? = nil
@@ -55,12 +62,12 @@ struct LoadingModifier: ViewModifier {
         LoadingOverlay(message: message, isSuccess: isSuccess)
           .transition(
             .opacity
-              .combined(with: .scale(scale: 0.95))
+              .combined(with: reduceMotion ? .identity : .scale(scale: 0.95))
           )
       }
     }
-    .animation(.easeOut(duration: 0.2), value: showOverlay)
-    .animation(.easeOut(duration: 0.2), value: isSuccess)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: showOverlay)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: isSuccess)
   }
 }
 

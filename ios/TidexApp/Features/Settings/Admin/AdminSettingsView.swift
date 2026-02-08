@@ -244,14 +244,14 @@ private struct SqlTabView: View {
         Button(action: { Task { await viewModel.executeSql() } }) {
           HStack {
             if viewModel.sqlIsExecuting {
-              ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white))
+              ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
             }
             Text(viewModel.sqlIsExecuting ? "Executing..." : "Execute")
           }
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .cornerRadius(CornerRadius.sm)
         }
         .disabled(viewModel.sqlIsExecuting)
@@ -484,14 +484,14 @@ private struct NotificationsTabView: View {
           Button(action: { Task { await viewModel.sendNotification() } }) {
             HStack {
               if viewModel.isSendingNotification {
-                ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white))
+                ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
               }
               Text(viewModel.isSendingNotification ? "Sending..." : "Send Notification")
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexBlue)
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .cornerRadius(CornerRadius.sm)
           }
           .disabled(
@@ -972,7 +972,7 @@ private struct FeedbackResponseSheet: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
             .background(Color.tidexBlue)
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .cornerRadius(CornerRadius.sm)
         }
         .disabled(viewModel.feedbackResponse.isEmpty || viewModel.isPerformingAction)
@@ -1158,7 +1158,7 @@ private struct CreateShareSheet: View {
             HStack {
               if viewModel.isCreatingShare {
                 ProgressView()
-                  .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                  .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
               }
               Text(viewModel.isCreatingShare ? "Creating..." : "Create Share")
             }
@@ -1170,7 +1170,7 @@ private struct CreateShareSheet: View {
                 ? Color.tidexBlue
                 : Color.tidexBlue.opacity(0.5)
             )
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .cornerRadius(CornerRadius.sm)
           }
           .disabled(

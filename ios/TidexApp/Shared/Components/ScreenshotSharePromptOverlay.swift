@@ -84,7 +84,7 @@ struct ScreenshotSharePromptOverlay: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(Color.tidexBrandPrimary)
-                .foregroundColor(.white)
+                .foregroundColor(.tidexTextOnBrand)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
             }
             .buttonStyle(PromptButtonStyle())

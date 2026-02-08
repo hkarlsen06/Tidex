@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 struct ShiftCompletionCelebrationView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let data: CelebrationData
   let onDismiss: () -> Void
 
@@ -85,7 +87,9 @@ struct ShiftCompletionCelebrationView: View {
               )
               .opacity(showCard ? 1 : 0)
               .offset(y: showCard ? 0 : 24)
-              .animation(.spring(response: 0.45, dampingFraction: 0.8), value: showCard)
+              .animation(
+                reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.8), value: showCard
+              )
 
               Text(.celebrationGreatJob)
                 .font(.tidexHeadline)
@@ -109,11 +113,11 @@ struct ShiftCompletionCelebrationView: View {
       .padding(.horizontal, Spacing.cardPadding)
       .padding(.bottom, Spacing.md)
       .opacity(showButton ? 1 : 0)
-      .animation(.easeInOut(duration: 0.25), value: showButton)
+      .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showButton)
       .allowsHitTesting(showButton)
     }
     .overlay {
-      ConfettiView(isActive: showConfetti) {
+      ConfettiView(isActive: !reduceMotion && showConfetti) {
         showConfetti = false
       }
       .allowsHitTesting(false)
@@ -136,9 +140,17 @@ struct ShiftCompletionCelebrationView: View {
     showConfetti = false
     showCard = false
     showButton = false
+    animationsCompleted = false
 
     hapticTask?.cancel()
     hapticTask = nil
+
+    if reduceMotion {
+      showCard = true
+      showButton = true
+      animationsCompleted = true
+      return
+    }
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
       showConfetti = true
@@ -179,9 +191,14 @@ struct ShiftCompletionCelebrationView: View {
     hapticTask?.cancel()
     hapticTask = nil
 
-    withAnimation(.easeInOut(duration: 0.2)) {
+    if reduceMotion {
       showCard = true
       showButton = true
+    } else {
+      withAnimation(.easeInOut(duration: 0.2)) {
+        showCard = true
+        showButton = true
+      }
     }
   }
 }

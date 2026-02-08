@@ -531,7 +531,7 @@ struct SecuritySettingsView: View {
               HStack {
                 if viewModel.isSettingPassword {
                   ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
                     .scaleEffect(0.8)
                 }
                 Text(
@@ -542,7 +542,7 @@ struct SecuritySettingsView: View {
                       : String(localized: .securityPasswordSet))
               }
               .font(.tidexButton)
-              .foregroundColor(.white)
+              .foregroundColor(.tidexTextOnBrand)
               .frame(maxWidth: .infinity)
               .padding(.vertical, Spacing.sm)
               .background(canSubmitPassword ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
@@ -583,7 +583,7 @@ struct SecuritySettingsView: View {
           HStack {
             if viewModel.isSettingPassword {
               ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
                 .scaleEffect(0.8)
             }
             Text(
@@ -592,7 +592,7 @@ struct SecuritySettingsView: View {
                 : String(localized: .securityPasswordRequestCode))
           }
           .font(.tidexButton)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
@@ -719,7 +719,7 @@ struct SecuritySettingsView: View {
               HStack {
                 if viewModel.isVerifyingMFA {
                   ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
                     .scaleEffect(0.8)
                 }
                 Text(
@@ -728,7 +728,7 @@ struct SecuritySettingsView: View {
                     : String(localized: .securityMfaVerify))
               }
               .font(.tidexButton)
-              .foregroundColor(.white)
+              .foregroundColor(.tidexTextOnBrand)
               .frame(maxWidth: .infinity)
               .padding(.vertical, Spacing.sm)
               .background(
@@ -936,7 +936,7 @@ struct SecuritySettingsView: View {
             HStack {
               if viewModel.isLinkingPhone {
                 ProgressView()
-                  .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                  .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
                   .scaleEffect(0.8)
               }
               Text(
@@ -949,7 +949,7 @@ struct SecuritySettingsView: View {
                     : String(localized: .securityPhoneLinkingVerify)))
             }
             .font(.tidexButton)
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
             .background(canSubmitPhoneLinking ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))

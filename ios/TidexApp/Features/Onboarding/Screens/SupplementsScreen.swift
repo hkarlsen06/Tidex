@@ -228,6 +228,8 @@ private struct SupplementRuleCard: View {
             Circle()
               .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 1)
           )
+          .contentShape(Rectangle())
+          .frame(minWidth: 44, minHeight: 44)
       }
       .buttonStyle(.plain)
 
@@ -242,6 +244,8 @@ private struct SupplementRuleCard: View {
           .frame(width: 36, height: 36)
           .background(Color.tidexError.opacity(0.1))
           .clipShape(Circle())
+          .contentShape(Rectangle())
+          .frame(minWidth: 44, minHeight: 44)
       }
       .buttonStyle(.plain)
     }

@@ -166,7 +166,7 @@ private struct ConflictBadge: View {
       Text(String(localized: .previewConflictBadge(count)))
         .font(.tidexLabelStrong)
     }
-    .foregroundColor(.white)
+    .foregroundColor(.tidexTextOnWarning)
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xxxs)
     .background(Color.tidexWarning)
@@ -320,13 +320,13 @@ private struct ActionButtons: View {
       Button(action: onConfirm) {
         if isLoading {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
         } else {
           Text(.previewConfirm)
             .font(.tidexButton)
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
         }

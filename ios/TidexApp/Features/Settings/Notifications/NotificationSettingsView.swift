@@ -175,7 +175,7 @@ struct NotificationSettingsView: View {
       } label: {
         Text(.notificationsPermissionEnable)
           .font(.tidexLabel)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexBlue)
