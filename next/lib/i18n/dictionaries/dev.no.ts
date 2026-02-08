@@ -24,8 +24,22 @@ export const devNo = {
   projects: {
     title: 'Mine prosjekter',
     subtitle: 'En samling av arbeid jeg er stolt av',
-    tidex: {
-      title: 'Tidex',
+    tidexIos: {
+      title: 'Tidex for iOS',
+      subtitle: 'Native iOS-app',
+      description: 'En nativ iOS-app for å spore arbeidsvakter og beregne lønn. Bygget med Swift og SwiftUI, med en polert nativ opplevelse med push-varsler, widgets og sømløs iCloud-integrasjon.',
+      tech: 'Teknologier',
+      features: 'Nøkkelfunksjoner',
+      feature1: 'Nativt SwiftUI-grensesnitt',
+      feature2: 'Push-varsler for vakter',
+      feature3: 'Frakoblet støtte',
+      feature4: 'Abonnement via StoreKit',
+      feature5: 'Lokalisert på norsk og engelsk',
+      viewAppStore: 'Se på App Store',
+    },
+    tidexWeb: {
+      title: 'Tidex nettapp',
+      subtitle: 'Lønnskalkulator og vaktplanlegger',
       description: 'En moderne lønnskalkulator og vaktplanlegger bygget med Next.js, TypeScript, Supabase og Tailwind CSS. Tidex hjelper brukere med å spore arbeidsvakter, beregne lønn med tillegg, og få full oversikt over inntektene sine.',
       tech: 'Teknologier',
       features: 'Nøkkelfunksjoner',
@@ -35,7 +49,6 @@ export const devNo = {
       feature4: 'Responsivt grensesnitt',
       feature5: 'Internasjonalisering (Norsk/Engelsk)',
       viewLive: 'Se live demo',
-      viewCode: 'Se kildekode',
     },
   },
   about: {
