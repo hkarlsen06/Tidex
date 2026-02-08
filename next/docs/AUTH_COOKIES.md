@@ -1,6 +1,6 @@
 # Authentication Cookie Management
 
-This document explains how authentication sessions are managed using server-side cookies to prevent "Invalid Refresh Token" errors in this Next.js 15 PWA.
+This document explains how authentication sessions are managed using server-side cookies to prevent "Invalid Refresh Token" errors in this Next.js 16 PWA.
 
 ## Architecture Overview
 
@@ -39,7 +39,7 @@ Implementation uses `useRef` to prevent duplicate subscriptions even during Reac
 
 | File                                                        | Purpose                                        |
 | ----------------------------------------------------------- | ---------------------------------------------- |
-| [lib/supabase/client.ts](../lib/supabase/client.ts)         | Browser client singleton (no custom storage)   |
+| [lib/supabase/browser.ts](../lib/supabase/browser.ts)       | Browser client singleton (no custom storage)   |
 | [lib/supabase/server.ts](../lib/supabase/server.ts)         | Server client with cookie read/write support   |
 | [lib/auth/refresh-lock.ts](../lib/auth/refresh-lock.ts)     | Serializes concurrent token refresh attempts   |
 | [app/supabase-listener.tsx](../app/supabase-listener.tsx)   | Single auth listener with cookie sync          |
