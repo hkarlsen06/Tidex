@@ -1,10 +1,9 @@
-- Lagt til 19 nye språk inkludert høgre-til-venstre-støtte for hebraisk, persisk og urdu
-- Lagt til kalendereksport for å dele vakter med andre kalenderapper
-- Lagt til hurtighandlingar på heimskjermen for raskare vakthåndtering
-- Lagt til dobbeltrykk for å hoppa raskt til gjeldande månad
-- Lagt til nylige tidsknapper for raskare vaktregistrering
-- Lagt til moglegheit for å leggja dine vakter over ein venns kalender
-- Lagt til tidsstempel for siste redigering på vaktdetaljar
-- Forbetrad tilgjenge med støtte for dynamisk tekststorleik
-- Retta dupliserte push-varslar
-- Feilrettingar og andre forbetringar
+- Lagt til delte vakter: se venners vakter i liste, kalender og detaljvisning
+- Lagt til håndtering av gjentagende vakter med unntak for enkeltdager
+- Lagt til mulighet for å dempe varsler for delte vakter
+- Lagt til støtte for 24:00 som slutt-tid for vakter
+- Redesignet innstillinger og venneadministrasjon med native iOS-stil
+- Forbedret kalender med dynamisk skalering og inntektsforhåndsvisning
+- Lagt til dra-for-å-oppdatere på Legg til-fanen
+- Rettet en feil som kunne forårsake svart skjerm ved oppstart
+- Feilrettinger og andre forbedringer

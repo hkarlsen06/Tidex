@@ -1,11 +1,11 @@
-Spåra dina arbetsskift och beräkna din lön med Tidex.
+Håll koll på dina arbetspass och beräkna din lön med Tidex.
 
 Funktioner:
-• Enkel skiftloggning med start- och sluttider
-• Automatisk lönberäkning
-• Kalendervy över alla skift
-• Inkomstöversikt och statistik
+• Enkel passregistrering med start- och sluttider
+• Automatisk löneberäkning
+• Kalendervy av alla pass
+• Intäktsöversikt och statistik
 • Widget för snabb åtkomst
 • Synkronisering mellan enheter
 
-Perfekt för anställda som vill hålla koll på sina arbetstimmar och inkomster.
+Perfekt för anställda som vill hålla koll på arbetstimmar och inkomster.

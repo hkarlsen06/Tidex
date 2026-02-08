@@ -1,10 +1,9 @@
-- 19 nieuwe talen toegevoegd, inclusief RTL-ondersteuning voor Hebreeuws, Perzisch en Urdu
-- Kalenderexport toegevoegd om shifts met andere agenda-apps te delen
-- Snelacties op het startscherm toegevoegd voor sneller shiftbeheer
-- Dubbeltik-gebaar toegevoegd om snel naar de huidige maand te springen
-- Recente tijdchips toegevoegd voor snellere shiftinvoer
-- Optie toegevoegd om je shifts over de agenda van een vriend te leggen
-- Tijdstempel voor laatst bewerkt toegevoegd aan shiftdetails
-- Toegankelijkheid verbeterd met ondersteuning voor dynamisch lettertype
-- Dubbele pushberichten opgelost
+- Gedeelde diensten toegevoegd: bekijk diensten van vrienden in lijst-, kalender- en detailweergave
+- Beheer van terugkerende diensten met uitzonderingsdatums toegevoegd
+- Meldingen dempen voor gedeelde diensten toegevoegd
+- Ondersteuning voor 24:00 als eindtijd van dienst toegevoegd
+- Instellingen en vriendenbeheer opnieuw ontworpen met native iOS-stijl
+- Kalender verbeterd met dynamische schaling en inkomstenvoorbeeld
+- Veeg-om-te-vernieuwen toegevoegd op het Toevoegen-tabblad
+- Probleem opgelost dat een zwart scherm bij opstarten kon veroorzaken
 - Bugfixes en andere verbeteringen

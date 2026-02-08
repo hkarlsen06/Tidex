@@ -1,10 +1,9 @@
-- Adicionados 19 novos idiomas incluindo suporte RTL para hebraico, persa e urdu
-- Adicionada exportação de calendário para compartilhar seus turnos com outros aplicativos de calendário
-- Adicionadas ações rápidas da tela inicial para gerenciamento mais rápido de turnos
-- Adicionado gesto de toque duplo para pular rapidamente para o mês atual
-- Adicionados chips de horário recente para entrada de turno mais rápida
-- Adicionada opção para sobrepor seus turnos no calendário de um amigo
-- Adicionado timestamp de última edição nos detalhes do turno
-- Acessibilidade melhorada com suporte a Dynamic Type
-- Corrigidas notificações push duplicadas
+- Adicionados turnos compartilhados: veja turnos de amigos na lista, calendário e visualização detalhada
+- Adicionado gerenciamento de turnos recorrentes com datas de exclusão
+- Adicionada opção de silenciar notificações para turnos compartilhados
+- Adicionado suporte para 24:00 como horário de término do turno
+- Redesenhadas as configurações e gerenciamento de amigos com estilo nativo do iOS
+- Melhorado o calendário com dimensionamento dinâmico e visualização prévia de ganhos
+- Adicionado arraste para atualizar na aba Adicionar
+- Corrigido um problema que poderia causar uma tela preta ao iniciar
 - Correções de bugs e outras melhorias

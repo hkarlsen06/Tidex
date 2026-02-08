@@ -1,0 +1,11 @@
+Lacak shift kerja Anda dan hitung upah Anda dengan Tidex.
+
+Fitur:
+• Pencatatan shift mudah dengan waktu mulai/selesai
+• Perhitungan upah otomatis
+• Tampilan kalender semua shift
+• Ringkasan pendapatan dan statistik
+• Widget untuk akses cepat
+• Sinkronisasi antar perangkat
+
+Sempurna untuk karyawan yang ingin melacak jam kerja dan pendapatan mereka.

@@ -1,10 +1,9 @@
-- Tilføjet 19 nye sprog inkl. højre-til-venstre-understøttelse for hebraisk, persisk og urdu
-- Tilføjet kalendereksport til at dele vagter med andre kalender-apps
-- Tilføjet genveje på startskærmen til hurtigere vakthåndtering
-- Tilføjet dobbelt-tryk for hurtigt at springe til indeværende måned
-- Tilføjet seneste tidsstrimler til hurtigere vaktregistrering
-- Tilføjet mulighed for at overlejre dine vagter på en vens kalender
-- Tilføjet tidsstempel for seneste redigering på vagt-detaljer
-- Forbedret tilgængelighed med dynamisk tekststørrelse-understøttelse
-- Rettet doblette push-notifikationer
-- Fejlrettelser og øvrige forbedringer
+- Tilføjet delte vagter: se venners vagter i liste, kalender og detaljevisning
+- Tilføjet håndtering af tilbagevendende vagter med undtagelsesdatoer
+- Tilføjet mulighed for at slå notifikationer fra for delte vagter
+- Tilføjet support for 24:00 som sluttidspunkt for vagter
+- Redesignet indstillinger og vennehåndtering med native iOS-stil
+- Forbedret kalender med dynamisk skalering og indtægtsforhåndsvisning
+- Tilføjet træk-for-at-opdatere på Tilføj-fanen
+- Rettet en fejl, der kunne forårsage sort skærm ved opstart
+- Fejlrettelser og andre forbedringer

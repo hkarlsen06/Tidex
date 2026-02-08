@@ -1,10 +1,9 @@
-- Added 19 new languages including RTL support for Hebrew, Persian, and Urdu
-- Added calendar export to share your shifts with other calendar apps
-- Added Home Screen quick actions for faster shift management
-- Added double-tap gesture to quickly jump to the current month
-- Added recent time chips for faster shift entry
-- Added option to overlay your shifts on a friend's calendar
-- Added last edited timestamp to shift details
-- Improved accessibility with Dynamic Type support
-- Fixed duplicate push notifications
+- Added shared shifts: view friends' shifts in list, calendar, and detail views
+- Added recurring shift management with exclusion dates
+- Added notification muting for shared shifts
+- Added support for 24:00 as shift end time
+- Redesigned settings and friends management with native iOS style
+- Improved calendar with dynamic scaling and earnings preview
+- Added pull-to-refresh on the Add tab
+- Fixed an issue that could cause a black screen on launch
 - Bug fixes and other improvements

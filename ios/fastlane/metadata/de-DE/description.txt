@@ -1,11 +1,11 @@
-Verwalte deine Arbeitschichten und berechne deinen Lohn mit Tidex.
+Erfasse deine Arbeitsschichten und berechne deinen Lohn mit Tidex.
 
 Funktionen:
-• Einfache Schichterfassung mit Start- und Endzeit
+• Einfache Schichterfassung mit Start- und Endzeiten
 • Automatische Lohnberechnung
 • Kalenderansicht aller Schichten
-• Einnahmeübersicht und Statistiken
+• Verdienstübersicht und Statistiken
 • Widget für schnellen Zugriff
-• Synchronisierung über alle Geräte
+• Synchronisierung über Geräte hinweg
 
-Perfekt für Arbeitnehmer, die ihre Arbeitsstunden und Einnahmen im Blick behalten möchten.
+Perfekt für Angestellte, die ihre Arbeitsstunden und Verdienste im Blick behalten möchten.

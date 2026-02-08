@@ -1,10 +1,9 @@
-- Ajout de 19 nouvelles langues incluant le support RTL pour l'hébreu, le persan et l'ourdou
-- Ajout de l'export calendrier pour partager vos shifts avec d'autres apps calendrier
-- Ajout d'actions rapides sur l'écran d'accueil pour une gestion des shifts plus rapide
-- Ajout du double-tap pour accéder rapidement au mois actuel
-- Ajout de puces horaires récentes pour une saisie de shift plus rapide
-- Ajout de l'option de superposition de vos shifts sur le calendrier d'un ami
-- Ajout du timestamp de dernière modification aux détails du shift
-- Accessibilité améliorée avec support du texte dynamique
-- Correction des notifications push en double
+- Ajout des horaires partagés : affichez les horaires de vos amis en liste, calendrier et vue détaillée
+- Ajout de la gestion des horaires récurrents avec dates d'exclusion
+- Ajout de la désactivation des notifications pour les horaires partagés
+- Ajout de la prise en charge de 24:00 comme heure de fin d'horaire
+- Refonte des paramètres et de la gestion des amis avec le style natif iOS
+- Amélioration du calendrier avec mise à l'échelle dynamique et aperçu des revenus
+- Ajout du glisser-pour-actualiser dans l'onglet Ajouter
+- Correction d'un problème pouvant causer un écran noir au lancement
 - Corrections de bugs et autres améliorations

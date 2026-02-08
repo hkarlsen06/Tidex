@@ -1,10 +1,9 @@
-- Lade till 19 nya språk inklusive höger-till-vänster-stöd för hebreiska, persiska och urdu
-- Lade till kalenderexport för att dela dina skift med andra kalenderappar
-- Lade till snabbåtgärder på hemskärmen för snabbare skifthanttering
-- Lade till dubbeltryckning för att snabbt hoppa till aktuell månad
-- Lade till senaste tidschips för snabbare skiftinmatning
-- Lade till möjlighet att lägga dina skift över en väns kalender
-- Lade till senast redigerad-tidsstämpel till skiftdetaljer
-- Förbättrad tillgänglighet med stöd för dynamisk texttyp
-- Åtgärdade duplicerade push-aviseringar
-- Felkorrigeringar och andra förbättringar
+- Lagt till delade pass: se vänners pass i lista, kalender och detaljvy
+- Lagt till hantering av återkommande pass med undantagsdatum
+- Lagt till möjlighet att tysta notiser för delade pass
+- Lagt till stöd för 24:00 som sluttid för pass
+- Omdesignade inställningar och vänhantering med native iOS-stil
+- Förbättrad kalender med dynamisk skalning och inkomstförhandsvisning
+- Lagt till dra-för-att-uppdatera på fliken Lägg till
+- Åtgärdat ett problem som kunde orsaka svart skärm vid start
+- Buggfixar och andra förbättringar

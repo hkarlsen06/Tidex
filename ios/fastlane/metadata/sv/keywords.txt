@@ -1,1 +1,1 @@
-skift,spårare,lön,lönekalkylator,arbete,timmar,tid,klocka,schema,inkomst
+pass,tracker,lön,arbete,timmar,tid,schema,inkomst,skift,jobb

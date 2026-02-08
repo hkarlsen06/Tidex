@@ -1,11 +1,11 @@
-Urmărește-ți turile de muncă și calculează-ți salariul cu Tidex.
+Urmărește-ți schimburile de lucru și calculează-ți salariul cu Tidex.
 
-Funcții:
-• Înregistrare ușoară a turilor cu ore de start și sfârșit
-• Calcul automat al salariului
-• Vedere calendar a tuturor turilor
-• Sumar și statistici de venituri
+Funcționalități:
+• Înregistrare ușoară a schimburilor cu ore de început/sfârșit
+• Calcule automate ale salariului
+• Vizualizare calendar a tuturor schimburilor
+• Prezentare generală a veniturilor și statistici
 • Widget pentru acces rapid
 • Sincronizare pe toate dispozitivele
 
-Perfect pentru angajații care doresc să-și urmărească orele de muncă și veniturile.
+Perfect pentru angajații care doresc să țină evidența orelor de lucru și a veniturilor.

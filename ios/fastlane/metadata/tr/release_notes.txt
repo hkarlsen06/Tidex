@@ -1,10 +1,9 @@
-- İbranice, Farsça ve Urduca için RTL desteği dahil 19 yeni dil eklendi
-- Vardiyaları diğer takvim uygulamalarıyla paylaşmak için takvim dışa aktarma eklendi
-- Daha hızlı vardiya yönetimi için Ana Ekran hızlı eylemleri eklendi
-- Güncel aya hızlı atlamak için çift dokunma hareketi eklendi
-- Daha hızlı vardiya girişi için son zaman seçenekleri eklendi
-- Vardiyalarınızı bir arkadaşın takviminin üzerine koyma seçeneği eklendi
-- Vardiya ayrıntılarına son düzenleme zaman damgası eklendi
-- Dinamik Yazı Tipi desteği ile erişilebilirlik geliştirildi
-- Yinelenen push bildirimleri düzeltildi
+- Paylaşılan vardiyalar eklendi: arkadaşlarınızın vardiyalarını liste, takvim ve detay görünümlerinde görün
+- İstisna tarihleriyle tekrarlayan vardiya yönetimi eklendi
+- Paylaşılan vardiyalar için bildirim sessize alma eklendi
+- Vardiya bitiş saati olarak 24:00 desteği eklendi
+- Ayarlar ve arkadaş yönetimi yerel iOS stiliyle yeniden tasarlandı
+- Dinamik ölçeklendirme ve kazanç önizlemesiyle takvim iyileştirildi
+- Ekle sekmesine aşağı kaydırarak yenile eklendi
+- Başlangıçta siyah ekrana neden olabilecek bir sorun düzeltildi
 - Hata düzeltmeleri ve diğer iyileştirmeler

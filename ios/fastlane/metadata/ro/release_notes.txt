@@ -1,10 +1,9 @@
-- Adăugate 19 limbi noi inclusiv suport RTL pentru ebraică, persană și urdu
-- Adăugată exportare calendar pentru a-ți partaja turile cu alte aplicații calendar
-- Adăugate acțiuni rapide pe ecranul principal pentru gestionare mai rapidă a turilor
-- Adăugat gest de dublu-atingere pentru a sări rapid la luna curentă
-- Adăugate jetoane de timp recent pentru introducere mai rapidă a turilor
-- Adăugată opțiune de suprapunere a turilor tale pe calendarul unui prieten
-- Adăugat timestamp de ultimă editare în detaliile turei
-- Accesibilitate îmbunătățită cu suport Dynamic Type
-- Rezolvate notificări push duplicate
-- Corecturi de erori și alte îmbunătățiri
+- Adăugate schimburi partajate: vizualizează schimburile prietenilor în listă, calendar și vedere detaliată
+- Adăugată gestionarea schimburilor recurente cu date de excludere
+- Adăugată posibilitatea de a dezactiva notificările pentru schimburi partajate
+- Adăugat suport pentru 24:00 ca oră de sfârșit a schimbului
+- Redesign pentru setări și gestionarea prietenilor cu stil iOS nativ
+- Calendar îmbunătățit cu scalare dinamică și previzualizare venituri
+- Adăugat trage-pentru-a-reîmprospăta pe fila Adaugă
+- Rezolvată o problemă care putea cauza un ecran negru la pornire
+- Remedieri de erori și alte îmbunătățiri

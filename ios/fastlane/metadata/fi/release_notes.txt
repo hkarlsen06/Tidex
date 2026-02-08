@@ -1,10 +1,9 @@
-- Lisätty 19 uutta kieltä oikealta vasemmalle -tuella heprealaisille, persialle ja urdulle
-- Lisätty kalentin vienti vuorojen jakamiseksi muiden kalentisovelluksien kanssa
-- Lisätty aloitusruudun pikavalinnat nopeampaa vuoronhallintaa varten
-- Lisätty kaksoisnapautus nykyisen kuukauden nopeaan siirtymiseen
-- Lisätty viimeaikaiset aikapalat vuorojen nopeampaa syöttöä varten
-- Lisätty mahdollisuus näyttää vuorosi ystävän kalenterin päällä
-- Lisätty viimeisen muokkauksen aikaleima vuoron tietoihin
-- Parannettu saavutettavuus dynaamisella tekstityypin tuella
-- Korjattu päällekkäiset push-ilmoitukset
-- Virheenkorjaukset ja muut parannukset
+- Lisätty jaetut vuorot: näe kavereiden vuorot lista-, kalenteri- ja yksityiskohtanäkymissä
+- Lisätty toistuvien vuorojen hallinta poissulkupäivineen
+- Lisätty ilmoitusten mykistys jaetuille vuoroille
+- Lisätty tuki kelloajalle 24:00 vuoron päättymisaikana
+- Uudistettu asetukset ja kaverien hallinta natiivilla iOS-tyylillä
+- Parannettu kalenteri dynaamisella skaalautumisella ja ansioiden esikatselulla
+- Lisätty vedä-päivittääksesi Lisää-välilehdelle
+- Korjattu ongelma, joka saattoi aiheuttaa mustan ruudun käynnistyksen yhteydessä
+- Virheiden korjauksia ja muita parannuksia

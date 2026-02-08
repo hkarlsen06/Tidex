@@ -1,0 +1,11 @@
+Pratite svoje radne smjene i izračunajte svoju plaću s Tidexom.
+
+Funkcije:
+• Jednostavno bilježenje smjena s vremenom početka i završetka
+• Automatsko izračunavanje plaće
+• Kalendarski prikaz svih smjena
+• Pregled zarade i statistika
+• Widget za brzi pristup
+• Sinkronizacija na svim uređajima
+
+Savršeno za zaposlenike koji žele pratiti svoje radne sate i zaradu.

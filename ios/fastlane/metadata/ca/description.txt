@@ -1,0 +1,11 @@
+Fes un seguiment dels teus torns de treball i calcula el teu salari amb Tidex.
+
+Funcionalitats:
+• Registre fàcil de torns amb hores d'inici i finalització
+• Càlcul automàtic del salari
+• Vista de calendari de tots els torns
+• Resum d'ingressos i estadístiques
+• Widget per a accés ràpid
+• Sincronització entre dispositius
+
+Perfecte per a empleats que volen fer un seguiment de les seves hores de treball i ingressos.

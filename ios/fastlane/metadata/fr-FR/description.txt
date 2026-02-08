@@ -1,10 +1,10 @@
-Suivez vos horaires de travail et calculez vos salaires avec Tidex.
+Suivez vos horaires de travail et calculez votre salaire avec Tidex.
 
 Fonctionnalités :
-• Enregistrement facile des shifts avec heures de début et fin
-• Calculs de salaire automatiques
-• Vue calendrier de tous vos shifts
-• Aperçu des gains et statistiques
+• Enregistrement facile des horaires avec heures de début/fin
+• Calcul automatique du salaire
+• Vue calendrier de tous les horaires
+• Aperçu des revenus et statistiques
 • Widget pour un accès rapide
 • Synchronisation entre appareils
 

@@ -69,13 +69,27 @@ const ASC_FOLDER_MAP = {
   ja: "ja",
   ko: "ko",
   "zh-Hans": "zh-Hans",
+  "zh-Hant": "zh-Hant",
   th: "th",
   vi: "vi",
+  ca: "ca",
+  cs: "cs",
+  hr: "hr",
+  hu: "hu",
+  id: "id",
+  he: "he",
+  hi: "hi",
+  sk: "sk",
+  ar: "ar-SA",
   Base: null, // Skip Base locale
+  // No ASC equivalent: is, et, lv, lt, sl, bg, sr, fa, ur, bn, ta, fil, sw
 };
 
 // Fields that get translated — name is excluded (managed manually per locale)
-const TRANSLATED_FIELDS = ["subtitle", "description", "keywords", "release_notes"];
+// Stable fields are only translated once; --force does not re-translate them
+const STABLE_FIELDS = ["subtitle"];
+const RELEASE_FIELDS = ["description", "keywords", "release_notes"];
+const TRANSLATED_FIELDS = [...STABLE_FIELDS, ...RELEASE_FIELDS];
 
 // Language names for translation prompts
 const LANGUAGE_NAMES = {
@@ -100,8 +114,18 @@ const LANGUAGE_NAMES = {
   ja: "Japanese",
   ko: "Korean",
   "zh-Hans": "Simplified Chinese",
+  "zh-Hant": "Traditional Chinese",
   th: "Thai",
   vi: "Vietnamese",
+  ca: "Catalan",
+  cs: "Czech",
+  hr: "Croatian",
+  hu: "Hungarian",
+  id: "Indonesian",
+  he: "Hebrew",
+  hi: "Hindi",
+  sk: "Slovak",
+  ar: "Arabic",
 };
 
 // App Store metadata field constraints
@@ -208,6 +232,25 @@ async function metadataExists(folderName) {
 }
 
 /**
+ * Read existing stable field values from disk for a locale
+ */
+async function readExistingStableFields(folderName) {
+  const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
+  const existing = {};
+
+  for (const field of STABLE_FIELDS) {
+    try {
+      const content = await fs.readFile(path.join(localeDir, `${field}.txt`), "utf-8");
+      existing[field] = content.trim();
+    } catch {
+      // Field doesn't exist yet
+    }
+  }
+
+  return existing;
+}
+
+/**
  * Write metadata files for a locale
  * Only writes fields present in the metadata object (skips missing keys)
  */
@@ -271,10 +314,15 @@ function extractJson(text) {
 /**
  * Translate metadata using Claude API
  */
-async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, client) {
-  // Build source/reference objects with only translatable fields
-  const sourceFields = Object.fromEntries(TRANSLATED_FIELDS.map((f) => [f, sourceMetadata[f]]));
-  const referenceFields = Object.fromEntries(TRANSLATED_FIELDS.map((f) => [f, norwegianMetadata[f]]));
+async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, client, fields = TRANSLATED_FIELDS) {
+  // Build source/reference objects with only the requested fields
+  const sourceFields = Object.fromEntries(fields.map((f) => [f, sourceMetadata[f]]));
+  const referenceFields = Object.fromEntries(fields.map((f) => [f, norwegianMetadata[f]]));
+
+  const limitRules = [];
+  if (fields.includes("subtitle")) limitRules.push("subtitle (30)");
+  if (fields.includes("keywords")) limitRules.push("keywords (100)");
+  const limitText = limitRules.length > 0 ? `\n4. Respect character limits: ${limitRules.join(", ")}` : "";
 
   const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
 Translate the following App Store metadata to ${languageName}.
@@ -282,8 +330,7 @@ Translate the following App Store metadata to ${languageName}.
 CRITICAL RULES:
 1. Maintain the same structure and formatting (bullet points, line breaks)
 2. Keep keywords comma-separated WITHOUT spaces after commas
-3. Make translations natural and idiomatic for ${languageName} speakers
-4. Respect character limits: subtitle (30), keywords (100)
+3. Make translations natural and idiomatic for ${languageName} speakers${limitText}
 
 Source metadata (English):
 ${JSON.stringify(sourceFields, null, 2)}
@@ -291,18 +338,26 @@ ${JSON.stringify(sourceFields, null, 2)}
 Reference translation (Norwegian Bokmål) - use this to understand intended meaning:
 ${JSON.stringify(referenceFields, null, 2)}
 
-Return ONLY a valid JSON object with these exact keys: subtitle, description, keywords, release_notes
+Return ONLY a valid JSON object with these exact keys: ${fields.join(", ")}
 No markdown, no explanation, just the JSON object.`;
 
-  const response = await withRetry(() =>
-    client.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-    })
-  );
+  // Retry the full translate+parse cycle since JSON parse failures are non-deterministic
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const response = await withRetry(() =>
+      client.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 2000,
+        messages: [{ role: "user", content: prompt }],
+      })
+    );
 
-  return extractJson(response.content[0].text.trim());
+    try {
+      return extractJson(response.content[0].text.trim());
+    } catch (parseError) {
+      if (attempt === maxAttempts - 1) throw parseError;
+    }
+  }
 }
 
 /**
@@ -337,20 +392,32 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
     return { status: "error", locale, error: `Unknown language: ${locale}` };
   }
 
+  const alreadyExists = await metadataExists(folderName);
+
   // Check if already exists (unless --force)
-  if (!forceRegenerate && (await metadataExists(folderName))) {
+  if (!forceRegenerate && alreadyExists) {
     stats.skipped++;
     return { status: "exists", locale };
   }
 
   try {
+    // When --force and files exist, preserve stable fields and only re-translate release fields
+    const existingStable = alreadyExists ? await readExistingStableFields(folderName) : {};
+    const fieldsToTranslate = alreadyExists && Object.keys(existingStable).length > 0
+      ? RELEASE_FIELDS
+      : TRANSLATED_FIELDS;
+
     let translated = await translateMetadata(
       sourceMetadata,
       norwegianMetadata,
       locale,
       languageName,
-      client
+      client,
+      fieldsToTranslate
     );
+
+    // Merge preserved stable fields back in
+    translated = { ...existingStable, ...translated };
 
     // Enforce character limits
     translated = enforceCharacterLimits(translated, locale);
@@ -435,6 +502,11 @@ async function main() {
   // Initialize client
   const client = new Anthropic({ apiKey });
 
+  // Collect ASC folders already written by source locales
+  const sourceFolders = new Set(
+    SOURCE_LOCALES.map((l) => ASC_FOLDER_MAP[l]).filter(Boolean)
+  );
+
   // Filter locales that need translation
   const localesToTranslate = projectLocales.filter((locale) => {
     // Skip source locales
@@ -443,6 +515,8 @@ async function main() {
     if (!ASC_FOLDER_MAP[locale]) return false;
     // Skip if folder name is null (e.g., Base)
     if (ASC_FOLDER_MAP[locale] === null) return false;
+    // Skip if ASC folder is already covered by a source locale (e.g., nn → "no" already written by nb)
+    if (sourceFolders.has(ASC_FOLDER_MAP[locale])) return false;
     return true;
   });
 
