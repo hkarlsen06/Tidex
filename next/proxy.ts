@@ -129,7 +129,7 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
     pathname === '/manifest.json' ||
     pathname === '/offline.html' ||
     pathname === '/support' ||
-    /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
+    /\.(svg|png|jpg|jpeg|gif|webp|ico)$/i.test(pathname)
   );
 }
 

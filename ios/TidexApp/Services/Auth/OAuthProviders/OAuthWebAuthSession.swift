@@ -212,13 +212,10 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
       {
         return anyWindow
       }
-      // Last resort: create a new window from the first available window scene
-      // Even if we couldn't find one above, try one more time with a fresh query
+      // Last resort: create a bare UIWindow. This should never happen in practice
+      // since an active app always has at least one window scene.
       assertionFailure("Unexpected: no window scene available for auth presentation")
-      let windowScene = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .first!
-      return UIWindow(windowScene: windowScene)
+      return UIWindow(frame: UIScreen.main.bounds)
     }
   }
 }
