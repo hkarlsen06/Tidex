@@ -12,12 +12,12 @@ const nextConfig = {
   // Optional: keeps URLs consistent on static hosts
   trailingSlash: true,
 
-  // Monorepo/workspace hint so Next traces correctly
-  outputFileTracingRoot: path.join(__dirname, '../..'),
+  // Monorepo/workspace hint so Next traces correctly on Netlify
+  outputFileTracingRoot: path.join(__dirname, '..'),
 
-  // Turbopack needs the workspace root to resolve packages in a pnpm monorepo
+  // Set turbopack root for monorepo builds
   turbopack: {
-    root: path.join(__dirname, '../..'),
+    root: path.join(__dirname, '..'),
   },
 };
 

@@ -46,12 +46,12 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
       <LocaleLangSetter locale={locale} />
       <ViewportHeightSetter />
       {/* Single subtle gradient accent at top */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[400px] bg-linear-to-b from-brand-gradient-start/8 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-100 bg-linear-to-b from-brand-gradient-start/8 to-transparent" />
 
       <section className="relative flex min-h-[calc(var(--hero-initial-dvh,100dvh))] w-full items-center justify-center pb-[calc(5rem+env(safe-area-inset-bottom))] pt-8 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pt-12 lg:pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <div className="relative w-full max-w-4xl px-6 sm:px-0">
           <div className="relative mx-auto w-full max-w-lg sm:max-w-xl">
-            <div className="relative flex w-full flex-col items-center gap-8 overflow-hidden rounded-2xl border border-border-subtle bg-surface-primary px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-12 shadow-app max-h-[760px] sm:max-h-[820px] sm:px-12">
+            <div className="relative flex w-full flex-col items-center gap-8 overflow-hidden rounded-2xl border border-border-subtle bg-surface-primary px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-12 shadow-app max-h-190 sm:max-h-205 sm:px-12">
               <div className="relative flex flex-col items-center gap-8 text-center">
                 <Image
                   src="/icons/tidex-wordmark.webp"
