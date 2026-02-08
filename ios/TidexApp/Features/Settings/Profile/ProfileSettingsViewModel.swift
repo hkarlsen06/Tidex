@@ -117,8 +117,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
       // Get profile picture from local settings
       if let currentUserId = userId,
-        let settings = settingsRepository.getSettings(for: currentUserId)
-      {
+        let settings = settingsRepository.getSettings(for: currentUserId) {
         profilePictureUrl = settings.profile_picture_url
       }
 

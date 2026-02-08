@@ -157,8 +157,7 @@ struct SharingView: View {
 
             // If dates were provided, navigate to the correct month and set highlight
             if let dates = dates, let firstDate = dates.first,
-              let date = Date.fromISODateString(firstDate)
-            {
+              let date = Date.fromISODateString(firstDate) {
               let calendar = Calendar.current
               let components = calendar.dateComponents([.year, .month], from: date)
               if let year = components.year, let month = components.month {

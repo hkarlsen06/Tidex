@@ -105,8 +105,7 @@ struct SharedShiftsListView: View {
 
   /// Shifts grouped by ISO week for list display
   private var weekGroups:
-    [(weekKey: String, weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])]
-  {
+    [(weekKey: String, weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] {
     var calendar = Calendar(identifier: .iso8601)
     calendar.firstWeekday = 2
     calendar.minimumDaysInFirstWeek = 4
@@ -245,8 +244,7 @@ struct SharedShiftsListView: View {
         Image(systemName: "bell.and.waves.left.and.right")
           .font(.tidexCaption)
           .foregroundColor(.tidexBlue)
-          .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) {
-            content, value in
+          .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) { content, value in
             content
               .rotationEffect(.degrees(value.angle), anchor: .top)
           } keyframes: { _ in

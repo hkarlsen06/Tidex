@@ -67,8 +67,7 @@ final class CountdownManager: ObservableObject {
     // Update shift countdown
     if let shiftDate = shiftDate,
       let startTime = startTime,
-      let endTime = endTime
-    {
+      let endTime = endTime {
       let (text, isActive, progress) = CountdownFormatter.formatShiftCountdown(
         shiftDate: shiftDate,
         startTime: startTime,

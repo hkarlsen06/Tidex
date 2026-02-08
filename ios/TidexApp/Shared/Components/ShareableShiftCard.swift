@@ -48,8 +48,7 @@ struct ShareableShiftCard: View {
 
   private var hasCustomSupplements: Bool {
     if let custom = shift.shift.custom_supplements,
-      !custom.rules.isEmpty
-    {
+      !custom.rules.isEmpty {
       return true
     }
     return false

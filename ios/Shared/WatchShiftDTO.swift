@@ -20,8 +20,7 @@ struct WatchShiftDTO: Codable, Identifiable, Sendable, Equatable {
   /// Used as fallback if avatarImageData is nil
   var effectiveAvatarURL: URL? {
     if let urlString = personProfilePictureUrl ?? personOauthAvatarUrl,
-      !urlString.isEmpty
-    {
+      !urlString.isEmpty {
       return URL(string: urlString)
     }
     return nil

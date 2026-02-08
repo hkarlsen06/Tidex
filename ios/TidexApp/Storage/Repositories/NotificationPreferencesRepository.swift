@@ -149,30 +149,26 @@ final class NotificationPreferencesRepository: ObservableObject {
     var hasChanges = false
 
     if let remindersEnabled = remindersEnabled,
-      remindersEnabled != preferences.shiftRemindersEnabled
-    {
+      remindersEnabled != preferences.shiftRemindersEnabled {
       preferences.shiftRemindersEnabled = remindersEnabled
       hasChanges = true
     }
 
     if let reminderMinutes = reminderMinutes,
-      reminderMinutes != preferences.shiftReminderMinutesArray
-    {
+      reminderMinutes != preferences.shiftReminderMinutesArray {
       preferences.shiftReminderMinutesArray = reminderMinutes
       hasChanges = true
     }
 
     if let sharedShiftsEnabled = sharedShiftsEnabled,
-      sharedShiftsEnabled != preferences.sharedShiftsEnabled
-    {
+      sharedShiftsEnabled != preferences.sharedShiftsEnabled {
       preferences.sharedShiftsEnabled = sharedShiftsEnabled
       hasChanges = true
     }
 
     let currentSmartEnabled = preferences.smartNotificationsEnabled ?? true
     if let smartNotificationsEnabled = smartNotificationsEnabled,
-      smartNotificationsEnabled != currentSmartEnabled
-    {
+      smartNotificationsEnabled != currentSmartEnabled {
       preferences.smartNotificationsEnabled = smartNotificationsEnabled
       hasChanges = true
     }

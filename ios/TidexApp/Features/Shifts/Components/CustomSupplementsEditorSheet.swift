@@ -104,8 +104,7 @@ enum ApplicableSupplements {
           shiftEnd: shiftEnd,
           ruleFrom: ruleFrom,
           ruleTo: ruleTo
-        )
-      {
+        ) {
         applicable.append(
           CustomSupplementRuleWithId(
             from: rule.from,
@@ -343,8 +342,7 @@ struct CustomSupplementsEditorSheet: View {
   private func initializeRules() {
     // Check if shift has existing custom supplements
     if let customSupplements = shift.shift.custom_supplements,
-      !customSupplements.rules.isEmpty
-    {
+      !customSupplements.rules.isEmpty {
       // Load existing custom supplements
       hadCustomSupplements = true
 
@@ -546,8 +544,7 @@ struct CustomSupplementsEditorSheet: View {
   }
 
   private func rulesMatch(_ a: [CustomSupplementRuleWithId], _ b: [CustomSupplementRuleWithId])
-    -> Bool
-  {
+    -> Bool {
     guard a.count == b.count else { return false }
 
     let sortedA = a.sorted { "\($0.from)-\($0.to)" < "\($1.from)-\($1.to)" }
@@ -555,8 +552,7 @@ struct CustomSupplementsEditorSheet: View {
 
     for (ruleA, ruleB) in zip(sortedA, sortedB) {
       if ruleA.from != ruleB.from || ruleA.to != ruleB.to || ruleA.rate != ruleB.rate
-        || ruleA.percent != ruleB.percent
-      {
+        || ruleA.percent != ruleB.percent {
         return false
       }
     }

@@ -159,8 +159,7 @@ private struct UsersTabView: View {
                 .onAppear {
                   // Trigger infinite scroll when last user appears
                   if user.id == viewModel.users.last?.id && viewModel.usersHasMore
-                    && !viewModel.usersIsLoading
-                  {
+                    && !viewModel.usersIsLoading {
                     Task { await viewModel.loadMoreUsers() }
                   }
                 }

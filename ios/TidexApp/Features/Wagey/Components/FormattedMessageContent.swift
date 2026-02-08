@@ -173,8 +173,7 @@ struct FormattedMessageContent: View {
     ]
     for pattern in patterns {
       if let regex = try? NSRegularExpression(pattern: pattern),
-        regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)) != nil
-      {
+        regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)) != nil {
         return true
       }
     }

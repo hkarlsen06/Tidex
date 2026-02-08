@@ -192,7 +192,7 @@ private func processEntry(_ entry: StringEntry, in catalog: inout Catalog) -> En
       ),
       "nb": CatalogLocalization(
         stringUnit: CatalogStringUnit(state: "translated", value: entry.norwegianValue)
-      ),
+      )
     ]
   )
   catalog.strings[entry.key] = newEntry

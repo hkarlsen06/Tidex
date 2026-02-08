@@ -25,7 +25,7 @@ struct ShimmerModifier: ViewModifier {
               gradient: Gradient(colors: [
                 .clear,
                 .white.opacity(0.3),
-                .clear,
+                .clear
               ]),
               startPoint: .leading,
               endPoint: .trailing

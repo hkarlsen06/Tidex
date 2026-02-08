@@ -665,8 +665,7 @@ final class AddShiftViewModel: ObservableObject {
 
       // Calculate target month from first selected date
       if let firstDate = selectedDates.min(),
-        let date = Date.fromISODateString(firstDate)
-      {
+        let date = Date.fromISODateString(firstDate) {
         let calendar = Calendar.current
         targetMonth = calendar.dateComponents([.year, .month], from: date)
       }

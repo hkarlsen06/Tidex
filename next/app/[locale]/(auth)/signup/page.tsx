@@ -388,7 +388,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
             if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { setOauthProvider(null); setMessage(null); }
           }}
         >
-          <div className="bg-surface-primary rounded-xl shadow-lg max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+          <div role="presentation" className="bg-surface-primary rounded-xl shadow-lg max-w-sm p-6" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <div className="flex flex-col items-center gap-4">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-brand-gradient-start"></div>
               <p className="text-lg font-semibold">

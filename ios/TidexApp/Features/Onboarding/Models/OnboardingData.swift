@@ -68,8 +68,7 @@ final class OnboardingData {
     case .tariff:
       // Use version-specific rate if available, otherwise fallback to static rates
       if let version = currentTariffVersion,
-        let rate = version.rate(forLevel: selectedTariffLevel)
-      {
+        let rate = version.rate(forLevel: selectedTariffLevel) {
         return rate
       }
       return PayrollCalculator.presetWageRates[String(selectedTariffLevel)] ?? 184.54
