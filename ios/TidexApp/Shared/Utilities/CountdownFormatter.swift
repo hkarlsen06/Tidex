@@ -78,7 +78,8 @@ struct CountdownFormatter {
   // MARK: - Private Helpers
 
   private static func parseShiftDateTime(date: String, time: String, crossesMidnight: Bool = false)
-    -> Date? {
+    -> Date?
+  {
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
     dateFormatter.calendar = Calendar(identifier: .gregorian)

@@ -269,7 +269,8 @@ private struct YearlyChartOverlay: View {
     }
   }
 
-  private func tooltipData(plotFrame: CGRect) -> (monthData: MonthlyIncomeData, xPosition: CGFloat)? {
+  private func tooltipData(plotFrame: CGRect) -> (monthData: MonthlyIncomeData, xPosition: CGFloat)?
+  {
     guard let selected = selectedMonth,
       let monthData = data.first(where: { $0.month == selected }),
       let index = data.firstIndex(where: { $0.month == selected })

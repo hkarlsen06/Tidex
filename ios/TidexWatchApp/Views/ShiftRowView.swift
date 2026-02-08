@@ -357,7 +357,8 @@ struct ShiftRowView: View {
   private var avatarView: some View {
     // Prefer pre-downloaded image data (JPEG from iOS)
     if let imageData = shift.avatarImageData,
-      let uiImage = UIImage(data: imageData) {
+      let uiImage = UIImage(data: imageData)
+    {
       Image(uiImage: uiImage)
         .resizable()
         .scaledToFill()

@@ -59,7 +59,8 @@ final class SettingsService: ObservableObject {
       } catch {
         // Check if error is "no rows returned" - return nil instead of throwing
         if let postgrestError = error as? PostgrestError,
-          postgrestError.code == "PGRST116" {
+          postgrestError.code == "PGRST116"
+        {
           // PGRST116 = "The result contains 0 rows"
           settings = nil
           return nil

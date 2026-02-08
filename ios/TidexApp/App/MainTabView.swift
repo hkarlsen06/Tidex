@@ -196,7 +196,8 @@ struct MainTabView: View {
 
       // Celebration overlay - above everything including tab bar and month picker
       if celebrationManager.shouldShowCelebration,
-        let data = celebrationManager.celebrationData {
+        let data = celebrationManager.celebrationData
+      {
         CelebrationOverlay(
           data: data,
           onDismiss: {

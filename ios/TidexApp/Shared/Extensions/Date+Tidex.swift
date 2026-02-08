@@ -19,7 +19,8 @@ extension Date {
 
   /// Parse ISO date string (YYYY-MM-DD) to Date
   static func fromISODateString(_ string: String, in timeZone: TimeZone = Date.localTimeZone)
-    -> Date? {
+    -> Date?
+  {
     FormatterCache.isoDateFormatter(timeZone: timeZone).date(from: string)
   }
 

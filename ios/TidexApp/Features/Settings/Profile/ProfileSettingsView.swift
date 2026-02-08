@@ -368,7 +368,8 @@ struct ProfileSettingsView: View {
   @ViewBuilder
   private var avatarView: some View {
     if let urlString = viewModel.profilePictureUrl,
-      let url = URL(string: urlString) {
+      let url = URL(string: urlString)
+    {
       CachedAsyncImage(
         url: url,
         content: { image in

@@ -197,7 +197,8 @@ struct PostAuthOnboardingView: View {
     // Try to restore saved progress
     if let savedScreenName = onboardingData.restore(),
       let savedScreen = PostAuthScreen(rawValue: savedScreenName),
-      savedScreen != .success && savedScreen != .loading {
+      savedScreen != .success && savedScreen != .loading
+    {
       currentScreen = savedScreen
       return
     }

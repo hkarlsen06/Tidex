@@ -234,7 +234,8 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   /// Export shifts to the device calendar using local data
-  private func exportToCalendarFromLocalData(userId: String, from: String, to: String) async throws {
+  private func exportToCalendarFromLocalData(userId: String, from: String, to: String) async throws
+  {
     logger.info("Exporting to calendar from local data: \(from) to \(to)")
 
     // Parse date range

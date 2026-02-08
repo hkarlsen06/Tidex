@@ -40,7 +40,8 @@ actor TariffVersionService {
     // Check cache
     if let cached = cachedTypes,
       let timestamp = typesCacheTimestamp,
-      Date().timeIntervalSince(timestamp) < cacheValiditySeconds {
+      Date().timeIntervalSince(timestamp) < cacheValiditySeconds
+    {
       logger.debug("Returning cached tariff types (\(cached.count) items)")
       return cached
     }
@@ -81,7 +82,8 @@ actor TariffVersionService {
     // Check cache
     if let cached = cachedVersions[tariffType],
       let timestamp = versionsCacheTimestamp[tariffType],
-      Date().timeIntervalSince(timestamp) < cacheValiditySeconds {
+      Date().timeIntervalSince(timestamp) < cacheValiditySeconds
+    {
       logger.debug("Returning cached tariff versions for \(tariffType) (\(cached.count) items)")
       return cached
     }
@@ -146,7 +148,8 @@ actor TariffVersionService {
     } catch {
       // Check if error is "no rows returned" - return nil instead of throwing
       if let postgrestError = error as? PostgrestError,
-        postgrestError.code == "PGRST116" {
+        postgrestError.code == "PGRST116"
+      {
         logger.info("No tariff version found for \(tariffType) at date \(date)")
         return nil
       }

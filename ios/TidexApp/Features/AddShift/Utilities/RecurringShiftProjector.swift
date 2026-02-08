@@ -149,7 +149,8 @@ struct RecurringShiftProjector {
           calendar.dateComponents([.day], from: currentDate, to: monthStart).day ?? 0
         let intervalsToSkip = daysBetween / intervalDays
         if let fastForwarded = calendar.date(
-          byAdding: .day, value: intervalsToSkip * intervalDays, to: currentDate) {
+          byAdding: .day, value: intervalsToSkip * intervalDays, to: currentDate)
+        {
           currentDate = fastForwarded
         }
       }

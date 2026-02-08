@@ -183,7 +183,8 @@ final class WatchConnectivityManager: NSObject {
             // This enables direct API access on subsequent refreshes
             if let tokenInfo = response["token"] as? [String: Any],
               let accessToken = tokenInfo["accessToken"] as? String,
-              let expiresAt = tokenInfo["expiresAt"] as? Int {
+              let expiresAt = tokenInfo["expiresAt"] as? Int
+            {
               do {
                 try SharedKeychainStorage.storeAccessToken(accessToken, expiresAt: expiresAt)
                 logger.info("Stored access token from iPhone (expires: \(expiresAt))")

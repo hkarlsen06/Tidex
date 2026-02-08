@@ -110,11 +110,13 @@ final class GoogleAuthProvider {
       return getTopViewController(from: presentedViewController)
     }
     if let navigationController = viewController as? UINavigationController,
-      let visibleViewController = navigationController.visibleViewController {
+      let visibleViewController = navigationController.visibleViewController
+    {
       return getTopViewController(from: visibleViewController)
     }
     if let tabBarController = viewController as? UITabBarController,
-      let selectedViewController = tabBarController.selectedViewController {
+      let selectedViewController = tabBarController.selectedViewController
+    {
       return getTopViewController(from: selectedViewController)
     }
     return viewController

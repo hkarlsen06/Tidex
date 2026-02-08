@@ -46,7 +46,8 @@ enum WatchDataConverter {
 
   /// Build the user's most relevant shift (active > upcoming > past)
   private static func buildUserShift(userId: String, settings: UserSettings?) async
-    -> WatchShiftDTO? {
+    -> WatchShiftDTO?
+  {
     let now = Date()
     let calendar = Calendar.current
 
@@ -79,7 +80,8 @@ enum WatchDataConverter {
       case .upcoming:
         // Keep the earliest upcoming shift
         if let existingDate = upcomingShift.flatMap({ parseDate($0.shift_date) }),
-          shiftDate < existingDate {
+          shiftDate < existingDate
+        {
           upcomingShift = shift
         } else if upcomingShift == nil {
           upcomingShift = shift
@@ -87,7 +89,8 @@ enum WatchDataConverter {
       case .past:
         // Keep the most recent past shift
         if let existingDate = pastShift.flatMap({ parseDate($0.shift_date) }),
-          shiftDate > existingDate {
+          shiftDate > existingDate
+        {
           pastShift = shift
         } else if pastShift == nil {
           pastShift = shift

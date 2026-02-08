@@ -67,7 +67,7 @@ private let uiPatterns: [(regex: NSRegularExpression, name: String)] = {
 
     // TextField/SecureField with literal prompt
     (#"TextField\(\s*"[^"]+""#, "TextField(\"...\")"),
-    (#"SecureField\(\s*"[^"]+""#, "SecureField(\"...\")")
+    (#"SecureField\(\s*"[^"]+""#, "SecureField(\"...\")"),
   ]
 
   return patterns.compactMap { pattern, name -> (NSRegularExpression, String)? in
@@ -136,7 +136,7 @@ private let allowedPatterns: [NSRegularExpression] = {
 
     // Time/data placeholder formats
     #"Text\(\s*"--:--"\s*\)"#,
-    #"Text\(\s*"--"\s*\)"#
+    #"Text\(\s*"--"\s*\)"#,
   ]
 
   return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: [.caseInsensitive]) }
@@ -152,7 +152,7 @@ private let skipPaths = [
   "DerivedData/",
   "/Admin/",
   "DebugView.swift",
-  "/Scripts/"
+  "/Scripts/",
 ]
 
 // MARK: - Key to Symbol Name Conversion
@@ -304,7 +304,8 @@ private func extractCaptures(from content: String, using regexes: [NSRegularExpr
   for regex in regexes {
     for match in regex.matches(in: content, options: [], range: range) {
       if match.numberOfRanges > 1,
-        let captureRange = Range(match.range(at: 1), in: content) {
+        let captureRange = Range(match.range(at: 1), in: content)
+      {
         results.insert(String(content[captureRange]))
       }
     }
@@ -325,7 +326,7 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
     #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,
     #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,
     #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#
+    #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#,
   ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
   let directKeyRegexes = [
@@ -334,7 +335,7 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
 
   let dynamicKeyRegexes = [
     #"String\.LocalizationValue\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#,
-    #"=\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#
+    #"=\s*"([a-zA-Z][a-zA-Z0-9_.]+)\\\("#,
   ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
   for file in swiftFiles {
@@ -350,7 +351,8 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
 // MARK: - Orphaned Key Detection
 
 private func findOrphanedKeys(catalogKeys: Set<String>, references: LocalizationReferences)
-  -> [OrphanedKey] {
+  -> [OrphanedKey]
+{
   var orphaned: [OrphanedKey] = []
 
   for key in catalogKeys {
@@ -377,7 +379,8 @@ private func findOrphanedKeys(catalogKeys: Set<String>, references: Localization
     // Skip admin/debug keys
     let lowercased = key.lowercased()
     if lowercased.hasPrefix("admin.") || lowercased.hasPrefix("debug.")
-      || lowercased.contains("impersonate") || lowercased.contains("storekit") {
+      || lowercased.contains("impersonate") || lowercased.contains("storekit")
+    {
       continue
     }
 
@@ -426,7 +429,7 @@ private func removeKeysFromCatalog(keys: [String], catalogPath: String) -> Bool 
   json["strings"] = strings
 
   let serializationOptions: JSONSerialization.WritingOptions = [
-    .prettyPrinted, .sortedKeys, .withoutEscapingSlashes
+    .prettyPrinted, .sortedKeys, .withoutEscapingSlashes,
   ]
   guard
     let updatedData = try? JSONSerialization.data(
@@ -611,7 +614,8 @@ private func checkOrphanedKeys(config: Config) -> Bool {
   if config.jsonOutput {
     if let jsonData = try? JSONSerialization.data(
       withJSONObject: orphanedKeys, options: [.prettyPrinted]),
-      let jsonString = String(data: jsonData, encoding: .utf8) {
+      let jsonString = String(data: jsonData, encoding: .utf8)
+    {
       print(jsonString)
     }
   } else if config.removeOrphaned {
