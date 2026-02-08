@@ -2,7 +2,9 @@ import SwiftUI
 
 /// Toolbar label showing today's date with styled parts.
 /// Weekday in primary, dot separator, and day + month in secondary.
+/// Tapping navigates back to the current month.
 struct TodayDateLabel: View {
+  private let monthContext = SharedMonthContext.shared
   private let parts: ShiftCardDateParts = ShiftCardFormatter.dateParts(
     for: Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash)),
     locale: Locale.appLocale
@@ -25,5 +27,10 @@ struct TodayDateLabel: View {
     }
     .fixedSize()
     .padding(.leading, Spacing.xxs)
+    .onTapGesture {
+      guard !monthContext.isCurrentMonth else { return }
+      Haptics.play(.light)
+      monthContext.goToCurrentMonth()
+    }
   }
 }
