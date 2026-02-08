@@ -314,8 +314,7 @@ struct WageScreen: View {
         // Set default tariff type if not already set
         if let defaultType = types.first(where: { $0.is_default }) ?? types.first {
           if data.selectedTariffTypeId.isEmpty
-            || !types.contains(where: { $0.id == data.selectedTariffTypeId })
-          {
+            || !types.contains(where: { $0.id == data.selectedTariffTypeId }) {
             data.selectedTariffTypeId = defaultType.id
           }
         }

@@ -306,16 +306,14 @@ struct ShiftsView: View {
     .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
       if shouldShow
         && celebrationManager.shouldShowConfetti(
-          forYear: viewModel.committedYear, month: viewModel.committedMonth)
-      {
+          forYear: viewModel.committedYear, month: viewModel.committedMonth) {
         triggerCelebration()
       }
     }
     .onChange(of: viewModel.committedMonth) { _, _ in
       // Check if we should show confetti for the newly committed (visible) month
       if celebrationManager.shouldShowConfetti(
-        forYear: viewModel.committedYear, month: viewModel.committedMonth)
-      {
+        forYear: viewModel.committedYear, month: viewModel.committedMonth) {
         triggerCelebration()
       }
       // Check if we have a pending deep link for this month
@@ -459,8 +457,7 @@ struct ShiftsView: View {
 
     // Get the root view controller and present
     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-      let rootVC = windowScene.windows.first?.rootViewController
-    {
+      let rootVC = windowScene.windows.first?.rootViewController {
       // Find the topmost presented view controller
       var topVC = rootVC
       while let presented = topVC.presentedViewController {
@@ -926,7 +923,9 @@ struct ShiftsView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.clear)
-        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
+        .contentMargins(
+          .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
+        )
         .refreshable {
           await refreshShiftsContent()
         }
@@ -1147,8 +1146,7 @@ struct ShiftsView: View {
     [(
       weekKey: String, weekNumber: Int, totalGross: Double, items: [ShiftListItem],
       isOutsideMonth: Bool
-    )]
-  {
+    )] {
     var calendar = Calendar(identifier: .iso8601)
     calendar.firstWeekday = 2  // Monday
     calendar.minimumDaysInFirstWeek = 4

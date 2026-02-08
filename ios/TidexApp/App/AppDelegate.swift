@@ -1,9 +1,9 @@
 import ActivityKit
 import BackgroundTasks
-import os
 import Supabase
 import UIKit
 import WatchConnectivity
+import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
@@ -93,8 +93,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   // MARK: - Background Tasks for Live Activity
 
   private func registerBackgroundTasks() {
-    BGTaskScheduler.shared.register(forTaskWithIdentifier: shiftCheckTaskId, using: nil) {
-      [weak self] task in
+    BGTaskScheduler.shared.register(forTaskWithIdentifier: shiftCheckTaskId, using: nil) { [weak self] task in
       guard let refreshTask = task as? BGAppRefreshTask else { return }
       self?.handleShiftCheckTask(refreshTask)
     }
@@ -236,8 +235,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     if let userDefaults = sharedUserDefaults(),
       let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
       let shiftsData = shiftsJson.data(using: .utf8),
-      let shifts = try? JSONDecoder().decode([StoredShift].self, from: shiftsData)
-    {
+      let shifts = try? JSONDecoder().decode([StoredShift].self, from: shiftsData) {
       currentShifts = shifts
     } else {
       currentShifts = []
@@ -364,8 +362,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // End any existing task first
     endBackgroundTaskIfNeeded()
 
-    backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "TidexCleanup") {
-      [weak self] in
+    backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "TidexCleanup") { [weak self] in
       // Expiration handler - called when iOS is about to terminate the task
       // We MUST end the task here to avoid the warning
       self?.endBackgroundTaskIfNeeded()
@@ -542,8 +539,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
     // Handle smart notification taps (prompt to add shift)
     if type == "smart_prompt",
-      let dateISO = userInfo["date"] as? String
-    {
+      let dateISO = userInfo["date"] as? String {
       Task { @MainActor in
         SharedMonthContext.shared.preselectedDate = dateISO
         AppCoordinator.shared.pendingDeepLink = .addShift
@@ -551,8 +547,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
     // Handle shift reminder notification taps
     else if type == "shift_reminder",
-      let shiftDate = userInfo["shift_date"] as? String
-    {
+      let shiftDate = userInfo["shift_date"] as? String {
       // Navigate to shifts view with the shift highlighted
       Task { @MainActor in
         AppCoordinator.shared.pendingDeepLink = .shifts(dates: [shiftDate], action: .highlight)
@@ -620,8 +615,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
     // Handle deeplink from admin broadcast or other notification types
     else if let deeplink = userInfo["deeplink"] as? String,
-      let url = URL(string: deeplink)
-    {
+      let url = URL(string: deeplink) {
       Task { @MainActor in
         if url.scheme == "tidex" {
           // Internal deep link - pass to AppCoordinator

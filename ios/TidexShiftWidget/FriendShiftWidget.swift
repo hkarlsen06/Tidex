@@ -131,8 +131,7 @@ struct FriendEntityQuery: EntityQuery {
 
     // Encode and save
     if let data = try? JSONEncoder().encode(sharers),
-      let jsonString = String(data: data, encoding: .utf8)
-    {
+      let jsonString = String(data: data, encoding: .utf8) {
       userDefaults.set(jsonString, forKey: friendSharersKey)
     }
   }
@@ -160,8 +159,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     FriendShiftWidgetEntry.placeholder()
   }
 
-  func snapshot(for configuration: FriendShiftIntent, in _: Context) async -> FriendShiftWidgetEntry
-  {
+  func snapshot(for configuration: FriendShiftIntent, in _: Context) async -> FriendShiftWidgetEntry {
     if let friend = configuration.friend {
       // For snapshot, use cached data (fast)
       return createEntry(for: friend, fromAPI: nil)
@@ -212,8 +210,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     }
 
     if let data = try? JSONEncoder().encode(sharers),
-      let jsonString = String(data: data, encoding: .utf8)
-    {
+      let jsonString = String(data: data, encoding: .utf8) {
       userDefaults.set(jsonString, forKey: friendSharersKey)
     }
 
@@ -243,8 +240,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     }
 
     if let data = try? JSONEncoder().encode(shifts),
-      let jsonString = String(data: data, encoding: .utf8)
-    {
+      let jsonString = String(data: data, encoding: .utf8) {
       userDefaults.set(jsonString, forKey: friendShiftsKey)
     }
   }
@@ -280,8 +276,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
   ///   - friend: The friend entity from widget config
   ///   - fromAPI: Optional fresh data from API (if available)
   private func createEntry(for friend: FriendEntity, fromAPI: FriendWithShift?)
-    -> FriendShiftWidgetEntry
-  {
+    -> FriendShiftWidgetEntry {
     let storedCurrency = getStoredCurrency()
 
     // Use API data if available, otherwise fall back to App Group cache
@@ -498,8 +493,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     // Tomorrow
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-      calendar.isDate(shiftDay, inSameDayAs: tomorrow)
-    {
+      calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
       return String(localized: .widgetTomorrow)
     }
 

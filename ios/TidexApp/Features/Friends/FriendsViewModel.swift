@@ -558,7 +558,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     // Get recurring shifts and generate virtual shifts
     let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
-    let realShiftDates = Set(allShifts.map { $0.shift_date })
+    // Track real shifts by date+time to detect duplicates from materialized recurring shifts
+    let realShiftKeys = Set(allShifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" })
 
     for recurring in recurringShifts {
       let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
@@ -568,8 +569,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       )
 
       for virtual in virtualShifts {
-        // Skip if a real shift exists on this date (avoid duplicates)
-        if realShiftDates.contains(virtual.date) { continue }
+        // Skip if a real shift with matching times exists (materialized recurring shift)
+        let key = "\(virtual.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
+        if realShiftKeys.contains(key) { continue }
 
         // Create virtual shift row with times from recurring pattern
         let virtualRow = ShiftRow(

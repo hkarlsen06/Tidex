@@ -658,8 +658,7 @@ final class StatsService: ObservableObject {
       let components = shift.shiftDate.split(separator: "-")
       if components.count >= 3,
         let month = Int(components[1]),
-        let day = Int(components[2])
-      {
+        let day = Int(components[2]) {
         daysWithShiftsPerMonth[month, default: []].insert(day)
       }
     }

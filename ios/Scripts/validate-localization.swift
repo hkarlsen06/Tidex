@@ -43,7 +43,7 @@ private let placeholderMappings: [String: [PlaceholderSpec]] = [
   "monthLimit.confirmDeleteMessage": [PlaceholderSpec(placeholder: "{months}", specifier: "%@")],
   "monthLimit.deleteExplanation": [
     PlaceholderSpec(placeholder: "{targetMonth}", specifier: "%@"),
-    PlaceholderSpec(placeholder: "{otherMonths}", specifier: "%@"),
+    PlaceholderSpec(placeholder: "{otherMonths}", specifier: "%@")
   ],
   "onboarding.settings.payday.customValue": [
     PlaceholderSpec(placeholder: "{day}", specifier: "%lld")
@@ -57,7 +57,7 @@ private let placeholderMappings: [String: [PlaceholderSpec]] = [
   "stats.charts.weeklyChart.bestWeek": [PlaceholderSpec(placeholder: "{week}", specifier: "%lld")],
   "stats.charts.yearlyIncome.title": [PlaceholderSpec(placeholder: "{year}", specifier: "%@")],
   "stats.monthlyGoal.overTarget": [PlaceholderSpec(placeholder: "{amount}", specifier: "%@")],
-  "stats.monthlyGoal.remaining": [PlaceholderSpec(placeholder: "{amount}", specifier: "%@")],
+  "stats.monthlyGoal.remaining": [PlaceholderSpec(placeholder: "{amount}", specifier: "%@")]
 ]
 
 private enum ValidationError: Error, CustomStringConvertible {
@@ -88,7 +88,7 @@ private let skipKeyPatterns: [String] = [
   "grandfathered",
   "legacy",
   "tier",
-  "tieId",
+  "tieId"
 ]
 
 // Exact strings to skip (symbols, punctuation, format specifiers, admin/debug strings)
@@ -108,7 +108,7 @@ private let skipExactStrings: Set<String> = [
   "Viewer (can see owner's shifts)", "About Impersonation", "Loading summary...",
   "Create a new share between two users. The owner's shifts will be visible to the viewer.",
   "Send Notification", "Conflicts", "User Settings", "Last Error", "Dirty",
-  "Title", "Clean", "(required for audit)",
+  "Title", "Clean", "(required for audit)"
 ]
 
 private func shouldSkipKey(_ key: String) -> Bool {

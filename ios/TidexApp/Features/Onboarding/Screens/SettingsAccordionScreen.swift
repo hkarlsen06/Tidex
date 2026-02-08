@@ -312,8 +312,7 @@ struct SettingsAccordionScreen: View {
     .onTapGesture {
       // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
       if currentSection != .tax
-        && (completedSections.contains(.tax) || completedSections.contains(.breakDeduction))
-      {
+        && (completedSections.contains(.tax) || completedSections.contains(.breakDeduction)) {
         withAnimation {
           currentSection = .tax
         }
@@ -462,8 +461,7 @@ struct SettingsAccordionScreen: View {
     .onTapGesture {
       // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
       if currentSection != .payday
-        && (completedSections.contains(.payday) || completedSections.contains(.tax))
-      {
+        && (completedSections.contains(.payday) || completedSections.contains(.tax)) {
         withAnimation {
           currentSection = .payday
         }

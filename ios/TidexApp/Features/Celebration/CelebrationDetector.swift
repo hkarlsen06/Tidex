@@ -41,8 +41,7 @@ struct CelebrationDetector {
 
   /// Select the highest-earning shift by gross pay (earliest date wins ties).
   static func selectHighestEarningShift(from shifts: [ShiftWithComputations])
-    -> ShiftWithComputations?
-  {
+    -> ShiftWithComputations? {
     guard !shifts.isEmpty else { return nil }
 
     let maxGross = shifts.map { $0.grossPay }.max() ?? 0

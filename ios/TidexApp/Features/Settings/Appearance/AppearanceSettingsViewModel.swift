@@ -71,8 +71,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     // Update state without triggering saves
     isInitialLoad = true
     if let themeString = settings?.theme,
-      let theme = AppTheme(rawValue: themeString)
-    {
+      let theme = AppTheme(rawValue: themeString) {
       selectedTheme = theme
     } else {
       selectedTheme = .system
@@ -80,8 +79,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
     // Load calendar animation style from settings (synced from server)
     if let styleString = settings?.calendar_animation_style,
-      let style = CalendarAnimationStyle(rawValue: styleString)
-    {
+      let style = CalendarAnimationStyle(rawValue: styleString) {
       selectedCalendarAnimationStyle = style
       // Also update AppearanceManager to match
       appearanceManager.setCalendarAnimationStyle(style)

@@ -207,8 +207,7 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
     // Find the current product based on active product ID
     if let productId = activeProductId,
-      let matchingProductId = ProductID(rawValue: productId)
-    {
+      let matchingProductId = ProductID(rawValue: productId) {
       currentProduct = storeKitManager.product(for: matchingProductId)
     } else if hasActiveSubscription {
       // Fallback: determine product from tier and guess billing period
