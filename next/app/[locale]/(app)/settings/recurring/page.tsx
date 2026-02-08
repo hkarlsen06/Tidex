@@ -41,7 +41,7 @@ export default async function RecurringSettingsPage({
       .eq("user_id", user.id)
       .is("deleted_at", null),
     supabase
-      .from("shifts")
+      .from("user_shifts")
       .select("shift_date,start_time,end_time")
       .eq("user_id", user.id)
       .is("deleted_at", null),
