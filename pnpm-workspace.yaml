@@ -1,5 +1,5 @@
 packages:
   - next
-  - next/marketing
-  - next/dev-site
+  - marketing
+  - dev-site
   - ios

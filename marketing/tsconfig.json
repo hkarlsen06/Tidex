@@ -30,22 +30,22 @@
         "./*"
       ],
       "@/lib/*": [
-        "../lib/*"
+        "../next/lib/*"
       ],
       "@root/*": [
-        "../*"
+        "../next/*"
       ],
       "@components/*": [
-        "../components/*"
+        "../next/components/*"
       ],
       "@ui/*": [
-        "../components/ui/*"
+        "../next/components/ui/*"
       ],
       "@appui/*": [
-        "../components/app/*"
+        "../next/components/app/*"
       ],
       "@lib/*": [
-        "../lib/*"
+        "../next/lib/*"
       ]
     }
   },

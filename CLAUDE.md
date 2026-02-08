@@ -15,6 +15,8 @@ Both apps share a common Supabase backend (edge functions, migrations, database 
 ```
 tidex/
 ├── next/           # Next.js web application (see next/CLAUDE.md)
+├── marketing/      # Marketing static site (tidex.no)
+├── dev-site/       # Developer portfolio static site (kkarlsen.dev)
 ├── ios/            # Native iOS application (see ios/CLAUDE.md)
 ├── supabase/       # Shared backend (edge functions, migrations)
 └── docs/           # Shared documentation
