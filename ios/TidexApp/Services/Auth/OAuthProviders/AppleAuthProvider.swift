@@ -136,9 +136,8 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
         return UIWindow(windowScene: windowScene)
       }
       // No window scene available — should never happen in practice.
-      // This is a programming error, so we'll trigger a fatal error.
-      fatalError(
-        "No window scene available for Apple Sign-In presentation. This should never happen.")
+      assertionFailure("No window scene available for Apple Sign-In presentation")
+      return UIWindow(frame: UIScreen.main.bounds)
     }
   }
 }
