@@ -384,8 +384,7 @@
     }
 
     /// Log a pull operation
-    func logPullOperation(table: SyncTable, rowsProcessed: Int, newConflicts: Int, autoMerged: Int)
-    {
+    func logPullOperation(table: SyncTable, rowsProcessed: Int, newConflicts: Int, autoMerged: Int) {
       log(
         .pull, "Pulled \(table.rawValue)",
         details: """

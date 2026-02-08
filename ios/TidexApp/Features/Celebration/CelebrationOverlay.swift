@@ -214,8 +214,7 @@ private struct SteppingCountUpText: View {
     return formatter
   }()
 
-  init(startValue: Double, endValue: Double, duration: Double, currency: String, isAnimating: Bool)
-  {
+  init(startValue: Double, endValue: Double, duration: Double, currency: String, isAnimating: Bool) {
     self.startValue = startValue
     self.endValue = endValue
     self.duration = duration

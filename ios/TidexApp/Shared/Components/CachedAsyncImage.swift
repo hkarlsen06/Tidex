@@ -112,8 +112,7 @@ final class ImageCache: @unchecked Sendable {
         }
 
         if let data = try? Data(contentsOf: filePath),
-          let image = UIImage(data: data)
-        {
+          let image = UIImage(data: data) {
           logger.debug("💾 Disk cache HIT for: \(url.lastPathComponent)")
           // Also populate memory cache
           DispatchQueue.main.async {

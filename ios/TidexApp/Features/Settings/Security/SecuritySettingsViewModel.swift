@@ -360,8 +360,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       var linkingSucceeded = false
 
       if let accessToken = allParams["access_token"],
-        let refreshToken = allParams["refresh_token"]
-      {
+        let refreshToken = allParams["refresh_token"] {
         // Set the new session
         try await supabase.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
         linkingSucceeded = true

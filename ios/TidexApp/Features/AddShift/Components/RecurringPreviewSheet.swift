@@ -28,8 +28,7 @@ struct RecurringPreviewSheet: View {
           // Scrollable list of projected dates
           ScrollView {
             LazyVStack(spacing: Spacing.xs) {
-              ForEach(Array(viewModel.cachedProjectedDates.prefix(50).enumerated()), id: \.offset) {
-                _, dateISO in
+              ForEach(Array(viewModel.cachedProjectedDates.prefix(50).enumerated()), id: \.offset) { _, dateISO in
                 ProjectedShiftRow(
                   dateISO: dateISO,
                   startTime: viewModel.startTimeString,

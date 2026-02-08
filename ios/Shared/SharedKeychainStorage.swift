@@ -56,7 +56,7 @@ enum SharedKeychainStorage {
       kSecAttrAccount as String: tempKey,
       kSecValueData as String: Data("probe".utf8),
       kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-      kSecReturnAttributes as String: true,
+      kSecReturnAttributes as String: true
     ]
 
     // Delete any existing probe item
@@ -173,7 +173,7 @@ enum SharedKeychainStorage {
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
       kSecAttrAccount as String: key,
-      kSecAttrAccessGroup as String: getAccessGroup(),
+      kSecAttrAccessGroup as String: getAccessGroup()
     ]
 
     // Delete existing item first
@@ -198,7 +198,7 @@ enum SharedKeychainStorage {
       kSecAttrAccount as String: key,
       kSecAttrAccessGroup as String: getAccessGroup(),
       kSecReturnData as String: true,
-      kSecMatchLimit as String: kSecMatchLimitOne,
+      kSecMatchLimit as String: kSecMatchLimitOne
     ]
 
     var result: AnyObject?
@@ -224,7 +224,7 @@ enum SharedKeychainStorage {
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
       kSecAttrAccount as String: key,
-      kSecAttrAccessGroup as String: getAccessGroup(),
+      kSecAttrAccessGroup as String: getAccessGroup()
     ]
 
     let status = SecItemDelete(query as CFDictionary)

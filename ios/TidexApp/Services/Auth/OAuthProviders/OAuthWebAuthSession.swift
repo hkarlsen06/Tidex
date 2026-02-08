@@ -86,17 +86,22 @@ final class OAuthWebAuthSession: NSObject {
     presentationAnchor = resolvedAnchor
 
     return try await withCheckedThrowingContinuation { continuation in
+      // Guard against double resume if both completion handler and start() failure fire
+      var hasResumed = false
+
       // SECURITY: The access token is NEVER passed in the URL
       // It was already sent securely via Authorization header in the initial request
       let session = ASWebAuthenticationSession(
         url: url,
         callbackURLScheme: "tidex"
       ) { callbackURL, error in
+        guard !hasResumed else { return }
+        hasResumed = true
+
         if let error = error {
           let nsError = error as NSError
           if nsError.domain == ASWebAuthenticationSessionErrorDomain,
-            nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
-          {
+            nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
             continuation.resume(throwing: OAuthWebAuthError.userCancelled)
           } else {
             continuation.resume(throwing: OAuthWebAuthError.failed(error.localizedDescription))
@@ -118,6 +123,8 @@ final class OAuthWebAuthSession: NSObject {
       self.webAuthSession = session
 
       if !session.start() {
+        guard !hasResumed else { return }
+        hasResumed = true
         continuation.resume(throwing: OAuthWebAuthError.sessionStartFailed)
       }
     }
@@ -183,8 +190,7 @@ extension OAuthWebAuthSession {
 
 extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
   nonisolated func presentationAnchor(for session: ASWebAuthenticationSession)
-    -> ASPresentationAnchor
-  {
+    -> ASPresentationAnchor {
     MainActor.assumeIsolated {
       if let anchor = presentationAnchor {
         return anchor
@@ -199,8 +205,7 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
       // Create window from first available scene
       if let windowScene = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
-        .first
-      {
+        .first {
         return UIWindow(windowScene: windowScene)
       }
       // Fallback: try to get any window from any scene
@@ -208,8 +213,7 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
       if let anyWindow = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
         .flatMap({ $0.windows })
-        .first
-      {
+        .first {
         return anyWindow
       }
       // Last resort: create a bare UIWindow. This should never happen in practice

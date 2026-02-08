@@ -234,8 +234,7 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   /// Export shifts to the device calendar using local data
-  private func exportToCalendarFromLocalData(userId: String, from: String, to: String) async throws
-  {
+  private func exportToCalendarFromLocalData(userId: String, from: String, to: String) async throws {
     logger.info("Exporting to calendar from local data: \(from) to \(to)")
 
     // Parse date range
@@ -266,8 +265,9 @@ final class DataSettingsViewModel: ObservableObject {
     let endYear = calendar.component(.year, from: endDate)
     let endMonth = calendar.component(.month, from: endDate)
 
-    // Create a set of real shift dates to avoid duplicates
-    let realShiftDates = Set(regularShifts.map { $0.shift_date })
+    // Track real shifts by date+time to detect duplicates from materialized recurring shifts
+    let realShiftKeys = Set(
+      regularShifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" })
 
     for recurring in recurringShifts {
       var currentYear = startYear
@@ -284,8 +284,9 @@ final class DataSettingsViewModel: ObservableObject {
           // Skip if outside the date range
           guard virtualShift.date >= from && virtualShift.date <= to else { continue }
 
-          // Skip if there's already a real shift on this date (prevents duplicates)
-          guard !realShiftDates.contains(virtualShift.date) else { continue }
+          // Skip if a real shift with matching times exists (materialized recurring shift)
+          let key = "\(virtualShift.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
+          guard !realShiftKeys.contains(key) else { continue }
 
           // Convert to ExportedShift
           virtualShifts.append(

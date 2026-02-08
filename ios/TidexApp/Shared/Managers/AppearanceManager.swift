@@ -71,16 +71,14 @@ final class AppearanceManager: ObservableObject {
   private init() {
     // Load cached theme from UserDefaults for immediate display
     if let cachedTheme = UserDefaults.standard.string(forKey: themeKey),
-      let theme = AppTheme(rawValue: cachedTheme)
-    {
+      let theme = AppTheme(rawValue: cachedTheme) {
       self.theme = theme
       logger.debug("Loaded cached theme: \(cachedTheme)")
     }
 
     // Load cached calendar animation style
     if let cachedStyle = UserDefaults.standard.string(forKey: calendarAnimationStyleKey),
-      let style = CalendarAnimationStyle(rawValue: cachedStyle)
-    {
+      let style = CalendarAnimationStyle(rawValue: cachedStyle) {
       self.calendarAnimationStyle = style
       logger.debug("Loaded cached calendar animation style: \(cachedStyle)")
     }
@@ -149,8 +147,7 @@ final class AppearanceManager: ObservableObject {
       // No local cache - use the server value
       let newTheme: AppTheme
       if let themeString = themeString,
-        let parsed = AppTheme(rawValue: themeString)
-      {
+        let parsed = AppTheme(rawValue: themeString) {
         newTheme = parsed
       } else {
         newTheme = .system
@@ -176,8 +173,7 @@ final class AppearanceManager: ObservableObject {
       // No local cache - use the server value
       let newStyle: CalendarAnimationStyle
       if let styleString = styleString,
-        let parsed = CalendarAnimationStyle(rawValue: styleString)
-      {
+        let parsed = CalendarAnimationStyle(rawValue: styleString) {
         newStyle = parsed
       } else {
         newStyle = .horizontal

@@ -1,5 +1,5 @@
-import os
 import SwiftUI
+import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
@@ -134,7 +134,8 @@ private struct RootContent: View {
     // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
     // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
     .onAppear {
-      launchLog.info("[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
+      launchLog.info(
+        "[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
     }
     .onAppear {
       Task { @MainActor in

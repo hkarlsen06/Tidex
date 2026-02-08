@@ -100,8 +100,7 @@ struct FriendWithShift: Sendable {
   /// Effective avatar URL (profile picture takes precedence)
   var effectiveAvatarURL: URL? {
     if let urlString = profilePictureUrl ?? oauthAvatarUrl,
-      !urlString.isEmpty
-    {
+      !urlString.isEmpty {
       return URL(string: urlString)
     }
     return nil
@@ -234,8 +233,7 @@ enum FriendsAPIClient {
 
   // MARK: - Private API Methods
 
-  private static func fetchSharers(accessToken: String) async throws -> [SharersResponse.SharerData]
-  {
+  private static func fetchSharers(accessToken: String) async throws -> [SharersResponse.SharerData] {
     let url = baseURL.appendingPathComponent("api/sharing/sharers")
 
     var request = URLRequest(url: url)

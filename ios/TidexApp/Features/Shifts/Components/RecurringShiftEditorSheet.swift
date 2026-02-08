@@ -205,7 +205,8 @@ struct RecurringShiftEditorSheet: View {
           isEnabled: true
         )
         .scrollDismissesKeyboard(.interactively)
-        .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
+        .contentMargins(
+          .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
       }
       .background(Color.tidexBackground)
       .navigationBarTitleDisplayMode(.inline)

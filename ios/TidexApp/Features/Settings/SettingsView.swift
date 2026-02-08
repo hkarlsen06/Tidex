@@ -363,8 +363,7 @@ struct SettingsView: View {
       // The role is stored in app_metadata which is set by the backend
       if let appMetadata = session.user.appMetadata["role"],
         case .string(let role) = appMetadata,
-        role == "admin"
-      {
+        role == "admin" {
         isAdmin = true
       }
     } catch {

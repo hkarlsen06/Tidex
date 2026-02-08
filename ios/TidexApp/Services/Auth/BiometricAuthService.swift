@@ -81,7 +81,8 @@ final class BiometricAuthService: ObservableObject {
       isLocked = false
       Self.isEnabledStatic = false
     }
-    launchLog.info("[Launch] BiometricAuthService.init END – isLocked=\(self.isLocked), isEnabled=\(sdkEnabled)")
+    launchLog.info(
+      "[Launch] BiometricAuthService.init END – isLocked=\(self.isLocked), isEnabled=\(sdkEnabled)")
   }
 
   // MARK: - Biometric Availability

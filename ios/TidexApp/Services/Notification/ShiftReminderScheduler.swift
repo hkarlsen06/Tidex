@@ -275,8 +275,7 @@ final class ShiftReminderScheduler {
     }
 
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-      calendar.isDate(shiftDay, inSameDayAs: tomorrow)
-    {
+      calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
       return String(localized: .commonTomorrow).capitalized
     }
 

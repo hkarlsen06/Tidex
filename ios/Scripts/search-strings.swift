@@ -155,8 +155,7 @@ private func generateSymbolName(from key: String) -> String {
 }
 
 private func searchVariations(_ variations: CatalogVariations, query: String, locale: String)
-  -> [String]
-{
+  -> [String] {
   var reasons: [String] = []
   if let plural = variations.plural {
     for (_, form) in plural where form.stringUnit?.value.lowercased().contains(query) == true {
@@ -187,8 +186,7 @@ private func findMatches(in catalog: Catalog, config: Config) -> [SearchMatch] {
     if config.searchValues, let localizations = entry.localizations {
       for (locale, localization) in localizations {
         if let value = localization.stringUnit?.value,
-          value.lowercased().contains(queryLower)
-        {
+          value.lowercased().contains(queryLower) {
           matchReasons.append(locale)
         }
         if let variations = localization.variations {

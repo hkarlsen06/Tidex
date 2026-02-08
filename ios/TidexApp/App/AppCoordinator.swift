@@ -1,8 +1,8 @@
 import Foundation
-import os
 import Supabase
 import SwiftUI
 import UIKit
+import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
@@ -193,7 +193,8 @@ final class AppCoordinator: ObservableObject {
       // the authStateChanges stream hasn't emitted.
       // This can happen if there's no stored session or the SDK initialization is slow.
       if self.appState == .loading && !self.didReceiveInitialSession {
-        launchLog.warning("[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
+        launchLog.warning(
+          "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
         await self.performInitialSessionCheck()
       }
     }
@@ -218,24 +219,26 @@ final class AppCoordinator: ObservableObject {
   /// (preserving offline usage) and only falls back to .unauthenticated when
   /// there is genuinely no session.
   private func setupMaxLoadingTimeout() {
-    backgroundTasks.append(Task { [weak self] in
-      try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
-      guard let self, !Task.isCancelled else { return }
-      guard self.appState == .loading else { return }
+    backgroundTasks.append(
+      Task { [weak self] in
+        try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
+        guard let self, !Task.isCancelled else { return }
+        guard self.appState == .loading else { return }
 
-      self.isUpdatingAuthState = false
+        self.isUpdatingAuthState = false
 
-      if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
-        launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
-        self.loadOnboardingStateFromUser(session.user)
-        self.userId = session.user.normalizedId
-        self.initialSyncComplete = false
-        self.appState = .authenticated
-      } else {
-        launchLog.error("[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
-        self.appState = .unauthenticated
-      }
-    })
+        if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+          launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
+          self.loadOnboardingStateFromUser(session.user)
+          self.userId = session.user.normalizedId
+          self.initialSyncComplete = false
+          self.appState = .authenticated
+        } else {
+          launchLog.error(
+            "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
+          self.appState = .unauthenticated
+        }
+      })
   }
 
   /// Reset auth state update flag. Called by AppLifecycleHandler's recovery mechanism
@@ -254,7 +257,8 @@ final class AppCoordinator: ObservableObject {
 
         switch event {
         case .initialSession:
-          launchLog.info("[Launch] AppCoordinator received .initialSession, hasSession=\(session != nil)")
+          launchLog.info(
+            "[Launch] AppCoordinator received .initialSession, hasSession=\(session != nil)")
           // Cancel the timeout task since we received the session event
           self.initialSessionTimeoutTask?.cancel()
           self.initialSessionTimeoutTask = nil
@@ -954,8 +958,7 @@ final class AppCoordinator: ObservableObject {
       // Skip during impersonation to prevent registering the admin's device
       // token under the impersonated user's account
       if !ImpersonationManager.shared.isImpersonating,
-        let appDelegate = UIApplication.shared.delegate as? AppDelegate
-      {
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate {
         await appDelegate.registerCachedAPNsTokenIfNeeded()
       }
 

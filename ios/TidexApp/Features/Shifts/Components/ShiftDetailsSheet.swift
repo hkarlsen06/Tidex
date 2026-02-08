@@ -142,8 +142,7 @@ struct ShiftDetailsSheet: View {
   /// Check if shift has custom supplements
   private var hasCustomSupplements: Bool {
     if let custom = shift.shift.custom_supplements,
-      !custom.rules.isEmpty
-    {
+      !custom.rules.isEmpty {
       return true
     }
     return false
@@ -482,8 +481,7 @@ struct ShiftDetailsSheet: View {
 
     // Get the root view controller and present
     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-      let rootVC = windowScene.windows.first?.rootViewController
-    {
+      let rootVC = windowScene.windows.first?.rootViewController {
       // Find the topmost presented view controller
       var topVC = rootVC
       while let presented = topVC.presentedViewController {

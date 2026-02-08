@@ -12,8 +12,7 @@ struct CalendarDayInfo: Identifiable, Equatable {
   let isOutsideMonth: Bool
 
   /// Create a day info for a day within the current month
-  static func inMonth(id: Int, dayNumber: Int, dateISO: String, weekNumber: Int?) -> CalendarDayInfo
-  {
+  static func inMonth(id: Int, dayNumber: Int, dateISO: String, weekNumber: Int?) -> CalendarDayInfo {
     CalendarDayInfo(
       id: id,
       dayNumber: dayNumber,
@@ -25,8 +24,7 @@ struct CalendarDayInfo: Identifiable, Equatable {
 
   /// Create a day info for a day outside the current month (prev/next month padding)
   static func outsideMonth(id: Int, dayNumber: Int, dateISO: String, weekNumber: Int?)
-    -> CalendarDayInfo
-  {
+    -> CalendarDayInfo {
     CalendarDayInfo(
       id: id,
       dayNumber: dayNumber,

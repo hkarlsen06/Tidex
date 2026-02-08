@@ -297,8 +297,7 @@ struct SharedShiftsCalendarView: View {
 
   /// Check if a date should be highlighted (from notification deeplink)
   private func isDateHighlighted(dayInfo: CalendarDayInfo, shiftsOnDay: [ShiftWithComputations])
-    -> Bool
-  {
+    -> Bool {
     // Check if any shift on this day matches a highlight shift ID (for added/updated)
     let matchesShiftId =
       !highlightShiftIds.isEmpty

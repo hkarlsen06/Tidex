@@ -96,7 +96,9 @@ struct AddShiftView: View {
                 await refreshAddContent()
               }
               .scrollDismissesKeyboard(.interactively)
-              .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
+              .contentMargins(
+                .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
+              )
               .onTapGesture {
                 hideKeyboard()
               }
@@ -204,19 +206,16 @@ struct AddShiftView: View {
         }
       )
     }
-    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
-    { notification in
+    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
       if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
-        as? CGRect
-      {
+        as? CGRect {
         keyboardHeight = keyboardFrame.height
       }
       withAnimation(.easeInOut(duration: 0.25)) {
         isKeyboardVisible = true
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
-    { _ in
+    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
       withAnimation(.easeInOut(duration: 0.25)) {
         isKeyboardVisible = false
         keyboardHeight = 0
