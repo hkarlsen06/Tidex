@@ -1,0 +1,1 @@
+zmena,sledovanie,mzda,plat,práca,hodiny,čas,rozvrh,výdelek,zárobok

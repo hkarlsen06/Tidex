@@ -1,0 +1,9 @@
+- Pridané zdieľané zmeny: zobrazenie zmien priateľov v zozname, kalendári a detailnom zobrazení
+- Pridaná správa opakujúcich sa zmien s dátumami vylúčenia
+- Pridané stlmenie upozornení pre zdieľané zmeny
+- Pridaná podpora pre 24:00 ako čas ukončenia zmeny
+- Prepracované nastavenia a správa priateľov v natívnom iOS štýle
+- Vylepšený kalendár s dynamickým škálovaním a náhľadom zárobkov
+- Pridané potiahnutie pre obnovenie na karte Pridať
+- Opravená chyba, ktorá mohla spôsobiť čiernu obrazovku pri spustení
+- Opravy chýb a ďalšie vylepšenia

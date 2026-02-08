@@ -1,10 +1,9 @@
-- Aggiunti 19 nuovi linguaggi con supporto da destra a sinistra per ebraico, persiano e urdu
-- Aggiunta esportazione calendario per condividere i turni con altre app di calendario
-- Aggiunte azioni rapide della schermata home per una gestione dei turni più veloce
-- Aggiunto doppio tocco per passare rapidamente al mese corrente
-- Aggiunti chip di tempo recente per una registrazione dei turni più veloce
-- Aggiunta opzione per sovrapporre i tuoi turni al calendario di un amico
-- Aggiunto timestamp dell'ultima modifica ai dettagli del turno
-- Migliorata l'accessibilità con supporto per Dynamic Type
-- Corrette notifiche push duplicate
+- Aggiunti turni condivisi: visualizza i turni degli amici in lista, calendario e vista dettagli
+- Aggiunta gestione turni ricorrenti con date di esclusione
+- Aggiunta possibilità di silenziare le notifiche per i turni condivisi
+- Aggiunto supporto per 24:00 come orario di fine turno
+- Riprogettate impostazioni e gestione amici con stile iOS nativo
+- Migliorato il calendario con scalatura dinamica e anteprima dei guadagni
+- Aggiunto scorri-per-aggiornare nella scheda Aggiungi
+- Risolto un problema che poteva causare una schermata nera all'avvio
 - Correzioni di bug e altri miglioramenti

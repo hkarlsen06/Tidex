@@ -1,0 +1,9 @@
+- Megosztott műszakok hozzáadva: barátok műszakainak megtekintése lista, naptár és részletes nézetben
+- Ismétlődő műszakok kezelése kizárási dátumokkal
+- Értesítések némítása a megosztott műszakokhoz
+- 24:00 támogatása műszak befejezési időpontként
+- Újratervezett beállítások és ismerőskezelés natív iOS stílusban
+- Továbbfejlesztett naptár dinamikus méretezéssel és kereseti előnézettel
+- Lehúzás a frissítéshez funkció hozzáadva a Hozzáadás fülön
+- Javítva egy hiba, ami fekete képernyőt okozhatott indításkor
+- Hibajavítások és egyéb fejlesztések

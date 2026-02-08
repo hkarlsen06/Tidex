@@ -1,1 +1,1 @@
-ca làm,theo dõi,lương,tiền lương,làm việc,giờ làm,thời gian,đồng hồ,lịch trình,thu nhập
+ca làm,theo dõi,lương,công việc,giờ làm,thời gian,lịch làm,thu nhập,tính lương

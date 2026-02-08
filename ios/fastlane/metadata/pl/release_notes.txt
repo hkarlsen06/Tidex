@@ -1,10 +1,9 @@
-- Dodano 19 nowych języków, w tym obsługę RTL dla hebrajskiego, perskiego i urdu
-- Dodano eksport kalendarza w celu udostępniania zmian innym aplikacjom kalendarza
-- Dodano skróty ekranu głównego dla szybszego zarządzania zmianami
-- Dodano dwukrotne dotknięcie w celu szybkiego przejścia do bieżącego miesiąca
-- Dodano niedawne chipsy czasowe dla szybszego wprowadzania zmian
-- Dodano opcję nałożenia zmian na kalendarz znajomego
-- Dodano sygnaturę czasową ostatniej edycji do szczegółów zmian
-- Ulepszona dostępność dzięki obsłudze Dynamic Type
-- Naprawiono zduplikowane powiadomienia push
+- Dodano udostępniane zmiany: przeglądaj zmiany znajomych w liście, kalendarzu i widoku szczegółów
+- Dodano zarządzanie cyklicznymi zmianami z datami wyłączeń
+- Dodano wyciszanie powiadomień dla udostępnianych zmian
+- Dodano obsługę 24:00 jako godziny zakończenia zmiany
+- Przeprojektowano ustawienia i zarządzanie znajomymi w natywnym stylu iOS
+- Ulepszono kalendarz z dynamicznym skalowaniem i podglądem zarobków
+- Dodano przeciągnij-aby-odświeżyć w zakładce Dodaj
+- Naprawiono błąd, który mógł powodować czarny ekran podczas uruchamiania
 - Poprawki błędów i inne ulepszenia

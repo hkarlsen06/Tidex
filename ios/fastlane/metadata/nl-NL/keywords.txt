@@ -1,1 +1,1 @@
-shift,tracker,loon,salaris,werk,uren,tijd,klok,rooster,inkomsten
+dienst,uren,loon,salaris,werk,tijd,rooster,inkomsten,baan,geld

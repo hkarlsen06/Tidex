@@ -1,0 +1,9 @@
+- Dodane dijeljene smjene: pregledajte smjene prijatelja u listi, kalendaru i detaljnom prikazu
+- Dodano upravljanje ponavljajućim smjenama s datumima izuzeća
+- Dodano isključivanje obavijesti za dijeljene smjene
+- Dodana podrška za 24:00 kao vrijeme završetka smjene
+- Redizajnirane postavke i upravljanje prijateljima s izvornim iOS stilom
+- Poboljšan kalendar s dinamičkim skaliranjem i pregledom zarade
+- Dodano povlačenje za osvježavanje na kartici Dodaj
+- Ispravljena greška koja je mogla uzrokovati crni zaslon pri pokretanju
+- Ispravke grešaka i druga poboljšanja

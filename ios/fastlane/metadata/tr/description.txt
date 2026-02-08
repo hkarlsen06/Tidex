@@ -1,11 +1,11 @@
-Tidex ile çalışma vardiyalarınızı takip edin ve maaşınızı hesaplayın.
+Tidex ile çalışma vardiyalarınızı takip edin ve ücretlerinizi hesaplayın.
 
 Özellikler:
-• Başlangıç ve bitiş saatleri ile kolay vardiya kaydı
-• Otomatik ücret hesaplaması
-• Tüm vardiyaların takvim görünümü
+• Başlangıç/bitiş saatleriyle kolay vardiya kaydı
+• Otomatik ücret hesaplamaları
+• Tüm vardiyanın takvim görünümü
 • Kazanç özeti ve istatistikler
 • Hızlı erişim için widget
-• Cihazlar arasında senkronizasyon
+• Cihazlar arası senkronizasyon
 
-Çalışma saatleri ve kazançlarını takip etmek isteyen çalışanlar için mükemmel.
+Çalışma saatlerini ve kazançlarını takip etmek isteyen çalışanlar için mükemmel.

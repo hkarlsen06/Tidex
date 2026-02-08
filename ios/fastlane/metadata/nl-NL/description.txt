@@ -1,11 +1,11 @@
-Houd je werkschema's bij en bereken je loon met Tidex.
+Houd je werkdiensten bij en bereken je loon met Tidex.
 
 Functies:
-• Eenvoudig schift registreren met start- en eindtijden
+• Eenvoudige dienstregistratie met start- en eindtijden
 • Automatische loonberekening
-• Kalenderweergave van alle shifts
+• Kalenderweergave van alle diensten
 • Inkomstenoverzicht en statistieken
 • Widget voor snelle toegang
-• Synchronisatie op alle apparaten
+• Synchronisatie tussen apparaten
 
 Perfect voor werknemers die hun werkuren en inkomsten willen bijhouden.

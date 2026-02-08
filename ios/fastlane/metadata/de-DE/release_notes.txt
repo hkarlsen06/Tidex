@@ -1,10 +1,9 @@
-- 19 neue Sprachen hinzugefügt, einschließlich RTL-Unterstützung für Hebräisch, Persisch und Urdu
-- Kalenderexport zum Teilen deiner Schichten mit anderen Kalender-Apps hinzugefügt
-- Schnellaktionen auf dem Startbildschirm für schnellere Schichtverwaltung hinzugefügt
-- Doppeltippen zum schnellen Springen zum aktuellen Monat hinzugefügt
-- Kürzliche Zeitchips für schnellere Schichterfassung hinzugefügt
-- Option zum Überlagern deiner Schichten mit dem Kalender eines Freundes hinzugefügt
-- Zeitstempel der letzten Bearbeitung zu Schichtdetails hinzugefügt
-- Barrierefreiheit mit Dynamic Type-Unterstützung verbessert
-- Doppelte Push-Benachrichtigungen behoben
+- Geteilte Schichten hinzugefügt: Schichten von Freunden in Listen-, Kalender- und Detailansicht anzeigen
+- Verwaltung wiederkehrender Schichten mit Ausschlussdaten hinzugefügt
+- Stummschaltung von Benachrichtigungen für geteilte Schichten hinzugefügt
+- Unterstützung für 24:00 als Schichtende hinzugefügt
+- Einstellungen und Freundeverwaltung im nativen iOS-Stil neu gestaltet
+- Kalender mit dynamischer Skalierung und Verdienstvorschau verbessert
+- Ziehen-zum-Aktualisieren im Hinzufügen-Tab hinzugefügt
+- Fehler behoben, der beim Start einen schwarzen Bildschirm verursachen konnte
 - Fehlerbehebungen und weitere Verbesserungen

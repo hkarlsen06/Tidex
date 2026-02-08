@@ -1,0 +1,1 @@
+směna,mzda,plat,práce,hodiny,čas,rozvrh,výdělek,sledování,kalkulačka

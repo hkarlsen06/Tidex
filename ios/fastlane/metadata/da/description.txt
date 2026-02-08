@@ -1,11 +1,11 @@
-Track dine arbejdsvagter og beregn din løn med Tidex.
+Hold styr på dine arbejdsvagter og beregn din løn med Tidex.
 
 Funktioner:
-• Nem vaktregistrering med start- og sluttider
+• Nem vagtregistrering med start- og sluttider
 • Automatisk lønberegning
 • Kalendervisning af alle vagter
-• Lønnoversigt og statistikker
+• Indtægtsoversigt og statistik
 • Widget til hurtig adgang
 • Synkronisering på tværs af enheder
 
-Perfekt til medarbejdere, der vil følge deres arbejdstimer og løn.
+Perfekt til medarbejdere, der ønsker at holde styr på deres arbejdstimer og indtjening.

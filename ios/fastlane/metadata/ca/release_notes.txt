@@ -1,0 +1,9 @@
+- Afegits torns compartits: consulta els torns d'amics a la llista, el calendari i la vista detallada
+- Afegida gestió de torns recurrents amb dates d'exclusió
+- Afegida opció per silenciar notificacions de torns compartits
+- Afegit suport per a 24:00 com a hora de finalització de torn
+- Redisseny de la configuració i gestió d'amics amb estil natiu d'iOS
+- Calendari millorat amb escalat dinàmic i previsualització d'ingressos
+- Afegit arrossegar per actualitzar a la pestanya Afegir
+- Solucionat un error que podia causar una pantalla negra en iniciar
+- Correccions d'errors i altres millores
