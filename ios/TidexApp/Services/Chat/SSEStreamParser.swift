@@ -81,9 +81,12 @@ enum SSEStreamParser {
             if let string = String(data: byteBuffer, encoding: .utf8) {
               buffer.append(string)
               byteBuffer.removeAll()
+            } else if byteBuffer.count > 4 {
+              // UTF-8 uses at most 4 bytes per character. If we've accumulated
+              // more than 4 bytes without valid UTF-8, the data is corrupt.
+              logger.error("Invalid UTF-8 sequence after \(byteBuffer.count) bytes, resetting buffer")
+              byteBuffer.removeAll()
             }
-            // If decoding fails, we have an incomplete multi-byte sequence
-            // Keep accumulating bytes until we have a complete sequence
 
             // Process complete events in the buffer
             while let eventRange = buffer.range(of: eventTerminator) {

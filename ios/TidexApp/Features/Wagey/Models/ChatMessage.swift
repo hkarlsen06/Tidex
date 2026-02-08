@@ -135,8 +135,9 @@ enum ContentBlock: Identifiable, Equatable {
   var id: String {
     switch self {
     case .text(let content):
-      // Use a hash of the text for identity (text blocks don't have natural IDs)
-      return "text-\(content.hashValue)"
+      // Use content length + prefix for a stable, deterministic identity.
+      // hashValue is randomized per process and must not be used for Identifiable.
+      return "text-\(content.count)-\(content.prefix(32))"
     case .toolCall(let toolCall):
       return toolCall.id
     case .image(let attachment):

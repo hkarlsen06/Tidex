@@ -243,7 +243,7 @@ final class SyncCoordinator: ObservableObject {
       }
       let first = await group.next()
       group.cancelAll()
-      return first
+      return (first ?? nil)
         ?? SyncResult(
           success: false,
           tableResults: [],

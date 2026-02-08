@@ -133,10 +133,7 @@ struct RecurringShiftGenerator {
 
   /// Convert Date to ISO date string (YYYY-MM-DD) in local time
   private static func toISODateLocal(_ date: Date) -> String {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withFullDate]
-    formatter.timeZone = Date.localTimeZone
-    return formatter.string(from: date)
+    FormatterCache.isoDateFormatter().string(from: date)
   }
 
   /// Check if date is within the recurring shift's end condition window
