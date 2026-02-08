@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 
 // MARK: - Tab Reselection Notification
@@ -16,6 +17,7 @@ extension Notification.Name {
 struct MainTabView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.requestReview) private var requestReview
   @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
   @ObservedObject private var monthContext = SharedMonthContext.shared
   @ObservedObject private var impersonationManager = ImpersonationManager.shared
@@ -196,12 +198,17 @@ struct MainTabView: View {
 
       // Celebration overlay - above everything including tab bar and month picker
       if celebrationManager.shouldShowCelebration,
-        let data = celebrationManager.celebrationData {
+        let data = celebrationManager.celebrationData
+      {
         CelebrationOverlay(
           data: data,
           onDismiss: {
             guard let userId = coordinator.userId else { return }
             celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
+            ReviewRequestManager.shared.requestReviewIfEligible(
+              userId: userId,
+              requestReview: { requestReview() }
+            )
           }
         )
       }

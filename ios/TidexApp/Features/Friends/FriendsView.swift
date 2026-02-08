@@ -275,6 +275,10 @@ private struct SharedShiftsDetailView: View {
   @Binding var highlightDates: Set<String>
   @Binding var highlightShiftIds: Set<String>
 
+  @Environment(\.dismiss) private var dismiss
+  @State private var showProfile = false
+  @State private var shouldNavigateBack = false
+
   var body: some View {
     ZStack {
       Color.tidexBackground
@@ -309,15 +313,38 @@ private struct SharedShiftsDetailView: View {
 
       ToolbarSpacer(.fixed, placement: .topBarTrailing)
 
-      // Friend display using UserMenuButton in display-only mode
+      // Friend display using UserMenuButton - tapping opens profile
       ToolbarItem(placement: .topBarTrailing) {
         UserMenuButton(
           displayName: sharer.displayName,
           avatarUrl: sharer.avatarUrl,
-          interactive: false
+          onTap: { showProfile = true }
         )
         .fixedSize(horizontal: true, vertical: false)
       }
+    }
+    .sheet(
+      isPresented: $showProfile,
+      onDismiss: {
+        if shouldNavigateBack {
+          shouldNavigateBack = false
+          dismiss()
+        }
+      }
+    ) {
+      FriendProfileView(
+        sharedUser: sharer,
+        onVisibilityChange: {
+          Task {
+            await viewModel.loadSharers(forceRefreshPreviews: true)
+          }
+        },
+        onFriendRemoved: {
+          shouldNavigateBack = true
+        }
+      )
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
     }
   }
 }

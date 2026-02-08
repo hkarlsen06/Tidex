@@ -13,6 +13,8 @@ struct UserMenuButton: View {
   let avatarUrl: String?
   /// Whether tapping opens settings (true) or is display-only (false)
   var interactive: Bool = true
+  /// Optional custom tap action. When provided, overrides the default settings behavior.
+  var onTap: (() -> Void)?
   /// Cached profile image (downloaded once, then reused)
   @State private var cachedImage: UIImage?
   /// Whether image download is in progress
@@ -27,7 +29,11 @@ struct UserMenuButton: View {
   var body: some View {
     if interactive {
       Button {
-        showSettings = true
+        if let onTap {
+          onTap()
+        } else {
+          showSettings = true
+        }
       } label: {
         menuButton
       }
