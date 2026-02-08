@@ -20,6 +20,7 @@
     @State private var isRunningValidation = false
     @State private var isLoadingSummary = false
     @State private var showAdvancedSync = false
+    @State private var showResetLocalDataConfirmation = false
 
     @ObservedObject private var entitlementService = EntitlementService.shared
     @ObservedObject private var storeKitManager = StoreKitManager.shared
@@ -48,19 +49,33 @@
         // Sync Status Section
         syncStatusSection
 
+        // Advanced controls
+        advancedSection
+
         // Advanced Sync (collapsible)
         if showAdvancedSync {
           stateSummarySection
           validationSection
           logsSection
         }
+
+        // Destructive actions
+        dangerZoneSection
       }
       .navigationTitle("Debug")
       .task {
         await loadUserId()
       }
       .refreshable {
-        await loadSummary()
+        await reloadDebugData()
+      }
+      .alert("Reset Local Data?", isPresented: $showResetLocalDataConfirmation) {
+        Button("Cancel", role: .cancel) {}
+        Button("Reset", role: .destructive) {
+          Task { await resetLocalData() }
+        }
+      } message: {
+        Text("This removes all local data and sync state on this device.")
       }
     }
 
@@ -137,25 +152,29 @@
           }
         }
 
-        // Test buttons
-        Button {
-          Task {
-            let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
-              type: .morning)
-            testNotificationResult = success ? "Morning test scheduled (5s)" : "Failed to schedule"
+        // Test actions
+        Menu {
+          Button("Send Morning Test") {
+            Task {
+              let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
+                type: .morning
+              )
+              testNotificationResult =
+                success ? "Morning test scheduled (5s)" : "Failed to schedule"
+            }
           }
-        } label: {
-          Label("Send Test Morning", systemImage: "sun.max")
-        }
 
-        Button {
-          Task {
-            let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
-              type: .evening)
-            testNotificationResult = success ? "Evening test scheduled (5s)" : "Failed to schedule"
+          Button("Send Evening Test") {
+            Task {
+              let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
+                type: .evening
+              )
+              testNotificationResult =
+                success ? "Evening test scheduled (5s)" : "Failed to schedule"
+            }
           }
         } label: {
-          Label("Send Test Evening", systemImage: "moon")
+          Label("Send Test Notification", systemImage: "paperplane")
         }
 
         Button {
@@ -169,6 +188,12 @@
           Label("Reschedule Smart Notifications", systemImage: "arrow.clockwise")
         }
         .disabled(userId == nil)
+
+        Button {
+          Task { await loadNotificationState() }
+        } label: {
+          Label("Reload Notification State", systemImage: "arrow.clockwise.circle")
+        }
 
         if let result = testNotificationResult {
           Text(result)
@@ -222,7 +247,8 @@
     }
 
     private func notificationLabel(for identifier: String)
-      -> (text: String, icon: String, color: Color) {
+      -> (text: String, icon: String, color: Color)
+    {
       if identifier.hasPrefix("smart-test-morning") {
         return ("Test morning", "sun.max", .orange)
       } else if identifier.hasPrefix("smart-test-evening") {
@@ -572,7 +598,8 @@
     }
 
     private func summaryRow(_ label: String, total: Int, clean: Int, dirty: Int, conflict: Int)
-      -> some View {
+      -> some View
+    {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         HStack {
           Text(label)
@@ -774,12 +801,6 @@
     private var quickActionsSection: some View {
       Section("Quick Actions") {
         Button {
-          resetWageyShowcase()
-        } label: {
-          Label("Reset Wagey Showcase", systemImage: "sparkles")
-        }
-
-        Button {
           Task { await triggerManualSync() }
         } label: {
           Label("Trigger Manual Sync", systemImage: "arrow.triangle.2.circlepath")
@@ -798,38 +819,31 @@
           }
         }
         .disabled(isRefreshingEntitlement || userId == nil)
-
-        Button {
-          withAnimation {
-            showAdvancedSync.toggle()
-          }
-        } label: {
-          Label(
-            showAdvancedSync ? "Hide Advanced Sync" : "Show Advanced Sync",
-            systemImage: showAdvancedSync ? "chevron.up" : "chevron.down"
-          )
-        }
-
-        Button {
-          Task { await resetLocalData() }
-        } label: {
-          Label("Reset Local Data", systemImage: "trash")
-        }
-        .foregroundColor(.red)
-
-        Button {
-          triggerCelebrationDebug()
-        } label: {
-          Label("Trigger Shift Celebration (Next Launch)", systemImage: "party.popper")
-        }
-        .disabled(userId == nil)
       }
     }
 
-    /// Reset the Wagey showcase "has seen" state so it shows again
-    private func resetWageyShowcase() {
-      WageyViewModel.shared.resetShowcaseSeen()
-      logger.info("Reset Wagey showcase state")
+    private var advancedSection: some View {
+      Section("Advanced") {
+        Toggle(isOn: $showAdvancedSync) {
+          Label("Show Sync Diagnostics", systemImage: "wrench.and.screwdriver")
+        }
+
+        Button {
+          Task { await reloadDebugData() }
+        } label: {
+          Label("Reload Debug Data", systemImage: "arrow.clockwise")
+        }
+      }
+    }
+
+    private var dangerZoneSection: some View {
+      Section("Danger Zone") {
+        Button(role: .destructive) {
+          showResetLocalDataConfirmation = true
+        } label: {
+          Label("Reset Local Data", systemImage: "trash")
+        }
+      }
     }
 
     // MARK: - Helper Methods
@@ -837,11 +851,15 @@
     private func loadUserId() async {
       do {
         userId = try await AuthSessionManager.shared.getUserId()
-        await loadSummary()
-        await loadNotificationState()
+        await reloadDebugData()
       } catch {
         logger.error("Failed to get user ID: \(error.localizedDescription)")
       }
+    }
+
+    private func reloadDebugData() async {
+      await loadSummary()
+      await loadNotificationState()
     }
 
     private func loadSummary() async {  // swiftlint:disable:this async_without_await
@@ -867,7 +885,7 @@
       let result = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
       testHelper.logSyncComplete(result: result)
 
-      await loadSummary()
+      await reloadDebugData()
     }
 
     private func resetLocalData() async {
@@ -875,13 +893,11 @@
       testHelper.log(.validation, "Local data reset")
       syncStateSummary = nil
       validationResults = []
-    }
-
-    private func triggerCelebrationDebug() {
-      guard let userId = userId else { return }
-      let month = Date.currentYearMonth()
-      ShiftCompletionCelebrationManager.shared.requestDebugCelebration(userId: userId, month: month)
-      testHelper.log(.validation, "Queued celebration for \(month.year)-\(month.month)")
+      pendingSmartCount = 0
+      pendingReminderCount = 0
+      scheduledNotifications = []
+      workPatternResult = nil
+      testNotificationResult = nil
     }
   }
 

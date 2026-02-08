@@ -520,7 +520,6 @@ struct TimeRangePicker: View {
           onSelect: { range in
             applyTimeRange(range)
           },
-          availableWidth: geometry.size.width,
           activeRangeId: activeRangeId
         )
       }

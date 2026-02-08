@@ -241,9 +241,9 @@ final class SyncCoordinator: ObservableObject {
         try? await Task.sleep(nanoseconds: Self.syncTimeout)
         return nil  // timeout signal
       }
-      let first = await group.next()
+      let first = await group.next() ?? nil
       group.cancelAll()
-      return (first)
+      return first
         ?? SyncResult(
           success: false,
           tableResults: [],

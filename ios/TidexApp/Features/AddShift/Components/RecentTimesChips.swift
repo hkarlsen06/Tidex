@@ -3,10 +3,6 @@ import SwiftUI
 /// Fixed height for the recent times chips area
 private let recentTimesChipBarHeight: CGFloat = 36
 
-/// Estimated width per chip (label + padding)
-/// "09:00-17:00" = ~90pt + padding = ~110pt per chip
-private let estimatedChipWidth: CGFloat = 110
-
 /// Spacing between chips
 private let chipSpacing: CGFloat = 8
 
@@ -20,15 +16,14 @@ struct TimeRangeCount: Identifiable, Hashable {
   var displayLabel: String { "\(startTime)-\(endTime)" }
 }
 
-/// Horizontal chips showing frequently used time range combinations
+/// Maximum number of time range chips to display
+private let maxChipCount = 5
+
+/// Horizontal scrollable chips showing frequently used time range combinations
 /// Chips are sorted by popularity (most used on the left)
-/// Only shows chips that fit within the available width
 struct RecentTimesChips: View {
   /// Callback when user taps a time range chip
   let onSelect: (TimeRangeCount) -> Void
-
-  /// Available width for laying out chips (passed from parent)
-  let availableWidth: CGFloat
 
   /// ID of the currently active time range (matches TimeRangeCount.id)
   var activeRangeId: String?
@@ -39,36 +34,26 @@ struct RecentTimesChips: View {
   /// Computed time range counts from shifts
   @State private var timeRangeCounts: [TimeRangeCount] = []
 
-  /// Number of chips that can fit in the available width
-  private var maxVisibleChips: Int {
-    guard availableWidth > 0 else { return 0 }
-    // Calculate how many chips fit with spacing
-    let chipsCount = Int((availableWidth + chipSpacing) / (estimatedChipWidth + chipSpacing))
-    return max(0, chipsCount)
-  }
-
-  /// Chips to display, limited by available width
-  /// Sorted with most popular on the left
+  /// Chips to display, sorted by popularity
   private var visibleRanges: [TimeRangeCount] {
-    // Take only what fits, most popular first (on the left)
-    Array(timeRangeCounts.prefix(maxVisibleChips))
+    Array(timeRangeCounts.prefix(maxChipCount))
   }
 
   var body: some View {
     Group {
       if visibleRanges.isEmpty {
-        // Empty state - just reserve the space
         Color.clear
           .frame(height: recentTimesChipBarHeight)
       } else {
-        HStack(spacing: chipSpacing) {
-          ForEach(visibleRanges) { range in
-            RecentTimeChip(range: range, isSelected: range.id == activeRangeId) {
-              onSelect(range)
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: chipSpacing) {
+            ForEach(visibleRanges) { range in
+              RecentTimeChip(range: range, isSelected: range.id == activeRangeId) {
+                onSelect(range)
+              }
             }
           }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: recentTimesChipBarHeight)
       }
     }
@@ -130,6 +115,7 @@ private struct RecentTimeChip: View {
     Button(action: onTap) {
       Text(timeRangeText)
         .font(.tidexMonoCaption)
+        .fixedSize(horizontal: true, vertical: false)
         .foregroundColor(isSelected ? .white : .tidexBlue)
         .environment(\.layoutDirection, .leftToRight)
         .padding(.horizontal, Spacing.sm)
@@ -148,8 +134,7 @@ private struct RecentTimeChip: View {
     RecentTimesChips(
       onSelect: { range in
         print("Selected: \(range.displayLabel)")
-      },
-      availableWidth: 350
+      }
     )
     .padding(.horizontal, Spacing.md)
     .background(Color.tidexBackground)
