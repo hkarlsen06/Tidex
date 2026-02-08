@@ -24,8 +24,22 @@ export const devEn = {
   projects: {
     title: 'My Projects',
     subtitle: 'A collection of work I am proud of',
-    tidex: {
-      title: 'Tidex',
+    tidexIos: {
+      title: 'Tidex for iOS',
+      subtitle: 'Native iOS App',
+      description: 'A native iOS app for tracking work shifts and calculating wages. Built with Swift and SwiftUI, featuring a polished native experience with push notifications, widgets, and seamless iCloud integration.',
+      tech: 'Technologies',
+      features: 'Key Features',
+      feature1: 'Native SwiftUI Interface',
+      feature2: 'Push Notifications for Shifts',
+      feature3: 'Offline Support',
+      feature4: 'Subscription via StoreKit',
+      feature5: 'Localized in Norwegian & English',
+      viewAppStore: 'View on App Store',
+    },
+    tidexWeb: {
+      title: 'Tidex Web App',
+      subtitle: 'Payroll Calculator & Shift Planner',
       description: 'A modern payroll calculator and shift planner built with Next.js, TypeScript, Supabase, and Tailwind CSS. Tidex helps users track work shifts, calculate wages with supplements, and maintain full control over their income.',
       tech: 'Technologies',
       features: 'Key Features',
@@ -35,7 +49,6 @@ export const devEn = {
       feature4: 'Responsive Interface',
       feature5: 'Internationalization (Norwegian/English)',
       viewLive: 'View Live Demo',
-      viewCode: 'View Source Code',
     },
   },
   about: {
