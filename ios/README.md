@@ -12,7 +12,7 @@ The iOS app is a native SwiftUI application for tracking work shifts and calcula
 
 ## Documentation Files
 
-### [ARCHITECTURE.md](ARCHITECTURE.md)
+### [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 High-level overview of the app structure, directory layout, and core patterns:
 - AppCoordinator (auth state & navigation)
 - View Models (UI state management)
@@ -22,7 +22,7 @@ High-level overview of the app structure, directory layout, and core patterns:
 
 **Read this first** to understand how the app is organized.
 
-### [DATA_FLOW.md](DATA_FLOW.md)
+### [DATA_FLOW.md](docs/DATA_FLOW.md)
 Complete data flow from UI to Supabase and back:
 - Overall data architecture diagram
 - Sync flow (pull → conflict detection → push)
@@ -35,7 +35,7 @@ Complete data flow from UI to Supabase and back:
 
 **Reference this** when debugging data issues or understanding sync behavior.
 
-### [PAYROLL_SYSTEM.md](PAYROLL_SYSTEM.md)
+### [PAYROLL_SYSTEM.md](docs/PAYROLL_SYSTEM.md)
 Detailed payroll computation system:
 - PayrollCalculator (single shift)
 - PayrollEngine (monthly aggregation)
@@ -108,7 +108,7 @@ Supabase (Server)
 2. Create view model: `MyFeatureViewModel.swift`
 3. Create repository (if needed): `Storage/Repositories/MyRepository.swift`
 4. Create view: `MyFeatureView.swift`
-5. Follow patterns in [PATTERNS.md](PATTERNS.md)
+5. Follow existing patterns in the codebase
 
 ### Debugging Sync Issues
 
@@ -197,16 +197,13 @@ XCTAssertEqual(computed.gross, expectedGross)
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [README.md](README.md) | Overview & quick start | Everyone |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System design & structure | Architects, senior devs |
-| [PATTERNS.md](PATTERNS.md) | Code patterns & best practices | All developers |
-| [DATA_FLOW.md](DATA_FLOW.md) | Data flow & sync system | Backend devs, debuggers |
-| [PAYROLL_SYSTEM.md](PAYROLL_SYSTEM.md) | Wage calculation system | Payroll feature devs |
-| [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) | Why architectural choices | Architects, reviewers |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick lookup & checklists | All developers |
-| [NATIVE_MIGRATION.md](NATIVE_MIGRATION.md) | Migration from Capacitor | Historical reference |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design & structure | Architects, senior devs |
+| [docs/DATA_FLOW.md](docs/DATA_FLOW.md) | Data flow & sync system | Backend devs, debuggers |
+| [docs/PAYROLL_SYSTEM.md](docs/PAYROLL_SYSTEM.md) | Wage calculation system | Payroll feature devs |
+| [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | Localization & adding languages | All developers |
 
 ## Related Documentation
 
-- [../CLAUDE.md](../CLAUDE.md) - Full project documentation
-- [../docs/](../docs/) - Web backend documentation
-- [../lib/payroll/](../lib/payroll/) - Web payroll implementation
+- [../CLAUDE.md](../CLAUDE.md) - Project instructions for Claude Code
+- [../docs/](../docs/) - Shared documentation (payroll spec, notifications, DB schema)
+- [../next/docs/](../next/docs/) - Web app documentation
