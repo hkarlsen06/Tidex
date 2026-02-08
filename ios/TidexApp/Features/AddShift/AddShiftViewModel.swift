@@ -386,9 +386,14 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   /// End time as HH:mm string
+  /// Returns "24:00" when end is midnight and start is not (end-of-day convention)
   var endTimeString: String {
     guard let time = endTime else { return "" }
-    return formatTimeAsHHmm(time)
+    let formatted = formatTimeAsHHmm(time)
+    if formatted == "00:00", let start = startTime, formatTimeAsHHmm(start) != "00:00" {
+      return "24:00"
+    }
+    return formatted
   }
 
   /// Set of dates that have existing shifts - uses cached data for performance
@@ -1061,7 +1066,7 @@ final class AddShiftViewModel: ObservableObject {
     let draft = ShiftDraft(
       mode: mode,
       startTime: startTime.map { formatTimeAsHHmm($0) },
-      endTime: endTime.map { formatTimeAsHHmm($0) },
+      endTime: endTimeString.isEmpty ? nil : endTimeString,
       selectedDates: Array(selectedDates),
       selectedDays: selectedDays,
       repeatInterval: repeatInterval,
@@ -1141,11 +1146,15 @@ final class AddShiftViewModel: ObservableObject {
     generator.impactOccurred()
   }
 
-  /// Parse HH:mm string to Date
+  /// Parse HH:mm string to Date (supports "24:00" as midnight)
   private func parseTimeFromHHmm(_ timeString: String) -> Date? {
+    // Handle "24:00" which DateFormatter can't parse
+    let is24 = timeString == "24:00"
+    let parseable = is24 ? "00:00" : timeString
+
     let formatter = DateFormatter()
     formatter.dateFormat = "HH:mm"
-    guard let time = formatter.date(from: timeString) else { return nil }
+    guard let time = formatter.date(from: parseable) else { return nil }
 
     // Transfer hour and minute to today's date
     let calendar = Calendar.current

@@ -211,8 +211,8 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 // Example rules:
 [
   { "days": [1,2,3,4,5], "from": "18:00", "to": "21:00", "rate": 22 },
-  { "days": [6], "from": "13:00", "to": "23:59", "rate": 110 },
-  { "days": [7], "from": "00:00", "to": "23:59", "rate": 115 }
+  { "days": [6], "from": "13:00", "to": "24:00", "rate": 110 },
+  { "days": [7], "from": "00:00", "to": "24:00", "rate": 115 }
 ]`,
           },
         },
@@ -224,11 +224,11 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
             headers: ['Period', 'Days', 'Time', 'Rate'],
             rows: [
               ['Weekday evening', 'Mon-Fri (1-5)', '18:00-21:00', '+22 NOK/h'],
-              ['Weekday late night', 'Mon-Fri (1-5)', '21:00-23:59', '+45 NOK/h'],
+              ['Weekday late night', 'Mon-Fri (1-5)', '21:00-24:00', '+45 NOK/h'],
               ['Saturday afternoon', 'Saturday (6)', '13:00-15:00', '+45 NOK/h'],
               ['Saturday late afternoon', 'Saturday (6)', '15:00-18:00', '+55 NOK/h'],
-              ['Saturday evening', 'Saturday (6)', '18:00-23:59', '+110 NOK/h'],
-              ['Sunday all day', 'Sunday (7)', '00:00-23:59', '+115 NOK/h'],
+              ['Saturday evening', 'Saturday (6)', '18:00-24:00', '+110 NOK/h'],
+              ['Sunday all day', 'Sunday (7)', '00:00-24:00', '+115 NOK/h'],
             ],
           },
         },
@@ -1116,7 +1116,7 @@ const snapshot = {
   hourly_wage: 185.00,
   supplements: { rules: [
     { days: [1,2,3,4,5], from: "18:00", to: "21:00", rate: 22 },
-    { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
+    { days: [1,2,3,4,5], from: "21:00", to: "24:00", rate: 45 },
   ]},
   break_enabled: false,
 };
@@ -1146,7 +1146,7 @@ const shift = {
 const snapshot = {
   hourly_wage: 185.00,
   supplements: { rules: [
-    { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
+    { days: [1,2,3,4,5], from: "21:00", to: "24:00", rate: 45 },
   ]},
   break_enabled: true,
   break_threshold_hours: 5.5,
@@ -1157,9 +1157,9 @@ const snapshot = {
 {
   durationHours: 8.00,        // 22:00 to 06:00 = 8 hours
   paidHours: 7.50,            // 8h - 0.5h break
-  basePay: 1387.50,           // 7.5h x 185
-  supplementPay: 67.50,       // 1.5h x 45 (proportional deduction)
-  gross: 1455.00,
+  basePay: 1387.51,           // 346.88 (1.875h x 185) + 1040.63 (5.625h x 185)
+  supplementPay: 84.38,       // 1.875h x 45 (proportional: 2h loses 2/8 x 0.5h)
+  gross: 1471.89,
 }`,
           },
         },
@@ -1177,7 +1177,7 @@ const shift = {
 const snapshot = {
   hourly_wage: 185.00,
   supplements: { rules: [
-    { days: [7], from: "00:00", to: "23:59", rate: 115 },
+    { days: [7], from: "00:00", to: "24:00", rate: 115 },
   ]},
   break_enabled: true,
   break_threshold_hours: 5.5,
@@ -1238,7 +1238,7 @@ const shift = {
 const snapshot = {
   hourly_wage: 200.00,
   supplements: { rules: [
-    { days: [3], from: "18:00", to: "23:59", percent: 50 }, // 50% of base
+    { days: [3], from: "18:00", to: "24:00", percent: 50 }, // 50% of base
   ]},
   break_enabled: false,
 };
@@ -1268,8 +1268,8 @@ const shift = {
 const snapshot = {
   hourly_wage: 185.00,
   supplements: { rules: [
-    { days: [6], from: "18:00", to: "23:59", rate: 110 }, // Saturday evening
-    { days: [7], from: "00:00", to: "23:59", rate: 115 }, // Sunday all day
+    { days: [6], from: "18:00", to: "24:00", rate: 110 }, // Saturday evening
+    { days: [7], from: "00:00", to: "24:00", rate: 115 }, // Sunday all day
   ]},
   break_enabled: false,
 };
