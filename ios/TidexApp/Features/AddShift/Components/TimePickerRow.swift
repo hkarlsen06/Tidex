@@ -314,7 +314,7 @@ struct NumericTimeInput: View {
       .onChange(of: time) { _, newTime in
         // Sync input display with time value
         if let newTime {
-          let formatted = formatDateToHHMM(newTime)
+          let formatted = displayString(for: newTime)
           if inputValue != formatted {
             inputValue = formatted
           }
@@ -325,7 +325,7 @@ struct NumericTimeInput: View {
       .onAppear {
         // Initialize input from existing time value
         if let time {
-          inputValue = formatDateToHHMM(time)
+          inputValue = displayString(for: time)
         }
       }
       .onChange(of: isFocused) { wasFocused, nowFocused in
@@ -433,17 +433,31 @@ struct NumericTimeInput: View {
     guard parts.count == 2,
       let hours = Int(parts[0]),
       let minutes = Int(parts[1]),
-      hours >= 0, hours <= 23,
+      hours >= 0, hours <= 24,
       minutes >= 0, minutes <= 59
     else {
       return nil
     }
 
+    // 24:00 is only valid as exactly end-of-day (24:01+ is invalid)
+    if hours == 24 && minutes != 0 { return nil }
+
     let calendar = Calendar.current
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
-    components.hour = hours
+    // Treat 24:00 as midnight (00:00) — the payroll engine's
+    // cross-midnight logic handles this correctly
+    components.hour = hours == 24 ? 0 : hours
     components.minute = minutes
     return calendar.date(from: components)
+  }
+
+  /// Format Date for display, showing "24:00" for midnight in the end field
+  private func displayString(for date: Date) -> String {
+    let formatted = formatDateToHHMM(date)
+    if field == .end && formatted == "00:00" {
+      return "24:00"
+    }
+    return formatted
   }
 
   private func formatDateToHHMM(_ date: Date) -> String {
@@ -578,15 +592,17 @@ struct TimeRangePicker: View {
     guard parts.count == 2,
       let hours = Int(parts[0]),
       let minutes = Int(parts[1]),
-      hours >= 0, hours <= 23,
+      hours >= 0, hours <= 24,
       minutes >= 0, minutes <= 59
     else {
       return nil
     }
 
+    if hours == 24 && minutes != 0 { return nil }
+
     let calendar = Calendar.current
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
-    components.hour = hours
+    components.hour = hours == 24 ? 0 : hours
     components.minute = minutes
     return calendar.date(from: components)
   }

@@ -163,8 +163,8 @@ type SupplementRule = {
 ```json
 [
   { "days": [1,2,3,4,5], "from": "18:00", "to": "21:00", "rate": 22 },
-  { "days": [6], "from": "13:00", "to": "23:59", "rate": 110 },
-  { "days": [7], "from": "00:00", "to": "23:59", "rate": 115 }
+  { "days": [6], "from": "13:00", "to": "24:00", "rate": 110 },
+  { "days": [7], "from": "00:00", "to": "24:00", "rate": 115 }
 ]
 ```
 
@@ -175,11 +175,11 @@ From `@/lib/payroll/presets.ts`:
 ```typescript
 const PRESET_SUPPLEMENT_RULES = [
   { days: [1,2,3,4,5], from: "18:00", to: "21:00", rate: 22 },   // Weekday evening
-  { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },   // Weekday late night
+  { days: [1,2,3,4,5], from: "21:00", to: "24:00", rate: 45 },   // Weekday late night
   { days: [6], from: "13:00", to: "15:00", rate: 45 },           // Saturday afternoon
   { days: [6], from: "15:00", to: "18:00", rate: 55 },           // Saturday late afternoon
-  { days: [6], from: "18:00", to: "23:59", rate: 110 },          // Saturday evening
-  { days: [7], from: "00:00", to: "23:59", rate: 115 },          // Sunday all day
+  { days: [6], from: "18:00", to: "24:00", rate: 110 },          // Saturday evening
+  { days: [7], from: "00:00", to: "24:00", rate: 115 },          // Sunday all day
 ];
 ```
 
@@ -1316,7 +1316,7 @@ const snapshot = createSnapshot({
   hourly_wage: 185.00,
   supplements: { rules: [
     { days: [1,2,3,4,5], from: "18:00", to: "21:00", rate: 22 },
-    { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
+    { days: [1,2,3,4,5], from: "21:00", to: "24:00", rate: 45 },
   ]},
   break_enabled: false,
 });
@@ -1346,7 +1346,7 @@ const shift = createShift({
 const snapshot = createSnapshot({
   hourly_wage: 185.00,
   supplements: { rules: [
-    { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
+    { days: [1,2,3,4,5], from: "21:00", to: "24:00", rate: 45 },
   ]},
   break_enabled: true,
   break_threshold_hours: 5.5,
@@ -1359,9 +1359,9 @@ const snapshot = createSnapshot({
 {
   durationHours: 8.00,        // 22:00 to 06:00 = 8 hours
   paidHours: 7.50,            // 8h - 0.5h break
-  basePay: 1387.50,           // 7.5h × 185
-  supplementPay: 67.50,       // 1.5h × 45 (proportional deduction)
-  gross: 1455.00,
+  basePay: 1387.51,           // 346.88 (1.875h × 185) + 1040.63 (5.625h × 185)
+  supplementPay: 84.38,       // 1.875h × 45 (proportional: 2h loses 2/8 × 0.5h)
+  gross: 1471.89,
 }
 ```
 
@@ -1378,7 +1378,7 @@ const shift = createShift({
 const snapshot = createSnapshot({
   hourly_wage: 185.00,
   supplements: { rules: [
-    { days: [7], from: "00:00", to: "23:59", rate: 115 },
+    { days: [7], from: "00:00", to: "24:00", rate: 115 },
   ]},
   break_enabled: true,
   break_threshold_hours: 5.5,
@@ -1548,7 +1548,7 @@ const shift = createShift({
 const snapshot = createSnapshot({
   hourly_wage: 200.00,
   supplements: { rules: [
-    { days: [3], from: "18:00", to: "23:59", percent: 50 }, // 50% of base
+    { days: [3], from: "18:00", to: "24:00", percent: 50 }, // 50% of base
   ]},
   break_enabled: false,
 });
@@ -1604,8 +1604,8 @@ const shift = createShift({
 const snapshot = createSnapshot({
   hourly_wage: 185.00,
   supplements: { rules: [
-    { days: [6], from: "18:00", to: "23:59", rate: 110 }, // Saturday evening
-    { days: [7], from: "00:00", to: "23:59", rate: 115 }, // Sunday all day
+    { days: [6], from: "18:00", to: "24:00", rate: 110 }, // Saturday evening
+    { days: [7], from: "00:00", to: "24:00", rate: 115 }, // Sunday all day
   ]},
   break_enabled: false,
 });

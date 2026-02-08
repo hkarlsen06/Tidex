@@ -218,14 +218,20 @@ extension Date {
     components.year = year
     components.month = month
     components.day = day
-    components.hour = hours
+    // Handle 24:00 as midnight of the next day
+    components.hour = hours == 24 ? 0 : hours
     components.minute = minutes
     components.second = 0
     components.timeZone = localTimeZone
 
     var calendar = gregorianCalendar
     calendar.timeZone = localTimeZone
-    return calendar.date(from: components)
+    guard let date = calendar.date(from: components) else { return nil }
+
+    if hours == 24 {
+      return calendar.date(byAdding: .day, value: 1, to: date)
+    }
+    return date
   }
 
   /// Check if a shift has ended based on its date and end time
