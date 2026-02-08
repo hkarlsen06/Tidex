@@ -85,11 +85,16 @@ const ASC_FOLDER_MAP = {
   // No ASC equivalent: is, et, lv, lt, sl, bg, sr, fa, ur, bn, ta, fil, sw
 };
 
-// Fields that get translated — name is excluded (managed manually per locale)
+// Fields that get translated — name is handled separately (see NAME_TAKEN_LOCALES)
 // Stable fields are only translated once; --force does not re-translate them
-const STABLE_FIELDS = ["subtitle"];
+const STABLE_FIELDS = ["subtitle", "promotional_text"];
 const RELEASE_FIELDS = ["description", "keywords", "release_notes"];
 const TRANSLATED_FIELDS = [...STABLE_FIELDS, ...RELEASE_FIELDS];
+
+// Translated locales where "Tidex" is already claimed on the App Store.
+// These get a translated name with a descriptive suffix; all others get "Tidex".
+// (en-US and sv have "Tidex" taken; en-US is a source locale so only sv is listed here)
+const NAME_TAKEN_LOCALES = new Set(["sv"]);
 
 // Language names for translation prompts
 const LANGUAGE_NAMES = {
@@ -132,12 +137,13 @@ const LANGUAGE_NAMES = {
 const FIELD_LIMITS = {
   name: 30,
   subtitle: 30,
+  promotional_text: 170,
   description: 4000,
   keywords: 100,
   release_notes: 4000,
 };
 
-const FIELDS = ["name", "subtitle", "description", "keywords", "release_notes"];
+const FIELDS = ["name", "subtitle", "promotional_text", "description", "keywords", "release_notes"];
 
 // Concurrency settings
 const CONCURRENCY = 10;
@@ -215,30 +221,13 @@ function validateMetadata(metadata, locale, fields = FIELDS) {
 }
 
 /**
- * Check if metadata files already exist for a locale
+ * Read existing translated field values from disk for a locale
  */
-async function metadataExists(folderName) {
-  const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
-
-  try {
-    for (const field of FIELDS) {
-      const filePath = path.join(localeDir, `${field}.txt`);
-      await fs.access(filePath);
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Read existing stable field values from disk for a locale
- */
-async function readExistingStableFields(folderName) {
+async function readExistingFields(folderName, fields) {
   const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
   const existing = {};
 
-  for (const field of STABLE_FIELDS) {
+  for (const field of fields) {
     try {
       const content = await fs.readFile(path.join(localeDir, `${field}.txt`), "utf-8");
       existing[field] = content.trim();
@@ -321,6 +310,7 @@ async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale
 
   const limitRules = [];
   if (fields.includes("subtitle")) limitRules.push("subtitle (30)");
+  if (fields.includes("promotional_text")) limitRules.push("promotional_text (170)");
   if (fields.includes("keywords")) limitRules.push("keywords (100)");
   const limitText = limitRules.length > 0 ? `\n4. Respect character limits: ${limitRules.join(", ")}` : "";
 
@@ -392,35 +382,57 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
     return { status: "error", locale, error: `Unknown language: ${locale}` };
   }
 
-  const alreadyExists = await metadataExists(folderName);
+  const existingFields = await readExistingFields(folderName, TRANSLATED_FIELDS);
+  const missingFields = TRANSLATED_FIELDS.filter((f) => !(f in existingFields));
 
-  // Check if already exists (unless --force)
-  if (!forceRegenerate && alreadyExists) {
+  // Skip if all fields exist (unless --force)
+  if (!forceRegenerate && missingFields.length === 0) {
     stats.skipped++;
     return { status: "exists", locale };
   }
 
   try {
-    // When --force and files exist, preserve stable fields and only re-translate release fields
-    const existingStable = alreadyExists ? await readExistingStableFields(folderName) : {};
-    const fieldsToTranslate = alreadyExists && Object.keys(existingStable).length > 0
-      ? RELEASE_FIELDS
-      : TRANSLATED_FIELDS;
+    // Determine which fields need translation:
+    // --force: re-translate release fields + any missing stable fields
+    // normal:  only translate missing fields
+    const fieldsToTranslate = forceRegenerate
+      ? [...RELEASE_FIELDS, ...STABLE_FIELDS.filter((f) => !(f in existingFields))]
+      : missingFields;
 
-    let translated = await translateMetadata(
-      sourceMetadata,
-      norwegianMetadata,
-      locale,
-      languageName,
-      client,
-      fieldsToTranslate
-    );
+    let translated = {};
+    if (fieldsToTranslate.length > 0) {
+      translated = await translateMetadata(
+        sourceMetadata,
+        norwegianMetadata,
+        locale,
+        languageName,
+        client,
+        fieldsToTranslate
+      );
+    }
 
-    // Merge preserved stable fields back in
-    translated = { ...existingStable, ...translated };
+    // Merge: preserve existing fields, overlay new translations
+    translated = { ...existingFields, ...translated };
 
     // Enforce character limits
     translated = enforceCharacterLimits(translated, locale);
+
+    // Set app name — use "Tidex" unless it's taken on this locale's App Store
+    if (NAME_TAKEN_LOCALES.has(locale)) {
+      try {
+        const existing = await fs.readFile(
+          path.join(METADATA_OUTPUT_PATH, folderName, "name.txt"), "utf-8"
+        );
+        translated.name = existing.trim();
+      } catch {
+        const nameResult = await translateMetadata(
+          sourceMetadata, norwegianMetadata, locale, languageName, client, ["name"]
+        );
+        translated.name = nameResult.name;
+      }
+    } else {
+      translated.name = "Tidex";
+    }
 
     // Validate (should pass now after enforcement)
     const errors = validateMetadata(translated, locale, TRANSLATED_FIELDS);
