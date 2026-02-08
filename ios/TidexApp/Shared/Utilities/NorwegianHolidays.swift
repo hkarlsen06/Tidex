@@ -29,7 +29,7 @@ enum NorwegianHolidays {
   /// - Returns: true if the date is a public holiday
   static func isPublicHoliday(_ date: Date) -> Bool {
     let dateString = formatDateISO(date)
-    let year = Calendar.current.component(.year, from: date)
+    let year = calendar.component(.year, from: date)
     let holidays = getHolidays(for: year)
     return holidays.contains { $0.date == dateString }
   }
@@ -41,7 +41,7 @@ enum NorwegianHolidays {
   /// - Returns: The holiday name, or nil if not a holiday
   static func getHolidayName(_ date: Date, locale: String = "no") -> String? {
     let dateString = formatDateISO(date)
-    let year = Calendar.current.component(.year, from: date)
+    let year = calendar.component(.year, from: date)
     let holidays = getHolidays(for: year)
     guard let holiday = holidays.first(where: { $0.date == dateString }) else {
       return nil
@@ -53,6 +53,8 @@ enum NorwegianHolidays {
   /// - Parameter year: The year to get holidays for
   /// - Returns: Array of holidays sorted by date
   static func getHolidays(for year: Int) -> [Holiday] {
+    cacheLock.lock()
+    defer { cacheLock.unlock() }
     if let cached = holidayCache[year] {
       return cached
     }
@@ -71,7 +73,15 @@ enum NorwegianHolidays {
 
   // MARK: - Private Implementation
 
+  private static let cacheLock = NSLock()
   private static var holidayCache: [Int: [Holiday]] = [:]
+
+  /// Gregorian calendar used for all holiday date calculations.
+  private static let calendar: Calendar = {
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = .current
+    return cal
+  }()
 
   /// Generate all Norwegian public holidays for a given year
   private static func generateHolidays(for year: Int) -> [Holiday] {
@@ -176,46 +186,47 @@ enum NorwegianHolidays {
 
   /// Calculate Easter Sunday for a given year using the Computus algorithm
   private static func calculateEaster(year: Int) -> Date {
-    // Use precomputed dates if available
-    if let precomputed = easterDates[year] {
-      var components = DateComponents()
-      components.year = year
-      components.month = precomputed.month
-      components.day = precomputed.day
-      return Calendar.current.date(from: components) ?? Date()
-    }
+    let month: Int
+    let day: Int
 
-    // Computus algorithm (Anonymous Gregorian algorithm) for years beyond precomputed range
-    let a = year % 19
-    let b = year / 100
-    let c = year % 100
-    let d = b / 4
-    let e = b % 4
-    let f = (b + 8) / 25
-    let g = (b - f + 1) / 3
-    let h = (19 * a + b - d - g + 15) % 30
-    let i = c / 4
-    let k = c % 4
-    let l = (32 + 2 * e + 2 * i - h - k) % 7
-    let m = (a + 11 * h + 22 * l) / 451
-    let month = (h + l - 7 * m + 114) / 31
-    let day = ((h + l - 7 * m + 114) % 31) + 1
+    if let precomputed = easterDates[year] {
+      month = precomputed.month
+      day = precomputed.day
+    } else {
+      // Computus algorithm (Anonymous Gregorian algorithm) for years beyond precomputed range
+      let a = year % 19
+      let b = year / 100
+      let c = year % 100
+      let d = b / 4
+      let e = b % 4
+      let f = (b + 8) / 25
+      let g = (b - f + 1) / 3
+      let h = (19 * a + b - d - g + 15) % 30
+      let i = c / 4
+      let k = c % 4
+      let l = (32 + 2 * e + 2 * i - h - k) % 7
+      let m = (a + 11 * h + 22 * l) / 451
+      month = (h + l - 7 * m + 114) / 31
+      day = ((h + l - 7 * m + 114) % 31) + 1
+    }
 
     var components = DateComponents()
     components.year = year
     components.month = month
     components.day = day
-    return Calendar.current.date(from: components) ?? Date()
+    components.hour = 12  // Noon to avoid timezone edge cases
+    // Calendar.date(from:) should never fail for valid Computus output (month 3-4, day 1-31).
+    // Use distantPast instead of Date() so any failure is obviously wrong rather than silent.
+    return calendar.date(from: components) ?? .distantPast
   }
 
   /// Add days to a date
   private static func addDays(to date: Date, days: Int) -> Date {
-    Calendar.current.date(byAdding: .day, value: days, to: date) ?? date
+    calendar.date(byAdding: .day, value: days, to: date) ?? date
   }
 
   /// Format date as YYYY-MM-DD
   private static func formatDateISO(_ date: Date) -> String {
-    let calendar = Calendar.current
     let year = calendar.component(.year, from: date)
     let month = calendar.component(.month, from: date)
     let day = calendar.component(.day, from: date)
