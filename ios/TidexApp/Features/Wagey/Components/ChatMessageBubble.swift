@@ -301,8 +301,7 @@ struct StreamingMessageBubble: View {
   private func streamingTextView(text: String) -> some View {
     Group {
       if let attributedString = try? AttributedString(
-        markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
-      {
+        markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
         Text(attributedString)
           .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)

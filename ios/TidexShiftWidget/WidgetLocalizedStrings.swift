@@ -111,6 +111,6 @@ extension LocalizedStringResource {
     "salute.47",
     "salute.48",
     "salute.49",
-    "salute.50",
+    "salute.50"
   ]
 }

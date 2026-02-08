@@ -1016,8 +1016,7 @@ actor LocalStoreActor {
       newDirtyFields.insert(.breakThresholdHours)
     }
 
-    if let newDeduction = breakDeductionMinutes, newDeduction != localSnapshot.breakDeductionMinutes
-    {
+    if let newDeduction = breakDeductionMinutes, newDeduction != localSnapshot.breakDeductionMinutes {
       localSnapshot.breakDeductionMinutes = newDeduction
       newDirtyFields.insert(.breakDeductionMinutes)
     }
@@ -2291,8 +2290,7 @@ actor LocalStoreActor {
     )
   }
 
-  func resolveWageSnapshotConflictKeepServer(id: String, serverSnapshot: WageSnapshotServerSnapshot)
-  {
+  func resolveWageSnapshotConflictKeepServer(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )

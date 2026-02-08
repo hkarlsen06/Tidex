@@ -93,8 +93,7 @@ final class ManageSharingViewModel: ObservableObject {
     } catch let error as SharingServiceError {
       // Check if the underlying error is a cancellation
       if case .networkError(let underlying) = error,
-        (underlying as? URLError)?.code == .cancelled
-      {
+        (underlying as? URLError)?.code == .cancelled {
         logger.info("loadFriends network request was cancelled")
       } else {
         logger.error("Failed to load friends (SharingServiceError): \(error)")

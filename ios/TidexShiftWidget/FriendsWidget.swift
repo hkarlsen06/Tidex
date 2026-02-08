@@ -75,7 +75,7 @@ struct FriendsWidgetEntry: TimelineEntry {
           timeRange: "08:00 – 16:00",
           status: .upcoming,
           daysRemaining: 3
-        ),
+        )
       ],
       hasAnyFriends: true
     )
@@ -137,8 +137,7 @@ struct FriendsWidgetProvider: TimelineProvider {
     var shifts: [StoredFriendShift] = []
     if let shiftsJson = userDefaults.string(forKey: friendShiftsKey),
       let shiftsData = shiftsJson.data(using: .utf8),
-      let decoded = try? JSONDecoder().decode([StoredFriendShift].self, from: shiftsData)
-    {
+      let decoded = try? JSONDecoder().decode([StoredFriendShift].self, from: shiftsData) {
       shifts = decoded
     }
 
@@ -333,8 +332,7 @@ struct FriendsWidgetProvider: TimelineProvider {
 
     // Tomorrow
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-      calendar.isDate(shiftDay, inSameDayAs: tomorrow)
-    {
+      calendar.isDate(shiftDay, inSameDayAs: tomorrow) {
       return String(localized: .widgetTomorrow)
     }
 
@@ -675,7 +673,7 @@ struct FriendsWidget: Widget {
           timeRange: nil,
           status: .none,
           daysRemaining: nil
-        ),
+        )
       ],
       hasAnyFriends: true
     )

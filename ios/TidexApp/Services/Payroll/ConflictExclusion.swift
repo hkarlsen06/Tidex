@@ -61,8 +61,7 @@ struct ConflictExclusion {
 
       // Check all pairs for overlap and union them
       for i in 0..<shiftsOnDate.count {
-        for j in (i + 1)..<shiftsOnDate.count where shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j])
-        {
+        for j in (i + 1)..<shiftsOnDate.count where shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j]) {
           union(shiftsOnDate[i].id, shiftsOnDate[j].id)
         }
       }

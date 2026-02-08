@@ -88,8 +88,7 @@ struct WageSnapshotEditorSheet: View {
     if mode == .edit, let snapshot = snapshot {
       // Editing existing snapshot
       if let fromDateString = snapshot.from_date,
-        let date = ISO8601DateFormatter.dateFromDateOnlyString(fromDateString)
-      {
+        let date = ISO8601DateFormatter.dateFromDateOnlyString(fromDateString) {
         _fromDate = State(initialValue: date)
       }
       // Only use preset if tariff is available AND snapshot uses tariff

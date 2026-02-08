@@ -26,8 +26,7 @@ private actor SyncStateStore {
   private var lastAutoSyncAt: Date?
 
   func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval)
-    -> SyncStartDecision
-  {
+    -> SyncStartDecision {
     switch syncState {
     case .syncing:
       return .alreadySyncing
@@ -39,8 +38,7 @@ private actor SyncStateStore {
       reason != .manualRefresh && reason != .localChange && reason != .watchRefresh
     if requiresIntervalCheck,
       let lastAuto = lastAutoSyncAt,
-      Date().timeIntervalSince(lastAuto) < minimumSyncInterval
-    {
+      Date().timeIntervalSince(lastAuto) < minimumSyncInterval {
       return .skippedInterval
     }
 
@@ -245,7 +243,7 @@ final class SyncCoordinator: ObservableObject {
       }
       let first = await group.next()
       group.cancelAll()
-      return (first ?? nil)
+      return (first)
         ?? SyncResult(
           success: false,
           tableResults: [],
@@ -509,8 +507,7 @@ final class SyncCoordinator: ObservableObject {
 
   // MARK: - User Shifts Pull
 
-  private func pullUserShiftsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult
-  {
+  private func pullUserShiftsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
     // Query server for changes since cursor using updated_at + id tie-breaker
     // Condition: (updated_at > cursor.updatedAt) OR (updated_at == cursor.updatedAt AND id > cursor.tieId)
     let rows: [SyncShiftRow]
@@ -621,8 +618,7 @@ final class SyncCoordinator: ObservableObject {
 
   /// Apply a server shift row to local storage
   private func applyShiftRow(_ serverRow: SyncShiftRow, storeActor: LocalStoreActor) async throws
-    -> ApplyResult
-  {
+    -> ApplyResult {
     // SAFETY: Throw on parse failure to prevent data corruption
     let serverUpdatedAt = try requireISO8601(
       serverRow.updated_at, table: .userShifts, id: serverRow.id)
@@ -785,8 +781,7 @@ final class SyncCoordinator: ObservableObject {
   // MARK: - Recurring Shifts Pull
 
   private func pullRecurringShiftsPage(userId: String, cursor: SyncCursor) async throws
-    -> PagePullResult
-  {
+    -> PagePullResult {
     // Query using updated_at + id tie-breaker
     let rows: [SyncRecurringShiftRow]
 
@@ -1030,8 +1025,7 @@ final class SyncCoordinator: ObservableObject {
   // MARK: - Wage Snapshots Pull
 
   private func pullWageSnapshotsPage(userId: String, cursor: SyncCursor) async throws
-    -> PagePullResult
-  {
+    -> PagePullResult {
     // Query using updated_at + id tie-breaker
     let rows: [SyncWageSnapshotRow]
 
@@ -1135,8 +1129,7 @@ final class SyncCoordinator: ObservableObject {
   }
 
   private func applyWageSnapshotRow(_ serverRow: SyncWageSnapshotRow, storeActor: LocalStoreActor)
-    async throws -> ApplyResult
-  {
+    async throws -> ApplyResult {
     // SAFETY: Throw on parse failure to prevent data corruption
     let serverUpdatedAt = try requireISO8601(
       serverRow.updated_at, table: .wageSnapshots, id: serverRow.id)
@@ -1280,8 +1273,7 @@ final class SyncCoordinator: ObservableObject {
   // MARK: - User Settings Pull
 
   private func pullUserSettingsPage(userId: String, cursor: SyncCursor) async throws
-    -> PagePullResult
-  {
+    -> PagePullResult {
     // Query using updated_at + user_id tie-breaker (user_settings uses user_id as primary key)
     let rows: [SyncUserSettingsRow]
 
@@ -1385,8 +1377,7 @@ final class SyncCoordinator: ObservableObject {
   }
 
   private func applyUserSettingsRow(_ serverRow: SyncUserSettingsRow, storeActor: LocalStoreActor)
-    async throws -> ApplyResult
-  {
+    async throws -> ApplyResult {
     // SAFETY: Throw on parse failure to prevent data corruption
     let serverUpdatedAt = try requireISO8601(
       serverRow.updated_at, table: .userSettings, id: serverRow.user_id)
@@ -3308,8 +3299,7 @@ final class SyncCoordinator: ObservableObject {
 
   /// Resolve a conflict for a user shift
   func resolveShiftConflict(shiftId: String, resolution: ConflictResolution, userId: String)
-    async throws
-  {
+    async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
 
     guard let shift = try await storeActor.getUserShift(id: shiftId) else {
@@ -3522,8 +3512,7 @@ final class SyncCoordinator: ObservableObject {
   // MARK: - Notification Preferences Pull
 
   private func pullNotificationPreferencesPage(userId: String, cursor: SyncCursor) async throws
-    -> PagePullResult
-  {
+    -> PagePullResult {
     // Query using updated_at + user_id tie-breaker (notification_preferences uses user_id as primary key)
     // Note: This table has no revision column - iOS is source of truth
     let rows: [SyncNotificationPreferencesRow]

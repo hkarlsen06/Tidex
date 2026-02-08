@@ -384,8 +384,7 @@ extension View {
   /// - Parameters:
   ///   - level: Shadow intensity level (default: .card)
   ///   - cornerRadius: Custom corner radius for the glow overlay. If nil, uses default for the level.
-  func tidexCardShadow(_ level: TidexShadowLevel = .card, cornerRadius: CGFloat? = nil) -> some View
-  {
+  func tidexCardShadow(_ level: TidexShadowLevel = .card, cornerRadius: CGFloat? = nil) -> some View {
     modifier(TidexCardShadowModifier(level: level, customCornerRadius: cornerRadius))
   }
 
