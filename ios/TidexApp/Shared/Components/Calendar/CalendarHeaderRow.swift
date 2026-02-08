@@ -72,7 +72,8 @@ struct CalendarHeaderRow: View {
 
   @ViewBuilder
   private func trailingContent(totals: CalendarHeaderTotals, alignment: VerticalAlignment)
-    -> some View {
+    -> some View
+  {
     HStack(alignment: alignment, spacing: Spacing.xs) {
       if let trailingAccessory {
         trailingAccessory

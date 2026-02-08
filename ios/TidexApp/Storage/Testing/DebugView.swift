@@ -222,7 +222,8 @@
     }
 
     private func notificationLabel(for identifier: String)
-      -> (text: String, icon: String, color: Color) {
+      -> (text: String, icon: String, color: Color)
+    {
       if identifier.hasPrefix("smart-test-morning") {
         return ("Test morning", "sun.max", .orange)
       } else if identifier.hasPrefix("smart-test-evening") {
@@ -572,7 +573,8 @@
     }
 
     private func summaryRow(_ label: String, total: Int, clean: Int, dirty: Int, conflict: Int)
-      -> some View {
+      -> some View
+    {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         HStack {
           Text(label)

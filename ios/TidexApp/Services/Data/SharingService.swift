@@ -320,7 +320,8 @@ final class SharingService: ObservableObject {
   /// Returns the most relevant shift (active > upcoming > past) for each sharer
   /// Uses cache for recently fetched previews (5 minute validity)
   func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool = false) async throws
-    -> [SharerShiftPreview] {
+    -> [SharerShiftPreview]
+  {
     guard !sharerIds.isEmpty else { return [] }
 
     // Check cache first (unless force refresh)

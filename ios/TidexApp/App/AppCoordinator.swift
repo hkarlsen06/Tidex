@@ -958,7 +958,8 @@ final class AppCoordinator: ObservableObject {
       // Skip during impersonation to prevent registering the admin's device
       // token under the impersonated user's account
       if !ImpersonationManager.shared.isImpersonating,
-        let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate
+      {
         await appDelegate.registerCachedAPNsTokenIfNeeded()
       }
 

@@ -314,7 +314,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // Check if we have valid cache for both displayed and previous months
     if var displayCache = monthCache[displayKey], displayCache.isValid,
-      var previousCache = monthCache[previousKey], previousCache.isValid {
+      var previousCache = monthCache[previousKey], previousCache.isValid
+    {
       // Use cached data - instant navigation!
       logger.info("📦 Using cached data for \(displayKey)")
       self.displayedMonthShifts = displayCache.shifts
@@ -331,7 +332,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let capturedPrevious = previousCache.shifts
         let capturedCurrency = currentSettings.currency ?? "kr"
 
-        Task.detached(priority: .userInitiated) { [displayYM = (year: targetYear, month: targetMonth), previousYM, currentSettings, capturedCurrency, capturedDisplay, capturedPrevious] in
+        Task.detached(priority: .userInitiated) {
+          [
+            displayYM = (year: targetYear, month: targetMonth), previousYM, currentSettings,
+            capturedCurrency, capturedDisplay, capturedPrevious
+          ] in
           let data = Self.buildDashboardDataOffMain(
             displayedMonthShifts: capturedDisplay,
             previousMonthShifts: capturedPrevious,
@@ -1219,7 +1224,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   }
 
   nonisolated private static func findBestShiftStatic(in shifts: [ShiftWithComputations])
-    -> ShiftWithComputations? {
+    -> ShiftWithComputations?
+  {
     guard !shifts.isEmpty else { return nil }
 
     let maxGross = shifts.map { $0.grossPay }.max() ?? 0

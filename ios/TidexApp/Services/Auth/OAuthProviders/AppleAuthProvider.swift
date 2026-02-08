@@ -113,7 +113,8 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
 
 extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProviding {
   nonisolated func presentationAnchor(for controller: ASAuthorizationController)
-    -> ASPresentationAnchor {
+    -> ASPresentationAnchor
+  {
     // Access MainActor-isolated property safely
     return MainActor.assumeIsolated {
       if let anchor = presentationAnchor {
@@ -130,7 +131,8 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
       // Create window from first available scene (required in iOS 26+)
       if let windowScene = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
-        .first {
+        .first
+      {
         return UIWindow(windowScene: windowScene)
       }
       // No window scene available — should never happen in practice.

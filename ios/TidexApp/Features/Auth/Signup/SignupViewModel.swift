@@ -84,7 +84,8 @@ final class SignupViewModel: ObservableObject {
     // Check for phone (starts with + or contains only digits and common phone characters)
     let phoneChars = CharacterSet(charactersIn: "+0123456789 -")
     if trimmed.hasPrefix("+")
-      || trimmed.allSatisfy({ String($0).rangeOfCharacter(from: phoneChars) != nil }) {
+      || trimmed.allSatisfy({ String($0).rangeOfCharacter(from: phoneChars) != nil })
+    {
       let digits = trimmed.filter { $0.isNumber }
       if digits.count >= 8 {
         return .phone

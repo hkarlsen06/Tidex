@@ -516,7 +516,8 @@ struct ShiftsCalendarView: View {
   }
 
   private func findDayAt(location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo])
-    -> String? {
+    -> String?
+  {
     let gridWidth = geometry.size.width
     let gridHeight = geometry.size.height
 

@@ -81,7 +81,8 @@ final class CalendarExportService {
   private func getOrCreateCalendar(name: String) throws -> EKCalendar {
     // Try to find existing Tidex calendar by stored identifier
     if let identifier = UserDefaults.standard.string(forKey: calendarIdentifierKey),
-      let existingCalendar = eventStore.calendar(withIdentifier: identifier) {
+      let existingCalendar = eventStore.calendar(withIdentifier: identifier)
+    {
       logger.debug("Found existing Tidex calendar")
       return existingCalendar
     }
@@ -123,7 +124,8 @@ final class CalendarExportService {
   }
 
   /// Create a calendar event for a shift
-  private func createEvent(for shift: ExportedShift, in calendar: EKCalendar, title: String) throws {
+  private func createEvent(for shift: ExportedShift, in calendar: EKCalendar, title: String) throws
+  {
     // Parse dates
     guard let shiftDate = parseISODate(shift.date) else {
       throw CalendarExportError.invalidDate

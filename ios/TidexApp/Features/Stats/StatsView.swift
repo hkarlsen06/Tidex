@@ -126,7 +126,8 @@ struct StatsView: View {
 
           // Employment Percentage Chart
           if let employment = stats.employment,
-            employment.monthlyData.contains(where: { $0.averagePercentage > 0 }) {
+            employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
+          {
             EmploymentPercentageChart(data: employment)
           } else {
             EmploymentPercentageChartEmpty()

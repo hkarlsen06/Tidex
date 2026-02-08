@@ -47,7 +47,8 @@ final class SnapshotsService: ObservableObject {
   ///   - date: ISO date string (YYYY-MM-DD)
   ///   - snapshots: Array of snapshots to search
   /// - Returns: Applicable snapshot or nil
-  nonisolated func snapshotForDate(_ date: String, from snapshots: [WageSnapshot]) -> WageSnapshot? {
+  nonisolated func snapshotForDate(_ date: String, from snapshots: [WageSnapshot]) -> WageSnapshot?
+  {
     Self.snapshotForDate(date, from: snapshots)
   }
 
@@ -59,7 +60,8 @@ final class SnapshotsService: ObservableObject {
   ///   - snapshots: Array of snapshots to search
   /// - Returns: Applicable snapshot or nil
   nonisolated static func snapshotForDate(_ date: String, from snapshots: [WageSnapshot])
-    -> WageSnapshot? {
+    -> WageSnapshot?
+  {
     // Find baseline snapshot (from_date == nil) as fallback
     let baseline = snapshots.first { $0.from_date == nil }
 
@@ -97,7 +99,8 @@ final class SnapshotsService: ObservableObject {
   ///   - snapshots: Array of snapshots to search
   /// - Returns: Dictionary mapping dates to applicable snapshots
   func snapshotsForDates(_ dates: [String], from snapshots: [WageSnapshot]) -> [String:
-    WageSnapshot] {
+    WageSnapshot]
+  {
     var map: [String: WageSnapshot] = [:]
     for date in dates {
       if let snapshot = snapshotForDate(date, from: snapshots) {

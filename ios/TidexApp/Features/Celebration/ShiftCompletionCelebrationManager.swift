@@ -120,7 +120,8 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
         // No new completed shifts; update baseline to current state.
         result = .store(state: baselineState)
       } else if let featuredShift = CelebrationDetector.selectHighestEarningShift(
-        from: newlyCompleted) {
+        from: newlyCompleted)
+      {
         var animateFrom: Double? = nil
         if previousState?.displayTaxEnabled != displayTaxEnabledSnapshot {
           // Avoid misleading count-up when tax basis changed.

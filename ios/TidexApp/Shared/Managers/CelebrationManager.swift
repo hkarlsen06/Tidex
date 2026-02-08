@@ -53,7 +53,8 @@ final class CelebrationManager: ObservableObject {
     shouldShowConfetti = true
 
     // Start timer to clear celebration after duration
-    clearTimer = Timer.scheduledTimer(withTimeInterval: Self.highlightDuration, repeats: false) { [weak self] _ in
+    clearTimer = Timer.scheduledTimer(withTimeInterval: Self.highlightDuration, repeats: false) {
+      [weak self] _ in
       Task { @MainActor in
         self?.clearCelebration()
       }

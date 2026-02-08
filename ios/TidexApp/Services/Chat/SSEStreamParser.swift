@@ -84,7 +84,8 @@ enum SSEStreamParser {
             } else if byteBuffer.count > 4 {
               // UTF-8 uses at most 4 bytes per character. If we've accumulated
               // more than 4 bytes without valid UTF-8, the data is corrupt.
-              logger.error("Invalid UTF-8 sequence after \(byteBuffer.count) bytes, resetting buffer")
+              logger.error(
+                "Invalid UTF-8 sequence after \(byteBuffer.count) bytes, resetting buffer")
               byteBuffer.removeAll()
             }
 
