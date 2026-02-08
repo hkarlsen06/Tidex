@@ -424,7 +424,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                 onClick={handleAppleSignIn}
                 disabled={oauthButtonDisabled}
                 aria-label={t.pages.auth.login.continueWithApple}
-                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
+                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 border border-border dark:border-transparent hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
               >
                 <Image src="/icons/apple.svg" alt="" width={20} height={20} />
                 Apple
@@ -434,7 +434,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                 onClick={handleGoogleSignIn}
                 disabled={oauthButtonDisabled}
                 aria-label={t.pages.auth.login.continueWithGoogle}
-                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
+                className="w-full h-12.5 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-3 border border-border dark:border-transparent hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-60"
               >
                 <span className="flex h-5 w-5 items-center justify-center"><GoogleIcon /></span>
                 Google

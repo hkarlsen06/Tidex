@@ -58,7 +58,7 @@ struct AccordionSectionView<Content: View>: View {
             }) {
               Text(.commonContinue)
                 .font(.tidexLabelStrong)
-                .foregroundColor(.white)
+                .foregroundColor(.tidexTextOnBrand)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(Color.tidexBrandPrimary)

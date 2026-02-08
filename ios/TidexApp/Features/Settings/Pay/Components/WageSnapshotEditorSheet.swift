@@ -192,37 +192,32 @@ struct WageSnapshotEditorSheet: View {
               errorBanner(error)
                 .padding(.horizontal)
             }
-
-            // Bottom spacing for delete button
-            if mode == .edit && !isBaseline {
-              Spacer()
-                .frame(height: 80)
-            } else {
-              Spacer()
-                .frame(height: Spacing.lg)
-            }
           }
           .padding(.vertical, Spacing.lg)
         }
         .scrollDismissesKeyboard(.interactively)
-
-        // Delete button at bottom
-        if mode == .edit && !isBaseline {
-          VStack {
-            Spacer()
-
-            deleteButton
-              .padding(.horizontal, Spacing.lg)
-              .padding(.bottom, Spacing.xl)
-              .background(
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+          if mode == .edit && !isBaseline {
+            VStack(spacing: 0) {
+              deleteButton
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.sm)
+                .padding(.bottom, Spacing.sm)
+            }
+            .frame(maxWidth: .infinity)
+            .background(
+              ZStack {
+                Rectangle()
+                  .fill(.ultraThinMaterial)
                 LinearGradient(
-                  colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
+                  colors: [Color.tidexBackground.opacity(0), Color.tidexBackground.opacity(0.92)],
                   startPoint: .top,
                   endPoint: .bottom
                 )
-                .frame(height: 100)
-                .allowsHitTesting(false)
-              )
+              }
+              .ignoresSafeArea(edges: .bottom)
+              .allowsHitTesting(false)
+            )
           }
         }
       }
@@ -714,7 +709,7 @@ struct WageSnapshotEditorSheet: View {
         Text(.settingsPayEditorDelete)
           .font(.tidexButton)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
       .frame(height: Spacing.buttonHeight)
       .background(Color.tidexError)

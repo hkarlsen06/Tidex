@@ -17,6 +17,8 @@ private enum GestureMode: Equatable {
 /// Shows shift times or earnings per day, ISO week numbers, and monthly totals
 /// Supports multi-date selection via long-press + drag
 struct ShiftsCalendarView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let shifts: [ShiftWithComputations]
   let month: Date
   let year: Int
@@ -88,6 +90,9 @@ struct ShiftsCalendarView: View {
   var excludedFromTotalIds: Set<String> = []
 
   @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+  @State private var showSingleSelectionOverflowMenu = false
+  @State private var showSingleSelectionDeleteConfirm = false
+  @State private var showMultiSelectionDeleteConfirm = false
 
   // MARK: - Gesture State
 
@@ -198,6 +203,24 @@ struct ShiftsCalendarView: View {
     return result
   }
 
+  private var multiDeleteConfirmTitle: String {
+    let count = selectedDates.count
+    if Locale.appLocale.isNorwegian {
+      return "Slette \(count) vakter?"
+    } else {
+      return "Delete \(count) shifts?"
+    }
+  }
+
+  private var multiDeleteConfirmMessage: String {
+    let count = selectedDates.count
+    if Locale.appLocale.isNorwegian {
+      return "Er du sikker på at du vil slette \(count) vakter? Dette kan ikke angres."
+    } else {
+      return "Are you sure you want to delete \(count) shifts? This cannot be undone."
+    }
+  }
+
   // MARK: - Body
 
   var body: some View {
@@ -206,7 +229,7 @@ struct ShiftsCalendarView: View {
         monthName: monthName,
         year: year,
         selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
-        phase: phase,
+        phase: nil,
         totals: headerTotals,
         trailingAccessory: nil
       )
@@ -214,7 +237,13 @@ struct ShiftsCalendarView: View {
       CalendarWeekdayHeader()
         .padding(.bottom, Spacing.xs)
 
-      calendarGrid
+      if let phase {
+        StaggeredCardsContainer(phase: phase, config: .default) {
+          calendarGrid
+        }
+      } else {
+        calendarGrid
+      }
 
       actionBar
         .padding(.top, Spacing.sm)
@@ -558,13 +587,69 @@ struct ShiftsCalendarView: View {
         multiSelectionBar
       }
     }
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: confirmingDelete)
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isCopyMode)
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isMoveMode)
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count
+    )
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: confirmingDelete
+    )
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: isCopyMode
+    )
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: isMoveMode
+    )
     .onAppear {
       toggleHaptic.prepare()
       warningHaptic.prepare()
+    }
+    .confirmationDialog(
+      "Handlinger",
+      isPresented: $showSingleSelectionOverflowMenu,
+      titleVisibility: .visible
+    ) {
+      Button(role: .destructive) {
+        showSingleSelectionDeleteConfirm = true
+      } label: {
+        Label(String(localized: .shiftsActionsDelete), systemImage: "trash")
+      }
+
+      Button {
+        toggleHaptic.impactOccurred()
+        onCopy?()
+      } label: {
+        Label(String(localized: "common.copy"), systemImage: "doc.on.doc")
+      }
+
+      Button {
+        toggleHaptic.impactOccurred()
+        onMove?()
+      } label: {
+        Label(String(localized: .shiftsMove), systemImage: "arrow.left.arrow.right")
+      }
+
+      Button(String(localized: .commonCancel), role: .cancel) {}
+    }
+    .alert(
+      String(localized: .shiftsDeleteConfirmTitle),
+      isPresented: $showSingleSelectionDeleteConfirm
+    ) {
+      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .shiftsDeleteButton), role: .destructive) {
+        warningHaptic.notificationOccurred(.warning)
+        onConfirmDelete?()
+      }
+    } message: {
+      Text(.shiftsDeleteConfirmMessage)
+    }
+    .alert(multiDeleteConfirmTitle, isPresented: $showMultiSelectionDeleteConfirm) {
+      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .shiftsDeleteButton), role: .destructive) {
+        warningHaptic.notificationOccurred(.warning)
+        onConfirmDelete?()
+      }
+    } message: {
+      Text(multiDeleteConfirmMessage)
     }
   }
 
@@ -573,7 +658,9 @@ struct ShiftsCalendarView: View {
     HStack(spacing: Spacing.xxs) {
       if isCopying || isMoving {
         ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .orange))
+          .progressViewStyle(
+            CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .tidexWarning)
+          )
           .scaleEffect(0.8)
           .frame(width: 36)
 
@@ -588,7 +675,7 @@ struct ShiftsCalendarView: View {
       } else {
         Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
           .font(.tidexLabel)
-          .foregroundColor(isCopyMode ? .tidexBlue : .orange)
+          .foregroundColor(isCopyMode ? .tidexBlue : .tidexWarning)
           .frame(width: 36)
 
         Text(
@@ -607,9 +694,9 @@ struct ShiftsCalendarView: View {
       } label: {
         Text(.commonCancel)
           .font(.tidexLabelStrong)
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .padding(.horizontal, Spacing.md)
-          .padding(.vertical, Spacing.sm)
+          .frame(height: 44)
           .background(Capsule().fill(Color.tidexBrandPrimary))
       }
       .buttonStyle(.plain)
@@ -622,73 +709,47 @@ struct ShiftsCalendarView: View {
   @ViewBuilder
   private var singleSelectionBar: some View {
     HStack(spacing: Spacing.xxs) {
-      deleteButton
-
-      if !confirmingDelete {
-        Button {
-          toggleHaptic.impactOccurred()
-          onCopy?()
-        } label: {
-          Image(systemName: "doc.on.doc")
+      Button {
+        toggleHaptic.impactOccurred()
+        onDetails?()
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "info.circle")
             .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
-            .frame(width: 44)
-            .padding(.vertical, Spacing.sm)
-            .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+          Text(.shiftsDetails)
+            .font(.tidexLabelStrong)
         }
-        .buttonStyle(.plain)
+        .foregroundColor(.tidexTextOnBrand)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(Capsule().fill(Color.tidexBrandPrimary))
       }
+      .buttonStyle(.plain)
 
-      if confirmingDelete {
-        cancelButton
-      } else {
-        Button {
-          toggleHaptic.impactOccurred()
-          onEdit?()
-        } label: {
-          Image(systemName: "pencil")
-            .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
-            .frame(width: 44)
-            .padding(.vertical, Spacing.sm)
-            .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
-        }
-        .buttonStyle(.plain)
-
-        Button {
-          toggleHaptic.impactOccurred()
-          onDetails?()
-        } label: {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "info.circle")
-              .font(.tidexLabel)
-            Text(.shiftsDetails)
-              .font(.tidexLabelStrong)
-          }
-          .foregroundColor(.white)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Capsule().fill(Color.tidexBrandPrimary))
-        }
-        .buttonStyle(.plain)
-
-        Button {
-          toggleHaptic.impactOccurred()
-          onMove?()
-        } label: {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "arrow.left.arrow.right")
-              .font(.tidexLabel)
-            Text(.shiftsMove)
-              .font(.tidexLabel)
-          }
-          .foregroundColor(.orange)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Capsule().fill(Color.orange.opacity(0.1)))
-        }
-        .buttonStyle(.plain)
+      Button {
+        toggleHaptic.impactOccurred()
+        onEdit?()
+      } label: {
+        Image(systemName: "pencil")
+          .font(.tidexLabel)
+          .foregroundColor(.tidexBlue)
+          .frame(width: 44, height: 44)
+          .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
       }
+      .buttonStyle(.plain)
+
+      Button {
+        toggleHaptic.impactOccurred()
+        showSingleSelectionOverflowMenu = true
+      } label: {
+        Image(systemName: "line.3.horizontal")
+          .font(.tidexLabel)
+          .foregroundColor(.tidexBlue)
+          .frame(width: 44, height: 44)
+          .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(String(localized: "Flere handlinger")))
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
@@ -697,28 +758,47 @@ struct ShiftsCalendarView: View {
   @ViewBuilder
   private var multiSelectionBar: some View {
     HStack(spacing: Spacing.xxs) {
-      deleteButton
-
-      if confirmingDelete {
-        cancelButton
-      } else {
-        Button {
-          toggleHaptic.impactOccurred()
-          onClearSelection?()
-        } label: {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "xmark")
-              .font(.tidexLabel)
-            Text(.commonCancel)
+      Button {
+        toggleHaptic.impactOccurred()
+        showMultiSelectionDeleteConfirm = true
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          if isDeleting {
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnDanger))
+              .scaleEffect(0.7)
+          } else {
+            Image(systemName: "trash")
               .font(.tidexLabel)
           }
-          .foregroundColor(.tidexTextSecondary)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Capsule().fill(Color.tidexSurfaceSecondary.opacity(0.8)))
+          Text(.shiftsActionsDelete)
+            .font(.tidexLabelStrong)
         }
-        .buttonStyle(.plain)
+        .foregroundColor(.tidexTextOnDanger)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(Capsule().fill(Color.tidexError))
       }
+      .buttonStyle(.plain)
+      .disabled(isDeleting)
+
+      Button {
+        toggleHaptic.impactOccurred()
+        onClearSelection?()
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "xmark")
+            .font(.tidexLabel)
+          Text(.commonCancel)
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexTextOnBrand)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(Capsule().fill(Color.tidexBrandPrimary))
+      }
+      .buttonStyle(.plain)
+      .disabled(isDeleting)
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
@@ -738,7 +818,9 @@ struct ShiftsCalendarView: View {
       HStack(spacing: Spacing.xxxs) {
         if isDeleting {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: confirmingDelete ? .white : .red))
+            .progressViewStyle(
+              CircularProgressViewStyle(tint: confirmingDelete ? .white : .tidexError)
+            )
             .scaleEffect(0.7)
         } else {
           Image(systemName: "trash")
@@ -750,15 +832,17 @@ struct ShiftsCalendarView: View {
             .font(.tidexLabelStrong)
         }
       }
-      .foregroundColor(confirmingDelete ? .white : .red)
-      .frame(width: confirmingDelete ? nil : 44)
+      .foregroundColor(confirmingDelete ? .white : .tidexError)
+      .frame(width: confirmingDelete ? nil : 44, height: 44)
       .frame(maxWidth: confirmingDelete ? .infinity : nil)
-      .padding(.vertical, Spacing.sm)
       .padding(.horizontal, confirmingDelete ? 16 : 0)
-      .background(Capsule().fill(confirmingDelete ? Color.red : Color.red.opacity(0.1)))
+      .background(
+        Capsule().fill(confirmingDelete ? Color.tidexError : Color.tidexError.opacity(0.1))
+      )
     }
     .buttonStyle(.plain)
     .disabled(isDeleting)
+    .accessibilityLabel(Text(String(localized: "common.delete")))
   }
 
   @ViewBuilder
@@ -773,9 +857,9 @@ struct ShiftsCalendarView: View {
         Text(.commonCancel)
           .font(.tidexLabelStrong)
       }
-      .foregroundColor(.white)
+      .foregroundColor(.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
-      .padding(.vertical, Spacing.sm)
+      .frame(height: 44)
       .background(Capsule().fill(Color.tidexBrandPrimary))
     }
     .buttonStyle(.plain)

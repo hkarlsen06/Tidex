@@ -81,14 +81,14 @@ private struct ActiveImpersonationCard: View {
         HStack {
           if isLoading {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnDanger))
           }
           Text(isLoading ? "Stopping..." : "Stop Impersonation")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexError)
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.tidexTextOnDanger)
         .cornerRadius(CornerRadius.sm)
       }
       .disabled(isLoading)
@@ -309,14 +309,14 @@ private struct StartButton: View {
       HStack {
         if viewModel.isStartingImpersonation {
           ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnWarning))
         }
         Text(viewModel.isStartingImpersonation ? "Starting..." : "Start Impersonation")
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(canStart ? Color.tidexWarning : Color.tidexWarning.opacity(0.5))
-      .foregroundStyle(.white)
+      .foregroundStyle(Color.tidexTextOnWarning)
       .cornerRadius(CornerRadius.sm)
     }
     .disabled(!canStart)

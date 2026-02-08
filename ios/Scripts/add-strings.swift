@@ -54,6 +54,7 @@ private enum AddStringError: Error, CustomStringConvertible {
   case fileNotFound(String)
   case keyAlreadyExists(String)
   case invalidJSON
+  case invalidUTF8Encoding
   case incompleteEntry(String)
 
   var description: String {
@@ -78,6 +79,8 @@ private enum AddStringError: Error, CustomStringConvertible {
       return "Key '\(key)' already exists in the catalog. Use Xcode to edit existing keys."
     case .invalidJSON:
       return "Failed to parse string catalog JSON"
+    case .invalidUTF8Encoding:
+      return "Failed to convert output data to UTF-8 string"
     case .incompleteEntry(let key):
       return
         "Incomplete entry for key '\(key)': both --en and --nb values are required after each --key"
@@ -204,7 +207,9 @@ private func writeCatalog(_ catalog: Catalog, to path: String) throws {
   let encoder = JSONEncoder()
   encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
   let outputData = try encoder.encode(catalog)
-  var outputString = String(data: outputData, encoding: .utf8)!
+  guard var outputString = String(data: outputData, encoding: .utf8) else {
+    throw AddStringError.invalidUTF8Encoding
+  }
   outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
   try outputString.write(toFile: path, atomically: true, encoding: .utf8)
 }

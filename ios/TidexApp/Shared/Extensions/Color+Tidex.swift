@@ -70,11 +70,47 @@ extension Color {
     Color("TidexTextMuted")
   }
 
-  /// Inverse text color (light on dark surfaces or vice versa)
+  /// Theme-reversed text color (light in light mode, dark in dark mode).
+  /// This is NOT role-based. Prefer `tidexTextOn*` tokens for filled controls.
   /// Light: HSlocalized(210, 40%, 98%)
   /// Dark: HSlocalized(222, 47%, 11%)
+  static var tidexTextReversedByTheme: Color {
+    Color("TidexTextReversedByTheme")
+  }
+
+  /// Legacy alias retained only to provide compiler guidance.
+  @available(
+    *, unavailable, renamed: "tidexTextReversedByTheme",
+    message:
+      "Use tidexTextReversedByTheme for theme-reversed text, or role tokens (tidexTextOnBrand/tidexTextOnWarning/tidexTextOnDanger/tidexTextOnSuccess) for filled controls."
+  )
   static var tidexTextInverse: Color {
-    Color("TidexTextInverse")
+    tidexTextReversedByTheme
+  }
+
+  /// Text color for filled brand controls (buttons, chips)
+  /// Uses white in both modes to maintain consistent readability on brand surfaces
+  static var tidexTextOnBrand: Color {
+    Color("TidexTextOnBrand")
+  }
+
+  /// Text color for warning-filled controls
+  /// Uses black in both modes to maintain accessible contrast on amber backgrounds
+  static var tidexTextOnWarning: Color {
+    Color("TidexTextOnWarning")
+  }
+
+  /// Text color for success-filled controls
+  /// Light: near-white for dark green surfaces
+  /// Dark: deep navy for bright green surfaces
+  static var tidexTextOnSuccess: Color {
+    Color("TidexTextOnSuccess")
+  }
+
+  /// Text color for destructive/danger-filled controls
+  /// Uses white in both modes to maintain accessible contrast on red surfaces
+  static var tidexTextOnDanger: Color {
+    Color("TidexTextOnDanger")
   }
 
   // MARK: - Brand Colors

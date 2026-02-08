@@ -81,7 +81,7 @@ struct ToolStatusView: View {
 
         if !isExecuting {
           Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-            .font(.system(size: 9, weight: .bold))
+            .font(.tidexMicro.weight(.semibold))
             .foregroundColor(.tidexTextMuted)
         }
       }
@@ -156,12 +156,12 @@ struct ToolStatusView: View {
   private func detailRow(label: String, value: String) -> some View {
     HStack(alignment: .top, spacing: Spacing.xs) {
       Text(label)
-        .font(.tidexMicro)
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
         .frame(width: 60, alignment: .leading)
 
       Text(value)
-        .font(.tidexMonoMicro)
+        .font(.tidexMonoCaptionRegular)
         .foregroundColor(.tidexTextPrimary)
     }
   }
@@ -169,12 +169,12 @@ struct ToolStatusView: View {
   private func detailSection(label: String, content: String) -> some View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
       Text(label)
-        .font(.tidexMicro)
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
 
       ScrollView(.horizontal, showsIndicators: false) {
         Text(content)
-          .font(.tidexMonoMicro2)
+          .font(.tidexMonoCaptionRegular)
           .foregroundColor(.tidexTextPrimary)
           .padding(Spacing.xs)
           .frame(maxWidth: .infinity, alignment: .leading)

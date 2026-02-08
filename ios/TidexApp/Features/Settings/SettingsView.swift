@@ -655,13 +655,13 @@ struct SettingsMenuItem: View {
           )
 
         // Title and description
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: Spacing.xxxs) {
           Text(title)
-            .font(.body)
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(description)
-            .font(.caption)
+            .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
             .lineLimit(2)
         }
@@ -673,6 +673,8 @@ struct SettingsMenuItem: View {
           .font(.tidexLabelStrong)
           .foregroundStyle(.tertiary)
       }
+      .padding(.vertical, Spacing.xxxs)
+      .frame(minHeight: 56)
     }
   }
 }

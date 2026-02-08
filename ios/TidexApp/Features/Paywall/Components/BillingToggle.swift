@@ -52,7 +52,7 @@ struct BillingToggle: View {
         if let badge = badge {
           Text(badge)
             .font(.tidexMicro.bold())
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnSuccess)
             .padding(.horizontal, Spacing.xxxs)
             .padding(.vertical, 3)
             .background(Color.tidexSuccess)

@@ -239,14 +239,14 @@ struct SharedShiftsCalendarView: View {
       }
 
       // Time text (centered, like real cells)
-      VStack(spacing: 0) {
+      VStack(spacing: -3) {
         Text("09:00")
-          .font(.system(size: 10, weight: .bold))
+          .font(.tidexMicro.weight(.semibold))
         Text("17:00")
-          .font(.system(size: 10, weight: .bold))
+          .font(.tidexMicro.weight(.semibold))
       }
       .foregroundColor(color)
-      .padding(.top, Spacing.xxxs)
+      .offset(y: 3)
     }
     .frame(width: 44, height: 54)
     .background(
@@ -257,6 +257,7 @@ struct SharedShiftsCalendarView: View {
       RoundedRectangle(cornerRadius: CornerRadius.xs)
         .strokeBorder(Color.tidexTextMuted.opacity(0.2), lineWidth: 0.5)
     )
+    .accessibilityHidden(true)
   }
 
   // MARK: - Calendar Grid

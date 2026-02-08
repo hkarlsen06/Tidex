@@ -4,6 +4,8 @@ import SwiftUI
 
 /// Expandable form for adding a new friend by email or phone
 struct AddFriendForm: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   @Binding var isExpanded: Bool
   @Binding var identifier: String
   @Binding var showEarnings: Bool
@@ -34,19 +36,23 @@ struct AddFriendForm: View {
             HStack(spacing: Spacing.xxs) {
               Text(capacityDisplay)
                 .font(.tidexFootnoteMedium)
-                .foregroundColor(canAdd ? .tidexTextMuted : .orange)
+                .foregroundColor(canAdd ? .tidexTextMuted : .tidexWarning)
 
               if !canAdd {
                 Image(systemName: "exclamationmark.circle.fill")
                   .font(.tidexCaptionRegular)
-                  .foregroundColor(.orange)
+                  .foregroundColor(.tidexWarning)
               }
             }
 
             if canAdd {
               Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                if reduceMotion {
                   isExpanded = true
+                } else {
+                  withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded = true
+                  }
                 }
                 // Focus the input after minimal delay (just enough for animation)
                 Task { @MainActor in
@@ -57,8 +63,11 @@ struct AddFriendForm: View {
                 Image(systemName: "plus.circle.fill")
                   .font(.system(size: 24))
                   .foregroundColor(.tidexBlue)
+                  .frame(minWidth: 44, minHeight: 44)
+                  .contentShape(Rectangle())
               }
               .buttonStyle(PlainButtonStyle())
+              .accessibilityLabel(Text(String(localized: "sharing.addFriend")))
             }
           }
         }
@@ -85,7 +94,7 @@ struct AddFriendForm: View {
             if let error = error {
               Text(error)
                 .font(.tidexCaptionRegular)
-                .foregroundColor(.red)
+                .foregroundColor(.tidexError)
             }
           }
 
@@ -98,7 +107,7 @@ struct AddFriendForm: View {
             Toggle(String(localized: .sharingShowEarnings), isOn: $showEarnings)
               .font(.tidexSubheadline)
               .foregroundColor(.tidexTextPrimary)
-              .toggleStyle(SwitchToggleStyle(tint: .green))
+              .toggleStyle(SwitchToggleStyle(tint: .tidexSuccess))
           }
           .padding(.horizontal, Spacing.xxs)
           .disabled(isLoading)
@@ -111,6 +120,8 @@ struct AddFriendForm: View {
               Text(.commonCancel)
                 .font(.tidexLabel)
                 .foregroundColor(.tidexTextMuted)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isLoading)
@@ -119,15 +130,16 @@ struct AddFriendForm: View {
               HStack(spacing: Spacing.xxxs) {
                 if isLoading {
                   ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
                     .scaleEffect(0.8)
                 }
                 Text(.sharingAdd)
                   .font(.tidexLabelStrong)
               }
-              .foregroundColor(.white)
+              .foregroundColor(.tidexTextOnBrand)
               .padding(.horizontal, Spacing.md)
               .padding(.vertical, Spacing.sm)
+              .frame(minHeight: 44)
               .background(
                 identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
                   ? Color.tidexBlue.opacity(0.5)

@@ -56,6 +56,8 @@ struct WageyShowcaseView: View {
             .frame(width: 32, height: 32)
             .background(Color.white.opacity(0.2))
             .clipShape(Circle())
+            .contentShape(Rectangle())
+            .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.top, Spacing.md)
         .padding(.trailing, Spacing.mlg)

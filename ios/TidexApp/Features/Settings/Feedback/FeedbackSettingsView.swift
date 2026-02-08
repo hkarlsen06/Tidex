@@ -139,7 +139,7 @@ struct FeedbackSettingsView: View {
         HStack(spacing: Spacing.xs) {
           if viewModel.isSubmitting {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
               .frame(width: 16, height: 16)
           }
 
@@ -150,7 +150,7 @@ struct FeedbackSettingsView: View {
           )
           .font(.tidexButton)
         }
-        .foregroundColor(.white)
+        .foregroundColor(.tidexTextOnBrand)
         .frame(maxWidth: .infinity)
         .frame(height: Spacing.buttonHeight)
         .background(viewModel.canSubmit ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))

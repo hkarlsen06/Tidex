@@ -492,7 +492,7 @@ struct FriendsListEmptyState: View {
             Text(.sharingAddFriend)
               .font(.tidexLabelStrong)
           }
-          .foregroundColor(.white)
+          .foregroundColor(.tidexTextOnBrand)
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.xsm)
           .background(Color.tidexBlue)

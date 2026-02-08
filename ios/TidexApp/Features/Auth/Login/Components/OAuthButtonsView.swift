@@ -78,7 +78,10 @@ private struct GoogleSignInButton: View {
           .frame(width: 18, height: 18)
 
         Text(title)
-          .font(.tidexBodyLarge)
+          // Match the native Apple button label sizing.
+          .font(.system(size: 17, weight: .semibold))
+          .lineLimit(1)
+          .minimumScaleFactor(0.9)
           .foregroundColor(colorScheme == .dark ? .black : .white)
       }
       .frame(maxWidth: .infinity)

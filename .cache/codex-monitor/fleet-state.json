@@ -1,0 +1,18 @@
+{
+  "initialized": true,
+  "repoFingerprint": {
+    "method": "remote-origin",
+    "raw": "https://github.com/Tidex-Payroll-Shifts/Tidex",
+    "normalized": "github.com/tidex-payroll-shifts/tidex",
+    "hash": "76d49a2d07a496a9"
+  },
+  "isCoordinator": true,
+  "fleetSize": 1,
+  "totalSlots": 6,
+  "localSlots": 6,
+  "mode": "solo",
+  "peers": [],
+  "dispatchOrder": [],
+  "lastSyncAt": "2026-02-09T00:17:42.262Z",
+  "updatedAt": "2026-02-09T00:17:42.263Z"
+}

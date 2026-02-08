@@ -49,6 +49,7 @@ private enum DeleteStringError: Error, CustomStringConvertible {
   case fileNotFound(String)
   case keyNotFound(String)
   case invalidJSON
+  case invalidUTF8Encoding
 
   var description: String {
     switch self {
@@ -71,6 +72,8 @@ private enum DeleteStringError: Error, CustomStringConvertible {
       return "Key '\(key)' not found in the catalog"
     case .invalidJSON:
       return "Failed to parse string catalog JSON"
+    case .invalidUTF8Encoding:
+      return "Failed to convert output data to UTF-8 string"
     }
   }
 }
@@ -189,7 +192,9 @@ private func run() throws {
   encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
   let outputData = try encoder.encode(catalog)
 
-  var outputString = String(data: outputData, encoding: .utf8)!
+  guard var outputString = String(data: outputData, encoding: .utf8) else {
+    throw DeleteStringError.invalidUTF8Encoding
+  }
   outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
 
   try outputString.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)

@@ -4,6 +4,8 @@ import SwiftUI
 /// Chat input field with send button and image attachment support
 /// Supports multi-line input, image uploads, and disabled states
 struct ChatInputField: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   /// Callback when user sends a message (text only)
   let onSend: (String) -> Void
 
@@ -102,8 +104,11 @@ struct ChatInputField: View {
               Image(systemName: "arrow.up.circle.fill")
                 .font(.system(size: 28))
                 .foregroundColor(.tidexBlue)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
             }
-            .transition(.scale.combined(with: .opacity))
+            .accessibilityLabel(Text(String(localized: "Send message")))
+            .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
           }
         }
         .padding(.horizontal, Spacing.msm)
@@ -113,7 +118,7 @@ struct ChatInputField: View {
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
-      .animation(.easeInOut(duration: 0.15), value: canSend)
+      .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
     }
     .background(Color.tidexBackground)
     .safeAreaPadding(.bottom)
@@ -141,6 +146,9 @@ struct ChatInputField: View {
       }
     }
     .disabled(disabled || isProcessingImage)
+    .frame(minWidth: 44, minHeight: 44)
+    .contentShape(Rectangle())
+    .accessibilityLabel(Text(String(localized: "profile.personalInfo.uploadImage")))
   }
 
   // MARK: - Image Preview
@@ -156,9 +164,14 @@ struct ChatInputField: View {
 
         // Remove button
         Button {
-          withAnimation(.easeInOut(duration: 0.2)) {
+          if reduceMotion {
             attachedImage = nil
             selectedPhotoItem = nil
+          } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+              attachedImage = nil
+              selectedPhotoItem = nil
+            }
           }
           Haptics.play(.light)
         } label: {
@@ -170,7 +183,10 @@ struct ChatInputField: View {
                 .fill(Color.black.opacity(0.5))
                 .frame(width: 18, height: 18)
             )
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
+        .accessibilityLabel(Text(String(localized: "profile.personalInfo.removeImage")))
         .offset(x: 6, y: -6)
       }
 
@@ -178,7 +194,7 @@ struct ChatInputField: View {
     }
     .padding(.horizontal, Spacing.md)
     .padding(.top, Spacing.xs)
-    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9)))
   }
 
   // MARK: - Error Banner
@@ -196,18 +212,26 @@ struct ChatInputField: View {
       Spacer()
 
       Button {
-        withAnimation {
+        if reduceMotion {
           imageError = nil
+        } else {
+          withAnimation {
+            imageError = nil
+          }
         }
       } label: {
         Image(systemName: "xmark")
           .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
+          .frame(minWidth: 44, minHeight: 44)
+          .contentShape(Rectangle())
       }
+      .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
+    .accessibilityElement(children: .combine)
   }
 
   // MARK: - Photo Processing

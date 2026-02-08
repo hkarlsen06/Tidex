@@ -3,6 +3,8 @@ import UIKit
 
 /// Compact celebration overlay that slides up from the bottom
 struct CelebrationOverlay: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let data: CelebrationData
   let onDismiss: () -> Void
 
@@ -115,7 +117,7 @@ struct CelebrationOverlay: View {
               .frame(maxWidth: .infinity)
               .frame(height: Spacing.buttonHeight)
               .background(Color.tidexBrandPrimary)
-              .foregroundColor(.white)
+              .foregroundColor(.tidexTextOnBrand)
               .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
           }
           .buttonStyle(CelebrationButtonStyle())
@@ -141,8 +143,12 @@ struct CelebrationOverlay: View {
               if value.translation.height > 80 || value.predictedEndTranslation.height > 200 {
                 dismiss()
               } else {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                if reduceMotion {
                   dragOffset = 0
+                } else {
+                  withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    dragOffset = 0
+                  }
                 }
               }
             }
@@ -150,21 +156,30 @@ struct CelebrationOverlay: View {
       }
       .ignoresSafeArea(edges: .bottom)
     }
-    .animation(.spring(response: 0.4, dampingFraction: 0.85), value: showContent)
-    .animation(.spring(response: 0.4, dampingFraction: 0.85), value: dragOffset)
-    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showCard)
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: showContent
+    )
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: dragOffset
+    )
+    .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.8), value: showCard)
     .onAppear {
       showContent = true
       Haptics.play(.success)
 
-      // Start count-up after overlay slides in
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+      if reduceMotion {
         startCountUp = true
-      }
-
-      // Show card after count-up completes (with a brief pause)
-      DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
         showCard = true
+      } else {
+        // Start count-up after overlay slides in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+          startCountUp = true
+        }
+
+        // Show card after count-up completes (with a brief pause)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+          showCard = true
+        }
       }
     }
     .userCurrency(data.currency)
@@ -173,8 +188,12 @@ struct CelebrationOverlay: View {
   private func dismiss() {
     showContent = false
     dragOffset = 0
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+    if reduceMotion {
       onDismiss()
+    } else {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        onDismiss()
+      }
     }
   }
 }
@@ -182,11 +201,13 @@ struct CelebrationOverlay: View {
 // MARK: - Button Style
 
 private struct CelebrationButtonStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.97 : 1.0))
       .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: configuration.isPressed)
   }
 }
 

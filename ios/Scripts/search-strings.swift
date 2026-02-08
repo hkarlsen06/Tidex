@@ -268,7 +268,9 @@ private func printEntry(key: String, entry: CatalogEntry, matchedIn: String, sho
 
   if let localizations = entry.localizations {
     for locale in localizations.keys.sorted() {
-      let localization = localizations[locale]!
+      guard let localization = localizations[locale] else {
+        continue
+      }
       if let value = localization.stringUnit?.value {
         let indicator = stateIndicator(for: localization.stringUnit?.state ?? "unknown")
         print("    \(locale): \"\(value)\" [\(indicator)]")

@@ -73,6 +73,10 @@ struct CalendarDayCell<Content: View>: View {
   let dayInfo: CalendarDayInfo
   let style: CalendarCellStyle
   let content: CalendarCellContent
+  // Optical balance: text glyph metrics make equal numeric padding look top-heavy.
+  private let horizontalCornerInset: CGFloat = Spacing.xxxs
+  private let topCornerInset: CGFloat = 3
+  private let weekNumberTopOpticalOffset: CGFloat = 1
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
   var showOverlapIndicator: Bool = false
@@ -98,31 +102,26 @@ struct CalendarDayCell<Content: View>: View {
 
   var body: some View {
     ZStack {
-      // Week number (top-left corner, only on Mondays, hidden when overlap indicator shows)
-      if let weekNum = dayInfo.weekNumber, !showOverlapIndicator {
-        VStack {
-          HStack {
-            Text("\(weekNum)")
-              .font(.caption2)
-              .foregroundColor(.tidexTextMuted)
-              .padding(.leading, Spacing.xxs)
-              .padding(.top, 3)
-            Spacer()
-          }
-          Spacer()
-        }
-      }
-
-      // Day number (top-right corner)
+      // Top row markers (week number on left, day number on right)
       VStack {
-        HStack {
+        HStack(alignment: .top, spacing: 0) {
+          if let weekNum = dayInfo.weekNumber, !showOverlapIndicator {
+            Text("\(weekNum)")
+              .font(.tidexFootnote)
+              .fixedSize(horizontal: true, vertical: true)
+              .foregroundColor(.tidexTextMuted)
+              .offset(y: weekNumberTopOpticalOffset)
+          }
+
           Spacer()
+
           Text("\(dayInfo.dayNumber)")
-            .font(.caption2.weight(.semibold))
+            .font(.tidexBodyMedium)
+            .fixedSize(horizontal: true, vertical: true)
             .foregroundColor(style.dayNumberColor)
-            .padding(.trailing, Spacing.xxs)
-            .padding(.top, 3)
         }
+        .padding(.horizontal, horizontalCornerInset)
+        .padding(.top, topCornerInset)
         Spacer()
       }
 
@@ -131,7 +130,7 @@ struct CalendarDayCell<Content: View>: View {
         VStack {
           HStack {
             Image(systemName: "person.2.fill")
-              .font(.system(size: 9, weight: .semibold))
+              .font(.tidexMicro.weight(.semibold))
               .foregroundColor(.tidexBlue)
               .padding(.leading, Spacing.xxs)
               .padding(.top, 5)
@@ -167,28 +166,36 @@ struct CalendarDayCell<Content: View>: View {
 
     case .hours(let hoursData, let color):
       let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
+      // Reserve top space for week/day/overlap markers, then center hours in the remaining space.
+      let topReservedSpace: CGFloat = (showOverlapIndicator || dayInfo.weekNumber != nil) ? 22 : 18
       GeometryReader { geo in
-        let fontSize = min(geo.size.width * 0.4, geo.size.height * 0.42)
-        VStack(spacing: -1) {
-          Text(hoursData.start)
-            .font(.system(size: fontSize, weight: .bold))
-            .environment(\.layoutDirection, .leftToRight)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .allowsTightening(true)
-            .frame(maxWidth: .infinity, alignment: .center)
-          Text(endDisplay)
-            .font(.system(size: fontSize, weight: .bold))
-            .environment(\.layoutDirection, .leftToRight)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .allowsTightening(true)
-            .frame(maxWidth: .infinity, alignment: .center)
+        let availableHeight = max(geo.size.height - topReservedSpace, 0)
+        let fontSize = min(geo.size.width * 0.4, availableHeight * 0.42)
+        VStack(spacing: 0) {
+          Color.clear
+            .frame(height: topReservedSpace)
+
+          VStack(spacing: -3) {
+            Text(hoursData.start)
+              .font(.system(size: fontSize, weight: .bold))
+              .environment(\.layoutDirection, .leftToRight)
+              .lineLimit(1)
+              .minimumScaleFactor(0.5)
+              .allowsTightening(true)
+              .frame(maxWidth: .infinity, alignment: .center)
+            Text(endDisplay)
+              .font(.system(size: fontSize, weight: .bold))
+              .environment(\.layoutDirection, .leftToRight)
+              .lineLimit(1)
+              .minimumScaleFactor(0.5)
+              .allowsTightening(true)
+              .frame(maxWidth: .infinity, alignment: .center)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .foregroundColor(color)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .padding(.top, Spacing.msm)
       .padding(.horizontal, Spacing.xxs)
 
     case .earnings(let amount, let color):

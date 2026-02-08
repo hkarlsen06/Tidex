@@ -4,6 +4,8 @@ import UIKit
 /// Full-width CTA button for onboarding screens
 /// Matches PrimaryButton styling with gradient option
 struct OnboardingButton: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let title: String
   var isEnabled: Bool = true
   let action: () -> Void
@@ -35,18 +37,20 @@ struct OnboardingButton: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
     }
-    .buttonStyle(SnappyOnboardingButtonStyle())
+    .buttonStyle(SnappyOnboardingButtonStyle(reduceMotion: reduceMotion))
     .disabled(!isEnabled)
   }
 }
 
 /// Snappy button style with scale and opacity feedback
 private struct SnappyOnboardingButtonStyle: ButtonStyle {
+  let reduceMotion: Bool
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.97 : 1.0))
       .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: configuration.isPressed)
   }
 }
 

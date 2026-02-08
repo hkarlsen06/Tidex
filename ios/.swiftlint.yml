@@ -1,2 +1,4 @@
+parent_config: ../.swiftlint.yml
+
 excluded:
   - Scripts/.build
