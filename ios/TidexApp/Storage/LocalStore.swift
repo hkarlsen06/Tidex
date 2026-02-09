@@ -16,6 +16,8 @@ enum LocalStoreWriteError: Error {
 /// Manages the ModelContainer and provides thread-safe access via ModelActor
 @MainActor
 final class LocalStore {
+  private static let appGroupId = "group.no.tidex.app"
+
   /// Shared instance for the app
   static let shared = LocalStore()
 
@@ -29,7 +31,33 @@ final class LocalStore {
   /// When true, data will NOT be saved between app launches - user should be warned.
   let isUsingInMemoryFallback: Bool
 
+  private static func ensureStoreParentDirectoryExists() {
+    guard
+      let appGroupURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
+      logger.error("Missing App Group container for local store")
+      return
+    }
+
+    let applicationSupportURL =
+      appGroupURL
+      .appendingPathComponent("Library", isDirectory: true)
+      .appendingPathComponent("Application Support", isDirectory: true)
+
+    do {
+      try FileManager.default.createDirectory(
+        at: applicationSupportURL,
+        withIntermediateDirectories: true
+      )
+    } catch {
+      logger.error("Failed to create local store directory: \(error.localizedDescription)")
+    }
+  }
+
   private init() {
+    Self.ensureStoreParentDirectoryExists()
+
     // Create schema with all local models
     let schema = Schema([
       LocalUserShift.self,

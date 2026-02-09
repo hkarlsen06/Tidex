@@ -9,6 +9,7 @@ struct ScreenshotSharePromptOverlay: View {
 
   @State private var dragOffset: CGFloat = 0
   @State private var showContent = false
+  @Namespace private var glassNamespace
 
   var body: some View {
     GeometryReader { geometry in
@@ -136,28 +137,32 @@ struct ScreenshotSharePromptOverlay: View {
   /// Shows the toolbar buttons with emphasis on the share button
   @ViewBuilder
   private var toolbarPreview: some View {
-    HStack(spacing: Spacing.md) {
-      // Share button - emphasized with liquid glass
-      VStack(spacing: Spacing.xxxs) {
-        Image(systemName: "square.and.arrow.up")
-          .font(.tidexBodyLarge)
-          .foregroundColor(.tidexBlue)
-          .frame(width: 48, height: 48)
-          .tidexGlass(shape: .circle, interactive: true)
+    GlassEffectContainer(spacing: Spacing.md) {
+      HStack(spacing: Spacing.md) {
+        // Share button - emphasized with liquid glass
+        VStack(spacing: Spacing.xxxs) {
+          Image(systemName: "square.and.arrow.up")
+            .font(.tidexBodyLarge)
+            .foregroundColor(.tidexBlue)
+            .frame(width: 48, height: 48)
+            .glassEffectID("screenshotPrompt.shareButton", in: glassNamespace)
+            .tidexGlass(shape: .circle, interactive: true)
 
-        // Pointer arrow
-        Image(systemName: "arrowtriangle.up.fill")
-          .font(.system(size: 10))
-          .foregroundColor(.tidexBlue)
+          // Pointer arrow
+          Image(systemName: "arrowtriangle.up.fill")
+            .font(.system(size: 10))
+            .foregroundColor(.tidexBlue)
+        }
+
+        // Selection button - dimmed with liquid glass
+        Image(systemName: "checkmark.circle")
+          .font(.tidexHeadline)
+          .foregroundColor(.tidexTextMuted)
+          .frame(width: 40, height: 40)
+          .glassEffectID("screenshotPrompt.selectionButton", in: glassNamespace)
+          .tidexGlass(shape: .circle)
+          .opacity(0.5)
       }
-
-      // Selection button - dimmed with liquid glass
-      Image(systemName: "checkmark.circle")
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextMuted)
-        .frame(width: 40, height: 40)
-        .tidexGlass(shape: .circle)
-        .opacity(0.5)
     }
   }
 

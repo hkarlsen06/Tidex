@@ -4,6 +4,7 @@ import SwiftUI
 /// Displays payroll, total earnings, and featured shift cards
 struct DashboardView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab
@@ -27,6 +28,15 @@ struct DashboardView: View {
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+
+  /// Use fixed minimum card heights for regular Dynamic Type sizes so loading
+  /// placeholders and real content occupy the same vertical space.
+  private var usesFixedCardHeights: Bool {
+    !dynamicTypeSize.isAccessibilitySize
+  }
+
+  private let payrollSectionMinHeight: CGFloat = 89
+  private let featuredSectionMinHeight: CGFloat = 118
 
   var body: some View {
     NavigationStack {
@@ -377,10 +387,26 @@ struct DashboardView: View {
 
   @ViewBuilder
   private func animatedCardContent(data: DashboardData) -> some View {
+    let now = Date()
+    let calendar = Calendar.current
+    let payrollDayStart = calendar.startOfDay(for: data.payrollDate)
+    let payrollDayEnd = calendar.date(byAdding: .day, value: 1, to: payrollDayStart) ?? payrollDayStart
+    let isOnOrBeforePayrollDay = now < payrollDayEnd
+    let canManuallySetPayrollStatus = viewModel.isCurrentMonth && isOnOrBeforePayrollDay
+
+    let payrollMarkedReceived = viewModel.isPayrollReceivedOverrideForDisplayedMonth()
+    let effectivePayrollHasPassed: Bool = {
+      guard viewModel.isCurrentMonth else { return data.payrollHasPassed }
+      if isOnOrBeforePayrollDay {
+        return payrollMarkedReceived
+      }
+      return true
+    }()
+
     // Determine payroll label based on whether viewing current month
     let payrollLabel: String = {
       if viewModel.isCurrentMonth {
-        return data.payrollHasPassed
+        return effectivePayrollHasPassed
           ? String(localized: .dashboardPreviousPayout)
           : String(localized: .dashboardNextPayout)
       } else {
@@ -392,10 +418,7 @@ struct DashboardView: View {
     // Calculate progress through the month until payroll (matches Next.js behavior)
     // Only show for current month when payroll hasn't passed yet
     let payrollProgress: Double? = {
-      guard viewModel.isCurrentMonth && !data.payrollHasPassed else { return nil }
-
-      let now = Date()
-      let calendar = Calendar.current
+      guard viewModel.isCurrentMonth && !effectivePayrollHasPassed else { return nil }
 
       // Get start of the current month
       guard
@@ -403,9 +426,6 @@ struct DashboardView: View {
       else {
         return nil
       }
-
-      // Get start of the payroll day
-      let payrollDayStart = calendar.startOfDay(for: data.payrollDate)
 
       let totalDuration = payrollDayStart.timeIntervalSince(monthStart)
       let elapsed = now.timeIntervalSince(monthStart)
@@ -430,14 +450,56 @@ struct DashboardView: View {
         .frame(height: 20)
 
       // Payroll Card (Previous Month relative to displayed month)
-      PayrollCard(
-        payrollDate: data.payrollDate,
-        label: payrollLabel,
-        gross: data.previousMonthGross,
-        net: data.previousMonthNet,
-        tax: data.previousMonthTax,
-        taxEnabled: data.previousMonthTaxEnabled,
-        progress: payrollProgress
+      Group {
+        if canManuallySetPayrollStatus {
+          Menu {
+            Section(String(localized: .dashboardPayrollStatusTitle)) {
+              Button {
+                impactHaptic.impactOccurred()
+                viewModel.markPayrollReceivedForDisplayedMonth()
+              } label: {
+                Label(
+                  String(localized: .dashboardPayrollStatusReceived),
+                  systemImage: payrollMarkedReceived ? "checkmark.circle.fill" : "circle"
+                )
+              }
+              Button {
+                impactHaptic.impactOccurred()
+                viewModel.clearPayrollReceivedOverrideForDisplayedMonth()
+              } label: {
+                Label(
+                  String(localized: .dashboardPayrollStatusNotReceived),
+                  systemImage: payrollMarkedReceived ? "circle" : "checkmark.circle.fill"
+                )
+              }
+            }
+          } label: {
+            PayrollCard(
+              payrollDate: data.payrollDate,
+              label: payrollLabel,
+              gross: data.previousMonthGross,
+              net: data.previousMonthNet,
+              tax: data.previousMonthTax,
+              taxEnabled: data.previousMonthTaxEnabled,
+              progress: payrollProgress
+            )
+          }
+          .menuIndicator(.hidden)
+        } else {
+          PayrollCard(
+            payrollDate: data.payrollDate,
+            label: payrollLabel,
+            gross: data.previousMonthGross,
+            net: data.previousMonthNet,
+            tax: data.previousMonthTax,
+            taxEnabled: data.previousMonthTaxEnabled,
+            progress: payrollProgress
+          )
+        }
+      }
+      .frame(
+        minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
+        alignment: .top
       )
 
       // Total Card (Displayed Month) - THE ANCHOR
@@ -453,8 +515,14 @@ struct DashboardView: View {
         taxEnabled: data.currentMonthTaxEnabled
       )
 
-      // Featured Shift Card - fixed height container to prevent layout shift
-      featuredShiftSection(data: data)
+      // Featured Shift Card - exact height on regular Dynamic Type to avoid
+      // skeleton/content vertical recentering during the loading transition.
+      if usesFixedCardHeights {
+        featuredShiftSection(data: data)
+          .frame(height: featuredSectionMinHeight, alignment: .top)
+      } else {
+        featuredShiftSection(data: data)
+      }
     }
   }
 
@@ -518,6 +586,10 @@ struct DashboardView: View {
               taxEnabled: false,
               isLoading: true
             )
+            .frame(
+              minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
+              alignment: .top
+            )
 
             // Total Card skeleton
             TotalCard(
@@ -533,7 +605,12 @@ struct DashboardView: View {
             )
 
             // Featured Shift Card skeleton
-            EmptyShiftCard(isLoading: true)
+            if usesFixedCardHeights {
+              EmptyShiftCard(isLoading: true)
+                .frame(height: featuredSectionMinHeight, alignment: .top)
+            } else {
+              EmptyShiftCard(isLoading: true)
+            }
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
           .padding(.horizontal, Spacing.md)

@@ -280,6 +280,10 @@ private struct SharedShiftsDetailView: View {
   @State private var showProfile = false
   @State private var shouldNavigateBack = false
 
+  private var isIPhone: Bool {
+    UIDevice.current.userInterfaceIdiom == .phone
+  }
+
   var body: some View {
     ZStack {
       Color.tidexBackground
@@ -296,7 +300,7 @@ private struct SharedShiftsDetailView: View {
         isSuperimposing: viewModel.isSuperimposing,
         userHoursByDate: viewModel.isSuperimposing ? viewModel.userHoursByDate : nil
       )
-      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
       .frame(maxWidth: .infinity)
     }
     .navigationBarTitleDisplayMode(.inline)

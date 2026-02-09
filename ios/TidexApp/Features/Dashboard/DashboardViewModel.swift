@@ -506,6 +506,27 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     isLoading = true
   }
 
+  /// Returns whether payroll has been manually marked as received for the displayed month.
+  func isPayrollReceivedOverrideForDisplayedMonth() -> Bool {
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth() else { return false }
+    return UserDefaults.standard.bool(forKey: key)
+  }
+
+  /// Marks payroll as received for the displayed month.
+  /// This is idempotent and only stores `true`.
+  func markPayrollReceivedForDisplayedMonth() {
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth() else { return }
+    UserDefaults.standard.set(true, forKey: key)
+    objectWillChange.send()
+  }
+
+  /// Clears the manual payroll-received override for the displayed month.
+  func clearPayrollReceivedOverrideForDisplayedMonth() {
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth() else { return }
+    UserDefaults.standard.removeObject(forKey: key)
+    objectWillChange.send()
+  }
+
   /// Reload dashboard from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
@@ -1334,6 +1355,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     isUpdatingShift = false
+  }
+
+  // MARK: - Payroll Override Helpers
+
+  private func payrollReceivedOverrideKeyForDisplayedMonth() -> String? {
+    guard let userId = cachedUserId, !userId.isEmpty else { return nil }
+    return "dashboard.payroll.received.\(userId).\(displayYearMonthKey)"
+  }
+
+  private var displayYearMonthKey: String {
+    String(format: "%04d-%02d", displayYear, displayMonth)
   }
 
   // MARK: - Helper Methods

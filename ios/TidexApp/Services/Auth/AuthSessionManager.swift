@@ -54,9 +54,11 @@ final class AuthSessionManager: ObservableObject {
   /// 3. Proactively refreshes if the token is close to expiry
   /// 4. Stores the token in shared keychain for widget/watch access
   ///
+  /// - Parameter allowProactiveRefresh: When false, skips the pre-expiry refresh optimization.
+  ///   Useful during launch where fastest possible handoff is preferred.
   /// - Returns: A valid session with a fresh access token
   /// - Throws: Auth errors if session cannot be obtained or refreshed
-  func getSession() async throws -> Session {
+  func getSession(allowProactiveRefresh: Bool = true) async throws -> Session {
     // If a refresh is already in progress, wait for it with timeout
     if let existingTask = refreshTask {
       logger.debug("Refresh in progress, waiting for existing task...")
@@ -73,7 +75,7 @@ final class AuthSessionManager: ObservableObject {
     let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
     let timeUntilExpiry = expiresAt.timeIntervalSinceNow
 
-    if timeUntilExpiry < refreshBuffer {
+    if allowProactiveRefresh && timeUntilExpiry < refreshBuffer {
       logger.info("Token expires in \(timeUntilExpiry)s, proactively refreshing...")
       return try await performRefresh()
     }
@@ -87,9 +89,9 @@ final class AuthSessionManager: ObservableObject {
   /// Get session if available, returning nil instead of throwing on error.
   ///
   /// Useful for optional session checks where authentication errors should be handled gracefully.
-  func getSessionIfAvailable() async -> Session? {
+  func getSessionIfAvailable(allowProactiveRefresh: Bool = true) async -> Session? {
     do {
-      return try await getSession()
+      return try await getSession(allowProactiveRefresh: allowProactiveRefresh)
     } catch {
       logger.debug("No session available: \(error.localizedDescription)")
       return nil

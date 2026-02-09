@@ -7,8 +7,8 @@ private let logoGradientColors = [
   Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255),  // #9B4DCA - magenta (bottom)
 ]
 
-/// Tidex "T" logo shape - exact path from short-logo-gradient.svg
-private struct TidexLogoShape: Shape {
+/// Tidex short logo shape - exact path from short-logo-gradient.svg
+struct TidexLogoShape: Shape {
   func path(in rect: CGRect) -> Path {
     var path = Path()
 

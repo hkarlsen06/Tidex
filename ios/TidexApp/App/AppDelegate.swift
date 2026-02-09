@@ -68,6 +68,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Apple recommends activating WCSession early in launch
     WatchConnectivityManager.shared.activateSession()
 
+    // Prewarm coordinator so auth listener starts before RootContent is created.
+    _ = AppCoordinator.shared
+
     // Trivial async system call
     application.registerForRemoteNotifications()
 

@@ -655,7 +655,7 @@ struct SettingsMenuItem: View {
           )
 
         // Title and description
-        VStack(alignment: .leading, spacing: Spacing.xxxs) {
+        VStack(alignment: .leading, spacing: 0) {
           Text(title)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
@@ -664,6 +664,7 @@ struct SettingsMenuItem: View {
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
             .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
         }
 
         Spacer()
@@ -676,6 +677,7 @@ struct SettingsMenuItem: View {
       .padding(.vertical, Spacing.xxxs)
       .frame(minHeight: 56)
     }
+    .buttonStyle(.plain)
   }
 }
 

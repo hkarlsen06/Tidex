@@ -29,8 +29,12 @@ struct PayrollCard: View {
     taxEnabled && (tax ?? 0) > 0
   }
 
-  private var hasPayout: Bool {
-    !isLoading && gross > 0
+  private var hasPayoutData: Bool {
+    gross > 0
+  }
+
+  private var showPayout: Bool {
+    !isLoading && hasPayoutData
   }
 
   // MARK: - Body
@@ -42,7 +46,7 @@ struct PayrollCard: View {
   }
 
   var body: some View {
-    ShiftCardContentLayout(centerTrailing: hasPayout && !showBreakdown) {
+    ShiftCardContentLayout(centerTrailing: !showBreakdown) {
       // Row 1: Label (leads with purpose, matches shift card title size)
       Text(label)
         .font(.tidexBodyMedium)
@@ -85,7 +89,7 @@ struct PayrollCard: View {
       }
     } trailingTop: {
       // Right side: amount
-      if hasPayout {
+      if showPayout {
         let primaryAmount = taxEnabled ? (net ?? gross) : gross
         CurrencyCountUpText(
           amount: primaryAmount,
@@ -97,13 +101,20 @@ struct PayrollCard: View {
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
       } else {
-        RoundedRectangle(cornerRadius: CornerRadius.xs)
-          .fill(Color.tidexTextMuted.opacity(0.3))
-          .frame(width: 100, height: 20)
+        ZStack {
+          Text("00 000")
+            .font(.tidexTitle)
+            .tracking(-0.5)
+            .opacity(0)
+
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
+            .fill(Color.tidexTextMuted.opacity(0.3))
+            .frame(width: 112, height: 24)
+        }
       }
     } trailingBottom: {
       // Breakdown (gross - tax) when tax enabled
-      if hasPayout && showBreakdown {
+      if showPayout && showBreakdown {
         HStack(spacing: Spacing.xxs) {
           Text(formatPlainAmount(gross))
             .contentTransition(.numericText(value: gross))
@@ -115,10 +126,16 @@ struct PayrollCard: View {
         .foregroundColor(.tidexTextMuted)
         .animation(.spring(duration: 0.8, bounce: 0), value: gross)
         .animation(.spring(duration: 0.8, bounce: 0), value: tax)
-      } else if !hasPayout {
-        RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .fill(Color.tidexTextMuted.opacity(0.2))
-          .frame(width: 70, height: 12)
+      } else if !showPayout {
+        ZStack {
+          Text("00 000 − 00 000")
+            .font(.tidexSubheadline)
+            .opacity(0)
+
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
+            .fill(Color.tidexTextMuted.opacity(0.2))
+            .frame(width: 84, height: 17)
+        }
       }
     }
     .padding(.horizontal, Spacing.mlg)

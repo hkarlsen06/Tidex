@@ -168,7 +168,7 @@ final class AppCoordinator: ObservableObject {
 
   /// Timeout for initial session check (in nanoseconds)
   /// If authStateChanges doesn't emit .initialSession within this time, we check manually
-  private static let initialSessionTimeout: UInt64 = 500_000_000  // 0.5 seconds
+  private static let initialSessionTimeout: UInt64 = 250_000_000  // 0.25 seconds
 
   /// Timeout for MFA/terms network checks (in nanoseconds)
   /// If these checks hang (slow network, unresponsive server), fall back to .unauthenticated
@@ -194,7 +194,7 @@ final class AppCoordinator: ObservableObject {
       // This can happen if there's no stored session or the SDK initialization is slow.
       if self.appState == .loading && !self.didReceiveInitialSession {
         launchLog.warning(
-          "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
+          "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.25s")
         await self.performInitialSessionCheck()
       }
     }
@@ -205,9 +205,9 @@ final class AppCoordinator: ObservableObject {
     do {
       // session is non-optional - throws if no session exists
       // Use AuthSessionManager to prevent concurrent refresh race conditions
-      _ = try await AuthSessionManager.shared.getSession()
+      let session = try await AuthSessionManager.shared.getSession(allowProactiveRefresh: false)
       // Returning user — skip MFA, go straight to terms check
-      await checkTermsAndUpdateState()
+      await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
     } catch {
       launchLog.info("[Launch] AppCoordinator → .unauthenticated (no session)")
       appState = .unauthenticated
@@ -283,7 +283,10 @@ final class AppCoordinator: ObservableObject {
               // Returning user with existing session — skip MFA (already at AAL2
               // from a previous login) and go straight to terms check.
               // MFA is only checked on fresh login (.signedIn).
-              await self.checkTermsAndUpdateState()
+              await self.checkTermsAndUpdateState(
+                initialSession: session,
+                allowProactiveRefresh: false
+              )
             }
           } else {
             self.appState = .unauthenticated
@@ -393,10 +396,20 @@ final class AppCoordinator: ObservableObject {
 
   /// Check if user needs to accept updated terms
   /// Uses cached/fallback version for immediate check, then verifies in background
-  private func checkTermsAndUpdateState() async {
+  private func checkTermsAndUpdateState(
+    initialSession: Session? = nil,
+    allowProactiveRefresh: Bool = true
+  ) async {
     do {
-      // Use AuthSessionManager to prevent concurrent refresh race conditions
-      let session = try await AuthSessionManager.shared.getSession()
+      let session: Session
+      if let initialSession {
+        session = initialSession
+      } else {
+        // Use AuthSessionManager to prevent concurrent refresh race conditions
+        session = try await AuthSessionManager.shared.getSession(
+          allowProactiveRefresh: allowProactiveRefresh
+        )
+      }
       let user = session.user
 
       // Get terms_accepted_at from user metadata
@@ -427,7 +440,9 @@ final class AppCoordinator: ObservableObject {
       }
     } catch {
       // If we can't check terms, proceed to authenticated and let backend handle it
-      if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+      if let session = await AuthSessionManager.shared.getSessionIfAvailable(
+        allowProactiveRefresh: allowProactiveRefresh
+      ) {
         loadOnboardingStateFromUser(session.user)
       }
       self.initialSyncComplete = false

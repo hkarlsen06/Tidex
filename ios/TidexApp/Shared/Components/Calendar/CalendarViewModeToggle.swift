@@ -26,81 +26,84 @@ struct CalendarViewModeToggle: View {
   }
 
   var body: some View {
-    HStack(spacing: 0) {
-      // Hours button
-      Button {
-        guard viewMode != .hours else { return }
-        toggleHaptic.impactOccurred()
-        if reduceMotion {
-          viewMode = .hours
-          viewMode.save()
-        } else {
-          withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-            viewMode = .hours
-            viewMode.save()
-          }
-        }
-      } label: {
-        HStack(spacing: Spacing.xxxs) {
-          Text("--:--")
-          Image(systemName: "clock")
-            .font(.tidexCaptionStrong)
-        }
-        .font(viewMode == .hours ? .tidexLabelStrong : .tidexSubheadline)
-        .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .frame(height: controlHeight)
-        .contentShape(Rectangle())
-        .background(
-          Group {
-            if viewMode == .hours {
-              Capsule()
-                .fill(.clear)
-                .tidexGlass(shape: .capsule, interactive: true)
-            }
-          }
-        )
-      }
-      .buttonStyle(.plain)
+    ZStack {
+      Capsule().fill(Color.tidexSurfaceSecondary)
 
-      // Money button (only if showing earnings)
-      if showMoneyOption {
+      GeometryReader { geometry in
+        let inset = Spacing.xxs
+        let innerWidth = max(0, geometry.size.width - (inset * 2))
+        let segmentCount: CGFloat = showMoneyOption ? 2 : 1
+        let segmentWidth = innerWidth / segmentCount
+        let selectedIndex: CGFloat = viewMode == .money && showMoneyOption ? 1 : 0
+
+        Capsule()
+          .tidexGlass(shape: .capsule, interactive: true)
+          .frame(width: segmentWidth, height: controlHeight)
+          .offset(x: inset + (selectedIndex * segmentWidth), y: inset)
+          .animation(
+            reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8),
+            value: selectedIndex
+          )
+      }
+
+      HStack(spacing: 0) {
+        // Hours button
         Button {
-          guard viewMode != .money else { return }
+          guard viewMode != .hours else { return }
           toggleHaptic.impactOccurred()
           if reduceMotion {
-            viewMode = .money
+            viewMode = .hours
             viewMode.save()
           } else {
             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-              viewMode = .money
+              viewMode = .hours
               viewMode.save()
             }
           }
         } label: {
-          Text("---- \(currency)")
-            .font(viewMode == .money ? .tidexLabelStrong : .tidexSubheadline)
-            .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .frame(height: controlHeight)
-            .contentShape(Rectangle())
-            .background(
-              Group {
-                if viewMode == .money {
-                  Capsule()
-                    .fill(.clear)
-                    .tidexGlass(shape: .capsule, interactive: true)
-                }
-              }
-            )
+          HStack(spacing: Spacing.xxxs) {
+            Text("--:--")
+            Image(systemName: "clock")
+              .font(.tidexCaptionStrong)
+          }
+          .font(viewMode == .hours ? .tidexLabelStrong : .tidexSubheadline)
+          .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.sm)
+          .frame(height: controlHeight)
+          .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+
+        // Money button (only if showing earnings)
+        if showMoneyOption {
+          Button {
+            guard viewMode != .money else { return }
+            toggleHaptic.impactOccurred()
+            if reduceMotion {
+              viewMode = .money
+              viewMode.save()
+            } else {
+              withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                viewMode = .money
+                viewMode.save()
+              }
+            }
+          } label: {
+            Text("---- \(currency)")
+              .font(viewMode == .money ? .tidexLabelStrong : .tidexSubheadline)
+              .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, Spacing.sm)
+              .frame(height: controlHeight)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+        }
       }
+      .padding(Spacing.xxs)
     }
-    .padding(Spacing.xxs)
-    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+    .frame(height: controlHeight + (Spacing.xxs * 2))
     .onAppear {
       toggleHaptic.prepare()
     }

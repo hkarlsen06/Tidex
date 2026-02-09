@@ -123,15 +123,11 @@ final class StatsService: ObservableObject {
         settings: settings
       )
 
-      // Build excluded IDs for conflicting shifts (lower-earning overlapping shifts)
-      let currentExcludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: currentMonthShifts)
-      let previousExcludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: previousMonthShifts)
-
-      // Filter out excluded shifts for totals calculations
-      let currentMonthIncluded = currentMonthShifts.filter { !currentExcludedIds.contains($0.id) }
-      let previousMonthIncluded = previousMonthShifts.filter {
-        !previousExcludedIds.contains($0.id)
-      }
+      // Partition shifts once with centralized conflict exclusion
+      let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)
+      let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)
+      let currentMonthIncluded = currentMonthPartition.includedShifts
+      let previousMonthIncluded = previousMonthPartition.includedShifts
 
       // Compute all shifts for the year (for employment calculation)
       // We need paidHours for each shift, so we compute them month by month
@@ -155,16 +151,18 @@ final class StatsService: ObservableObject {
         fullYearShifts.append(contentsOf: computedShifts)
       }
 
-      // Get totals using PayrollEngine (using filtered shifts that exclude conflicts)
+      // Get totals using PayrollEngine with centralized exclusion IDs
       let halfTaxMonth = settings.half_tax_month
       let currentTotals = PayrollEngine.summarizeShiftTotals(
-        shifts: currentMonthIncluded,
+        shifts: currentMonthShifts,
+        excludedShiftIds: currentMonthPartition.analysis.excludedIds,
         halfTaxMonth: halfTaxMonth,
         earningsMonth: currentYM.month,
         now: now
       )
       let previousTotals = PayrollEngine.summarizeShiftTotals(
-        shifts: previousMonthIncluded,
+        shifts: previousMonthShifts,
+        excludedShiftIds: previousMonthPartition.analysis.excludedIds,
         halfTaxMonth: halfTaxMonth,
         earningsMonth: previousYM.month,
         now: now
@@ -256,9 +254,8 @@ final class StatsService: ObservableObject {
         snapshots: snapshots
       )
 
-      // Filter fullYearShifts for earnings calculations (exclude conflicting shifts)
-      let fullYearExcludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: fullYearShifts)
-      let fullYearIncluded = fullYearShifts.filter { !fullYearExcludedIds.contains($0.id) }
+      // Filter full year shifts through centralized conflict exclusion
+      let fullYearIncluded = ConflictExclusion.partition(shifts: fullYearShifts).includedShifts
 
       // Build yearly income data (monthly breakdown for the focus year, excluding conflicts)
       let yearlyIncomeData = buildYearlyIncomeData(
@@ -293,7 +290,7 @@ final class StatsService: ObservableObject {
 
       stats = statsData
       logger.info(
-        "Computed stats: \(currentMonthShifts.count) shifts (\(currentExcludedIds.count) excluded), \(Int(currentHours))h, \(Int(currentTotals.gross)) gross"
+        "Computed stats: \(currentMonthShifts.count) shifts (\(currentMonthPartition.analysis.excludedIds.count) excluded), \(Int(currentHours))h, \(Int(currentTotals.gross)) gross"
       )
 
       return statsData
