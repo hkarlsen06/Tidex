@@ -115,6 +115,12 @@ struct FeaturedShiftCard: View {
           .foregroundColor(.tidexTextMuted)
           .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
           .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
+        } else {
+          // Reserve identical second-row height so skeleton and loaded states
+          // stay vertically stable even when no breakdown is shown.
+          Text("00 000 − 00 000")
+            .font(.tidexSubheadline)
+            .opacity(0)
         }
       }
       .padding(.horizontal, Spacing.mlg)

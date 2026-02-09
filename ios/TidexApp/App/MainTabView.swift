@@ -49,10 +49,16 @@ struct MainTabView: View {
 
   // Haptic feedback for toggle
   private let selectionHaptic = UISelectionFeedbackGenerator()
+  // Temporary investigation switch; keep false for docs-aligned glass behavior.
+  private let disableHeavyCompositingForHangInvestigation = false
 
   // iPad detection - tab bar is at top on iPad, so month picker doesn't need extra bottom padding
   private var isIPad: Bool {
     UIDevice.current.userInterfaceIdiom == .pad
+  }
+
+  private var shouldReduceEffects: Bool {
+    reduceMotion || disableHeavyCompositingForHangInvestigation
   }
 
   enum Tab: String, CaseIterable {
@@ -93,7 +99,11 @@ struct MainTabView: View {
         selectionHaptic.selectionChanged()
 
         if newTab == selectedTab {
-          if newTab == .sharing {
+          if newTab == .add {
+            // Add tab - reset form state
+            NotificationCenter.default.post(
+              name: .tabReselected, object: nil, userInfo: ["tab": newTab])
+          } else if newTab == .sharing {
             // Sharing tab - keep existing behavior (deselect sharer)
             NotificationCenter.default.post(
               name: .tabReselected, object: nil, userInfo: ["tab": newTab])
@@ -183,17 +193,20 @@ struct MainTabView: View {
           }
         }
         .animation(
-          reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: selectedTab
+          shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+          value: selectedTab
         )
         .animation(
-          reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+          shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
           value: shouldShowMonthPicker
         )
         .animation(
-          reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: showListView)
+          shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+          value: showListView
+        )
       }
       .animation(
-        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+        shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
         value: impersonationManager.isImpersonating)
 
       // Celebration overlay - above everything including tab bar and month picker
@@ -276,100 +289,116 @@ struct MainTabView: View {
 
   @ViewBuilder
   private var sharedMonthPickerOverlay: some View {
-    HStack(spacing: Spacing.xs) {
-      // Wagey button - only on Home tab
-      if selectedTab == .home {
-        Button {
-          Haptics.play(.light)
-          showWageySheet = true
-        } label: {
-          Image(systemName: "sparkles")
-            .font(.tidexTitle2)
-            .foregroundColor(.tidexBlue)
-            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-        .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-      }
-
-      // View mode toggle button - Shifts tab or Friends tab when viewing a friend
-      if selectedTab == .shifts || (selectedTab == .sharing && sharingHasSelectedSharer) {
-        Button {
-          selectionHaptic.selectionChanged()
-          showListView.toggle()
-        } label: {
-          Image(systemName: showListView ? "calendar" : "list.bullet")
-            .font(.tidexButton)
-            .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexBlue)
-            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .contentTransition(.symbolEffect(.replace))
-        .tidexGlass(
-          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          tint: monthContext.hasConflictsInMonth ? Color.tidexWarning.opacity(0.3) : nil
-        )
-        .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        .animation(
-          reduceMotion ? nil : .easeInOut(duration: 0.2), value: monthContext.hasConflictsInMonth)
-      }
-
-      // Month picker
-      AnimatedMonthHeader(
-        monthName: monthContext.displayMonthName,
-        year: monthContext.displayYear,
-        phase: transitionPhase,
-        config: .default,
-        onPrevious: {
-          AppearanceTracker.shared.reset()
-          monthContext.goToPreviousMonth()
-        },
-        onNext: {
-          AppearanceTracker.shared.reset()
-          monthContext.goToNextMonth()
-        },
-        onNavigateToMonth: { year, month in
-          AppearanceTracker.shared.reset()
-          monthContext.navigateTo(year: year, month: month)
-        },
-        isLoading: false
-      )
-      .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
-      .frame(height: MonthPickerLayout.height)
-      .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius), interactive: true)
-
-      // Add button - only on Add tab
-      if selectedTab == .add {
-        Button {
-          selectionHaptic.selectionChanged()
-          addShiftCoordinator.triggerAdd()
-        } label: {
-          Group {
-            if addShiftCoordinator.isLoading {
-              ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(0.9)
-            } else {
-              Image(systemName: "plus")
-                .font(.tidexHeadline)
-                .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
-            }
+    GlassEffectContainer(spacing: Spacing.xs) {
+      HStack(spacing: Spacing.xs) {
+        // Wagey button - only on Home tab
+        if selectedTab == .home {
+          Button {
+            Haptics.play(.light)
+            showWageySheet = true
+          } label: {
+            Image(systemName: "sparkles")
+              .font(.tidexTitle2)
+              .foregroundColor(.tidexBlue)
+              .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+              .contentShape(Rectangle())
           }
-          .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-          .contentShape(Rectangle())
+          .buttonStyle(.plain)
+          .tidexGlass(
+            shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+            interactive: true,
+            disabled: disableHeavyCompositingForHangInvestigation
+          )
+          .transition(.opacity)
         }
-        .buttonStyle(.plain)
-        .disabled(!addShiftCoordinator.canSubmit || addShiftCoordinator.isLoading)
+
+        // View mode toggle button - Shifts tab or Friends tab when viewing a friend
+        if selectedTab == .shifts || (selectedTab == .sharing && sharingHasSelectedSharer) {
+          Button {
+            selectionHaptic.selectionChanged()
+            showListView.toggle()
+          } label: {
+            Image(systemName: showListView ? "calendar" : "list.bullet")
+              .font(.tidexButton)
+              .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexBlue)
+              .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .contentTransition(.symbolEffect(.replace))
+          .tidexGlass(
+            shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+            tint: monthContext.hasConflictsInMonth ? Color.tidexWarning.opacity(0.3) : nil,
+            interactive: true,
+            disabled: disableHeavyCompositingForHangInvestigation
+          )
+          .transition(.opacity)
+          .animation(
+            shouldReduceEffects ? nil : .easeInOut(duration: 0.2),
+            value: monthContext.hasConflictsInMonth
+          )
+        }
+
+        // Month picker
+        AnimatedMonthHeader(
+          monthName: monthContext.displayMonthName,
+          year: monthContext.displayYear,
+          phase: transitionPhase,
+          config: .default,
+          onPrevious: {
+            AppearanceTracker.shared.reset()
+            monthContext.goToPreviousMonth()
+          },
+          onNext: {
+            AppearanceTracker.shared.reset()
+            monthContext.goToNextMonth()
+          },
+          onNavigateToMonth: { year, month in
+            AppearanceTracker.shared.reset()
+            monthContext.navigateTo(year: year, month: month)
+          },
+          isLoading: false
+        )
+        .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
+        .frame(height: MonthPickerLayout.height)
         .tidexGlass(
           shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          tint: addShiftCoordinator.canSubmit ? Color.tidexBlue.opacity(0.2) : nil
+          interactive: true,
+          disabled: disableHeavyCompositingForHangInvestigation
         )
-        .opacity(addShiftCoordinator.canSubmit ? 1.0 : 0.6)
-        .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        .accessibilityLabel(Text(.tabsAdd))
+
+        // Add button - only on Add tab
+        if selectedTab == .add {
+          Button {
+            selectionHaptic.selectionChanged()
+            addShiftCoordinator.triggerAdd()
+          } label: {
+            Group {
+              if addShiftCoordinator.isLoading {
+                ProgressView()
+                  .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                  .scaleEffect(0.9)
+              } else {
+                Image(systemName: "plus")
+                  .font(.tidexHeadline)
+                  .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
+              }
+            }
+            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+            .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .disabled(!addShiftCoordinator.canSubmit || addShiftCoordinator.isLoading)
+          .tidexGlass(
+            shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+            tint: addShiftCoordinator.canSubmit ? Color.tidexBlue.opacity(0.2) : nil,
+            interactive: true,
+            disabled: disableHeavyCompositingForHangInvestigation
+          )
+          .opacity(addShiftCoordinator.canSubmit ? 1.0 : 0.6)
+          .transition(.opacity)
+          .accessibilityLabel(Text(.tabsAdd))
+        }
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -382,7 +411,7 @@ struct MainTabView: View {
   }
 
   private var monthPickerTransition: AnyTransition {
-    reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity)
+    shouldReduceEffects ? .opacity : .move(edge: .bottom).combined(with: .opacity)
   }
 
   /// Whether this tab has scrollable list content that should scroll-to-top before navigating to current month

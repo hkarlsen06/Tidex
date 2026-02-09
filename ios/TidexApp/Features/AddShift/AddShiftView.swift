@@ -13,6 +13,11 @@ struct AddShiftView: View {
   @State private var tabTransitionOffset: CGFloat = 0
   @State private var tabTransitionOpacity: Double = 1
 
+  /// Whether running on iPhone-sized idiom.
+  private var isIPhone: Bool {
+    UIDevice.current.userInterfaceIdiom == .phone
+  }
+
   /// Title for current mode
   private var modeTitle: String {
     switch viewModel.mode {
@@ -49,8 +54,8 @@ struct AddShiftView: View {
                     viewModel: viewModel, scrollProxy: scrollProxy,
                     focusedTimeField: $focusedTimeField
                   )
-                  .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                  .padding(.horizontal, Spacing.md)
+                  .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+                  .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
                   .offset(y: tabTransitionOffset)
                   .opacity(tabTransitionOpacity)
 
@@ -79,8 +84,8 @@ struct AddShiftView: View {
                     viewModel: viewModel, scrollProxy: scrollProxy,
                     focusedTimeField: $focusedTimeField)
                 }
-                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                .padding(.horizontal, Spacing.md)
+                .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+                .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
                 .padding(.top, Spacing.md)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: availableHeight, alignment: .center)
@@ -122,8 +127,8 @@ struct AddShiftView: View {
             },
             onDismiss: { viewModel.error = nil }
           )
-          .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, Spacing.md)
+          .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+          .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
           .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
           .transition(.move(edge: .bottom).combined(with: .opacity))
         }
@@ -141,11 +146,9 @@ struct AddShiftView: View {
             .foregroundColor(.tidexTextPrimary)
         }
         ToolbarItem(placement: .topBarTrailing) {
-          UserMenuButton(
-            displayName: coordinator.userDisplayName,
-            avatarUrl: coordinator.userAvatarUrl
-          )
+          AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
         }
+        .sharedBackgroundVisibility(.hidden)
       }
       .overlay(alignment: .bottomTrailing) {
         if isKeyboardVisible {
@@ -205,6 +208,13 @@ struct AddShiftView: View {
           viewModel.onUpgradeComplete()
         }
       )
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+      guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
+        tab == .add, viewModel.hasContent
+      else { return }
+      focusedTimeField = nil
+      viewModel.startFresh()
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
     { notification in
@@ -273,15 +283,7 @@ private struct SingleShiftContent: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      AddShiftCalendarView(
-        viewModel: viewModel,
-        onReset: {
-          viewModel.startFresh()
-          if focusedTimeField != nil {
-            focusedTimeField = nil
-          }
-        }
-      )
+      AddShiftCalendarView(viewModel: viewModel)
 
       TimeRangePicker(
         startTime: $viewModel.startTime,
@@ -328,18 +330,76 @@ private struct RecurringShiftContent: View {
         }
       )
 
-      RecurringCalendarView(
-        viewModel: viewModel,
-        onReset: {
-          viewModel.startFresh()
-          if focusedTimeField != nil {
-            focusedTimeField = nil
-          }
-        }
-      )
+      RecurringCalendarView(viewModel: viewModel)
     }
     // Extra bottom padding to clear the month picker
     .padding(.bottom, Spacing.bottomScrollMargin)
+  }
+}
+
+// MARK: - Toolbar Totals
+
+/// Compact earnings display for the Add tab toolbar trailing position.
+/// Shows the combined monthly total (existing shifts + preview earnings).
+private struct AddShiftToolbarTotals: View {
+  let totals: CalendarHeaderTotals?
+
+  @State private var lastDisplayedPrimary: Double = 0
+  @State private var lastDisplayedSecondary: Double = 0
+
+  var body: some View {
+    if let totals {
+      if let secondary = totals.secondary {
+        VStack(alignment: .trailing, spacing: Spacing.micro) {
+          animatedAmount(
+            totals.primary,
+            lastDisplayed: lastDisplayedPrimary,
+            onUpdate: { lastDisplayedPrimary = $0 }
+          )
+          .font(.tidexHeadline)
+          .foregroundColor(.tidexTextPrimary)
+
+          animatedAmount(
+            secondary,
+            lastDisplayed: lastDisplayedSecondary,
+            onUpdate: { lastDisplayedSecondary = $0 }
+          )
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+        }
+      } else if let primary = totals.primary {
+        animatedAmount(
+          primary,
+          lastDisplayed: lastDisplayedPrimary,
+          onUpdate: { lastDisplayedPrimary = $0 }
+        )
+        .font(.tidexHeadline)
+        .foregroundColor(.tidexTextPrimary)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func animatedAmount(
+    _ amount: Double?,
+    lastDisplayed: Double,
+    onUpdate: @escaping (Double) -> Void
+  ) -> some View {
+    if let amount, amount > 0 {
+      CurrencyCountUpText(
+        amount: amount,
+        animateOnAppear: false,
+        animateFrom: lastDisplayed > 0 ? lastDisplayed : nil
+      )
+      .onChange(of: amount) { _, newValue in
+        onUpdate(newValue)
+      }
+      .onAppear {
+        if lastDisplayed == 0 {
+          onUpdate(amount)
+        }
+      }
+    }
   }
 }
 

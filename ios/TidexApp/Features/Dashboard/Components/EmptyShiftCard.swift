@@ -13,24 +13,54 @@ struct EmptyShiftCard: View {
   var body: some View {
     VStack(spacing: Spacing.xs) {
       // Main card content
-      ShiftCardContentLayout(rowSpacing: 8, centerTrailing: true) {
+      ShiftCardContentLayout(rowSpacing: 4, centerTrailing: true) {
         // Placeholder day name and date
-        RoundedRectangle(cornerRadius: 5)
-          .fill(Color.tidexTextMuted.opacity(0.3))
-          .frame(width: 140, height: 16)
+        ZStack(alignment: .leading) {
+          Text("Monday · 31 Dec")
+            .font(.tidexBodyMedium)
+            .opacity(0)
+
+          RoundedRectangle(cornerRadius: 5)
+            .fill(Color.tidexTextMuted.opacity(0.3))
+            .frame(width: 140, height: 20)
+        }
       } leadingBottom: {
         // Placeholder time range
-        RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .fill(Color.tidexTextMuted.opacity(0.2))
-          .frame(width: 100, height: 12)
+        ZStack(alignment: .leading) {
+          HStack(spacing: Spacing.xxs) {
+            Image(systemName: "clock")
+              .font(.tidexSubheadline)
+              .opacity(0)
+            Text("00:00 - 00:00")
+              .font(.tidexSubheadline)
+              .opacity(0)
+          }
+
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
+            .fill(Color.tidexTextMuted.opacity(0.2))
+            .frame(width: 100, height: 17)
+        }
       } trailingTop: {
-        RoundedRectangle(cornerRadius: CornerRadius.xs)
-          .fill(Color.tidexTextMuted.opacity(0.3))
-          .frame(width: 80, height: 20)
+        ZStack {
+          Text("00 000")
+            .font(.tidexTitle)
+            .tracking(-0.5)
+            .opacity(0)
+
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
+            .fill(Color.tidexTextMuted.opacity(0.3))
+            .frame(width: 96, height: 24)
+        }
       } trailingBottom: {
-        RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .fill(Color.tidexTextMuted.opacity(0.2))
-          .frame(width: 60, height: 12)
+        ZStack(alignment: .trailing) {
+          Text("00 000 − 00 000")
+            .font(.tidexSubheadline)
+            .opacity(0)
+
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
+            .fill(Color.tidexTextMuted.opacity(0.2))
+            .frame(width: 72, height: 17)
+        }
       }
       .padding(.horizontal, Spacing.mlg)
       .padding(.vertical, Spacing.lg)

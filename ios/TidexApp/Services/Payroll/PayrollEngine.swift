@@ -212,12 +212,15 @@ struct PayrollEngine {
   /// Summarize shift totals with half-tax support and conflict exclusion
   /// - Parameters:
   ///   - shifts: All computed shifts for the month
+  ///   - excludedShiftIds: Optional precomputed excluded IDs from ConflictExclusion.analyze.
+  ///     When nil, exclusions are computed automatically.
   ///   - halfTaxMonth: User's half-tax month setting (11=November, 12=December)
   ///   - earningsMonth: The month these shifts are worked in (1-12)
   ///   - now: Current date for determining completed shifts
   /// - Returns: Aggregated totals with half-tax applied
   static func summarizeShiftTotals(
     shifts: [ShiftWithComputations],
+    excludedShiftIds: Set<String>? = nil,
     halfTaxMonth: Int?,
     earningsMonth: Int,
     now: Date = Date()
@@ -226,7 +229,7 @@ struct PayrollEngine {
     let payoutMonth = earningsMonth >= 12 ? 1 : earningsMonth + 1
 
     // Automatically compute excluded shifts (higher-earning conflicting shifts)
-    let excludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: shifts)
+    let excludedIds = excludedShiftIds ?? ConflictExclusion.buildExcludedShiftIds(shifts: shifts)
 
     // Filter out excluded shifts for totals calculation
     let includedShifts =

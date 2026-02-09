@@ -126,7 +126,6 @@ private struct RootContent: View {
         }
       }
     }
-    .animation(.easeInOut(duration: 0.3), value: coordinator.appState)
     .animation(.easeInOut(duration: 0.3), value: hasCompletedPreAuthOnboarding)
     .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
     .animation(.easeInOut(duration: 0.25), value: biometricService.isLocked)
@@ -166,17 +165,17 @@ struct LoadingView: View {
         Color.tidexLaunchBackground
 
         // Logo centered in full screen (ignoring safe areas) - matches storyboard centerX/centerY
-        Image("Splash")
+        Image("SplashLaunch")
           .resizable()
           .aspectRatio(contentMode: .fit)
-          .frame(width: 200, height: 200)
+          .frame(width: 150, height: 150)
           .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
 
         // Spinner positioned below the logo
         ProgressView()
           .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
           .scaleEffect(1.2)
-          .position(x: geometry.size.width / 2, y: geometry.size.height / 2 + 140)
+          .position(x: geometry.size.width / 2, y: geometry.size.height / 2 + 105)
       }
     }
     .ignoresSafeArea()

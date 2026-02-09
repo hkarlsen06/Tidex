@@ -10,6 +10,10 @@ struct SharedShiftsCalendarView: View {
   let currency: String
   let showEarnings: Bool
 
+  private var isIPhone: Bool {
+    UIDevice.current.userInterfaceIdiom == .phone
+  }
+
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
 
@@ -127,7 +131,7 @@ struct SharedShiftsCalendarView: View {
         )
       }
     }
-    .padding(.horizontal, Spacing.md)
+    .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
     .overlay(alignment: .top) {
       if isSuperimposing {
         superimposeLegend

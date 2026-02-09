@@ -63,6 +63,8 @@ struct SharedShiftsListView: View {
             )
             Spacer()
           }
+          // Offset for month picker overlay so content centers in available space
+          .padding(.bottom, MonthPickerLayout.totalBottomInset)
         }
 
         // Screenshot bubble overlay

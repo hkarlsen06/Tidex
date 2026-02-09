@@ -13,11 +13,17 @@ extension View {
     shape: TidexGlassShape,
     tint: Color? = nil,
     interactive: Bool = false,
+    disabled: Bool = false,
     fallbackOpacity: Double = 0.94
   ) -> some View {
     modifier(
       TidexGlassModifier(
-        shape: shape, tint: tint, interactive: interactive, fallbackOpacity: fallbackOpacity))
+        shape: shape,
+        tint: tint,
+        interactive: interactive,
+        disabled: disabled,
+        fallbackOpacity: fallbackOpacity
+      ))
   }
 }
 
@@ -27,6 +33,7 @@ private struct TidexGlassModifier: ViewModifier {
   let shape: TidexGlassShape
   let tint: Color?
   let interactive: Bool
+  let disabled: Bool
   let fallbackOpacity: Double
 
   private var glassEffect: Glass {
@@ -44,7 +51,7 @@ private struct TidexGlassModifier: ViewModifier {
     let fallbackBase = Color.tidexSurfacePrimary.opacity(fallbackOpacity)
     let fallbackTint = tint?.opacity(0.18) ?? .clear
 
-    if reduceTransparency {
+    if reduceTransparency || disabled {
       switch shape {
       case .rect(let cornerRadius):
         content

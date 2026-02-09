@@ -448,6 +448,48 @@ final class AddShiftViewModel: ObservableObject {
     cachedPreviewEarnings
   }
 
+  // MARK: - Toolbar Monthly Total
+
+  /// Combined monthly total (existing shifts + preview earnings) for toolbar display.
+  /// Uses `ConflictExclusion.combinedEarnings` so the "lowest gross wins" rule
+  /// is applied consistently with the rest of the app.
+  var toolbarTotals: CalendarHeaderTotals? {
+    let existingEarnings = cachedDisplayData?.existingShiftEarnings ?? [:]
+
+    // Build preview earnings map for the current mode
+    let previewByDate: [String: CalendarEarningsData] = {
+      switch mode {
+      case .single:
+        return cachedPreviewEarnings
+      case .recurring:
+        var map: [String: CalendarEarningsData] = [:]
+        for dateISO in cachedProjectedRecurringDates {
+          let weekday = weekdayFromDate(dateISO)
+          if let earnings = cachedAnchorEarnings[weekday] {
+            map[dateISO] = earnings
+          }
+        }
+        return map
+      }
+    }()
+
+    let totals = ConflictExclusion.combinedEarnings(
+      existingByDate: existingEarnings,
+      previewByDate: previewByDate,
+      conflictDates: cachedConflictDatesForCalendar
+    )
+
+    guard totals.gross > 0 else { return nil }
+
+    let primaryAmount = totals.hasTaxEnabled ? totals.net : totals.gross
+    let secondaryAmount = totals.hasTaxEnabled ? totals.gross : nil
+
+    return CalendarHeaderTotals(
+      primary: primaryAmount,
+      secondary: secondaryAmount
+    )
+  }
+
   /// Get earnings for a recurring date by looking up its anchor's earnings
   /// All dates on the same weekday share the same earnings
   func earningsForRecurringDate(_ dateISO: String) -> CalendarEarningsData? {

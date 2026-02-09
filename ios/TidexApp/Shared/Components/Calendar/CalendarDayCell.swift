@@ -102,17 +102,9 @@ struct CalendarDayCell<Content: View>: View {
 
   var body: some View {
     ZStack {
-      // Top row markers (week number on left, day number on right)
+      // Day number (top-right)
       VStack {
-        HStack(alignment: .top, spacing: 0) {
-          if let weekNum = dayInfo.weekNumber, !showOverlapIndicator {
-            Text("\(weekNum)")
-              .font(.tidexFootnote)
-              .fixedSize(horizontal: true, vertical: true)
-              .foregroundColor(.tidexTextMuted)
-              .offset(y: weekNumberTopOpticalOffset)
-          }
-
+        HStack {
           Spacer()
 
           Text("\(dayInfo.dayNumber)")
@@ -125,21 +117,6 @@ struct CalendarDayCell<Content: View>: View {
         Spacer()
       }
 
-      // Overlap indicator (top-left, replacing week number position)
-      if showOverlapIndicator {
-        VStack {
-          HStack {
-            Image(systemName: "person.2.fill")
-              .font(.tidexMicro.weight(.semibold))
-              .foregroundColor(.tidexBlue)
-              .padding(.leading, Spacing.xxs)
-              .padding(.top, 5)
-            Spacer()
-          }
-          Spacer()
-        }
-      }
-
       // Content (centered)
       contentView
     }
@@ -150,6 +127,27 @@ struct CalendarDayCell<Content: View>: View {
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(style.backgroundColor)
     )
+    // Week number (top-left) — overlay so it doesn't affect cell sizing
+    .overlay(alignment: .topLeading) {
+      if let weekNum = dayInfo.weekNumber, !showOverlapIndicator {
+        Text("\(weekNum)")
+          .font(.tidexMicro)
+          .foregroundColor(.tidexTextMuted)
+          .padding(.leading, horizontalCornerInset)
+          .padding(.top, topCornerInset)
+          .offset(y: weekNumberTopOpticalOffset)
+      }
+    }
+    // Overlap indicator (top-left, replacing week number)
+    .overlay(alignment: .topLeading) {
+      if showOverlapIndicator {
+        Image(systemName: "person.2.fill")
+          .font(.tidexMicro.weight(.semibold))
+          .foregroundColor(.tidexBlue)
+          .padding(.leading, Spacing.xxs)
+          .padding(.top, 5)
+      }
+    }
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .strokeBorder(style.borderColor, lineWidth: style.borderWidth)
@@ -199,44 +197,15 @@ struct CalendarDayCell<Content: View>: View {
       .padding(.horizontal, Spacing.xxs)
 
     case .earnings(let amount, let color):
+      let topReservedSpace: CGFloat = (showOverlapIndicator || dayInfo.weekNumber != nil) ? 22 : 18
       GeometryReader { geo in
-        let fontSize = min(geo.size.width * 0.4, geo.size.height * 0.42)
-        Text(CalendarGridHelper.formatCompactCurrency(amount))
-          .font(.system(size: fontSize, weight: .bold))
-          .foregroundColor(color)
-          .lineLimit(1)
-          .minimumScaleFactor(0.5)
-          .allowsTightening(true)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-      }
-      .padding(.top, Spacing.msm)
-      .padding(.horizontal, Spacing.xxs)
+        let availableHeight = max(geo.size.height - topReservedSpace, 0)
+        let fontSize = min(geo.size.width * 0.4, availableHeight * 0.42)
+        VStack(spacing: 0) {
+          Color.clear
+            .frame(height: topReservedSpace)
 
-    case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
-      GeometryReader { geo in
-        if earnings.hasTaxEnabled {
-          let primarySize = min(geo.size.width * 0.4, geo.size.height * 0.42)
-          let secondarySize = primarySize * 0.8
-          VStack(spacing: -1) {
-            Text(CalendarGridHelper.formatCompactCurrency(earnings.net))
-              .font(.system(size: primarySize, weight: .bold))
-              .foregroundColor(color)
-              .lineLimit(1)
-              .minimumScaleFactor(0.5)
-              .allowsTightening(true)
-              .frame(maxWidth: .infinity, alignment: .center)
-            Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
-              .font(.system(size: secondarySize, weight: .bold))
-              .foregroundColor(beforeTaxColor)
-              .lineLimit(1)
-              .minimumScaleFactor(0.5)
-              .allowsTightening(true)
-              .frame(maxWidth: .infinity, alignment: .center)
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-          let fontSize = min(geo.size.width * 0.4, geo.size.height * 0.42)
-          Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
+          Text(CalendarGridHelper.formatCompactCurrency(amount))
             .font(.system(size: fontSize, weight: .bold))
             .foregroundColor(color)
             .lineLimit(1)
@@ -244,8 +213,55 @@ struct CalendarDayCell<Content: View>: View {
             .allowsTightening(true)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .padding(.top, Spacing.msm)
+      .padding(.horizontal, Spacing.xxs)
+
+    case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
+      let topReservedSpace: CGFloat = (showOverlapIndicator || dayInfo.weekNumber != nil) ? 22 : 18
+      GeometryReader { geo in
+        let availableHeight = max(geo.size.height - topReservedSpace, 0)
+        let fontSize = min(geo.size.width * 0.4, availableHeight * 0.42)
+        if earnings.hasTaxEnabled {
+          VStack(spacing: 0) {
+            Color.clear
+              .frame(height: topReservedSpace)
+
+            VStack(spacing: -3) {
+              Text(CalendarGridHelper.formatCompactCurrency(earnings.net))
+                .font(.system(size: fontSize, weight: .bold))
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .allowsTightening(true)
+                .frame(maxWidth: .infinity, alignment: .center)
+              Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
+                .font(.system(size: fontSize, weight: .bold))
+                .foregroundColor(beforeTaxColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .allowsTightening(true)
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+          VStack(spacing: 0) {
+            Color.clear
+              .frame(height: topReservedSpace)
+
+            Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
+              .font(.system(size: fontSize, weight: .bold))
+              .foregroundColor(color)
+              .lineLimit(1)
+              .minimumScaleFactor(0.5)
+              .allowsTightening(true)
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+      }
       .padding(.horizontal, Spacing.xxs)
 
     case .starIcon(let color):

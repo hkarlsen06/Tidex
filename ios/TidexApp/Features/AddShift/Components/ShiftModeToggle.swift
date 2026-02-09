@@ -35,29 +35,33 @@ struct ShiftModeToggle: View {
         Button {
           select(modeOption)
         } label: {
-          Label(localizedTitle(for: modeOption), systemImage: iconName(for: modeOption))
+          let labelContent = Label(localizedTitle(for: modeOption), systemImage: iconName(for: modeOption))
             .labelStyle(.iconOnly)
             .font(.system(size: iconFontSize, weight: .semibold))
             .foregroundStyle(isSelected ? .white : .tidexTextSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .background {
-              if isSelected {
-                Capsule()
-                  .tidexGlass(
-                    shape: .capsule,
-                    tint: Color.tidexBlue.opacity(0.35)
-                  )
-                  .shadow(
-                    color: Color.black.opacity(shadowOpacity),
-                    radius: shadowRadius,
-                    x: 0,
-                    y: 2
-                  )
-                  .matchedGeometryEffect(id: "selection", in: namespace)
-              }
-            }
             .contentShape(Capsule())
+
+          Group {
+            if isSelected {
+              labelContent
+                .tidexGlass(
+                  shape: .capsule,
+                  tint: Color.tidexBlue.opacity(0.35),
+                  interactive: true
+                )
+                .shadow(
+                  color: Color.black.opacity(shadowOpacity),
+                  radius: shadowRadius,
+                  x: 0,
+                  y: 2
+                )
+                .matchedGeometryEffect(id: "selection", in: namespace)
+            } else {
+              labelContent
+            }
+          }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizedTitle(for: modeOption))
