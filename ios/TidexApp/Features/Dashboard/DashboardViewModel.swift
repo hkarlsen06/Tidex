@@ -89,9 +89,11 @@ private struct MonthCacheEntry {
 
   var key: String { "\(year)-\(month)" }
 
-  /// Check if cache entry is still valid (within 5 minutes)
+  /// Cache validity is managed via explicit invalidation events
+  /// (sync/reload/edit, lifecycle time changes, memory pressure).
+  /// Entries do not expire by fixed TTL.
   var isValid: Bool {
-    Date().timeIntervalSince(timestamp) < 300  // 5 minutes
+    true
   }
 
   init(year: Int, month: Int, shifts: [ShiftWithComputations], timestamp: Date) {
@@ -175,6 +177,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Memory warning observer
   private var memoryWarningObserver: NSObjectProtocol?
+  /// App lifecycle observer for foreground transitions
+  private var foregroundObserver: NSObjectProtocol?
+  /// Observer for significant time changes (midnight, timezone, DST, etc.)
+  private var significantTimeObserver: NSObjectProtocol?
 
   // MARK: - Initialization
 
@@ -210,6 +216,29 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     ) { [weak self] _ in
       Task { @MainActor in
         self?.handleMemoryWarning()
+      }
+    }
+
+    // Invalidate current-month cache when returning to foreground so time-based
+    // fields (completed shifts, next shift selection, payroll status) refresh.
+    foregroundObserver = NotificationCenter.default.addObserver(
+      forName: UIApplication.willEnterForegroundNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      Task { @MainActor in
+        self?.invalidateCurrentMonthCache(reason: "foreground")
+      }
+    }
+
+    // Invalidate on significant wall-clock changes (e.g. midnight rollover).
+    significantTimeObserver = NotificationCenter.default.addObserver(
+      forName: UIApplication.significantTimeChangeNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      Task { @MainActor in
+        self?.invalidateCurrentMonthCache(reason: "significant-time-change")
       }
     }
   }
@@ -249,6 +278,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     if let observer = memoryWarningObserver {
       NotificationCenter.default.removeObserver(observer)
     }
+    if let observer = foregroundObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    if let observer = significantTimeObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
   }
 
   // MARK: - Memory Management
@@ -259,6 +294,25 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       "⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries)")
     monthCache.removeAll()
     prefetchTasks.removeAll()
+  }
+
+  /// Invalidate cache entries for the real current month.
+  /// Keeps historical months hot while ensuring time-dependent current-month
+  /// dashboard values are recomputed on next access.
+  private func invalidateCurrentMonthCache(reason: String) {
+    let current = Date.currentYearMonth()
+    let key = "\(current.year)-\(current.month)"
+    guard monthCache.removeValue(forKey: key) != nil else { return }
+
+    // Also allow background prefetch for this key again after invalidation.
+    prefetchTasks.remove(key)
+    logger.info("♻️ Invalidated current-month cache (\(reason)): \(key)")
+
+    // If the user is viewing the invalidated month, trigger a background
+    // reload so the dashboard reflects updated time-based fields immediately.
+    if displayYear == current.year && displayMonth == current.month {
+      loadDashboardForDisplayedMonthNonBlocking()
+    }
   }
 
   /// Evict least recently used cache entries if over limit
@@ -360,11 +414,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       return
     }
 
-    // Cache miss - clear stale data and show loading state
+    // Cache miss - fetch in background while keeping the currently rendered
+    // dashboard content visible (matches Shifts tab behavior).
+    // This avoids a brief full-screen skeleton flash on first month change
+    // after cold start or after cache expiry.
     logger.info("🔄 Cache miss for \(displayKey), fetching in background...")
 
-    // Clear dashboard data so we show loading state instead of stale data
-    self.dashboardData = nil
     self.isLoading = true
 
     // Cancel any previous navigation task
@@ -507,22 +562,22 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   }
 
   /// Returns whether payroll has been manually marked as received for the displayed month.
-  func isPayrollReceivedOverrideForDisplayedMonth() -> Bool {
-    guard let key = payrollReceivedOverrideKeyForDisplayedMonth() else { return false }
+  func isPayrollReceivedOverrideForDisplayedMonth(userId: String? = nil) -> Bool {
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else { return false }
     return UserDefaults.standard.bool(forKey: key)
   }
 
   /// Marks payroll as received for the displayed month.
   /// This is idempotent and only stores `true`.
-  func markPayrollReceivedForDisplayedMonth() {
-    guard let key = payrollReceivedOverrideKeyForDisplayedMonth() else { return }
+  func markPayrollReceivedForDisplayedMonth(userId: String? = nil) {
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else { return }
     UserDefaults.standard.set(true, forKey: key)
     objectWillChange.send()
   }
 
   /// Clears the manual payroll-received override for the displayed month.
-  func clearPayrollReceivedOverrideForDisplayedMonth() {
-    guard let key = payrollReceivedOverrideKeyForDisplayedMonth() else { return }
+  func clearPayrollReceivedOverrideForDisplayedMonth(userId: String? = nil) {
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else { return }
     UserDefaults.standard.removeObject(forKey: key)
     objectWillChange.send()
   }
@@ -1359,9 +1414,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Payroll Override Helpers
 
-  private func payrollReceivedOverrideKeyForDisplayedMonth() -> String? {
-    guard let userId = cachedUserId, !userId.isEmpty else { return nil }
-    return "dashboard.payroll.received.\(userId).\(displayYearMonthKey)"
+  private func payrollReceivedOverrideKeyForDisplayedMonth(userId: String? = nil) -> String? {
+    let resolvedUserId = userId ?? cachedUserId
+    guard let resolvedUserId, !resolvedUserId.isEmpty else { return nil }
+    return "dashboard.payroll.received.\(resolvedUserId).\(displayYearMonthKey)"
   }
 
   private var displayYearMonthKey: String {

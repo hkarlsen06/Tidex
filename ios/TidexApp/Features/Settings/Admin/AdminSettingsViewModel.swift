@@ -15,10 +15,10 @@ enum AdminTab: String, CaseIterable, Identifiable {
   case notifications
   case users
   case feedback
+  case subscribers
+  case shares
   case auditLog
   case sql
-  case shares
-  case impersonation
 
   var id: String { rawValue }
 
@@ -27,10 +27,10 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case .notifications: return "Notifications"
     case .users: return "Users"
     case .feedback: return "Feedback"
+    case .subscribers: return "Subscribers"
+    case .shares: return "Shares"
     case .auditLog: return "Audit Log"
     case .sql: return "SQL"
-    case .shares: return "Shares"
-    case .impersonation: return "Impersonate"
     }
   }
 
@@ -39,10 +39,30 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case .notifications: return "bell"
     case .users: return "person.2"
     case .feedback: return "bubble.left.and.bubble.right"
+    case .subscribers: return "creditcard"
+    case .shares: return "square.and.arrow.up"
     case .auditLog: return "list.bullet.clipboard"
     case .sql: return "terminal"
-    case .shares: return "square.and.arrow.up"
-    case .impersonation: return "person.crop.circle.badge.exclamationmark"
+    }
+  }
+}
+
+enum AdminSubscriberFilter: String, CaseIterable, Identifiable {
+  case all
+  case pro
+  case max
+  case grandfathered
+  case trial
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .all: return "All"
+    case .pro: return "Pro"
+    case .max: return "Max"
+    case .grandfathered: return "Lifetime"
+    case .trial: return "Trial"
     }
   }
 }
@@ -71,6 +91,28 @@ struct AdminUsersResponse: Codable {
   let page: Int
   let perPage: Int
   let resultsArePartial: Bool
+}
+
+struct AdminSubscriberItem: Codable, Identifiable {
+  let userId: String
+  let email: String?
+  let phone: String?
+  let name: String?
+  let provider: String?
+  let productId: String?
+  let priceId: String?
+  let status: String?
+  let currentPeriodEnd: String?
+  let isGrandfathered: Bool
+  let plan: String
+
+  var id: String { userId }
+}
+
+struct AdminSubscribersResponse: Codable {
+  let success: Bool
+  let subscribers: [AdminSubscriberItem]?
+  let message: String?
 }
 
 /// Feedback item for admin view
@@ -256,6 +298,13 @@ struct FeedbackTabState {
   var responseText: String = ""
 }
 
+/// Groups related subscribers tab state
+struct SubscribersTabState {
+  var items: [AdminSubscriberItem] = []
+  var filter: AdminSubscriberFilter = .all
+  var isLoading: Bool = false
+}
+
 /// Groups related audit log tab state
 struct AuditLogTabState {
   var entries: [AuditLogEntry] = []
@@ -334,7 +383,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
   // MARK: - Common State
 
-  @Published var selectedTab: AdminTab = .users
+  @Published var selectedTab: AdminTab = .notifications
   @Published var isSuperAdmin: Bool = false
   @Published var errorMessage: String?
   @Published var isPerformingAction: Bool = false
@@ -343,6 +392,7 @@ final class AdminSettingsViewModel: ObservableObject {
   // MARK: - Grouped Tab States
 
   @Published var usersState = UsersTabState()
+  @Published var subscribersState = SubscribersTabState()
   @Published var feedbackState = FeedbackTabState()
   @Published var auditLogState = AuditLogTabState()
   @Published var sqlState = SqlTabState()
@@ -380,6 +430,20 @@ final class AdminSettingsViewModel: ObservableObject {
   var selectedUser: AdminUserItem? {
     get { usersState.selected }
     set { usersState.selected = newValue }
+  }
+
+  // Subscribers
+  var subscribers: [AdminSubscriberItem] {
+    get { subscribersState.items }
+    set { subscribersState.items = newValue }
+  }
+  var subscribersFilter: AdminSubscriberFilter {
+    get { subscribersState.filter }
+    set { subscribersState.filter = newValue }
+  }
+  var subscribersIsLoading: Bool {
+    get { subscribersState.isLoading }
+    set { subscribersState.isLoading = newValue }
   }
 
   // Feedback
@@ -618,6 +682,8 @@ final class AdminSettingsViewModel: ObservableObject {
     switch tab {
     case .users:
       await fetchUsers(page: 1, search: nil)
+    case .subscribers:
+      await fetchSubscribers()
     case .feedback:
       await fetchFeedback()
     case .auditLog:
@@ -628,8 +694,6 @@ final class AdminSettingsViewModel: ObservableObject {
       await fetchShares()
     case .notifications:
       await fetchBroadcastHistory()
-    case .impersonation:
-      break  // No initial load needed - state is managed by ImpersonationManager
     }
   }
 
@@ -733,7 +797,83 @@ final class AdminSettingsViewModel: ObservableObject {
         await fetchUsers(
           page: usersCurrentPage, search: usersSearchQuery.isEmpty ? nil : usersSearchQuery)
       } else {
-        errorMessage = response.error ?? response.message ?? "Action failed"
+        errorMessage = "Action failed"
+      }
+    } catch {
+      errorMessage = "Failed to perform action"
+    }
+
+    isPerformingAction = false
+  }
+
+  // MARK: - Subscribers Tab Methods
+
+  func setSubscribersFilter(_ filter: AdminSubscriberFilter) async {
+    subscribersFilter = filter
+    await fetchSubscribers()
+  }
+
+  func fetchSubscribers() async {
+    subscribersIsLoading = true
+
+    do {
+      var components = URLComponents(
+        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/subscribers"),
+        resolvingAgainstBaseURL: false)!
+      components.queryItems = [URLQueryItem(name: "filter", value: subscribersFilter.rawValue)]
+
+      let result: AdminSubscribersResponse = try await makeRequest(
+        url: components.url!, method: "GET")
+
+      if result.success {
+        subscribers = result.subscribers ?? []
+      } else {
+        errorMessage = "Failed to load subscribers"
+      }
+    } catch {
+      logger.error("Failed to fetch subscribers: \(error.localizedDescription)")
+      errorMessage = "Failed to load subscribers"
+    }
+
+    subscribersIsLoading = false
+  }
+
+  func toggleSubscriberGrandfathered(_ subscriber: AdminSubscriberItem) async {
+    await performSubscriberAction(
+      endpoint: "/api/admin/users/grandfathered",
+      body: [
+        "targetUserId": subscriber.userId,
+        "targetEmail": subscriber.email ?? subscriber.phone ?? "unknown",
+        "grant": !subscriber.isGrandfathered,
+      ])
+  }
+
+  func toggleSubscriberTrial(_ subscriber: AdminSubscriberItem, create: Bool, days: Int = 30) async
+  {
+    await performSubscriberAction(
+      endpoint: "/api/admin/users/trial",
+      body: [
+        "targetUserId": subscriber.userId,
+        "targetEmail": subscriber.email ?? subscriber.phone ?? "unknown",
+        "action": create ? "create" : "revoke",
+        "durationDays": days,
+      ])
+  }
+
+  private func performSubscriberAction(endpoint: String, body: [String: Any]) async {
+    guard !isPerformingAction else { return }
+    isPerformingAction = true
+    clearMessages()
+
+    do {
+      let response: AdminActionResponse = try await makeRequest(
+        url: APIConfiguration.webAppBaseURL.appendingPathComponent(endpoint), method: "POST",
+        body: body)
+      if response.success {
+        Haptics.play(.success)
+        await fetchSubscribers()
+      } else {
+        errorMessage = "Action failed"
       }
     } catch {
       errorMessage = "Failed to perform action"
@@ -777,7 +917,7 @@ final class AdminSettingsViewModel: ObservableObject {
         feedbackResponse = ""
         await fetchFeedback()
       } else {
-        errorMessage = result.message ?? "Failed to send response"
+        errorMessage = "Failed to send response"
       }
     } catch {
       errorMessage = "Failed to send response"
@@ -827,7 +967,7 @@ final class AdminSettingsViewModel: ObservableObject {
         sqlRowCount = result.rowCount ?? 0
         sqlExecutionTime = result.executionTimeMs ?? 0
       } else {
-        sqlError = result.message ?? "Query failed"
+        sqlError = "Query failed"
       }
     } catch {
       sqlError = "Failed to execute query"
@@ -885,7 +1025,7 @@ final class AdminSettingsViewModel: ObservableObject {
         Haptics.play(.success)
         await fetchShares()
       } else {
-        errorMessage = result.message ?? "Failed to delete share"
+        errorMessage = "Failed to delete share"
       }
     } catch {
       errorMessage = "Failed to delete share"
@@ -925,24 +1065,12 @@ final class AdminSettingsViewModel: ObservableObject {
         isShowingCreateShare = false
         await fetchShares()
       } else {
-        errorMessage = result.message ?? "Failed to create share"
+        errorMessage = "Failed to create share"
       }
-    } catch let error as AdminError {
-      // Parse error message from server response if available
-      if case .serverError(_, let message) = error {
-        // Try to extract the message from JSON response
-        if let data = message.data(using: .utf8),
-          let json = try? JSONDecoder().decode(AdminActionResponse.self, from: data)
-        {
-          errorMessage = json.message ?? "Failed to create share"
-        } else {
-          errorMessage = error.localizedDescription
-        }
-      } else {
-        errorMessage = error.localizedDescription
-      }
+    } catch is AdminError {
+      errorMessage = "Failed to create share"
     } catch {
-      errorMessage = "Failed to create share: \(error.localizedDescription)"
+      errorMessage = "Failed to create share"
     }
 
     isCreatingShare = false
@@ -1116,6 +1244,18 @@ final class AdminSettingsViewModel: ObservableObject {
   }
 
   func sendNotification() async {
+    let draftBeforeSend = NotificationFormDraft(
+      title: notificationTitle,
+      titleNo: notificationTitleNo,
+      body: notificationBody,
+      bodyNo: notificationBodyNo,
+      deeplink: notificationDeeplink,
+      deeplinkNo: notificationDeeplinkNo,
+      target: notificationTarget,
+      selectedUsers: notificationSelectedUsers,
+      userSearch: notificationUserSearch
+    )
+
     // Require both English and Norwegian title/body
     guard
       !notificationTitle.isEmpty && !notificationTitleNo.isEmpty && !notificationBody.isEmpty
@@ -1161,16 +1301,81 @@ final class AdminSettingsViewModel: ObservableObject {
 
       if result.success {
         Haptics.play(.success)
-        // Don't clear fields on success - user may want to send similar notification
+        // Keep the compose form intact after send so admins can test on themselves first
+        // and immediately resend without re-entering fields.
         await fetchBroadcastHistory()
+
+        if shouldRestoreNotificationFormFromDefaults(
+          current: notificationsState,
+          draft: draftBeforeSend
+        ) {
+          restoreNotificationForm(from: draftBeforeSend)
+        }
       } else {
-        errorMessage = result.message ?? "Failed to send notification"
+        errorMessage = "Failed to send notification"
       }
     } catch {
       errorMessage = "Failed to send notification"
     }
 
     isSendingNotification = false
+  }
+
+  private struct NotificationFormDraft {
+    let title: String
+    let titleNo: String
+    let body: String
+    let bodyNo: String
+    let deeplink: String
+    let deeplinkNo: String
+    let target: String
+    let selectedUsers: [AdminUserItem]
+    let userSearch: String
+
+    var hasMeaningfulInput: Bool {
+      !title.isEmpty
+        || !titleNo.isEmpty
+        || !body.isEmpty
+        || !bodyNo.isEmpty
+        || deeplink != "tidex://"
+        || !deeplinkNo.isEmpty
+        || target != "all"
+        || !selectedUsers.isEmpty
+        || !userSearch.isEmpty
+    }
+  }
+
+  private func shouldRestoreNotificationFormFromDefaults(
+    current: NotificationsTabState,
+    draft: NotificationFormDraft
+  ) -> Bool {
+    guard draft.hasMeaningfulInput else { return false }
+
+    return current.title.isEmpty
+      && current.titleNo.isEmpty
+      && current.body.isEmpty
+      && current.bodyNo.isEmpty
+      && (current.deeplink.isEmpty || current.deeplink == "tidex://")
+      && current.deeplinkNo.isEmpty
+      && current.target == "all"
+      && current.selectedUsers.isEmpty
+      && current.userSearch.isEmpty
+  }
+
+  private func restoreNotificationForm(from draft: NotificationFormDraft) {
+    notificationTitle = draft.title
+    notificationTitleNo = draft.titleNo
+    notificationBody = draft.body
+    notificationBodyNo = draft.bodyNo
+    notificationDeeplink = draft.deeplink
+    notificationDeeplinkNo = draft.deeplinkNo
+    notificationTarget = draft.target
+    notificationSelectedUsers = draft.selectedUsers
+    notificationUserSearch = draft.userSearch
+
+    if notificationTarget == "specific" {
+      previewCount = notificationSelectedUsers.count
+    }
   }
 
   // MARK: - Impersonation Tab Methods
@@ -1240,7 +1445,7 @@ final class AdminSettingsViewModel: ObservableObject {
       // Signal that the admin view should dismiss
       shouldDismissAfterImpersonation = true
     } catch {
-      errorMessage = error.localizedDescription
+      errorMessage = "Failed to start impersonation"
     }
 
     isStartingImpersonation = false
@@ -1302,6 +1507,25 @@ enum AdminError: LocalizedError {
 extension AdminUserItem {
   var displayName: String {
     name ?? email ?? phone ?? String(id.prefix(8)) + "..."
+  }
+
+  var planDisplayName: String {
+    switch plan {
+    case "max": return "Max"
+    case "pro": return "Pro"
+    case "trial": return "Trial"
+    default: return "Free"
+    }
+  }
+}
+
+extension AdminSubscriberItem {
+  var displayName: String {
+    name ?? email ?? phone ?? String(userId.prefix(8)) + "..."
+  }
+
+  var contactDisplay: String {
+    email ?? phone ?? String(userId.prefix(8))
   }
 
   var planDisplayName: String {

@@ -118,13 +118,13 @@ private struct TabContent: View {
 
   var body: some View {
     switch viewModel.selectedTab {
+    case .notifications: NotificationsTabView(viewModel: viewModel)
     case .users: UsersTabView(viewModel: viewModel)
     case .feedback: FeedbackTabView(viewModel: viewModel)
+    case .subscribers: SubscribersTabView(viewModel: viewModel)
+    case .shares: SharesTabView(viewModel: viewModel)
     case .auditLog: AuditLogTabView(viewModel: viewModel)
     case .sql: SqlTabView(viewModel: viewModel)
-    case .shares: SharesTabView(viewModel: viewModel)
-    case .notifications: NotificationsTabView(viewModel: viewModel)
-    case .impersonation: ImpersonationTabView(viewModel: viewModel)
     }
   }
 }
@@ -169,6 +169,61 @@ private struct UsersTabView: View {
             if viewModel.usersIsLoading && !viewModel.users.isEmpty {
               ProgressView()
                 .padding()
+            }
+          }
+          .padding(Spacing.md)
+        }
+      }
+    }
+  }
+}
+
+// MARK: - Subscribers Tab
+
+private struct SubscribersTabView: View {
+  @ObservedObject var viewModel: AdminSettingsViewModel
+
+  var body: some View {
+    VStack(spacing: 0) {
+      HStack {
+        Picker("Filter", selection: $viewModel.subscribersFilter) {
+          ForEach(AdminSubscriberFilter.allCases) { filter in
+            Text(filter.title).tag(filter)
+          }
+        }
+        .pickerStyle(.menu)
+        .onChange(of: viewModel.subscribersFilter) { _, filter in
+          Task { await viewModel.setSubscribersFilter(filter) }
+        }
+
+        Spacer()
+
+        Button {
+          Task { await viewModel.fetchSubscribers() }
+        } label: {
+          Image(systemName: "arrow.clockwise")
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexBlue)
+        }
+        .disabled(viewModel.subscribersIsLoading)
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+
+      if viewModel.subscribersIsLoading {
+        AdminLoadingView()
+      } else if viewModel.subscribers.isEmpty {
+        EmptyStateView(icon: "person.crop.circle.badge.checkmark", message: "No subscribers found")
+      } else {
+        ScrollView {
+          LazyVStack(spacing: Spacing.xs) {
+            Text("\(viewModel.subscribers.count) subscribers")
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexTextMuted)
+              .frame(maxWidth: .infinity, alignment: .leading)
+
+            ForEach(viewModel.subscribers) { subscriber in
+              SubscriberCard(subscriber: subscriber, viewModel: viewModel)
             }
           }
           .padding(Spacing.md)
@@ -684,6 +739,102 @@ private struct UserCard: View {
   }
 }
 
+private struct SubscriberCard: View {
+  let subscriber: AdminSubscriberItem
+  @ObservedObject var viewModel: AdminSettingsViewModel
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      HStack {
+        Text(subscriber.displayName)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
+
+        Spacer()
+
+        HStack(spacing: Spacing.xxs) {
+          Badge(text: subscriber.planDisplayName, color: planColor(subscriber.plan))
+          if subscriber.isGrandfathered {
+            Badge(text: "Lifetime", color: .tidexSuccess)
+          }
+        }
+      }
+
+      Text(subscriber.contactDisplay)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .lineLimit(1)
+
+      HStack {
+        Text("Expires: \(formattedDate(subscriber.currentPeriodEnd))")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+        Spacer()
+      }
+
+      HStack(spacing: Spacing.sm) {
+        if subscriber.isGrandfathered {
+          Button("Revoke Lifetime") {
+            Task { await viewModel.toggleSubscriberGrandfathered(subscriber) }
+          }
+          .foregroundColor(.tidexError)
+          .disabled(viewModel.isPerformingAction)
+        } else {
+          Button("Grant Lifetime") {
+            Task { await viewModel.toggleSubscriberGrandfathered(subscriber) }
+          }
+          .disabled(viewModel.isPerformingAction)
+        }
+
+        if subscriber.plan == "trial" {
+          Button("End Trial") {
+            Task { await viewModel.toggleSubscriberTrial(subscriber, create: false) }
+          }
+          .foregroundColor(.tidexError)
+          .disabled(viewModel.isPerformingAction)
+        } else if subscriber.plan == "free" {
+          Button("Grant Trial") {
+            Task { await viewModel.toggleSubscriberTrial(subscriber, create: true) }
+          }
+          .disabled(viewModel.isPerformingAction)
+        }
+      }
+      .font(.tidexCaptionRegular)
+    }
+    .padding(Spacing.sm)
+    .background(Color.tidexSurfacePrimary)
+    .cornerRadius(CornerRadius.md)
+    .tidexCardShadow(cornerRadius: CornerRadius.md)
+  }
+
+  private func planColor(_ plan: String) -> Color {
+    switch plan {
+    case "max": return .tidexPurple
+    case "pro": return .tidexBlue
+    case "trial": return .tidexWarning
+    default: return .tidexTextMuted
+    }
+  }
+
+  private func formattedDate(_ dateString: String?) -> String {
+    guard let dateString else { return "-" }
+
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: dateString) {
+      return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    formatter.formatOptions = [.withInternetDateTime]
+    if let date = formatter.date(from: dateString) {
+      return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    return dateString
+  }
+}
+
 private struct FeedbackCard: View {
   let item: AdminFeedbackItem
   let onTap: () -> Void
@@ -825,6 +976,9 @@ private struct UserActionSheet: View {
   let user: AdminUserItem
   @ObservedObject var viewModel: AdminSettingsViewModel
   @Environment(\.dismiss) private var dismiss
+  @State private var impersonationReason = ""
+  @State private var impersonationError: String?
+  @State private var isStartingImpersonation = false
 
   private var formattedLastSignIn: String? {
     guard let lastSignIn = user.lastSignInAt else { return nil }
@@ -917,6 +1071,26 @@ private struct UserActionSheet: View {
             }
           }
         }
+
+        if !user.isAdmin {
+          Section("Impersonation") {
+            TextField("Reason (minimum 5 characters)", text: $impersonationReason)
+              .textInputAutocapitalization(.sentences)
+
+            if let impersonationError {
+              Text(impersonationError)
+                .font(.tidexCaptionRegular)
+                .foregroundColor(.tidexError)
+            }
+
+            Button(isStartingImpersonation ? "Starting..." : "Impersonate User") {
+              Task { await startImpersonation() }
+            }
+            .disabled(
+              isStartingImpersonation
+                || impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines).count < 5)
+          }
+        }
       }
       .navigationTitle("User Actions")
       .navigationBarTitleDisplayMode(.inline)
@@ -926,7 +1100,32 @@ private struct UserActionSheet: View {
         }
       }
     }
-    .presentationDetents([.medium])
+    .presentationDetents([.medium, .large])
+  }
+
+  private func startImpersonation() async {
+    let reason = impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard reason.count >= 5 else {
+      impersonationError = "Reason must be at least 5 characters"
+      return
+    }
+
+    isStartingImpersonation = true
+    impersonationError = nil
+
+    do {
+      _ = try await ImpersonationManager.shared.startImpersonation(
+        targetUserId: user.id,
+        reason: reason
+      )
+      Haptics.play(.success)
+      viewModel.shouldDismissAfterImpersonation = true
+      dismiss()
+    } catch {
+      impersonationError = "Failed to start impersonation"
+    }
+
+    isStartingImpersonation = false
   }
 }
 
