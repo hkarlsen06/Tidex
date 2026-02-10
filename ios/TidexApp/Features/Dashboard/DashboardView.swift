@@ -394,7 +394,10 @@ struct DashboardView: View {
     let isOnOrBeforePayrollDay = now < payrollDayEnd
     let canManuallySetPayrollStatus = viewModel.isCurrentMonth && isOnOrBeforePayrollDay
 
-    let payrollMarkedReceived = viewModel.isPayrollReceivedOverrideForDisplayedMonth()
+    let payrollOverrideUserId = coordinator.getCurrentUserId()
+    let payrollMarkedReceived = viewModel.isPayrollReceivedOverrideForDisplayedMonth(
+      userId: payrollOverrideUserId
+    )
     let effectivePayrollHasPassed: Bool = {
       guard viewModel.isCurrentMonth else { return data.payrollHasPassed }
       if isOnOrBeforePayrollDay {
@@ -456,7 +459,7 @@ struct DashboardView: View {
             Section(String(localized: .dashboardPayrollStatusTitle)) {
               Button {
                 impactHaptic.impactOccurred()
-                viewModel.markPayrollReceivedForDisplayedMonth()
+                viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
               } label: {
                 Label(
                   String(localized: .dashboardPayrollStatusReceived),
@@ -465,7 +468,7 @@ struct DashboardView: View {
               }
               Button {
                 impactHaptic.impactOccurred()
-                viewModel.clearPayrollReceivedOverrideForDisplayedMonth()
+                viewModel.clearPayrollReceivedOverrideForDisplayedMonth(userId: payrollOverrideUserId)
               } label: {
                 Label(
                   String(localized: .dashboardPayrollStatusNotReceived),

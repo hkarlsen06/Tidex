@@ -73,6 +73,20 @@ function getSupabaseAdmin(): ReturnType<typeof createClient> | null {
   return supabaseAdmin;
 }
 
+function createRequestScopedAdminClient(): ReturnType<typeof createClient> | null {
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  if (!url || !key) {
+    console.error("[impersonation] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    return null;
+  }
+
+  return createClient(url, key, {
+    auth: { persistSession: false },
+  });
+}
+
 // ---------- Encryption Utilities ----------
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -380,9 +394,16 @@ async function insertAuditLog(params: {
 
 // ---------- Request Handlers ----------
 async function handleStart(req: Request): Promise<Response> {
-  // Initialize Supabase client (lazy initialization)
-  const adminClient = getSupabaseAdmin();
-  if (!adminClient) {
+  // Initialize long-lived DB/RPC client (lazy initialization)
+  const dbClient = getSupabaseAdmin();
+  if (!dbClient) {
+    return json({ ok: false, error: "Service not configured" }, 503);
+  }
+
+  // Use a separate request-scoped client for auth flows that can mutate session
+  // (e.g. verifyOtp), so DB RPCs always run as service_role.
+  const authClient = createRequestScopedAdminClient();
+  if (!authClient) {
     return json({ ok: false, error: "Service not configured" }, 503);
   }
 
@@ -393,7 +414,7 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   const token = authHeader.replace("Bearer ", "");
-  const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(token);
+  const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
 
   if (authError || !caller) {
     return json({ ok: false, error: "Invalid or expired token" }, 401);
@@ -475,7 +496,7 @@ async function handleStart(req: Request): Promise<Response> {
 
   // 10. Mint a session for the target user using Admin API
   // Generate a magic link (server-side only, email not sent)
-  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+  const { data: linkData, error: linkError } = await authClient.auth.admin.generateLink({
     type: "magiclink",
     email: targetValidation.email,
     options: {
@@ -492,7 +513,7 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   // Verify the token to create a session (bypasses MFA)
-  const { data: verifyData, error: verifyError } = await adminClient.auth.verifyOtp({
+  const { data: verifyData, error: verifyError } = await authClient.auth.verifyOtp({
     token_hash: linkData.properties.hashed_token,
     type: "magiclink",
   });
@@ -527,7 +548,7 @@ async function handleStart(req: Request): Promise<Response> {
   } catch (error) {
     console.error("[impersonation] Failed to create session record:", error);
     // Clean up the minted session
-    await adminClient.auth.admin.signOut(verifyData.session.access_token).catch(() => {});
+    await authClient.auth.admin.signOut(verifyData.session.access_token).catch(() => {});
 
     const errorMessage = error instanceof Error ? error.message : "Failed to create session record";
     return json({ ok: false, error: errorMessage }, 500);
