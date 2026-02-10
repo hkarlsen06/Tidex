@@ -2,7 +2,9 @@
 
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { spring, useReducedMotion } from "motion/react";
+import { AnimateView } from "motion-plus/animate-view";
 
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
@@ -69,11 +71,32 @@ function LayoutContent({
   children,
   userName,
 }: AppLayoutClientProps) {
+  const pathname = usePathname();
+  const shouldReduceMotion = useReducedMotion();
+
+  const normalizedPath = pathname.replace(/^\/(no|en)(?=\/|$)/, "") || "/";
+  const isTabRoute = [
+    "/dashboard",
+    "/shifts",
+    "/shifts/add",
+    "/stats",
+    "/sharing",
+  ].some((prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`));
+
   return (
     <div className="flex flex-col h-dvh">
       <TopHeader userName={userName} />
       <main className="flex-1 min-h-0 overflow-hidden">
-        {children}
+        {isTabRoute ? (
+          <AnimateView
+            key={normalizedPath}
+            transition={shouldReduceMotion ? { duration: 0 } : { type: spring, visualDuration: 0.34, bounce: 0.16 }}
+          >
+            {children}
+          </AnimateView>
+        ) : (
+          children
+        )}
       </main>
       <NavBar />
     </div>

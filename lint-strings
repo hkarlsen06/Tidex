@@ -1,4 +1,0 @@
-#!/bin/bash
-# Audit localization strings in iOS SwiftUI views
-# Usage: ./lint-strings [--strict] [--orphaned-only] [--hardcoded-only]
-exec "$(dirname "$0")/ios/Scripts/audit-strings" "$@"

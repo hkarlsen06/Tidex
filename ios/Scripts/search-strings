@@ -1,6 +1,0 @@
-#!/bin/bash
-# Wrapper script for search-strings Swift tool
-# Usage: search-strings "query" [--keys-only] [--values-only] [--limit N]
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-swift run --package-path "$SCRIPT_DIR" search-strings "$@"
