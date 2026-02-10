@@ -1,6 +1,0 @@
-#!/bin/bash
-# Wrapper script for add-strings Swift tool
-# Usage: add-strings --key "feature.key" --en "English" --nb "Norwegian" [--key "key2" --en "En2" --nb "Nb2" ...]
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-swift run --package-path "$SCRIPT_DIR" add-strings "$@"

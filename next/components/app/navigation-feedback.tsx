@@ -57,8 +57,10 @@ export function NavigationFeedbackProvider({
         return;
       }
 
-      setPendingPath(targetPath);
-      router.push(href);
+      startTransition(() => {
+        setPendingPath(targetPath);
+        router.push(href);
+      });
     },
     [pathname, router, toPathname],
   );
