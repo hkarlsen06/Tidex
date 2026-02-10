@@ -123,6 +123,7 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/oauth/consent') ||
     pathname.startsWith('/monitoring') ||
     pathname.startsWith('/.well-known/') ||
     pathname === '/favicon.ico' ||

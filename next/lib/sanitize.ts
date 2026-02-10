@@ -63,3 +63,24 @@ export function sanitizeUrl(url: string | null | undefined): string | null {
     return null;
   }
 }
+
+/**
+ * Extract and validate a redirect URL from an OAuth response object.
+ * Checks both `redirect_url` and `redirect_to` fields, and ensures
+ * the result is a valid HTTP(S) URL.
+ */
+export function extractRedirectUrl(data: unknown): string | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const record = data as Record<string, unknown>;
+  const candidate =
+    typeof record.redirect_url === "string"
+      ? record.redirect_url
+      : typeof record.redirect_to === "string"
+        ? record.redirect_to
+        : null;
+
+  return sanitizeUrl(candidate);
+}

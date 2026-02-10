@@ -58,6 +58,7 @@ import { translateError } from "@/lib/errors/translate";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 import { AuthHeader } from "@/components/app/AuthHeader";
 import { GroupedInput, GroupedInputDivider, groupedInputClassName } from "@/components/app/GroupedInput";
+import { showAuthSuccessToast } from "@/lib/ui/auth-toast";
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import("../login/GoogleIcon"), {
@@ -65,7 +66,7 @@ const GoogleIcon = dynamic(() => import("../login/GoogleIcon"), {
   loading: () => <div className="h-4 w-4" />
 });
 
-type MessageState = { type: "error" | "success"; text: string } | null;
+type MessageState = { type: "error"; text: string } | null;
 type SignupStep = "input" | "otp";
 type FieldErrors = {
   firstName?: string;
@@ -140,10 +141,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    setMessage({
-      type: 'success',
-      text: t.pages.auth.login.waitingForGoogle,
-    });
+    showAuthSuccessToast(t.pages.auth.login.waitingForGoogle);
   };
 
   const handleGoogleSignIn = async () => {
@@ -179,10 +177,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    setMessage({
-      type: 'success',
-      text: t.pages.auth.login.waitingForApple,
-    });
+    showAuthSuccessToast(t.pages.auth.login.waitingForApple);
   };
 
   const handleAppleSignIn = async () => {
@@ -265,7 +260,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         return;
       }
 
-      setMessage({ type: "success", text: t.pages.auth.signup.success.accountCreated });
+      setMessage(null);
+      showAuthSuccessToast(t.pages.auth.signup.success.accountCreated);
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: emailOrPhone,
@@ -312,7 +308,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         }
 
         setStep("otp");
-        setMessage({ type: "success", text: t.pages.auth.signup.success.smsSent });
+        setMessage(null);
+        showAuthSuccessToast(t.pages.auth.signup.success.smsSent);
       } catch (err) {
         setIsSubmitting(false);
         setMessage({
@@ -351,7 +348,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         return;
       }
 
-      setMessage({ type: "success", text: t.pages.auth.signup.success.accountCreated });
+      setMessage(null);
+      showAuthSuccessToast(t.pages.auth.signup.success.accountCreated);
 
       setTimeout(() => {
         router.replace(`/${locale}/onboarding`);
@@ -541,9 +539,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                 />
               </div>
 
-              {message && (
+              {message?.type === "error" && (
                 <div
-                  className={`rounded-lg px-4 py-3 text-sm font-medium ${message.type === "error" ? "bg-error-subtle text-error-foreground" : "bg-success-subtle text-success-foreground"}`}
+                  className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                   role="status"
                   aria-live="polite"
                 >
@@ -585,9 +583,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
               {fieldErrors.otp && <FieldError className="text-center">{fieldErrors.otp}</FieldError>}
             </Field>
 
-            {message && (
+            {message?.type === "error" && (
               <div
-                className={`rounded-lg px-4 py-3 text-sm font-medium ${message.type === "error" ? "bg-error-subtle text-error-foreground" : "bg-success-subtle text-success-foreground"}`}
+                className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                 role="status"
                 aria-live="polite"
               >

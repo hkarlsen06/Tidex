@@ -378,7 +378,7 @@ private struct NotificationsTabView: View {
             TextField("English (e.g. tidex://shifts)", text: $viewModel.notificationDeeplink)
               .textFieldStyle(AdminTextFieldStyle())
             TextField(
-              "Norwegian (optional, falls back to English)", text: $viewModel.notificationDeeplinkNo
+              "Norwegian (optional)", text: $viewModel.notificationDeeplinkNo
             )
             .textFieldStyle(AdminTextFieldStyle())
           }

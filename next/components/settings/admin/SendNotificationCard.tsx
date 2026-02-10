@@ -289,7 +289,7 @@ export function SendNotificationCard({ onSuccess }: Props) {
             </div>
             <div>
               <label htmlFor="notification-deeplink-no" className="block text-xs text-text-muted mb-1">
-                Norwegian (optional, falls back to English)
+                Norwegian (optional)
               </label>
               <Input
                 id="notification-deeplink-no"

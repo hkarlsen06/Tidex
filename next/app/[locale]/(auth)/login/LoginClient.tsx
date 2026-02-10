@@ -51,6 +51,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/comp
 import { LocaleSwitcher } from '@/components/app/LocaleSwitcher';
 import { AuthHeader } from '@/components/app/AuthHeader';
 import { GroupedInput, GroupedInputDivider, groupedInputClassName } from '@/components/app/GroupedInput';
+import { showAuthSuccessToast } from '@/lib/ui/auth-toast';
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
@@ -58,7 +59,7 @@ const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
   loading: () => <div className="h-4 w-4" />
 });
 
-type MessageState = { type: 'error' | 'success'; text: string } | null;
+type MessageState = { type: 'error'; text: string } | null;
 // NOTE: 'otp' step preserved for future MFA implementation
 type LoginStep = 'input' | 'otp';
 type FieldErrors = {
@@ -200,10 +201,8 @@ export default function LoginClient({
     }
 
     // Redirect flow - waiting for callback
-    setMessage({
-      type: 'success',
-      text: t.pages.auth.login.waitingForGoogle,
-    });
+    setMessage(null);
+    showAuthSuccessToast(t.pages.auth.login.waitingForGoogle);
   };
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
@@ -366,10 +365,8 @@ export default function LoginClient({
 
           setLoginType('phone');
           setStep('otp');
-          setMessage({
-            type: 'success',
-            text: t.pages.auth.login.success.smsSent,
-          });
+          setMessage(null);
+          showAuthSuccessToast(t.pages.auth.login.success.smsSent);
         } catch (err) {
           setIsSubmitting(false);
           setMessage({
@@ -422,7 +419,8 @@ export default function LoginClient({
         return;
       }
 
-      setMessage({ type: 'success', text: t.pages.auth.login.loggingIn });
+      setMessage(null);
+      showAuthSuccessToast(t.pages.auth.login.loggingIn);
       const destination = getRedirectPath();
       // Check MFA and redirect appropriately
       await checkMfaAndRedirect(destination);
@@ -466,10 +464,8 @@ export default function LoginClient({
     }
 
     // Redirect flow - waiting for callback
-    setMessage({
-      type: 'success',
-      text: t.pages.auth.login.waitingForApple,
-    });
+    setMessage(null);
+    showAuthSuccessToast(t.pages.auth.login.waitingForApple);
   };
 
   const handleAppleSignIn = async () => {
@@ -687,13 +683,9 @@ export default function LoginClient({
                     />
                   </div>
 
-                  {message && (
+                  {message?.type === 'error' && (
                     <div
-                      className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                        message.type === 'error'
-                          ? 'bg-error-subtle text-error-foreground'
-                          : 'bg-success-subtle text-success-foreground'
-                      }`}
+                      className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                       role="status"
                       aria-live="polite"
                     >
@@ -766,13 +758,9 @@ export default function LoginClient({
               )}
             </Field>
 
-            {message && (
+            {message?.type === 'error' && (
               <div
-                className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                  message.type === 'error'
-                    ? 'bg-error-subtle text-error-foreground'
-                    : 'bg-success-subtle text-success-foreground'
-                }`}
+                className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                 role="status"
                 aria-live="polite"
               >

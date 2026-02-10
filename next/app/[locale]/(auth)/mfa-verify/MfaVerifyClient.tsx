@@ -41,8 +41,9 @@ import { Button } from "@/components/app/Button";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 import { AuthHeader } from "@/components/app/AuthHeader";
 import type { Factor } from "@supabase/supabase-js";
+import { showAuthSuccessToast } from "@/lib/ui/auth-toast";
 
-type MessageState = { type: "error" | "success"; text: string } | null;
+type MessageState = { type: "error"; text: string } | null;
 
 interface MfaVerifyClientProps {
   locale: string;
@@ -182,7 +183,8 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
         console.error("[MFA Verify] Failed to update user locale metadata:", err);
       });
 
-      setMessage({ type: "success", text: t.pages.auth.mfaVerify.success.verified });
+      setMessage(null);
+      showAuthSuccessToast(t.pages.auth.mfaVerify.success.verified);
 
       // Redirect to intended destination
       setTimeout(() => {
@@ -297,13 +299,9 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
               )}
             </Field>
 
-            {message && (
+            {message?.type === "error" && (
               <div
-                className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                  message.type === "error"
-                    ? "bg-error-subtle text-error-foreground"
-                    : "bg-success-subtle text-success-foreground"
-                }`}
+                className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                 role="status"
                 aria-live="polite"
               >
@@ -343,13 +341,9 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
         )}
 
         {/* Message Display (when no form is showing) */}
-        {!selectedFactor && message && (
+        {!selectedFactor && message?.type === "error" && (
           <div
-            className={`rounded-lg px-4 py-3 text-sm font-medium ${
-              message.type === "error"
-                ? "bg-error-subtle text-error-foreground"
-                : "bg-success-subtle text-success-foreground"
-            }`}
+            className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
             role="status"
             aria-live="polite"
           >
