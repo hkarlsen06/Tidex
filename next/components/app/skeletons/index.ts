@@ -27,7 +27,6 @@ export {
   DataSkeleton,
   SubscriptionSkeleton,
   PreferencesSkeleton,
-  NotificationsSkeleton,
   FeedbackSkeleton,
 } from "./settings";
 

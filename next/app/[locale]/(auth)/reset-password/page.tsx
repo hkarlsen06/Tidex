@@ -53,8 +53,9 @@ import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 import { AuthHeader } from "@/components/app/AuthHeader";
 import { GroupedInput, GroupedInputDivider, groupedInputClassName } from "@/components/app/GroupedInput";
+import { showAuthSuccessToast } from "@/lib/ui/auth-toast";
 
-type MessageState = { type: "error" | "success"; text: string } | null;
+type MessageState = { type: "error"; text: string } | null;
 type Step = "input" | "otp" | "password";
 type FieldErrors = {
   emailOrPhone?: string;
@@ -156,10 +157,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
         }
 
         setResetType("email");
-        setMessage({
-          type: "success",
-          text: t.pages.auth.resetPassword.success.emailCodeSent,
-        });
+        setMessage(null);
+        showAuthSuccessToast(t.pages.auth.resetPassword.success.emailCodeSent);
       } else {
         // Phone reset
         if (!isValidNorwegianPhone(emailOrPhone)) {
@@ -184,10 +183,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
         }
 
         setResetType("phone");
-        setMessage({
-          type: "success",
-          text: t.pages.auth.resetPassword.success.smsCodeSent,
-        });
+        setMessage(null);
+        showAuthSuccessToast(t.pages.auth.resetPassword.success.smsCodeSent);
       }
 
       setStep("otp");
@@ -255,7 +252,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
         }
       }
 
-      setMessage({ type: "success", text: t.pages.auth.resetPassword.success.codeVerified });
+      setMessage(null);
+      showAuthSuccessToast(t.pages.auth.resetPassword.success.codeVerified);
       setStep("password");
     } catch (err) {
       setIsSubmitting(false);
@@ -307,10 +305,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
       return;
     }
 
-    setMessage({
-      type: "success",
-      text: t.pages.auth.resetPassword.success.passwordUpdated,
-    });
+    setMessage(null);
+    showAuthSuccessToast(t.pages.auth.resetPassword.success.passwordUpdated);
 
     // Auto-login and redirect
     setTimeout(() => {
@@ -389,13 +385,9 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
               />
             </div>
 
-            {message && (
+            {message?.type === "error" && (
               <div
-                className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                  message.type === "error"
-                    ? "bg-error-subtle text-error-foreground"
-                    : "bg-success-subtle text-success-foreground"
-                }`}
+                className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                 role="status"
                 aria-live="polite"
               >
@@ -447,13 +439,9 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
               )}
             </Field>
 
-            {message && (
+            {message?.type === "error" && (
               <div
-                className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                  message.type === "error"
-                    ? "bg-error-subtle text-error-foreground"
-                    : "bg-success-subtle text-success-foreground"
-                }`}
+                className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                 role="status"
                 aria-live="polite"
               >
@@ -531,13 +519,9 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
               <p className="text-xs text-error px-1">{fieldErrors.confirmPassword}</p>
             )}
 
-            {message && (
+            {message?.type === "error" && (
               <div
-                className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                  message.type === "error"
-                    ? "bg-error-subtle text-error-foreground"
-                    : "bg-success-subtle text-success-foreground"
-                }`}
+                className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
                 role="status"
                 aria-live="polite"
               >

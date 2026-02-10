@@ -33,8 +33,9 @@ import { Button } from "@/components/app/Button";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
 import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 import { AuthHeader } from "@/components/app/AuthHeader";
+import { showAuthSuccessToast } from "@/lib/ui/auth-toast";
 
-type MessageState = { type: "error" | "success"; text: string } | null;
+type MessageState = { type: "error"; text: string } | null;
 
 function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -79,10 +80,8 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
         return;
       }
 
-      setMessage({
-        type: "success",
-        text: t.pages.auth.verifyEmail.success.resent,
-      });
+      setMessage(null);
+      showAuthSuccessToast(t.pages.auth.verifyEmail.success.resent);
     } catch (err) {
       setIsResending(false);
       setIsCaptchaValidating(false);
@@ -157,13 +156,9 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
             className="hidden"
           />
 
-          {message && (
+          {message?.type === "error" && (
             <div
-              className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                message.type === "error"
-                  ? "bg-error-subtle text-error-foreground"
-                  : "bg-success-subtle text-success-foreground"
-              }`}
+              className="rounded-lg px-4 py-3 text-sm font-medium bg-error-subtle text-error-foreground"
               role="status"
               aria-live="polite"
             >

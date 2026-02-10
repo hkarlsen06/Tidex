@@ -8,6 +8,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { getSession } from "@dal/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { needsTermsReAcceptance, isJwtFreshForTermsCheck } from "@/lib/legal/version";
+import { AuthToastHost } from "@/components/app/AuthToastHost";
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
@@ -75,6 +76,7 @@ export default async function AuthLayout({
   return (
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.auth']}>
       <div className="min-h-screen bg-background text-foreground antialiased">
+        <AuthToastHost />
         <div className="app-container">
           <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8 pt-[calc(env(safe-area-inset-top)+2rem)]">{children}</main>
         </div>

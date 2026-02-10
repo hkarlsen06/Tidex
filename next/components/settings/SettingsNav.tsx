@@ -12,7 +12,6 @@ import {
   Database,
   CreditCard,
   Shield,
-  Bell,
   ChevronRight,
   Loader2,
   ShieldAlert,
@@ -34,7 +33,7 @@ interface SettingsItem {
   adminOnly?: boolean;
 }
 
-const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: boolean): SettingsItem[] => {
+const getSettingsItems = (t: Dictionary, showAdmin: boolean): SettingsItem[] => {
   const items: SettingsItem[] = [
     // Account & Security group
     {
@@ -56,16 +55,6 @@ const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: 
       icon: CreditCard,
     },
   ];
-
-  // Preferences group
-  if (showNotifications) {
-    items.push({
-      href: "/settings/notifications",
-      label: t.pages.settings.menu.notifications.label,
-      description: t.pages.settings.menu.notifications.description,
-      icon: Bell,
-    });
-  }
 
   items.push(
     {
@@ -129,7 +118,7 @@ export function SettingsNav() {
     });
   }, []);
 
-  const settingsItems = getSettingsItems(t, true, isAdmin);
+  const settingsItems = getSettingsItems(t, isAdmin);
 
   // Extract locale from current pathname
   const localeMatch = pathname.match(/^\/(en|no)/);
