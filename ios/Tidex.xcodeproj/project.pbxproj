@@ -19,6 +19,7 @@
 		11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C232F16B98A0076AFD6 /* GoogleSignInSwift */; };
 		11923C262F16BB090076AFD6 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C252F16BB090076AFD6 /* Realtime */; };
 		11923C282F16BB090076AFD6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C272F16BB090076AFD6 /* Supabase */; };
+		11F0A0043011111100A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -142,6 +143,7 @@
 				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
 				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
 				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
+				11F0A0043011111100A1B2C3 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,6 +276,7 @@
 				11923C272F16BB090076AFD6 /* Supabase */,
 				11263D3B2F2FF22700233D63 /* CropViewController */,
 				11263D3F2F2FF3F700233D63 /* TOCropViewController */,
+				11F0A0033011111100A1B2C3 /* Sentry */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -360,6 +363,7 @@
 				11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
+				11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -826,6 +830,14 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.4.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -878,6 +890,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		11F0A0033011111100A1B2C3 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

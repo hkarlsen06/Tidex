@@ -1,5 +1,6 @@
 import ActivityKit
 import BackgroundTasks
+import Sentry
 import Supabase
 import UIKit
 import WatchConnectivity
@@ -56,6 +57,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     launchLog.info("[Launch] AppDelegate.didFinishLaunching START")
+
+    if let sentryDSN = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String,
+      !sentryDSN.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    {
+      SentrySDK.start { options in
+        options.dsn = sentryDSN
+        options.debug = false
+      }
+      launchLog.info("[Launch] Sentry initialized")
+    } else {
+      launchLog.info("[Launch] Sentry not initialized (missing SENTRY_DSN)")
+    }
 
     // --- Synchronous (must complete before launch finishes) ---
 
