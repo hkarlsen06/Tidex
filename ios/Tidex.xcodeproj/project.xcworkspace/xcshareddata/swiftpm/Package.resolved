@@ -65,6 +65,15 @@
       }
     },
     {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "f1eefffd88cd6dfe5751159a3b32ff3c8e5b3b32",
+        "version" : "9.4.0"
+      }
+    },
+    {
       "identity" : "supabase-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Tidex-Payroll-Shifts/supabase-swift.git",
