@@ -10,8 +10,7 @@ struct ChatMessageBubble: View {
   private let maxWidthRatio: CGFloat = 0.8
 
   /// State for full-screen image viewer
-  @State private var selectedImage: UIImage?
-  @State private var showImageViewer = false
+  @State private var selectedImageViewer: SelectedImageViewer?
 
   var body: some View {
     HStack {
@@ -43,9 +42,9 @@ struct ChatMessageBubble: View {
         Spacer(minLength: 40)
       }
     }
-    .fullScreenCover(isPresented: $showImageViewer) {
-      if let image = selectedImage {
-        ImageViewerOverlay(image: image, isPresented: $showImageViewer)
+    .fullScreenCover(item: $selectedImageViewer) { viewer in
+      ImageViewerOverlay(image: viewer.image) {
+        selectedImageViewer = nil
       }
     }
   }
@@ -100,8 +99,7 @@ struct ChatMessageBubble: View {
               )
           )
           .onTapGesture {
-            selectedImage = uiImage
-            showImageViewer = true
+            selectedImageViewer = SelectedImageViewer(image: uiImage)
           }
           .contextMenu {
             Button {
@@ -115,12 +113,17 @@ struct ChatMessageBubble: View {
   }
 }
 
+private struct SelectedImageViewer: Identifiable {
+  let id = UUID()
+  let image: UIImage
+}
+
 // MARK: - Image Viewer Overlay
 
 /// Full-screen image viewer with zoom and dismiss gestures
 struct ImageViewerOverlay: View {
   let image: UIImage
-  @Binding var isPresented: Bool
+  let onDismiss: () -> Void
 
   @State private var scale: CGFloat = 1.0
   @State private var lastScale: CGFloat = 1.0
@@ -173,7 +176,7 @@ struct ImageViewerOverlay: View {
               lastOffset = offset
               // Dismiss if dragged down far enough when not zoomed
               if scale <= 1 && value.translation.height > 100 {
-                isPresented = false
+                onDismiss()
               } else if scale <= 1 {
                 withAnimation(.spring(response: 0.3)) {
                   offset = .zero
@@ -199,7 +202,7 @@ struct ImageViewerOverlay: View {
         HStack {
           Spacer()
           Button {
-            isPresented = false
+            onDismiss()
           } label: {
             Image(systemName: "xmark.circle.fill")
               .font(.system(size: 30))
