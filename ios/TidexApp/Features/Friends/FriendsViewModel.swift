@@ -123,6 +123,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   private var monthContextCancellable: AnyCancellable?
   private var lastObservedYear: Int = 0
   private var lastObservedMonth: Int = 0
+  private var selectedSharerLoadTask: Task<Void, Never>?
+  private var inFlightRequestKey: String?
 
   // MARK: - Initialization
 
@@ -150,6 +152,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   deinit {
     monthContextCancellable?.cancel()
+    selectedSharerLoadTask?.cancel()
   }
 
   private func setupMonthContextSubscription() {
@@ -169,11 +172,16 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
         // Reload shifts for new month if a sharer is selected
         if self.selectedSharer != nil {
-          Task {
-            await self.loadShiftsForSelectedSharer()
-          }
+          self.startSelectedSharerLoadTask()
         }
       }
+  }
+
+  private func startSelectedSharerLoadTask() {
+    selectedSharerLoadTask?.cancel()
+    selectedSharerLoadTask = Task { [weak self] in
+      await self?.loadShiftsForSelectedSharer()
+    }
   }
 
   // MARK: - Month Navigation
@@ -417,14 +425,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   func selectSharer(_ sharer: SharedUser) {
     selectedSharer = sharer
     sharedShifts = []
-
-    Task {
-      await loadShiftsForSelectedSharer()
-    }
+    startSelectedSharerLoadTask()
   }
 
   /// Go back to sharer list
   func deselectSharer() {
+    selectedSharerLoadTask?.cancel()
+    selectedSharerLoadTask = nil
+    inFlightRequestKey = nil
     selectedSharer = nil
     sharedShifts = []
     lastCacheTime = nil
@@ -436,6 +444,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     guard let sharer = selectedSharer else { return }
 
     error = nil
+    defer { isLoadingShifts = false }
 
     do {
       guard let userId = try await getCurrentUserId() else {
@@ -444,6 +453,18 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       let year = displayYear
       let month = displayMonth
+      let requestKey = "\(sharer.id):\(year):\(month)"
+
+      if inFlightRequestKey == requestKey {
+        logger.debug("Skipping duplicate shared shift request for \(year)-\(month)")
+        return
+      }
+      inFlightRequestKey = requestKey
+      defer {
+        if inFlightRequestKey == requestKey {
+          inFlightRequestKey = nil
+        }
+      }
 
       // Load from cache first (synchronously, before setting loading state)
       let cachedShifts = sharedShiftsRepository.getSharedShifts(
@@ -459,6 +480,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         sharedShifts = cachedShifts
         committedYear = year
         committedMonth = month
+        loadUserShifts(for: userId, year: year, month: month)
         lastCacheTime = sharedShiftsRepository.getLastCacheTime(
           ownerId: sharer.id,
           viewerId: userId,
@@ -466,8 +488,19 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
           month: month
         )
         // Don't set isLoadingShifts - we have data to show
+      } else if sharedShiftsRepository.hasFetchRecord(
+        ownerId: sharer.id,
+        viewerId: userId,
+        year: year,
+        month: month
+      ) {
+        // Previously fetched but empty - show empty calendar instantly, no loading
+        sharedShifts = []
+        committedYear = year
+        committedMonth = month
+        loadUserShifts(for: userId, year: year, month: month)
       } else {
-        // Cache miss - DON'T clear shifts or update committed state
+        // Never fetched - DON'T clear shifts or update committed state
         // Keep showing previous month until new data is ready
         isLoadingShifts = true
       }
@@ -479,35 +512,49 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         month: month
       )
 
-      // Convert to ShiftWithComputations
-      let freshShifts = response.shifts.map { $0.toShiftWithComputations() }
+      // If selection/month changed while request was in-flight, ignore stale result.
+      if selectedSharer?.id != sharer.id || displayYear != year || displayMonth != month {
+        logger.info("Discarding stale shared shift result for \(year)-\(month)")
+      } else {
+        // Convert to ShiftWithComputations
+        let freshShifts = response.shifts.map { $0.toShiftWithComputations() }
 
-      // ATOMIC UPDATE: Set shifts and committed state together
-      // This ensures the calendar structure and data update in the same render pass
-      sharedShifts = freshShifts
-      committedYear = year
-      committedMonth = month
-      lastCacheTime = Date()
+        // ATOMIC UPDATE: Set shifts and committed state together
+        // This ensures the calendar structure and data update in the same render pass
+        sharedShifts = freshShifts
+        committedYear = year
+        committedMonth = month
+        lastCacheTime = Date()
 
-      // Save to cache
-      await sharedShiftsRepository.saveSharedShifts(
-        response.shifts,
-        ownerId: sharer.id,
-        viewerId: userId,
-        showEarnings: sharer.showEarnings,
-        year: year,
-        month: month
-      )
+        // Save to cache
+        await sharedShiftsRepository.saveSharedShifts(
+          response.shifts,
+          ownerId: sharer.id,
+          viewerId: userId,
+          showEarnings: sharer.showEarnings,
+          year: year,
+          month: month
+        )
 
-      logger.info("Loaded \(freshShifts.count) shared shifts for \(year)-\(month)")
+        logger.info("Loaded \(freshShifts.count) shared shifts for \(year)-\(month)")
+      }
 
+    } catch is CancellationError {
+      logger.info("Shared shifts load cancelled")
     } catch {
-      logger.error("Failed to load shared shifts: \(error.localizedDescription)")
-      self.error = SharingError.loadFailed(underlying: error)
+      if let urlError = error as? URLError, urlError.code == .cancelled {
+        logger.info("Shared shifts network request cancelled")
+      } else {
+        logger.error("Failed to load shared shifts: \(error.localizedDescription)")
+        self.error = SharingError.loadFailed(underlying: error)
+      }
     }
 
-    isLoadingShifts = false
-    await loadUserShiftsForMonth()
+    if let userId = cachedUserId {
+      loadUserShifts(for: userId, year: committedYear, month: committedMonth)
+    } else {
+      await loadUserShiftsForMonth()
+    }
   }
 
   /// Load user's own shifts for the current month (for overlap indicators + superimpose feature)
@@ -524,8 +571,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       return
     }
 
-    let year = committedYear
-    let month = committedMonth
+    loadUserShifts(for: userId, year: committedYear, month: committedMonth)
+  }
+
+  /// Load user's own shifts for a specific month from local repositories.
+  private func loadUserShifts(for userId: String, year: Int, month: Int) {
 
     // Calculate date range for the month
     var components = DateComponents()

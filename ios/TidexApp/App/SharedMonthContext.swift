@@ -36,6 +36,9 @@ final class SharedMonthContext: ObservableObject {
   /// Updated by ShiftsViewModel when conflicts are detected
   @Published var hasConflictsInMonth: Bool = false
 
+  /// Emits exactly one event per month navigation to avoid transient year/month pairs.
+  private let monthChangedSubject = PassthroughSubject<(year: Int, month: Int), Never>()
+
   // MARK: - Computed Properties
 
   /// Whether viewing the current (real) month
@@ -56,8 +59,8 @@ final class SharedMonthContext: ObservableObject {
 
   /// Combined publisher for year and month changes
   var monthChanged: AnyPublisher<(year: Int, month: Int), Never> {
-    Publishers.CombineLatest($displayYear, $displayMonth)
-      .map { (year: $0, month: $1) }
+    monthChangedSubject
+      .prepend((year: displayYear, month: displayMonth))
       .eraseToAnyPublisher()
   }
 
@@ -83,6 +86,8 @@ final class SharedMonthContext: ObservableObject {
     } else {
       displayMonth -= 1
     }
+
+    monthChangedSubject.send((year: displayYear, month: displayMonth))
   }
 
   /// Navigate to the next month
@@ -96,6 +101,8 @@ final class SharedMonthContext: ObservableObject {
     } else {
       displayMonth += 1
     }
+
+    monthChangedSubject.send((year: displayYear, month: displayMonth))
   }
 
   /// Reset to current month
@@ -117,6 +124,7 @@ final class SharedMonthContext: ObservableObject {
 
     displayYear = current.year
     displayMonth = current.month
+    monthChangedSubject.send((year: displayYear, month: displayMonth))
   }
 
   /// Navigate to a specific year and month
@@ -141,6 +149,7 @@ final class SharedMonthContext: ObservableObject {
 
     displayYear = year
     displayMonth = month
+    monthChangedSubject.send((year: displayYear, month: displayMonth))
   }
 
   /// Reset to current month without animation (for initial load)
@@ -149,5 +158,6 @@ final class SharedMonthContext: ObservableObject {
     navigationDirection = nil
     displayYear = current.year
     displayMonth = current.month
+    monthChangedSubject.send((year: displayYear, month: displayMonth))
   }
 }

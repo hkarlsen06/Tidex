@@ -71,6 +71,7 @@ final class LocalStore {
       LocalSharedShift.self,
       LocalSharer.self,
       LocalShiftPreview.self,
+      LocalSharedShiftFetchRecord.self,
       LocalConversation.self,
     ])
 
@@ -167,6 +168,7 @@ actor LocalStoreActor {
       try modelContext.delete(model: LocalSharedShift.self)
       try modelContext.delete(model: LocalSharer.self)
       try modelContext.delete(model: LocalShiftPreview.self)
+      try modelContext.delete(model: LocalSharedShiftFetchRecord.self)
       try modelContext.delete(model: LocalConversation.self)
       try modelContext.save()
     } catch {
@@ -2615,6 +2617,25 @@ actor LocalStoreActor {
       modelContext.insert(localShift)
     }
 
+    // Upsert fetch record so we know this month was fetched (even if empty)
+    let fetchRecordKey = "\(viewerId):\(ownerId):\(year):\(month)"
+    let fetchRecordDescriptor = FetchDescriptor<LocalSharedShiftFetchRecord>(
+      predicate: #Predicate { $0.compositeKey == fetchRecordKey }
+    )
+    let existingRecords = try modelContext.fetch(fetchRecordDescriptor)
+    for record in existingRecords {
+      modelContext.delete(record)
+    }
+    modelContext.insert(
+      LocalSharedShiftFetchRecord(
+        ownerId: ownerId,
+        viewerId: viewerId,
+        year: year,
+        month: month,
+        shiftCount: shifts.count
+      )
+    )
+
     try modelContext.save()
   }
 
@@ -2644,6 +2665,14 @@ actor LocalStoreActor {
       modelContext.delete(preview)
     }
 
+    // Clear fetch records
+    let fetchRecordDescriptor = FetchDescriptor<LocalSharedShiftFetchRecord>(
+      predicate: #Predicate { $0.viewerId == viewerId }
+    )
+    for record in try modelContext.fetch(fetchRecordDescriptor) {
+      modelContext.delete(record)
+    }
+
     try modelContext.save()
   }
 
@@ -2657,6 +2686,17 @@ actor LocalStoreActor {
     for shift in try modelContext.fetch(descriptor) {
       modelContext.delete(shift)
     }
+
+    // Clear fetch records for this owner
+    let fetchRecordDescriptor = FetchDescriptor<LocalSharedShiftFetchRecord>(
+      predicate: #Predicate { record in
+        record.ownerId == ownerId && record.viewerId == viewerId
+      }
+    )
+    for record in try modelContext.fetch(fetchRecordDescriptor) {
+      modelContext.delete(record)
+    }
+
     try modelContext.save()
   }
 

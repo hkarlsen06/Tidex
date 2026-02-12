@@ -19,10 +19,10 @@
 		11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C232F16B98A0076AFD6 /* GoogleSignInSwift */; };
 		11923C262F16BB090076AFD6 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C252F16BB090076AFD6 /* Realtime */; };
 		11923C282F16BB090076AFD6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C272F16BB090076AFD6 /* Supabase */; };
-		11F0A0043011111100A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		11F0A0043011111100A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
 		D61778127607441CA2BF1FBF /* Resources/Localization/Widget/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 955621F053164F42944E9C0F /* Resources/Localization/Widget/Localizable.xcstrings */; };
 		E61778127607441CA2BF1FBF /* Resources/Localization/Watch/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */; };

@@ -44,6 +44,32 @@ struct FeaturedShiftCard: View {
     return progress >= 0 && progress <= 100
   }
 
+  /// Badge color status for the featured shift countdown.
+  private var countdownStatus: ShiftPreviewStatus {
+    if hasProgress {
+      return .active
+    }
+
+    if Date.hasShiftEnded(
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime
+    ) {
+      return .past
+    }
+
+    return .upcoming
+  }
+
+  /// Final 60-second countdown (matches FriendCard behavior for active shifts).
+  private var finalCountdownSeconds: Int? {
+    CountdownFormatter.finalCountdownSecondsForShift(
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime
+    )
+  }
+
   private var isRTL: Bool {
     layoutDirection == .rightToLeft
   }
@@ -59,7 +85,7 @@ struct FeaturedShiftCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: Spacing.xs) {
+    VStack(spacing: Spacing.sm) {
       // Main card content
       ShiftCardContentLayout(centerTrailing: !showBreakdown) {
         // Row 1: Day name and date
@@ -159,19 +185,21 @@ struct FeaturedShiftCard: View {
       // Uses fixed height to prevent layout shift during transitions
       Group {
         if let text = footerText {
-          HStack(spacing: Spacing.xxxs) {
-            if isBestShift {
+          if isBestShift {
+            HStack(spacing: Spacing.xxxs) {
               Image(systemName: "star.fill")
                 .font(.tidexCaptionRegular)
                 .foregroundColor(.tidexBlue)
-            } else {
-              Circle()
-                .fill(hasProgress ? Color.green : (isToday ? Color.blue : Color.tidexTextMuted))
-                .frame(width: 7, height: 7)
+              Text(text)
+                .font(.tidexLabel)
+                .foregroundColor(.tidexTextSecondary)
             }
-            Text(text)
-              .font(.tidexLabel)
-              .foregroundColor(.tidexTextSecondary)
+          } else {
+            ShiftCountdownBadge(
+              text: text,
+              status: countdownStatus,
+              finalCountdownSeconds: finalCountdownSeconds
+            )
           }
         } else {
           // Skeleton placeholder bar matching other empty states

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
@@ -277,6 +278,7 @@ private struct SharedShiftsDetailView: View {
   @Binding var highlightShiftIds: Set<String>
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.layoutDirection) private var layoutDirection
   @State private var showProfile = false
   @State private var shouldNavigateBack = false
 
@@ -284,24 +286,36 @@ private struct SharedShiftsDetailView: View {
     UIDevice.current.userInterfaceIdiom == .phone
   }
 
-  var body: some View {
-    ZStack {
-      Color.tidexBackground
-        .ignoresSafeArea()
+  private let swipeThreshold: CGFloat = 50
+  private let verticalLimit: CGFloat = 50
+  private let edgeExclusion: CGFloat = 24
+  private let monthSwipeHaptic = UIImpactFeedbackGenerator(style: .medium)
 
-      SharedShiftsListView(
-        sharer: sharer,
-        shifts: viewModel.sharedShifts,
-        year: viewModel.committedYear,
-        month: viewModel.committedMonth,
-        isLoading: viewModel.isLoadingShifts,
-        highlightDates: highlightDates,
-        highlightShiftIds: highlightShiftIds,
-        isSuperimposing: viewModel.isSuperimposing,
-        userHoursByDate: viewModel.userHoursByDate
-      )
-      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-      .frame(maxWidth: .infinity)
+  var body: some View {
+    GeometryReader { geometry in
+      ZStack {
+        Color.tidexBackground
+          .ignoresSafeArea()
+
+        SharedShiftsListView(
+          sharer: sharer,
+          shifts: viewModel.sharedShifts,
+          year: viewModel.committedYear,
+          month: viewModel.committedMonth,
+          isLoading: viewModel.isLoadingShifts,
+          highlightDates: highlightDates,
+          highlightShiftIds: highlightShiftIds,
+          isSuperimposing: viewModel.isSuperimposing,
+          userHoursByDate: viewModel.userHoursByDate
+        )
+        .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+        .frame(maxWidth: .infinity)
+      }
+      .contentShape(Rectangle())
+      .simultaneousGesture(monthSwipeDragGesture(containerWidth: geometry.size.width))
+    }
+    .onAppear {
+      monthSwipeHaptic.prepare()
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -350,7 +364,39 @@ private struct SharedShiftsDetailView: View {
       )
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
+      .interactiveDismissDisabled()
     }
+  }
+
+  private func monthSwipeDragGesture(containerWidth: CGFloat) -> some Gesture {
+    DragGesture(minimumDistance: 10)
+      .onEnded { value in
+        let horizontal = value.translation.width
+        let vertical = abs(value.translation.height)
+        guard vertical <= verticalLimit else { return }
+        guard abs(horizontal) >= swipeThreshold else { return }
+
+        // Leave edge swipes to NavigationStack interactive pop gesture.
+        let startX = value.startLocation.x
+        guard startX > edgeExclusion && startX < (containerWidth - edgeExclusion) else { return }
+
+        AppearanceTracker.shared.reset()
+        monthSwipeHaptic.impactOccurred()
+        monthSwipeHaptic.prepare()
+
+        let swipeLeft = horizontal < 0
+        if swipeLeft {
+          if layoutDirection == .rightToLeft {
+            viewModel.goToPreviousMonth()
+          } else {
+            viewModel.goToNextMonth()
+          }
+        } else if layoutDirection == .rightToLeft {
+          viewModel.goToNextMonth()
+        } else {
+          viewModel.goToPreviousMonth()
+        }
+      }
   }
 }
 

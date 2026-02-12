@@ -201,6 +201,33 @@ final class SharedShiftsRepository: ObservableObject {
     }
   }
 
+  // MARK: - Fetch Record Operations
+
+  /// Check whether a specific owner/month has been fetched before.
+  /// Used to distinguish "never fetched" from "fetched but empty" so that
+  /// revisiting an empty month skips the loading state.
+  func hasFetchRecord(
+    ownerId: String,
+    viewerId: String,
+    year: Int,
+    month: Int
+  ) -> Bool {
+    let context = localStore.mainContext
+    let compositeKey = "\(viewerId):\(ownerId):\(year):\(month)"
+
+    var descriptor = FetchDescriptor<LocalSharedShiftFetchRecord>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+    descriptor.fetchLimit = 1
+
+    do {
+      return try !context.fetch(descriptor).isEmpty
+    } catch {
+      logger.error("Failed to check fetch record: \(error.localizedDescription)")
+      return false
+    }
+  }
+
   // MARK: - Shift Preview Operations
 
   /// Get cached shift previews for a viewer
