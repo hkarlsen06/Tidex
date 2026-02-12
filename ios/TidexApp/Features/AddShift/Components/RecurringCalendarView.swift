@@ -31,42 +31,40 @@ struct RecurringCalendarView: View {
     let days = CalendarGridHelper.daysInMonth(for: viewModel.displayMonth)
     let projectedDatesSet = Set(viewModel.projectedRecurringDates)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
-      ForEach(days, id: \.id) { dayInfo in
-        let isAnchor = dayInfo.dateISO.map { isAnchorDate($0) } ?? false
-        let isProjected = dayInfo.dateISO.map { projectedDatesSet.contains($0) } ?? false
-        let hasConflict = dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false
-        let hasExistingShift =
-          dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false
-        let isToday = dayInfo.dateISO == todayISO()
-        let existingHours = dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] }
-        let anchorEarnings =
-          isAnchor ? dayInfo.dateISO.flatMap { viewModel.earningsForRecurringDate($0) } : nil
+    CalendarMonthGrid(days: days) { dayInfo in
+      let isAnchor = dayInfo.dateISO.map { isAnchorDate($0) } ?? false
+      let isProjected = dayInfo.dateISO.map { projectedDatesSet.contains($0) } ?? false
+      let hasConflict = dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false
+      let hasExistingShift =
+        dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false
+      let isToday = dayInfo.dateISO == todayISO()
+      let existingHours = dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] }
+      let anchorEarnings =
+        isAnchor ? dayInfo.dateISO.flatMap { viewModel.earningsForRecurringDate($0) } : nil
 
-        CalendarDayCell(
-          dayInfo: dayInfo,
-          style: cellStyle(
-            isAnchor: isAnchor,
-            isProjected: isProjected,
-            hasConflict: hasConflict,
-            hasExistingShift: hasExistingShift,
-            isToday: isToday,
-            isOutsideMonth: dayInfo.isOutsideMonth
-          ),
-          content: cellContent(
-            isAnchor: isAnchor,
-            isProjected: isProjected,
-            hasConflict: hasConflict,
-            anchorEarnings: anchorEarnings,
-            existingHours: existingHours,
-            isOutsideMonth: dayInfo.isOutsideMonth
-          )
+      CalendarDayCell(
+        dayInfo: dayInfo,
+        style: cellStyle(
+          isAnchor: isAnchor,
+          isProjected: isProjected,
+          hasConflict: hasConflict,
+          hasExistingShift: hasExistingShift,
+          isToday: isToday,
+          isOutsideMonth: dayInfo.isOutsideMonth
+        ),
+        content: cellContent(
+          isAnchor: isAnchor,
+          isProjected: isProjected,
+          hasConflict: hasConflict,
+          anchorEarnings: anchorEarnings,
+          existingHours: existingHours,
+          isOutsideMonth: dayInfo.isOutsideMonth
         )
-        .contentShape(Rectangle())
-        .onTapGesture {
-          if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
-            viewModel.toggleAnchorDate(dateISO)
-          }
+      )
+      .contentShape(Rectangle())
+      .onTapGesture {
+        if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
+          viewModel.toggleAnchorDate(dateISO)
         }
       }
     }

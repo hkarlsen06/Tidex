@@ -191,16 +191,14 @@ struct ShareableCalendarView: View {
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: month)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
-      ForEach(days, id: \.id) { dayInfo in
-        let isToday = dayInfo.dateISO == todayISO()
+    CalendarMonthGrid(days: days) { dayInfo in
+      let isToday = dayInfo.dateISO == todayISO()
 
-        CalendarDayCell(
-          dayInfo: dayInfo,
-          style: cellStyle(isToday: isToday),
-          content: cellContent(for: dayInfo)
-        )
-      }
+      CalendarDayCell(
+        dayInfo: dayInfo,
+        style: cellStyle(isToday: isToday),
+        content: cellContent(for: dayInfo)
+      )
     }
   }
 

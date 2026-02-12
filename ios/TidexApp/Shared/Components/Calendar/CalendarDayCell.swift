@@ -73,18 +73,16 @@ struct CalendarDayCell<Content: View>: View {
   let dayInfo: CalendarDayInfo
   let style: CalendarCellStyle
   let content: CalendarCellContent
-  // Optical balance: text glyph metrics make equal numeric padding look top-heavy.
   private let horizontalCornerInset: CGFloat = Spacing.xxxs
-  private let topCornerInset: CGFloat = 3
-  private let weekNumberTopOpticalOffset: CGFloat = 1
+  private let topCornerInset: CGFloat = 1
+  private let topRowHeight: CGFloat = 17
+  private let stackedMetricSpacing: CGFloat = -3
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
   var showOverlapIndicator: Bool = false
 
   /// Optional custom content view (used when content == .custom)
   let customContent: (() -> Content)?
-
-  @Environment(\.layoutDirection) private var layoutDirection
 
   init(
     dayInfo: CalendarDayInfo,
@@ -101,41 +99,25 @@ struct CalendarDayCell<Content: View>: View {
   }
 
   var body: some View {
-    ZStack {
-      // Top markers row (week/overlap on left, day number on right)
-      VStack {
-        HStack(alignment: .lastTextBaseline) {
-          if showOverlapIndicator {
-            Image(systemName: "person.2.fill")
-              .font(.tidexMicro.weight(.semibold))
-              .foregroundColor(.tidexBlue)
-              .alignmentGuide(.lastTextBaseline) { dimensions in
-                dimensions[VerticalAlignment.bottom]
-              }
-          } else if let weekNum = dayInfo.weekNumber {
-            Text("\(weekNum)")
-              .font(.tidexMicro)
-              .foregroundColor(.tidexTextMuted)
-              .offset(y: weekNumberTopOpticalOffset)
-          }
+    VStack(spacing: 0) {
+      HStack(alignment: .center) {
+        leadingMarkerSlot
 
-          Spacer(minLength: 0)
+        Spacer(minLength: 0)
 
-          Text("\(dayInfo.dayNumber)")
-            .font(.tidexBodyMedium)
-            .fixedSize(horizontal: true, vertical: true)
-            .foregroundColor(style.dayNumberColor)
-        }
-        .padding(.horizontal, horizontalCornerInset)
-        .padding(.top, topCornerInset)
-        Spacer()
+        Text("\(dayInfo.dayNumber)")
+          .font(.tidexBodyMedium)
+          .fixedSize(horizontal: true, vertical: false)
+          .foregroundColor(style.dayNumberColor)
       }
+      .frame(height: topRowHeight, alignment: .top)
+      .padding(.horizontal, horizontalCornerInset)
+      .padding(.top, topCornerInset)
 
-      // Content (centered)
       contentView
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
-    .frame(maxWidth: .infinity)
-    .aspectRatio(1 / 1.3, contentMode: .fill)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .clipped()
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.sm)
@@ -150,136 +132,149 @@ struct CalendarDayCell<Content: View>: View {
   }
 
   @ViewBuilder
+  private var leadingMarkerContent: some View {
+    if showOverlapIndicator {
+      Image(systemName: "person.2.fill")
+        .font(.tidexMicro)
+        .imageScale(.small)
+        .foregroundColor(.tidexBlue)
+    } else if let weekNum = dayInfo.weekNumber {
+      Text("\(weekNum)")
+        .font(.tidexMicro)
+        .foregroundColor(.tidexTextMuted)
+    }
+  }
+
+  private var leadingMarkerSlot: some View {
+    Text("88")
+      .font(.tidexMicro)
+      .hidden()
+      .accessibilityHidden(true)
+      .overlay(alignment: .leading) {
+        leadingMarkerContent
+      }
+  }
+
+  @ViewBuilder
   private var contentView: some View {
     switch content {
     case .empty:
-      EmptyView()
+      Color.clear
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .hours(let hoursData, let color):
       let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
-      // Reserve top space for week/day/overlap markers, then center hours in the remaining space.
-      let topReservedSpace: CGFloat = (showOverlapIndicator || dayInfo.weekNumber != nil) ? 22 : 18
-      GeometryReader { geo in
-        let availableHeight = max(geo.size.height - topReservedSpace, 0)
-        let fontSize = min(geo.size.width * 0.4, availableHeight * 0.42)
-        VStack(spacing: 0) {
-          Color.clear
-            .frame(height: topReservedSpace)
-
-          VStack(spacing: -3) {
-            Text(hoursData.start)
-              .font(.system(size: fontSize, weight: .bold))
-              .environment(\.layoutDirection, .leftToRight)
-              .lineLimit(1)
-              .minimumScaleFactor(0.5)
-              .allowsTightening(true)
-              .frame(maxWidth: .infinity, alignment: .center)
-            Text(endDisplay)
-              .font(.system(size: fontSize, weight: .bold))
-              .environment(\.layoutDirection, .leftToRight)
-              .lineLimit(1)
-              .minimumScaleFactor(0.5)
-              .allowsTightening(true)
-              .frame(maxWidth: .infinity, alignment: .center)
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      metricContainer(lineCount: 2) { fontSize in
+        VStack(spacing: stackedMetricSpacing) {
+          calendarMetricText(hoursData.start, color: color, fontSize: fontSize)
+            .environment(\.layoutDirection, .leftToRight)
+          calendarMetricText(endDisplay, color: color, fontSize: fontSize)
+            .environment(\.layoutDirection, .leftToRight)
         }
-        .foregroundColor(color)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .padding(.horizontal, Spacing.xxs)
 
     case .earnings(let amount, let color):
-      let topReservedSpace: CGFloat = (showOverlapIndicator || dayInfo.weekNumber != nil) ? 22 : 18
-      GeometryReader { geo in
-        let availableHeight = max(geo.size.height - topReservedSpace, 0)
-        let fontSize = min(geo.size.width * 0.4, availableHeight * 0.42)
-        VStack(spacing: 0) {
-          Color.clear
-            .frame(height: topReservedSpace)
-
-          Text(CalendarGridHelper.formatCompactCurrency(amount))
-            .font(.system(size: fontSize, weight: .bold))
-            .foregroundColor(color)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .allowsTightening(true)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+      metricContainer(lineCount: 1) { fontSize in
+        calendarMetricText(
+          CalendarGridHelper.formatCompactCurrency(amount),
+          color: color,
+          fontSize: fontSize
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .padding(.horizontal, Spacing.xxs)
 
     case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
-      let topReservedSpace: CGFloat = (showOverlapIndicator || dayInfo.weekNumber != nil) ? 22 : 18
-      GeometryReader { geo in
-        let availableHeight = max(geo.size.height - topReservedSpace, 0)
-        let fontSize = min(geo.size.width * 0.4, availableHeight * 0.42)
+      Group {
         if earnings.hasTaxEnabled {
-          VStack(spacing: 0) {
-            Color.clear
-              .frame(height: topReservedSpace)
-
-            VStack(spacing: -3) {
-              Text(CalendarGridHelper.formatCompactCurrency(earnings.net))
-                .font(.system(size: fontSize, weight: .bold))
-                .foregroundColor(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .allowsTightening(true)
-                .frame(maxWidth: .infinity, alignment: .center)
-              Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
-                .font(.system(size: fontSize, weight: .bold))
-                .foregroundColor(beforeTaxColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .allowsTightening(true)
-                .frame(maxWidth: .infinity, alignment: .center)
+          metricContainer(lineCount: 2) { fontSize in
+            VStack(spacing: stackedMetricSpacing) {
+              calendarMetricText(
+                CalendarGridHelper.formatCompactCurrency(earnings.net),
+                color: color,
+                fontSize: fontSize
+              )
+              calendarMetricText(
+                CalendarGridHelper.formatCompactCurrency(earnings.gross),
+                color: beforeTaxColor,
+                fontSize: fontSize
+              )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-          VStack(spacing: 0) {
-            Color.clear
-              .frame(height: topReservedSpace)
-
-            Text(CalendarGridHelper.formatCompactCurrency(earnings.gross))
-              .font(.system(size: fontSize, weight: .bold))
-              .foregroundColor(color)
-              .lineLimit(1)
-              .minimumScaleFactor(0.5)
-              .allowsTightening(true)
-              .frame(maxWidth: .infinity, maxHeight: .infinity)
+          metricContainer(lineCount: 1) { fontSize in
+            calendarMetricText(
+              CalendarGridHelper.formatCompactCurrency(earnings.gross),
+              color: color,
+              fontSize: fontSize
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
       }
-      .padding(.horizontal, Spacing.xxs)
 
     case .starIcon(let color):
-      VStack {
-        Spacer()
-        Image(systemName: "star.fill")
-          .font(.footnote.weight(.bold))
-          .foregroundColor(color)
-          .padding(.bottom, Spacing.xs)
-      }
+      Image(systemName: "star.fill")
+        .font(.footnote.weight(.bold))
+        .foregroundColor(color)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .dot(let color):
-      VStack {
-        Spacer()
-        Circle()
-          .fill(color)
-          .frame(width: 8, height: 8)
-          .padding(.bottom, Spacing.xs)
-      }
+      Circle()
+        .fill(color)
+        .frame(width: 8, height: 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .custom:
       if let customContent = customContent {
         customContent()
       }
     }
+  }
+
+  private func metricContainer<Inner: View>(
+    lineCount: Int,
+    horizontalInset: CGFloat = Spacing.xxs,
+    @ViewBuilder content: @escaping (_ fontSize: CGFloat) -> Inner
+  ) -> some View {
+    GeometryReader { geo in
+      let fontSize = metricFontSize(
+        for: geo.size,
+        lineCount: lineCount,
+        horizontalInset: horizontalInset
+      )
+
+      content(fontSize)
+        .padding(.horizontal, horizontalInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+  }
+
+  private func metricFontSize(
+    for size: CGSize,
+    lineCount: Int,
+    horizontalInset: CGFloat
+  ) -> CGFloat {
+    let safeLineCount = max(lineCount, 1)
+    let usableWidth = max(size.width - (horizontalInset * 2), 0)
+    let widthBound = usableWidth * 0.4
+    let interlineSpacing = CGFloat(max(safeLineCount - 1, 0)) * abs(stackedMetricSpacing)
+    let usableHeight = max(size.height - interlineSpacing, 0)
+    let heightPerLine = usableHeight / CGFloat(safeLineCount)
+    let heightBound = heightPerLine * 0.9
+
+    return max(9, min(widthBound, heightBound))
+  }
+
+  private func calendarMetricText(_ value: String, color: Color, fontSize: CGFloat) -> some View {
+    Text(value)
+      .font(.system(size: fontSize, weight: .bold))
+      .foregroundColor(color)
+      .lineLimit(1)
+      .minimumScaleFactor(0.7)
+      .allowsTightening(true)
+      .frame(maxWidth: .infinity, alignment: .center)
   }
 }
 

@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Read-only calendar view for shared shifts
 /// Matches the visual style of ShiftsCalendarView but without selection/editing features
@@ -9,10 +8,6 @@ struct SharedShiftsCalendarView: View {
   let month: Int  // 1-12
   let currency: String
   let showEarnings: Bool
-
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-  }
 
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
@@ -137,7 +132,6 @@ struct SharedShiftsCalendarView: View {
         )
       }
     }
-    .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
     .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
   }
 
@@ -270,10 +264,8 @@ struct SharedShiftsCalendarView: View {
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: month)
 
-    return LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
-      ForEach(days, id: \.id) { dayInfo in
-        calendarDayView(for: dayInfo)
-      }
+    return CalendarMonthGrid(days: days) { dayInfo in
+      calendarDayView(for: dayInfo)
     }
   }
 
