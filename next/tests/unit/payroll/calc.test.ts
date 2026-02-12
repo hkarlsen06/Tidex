@@ -239,6 +239,31 @@ describe('payroll/calc', () => {
       expect(result.supplementPay).toBeGreaterThan(0);
       expect(result.gross).toBeGreaterThan(1200);
     });
+
+    it('should suppress all supplements when custom_supplements has empty rules array', () => {
+      const shift = createShift({
+        shift_date: '2025-01-15', // Wednesday
+        start_time: '17:00',
+        end_time: '22:00',
+        custom_supplements: { rules: [] },
+      });
+      const settings = createSettings({ pause_deduction_enabled: false });
+      const supplements: SupplementRule[] = [
+        { days: [1, 2, 3, 4, 5], from: '18:00', to: '21:00', rate: 22 },
+        { days: [1, 2, 3, 4, 5], from: '21:00', to: '24:00', rate: 45 },
+      ];
+      const snapshot = createSnapshot({
+        hourly_wage: 200,
+        supplements: { rules: supplements },
+      });
+
+      const result = computeShift(shift, settings, supplements, snapshot);
+
+      expect(result.durationHours).toBe(5);
+      expect(result.basePay).toBe(1000); // 5 * 200
+      expect(result.supplementPay).toBe(0); // Empty rules = no supplements
+      expect(result.gross).toBe(1000);
+    });
   });
 
   describe('wage rate resolution', () => {

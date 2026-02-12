@@ -60,8 +60,13 @@ function resolveSupplementRules(
   predefinedRules: SupplementRule[],
   customSupplements: CustomSupplementsData | null | undefined
 ): SupplementRule[] {
-  if (!customSupplements || !customSupplements.rules || customSupplements.rules.length === 0) {
+  if (!customSupplements || !customSupplements.rules) {
     return predefinedRules;
+  }
+
+  // Empty rules array means "explicitly no supplements" for this shift
+  if (customSupplements.rules.length === 0) {
+    return [];
   }
 
   // Custom supplements completely replace predefined rules

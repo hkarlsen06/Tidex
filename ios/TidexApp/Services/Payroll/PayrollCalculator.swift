@@ -163,7 +163,11 @@ struct PayrollCalculator {
     customSupplements: CustomSupplementsData?
   ) -> [SupplementRule] {
     // If custom supplements exist, they replace everything
-    if let custom = customSupplements, !custom.rules.isEmpty {
+    if let custom = customSupplements {
+      // Empty rules array means "explicitly no supplements" for this shift
+      if custom.rules.isEmpty {
+        return []
+      }
       return custom.rules.map { rule in
         SupplementRule(
           days: [weekday],

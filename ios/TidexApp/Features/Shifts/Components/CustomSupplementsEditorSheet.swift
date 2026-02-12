@@ -341,10 +341,8 @@ struct CustomSupplementsEditorSheet: View {
   // MARK: - Initialization
 
   private func initializeRules() {
-    // Check if shift has existing custom supplements
-    if let customSupplements = shift.shift.custom_supplements,
-      !customSupplements.rules.isEmpty
-    {
+    // Check if shift has existing custom supplements (including explicitly empty rules)
+    if let customSupplements = shift.shift.custom_supplements {
       // Load existing custom supplements
       hadCustomSupplements = true
 
