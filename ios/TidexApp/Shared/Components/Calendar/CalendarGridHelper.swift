@@ -7,6 +7,10 @@ import SwiftUI
 /// Centralizes the date calculation logic shared across all calendar views
 enum CalendarGridHelper {
   private static let calendar = Calendar.current
+  static let columnCount = 7
+  static let cellSpacing: CGFloat = Spacing.xxs
+  /// Width:height ratio for calendar cells.
+  static let cellAspectRatio: CGFloat = 1 / 1.3
 
   // MARK: - Days in Month
 
@@ -139,7 +143,10 @@ enum CalendarGridHelper {
   // MARK: - Grid Columns
 
   /// Standard 7-column grid for calendar
-  static let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xxs), count: 7)
+  static let columns = Array(
+    repeating: GridItem(.flexible(), spacing: cellSpacing),
+    count: columnCount
+  )
 
   // MARK: - Formatting
 
@@ -185,5 +192,37 @@ enum CalendarGridHelper {
       return monthName(from: date, locale: locale)
     }
     return ""
+  }
+}
+
+/// Shared month grid container that owns cell geometry.
+/// Parent views provide day content, while this view enforces
+/// consistent cell sizing for all calendar variants.
+struct CalendarMonthGrid<DayContent: View>: View {
+  let days: [CalendarDayInfo]
+  var spacing: CGFloat = CalendarGridHelper.cellSpacing
+  var cellAspectRatio: CGFloat = CalendarGridHelper.cellAspectRatio
+  let dayContent: (CalendarDayInfo) -> DayContent
+
+  init(
+    days: [CalendarDayInfo],
+    spacing: CGFloat = CalendarGridHelper.cellSpacing,
+    cellAspectRatio: CGFloat = CalendarGridHelper.cellAspectRatio,
+    @ViewBuilder dayContent: @escaping (CalendarDayInfo) -> DayContent
+  ) {
+    self.days = days
+    self.spacing = spacing
+    self.cellAspectRatio = cellAspectRatio
+    self.dayContent = dayContent
+  }
+
+  var body: some View {
+    LazyVGrid(columns: CalendarGridHelper.columns, spacing: spacing) {
+      ForEach(days, id: \.id) { dayInfo in
+        dayContent(dayInfo)
+          .frame(maxWidth: .infinity)
+          .aspectRatio(cellAspectRatio, contentMode: .fit)
+      }
+    }
   }
 }

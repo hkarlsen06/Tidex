@@ -36,6 +36,10 @@ struct SharedShiftsListView: View {
   @State private var showNotifiedIcon = false
   @State private var bellShakeTrigger = false
 
+  private var isIPhone: Bool {
+    UIDevice.current.userInterfaceIdiom == .phone
+  }
+
   var body: some View {
     GeometryReader { _ in
       ZStack {
@@ -61,6 +65,8 @@ struct SharedShiftsListView: View {
                 selectedShift = shift
               }
             )
+            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
             Spacer()
           }
           // Offset for month picker overlay so content centers in available space

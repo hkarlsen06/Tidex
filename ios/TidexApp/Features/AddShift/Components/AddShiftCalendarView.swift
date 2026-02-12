@@ -8,42 +8,16 @@ struct AddShiftCalendarView: View {
   @ObservedObject var viewModel: AddShiftViewModel
 
   private let calendar = Calendar.current
-  private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xxs), count: 7)
 
   var body: some View {
     VStack(spacing: 0) {
       // Weekday headers
-      weekdayHeaderRow
+      CalendarWeekdayHeader()
         .padding(.bottom, Spacing.xs)
 
       // Calendar grid
       calendarGrid
     }
-  }
-
-  // MARK: - Weekday Header Row
-
-  private var weekdayHeaderRow: some View {
-    HStack(spacing: 0) {
-      ForEach(weekdaySymbols.indices, id: \.self) { index in
-        Text(weekdaySymbols[index])
-          .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
-          .frame(maxWidth: .infinity)
-      }
-    }
-  }
-
-  private var weekdaySymbols: [String] {
-    [
-      String(localized: .calendarWeekdayMonday),
-      String(localized: .calendarWeekdayTuesday),
-      String(localized: .calendarWeekdayWednesday),
-      String(localized: .calendarWeekdayThursday),
-      String(localized: .calendarWeekdayFriday),
-      String(localized: .calendarWeekdaySaturday),
-      String(localized: .calendarWeekdaySunday),
-    ]
   }
 
   // MARK: - Calendar Grid
@@ -52,20 +26,18 @@ struct AddShiftCalendarView: View {
   private var calendarGrid: some View {
     let days = daysInMonth()
 
-    LazyVGrid(columns: columns, spacing: Spacing.xxs) {
-      ForEach(days, id: \.id) { dayInfo in
-        AddShiftCalendarDayCell(
-          dayInfo: dayInfo,
-          isToday: dayInfo.dateISO == todayISO(),
-          isSelected: dayInfo.dateISO.map { viewModel.selectedDates.contains($0) } ?? false,
-          hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
-          existingHours: dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] },
-          previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewEarnings[$0] }
-        )
-        .onTapGesture {
-          if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
-            viewModel.toggleDate(dateISO)
-          }
+    CalendarMonthGrid(days: days) { dayInfo in
+      AddShiftCalendarDayCell(
+        dayInfo: dayInfo,
+        isToday: dayInfo.dateISO == todayISO(),
+        isSelected: dayInfo.dateISO.map { viewModel.selectedDates.contains($0) } ?? false,
+        hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
+        existingHours: dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] },
+        previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewEarnings[$0] }
+      )
+      .onTapGesture {
+        if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
+          viewModel.toggleDate(dateISO)
         }
       }
     }

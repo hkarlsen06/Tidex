@@ -113,10 +113,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   // MARK: - Background Tasks for Live Activity
 
   private func registerBackgroundTasks() {
-    BGTaskScheduler.shared.register(forTaskWithIdentifier: shiftCheckTaskId, using: nil) {
-      [weak self] task in
-      guard let refreshTask = task as? BGAppRefreshTask else { return }
+    let registered = BGTaskScheduler.shared.register(
+      forTaskWithIdentifier: shiftCheckTaskId,
+      using: nil
+    ) { [weak self] task in
+      guard let refreshTask = task as? BGAppRefreshTask else {
+        print("[BGTask] Received task with wrong type")
+        return
+      }
       self?.handleShiftCheckTask(refreshTask)
+    }
+
+    if registered {
+      print("[BGTask] Successfully registered task handler for \(shiftCheckTaskId)")
+    } else {
+      print("[BGTask] Failed to register task handler - may already be registered")
     }
   }
 
@@ -133,12 +144,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func scheduleNextShiftLiveActivity() {
     // Cancel any existing scheduled task first
     BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: shiftCheckTaskId)
+    print("[BGTask] Cancelled existing background tasks")
 
     guard let userDefaults = sharedUserDefaults(),
       let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
       let data = shiftsJson.data(using: .utf8),
       let shifts = try? JSONDecoder().decode([StoredShift].self, from: data)
     else {
+      print("[BGTask] No shifts found in App Group storage")
       return
     }
 
@@ -152,6 +165,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       .min()
 
     guard let shiftStart = nextShiftStart else {
+      print("[BGTask] No upcoming shifts to schedule background task for")
       return
     }
 
@@ -164,8 +178,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     do {
       try BGTaskScheduler.shared.submit(request)
+      let formatter = ISO8601DateFormatter()
+      print("[BGTask] Scheduled background task for \(formatter.string(from: scheduledTime))")
     } catch {
-      print("[BGTask] Failed to schedule: \(error)")
+      print("[BGTask] Failed to schedule: \(error.localizedDescription)")
     }
   }
 
@@ -175,13 +191,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   private func handleShiftCheckTask(_ task: BGAppRefreshTask) {
+    print("[BGTask] Background task fired - checking for ongoing shifts")
+
     // Set expiration handler
     task.expirationHandler = {
+      print("[BGTask] Task expiring - completing with failure")
       task.setTaskCompleted(success: false)
     }
 
     // Check for ongoing shifts and start Live Activity if needed
     checkAndStartLiveActivity { [weak self] success in
+      print("[BGTask] Completed with success: \(success)")
       task.setTaskCompleted(success: success)
       // Schedule the next shift's Live Activity
       self?.scheduleNextShiftLiveActivity()
@@ -204,7 +224,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// This ensures the Live Activity starts reliably, not just depending on BGTask timing.
   func checkAndStartLiveActivityIfNeeded() {
     // Check if Live Activities are enabled
-    guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+    let authInfo = ActivityAuthorizationInfo()
+    guard authInfo.areActivitiesEnabled else {
+      print("[LiveActivity] Activities not enabled - user may have disabled them in Settings")
       return
     }
 
@@ -366,8 +388,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         content: .init(state: initialState, staleDate: nil),
         pushType: nil
       )
+      print("[LiveActivity] Started successfully for shift \(shift.shiftId)")
     } catch {
-      print("[LiveActivity] Failed to start: \(error)")
+      print("[LiveActivity] Failed to start: \(error.localizedDescription)")
     }
   }
 

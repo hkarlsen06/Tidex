@@ -214,11 +214,10 @@ struct ShiftsCalendarView: View {
 
   private var multiDeleteConfirmMessage: String {
     let count = selectedDates.count
-    if Locale.appLocale.isNorwegian {
-      return "Er du sikker på at du vil slette \(count) vakter? Dette kan ikke angres."
-    } else {
-      return "Are you sure you want to delete \(count) shifts? This cannot be undone."
+    if count == 1 {
+      return String(localized: .shiftsDeleteConfirmMessage)
     }
+    return String(localized: .shiftsDeleteConfirmPluralMessage(count))
   }
 
   // MARK: - Body
@@ -293,32 +292,30 @@ struct ShiftsCalendarView: View {
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: monthNumber)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
-      ForEach(days, id: \.id) { dayInfo in
-        let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
-        let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
-        let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
-        let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
-        let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
-        let isToday = dayInfo.dateISO == todayISO()
-        let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
+    CalendarMonthGrid(days: days) { dayInfo in
+      let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
+      let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
+      let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
+      let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
+      let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
+      let isToday = dayInfo.dateISO == todayISO()
+      let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
 
-        CalendarDayCell(
-          dayInfo: dayInfo,
-          style: cellStyle(
-            isToday: isToday,
-            isSelected: isSelected,
-            isInDragPreview: isInDragPreview,
-            isNewlyAdded: isNewlyAdded,
-            isDeepLinkHighlighted: isDeepLinkHighlighted,
-            hasConflict: hasConflict
-          ),
-          content: cellContent(
-            for: dayInfo,
-            hasShifts: !shiftsOnDay.isEmpty
-          )
+      CalendarDayCell(
+        dayInfo: dayInfo,
+        style: cellStyle(
+          isToday: isToday,
+          isSelected: isSelected,
+          isInDragPreview: isInDragPreview,
+          isNewlyAdded: isNewlyAdded,
+          isDeepLinkHighlighted: isDeepLinkHighlighted,
+          hasConflict: hasConflict
+        ),
+        content: cellContent(
+          for: dayInfo,
+          hasShifts: !shiftsOnDay.isEmpty
         )
-      }
+      )
     }
     .coordinateSpace(name: "calendar")
     .overlay(
@@ -548,18 +545,27 @@ struct ShiftsCalendarView: View {
     -> String?
   {
     let gridWidth = geometry.size.width
-    let gridHeight = geometry.size.height
-
     let numRows = (days.count + 6) / 7
-    let cellWidth = gridWidth / 7
-    let cellHeight = gridHeight / CGFloat(numRows)
+    let spacing = CalendarGridHelper.cellSpacing
+    let totalHorizontalSpacing = spacing * CGFloat(CalendarGridHelper.columnCount - 1)
+    let cellWidth = (gridWidth - totalHorizontalSpacing) / CGFloat(CalendarGridHelper.columnCount)
+    let cellHeight = cellWidth / CalendarGridHelper.cellAspectRatio
+    let colStep = cellWidth + spacing
+    let rowStep = cellHeight + spacing
 
-    let col = Int(location.x / cellWidth)
-    let row = Int(location.y / cellHeight)
+    guard colStep > 0, rowStep > 0 else { return nil }
 
-    guard col >= 0, col < 7, row >= 0, row < numRows else { return nil }
+    let col = Int(location.x / colStep)
+    let row = Int(location.y / rowStep)
 
-    let index = row * 7 + col
+    guard col >= 0, col < CalendarGridHelper.columnCount, row >= 0, row < numRows else { return nil }
+
+    // Ignore hits in the inter-cell spacing gutters.
+    let xInCell = location.x - CGFloat(col) * colStep
+    let yInCell = location.y - CGFloat(row) * rowStep
+    guard xInCell <= cellWidth, yInCell <= cellHeight else { return nil }
+
+    let index = row * CalendarGridHelper.columnCount + col
     guard index >= 0, index < days.count else { return nil }
 
     let dayInfo = days[index]

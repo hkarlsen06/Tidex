@@ -53,33 +53,31 @@ struct EditRecurringCalendarView: View {
     let days = CalendarGridHelper.daysInMonth(for: displayMonth)
     let projectedDatesSet = Set(projectedDates)
 
-    LazyVGrid(columns: CalendarGridHelper.columns, spacing: Spacing.xxs) {
-      ForEach(days, id: \.id) { dayInfo in
-        let isAnchor = dayInfo.dateISO.map { isAnchorDate($0) } ?? false
-        let isProjected = dayInfo.dateISO.map { projectedDatesSet.contains($0) } ?? false
-        let hasExistingShift = dayInfo.dateISO.map { existingShiftDates.contains($0) } ?? false
-        let isToday = dayInfo.dateISO == todayISO()
+    CalendarMonthGrid(days: days) { dayInfo in
+      let isAnchor = dayInfo.dateISO.map { isAnchorDate($0) } ?? false
+      let isProjected = dayInfo.dateISO.map { projectedDatesSet.contains($0) } ?? false
+      let hasExistingShift = dayInfo.dateISO.map { existingShiftDates.contains($0) } ?? false
+      let isToday = dayInfo.dateISO == todayISO()
 
-        CalendarDayCell(
-          dayInfo: dayInfo,
-          style: cellStyle(
-            isAnchor: isAnchor,
-            isProjected: isProjected,
-            hasExistingShift: hasExistingShift,
-            isToday: isToday,
-            isOutsideMonth: dayInfo.isOutsideMonth
-          ),
-          content: cellContent(
-            isAnchor: isAnchor,
-            isProjected: isProjected,
-            isOutsideMonth: dayInfo.isOutsideMonth
-          )
+      CalendarDayCell(
+        dayInfo: dayInfo,
+        style: cellStyle(
+          isAnchor: isAnchor,
+          isProjected: isProjected,
+          hasExistingShift: hasExistingShift,
+          isToday: isToday,
+          isOutsideMonth: dayInfo.isOutsideMonth
+        ),
+        content: cellContent(
+          isAnchor: isAnchor,
+          isProjected: isProjected,
+          isOutsideMonth: dayInfo.isOutsideMonth
         )
-        .contentShape(Rectangle())
-        .onTapGesture {
-          if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
-            toggleAnchorDate(dateISO)
-          }
+      )
+      .contentShape(Rectangle())
+      .onTapGesture {
+        if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
+          toggleAnchorDate(dateISO)
         }
       }
     }

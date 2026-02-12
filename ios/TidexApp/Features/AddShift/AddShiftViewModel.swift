@@ -86,8 +86,11 @@ final class AddShiftViewModel: ObservableObject {
   /// Debounce timer for time input changes
   private var previewUpdateTask: Task<Void, Never>?
 
-  /// Debounce delay in seconds (wait for user to finish typing)
-  private static let previewDebounceDelay: UInt64 = 300_000_000  // 300ms
+  /// Debounce delay when user is actively typing (partial input)
+  private static let activeTypingDelay: UInt64 = 150_000_000  // 150ms
+
+  /// Minimal delay when form is complete (instant feedback)
+  private static let completedFormDelay: UInt64 = 50_000_000  // 50ms
 
   // MARK: - Draft Persistence
 
@@ -1212,14 +1215,19 @@ final class AddShiftViewModel: ObservableObject {
   // MARK: - Performance Optimization Methods
 
   /// Schedule a debounced preview update after time input changes
+  /// Uses adaptive delays: instant feedback when form is complete, debounced during typing
   private func schedulePreviewUpdate() {
     // Cancel any pending update
     previewUpdateTask?.cancel()
 
-    // Schedule new update with debounce delay
+    // Use shorter delay when both times are set (user editing complete form = instant feedback)
+    // Use longer delay when partially filled (user actively typing = debounce to reduce thrashing)
+    let delay = hasValidTimes ? Self.completedFormDelay : Self.activeTypingDelay
+
+    // Schedule new update with adaptive delay
     previewUpdateTask = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: Self.previewDebounceDelay)
+        try await Task.sleep(nanoseconds: delay)
 
         // Check if cancelled during sleep
         guard !Task.isCancelled else { return }
