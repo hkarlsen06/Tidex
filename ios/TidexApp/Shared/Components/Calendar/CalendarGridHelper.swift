@@ -171,7 +171,7 @@ enum CalendarGridHelper {
   static func monthName(from date: Date, locale: Locale) -> String {
     FormatterCache.monthNameFormatter(locale: locale)
       .string(from: date)
-      .capitalized
+      .sentenceCased()
   }
 
   /// Get localized month name from year/month components

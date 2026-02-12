@@ -64,10 +64,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       SentrySDK.start { options in
         options.dsn = sentryDSN
         options.debug = false
-#if DEBUG
-        // Allow Session Replay while developing in environments Sentry marks as unreliable.
-        options.experimental.enableSessionReplayInUnreliableEnvironment = true
-#endif
+        #if DEBUG
+          // Allow Session Replay while developing in environments Sentry marks as unreliable.
+          options.experimental.enableSessionReplayInUnreliableEnvironment = true
+        #endif
       }
       launchLog.info("[Launch] Sentry initialized")
     } else {

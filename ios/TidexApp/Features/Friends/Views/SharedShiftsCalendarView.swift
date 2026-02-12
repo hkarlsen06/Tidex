@@ -112,6 +112,12 @@ struct SharedShiftsCalendarView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      if isSuperimposing {
+        superimposeLegend
+          .padding(.bottom, Spacing.sm)
+          .transition(.move(edge: .top).combined(with: .opacity))
+      }
+
       // Header: Month name + Year and Total
       headerRow
 
@@ -132,12 +138,7 @@ struct SharedShiftsCalendarView: View {
       }
     }
     .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-    .overlay(alignment: .top) {
-      if isSuperimposing {
-        superimposeLegend
-          .offset(y: -86)
-      }
-    }
+    .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
   }
 
   // MARK: - Header Row
@@ -284,10 +285,10 @@ struct SharedShiftsCalendarView: View {
     let isToday = dayInfo.dateISO == todayISO()
     let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
 
-    // Show overlap indicator when superimposing and both user AND friend have shifts
+    // Show overlap indicator whenever both user and friend have shifts.
     let friendHasShift = !shiftsOnDay.isEmpty
     let userHasShift = dayInfo.dateISO.flatMap { userHoursByDate?[$0] } != nil
-    let showOverlap = isSuperimposing && friendHasShift && userHasShift
+    let showOverlap = friendHasShift && userHasShift
 
     CalendarDayCell(
       dayInfo: dayInfo,

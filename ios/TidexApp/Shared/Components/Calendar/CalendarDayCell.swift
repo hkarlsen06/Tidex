@@ -102,10 +102,24 @@ struct CalendarDayCell<Content: View>: View {
 
   var body: some View {
     ZStack {
-      // Day number (top-right)
+      // Top markers row (week/overlap on left, day number on right)
       VStack {
-        HStack {
-          Spacer()
+        HStack(alignment: .lastTextBaseline) {
+          if showOverlapIndicator {
+            Image(systemName: "person.2.fill")
+              .font(.tidexMicro.weight(.semibold))
+              .foregroundColor(.tidexBlue)
+              .alignmentGuide(.lastTextBaseline) { dimensions in
+                dimensions[VerticalAlignment.bottom]
+              }
+          } else if let weekNum = dayInfo.weekNumber {
+            Text("\(weekNum)")
+              .font(.tidexMicro)
+              .foregroundColor(.tidexTextMuted)
+              .offset(y: weekNumberTopOpticalOffset)
+          }
+
+          Spacer(minLength: 0)
 
           Text("\(dayInfo.dayNumber)")
             .font(.tidexBodyMedium)
@@ -127,27 +141,6 @@ struct CalendarDayCell<Content: View>: View {
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .fill(style.backgroundColor)
     )
-    // Week number (top-left) — overlay so it doesn't affect cell sizing
-    .overlay(alignment: .topLeading) {
-      if let weekNum = dayInfo.weekNumber, !showOverlapIndicator {
-        Text("\(weekNum)")
-          .font(.tidexMicro)
-          .foregroundColor(.tidexTextMuted)
-          .padding(.leading, horizontalCornerInset)
-          .padding(.top, topCornerInset)
-          .offset(y: weekNumberTopOpticalOffset)
-      }
-    }
-    // Overlap indicator (top-left, replacing week number)
-    .overlay(alignment: .topLeading) {
-      if showOverlapIndicator {
-        Image(systemName: "person.2.fill")
-          .font(.tidexMicro.weight(.semibold))
-          .foregroundColor(.tidexBlue)
-          .padding(.leading, Spacing.xxs)
-          .padding(.top, 5)
-      }
-    }
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .strokeBorder(style.borderColor, lineWidth: style.borderWidth)

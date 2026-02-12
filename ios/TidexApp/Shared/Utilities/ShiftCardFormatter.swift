@@ -16,7 +16,7 @@ enum ShiftCardFormatter {
     }
 
     let dayNameFormatter = formatterCache.formatter(locale: locale, format: "EEEE")
-    let dayName = dayNameFormatter.string(from: date).capitalized
+    let dayName = dayNameFormatter.string(from: date).sentenceCased()
 
     let dayNumberFormatter = formatterCache.formatter(locale: locale, format: "d")
     let dayNumber = dayNumberFormatter.string(from: date) + String(localized: .commonDaySuffix)

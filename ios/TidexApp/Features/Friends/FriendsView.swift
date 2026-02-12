@@ -298,7 +298,7 @@ private struct SharedShiftsDetailView: View {
         highlightDates: highlightDates,
         highlightShiftIds: highlightShiftIds,
         isSuperimposing: viewModel.isSuperimposing,
-        userHoursByDate: viewModel.isSuperimposing ? viewModel.userHoursByDate : nil
+        userHoursByDate: viewModel.userHoursByDate
       )
       .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
       .frame(maxWidth: .infinity)

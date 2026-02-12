@@ -17,7 +17,7 @@ struct ShareableShiftCard: View {
     let formatter = DateFormatter()
     formatter.locale = Locale.appLocale
     formatter.dateFormat = "EEEE, d. MMMM yyyy"
-    return formatter.string(from: date).capitalized
+    return formatter.string(from: date).sentenceCased()
   }
 
   private var formattedTimeRange: String {

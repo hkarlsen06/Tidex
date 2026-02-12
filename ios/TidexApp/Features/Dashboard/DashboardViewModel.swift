@@ -563,7 +563,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Returns whether payroll has been manually marked as received for the displayed month.
   func isPayrollReceivedOverrideForDisplayedMonth(userId: String? = nil) -> Bool {
-    guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else { return false }
+    guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else {
+      return false
+    }
     return UserDefaults.standard.bool(forKey: key)
   }
 

@@ -595,7 +595,7 @@ final class StatsService: ObservableObject {
     formatter.calendar = calendar
     formatter.locale = Locale(identifier: "nb_NO")  // Norwegian for consistency
     formatter.dateFormat = "EEE"
-    return formatter.string(from: date).capitalized
+    return formatter.string(from: date).sentenceCased()
   }
 
   /// Get full weekday name (e.g., "Mandag", "Tirsdag")
@@ -604,7 +604,7 @@ final class StatsService: ObservableObject {
     formatter.calendar = calendar
     formatter.locale = Locale(identifier: "nb_NO")  // Norwegian for consistency
     formatter.dateFormat = "EEEE"
-    return formatter.string(from: date).capitalized
+    return formatter.string(from: date).sentenceCased()
   }
 
   // MARK: - Employment Percentage Calculation

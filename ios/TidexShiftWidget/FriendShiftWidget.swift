@@ -489,7 +489,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.locale = appLocale()
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-        return weekdayFormatter.string(from: shiftDate).capitalized
+        return sentenceCased(weekdayFormatter.string(from: shiftDate))
       }
     }
 
@@ -509,11 +509,16 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     let weekdayFormatter = DateFormatter()
     weekdayFormatter.locale = appLocale()
     weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-    return weekdayFormatter.string(from: shiftDate).capitalized
+    return sentenceCased(weekdayFormatter.string(from: shiftDate))
   }
 }
 
 // MARK: - App Locale Helper
+
+private func sentenceCased(_ text: String) -> String {
+  guard !text.isEmpty else { return text }
+  return text.prefix(1).uppercased(with: appLocale()) + text.dropFirst()
+}
 
 private func appLocale() -> Locale {
   let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier

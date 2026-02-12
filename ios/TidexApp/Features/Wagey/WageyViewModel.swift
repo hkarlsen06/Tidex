@@ -55,6 +55,12 @@ final class WageyViewModel {
     .max: 90,
   ]
 
+  /// Character count threshold at which the "conversation is getting long" warning appears
+  private static let conversationWarningCharacters = 24_000
+
+  /// Character count threshold at which older messages are truncated before sending to the API
+  private static let conversationMaxCharacters = 32_000
+
   // MARK: - Published State
 
   /// All conversations for the current user
@@ -127,6 +133,27 @@ final class WageyViewModel {
   /// Whether to show the showcase (free tier + hasn't seen it)
   var shouldShowShowcase: Bool {
     currentTier == .free && !hasSeenShowcase
+  }
+
+  /// Estimated total character count across all messages (proxy for token usage)
+  var estimatedConversationCharacters: Int {
+    messages.reduce(0) { total, message in
+      total + message.contentBlocks.reduce(0) { blockTotal, block in
+        switch block {
+        case .text(let text):
+          return blockTotal + text.count
+        case .toolCall(let toolCall):
+          return blockTotal + (toolCall.arguments?.count ?? 0) + (toolCall.result?.count ?? 0)
+        case .image:
+          return blockTotal
+        }
+      }
+    }
+  }
+
+  /// Whether the conversation is long enough to show a soft warning
+  var isConversationLong: Bool {
+    estimatedConversationCharacters >= Self.conversationWarningCharacters
   }
 
   // MARK: - Computed Properties for Streaming
@@ -393,9 +420,9 @@ final class WageyViewModel {
         }
         let userName = coordinator.userDisplayName.isEmpty ? nil : coordinator.userDisplayName
 
-        // Start streaming from WageyService
+        // Start streaming from WageyService (truncate older messages if conversation is very long)
         let stream = WageyService.shared.streamChat(
-          messages: messages,
+          messages: messagesForAPI(),
           userId: userId,
           userName: userName
         )
@@ -451,6 +478,37 @@ final class WageyViewModel {
   }
 
   // MARK: - Private Helpers
+
+  /// Returns messages to send to the API, truncating older messages when the conversation
+  /// exceeds the max character threshold. Keeps the most recent messages that fit.
+  private func messagesForAPI() -> [ChatMessage] {
+    guard estimatedConversationCharacters > Self.conversationMaxCharacters else {
+      return messages
+    }
+
+    // Build from the end, keeping messages until we hit the budget
+    var truncated: [ChatMessage] = []
+    var charCount = 0
+
+    for message in messages.reversed() {
+      let messageChars = message.contentBlocks.reduce(0) { blockTotal, block in
+        switch block {
+        case .text(let text): return blockTotal + text.count
+        case .toolCall(let tc): return blockTotal + (tc.arguments?.count ?? 0) + (tc.result?.count ?? 0)
+        case .image: return blockTotal
+        }
+      }
+
+      if charCount + messageChars > Self.conversationMaxCharacters && !truncated.isEmpty {
+        break
+      }
+
+      charCount += messageChars
+      truncated.append(message)
+    }
+
+    return truncated.reversed()
+  }
 
   /// Trigger a background entitlement sync when server/StoreKit mismatch is detected
   /// This uploads the StoreKit subscription to the server to fix the mismatch

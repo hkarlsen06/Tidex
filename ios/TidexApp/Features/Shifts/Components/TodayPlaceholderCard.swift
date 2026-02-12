@@ -15,7 +15,7 @@ struct TodayPlaceholderCard: View {
 
     // Get day name (full)
     formatter.dateFormat = "EEEE"
-    let dayName = formatter.string(from: date).capitalized
+    let dayName = formatter.string(from: date).sentenceCased()
 
     // Get day number
     formatter.dateFormat = "d"

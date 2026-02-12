@@ -35,13 +35,15 @@ struct ShiftModeToggle: View {
         Button {
           select(modeOption)
         } label: {
-          let labelContent = Label(localizedTitle(for: modeOption), systemImage: iconName(for: modeOption))
-            .labelStyle(.iconOnly)
-            .font(.system(size: iconFontSize, weight: .semibold))
-            .foregroundStyle(isSelected ? .white : .tidexTextSecondary)
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, verticalPadding)
-            .contentShape(Capsule())
+          let labelContent = Label(
+            localizedTitle(for: modeOption), systemImage: iconName(for: modeOption)
+          )
+          .labelStyle(.iconOnly)
+          .font(.system(size: iconFontSize, weight: .semibold))
+          .foregroundStyle(isSelected ? .white : .tidexTextSecondary)
+          .padding(.horizontal, horizontalPadding)
+          .padding(.vertical, verticalPadding)
+          .contentShape(Capsule())
 
           Group {
             if isSelected {
