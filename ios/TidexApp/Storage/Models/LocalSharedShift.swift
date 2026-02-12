@@ -532,3 +532,38 @@ final class LocalShiftPreview {
     )
   }
 }
+
+// MARK: - Fetch Record (tracks which owner/month combinations have been fetched)
+
+/// Tracks that a specific owner/month was fetched from the server.
+/// Allows distinguishing "never fetched" from "fetched but empty" so that
+/// revisiting an empty month shows the calendar instantly without a loading state.
+@Model
+final class LocalSharedShiftFetchRecord {
+  @Attribute(.unique)
+  var compositeKey: String
+
+  var ownerId: String
+  var viewerId: String
+  var year: Int
+  var month: Int
+  var fetchedAt: Date
+  var shiftCount: Int
+
+  init(
+    ownerId: String,
+    viewerId: String,
+    year: Int,
+    month: Int,
+    shiftCount: Int,
+    fetchedAt: Date = Date()
+  ) {
+    self.compositeKey = "\(viewerId):\(ownerId):\(year):\(month)"
+    self.ownerId = ownerId
+    self.viewerId = viewerId
+    self.year = year
+    self.month = month
+    self.shiftCount = shiftCount
+    self.fetchedAt = fetchedAt
+  }
+}

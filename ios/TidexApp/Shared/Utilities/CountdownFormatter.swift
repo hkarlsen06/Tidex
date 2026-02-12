@@ -38,13 +38,50 @@ struct CountdownFormatter {
 
     // Check if shift is in the past
     if now >= shiftEnd {
-      let (text, _) = formatPastTime(from: shiftEnd)
-      return (text, false, 0)
+      return (
+        formatRelativeCountdown(
+          referenceDate: shiftEnd,
+          dayBoundaryReferenceDate: shiftStart,
+          now: now
+        ),
+        false,
+        0
+      )
     }
 
     // Shift is in the future
-    let (text, _) = formatFutureTime(to: shiftStart)
-    return (text, false, 0)
+    return (
+      formatRelativeCountdown(
+        referenceDate: shiftStart,
+        dayBoundaryReferenceDate: shiftStart,
+        now: now
+      ),
+      false,
+      0
+    )
+  }
+
+  /// Returns remaining seconds in the final 60-second window of an active shift.
+  /// Returns `nil` when the shift is not active or not in its final minute.
+  static func finalCountdownSecondsForShift(
+    shiftDate: String,
+    startTime: String,
+    endTime: String,
+    now: Date = Date()
+  ) -> Int? {
+    guard let shiftStart = parseShiftDateTime(date: shiftDate, time: startTime),
+      let shiftEnd = parseShiftDateTime(
+        date: shiftDate, time: endTime, crossesMidnight: endTime <= startTime)
+    else {
+      return nil
+    }
+
+    guard now >= shiftStart && now < shiftEnd else {
+      return nil
+    }
+
+    let seconds = Int(ceil(shiftEnd.timeIntervalSince(now)))
+    return (1...60).contains(seconds) ? seconds : nil
   }
 
   // MARK: - Payroll Countdown
@@ -73,6 +110,82 @@ struct CountdownFormatter {
     // Payroll is in the future
     let (text, _) = formatFutureTime(to: payrollDate)
     return (text, false, false)
+  }
+
+  // MARK: - Shared Relative Countdown
+
+  /// Shared relative countdown formatting used by payroll and friend next-shift previews.
+  /// Format examples: "Om 2t 30min 45sek", "I morgen", "2t siden".
+  static func formatRelativeCountdown(
+    referenceDate: Date,
+    dayBoundaryReferenceDate: Date? = nil,
+    now: Date = Date()
+  ) -> String {
+    let diffSeconds = referenceDate.timeIntervalSince(now)
+    let isFuture = diffSeconds > 0
+    let absDiffSeconds = abs(diffSeconds)
+
+    let totalSeconds = Int(absDiffSeconds)
+    let totalMinutes = totalSeconds / 60
+    let totalHours = totalMinutes / 60
+
+    // Allows callers to keep day-crossing behavior tied to a different anchor date
+    // (FriendCard uses shift start for this).
+    let dayBoundaryDate = dayBoundaryReferenceDate ?? referenceDate
+    let midnightDays = countMidnightCrossings(
+      from: min(now, dayBoundaryDate),
+      to: max(now, dayBoundaryDate)
+    )
+
+    let hAbbrev = String(localized: .commonHoursShort)
+    let minAbbrev = String(localized: .commonMinShort)
+    let secAbbrev = String(localized: .commonSecondsShort)
+
+    if midnightDays == 0 {
+      let h = totalMinutes / 60
+      let m = totalMinutes % 60
+      let s = totalSeconds % 60
+      let includeSeconds = totalHours < 12
+
+      let timeStr: String
+      if totalMinutes == 0 {
+        timeStr = "\(s)\(secAbbrev)"
+      } else if h == 0 {
+        if includeSeconds {
+          timeStr = "\(m)\(minAbbrev) \(s)\(secAbbrev)"
+        } else {
+          timeStr = "\(m)\(minAbbrev)"
+        }
+      } else if includeSeconds {
+        if m == 0 {
+          timeStr = "\(h)\(hAbbrev) \(s)\(secAbbrev)"
+        } else {
+          timeStr = "\(h)\(hAbbrev) \(m)\(minAbbrev) \(s)\(secAbbrev)"
+        }
+      } else if m == 0 {
+        timeStr = "\(h)\(hAbbrev)"
+      } else {
+        timeStr = "\(h)\(hAbbrev) \(m)\(minAbbrev)"
+      }
+
+      if isFuture {
+        return String(localized: .commonInTime(timeStr))
+      } else {
+        return String(localized: .commonTimeAgo(timeStr))
+      }
+    }
+
+    if midnightDays == 1 {
+      return isFuture
+        ? String(localized: .commonTomorrow)
+        : String(localized: .commonYesterday)
+    }
+
+    if isFuture {
+      return String(localized: .commonInDaysPlural(Int(Int32(midnightDays))))
+    } else {
+      return String(localized: .commonDaysAgoPlural(Int(Int32(midnightDays))))
+    }
   }
 
   // MARK: - Private Helpers

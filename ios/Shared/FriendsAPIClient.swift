@@ -1,74 +1,1401 @@
-// swiftlint:disable function_body_length
-// API client fetch methods require sequential network calls
+// swiftlint:disable file_length function_body_length cyclomatic_complexity
 import Foundation
 
-// MARK: - Shift Status (local definition to avoid cross-target dependencies)
+// MARK: - Shared RPC Models (App + Watch + Widget)
 
-/// Status of a shift preview
-/// Note: This mirrors FriendShiftStatus from the main Shared folder
-/// but is defined locally to avoid cross-target compilation issues
-enum FriendShiftStatus: String, Codable, Sendable {
+enum SharingRPCMode: Sendable {
+  case visible
+  case hidden
+}
+
+struct SharingRPCSharerRow: Codable, Sendable {
+  let id: String
+  let email: String?
+  let phone: String?
+  let firstName: String?
+  let profilePictureUrl: String?
+  let oauthAvatarUrl: String?
+  let sharedAt: String
+  let showEarnings: Bool
+  let blocked: Bool
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case email
+    case phone
+    case firstName = "first_name"
+    case profilePictureUrl = "profile_picture_url"
+    case oauthAvatarUrl = "oauth_avatar_url"
+    case sharedAt = "shared_at"
+    case showEarnings = "show_earnings"
+    case blocked
+  }
+}
+
+struct SharingRPCUserSettings: Codable, Sendable {
+  let userId: String?
+  let monthlyGoal: Double?
+  let defaultShiftsView: String?
+  let profilePictureUrl: String?
+  let payrollDay: Int?
+  let theme: String?
+  let calendarAnimationStyle: String?
+  let halfTaxMonth: Int?
+  let currency: String?
+
+  var effectivePayrollDay: Int {
+    payrollDay ?? 1
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case userId = "user_id"
+    case monthlyGoal = "monthly_goal"
+    case defaultShiftsView = "default_shifts_view"
+    case profilePictureUrl = "profile_picture_url"
+    case payrollDay = "payroll_day"
+    case theme
+    case calendarAnimationStyle = "calendar_animation_style"
+    case halfTaxMonth = "half_tax_month"
+    case currency
+  }
+}
+
+struct SharingRPCSupplementRule: Codable, Equatable, Sendable {
+  let days: [Int]
+  let from: String
+  let to: String
+  let rate: Double?
+  let percent: Double?
+}
+
+struct SharingRPCCustomSupplementRule: Codable, Equatable, Sendable {
+  let from: String
+  let to: String
+  let rate: Double?
+  let percent: Double?
+  let isCustom: Bool?
+
+  private enum CodingKeys: String, CodingKey {
+    case from
+    case to
+    case rate
+    case percent
+    case isCustom = "is_custom"
+  }
+}
+
+struct SharingRPCCustomSupplements: Codable, Equatable, Sendable {
+  let rules: [SharingRPCCustomSupplementRule]
+}
+
+struct SharingRPCSupplementRulesSnapshot: Codable, Equatable, Sendable {
+  let rules: [SharingRPCSupplementRule]
+}
+
+enum SharingRPCEndCondition: Codable, Equatable, Sendable {
+  case months(value: Int)
+  case years(value: Int)
+  case endDate(date: String)
+
+  private enum CodingKeys: String, CodingKey {
+    case type
+    case value
+    case date
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let type = try container.decode(String.self, forKey: .type)
+
+    switch type {
+    case "months":
+      self = .months(value: try container.decode(Int.self, forKey: .value))
+    case "years":
+      self = .years(value: try container.decode(Int.self, forKey: .value))
+    case "end_date":
+      if let date = try? container.decode(String.self, forKey: .date) {
+        self = .endDate(date: date)
+      } else if let value = try? container.decode(String.self, forKey: .value) {
+        self = .endDate(date: value)
+      } else {
+        throw DecodingError.dataCorrupted(
+          DecodingError.Context(
+            codingPath: decoder.codingPath,
+            debugDescription: "end_date requires either 'date' or 'value' key"
+          ))
+      }
+    default:
+      throw DecodingError.dataCorrupted(
+        DecodingError.Context(
+          codingPath: decoder.codingPath,
+          debugDescription: "Unknown end condition type: \(type)"
+        ))
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+
+    switch self {
+    case .months(let value):
+      try container.encode("months", forKey: .type)
+      try container.encode(value, forKey: .value)
+    case .years(let value):
+      try container.encode("years", forKey: .type)
+      try container.encode(value, forKey: .value)
+    case .endDate(let date):
+      try container.encode("end_date", forKey: .type)
+      try container.encode(date, forKey: .date)
+    }
+  }
+}
+
+struct SharingRPCShiftRow: Codable, Sendable {
+  let id: String
+  let userId: String
+  let shiftDate: String
+  let startTime: String
+  let endTime: String
+  let customSupplements: SharingRPCCustomSupplements?
+  let recurringId: String?
+  let recurringAnchorWeekday: Int?
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case userId = "user_id"
+    case shiftDate = "shift_date"
+    case startTime = "start_time"
+    case endTime = "end_time"
+    case customSupplements = "custom_supplements"
+    case recurringId = "recurring_id"
+    case recurringAnchorWeekday = "recurring_anchor_weekday"
+  }
+}
+
+struct SharingRPCRecurringShiftRow: Codable, Sendable {
+  let id: String
+  let userId: String
+  let startTime: String
+  let endTime: String
+  let repeatIntervalWeeks: Int
+  let selectedDays: [String: String]
+  let endCondition: SharingRPCEndCondition?
+  let exclusions: [String]?
+  let dateSpecificSupplements: [String: SharingRPCCustomSupplements]?
+
+  var cleanStartTime: String {
+    Self.cleanTime(startTime)
+  }
+
+  var cleanEndTime: String {
+    Self.cleanTime(endTime)
+  }
+
+  private static func cleanTime(_ time: String) -> String {
+    var cleaned = time
+
+    if let plusIndex = cleaned.firstIndex(of: "+") {
+      cleaned = String(cleaned[..<plusIndex])
+    }
+
+    if let minusIndex = cleaned.lastIndex(of: "-"),
+      cleaned.distance(from: cleaned.startIndex, to: minusIndex) > 2
+    {
+      cleaned = String(cleaned[..<minusIndex])
+    }
+
+    return String(cleaned.prefix(5))
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case userId = "user_id"
+    case startTime = "start_time"
+    case endTime = "end_time"
+    case repeatIntervalWeeks = "repeat_interval_weeks"
+    case selectedDays = "selected_days"
+    case endCondition = "end_condition"
+    case exclusions
+    case dateSpecificSupplements = "date_specific_supplements"
+  }
+}
+
+struct SharingRPCWageSnapshot: Codable, Sendable {
+  let id: String
+  let userId: String
+  let fromDate: String?
+  let hourlyWage: Double
+  let wageLevel: Int?
+  let tariffTypeId: String?
+  let supplements: SharingRPCSupplementRulesSnapshot
+  let taxEnabled: Bool?
+  let taxPercentage: Double?
+  let breakEnabled: Bool?
+  let breakMethod: String?
+  let breakThresholdHours: Double?
+  let breakDeductionMinutes: Int?
+
+  var effectiveTaxEnabled: Bool {
+    taxEnabled ?? false
+  }
+
+  var effectiveTaxPercentage: Double {
+    taxPercentage ?? 0
+  }
+
+  var effectiveBreakEnabled: Bool {
+    breakEnabled ?? true
+  }
+
+  var effectiveBreakThresholdHours: Double {
+    breakThresholdHours ?? 5.5
+  }
+
+  var effectiveBreakDeductionMinutes: Int {
+    breakDeductionMinutes ?? 30
+  }
+
+  fileprivate var effectiveBreakMethod: SharingRPCBreakMethod {
+    guard let breakMethod else { return .proportional }
+    return SharingRPCBreakMethod(rawValue: breakMethod) ?? .proportional
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case userId = "user_id"
+    case fromDate = "from_date"
+    case hourlyWage = "hourly_wage"
+    case wageLevel = "wage_level"
+    case tariffTypeId = "tariff_type_id"
+    case supplements
+    case taxEnabled = "tax_enabled"
+    case taxPercentage = "tax_percentage"
+    case breakEnabled = "break_enabled"
+    case breakMethod = "break_method"
+    case breakThresholdHours = "break_threshold_hours"
+    case breakDeductionMinutes = "break_deduction_minutes"
+  }
+}
+
+struct SharingRPCPreviewPayloadRow: Codable, Sendable {
+  let sharerId: String
+  let showEarnings: Bool
+  let settings: SharingRPCUserSettings
+  let shifts: [SharingRPCShiftRow]
+  let recurringShifts: [SharingRPCRecurringShiftRow]
+  let snapshots: [SharingRPCWageSnapshot]
+
+  var payloadInput: SharingRPCPayloadInput {
+    SharingRPCPayloadInput(
+      ownerId: sharerId,
+      showEarnings: showEarnings,
+      settings: settings,
+      shifts: shifts,
+      recurringShifts: recurringShifts,
+      snapshots: snapshots
+    )
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case sharerId = "sharer_id"
+    case showEarnings = "show_earnings"
+    case settings
+    case shifts
+    case recurringShifts = "recurring_shifts"
+    case snapshots
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    sharerId = try container.decode(String.self, forKey: .sharerId)
+    showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
+    settings = try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
+      ?? SharingRPCUserSettings(
+        userId: sharerId,
+        monthlyGoal: nil,
+        defaultShiftsView: nil,
+        profilePictureUrl: nil,
+        payrollDay: nil,
+        theme: nil,
+        calendarAnimationStyle: nil,
+        halfTaxMonth: nil,
+        currency: nil
+      )
+    shifts = try container.decodeIfPresent([SharingRPCShiftRow].self, forKey: .shifts) ?? []
+    recurringShifts =
+      try container.decodeIfPresent([SharingRPCRecurringShiftRow].self, forKey: .recurringShifts)
+      ?? []
+    snapshots = try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
+      ?? []
+  }
+}
+
+struct SharingRPCMonthPayloadRow: Codable, Sendable {
+  let ownerId: String
+  let showEarnings: Bool
+  let settings: SharingRPCUserSettings
+  let shifts: [SharingRPCShiftRow]
+  let recurringShifts: [SharingRPCRecurringShiftRow]
+  let snapshots: [SharingRPCWageSnapshot]
+
+  var payloadInput: SharingRPCPayloadInput {
+    SharingRPCPayloadInput(
+      ownerId: ownerId,
+      showEarnings: showEarnings,
+      settings: settings,
+      shifts: shifts,
+      recurringShifts: recurringShifts,
+      snapshots: snapshots
+    )
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case ownerId = "owner_id"
+    case showEarnings = "show_earnings"
+    case settings
+    case shifts
+    case recurringShifts = "recurring_shifts"
+    case snapshots
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    ownerId = try container.decode(String.self, forKey: .ownerId)
+    showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
+    settings = try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
+      ?? SharingRPCUserSettings(
+        userId: ownerId,
+        monthlyGoal: nil,
+        defaultShiftsView: nil,
+        profilePictureUrl: nil,
+        payrollDay: nil,
+        theme: nil,
+        calendarAnimationStyle: nil,
+        halfTaxMonth: nil,
+        currency: nil
+      )
+    shifts = try container.decodeIfPresent([SharingRPCShiftRow].self, forKey: .shifts) ?? []
+    recurringShifts =
+      try container.decodeIfPresent([SharingRPCRecurringShiftRow].self, forKey: .recurringShifts)
+      ?? []
+    snapshots = try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
+      ?? []
+  }
+}
+
+struct SharingRPCPayloadInput: Sendable {
+  let ownerId: String
+  let showEarnings: Bool
+  let settings: SharingRPCUserSettings
+  let shifts: [SharingRPCShiftRow]
+  let recurringShifts: [SharingRPCRecurringShiftRow]
+  let snapshots: [SharingRPCWageSnapshot]
+}
+
+struct SharingRPCPayoutTaxSettings: Equatable, Sendable {
+  let enabled: Bool
+  let percentage: Double
+}
+
+// MARK: - Shared Compute Models
+
+struct SharingComputedShiftComputed: Equatable, Sendable {
+  let durationHours: Double
+  let paidHours: Double
+  let basePay: Double
+  let supplementPay: Double
+  let gross: Double
+}
+
+struct SharingComputedShift: Identifiable, Equatable, Sendable {
+  let id: String
+  let userId: String
+  let shiftDate: String
+  let startTime: String
+  let endTime: String
+  let customSupplements: SharingRPCCustomSupplements?
+  let recurringId: String?
+  let recurringAnchorWeekday: Int?
+  let computed: SharingComputedShiftComputed
+  let taxEnabled: Bool
+  let taxPercentage: Double
+}
+
+enum SharingPreviewStatus: String, Codable, Sendable {
   case active
   case upcoming
   case past
 }
 
-// MARK: - API Response Types
+struct SharingComputedPreview: Sendable {
+  let sharerId: String
+  let shift: SharingComputedShift?
+  let status: SharingPreviewStatus?
+  let showEarnings: Bool
+}
 
-/// Response from /api/sharing/sharers endpoint
-struct SharersResponse: Codable, Sendable {
-  let sharers: [SharerData]
+private enum SharingRPCBreakMethod: String, Codable, Equatable, Sendable {
+  case proportional = "proportional"
+  case baseOnly = "base_only"
+  case endOfShift = "end_of_shift"
+  case none = "none"
+}
 
-  struct SharerData: Codable, Sendable {
-    let id: String
-    let email: String?
-    let phone: String?
-    let firstName: String?
-    let profilePictureUrl: String?
-    let oauthAvatarUrl: String?
-    let sharedAt: String
-    let showEarnings: Bool
-    let blocked: Bool
+private struct SharingRPCWagePeriod: Equatable, Sendable {
+  let fromMin: Double
+  let toMin: Double
+  let baseRate: Double
+  let supplementRate: Double
+
+  var durationMinutes: Double { toMin - fromMin }
+  var durationHours: Double { durationMinutes / 60.0 }
+}
+
+private struct SharingRPCBreakAudit: Equatable, Sendable {
+  let method: SharingRPCBreakMethod
+  let thresholdHours: Double
+  let deductedHours: Double
+  let notes: [String]
+}
+
+private struct SharingRPCBreakDeductionResult: Equatable, Sendable {
+  let periods: [SharingRPCWagePeriod]
+  let audit: SharingRPCBreakAudit
+}
+
+private struct SharingRecurringVirtualShift: Equatable, Sendable {
+  let date: String
+  let weekday: Int
+}
+
+// MARK: - Shared Compute Core (Foundation-only)
+
+enum SharingComputeCore {
+  private static let hourPrecision: Double = 1000
+  private static let currencyPrecision: Double = 100
+  private static let defaultBreakEnabled = true
+  private static let defaultBreakThresholdHours = 5.5
+  private static let defaultBreakDeductionMinutes = 30
+  private static let fallbackBaseRate = 184.54
+
+  private static let presetSupplementRules: [SharingRPCSupplementRule] = [
+    SharingRPCSupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22, percent: nil),
+    SharingRPCSupplementRule(days: [1, 2, 3, 4, 5], from: "21:00", to: "24:00", rate: 45, percent: nil),
+    SharingRPCSupplementRule(days: [6], from: "13:00", to: "15:00", rate: 45, percent: nil),
+    SharingRPCSupplementRule(days: [6], from: "15:00", to: "18:00", rate: 55, percent: nil),
+    SharingRPCSupplementRule(days: [6], from: "18:00", to: "24:00", rate: 110, percent: nil),
+    SharingRPCSupplementRule(days: [7], from: "00:00", to: "24:00", rate: 115, percent: nil),
+  ]
+
+  private static func makeISODateFormatter() -> DateFormatter {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = .current
+    return formatter
+  }
+
+  static func isoDateString(_ date: Date) -> String {
+    makeISODateFormatter().string(from: date)
+  }
+
+  static func monthStart(year: Int, month: Int) -> String {
+    String(format: "%04d-%02d-01", year, month)
+  }
+
+  static func monthEnd(year: Int, month: Int) -> String {
+    let day = daysInMonth(year: year, month: month)
+    return String(format: "%04d-%02d-%02d", year, month, day)
+  }
+
+  static func computeShiftsInRange(
+    payload: SharingRPCPayloadInput,
+    startDate: String,
+    endDate: String,
+    mode: SharingRPCMode
+  ) -> [SharingComputedShift] {
+    var computed: [SharingComputedShift] = []
+
+    let regularShifts = payload.shifts.filter { shift in
+      shift.shiftDate >= startDate && shift.shiftDate <= endDate
+    }
+
+    for shift in regularShifts {
+      computed.append(
+        computeShiftWithTax(
+          shift: shift,
+          settings: payload.settings,
+          snapshots: payload.snapshots,
+          mode: mode
+        ))
+    }
+
+    let months = monthsInRange(startDate: startDate, endDate: endDate)
+    var seenVirtualIds = Set<String>()
+
+    for recurring in payload.recurringShifts {
+      for (year, month) in months {
+        let virtualShifts = generateVirtualShiftsForMonth(
+          year: year,
+          month: month,
+          recurring: recurring
+        )
+
+        for virtual in virtualShifts {
+          guard virtual.date >= startDate && virtual.date <= endDate else { continue }
+
+          let virtualId = "virtual-\(recurring.id)-\(virtual.date)"
+          guard !seenVirtualIds.contains(virtualId) else { continue }
+          seenVirtualIds.insert(virtualId)
+
+          let virtualShift = SharingRPCShiftRow(
+            id: virtualId,
+            userId: recurring.userId,
+            shiftDate: virtual.date,
+            startTime: recurring.cleanStartTime,
+            endTime: recurring.cleanEndTime,
+            customSupplements: recurring.dateSpecificSupplements?[virtual.date],
+            recurringId: recurring.id,
+            recurringAnchorWeekday: virtual.weekday
+          )
+
+          computed.append(
+            computeShiftWithTax(
+              shift: virtualShift,
+              settings: payload.settings,
+              snapshots: payload.snapshots,
+              mode: mode
+            ))
+        }
+      }
+    }
+
+    let sorted = computed.sorted { lhs, rhs in
+      if lhs.shiftDate == rhs.shiftDate {
+        return lhs.startTime < rhs.startTime
+      }
+      return lhs.shiftDate < rhs.shiftDate
+    }
+
+    if mode == .hidden {
+      return enforceHiddenEarnings(on: sorted)
+    }
+
+    return sorted
+  }
+
+  static func computeMonthShifts(
+    payload: SharingRPCPayloadInput,
+    year: Int,
+    month: Int,
+    mode: SharingRPCMode
+  ) -> [SharingComputedShift] {
+    computeShiftsInRange(
+      payload: payload,
+      startDate: monthStart(year: year, month: month),
+      endDate: monthEnd(year: year, month: month),
+      mode: mode
+    )
+  }
+
+  static func payoutTaxSettings(
+    year: Int,
+    month: Int,
+    settings: SharingRPCUserSettings,
+    snapshots: [SharingRPCWageSnapshot],
+    mode: SharingRPCMode
+  ) -> SharingRPCPayoutTaxSettings? {
+    guard mode == .visible else { return nil }
+
+    let payoutDate = calculatePayoutDate(
+      shiftDate: monthStart(year: year, month: month),
+      payrollDay: settings.effectivePayrollDay
+    )
+
+    guard let snapshot = snapshotForDate(payoutDate, from: snapshots) else {
+      return nil
+    }
+
+    return SharingRPCPayoutTaxSettings(
+      enabled: snapshot.effectiveTaxEnabled,
+      percentage: snapshot.effectiveTaxPercentage
+    )
+  }
+
+  static func enforceHiddenEarnings(on shifts: [SharingComputedShift]) -> [SharingComputedShift] {
+    shifts.map { shift in
+      SharingComputedShift(
+        id: shift.id,
+        userId: shift.userId,
+        shiftDate: shift.shiftDate,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        customSupplements: nil,
+        recurringId: shift.recurringId,
+        recurringAnchorWeekday: shift.recurringAnchorWeekday,
+        computed: SharingComputedShiftComputed(
+          durationHours: shift.computed.durationHours,
+          paidHours: shift.computed.paidHours,
+          basePay: 0,
+          supplementPay: 0,
+          gross: 0
+        ),
+        taxEnabled: false,
+        taxPercentage: 0
+      )
+    }
+  }
+
+  static func selectPreview(
+    sharerId: String,
+    shifts: [SharingComputedShift],
+    showEarnings: Bool,
+    now: Date = Date()
+  ) -> SharingComputedPreview {
+    guard !shifts.isEmpty else {
+      return SharingComputedPreview(sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
+    }
+
+    let sortedShifts = shifts.sorted { lhs, rhs in
+      if lhs.shiftDate == rhs.shiftDate {
+        return lhs.startTime < rhs.startTime
+      }
+      return lhs.shiftDate < rhs.shiftDate
+    }
+
+    for shift in sortedShifts {
+      guard let (start, end) = shiftInterval(shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime) else {
+        continue
+      }
+
+      if now >= start && now <= end {
+        return SharingComputedPreview(sharerId: sharerId, shift: shift, status: .active, showEarnings: showEarnings)
+      }
+    }
+
+    for shift in sortedShifts {
+      guard let start = shiftDateTime(shiftDate: shift.shiftDate, time: shift.startTime) else {
+        continue
+      }
+
+      if start > now {
+        return SharingComputedPreview(sharerId: sharerId, shift: shift, status: .upcoming, showEarnings: showEarnings)
+      }
+    }
+
+    let pastShifts = sortedShifts.filter { shift in
+      guard let (_, end) = shiftInterval(shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime) else {
+        return false
+      }
+      return end < now
+    }
+
+    if let mostRecentPast = pastShifts.last {
+      return SharingComputedPreview(sharerId: sharerId, shift: mostRecentPast, status: .past, showEarnings: showEarnings)
+    }
+
+    return SharingComputedPreview(sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
+  }
+
+  static func sortPreviews(_ previews: [SharingComputedPreview]) -> [SharingComputedPreview] {
+    previews.sorted { lhs, rhs in
+      let priority: [SharingPreviewStatus?] = [.active, .upcoming, .past, nil]
+      let lhsPriority = priority.firstIndex(where: { $0 == lhs.status }) ?? 4
+      let rhsPriority = priority.firstIndex(where: { $0 == rhs.status }) ?? 4
+
+      if lhsPriority != rhsPriority {
+        return lhsPriority < rhsPriority
+      }
+
+      guard let lhsDateTime = shiftDateTime(shiftDate: lhs.shift?.shiftDate, time: lhs.shift?.startTime),
+        let rhsDateTime = shiftDateTime(shiftDate: rhs.shift?.shiftDate, time: rhs.shift?.startTime)
+      else {
+        return lhs.shift != nil
+      }
+
+      if lhs.status == .upcoming {
+        return lhsDateTime < rhsDateTime
+      }
+      if lhs.status == .past {
+        return lhsDateTime > rhsDateTime
+      }
+
+      return false
+    }
+  }
+
+  // MARK: - Core Calculation
+
+  private static func computeShiftWithTax(
+    shift: SharingRPCShiftRow,
+    settings: SharingRPCUserSettings,
+    snapshots: [SharingRPCWageSnapshot],
+    mode: SharingRPCMode
+  ) -> SharingComputedShift {
+    let payoutDate = calculatePayoutDate(
+      shiftDate: shift.shiftDate,
+      payrollDay: settings.effectivePayrollDay
+    )
+
+    let wageSnapshot = snapshotForDate(shift.shiftDate, from: snapshots)
+    let taxSnapshot = snapshotForDate(payoutDate, from: snapshots)
+
+    var computed = computeShift(shift: shift, snapshot: wageSnapshot, mode: mode)
+
+    let taxEnabled = mode == .hidden ? false : (taxSnapshot?.effectiveTaxEnabled ?? false)
+    let taxPercentage = mode == .hidden ? 0 : (taxSnapshot?.effectiveTaxPercentage ?? 0)
+
+    if mode == .hidden {
+      computed = SharingComputedShiftComputed(
+        durationHours: computed.durationHours,
+        paidHours: computed.paidHours,
+        basePay: 0,
+        supplementPay: 0,
+        gross: 0
+      )
+    }
+
+    return SharingComputedShift(
+      id: shift.id,
+      userId: shift.userId,
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      customSupplements: mode == .hidden ? nil : shift.customSupplements,
+      recurringId: shift.recurringId,
+      recurringAnchorWeekday: shift.recurringAnchorWeekday,
+      computed: computed,
+      taxEnabled: taxEnabled,
+      taxPercentage: taxPercentage
+    )
+  }
+
+  private static func computeShift(
+    shift: SharingRPCShiftRow,
+    snapshot: SharingRPCWageSnapshot?,
+    mode: SharingRPCMode
+  ) -> SharingComputedShiftComputed {
+    let weekday = weekdayFromISO(shift.shiftDate)
+
+    let baseRate = resolveBaseRate(snapshot: snapshot, mode: mode)
+    let rules = resolveSupplementRules(
+      weekday: weekday,
+      snapshot: snapshot,
+      customSupplements: shift.customSupplements,
+      mode: mode
+    )
+
+    var periods = buildWagePeriods(
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      weekday: weekday,
+      baseRate: baseRate,
+      rules: rules
+    )
+
+    let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let durationHours = roundTo(totalMinutes / 60.0, decimals: 2)
+
+    let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
+    let breakMethod = snapshot?.effectiveBreakMethod ?? .proportional
+    let breakThreshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
+    let breakMinutes = breakEnabled ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes) : 0
+
+    let breakResult = applyBreakDeduction(
+      periods: periods,
+      method: breakMethod,
+      thresholdHours: breakThreshold,
+      deductionHours: Double(breakMinutes) / 60.0
+    )
+
+    periods = breakResult.periods
+
+    let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let paidHours = roundTo(paidMinutes / 60.0, decimals: 2)
+
+    var basePay: Double = 0
+    var supplementPay: Double = 0
+
+    for period in periods {
+      let hours = round(period.durationHours * hourPrecision) / hourPrecision
+      basePay += round(hours * period.baseRate * currencyPrecision) / currencyPrecision
+      supplementPay += round(hours * period.supplementRate * currencyPrecision) / currencyPrecision
+    }
+
+    basePay = roundTo(basePay, decimals: 2)
+    supplementPay = roundTo(supplementPay, decimals: 2)
+    let gross = roundTo(basePay + supplementPay, decimals: 2)
+
+    return SharingComputedShiftComputed(
+      durationHours: durationHours,
+      paidHours: paidHours,
+      basePay: basePay,
+      supplementPay: supplementPay,
+      gross: gross
+    )
+  }
+
+  private static func resolveBaseRate(snapshot: SharingRPCWageSnapshot?, mode: SharingRPCMode) -> Double {
+    if let wage = snapshot?.hourlyWage, wage > 0 {
+      return wage
+    }
+
+    if mode == .hidden {
+      return 0
+    }
+
+    return fallbackBaseRate
+  }
+
+  private static func resolveSupplementRules(
+    weekday: Int,
+    snapshot: SharingRPCWageSnapshot?,
+    customSupplements: SharingRPCCustomSupplements?,
+    mode: SharingRPCMode
+  ) -> [SharingRPCSupplementRule] {
+    if let customSupplements {
+      if customSupplements.rules.isEmpty {
+        return []
+      }
+
+      return customSupplements.rules.map { rule in
+        SharingRPCSupplementRule(
+          days: [weekday],
+          from: rule.from,
+          to: rule.to,
+          rate: rule.rate,
+          percent: rule.percent
+        )
+      }
+    }
+
+    if let snapshot {
+      return snapshot.supplements.rules
+    }
+
+    if mode == .hidden {
+      return []
+    }
+
+    return presetSupplementRules
+  }
+
+  // MARK: - Wage Periods + Break Deduction
+
+  private static func buildWagePeriods(
+    startTime: String,
+    endTime: String,
+    weekday: Int,
+    baseRate: Double,
+    rules: [SharingRPCSupplementRule]
+  ) -> [SharingRPCWagePeriod] {
+    let start = toMinutes(startTime)
+    var end = toMinutes(endTime)
+
+    if end <= start {
+      end += 24 * 60
+    }
+
+    var points = Set<Int>([start, end])
+
+    for rule in rules {
+      guard rule.days.contains(weekday) else { continue }
+
+      let ruleFrom = toMinutes(rule.from)
+      var ruleTo = toMinutes(rule.to)
+
+      if ruleTo < ruleFrom {
+        ruleTo += 24 * 60
+      }
+
+      for base in [0, 24 * 60] {
+        let a = ruleFrom + base
+        let b = ruleTo + base
+
+        if b < start || a > end { continue }
+
+        if a > start && a < end { points.insert(a) }
+        if b > start && b < end { points.insert(b) }
+      }
+    }
+
+    let sorted = points.sorted()
+    guard sorted.count > 1 else {
+      return [
+        SharingRPCWagePeriod(
+          fromMin: Double(start),
+          toMin: Double(end),
+          baseRate: baseRate,
+          supplementRate: 0
+        )
+      ]
+    }
+
+    var result: [SharingRPCWagePeriod] = []
+
+    for idx in 0..<(sorted.count - 1) {
+      let periodStart = sorted[idx]
+      let periodEnd = sorted[idx + 1]
+
+      var supplement: Double = 0
+
+      for rule in rules {
+        guard rule.days.contains(weekday) else { continue }
+
+        for base in [0, 24 * 60] {
+          let ruleFrom = toMinutes(rule.from) + base
+          var ruleTo = toMinutes(rule.to) + base
+
+          if toMinutes(rule.to) < toMinutes(rule.from) {
+            ruleTo += 24 * 60
+          }
+
+          if periodStart >= ruleFrom && (periodEnd - 1) <= ruleTo {
+            let value = resolveSupplementRate(rule: rule, baseRate: baseRate)
+            supplement = max(supplement, value)
+          }
+        }
+      }
+
+      result.append(
+        SharingRPCWagePeriod(
+          fromMin: Double(periodStart),
+          toMin: Double(periodEnd),
+          baseRate: baseRate,
+          supplementRate: supplement
+        )
+      )
+    }
+
+    return result
+  }
+
+  private static func applyBreakDeduction(
+    periods: [SharingRPCWagePeriod],
+    method: SharingRPCBreakMethod,
+    thresholdHours: Double,
+    deductionHours: Double
+  ) -> SharingRPCBreakDeductionResult {
+    let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let totalHours = totalMinutes / 60.0
+
+    let toDeduct = totalHours > thresholdHours ? deductionHours : 0
+
+    var adjusted = periods
+    var notes: [String] = []
+
+    if toDeduct > 0 && method != .none {
+      var remaining = (toDeduct * 60).rounded()
+
+      switch method {
+      case .endOfShift:
+        for idx in stride(from: adjusted.count - 1, through: 0, by: -1) {
+          guard remaining > 0 else { break }
+          let span = adjusted[idx].durationMinutes
+          let cut = min(span, remaining)
+
+          adjusted[idx] = SharingRPCWagePeriod(
+            fromMin: adjusted[idx].fromMin,
+            toMin: adjusted[idx].toMin - cut,
+            baseRate: adjusted[idx].baseRate,
+            supplementRate: adjusted[idx].supplementRate
+          )
+
+          remaining -= cut
+        }
+        notes.append("Deducted at end of shift")
+
+      case .proportional:
+        var newPeriods: [SharingRPCWagePeriod] = []
+
+        for period in adjusted {
+          let proportion = period.durationMinutes / totalMinutes
+          let cutMinutes = proportion * toDeduct * 60
+
+          newPeriods.append(
+            SharingRPCWagePeriod(
+              fromMin: period.fromMin,
+              toMin: period.toMin - cutMinutes,
+              baseRate: period.baseRate,
+              supplementRate: period.supplementRate
+            )
+          )
+        }
+
+        adjusted = newPeriods
+        notes.append("Deducted proportionally across periods")
+
+      case .baseOnly:
+        let sortedIndices = adjusted.indices.sorted { adjusted[$0].supplementRate < adjusted[$1].supplementRate }
+
+        for idx in sortedIndices {
+          guard remaining > 0 else { break }
+          let span = adjusted[idx].durationMinutes
+          let cut = min(span, remaining)
+
+          adjusted[idx] = SharingRPCWagePeriod(
+            fromMin: adjusted[idx].fromMin,
+            toMin: adjusted[idx].toMin - cut,
+            baseRate: adjusted[idx].baseRate,
+            supplementRate: adjusted[idx].supplementRate
+          )
+
+          remaining -= cut
+        }
+        notes.append("Deducted from base/lowest supplement periods first")
+
+      case .none:
+        break
+      }
+
+      adjusted = adjusted.filter { $0.toMin > $0.fromMin }
+    }
+
+    return SharingRPCBreakDeductionResult(
+      periods: adjusted,
+      audit: SharingRPCBreakAudit(
+        method: method,
+        thresholdHours: thresholdHours,
+        deductedHours: toDeduct,
+        notes: notes
+      )
+    )
+  }
+
+  private static func resolveSupplementRate(rule: SharingRPCSupplementRule, baseRate: Double) -> Double {
+    if let rate = rule.rate, !rate.isNaN {
+      return rate
+    }
+
+    if let percent = rule.percent, !percent.isNaN {
+      return (baseRate * percent) / 100.0
+    }
+
+    return 0
+  }
+
+  // MARK: - Snapshot Helpers
+
+  private static func snapshotForDate(
+    _ date: String,
+    from snapshots: [SharingRPCWageSnapshot]
+  ) -> SharingRPCWageSnapshot? {
+    let baseline = snapshots.first { $0.fromDate == nil }
+
+    let dated = snapshots
+      .filter { $0.fromDate != nil }
+      .sorted { ($0.fromDate ?? "") < ($1.fromDate ?? "") }
+
+    var left = 0
+    var right = dated.count - 1
+    var result: SharingRPCWageSnapshot?
+
+    while left <= right {
+      let mid = (left + right) / 2
+      if let midDate = dated[mid].fromDate, midDate <= date {
+        result = dated[mid]
+        left = mid + 1
+      } else {
+        right = mid - 1
+      }
+    }
+
+    return result ?? baseline
+  }
+
+  private static func calculatePayoutDate(shiftDate: String, payrollDay: Int) -> String {
+    let parts = shiftDate.split(separator: "-")
+    guard parts.count >= 2,
+      let shiftYear = Int(parts[0]),
+      let shiftMonth = Int(parts[1])
+    else {
+      return shiftDate
+    }
+
+    var payoutYear = shiftYear
+    var payoutMonth = shiftMonth + 1
+
+    if payoutMonth > 12 {
+      payoutMonth = 1
+      payoutYear += 1
+    }
+
+    let effectiveDay = min(payrollDay, daysInMonth(year: payoutYear, month: payoutMonth))
+    return String(format: "%04d-%02d-%02d", payoutYear, payoutMonth, effectiveDay)
+  }
+
+  // MARK: - Recurring Helpers
+
+  private static func generateVirtualShiftsForMonth(
+    year: Int,
+    month: Int,
+    recurring: SharingRPCRecurringShiftRow
+  ) -> [SharingRecurringVirtualShift] {
+    guard !recurring.selectedDays.isEmpty else { return [] }
+
+    let monthStartISO = monthStart(year: year, month: month)
+    let monthEndISO = monthEnd(year: year, month: month)
+    let exclusionSet = Set(recurring.exclusions ?? [])
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+
+    var startComponents = DateComponents()
+    startComponents.year = year
+    startComponents.month = month
+    startComponents.day = 1
+    startComponents.hour = 12
+
+    var endComponents = DateComponents()
+    endComponents.year = year
+    endComponents.month = month
+    endComponents.day = daysInMonth(year: year, month: month)
+    endComponents.hour = 12
+
+    guard let monthStartDate = calendar.date(from: startComponents),
+      let monthEndDate = calendar.date(from: endComponents)
+    else {
+      return []
+    }
+
+    var virtualShifts: [SharingRecurringVirtualShift] = []
+
+    for (weekdayKey, anchorISO) in recurring.selectedDays {
+      guard let weekday = Int(weekdayKey) else { continue }
+
+      var current = monthStartDate
+      let currentWeekday = calendar.component(.weekday, from: current) - 1
+      let daysUntilTarget = (weekday - currentWeekday + 7) % 7
+      current = calendar.date(byAdding: .day, value: daysUntilTarget, to: current) ?? current
+
+      while current <= monthEndDate {
+        let currentISO = isoDateString(current)
+
+        if currentISO < monthStartISO || currentISO > monthEndISO {
+          current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
+          continue
+        }
+
+        if currentISO < anchorISO {
+          current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
+          continue
+        }
+
+        let inPhase = isInPhase(
+          dateISO: currentISO,
+          anchorISO: anchorISO,
+          interval: recurring.repeatIntervalWeeks
+        )
+
+        let withinWindow = checkEndCondition(
+          currentDate: current,
+          currentISO: currentISO,
+          endCondition: recurring.endCondition,
+          selectedDays: recurring.selectedDays
+        )
+
+        let notExcluded = !exclusionSet.contains(currentISO)
+
+        if inPhase && withinWindow && notExcluded {
+          virtualShifts.append(SharingRecurringVirtualShift(date: currentISO, weekday: weekday))
+        }
+
+        current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
+      }
+    }
+
+    return virtualShifts.sorted { $0.date < $1.date }
+  }
+
+  private static func isInPhase(dateISO: String, anchorISO: String, interval: Int) -> Bool {
+    if interval == 0 { return true }
+    let dayDiff = daysBetween(anchorISO, dateISO)
+    let weeksDiff = dayDiff / 7
+    return weeksDiff.isMultiple(of: interval + 1)
+  }
+
+  private static func checkEndCondition(
+    currentDate: Date,
+    currentISO: String,
+    endCondition: SharingRPCEndCondition?,
+    selectedDays: [String: String]
+  ) -> Bool {
+    guard let endCondition else {
+      return true
+    }
+
+    let anchorDates = selectedDays.values.sorted()
+    guard let earliestAnchor = anchorDates.first,
+      let anchorDate = dateFromISO(earliestAnchor)
+    else {
+      return true
+    }
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+
+    switch endCondition {
+    case .months(let value):
+      guard let endDate = calendar.date(byAdding: .month, value: value, to: anchorDate) else {
+        return true
+      }
+      return currentDate <= endDate
+
+    case .years(let value):
+      guard let endDate = calendar.date(byAdding: .year, value: value, to: anchorDate) else {
+        return true
+      }
+      return currentDate <= endDate
+
+    case .endDate(let date):
+      return currentISO <= date
+    }
+  }
+
+  // MARK: - Date + Time Helpers
+
+  private static func shiftInterval(
+    shiftDate: String,
+    startTime: String,
+    endTime: String
+  ) -> (start: Date, end: Date)? {
+    guard let start = shiftDateTime(shiftDate: shiftDate, time: startTime),
+      var end = shiftDateTime(shiftDate: shiftDate, time: endTime)
+    else {
+      return nil
+    }
+
+    if end <= start {
+      end = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: end) ?? end
+    }
+
+    return (start, end)
+  }
+
+  private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {
+    guard let shiftDate, let time else { return nil }
+
+    let dateParts = shiftDate.split(separator: "-").compactMap { Int($0) }
+    let timeParts = time.split(separator: ":").compactMap { Int($0) }
+
+    guard dateParts.count == 3, timeParts.count >= 2 else { return nil }
+
+    let hour = timeParts[0] == 24 ? 0 : timeParts[0]
+
+    var components = DateComponents()
+    components.year = dateParts[0]
+    components.month = dateParts[1]
+    components.day = dateParts[2]
+    components.hour = hour
+    components.minute = timeParts[1]
+    components.second = 0
+    components.timeZone = .current
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+
+    guard var date = calendar.date(from: components) else { return nil }
+
+    if timeParts[0] == 24 {
+      date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+    }
+
+    return date
+  }
+
+  private static func weekdayFromISO(_ dateString: String) -> Int {
+    guard let date = dateFromISO(dateString) else { return 1 }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+    let weekday = calendar.component(.weekday, from: date)
+    return weekday == 1 ? 7 : weekday - 1
+  }
+
+  private static func dateFromISO(_ dateString: String) -> Date? {
+    makeISODateFormatter().date(from: dateString)
+  }
+
+  private static func daysBetween(_ from: String, _ to: String) -> Int {
+    guard let fromDate = dateFromISO(from),
+      let toDate = dateFromISO(to)
+    else {
+      return 0
+    }
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+
+    let fromStart = calendar.startOfDay(for: fromDate)
+    let toStart = calendar.startOfDay(for: toDate)
+
+    return calendar.dateComponents([.day], from: fromStart, to: toStart).day ?? 0
+  }
+
+  private static func monthsInRange(startDate: String, endDate: String) -> [(Int, Int)] {
+    let startParts = startDate.split(separator: "-")
+    let endParts = endDate.split(separator: "-")
+
+    guard startParts.count >= 2,
+      endParts.count >= 2,
+      let startYear = Int(startParts[0]),
+      let startMonth = Int(startParts[1]),
+      let endYear = Int(endParts[0]),
+      let endMonth = Int(endParts[1])
+    else {
+      return []
+    }
+
+    var result: [(Int, Int)] = []
+    var year = startYear
+    var month = startMonth
+
+    while year < endYear || (year == endYear && month <= endMonth) {
+      result.append((year, month))
+      month += 1
+      if month > 12 {
+        month = 1
+        year += 1
+      }
+    }
+
+    return result
+  }
+
+  private static func daysInMonth(year: Int, month: Int) -> Int {
+    var components = DateComponents()
+    components.year = year
+    components.month = month + 1
+    components.day = 0
+
+    let calendar = Calendar(identifier: .gregorian)
+    guard let date = calendar.date(from: components) else {
+      return 30
+    }
+
+    return calendar.component(.day, from: date)
+  }
+
+  private static func toMinutes(_ hhmm: String) -> Int {
+    let parts = hhmm.split(separator: ":").compactMap { Int($0) }
+    guard parts.count >= 2 else { return 0 }
+    return parts[0] * 60 + parts[1]
+  }
+
+  private static func roundTo(_ value: Double, decimals: Int) -> Double {
+    let precision = pow(10.0, Double(decimals))
+    return round(value * precision) / precision
   }
 }
 
-/// Response from /api/sharing/previews endpoint
-/// Matches the format returned by the iOS app's SharingService
-/// Computed payroll data - only extract what we need for friends shift preview
-struct PreviewShiftComputedData: Codable, Sendable {
-  let gross: Double
-}
+// MARK: - Shift Status (Widget/Watch output)
 
-/// Shift data matching the API's ShiftWithComputations format
-/// Only decodes the fields we need for the Watch/Widget
-struct PreviewShiftData: Codable, Sendable {
-  let id: String
-  let shiftDate: String
-  let startTime: String
-  let endTime: String
-  let computed: PreviewShiftComputedData
-
-  /// Convenience accessor for gross
-  var gross: Double { computed.gross }
-
-  private enum CodingKeys: String, CodingKey {
-    case id
-    case shiftDate = "shift_date"
-    case startTime = "start_time"
-    case endTime = "end_time"
-    case computed
-  }
-}
-
-struct PreviewsResponse: Codable, Sendable {
-  let previews: [PreviewData]
-
-  struct PreviewData: Codable, Sendable {
-    let sharerId: String
-    let shift: PreviewShiftData?
-    let status: String?
-    let showEarnings: Bool
-  }
+/// Status of a shift preview
+/// Note: This mirrors the app's ShiftPreviewStatus but is local to shared extension code.
+enum FriendShiftStatus: String, Codable, Sendable {
+  case active
+  case upcoming
+  case past
 }
 
 // MARK: - Combined Friends Data
@@ -112,6 +1439,7 @@ struct FriendWithShift: Sendable {
 
 enum FriendsAPIError: Error, LocalizedError, Sendable {
   case noAccessToken
+  case noAnonKey
   case networkError(underlying: String)
   case httpError(statusCode: Int)
   case decodingError(underlying: String)
@@ -121,6 +1449,8 @@ enum FriendsAPIError: Error, LocalizedError, Sendable {
     switch self {
     case .noAccessToken:
       return "No access token available"
+    case .noAnonKey:
+      return "Missing Supabase anon key"
     case .networkError(let message):
       return "Network error: \(message)"
     case .httpError(let code):
@@ -133,13 +1463,31 @@ enum FriendsAPIError: Error, LocalizedError, Sendable {
   }
 }
 
+// MARK: - RPC Error Response
+
+private struct RPCErrorResponse: Codable {
+  let code: String?
+  let message: String?
+  let details: String?
+  let hint: String?
+}
+
 // MARK: - Friends API Client
 
 /// Lightweight API client for fetching friends data directly
 /// Used by widget and watch to bypass the main app's data flow
+///
+/// This client now fetches from Supabase RPC:
+/// - get_my_sharers
+/// - get_my_sharer_preview_payloads
+///
+/// Preview selection and payroll computation are handled client-side via SharingComputeCore.
 enum FriendsAPIClient {
-  /// Base URL for the API
-  private static let baseURL = URL(string: "https://app.tidex.no")
+  /// Base URL for Supabase REST RPC
+  private static let rpcBaseURL = URL(string: "https://identity.tidex.no/rest/v1/rpc")
+
+  /// Fallback anon/publishable key for extension contexts lacking Info.plist config
+  private static let fallbackAnonKey = "sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb"
 
   /// Shared URLSession with reasonable timeouts
   private static let urlSession: URLSession = {
@@ -149,41 +1497,93 @@ enum FriendsAPIClient {
     return URLSession(configuration: config)
   }()
 
+  /// Supabase anon key from Info.plist (or fallback)
+  private static var supabaseAnonKey: String {
+    if let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
+      !key.isEmpty
+    {
+      return key
+    }
+    return fallbackAnonKey
+  }
+
   // MARK: - Public API
 
   /// Fetch all friends with their shift previews in a single call
   /// This is the main entry point for widget and watch
   /// - Returns: Array of friends with their shift data
   static func fetchFriendsWithShifts() async throws -> [FriendWithShift] {
-    // Get the access token from shared keychain
     guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
       throw FriendsAPIError.noAccessToken
     }
 
-    // Fetch sharers first
-    let sharers = try await fetchSharers(accessToken: accessToken)
+    guard !supabaseAnonKey.isEmpty else {
+      throw FriendsAPIError.noAnonKey
+    }
 
-    // Filter out blocked sharers
+    let sharers = try await fetchSharers(accessToken: accessToken)
     let activeSharers = sharers.filter { !$0.blocked }
 
     guard !activeSharers.isEmpty else {
       return []
     }
 
-    // Fetch shift previews for all active sharers
-    let sharerIds = activeSharers.map { $0.id }
-    let previews = try await fetchPreviews(sharerIds: sharerIds, accessToken: accessToken)
+    let now = Date()
+    let startDate = SharingComputeCore.isoDateString(
+      Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
+    let endDate = SharingComputeCore.isoDateString(
+      Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
 
-    // Build a lookup map for previews
-    var previewMap: [String: PreviewsResponse.PreviewData] = [:]
-    for preview in previews {
-      previewMap[preview.sharerId] = preview
+    let payloadRows = try await fetchPreviewPayloads(
+      sharerIds: activeSharers.map { $0.id },
+      startDate: startDate,
+      endDate: endDate,
+      accessToken: accessToken
+    )
+
+    let rowsBySharerId = Dictionary(payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
+
+    var previews: [SharingComputedPreview] = []
+    previews.reserveCapacity(activeSharers.count)
+
+    for sharer in activeSharers {
+      if let payloadRow = rowsBySharerId[sharer.id] {
+        let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
+        let shifts = SharingComputeCore.computeShiftsInRange(
+          payload: payloadRow.payloadInput,
+          startDate: startDate,
+          endDate: endDate,
+          mode: mode
+        )
+        previews.append(
+          SharingComputeCore.selectPreview(
+            sharerId: sharer.id,
+            shifts: shifts,
+            showEarnings: payloadRow.showEarnings,
+            now: now
+          ))
+      } else {
+        // Defense: no row means no share access or no data
+        previews.append(
+          SharingComputedPreview(
+            sharerId: sharer.id,
+            shift: nil,
+            status: nil,
+            showEarnings: false
+          ))
+      }
     }
 
-    // Combine sharers with their previews
+    let sortedPreviews = SharingComputeCore.sortPreviews(previews)
+    let previewMap = Dictionary(sortedPreviews.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
+
     let results = activeSharers.map { sharer in
       let preview = previewMap[sharer.id]
-      let status = preview?.status.flatMap { FriendShiftStatus(rawValue: $0) }
+      let status = preview?.status.flatMap { FriendShiftStatus(rawValue: $0.rawValue) }
+
+      let showEarnings = preview?.showEarnings ?? sharer.showEarnings
+      let previewShift = preview?.shift
+      let safeGross = showEarnings ? previewShift?.computed.gross : nil
 
       return FriendWithShift(
         id: sharer.id,
@@ -194,19 +1594,110 @@ enum FriendsAPIClient {
         ),
         profilePictureUrl: sharer.profilePictureUrl,
         oauthAvatarUrl: sharer.oauthAvatarUrl,
-        showEarnings: preview?.showEarnings ?? sharer.showEarnings,
+        showEarnings: showEarnings,
         blocked: sharer.blocked,
-        shiftId: preview?.shift?.id,
-        shiftDate: preview?.shift?.shiftDate,
-        startTime: preview?.shift?.startTime,
-        endTime: preview?.shift?.endTime,
-        gross: preview?.shift?.gross,
+        shiftId: previewShift?.id,
+        shiftDate: previewShift?.shiftDate,
+        startTime: previewShift?.startTime,
+        endTime: previewShift?.endTime,
+        gross: safeGross,
         status: status
       )
     }
 
-    // Sort by shift proximity: active first, then upcoming (soonest), then past (most recent), then no shifts
-    return results.sorted { lhs, rhs in
+    return sortFriends(results)
+  }
+
+  // MARK: - Private API Methods
+
+  private static func fetchSharers(accessToken: String) async throws -> [SharingRPCSharerRow] {
+    try await callRPC(
+      functionName: "get_my_sharers",
+      body: [:],
+      accessToken: accessToken
+    )
+  }
+
+  private static func fetchPreviewPayloads(
+    sharerIds: [String],
+    startDate: String,
+    endDate: String,
+    accessToken: String
+  ) async throws -> [SharingRPCPreviewPayloadRow] {
+    try await callRPC(
+      functionName: "get_my_sharer_preview_payloads",
+      body: [
+        "p_sharer_ids": sharerIds,
+        "p_start_date": startDate,
+        "p_end_date": endDate,
+      ],
+      accessToken: accessToken
+    )
+  }
+
+  private static func callRPC<T: Decodable>(
+    functionName: String,
+    body: [String: Any],
+    accessToken: String
+  ) async throws -> T {
+    guard let rpcBaseURL else {
+      throw FriendsAPIError.networkError(underlying: "Invalid RPC base URL")
+    }
+
+    let url = rpcBaseURL.appendingPathComponent(functionName)
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+    do {
+      request.httpBody = try JSONSerialization.data(withJSONObject: body)
+    } catch {
+      throw FriendsAPIError.networkError(underlying: "Failed to encode RPC body: \(error.localizedDescription)")
+    }
+
+    do {
+      let (data, response) = try await urlSession.data(for: request)
+
+      guard let httpResponse = response as? HTTPURLResponse else {
+        throw FriendsAPIError.networkError(underlying: "Invalid response type")
+      }
+
+      switch httpResponse.statusCode {
+      case 200...299:
+        break
+      case 401:
+        throw FriendsAPIError.unauthorized
+      default:
+        if let rpcError = try? JSONDecoder().decode(RPCErrorResponse.self, from: data),
+          let message = rpcError.message,
+          !message.isEmpty
+        {
+          throw FriendsAPIError.networkError(
+            underlying: "RPC \(functionName) failed (\(httpResponse.statusCode)): \(message)")
+        }
+        throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
+      }
+
+      do {
+        return try JSONDecoder().decode(T.self, from: data)
+      } catch {
+        throw FriendsAPIError.decodingError(underlying: error.localizedDescription)
+      }
+    } catch let error as FriendsAPIError {
+      throw error
+    } catch {
+      throw FriendsAPIError.networkError(underlying: error.localizedDescription)
+    }
+  }
+
+  // MARK: - Helpers
+
+  private static func sortFriends(_ friends: [FriendWithShift]) -> [FriendWithShift] {
+    friends.sorted { lhs, rhs in
       let priorityOrder: [FriendShiftStatus?] = [.active, .upcoming, .past, nil]
       let lhsPriority = priorityOrder.firstIndex(where: { $0 == lhs.status }) ?? 4
       let rhsPriority = priorityOrder.firstIndex(where: { $0 == rhs.status }) ?? 4
@@ -215,120 +1706,21 @@ enum FriendsAPIClient {
         return lhsPriority < rhsPriority
       }
 
-      // Same status - sort by date/time when possible
       guard let lhsDateTime = shiftDateTime(shiftDate: lhs.shiftDate, time: lhs.startTime),
         let rhsDateTime = shiftDateTime(shiftDate: rhs.shiftDate, time: rhs.startTime)
       else {
-        return lhs.shiftDate != nil  // Put shifts before no-shifts
+        return lhs.shiftDate != nil
       }
 
       if lhs.status == .upcoming {
-        return lhsDateTime < rhsDateTime  // Upcoming: soonest first
+        return lhsDateTime < rhsDateTime
       } else if lhs.status == .past {
-        return lhsDateTime > rhsDateTime  // Past: most recent first
+        return lhsDateTime > rhsDateTime
       }
 
       return false
     }
   }
-
-  // MARK: - Private API Methods
-
-  private static func fetchSharers(accessToken: String) async throws -> [SharersResponse.SharerData]
-  {
-    guard let baseURL else {
-      throw FriendsAPIError.networkError(underlying: "Invalid base URL")
-    }
-    let url = baseURL.appendingPathComponent("api/sharing/sharers")
-
-    var request = URLRequest(url: url)
-    request.httpMethod = "GET"
-    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    do {
-      let (data, response) = try await urlSession.data(for: request)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        throw FriendsAPIError.networkError(underlying: "Invalid response type")
-      }
-
-      switch httpResponse.statusCode {
-      case 200:
-        break
-      case 401:
-        throw FriendsAPIError.unauthorized
-      default:
-        throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
-      }
-
-      let decoder = JSONDecoder()
-      let result = try decoder.decode(SharersResponse.self, from: data)
-      return result.sharers
-
-    } catch let error as FriendsAPIError {
-      throw error
-    } catch let decodingError as DecodingError {
-      throw FriendsAPIError.decodingError(underlying: decodingError.localizedDescription)
-    } catch {
-      throw FriendsAPIError.networkError(underlying: error.localizedDescription)
-    }
-  }
-
-  private static func fetchPreviews(
-    sharerIds: [String],
-    accessToken: String
-  ) async throws -> [PreviewsResponse.PreviewData] {
-    guard let baseURL else {
-      throw FriendsAPIError.networkError(underlying: "Invalid base URL")
-    }
-    let previewsURL = baseURL.appendingPathComponent("api/sharing/previews")
-    guard var components = URLComponents(url: previewsURL, resolvingAgainstBaseURL: false) else {
-      throw FriendsAPIError.networkError(underlying: "Invalid base URL")
-    }
-    components.queryItems = [
-      URLQueryItem(name: "sharerIds", value: sharerIds.joined(separator: ","))
-    ]
-
-    guard let url = components.url else {
-      throw FriendsAPIError.networkError(underlying: "Invalid URL")
-    }
-
-    var request = URLRequest(url: url)
-    request.httpMethod = "GET"
-    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    do {
-      let (data, response) = try await urlSession.data(for: request)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        throw FriendsAPIError.networkError(underlying: "Invalid response type")
-      }
-
-      switch httpResponse.statusCode {
-      case 200:
-        break
-      case 401:
-        throw FriendsAPIError.unauthorized
-      default:
-        throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
-      }
-
-      let decoder = JSONDecoder()
-      let result = try decoder.decode(PreviewsResponse.self, from: data)
-      return result.previews
-
-    } catch let error as FriendsAPIError {
-      throw error
-    } catch let decodingError as DecodingError {
-      throw FriendsAPIError.decodingError(underlying: decodingError.localizedDescription)
-    } catch {
-      throw FriendsAPIError.networkError(underlying: error.localizedDescription)
-    }
-  }
-
-  // MARK: - Helpers
 
   private static func makeInitials(from name: String) -> String {
     let words = name.split(separator: " ")
@@ -350,12 +1742,18 @@ enum FriendsAPIClient {
     components.year = dateParts[0]
     components.month = dateParts[1]
     components.day = dateParts[2]
-    components.hour = timeParts[0]
+    components.hour = timeParts[0] == 24 ? 0 : timeParts[0]
     components.minute = timeParts[1]
 
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = .current
-    return calendar.date(from: components)
+
+    guard var date = calendar.date(from: components) else { return nil }
+    if timeParts[0] == 24 {
+      date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+    }
+
+    return date
   }
 }
-// swiftlint:enable function_body_length
+// swiftlint:enable file_length function_body_length cyclomatic_complexity

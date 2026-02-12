@@ -54,13 +54,21 @@ struct ShiftRowView: View {
 
   // MARK: - Countdown Logic
 
-  /// Whether we should show a live countdown (under 24 hours before shift)
+  /// Whether we should update the timer (upcoming within 24h or active)
   private var shouldCountdown: Bool {
-    guard shift.status == .upcoming,
-      let shiftStart = shiftStartDate
+    guard let shiftStart = shiftStartDate,
+      let shiftEnd = shiftEndDate
     else { return false }
 
-    let secondsUntil = shiftStart.timeIntervalSince(currentTime)
+    let now = Date()
+
+    // Update during active shifts (for progress bar and status transition)
+    if now >= shiftStart && now < shiftEnd {
+      return true
+    }
+
+    // Update during upcoming shifts within 24 hours
+    let secondsUntil = shiftStart.timeIntervalSince(now)
     let hoursUntil = secondsUntil / 3600
 
     return hoursUntil > 0 && hoursUntil <= 24
@@ -78,6 +86,44 @@ struct ShiftRowView: View {
     startComponents.minute = startParts[1]
 
     return calendar.date(from: startComponents)
+  }
+
+  private var shiftEndDate: Date? {
+    guard let shiftDate = parseDate(shift.shiftDate),
+      let shiftStart = shiftStartDate
+    else { return nil }
+
+    let calendar = Calendar.current
+    let endParts = shift.endTime.split(separator: ":").compactMap { Int($0) }
+    guard endParts.count >= 2 else { return nil }
+
+    var endComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
+    endComponents.hour = endParts[0]
+    endComponents.minute = endParts[1]
+
+    guard var shiftEnd = calendar.date(from: endComponents) else { return nil }
+
+    if shiftEnd <= shiftStart {
+      shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
+    }
+
+    return shiftEnd
+  }
+
+  /// Dynamically computed status based on current time,
+  /// so shifts transition from upcoming -> active -> past in real time.
+  private var effectiveStatus: ShiftPreviewStatus {
+    guard let start = shiftStartDate, let end = shiftEndDate else {
+      return shift.status
+    }
+    let now = currentTime
+    if now >= start && now < end {
+      return .active
+    } else if now < start {
+      return .upcoming
+    } else {
+      return .past
+    }
   }
 
   // MARK: - Shift Card
@@ -120,7 +166,7 @@ struct ShiftRowView: View {
     .overlay(
       // Progress indicator for active shifts
       GeometryReader { geometry in
-        if shift.status == .active {
+        if effectiveStatus == .active {
           RoundedRectangle(cornerRadius: 10)
             .fill(Color.green.opacity(0.15))
             .frame(width: geometry.size.width * progress)
@@ -175,7 +221,7 @@ struct ShiftRowView: View {
   }
 
   private var statusText: String {
-    switch shift.status {
+    switch effectiveStatus {
     case .active:
       return String(localized: .watchActive)
     case .upcoming, .past:
@@ -184,7 +230,7 @@ struct ShiftRowView: View {
   }
 
   private var statusColor: Color {
-    switch shift.status {
+    switch effectiveStatus {
     case .active:
       return .green
     case .upcoming:
@@ -195,7 +241,7 @@ struct ShiftRowView: View {
   }
 
   private var statusBackgroundColor: Color {
-    switch shift.status {
+    switch effectiveStatus {
     case .active:
       return .green.opacity(0.2)
     case .upcoming:
@@ -226,7 +272,7 @@ struct ShiftRowView: View {
   // MARK: - Progress for Active Shifts
 
   private var progress: Double {
-    guard shift.status == .active,
+    guard effectiveStatus == .active,
       let shiftDate = parseDate(shift.shiftDate)
     else { return 0 }
 
@@ -297,7 +343,7 @@ struct ShiftRowView: View {
       shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
     }
 
-    let referenceTime = shift.status == .past ? shiftEnd : shiftStart
+    let referenceTime = effectiveStatus == .past ? shiftEnd : shiftStart
     let diffSeconds = referenceTime.timeIntervalSince(now)
     let isFuture = diffSeconds > 0
     let absDiffSeconds = abs(diffSeconds)
@@ -319,7 +365,7 @@ struct ShiftRowView: View {
     }
 
     // For upcoming shifts under 24 hours, show countdown with seconds
-    if shift.status == .upcoming && isFuture && hours < 24 {
+    if effectiveStatus == .upcoming && isFuture && hours < 24 {
       let hourLabel = String(localized: .commonHoursShort)
       let minLabel = String(localized: .commonMinutesShort)
       let secLabel = "s"

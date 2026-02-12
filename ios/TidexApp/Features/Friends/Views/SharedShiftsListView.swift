@@ -93,6 +93,7 @@ struct SharedShiftsListView: View {
       ShiftDetailsSheet(shift: shift, onDelete: nil)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled()
     }
     // Detect screenshots and notify the sharer
     .onReceive(

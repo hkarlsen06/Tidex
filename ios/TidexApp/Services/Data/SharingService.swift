@@ -5,37 +5,6 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharingService")
 
-// MARK: - API Response Types
-
-/// Response from /api/sharing/sharers endpoint
-private struct SharersAPIResponse: Codable {
-  let sharers: [SharerData]
-
-  struct SharerData: Codable {
-    let id: String
-    let email: String?
-    let phone: String?
-    let firstName: String?
-    let profilePictureUrl: String?
-    let oauthAvatarUrl: String?
-    let sharedAt: String
-    let showEarnings: Bool
-    let blocked: Bool
-  }
-}
-
-/// Response from /api/sharing/previews endpoint
-private struct PreviewsAPIResponse: Codable {
-  let previews: [PreviewData]
-
-  struct PreviewData: Codable {
-    let sharerId: String
-    let shift: SharedShiftData?
-    let status: String?
-    let showEarnings: Bool
-  }
-}
-
 // MARK: - Shift Preview
 
 /// Preview of a sharer's next/active/past shift
@@ -85,7 +54,7 @@ private struct CachedPreview {
 // MARK: - Sharing Service
 
 /// Service for fetching shared shifts and sharers
-/// Uses Supabase for sharer list and Next.js API for shared shifts
+/// Read/fetch paths use Supabase RPC; mutation paths stay on existing Next.js endpoints.
 @MainActor
 final class SharingService: ObservableObject {
   static let shared = SharingService()
@@ -122,11 +91,12 @@ final class SharingService: ObservableObject {
     previewCache.removeAll()
   }
 
-  // MARK: - Sharer List (via Next.js API)
+  // MARK: - Sharer List (via Supabase RPC)
 
   /// Fetch users who have shared their shifts with the current user
-  /// Uses Next.js API endpoint which has access to admin client for user profile data
+  /// Uses Supabase RPC get_my_sharers()
   func fetchSharers(for userId: String) async throws -> [SharedUser] {
+    _ = userId  // Signature stability for existing callers
     isLoadingSharers = true
     error = nil
     defer { isLoadingSharers = false }
@@ -136,55 +106,21 @@ final class SharingService: ObservableObject {
         // Check for cancellation before making network request
         try Task.checkCancellation()
 
-        // Get the current session token
-        let session = try await AuthSessionManager.shared.getSession()
-        let accessToken = session.accessToken
+        // Ensure we have a valid authenticated Supabase session.
+        _ = try await AuthSessionManager.shared.getSession()
 
-        // Build URL for sharers endpoint
-        let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/sharers")
+        // Execute RPC
+        let rpcRows: [SharingRPCSharerRow] =
+          try await supabase
+          .rpc("get_my_sharers")
+          .execute()
+          .value
 
-        // Build request with auth header
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.cachePolicy = URLRequest.CachePolicy.reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        logger.info("Fetching sharers from \(url.absoluteString)")
-
-        // Execute request
-        let (data, response) = try await urlSession.data(for: request)
-
-        // Check for cancellation after network request
+        // Check for cancellation after RPC
         try Task.checkCancellation()
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-          throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
-        }
-
-        // Handle HTTP errors
-        switch httpResponse.statusCode {
-        case 200:
-          break  // Success
-        case 401:
-          throw SharingServiceError.notAuthenticated
-        default:
-          let message = String(data: data, encoding: .utf8)
-          throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
-        }
-
-        // Decode response
-        let decoder = JSONDecoder()
-        let apiResponse: SharersAPIResponse
-        do {
-          apiResponse = try decoder.decode(SharersAPIResponse.self, from: data)
-        } catch {
-          logger.error("Failed to decode sharers response: \(error)")
-          throw SharingServiceError.decodingError(underlying: error)
-        }
-
         // Map to SharedUser
-        let users = apiResponse.sharers.map { sharer in
+        let users = rpcRows.map { sharer in
           SharedUser(
             id: sharer.id,
             email: sharer.email,
@@ -205,23 +141,30 @@ final class SharingService: ObservableObject {
       } catch let error as SharingServiceError {
         self.error = error
         throw error
+      } catch let error as PostgrestError {
+        let mapped = mapRPCError(error)
+        self.error = mapped
+        throw mapped
+      } catch let error as AuthError {
+        let mapped = mapRPCError(error)
+        self.error = mapped
+        throw mapped
       } catch is CancellationError {
         logger.info("Sharers fetch was cancelled")
         throw CancellationError()
       } catch {
-        let wrappedError = SharingServiceError.networkError(underlying: error)
-        self.error = wrappedError
-        throw wrappedError
+        let mapped = mapRPCError(error)
+        self.error = mapped
+        throw mapped
       }
     } onCancel: {
       logger.info("Sharers fetch cancellation requested")
     }
   }
 
-  // MARK: - Shared Shifts (via Next.js API)
+  // MARK: - Shared Shifts (via Supabase RPC)
 
-  /// Fetch shared shifts from the Next.js API
-  /// This endpoint handles share verification and payroll computation
+  /// Fetch shared shifts month payload from Supabase RPC and compute client-side.
   func fetchSharedShifts(
     ownerId: String,
     year: Int,
@@ -236,85 +179,94 @@ final class SharingService: ObservableObject {
         // Check for cancellation before making network request
         try Task.checkCancellation()
 
-        // Get the current session token
-        let session = try await AuthSessionManager.shared.getSession()
-        let accessToken = session.accessToken
+        // Ensure we have a valid authenticated Supabase session.
+        _ = try await AuthSessionManager.shared.getSession()
 
-        // Build URL
-        let sharingURL = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing")
-        guard var components = URLComponents(url: sharingURL, resolvingAgainstBaseURL: false) else {
-          throw SharingServiceError.networkError(underlying: URLError(.badURL))
-        }
-        components.queryItems = [
-          URLQueryItem(name: "ownerId", value: ownerId),
-          URLQueryItem(name: "year", value: String(year)),
-          URLQueryItem(name: "month", value: String(month)),
+        let params: [String: AnyJSON] = [
+          "p_owner_id": .string(ownerId),
+          "p_year": .integer(year),
+          "p_month": .integer(month),
         ]
 
-        guard let url = components.url else {
-          throw SharingServiceError.networkError(underlying: URLError(.badURL))
+        logger.info("Fetching shared month payload via RPC for owner \(ownerId, privacy: .private)")
+
+        let payloadRow: SharingRPCMonthPayloadRow
+        do {
+          payloadRow =
+            try await supabase
+            .rpc("get_shared_month_payload", params: params)
+            .single()
+            .execute()
+            .value
+        } catch let postgrestError as PostgrestError where postgrestError.code == "PGRST116" {
+          // No row means no share access or blocked.
+          throw SharingServiceError.noShareAccess
         }
 
-        // Build request with auth header
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.cachePolicy = URLRequest.CachePolicy.reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        logger.info("Fetching shared shifts from \(url.absoluteString)")
-
-        // Execute request
-        let (data, response) = try await urlSession.data(for: request)
-
-        // Check for cancellation after network request
+        // Check for cancellation after RPC
         try Task.checkCancellation()
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-          throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
+        let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
+        var computedShifts = SharingComputeCore.computeMonthShifts(
+          payload: payloadRow.payloadInput,
+          year: year,
+          month: month,
+          mode: mode
+        )
+
+        // Defense-in-depth: never cache/render monetary outputs for hidden-earnings shares.
+        if !payloadRow.showEarnings {
+          computedShifts = SharingComputeCore.enforceHiddenEarnings(on: computedShifts)
         }
 
-        // Handle HTTP errors
-        switch httpResponse.statusCode {
-        case 200:
-          break  // Success
-        case 401:
-          throw SharingServiceError.notAuthenticated
-        case 404:
-          throw SharingServiceError.noShareAccess
-        default:
-          let message = String(data: data, encoding: .utf8)
-          throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
-        }
+        let shifts = computedShifts.map(mapComputedShiftToSharedShiftData)
+        let payoutTaxSettings = SharingComputeCore.payoutTaxSettings(
+          year: year,
+          month: month,
+          settings: payloadRow.settings,
+          snapshots: payloadRow.snapshots,
+          mode: mode
+        )
+        .map { SharedPayoutTaxSettings(enabled: $0.enabled, percentage: $0.percentage) }
 
-        // Decode response
-        let decoder = JSONDecoder()
-        do {
-          let result = try decoder.decode(SharedShiftsResponse.self, from: data)
-          logger.info("Loaded \(result.shifts.count) shared shifts for month \(year)-\(month)")
-          return result
-        } catch {
-          logger.error("Failed to decode shared shifts: \(error)")
-          throw SharingServiceError.decodingError(underlying: error)
-        }
+        let response = SharedShiftsResponse(
+          shifts: shifts,
+          settings: SharedUserSettings(
+            payroll_day: payloadRow.settings.payrollDay,
+            half_tax_month: payloadRow.settings.halfTaxMonth,
+            monthly_goal: payloadRow.settings.monthlyGoal
+          ),
+          payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil
+        )
+
+        logger.info("Loaded \(response.shifts.count) shared shifts for month \(year)-\(month)")
+        return response
 
       } catch let error as SharingServiceError {
         self.error = error
         throw error
+      } catch let error as PostgrestError {
+        let mapped = mapRPCError(error)
+        self.error = mapped
+        throw mapped
+      } catch let error as AuthError {
+        let mapped = mapRPCError(error)
+        self.error = mapped
+        throw mapped
       } catch is CancellationError {
         logger.info("Shared shifts fetch was cancelled")
         throw CancellationError()
       } catch {
-        let wrappedError = SharingServiceError.networkError(underlying: error)
-        self.error = wrappedError
-        throw wrappedError
+        let mapped = mapRPCError(error)
+        self.error = mapped
+        throw mapped
       }
     } onCancel: {
       logger.info("Shared shifts fetch cancellation requested")
     }
   }
 
-  // MARK: - Shift Previews (via Next.js API)
+  // MARK: - Shift Previews (via Supabase RPC)
 
   /// Fetch shift previews for all sharers
   /// Returns the most relevant shift (active > upcoming > past) for each sharer
@@ -347,80 +299,83 @@ final class SharingService: ObservableObject {
     }
 
     do {
-      // Get the current session token
-      let session = try await AuthSessionManager.shared.getSession()
-      let accessToken = session.accessToken
+      // Ensure we have a valid authenticated Supabase session.
+      _ = try await AuthSessionManager.shared.getSession()
 
-      // Build URL - only fetch uncached IDs
-      let previewsURL = APIConfiguration.webAppBaseURL.appendingPathComponent(
-        "/api/sharing/previews")
-      guard var components = URLComponents(url: previewsURL, resolvingAgainstBaseURL: false) else {
-        throw SharingServiceError.networkError(underlying: URLError(.badURL))
-      }
-      components.queryItems = [
-        URLQueryItem(name: "sharerIds", value: uncachedIds.joined(separator: ","))
+      let now = Date()
+      let startDate = SharingComputeCore.isoDateString(
+        Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
+      let endDate = SharingComputeCore.isoDateString(
+        Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
+
+      let params: [String: AnyJSON] = [
+        "p_sharer_ids": .array(uncachedIds.map { .string($0) }),
+        "p_start_date": .string(startDate),
+        "p_end_date": .string(endDate),
       ]
 
-      guard let url = components.url else {
-        throw SharingServiceError.networkError(underlying: URLError(.badURL))
-      }
-
-      // Build request with auth header
-      var request = URLRequest(url: url)
-      request.httpMethod = "GET"
-      request.cachePolicy = URLRequest.CachePolicy.reloadIgnoringLocalCacheData
-      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
       logger.info(
-        "Fetching \(uncachedIds.count) shift previews from API (cached: \(cachedPreviews.count))")
+        "Fetching \(uncachedIds.count) shift preview payloads via RPC (cached: \(cachedPreviews.count))"
+      )
 
-      // Execute request
-      let (data, response) = try await urlSession.data(for: request)
+      let payloadRows: [SharingRPCPreviewPayloadRow] =
+        try await supabase
+        .rpc("get_my_sharer_preview_payloads", params: params)
+        .execute()
+        .value
 
-      guard let httpResponse = response as? HTTPURLResponse else {
-        throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
-      }
+      let payloadBySharerId = Dictionary(
+        payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last }
+      )
 
-      // Handle HTTP errors
-      switch httpResponse.statusCode {
-      case 200:
-        break  // Success
-      case 401:
-        throw SharingServiceError.notAuthenticated
-      default:
-        let message = String(data: data, encoding: .utf8)
-        throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
-      }
-
-      // Decode response
-      let decoder = JSONDecoder()
-      do {
-        let apiResponse = try decoder.decode(PreviewsAPIResponse.self, from: data)
-        let now = Date()
-        let freshPreviews = apiResponse.previews.map { preview in
-          SharerShiftPreview(
-            sharerId: preview.sharerId,
-            shift: preview.shift,
-            status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0) },
-            showEarnings: preview.showEarnings
+      let freshPreviews: [SharerShiftPreview] = uncachedIds.map { sharerId in
+        guard let payloadRow = payloadBySharerId[sharerId] else {
+          return SharerShiftPreview(
+            sharerId: sharerId,
+            shift: nil,
+            status: nil,
+            showEarnings: false
           )
         }
 
-        // Cache the fresh previews
-        for preview in freshPreviews {
-          previewCache[preview.sharerId] = CachedPreview(preview: preview, cachedAt: now)
+        let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
+        var shifts = SharingComputeCore.computeShiftsInRange(
+          payload: payloadRow.payloadInput,
+          startDate: startDate,
+          endDate: endDate,
+          mode: mode
+        )
+
+        // Defense-in-depth redaction before caching/rendering.
+        if !payloadRow.showEarnings {
+          shifts = SharingComputeCore.enforceHiddenEarnings(on: shifts)
         }
 
-        // Merge cached + fresh and return
-        let allPreviews = cachedPreviews + freshPreviews
-        logger.info(
-          "Loaded \(freshPreviews.count) fresh + \(cachedPreviews.count) cached shift previews")
-        return allPreviews
-      } catch {
-        logger.error("Failed to decode shift previews: \(error)")
-        throw SharingServiceError.decodingError(underlying: error)
+        let preview = SharingComputeCore.selectPreview(
+          sharerId: sharerId,
+          shifts: shifts,
+          showEarnings: payloadRow.showEarnings,
+          now: now
+        )
+
+        return SharerShiftPreview(
+          sharerId: sharerId,
+          shift: preview.shift.map(mapComputedShiftToSharedShiftData),
+          status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0.rawValue) },
+          showEarnings: preview.showEarnings
+        )
       }
+
+      // Cache the fresh previews
+      for preview in freshPreviews {
+        previewCache[preview.sharerId] = CachedPreview(preview: preview, cachedAt: now)
+      }
+
+      // Merge cached + fresh and return
+      let allPreviews = cachedPreviews + freshPreviews
+      logger.info(
+        "Loaded \(freshPreviews.count) fresh + \(cachedPreviews.count) cached shift previews")
+      return allPreviews
 
     } catch let error as SharingServiceError {
       // If we have cached data, return it even on error
@@ -429,14 +384,94 @@ final class SharingService: ObservableObject {
         return cachedPreviews
       }
       throw error
+    } catch let error as PostgrestError {
+      if !cachedPreviews.isEmpty {
+        logger.warning("RPC error, returning \(cachedPreviews.count) cached previews")
+        return cachedPreviews
+      }
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      if !cachedPreviews.isEmpty {
+        logger.warning("Auth error, returning \(cachedPreviews.count) cached previews")
+        return cachedPreviews
+      }
+      throw mapRPCError(error)
     } catch {
       // If we have cached data, return it even on error
       if !cachedPreviews.isEmpty {
         logger.warning("Network error, returning \(cachedPreviews.count) cached previews")
         return cachedPreviews
       }
-      throw SharingServiceError.networkError(underlying: error)
+      throw mapRPCError(error)
     }
+  }
+
+  // MARK: - RPC Helpers
+
+  private func mapRPCError(_ error: Error) -> SharingServiceError {
+    if error is AuthError {
+      return .notAuthenticated
+    }
+
+    if let postgrestError = error as? PostgrestError {
+      let message = postgrestError.message
+      let lowercasedMessage = message.lowercased()
+      let code = (postgrestError.code ?? "").uppercased()
+
+      if code == "PGRST301"
+        || lowercasedMessage.contains("jwt")
+        || lowercasedMessage.contains("unauthorized")
+      {
+        return .notAuthenticated
+      }
+
+      return .httpError(statusCode: 400, message: message)
+    }
+
+    if let decodingError = error as? DecodingError {
+      return .decodingError(underlying: decodingError)
+    }
+
+    return .networkError(underlying: error)
+  }
+
+  private func mapComputedShiftToSharedShiftData(_ shift: SharingComputedShift) -> SharedShiftData {
+    SharedShiftData(
+      id: shift.id,
+      user_id: shift.userId,
+      shift_date: shift.shiftDate,
+      start_time: shift.startTime,
+      end_time: shift.endTime,
+      computed: SharedShiftComputed(
+        id: shift.id,
+        durationHours: shift.computed.durationHours,
+        paidHours: shift.computed.paidHours,
+        basePay: shift.computed.basePay,
+        supplementPay: shift.computed.supplementPay,
+        gross: shift.computed.gross
+      ),
+      tax_enabled: shift.taxEnabled,
+      tax_percentage: shift.taxPercentage,
+      custom_supplements: shift.customSupplements.map(mapCustomSupplements),
+      recurring_id: shift.recurringId,
+      recurring_anchor_weekday: shift.recurringAnchorWeekday
+    )
+  }
+
+  private func mapCustomSupplements(_ supplements: SharingRPCCustomSupplements)
+    -> CustomSupplementsData
+  {
+    CustomSupplementsData(
+      rules: supplements.rules.map { rule in
+        CustomSupplementRule(
+          from: rule.from,
+          to: rule.to,
+          rate: rule.rate,
+          percent: rule.percent,
+          isCustom: rule.isCustom
+        )
+      }
+    )
   }
 
   // MARK: - Friends Management (via Next.js API)

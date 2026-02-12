@@ -347,6 +347,8 @@ struct SharedShiftsCalendarView: View {
 
   private func cellContent(for dayInfo: CalendarDayInfo, hasShifts: Bool) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
+    let hasUserShift = userHoursByDate?[dateISO] != nil
+    let hasOverlap = hasShifts && hasUserShift
 
     // When superimposing and user has a shift on this day
     if isSuperimposing, let userHours = userHoursByDate?[dateISO] {
@@ -361,7 +363,7 @@ struct SharedShiftsCalendarView: View {
     if effectiveViewMode == .money, let amount = earningsByDate[dateISO] {
       return .earnings(amount)
     } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
-      return .hours(hoursData)
+      return .hours(hoursData, color: hasOverlap ? .tidexBlue : .tidexTextPrimary)
     }
 
     return .empty

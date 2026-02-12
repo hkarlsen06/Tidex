@@ -307,35 +307,11 @@ private struct ShiftPreviewCard: View {
 
   @ViewBuilder
   private func statusBadge(computed: ComputedStatus) -> some View {
-    if isCountingDown(computed) {
-      // Show countdown number for final 60 seconds (matches Next.js behavior)
-      Text("\(computed.secondsUntilEnd)")
-        .font(.tidexBodyMedium)
-        .monospacedDigit()
-        .frame(minWidth: 40)
-        .padding(.horizontal, Spacing.xs)
-        .padding(.vertical, Spacing.xxs)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.sm)
-            .fill(Color.green.opacity(0.2))
-        )
-        .foregroundColor(.green)
-        .contentTransition(.numericText())
-        .animation(.default, value: computed.secondsUntilEnd)
-    } else {
-      Text(statusText(computed: computed))
-        .font(.tidexCaption)
-        .monospacedDigit()
-        .padding(.horizontal, Spacing.xs)
-        .padding(.vertical, Spacing.xxs)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.sm)
-            .fill(statusBackgroundColor(for: computed.status))
-        )
-        .foregroundColor(statusTextColor(for: computed.status))
-        .contentTransition(.numericText())
-        .animation(.default, value: computed.relativeText)
-    }
+    ShiftCountdownBadge(
+      text: statusText(computed: computed),
+      status: computed.status,
+      finalCountdownSeconds: isCountingDown(computed) ? computed.secondsUntilEnd : nil
+    )
   }
 
   private func statusText(computed: ComputedStatus) -> String {
@@ -353,113 +329,15 @@ private struct ShiftPreviewCard: View {
   private func computeRelativeTimeText(at now: Date, shiftStart: Date, shiftEnd: Date) -> String {
     // For past shifts, calculate from end time (matches Next.js behavior)
     // "3min siden" means "ended 3 minutes ago", not "started X hours ago"
-    let referenceTime: Date
-    if now > shiftEnd {
-      referenceTime = shiftEnd
-    } else {
-      referenceTime = shiftStart
-    }
+    let referenceTime = now > shiftEnd ? shiftEnd : shiftStart
 
-    let diffSeconds = referenceTime.timeIntervalSince(now)
-    let isFuture = diffSeconds > 0
-    let absDiffSeconds = abs(diffSeconds)
-
-    let totalSeconds = Int(absDiffSeconds)
-    let totalMinutes = totalSeconds / 60
-    let totalHours = totalMinutes / 60
-
-    // Count midnight crossings for day-based formatting
-    let midnightDays = countMidnightCrossings(from: min(now, shiftStart), to: max(now, shiftStart))
-
-    // Abbreviations from String Catalog
-    let hAbbrev = String(localized: .commonHoursShort)
-    let minAbbrev = String(localized: .commonMinShort)
-    let secAbbrev = String(localized: .commonSecondsShort)
-
-    // Within the same day (0 midnight crossings)
-    if midnightDays == 0 {
-      let h = totalMinutes / 60
-      let m = totalMinutes % 60
-      let s = totalSeconds % 60
-
-      // Under 12 hours: include seconds
-      let includeSeconds = totalHours < 12
-
-      var timeStr: String
-      if totalMinutes == 0 {
-        // Less than a minute - always show seconds
-        timeStr = "\(s)\(secAbbrev)"
-      } else if h == 0 {
-        // Less than an hour
-        if includeSeconds {
-          timeStr = "\(m)\(minAbbrev) \(s)\(secAbbrev)"
-        } else {
-          timeStr = "\(m)\(minAbbrev)"
-        }
-      } else if includeSeconds {
-        if m == 0 {
-          timeStr = "\(h)\(hAbbrev) \(s)\(secAbbrev)"
-        } else {
-          timeStr = "\(h)\(hAbbrev) \(m)\(minAbbrev) \(s)\(secAbbrev)"
-        }
-      } else if m == 0 {
-        timeStr = "\(h)\(hAbbrev)"
-      } else {
-        timeStr = "\(h)\(hAbbrev) \(m)\(minAbbrev)"
-      }
-
-      if isFuture {
-        return String(localized: .commonInTime(timeStr))
-      } else {
-        return String(localized: .commonTimeAgo(timeStr))
-      }
-    }
-
-    // 1 midnight crossing = tomorrow/yesterday
-    if midnightDays == 1 {
-      return isFuture
-        ? String(localized: .commonTomorrow)
-        : String(localized: .commonYesterday)
-    }
-
-    // Multiple days
-    if isFuture {
-      return String(localized: .commonInDaysPlural(Int(Int32(midnightDays))))
-    } else {
-      return String(localized: .commonDaysAgoPlural(Int(Int32(midnightDays))))
-    }
+    return CountdownFormatter.formatRelativeCountdown(
+      referenceDate: referenceTime,
+      dayBoundaryReferenceDate: shiftStart,
+      now: now
+    )
   }
 
-  /// Count midnight crossings between two dates (matches Next.js logic)
-  private func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
-    let calendar = Calendar.current
-    let startOfStartDay = calendar.startOfDay(for: startDate)
-    let startOfEndDay = calendar.startOfDay(for: endDate)
-    let components = calendar.dateComponents([.day], from: startOfStartDay, to: startOfEndDay)
-    return abs(components.day ?? 0)
-  }
-
-  private func statusBackgroundColor(for status: ShiftPreviewStatus) -> Color {
-    switch status {
-    case .active:
-      return Color.green.opacity(0.15)
-    case .upcoming:
-      return Color.blue.opacity(0.15)
-    case .past:
-      return Color.tidexTextMuted.opacity(0.15)
-    }
-  }
-
-  private func statusTextColor(for status: ShiftPreviewStatus) -> Color {
-    switch status {
-    case .active:
-      return Color.green
-    case .upcoming:
-      return Color.blue
-    case .past:
-      return Color.tidexTextMuted
-    }
-  }
 }
 
 // MARK: - Empty State
