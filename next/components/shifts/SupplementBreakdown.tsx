@@ -98,7 +98,7 @@ export function SupplementBreakdown(props: SupplementBreakdownProps) {
   if (rows.length === 0) return null;
 
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
-  const hasCustomSupplements = props.customSupplements && props.customSupplements.rules.length > 0;
+  const hasCustomSupplements = props.customSupplements != null;
 
   return (
     <>

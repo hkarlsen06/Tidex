@@ -109,7 +109,7 @@ struct ShiftDetailsSheet: View {
     let formatter = DateFormatter()
     formatter.locale = Locale.appLocale
     formatter.dateFormat = "EEEE, d. MMMM yyyy"
-    return formatter.string(from: date).capitalized
+    return formatter.string(from: date).sentenceCased()
   }
 
   private var formattedTimeRange: String {
@@ -139,14 +139,9 @@ struct ShiftDetailsSheet: View {
     shift.computed.supplementPay > 0 && !supplementSegments.isEmpty
   }
 
-  /// Check if shift has custom supplements
+  /// Check if shift has custom supplements (including explicitly empty rules)
   private var hasCustomSupplements: Bool {
-    if let custom = shift.shift.custom_supplements,
-      !custom.rules.isEmpty
-    {
-      return true
-    }
-    return false
+    return shift.shift.custom_supplements != nil
   }
 
   /// Base wage rate per hour (for showing in supplement rows)
