@@ -147,6 +147,11 @@ struct WageyView: View {
         }
       )
 
+      // Soft warning when conversation is getting long
+      if viewModel.isConversationLong {
+        conversationLengthWarning
+      }
+
       // Input field with image support
       ChatInputField(
         inputText: $inputText,
@@ -198,6 +203,24 @@ struct WageyView: View {
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xsm)
+    .background(Color.tidexSurfaceSecondary)
+  }
+
+  // MARK: - Conversation Length Warning
+
+  private var conversationLengthWarning: some View {
+    HStack(spacing: Spacing.xs) {
+      Image(systemName: "info.circle")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(.wageyConversationLongWarning)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.xsm)
+    .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.tidexSurfaceSecondary)
   }
 

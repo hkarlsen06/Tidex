@@ -24,7 +24,7 @@ struct SharedShiftRow: View {
 
     let dayName = FormatterCache.weekdayFormatter(locale: locale)
       .string(from: date)
-      .capitalized
+      .sentenceCased()
 
     let dayNumber = FormatterCache.dayFormatter(locale: locale)
       .string(from: date)

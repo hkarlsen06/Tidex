@@ -281,7 +281,7 @@ struct MonthYearPickerSheet: View {
   private var monthNames: [String] {
     FormatterCache.monthNameFormatter(locale: .appLocale)
       .monthSymbols
-      .map { $0.capitalized }
+      .map { $0.sentenceCased() }
   }
 
   /// Current real month/year for the "This month" button
@@ -555,7 +555,7 @@ struct AnimatedMonthHeader: View {
   @ViewBuilder
   private func monthYearLabel(yearText: String) -> some View {
     HStack(spacing: Spacing.xxxs) {
-      Text(monthName.capitalized)
+      Text(monthName.sentenceCased())
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(1)
@@ -570,7 +570,7 @@ struct AnimatedMonthHeader: View {
   @ViewBuilder
   private func compactMonthYearLabel(yearText: String) -> some View {
     VStack(spacing: 0) {
-      Text(monthName.capitalized)
+      Text(monthName.sentenceCased())
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(1)

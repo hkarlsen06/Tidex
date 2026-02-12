@@ -65,6 +65,7 @@ struct SharedShiftsListView: View {
           }
           // Offset for month picker overlay so content centers in available space
           .padding(.bottom, MonthPickerLayout.totalBottomInset)
+          .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
         }
 
         // Screenshot bubble overlay

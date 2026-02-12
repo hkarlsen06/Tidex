@@ -22,7 +22,7 @@ struct DayShiftsSheet: View {
     let formatter = DateFormatter()
     formatter.locale = Locale.appLocale
     formatter.dateFormat = "EEEE, d. MMMM"
-    return formatter.string(from: date).capitalized
+    return formatter.string(from: date).sentenceCased()
   }
 
   private var totalEarnings: Double {

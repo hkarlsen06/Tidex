@@ -171,10 +171,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         if self.selectedSharer != nil {
           Task {
             await self.loadShiftsForSelectedSharer()
-            // Also reload user shifts if superimposing
-            if self.isSuperimposing {
-              await self.loadUserShiftsForMonth()
-            }
           }
         }
       }
@@ -511,16 +507,12 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     isLoadingShifts = false
+    await loadUserShiftsForMonth()
   }
 
-  /// Load user's own shifts for the current month (for superimpose feature)
+  /// Load user's own shifts for the current month (for overlap indicators + superimpose feature)
   /// Includes both real shifts and virtual shifts from recurring patterns
   func loadUserShiftsForMonth() async {
-    guard isSuperimposing else {
-      userShiftsForMonth = []
-      return
-    }
-
     // Get user ID from cache or fetch
     var userId = cachedUserId
     if userId == nil {
@@ -597,7 +589,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   /// Toggle superimpose mode and load user shifts if needed
   func toggleSuperimpose() {
-    isSuperimposing.toggle()
+    withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+      isSuperimposing.toggle()
+    }
     Task {
       await loadUserShiftsForMonth()
     }

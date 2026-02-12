@@ -159,10 +159,10 @@ struct DataSettingsView: View {
         return ""
       }
       dateFormatter.dateFormat = "MMMM"
-      return dateFormatter.string(from: lastMonth).capitalized
+      return dateFormatter.string(from: lastMonth).sentenceCased()
     case .currentMonth:
       dateFormatter.dateFormat = "MMMM"
-      return dateFormatter.string(from: now).capitalized
+      return dateFormatter.string(from: now).sentenceCased()
     case .currentYear:
       return String(calendar.component(.year, from: now))
     case .custom:

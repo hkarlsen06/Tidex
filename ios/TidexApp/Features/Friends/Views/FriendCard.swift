@@ -251,7 +251,7 @@ private struct ShiftPreviewCard: View {
     let locale = Locale.appLocale
     let dayName = FormatterCache.weekdayFormatter(locale: locale)
       .string(from: date)
-      .capitalized
+      .sentenceCased()
 
     let dayNumber = Calendar.current.component(.day, from: date)
     let daySuffix = String(localized: .commonDaySuffix)
@@ -418,8 +418,8 @@ private struct ShiftPreviewCard: View {
     // 1 midnight crossing = tomorrow/yesterday
     if midnightDays == 1 {
       return isFuture
-        ? String(localized: .commonTomorrow).capitalized
-        : String(localized: .commonYesterday).capitalized
+        ? String(localized: .commonTomorrow)
+        : String(localized: .commonYesterday)
     }
 
     // Multiple days

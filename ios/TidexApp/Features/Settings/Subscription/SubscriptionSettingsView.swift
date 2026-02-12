@@ -170,7 +170,7 @@ struct SubscriptionSettingsView: View {
                   .font(.tidexButton)
                   .foregroundColor(.tidexTextPrimary)
               } else {
-                Text(viewModel.billingPeriodText.capitalized)
+                Text(viewModel.billingPeriodText.sentenceCased())
                   .font(.tidexButton)
                   .foregroundColor(.tidexTextPrimary)
               }

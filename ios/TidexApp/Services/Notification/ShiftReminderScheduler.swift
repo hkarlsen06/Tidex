@@ -271,13 +271,13 @@ final class ShiftReminderScheduler {
     let shiftDay = calendar.startOfDay(for: shiftDate)
 
     if calendar.isDate(shiftDay, inSameDayAs: today) {
-      return String(localized: .commonToday).capitalized
+      return String(localized: .commonToday)
     }
 
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
       calendar.isDate(shiftDay, inSameDayAs: tomorrow)
     {
-      return String(localized: .commonTomorrow).capitalized
+      return String(localized: .commonTomorrow)
     }
 
     // Format as weekday + date

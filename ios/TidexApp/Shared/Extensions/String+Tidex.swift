@@ -1,6 +1,13 @@
 import Foundation
 
 extension String {
+  /// Uppercase only the first character using the provided locale.
+  /// Unlike `.capitalized`, this preserves casing for subsequent words (e.g. "I morgen").
+  func sentenceCased(locale: Locale = .appLocale) -> String {
+    guard !isEmpty else { return self }
+    return prefix(1).uppercased(with: locale) + dropFirst()
+  }
+
   /// Heuristic: true if the string contains any RTL script characters.
   var isRightToLeft: Bool {
     for scalar in unicodeScalars {
