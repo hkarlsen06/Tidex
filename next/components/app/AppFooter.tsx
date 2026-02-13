@@ -50,7 +50,7 @@ export function AppFooter() {
               </li>
               <li>
                 <a
-                  href="https://github.com/Tidex-Payroll-Shifts"
+                  href="https://github.com/TidexHQ"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-text-secondary hover:text-text-primary transition-colors inline-flex items-center gap-1"

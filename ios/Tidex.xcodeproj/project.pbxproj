@@ -1005,7 +1005,7 @@
 		};
 		11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Tidex-Payroll-Shifts/supabase-swift.git";
+			repositoryURL = "https://github.com/TidexHQ/supabase-swift.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.5.1;
@@ -1013,7 +1013,7 @@
 		};
 		11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Tidex-Payroll-Shifts/GoogleSignIn-iOS.git";
+			repositoryURL = "https://github.com/TidexHQ/GoogleSignIn-iOS.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 9.1.0;

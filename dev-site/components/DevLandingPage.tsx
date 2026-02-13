@@ -109,7 +109,7 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
             © 2026 Hjalmar Karlsen. {dictionary.footer.rights}.
           </p>
           <a
-            href="https://github.com/Tidex-Payroll-Shifts"
+            href="https://github.com/TidexHQ"
             target="_blank"
             rel="noopener noreferrer"
             className="text-text-secondary transition-colors hover:text-text-primary"
