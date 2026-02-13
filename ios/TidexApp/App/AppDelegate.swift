@@ -317,6 +317,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
 
+  /// Immediately end any active Live Activity for the specified shift.
+  /// Used when a shift is manually ended from the UI.
+  func endLiveActivity(for shiftId: String) {
+    let matchingActivities = Activity<ShiftActivityAttributes>.activities.filter {
+      $0.attributes.shiftId == shiftId
+    }
+    guard !matchingActivities.isEmpty else { return }
+
+    for activity in matchingActivities {
+      print("[LiveActivity] Force ending activity for shift \(shiftId) from user action")
+      Task {
+        await activity.end(nil, dismissalPolicy: .immediate)
+      }
+    }
+  }
+
   private func isShiftOngoing(_ shift: StoredShift, at date: Date) -> Bool {
     let formatter = shiftDateTimeFormatter()
 
