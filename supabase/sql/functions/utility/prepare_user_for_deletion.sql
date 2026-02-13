@@ -33,7 +33,6 @@ BEGIN
   DELETE FROM internal.impersonation_rate_limits WHERE admin_user_id = target_user_id;
   DELETE FROM internal.app_account_tokens WHERE user_id = target_user_id;
   DELETE FROM internal.push_devices WHERE user_id = target_user_id;
-  DELETE FROM internal.notification_time_windows WHERE owner_id = target_user_id;
   DELETE FROM internal.notifications_outbox WHERE owner_id = target_user_id OR recipient_id = target_user_id;
 
   -- Note: The following are handled by ON DELETE SET NULL or ON DELETE CASCADE:

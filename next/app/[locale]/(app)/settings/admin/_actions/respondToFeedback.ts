@@ -3,11 +3,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { verifyAdmin } from '@/data-access/auth';
-import {
-  enqueueDirectNotification,
-  generateMutationId,
-} from '@/lib/notifications/enqueue';
-
 const MAX_RESPONSE_LENGTH = 2000;
 
 export async function respondToFeedback(
@@ -28,10 +23,10 @@ export async function respondToFeedback(
     throw new Error(`Response must be ${MAX_RESPONSE_LENGTH} characters or less`);
   }
 
-  // Get current feedback to check if this is the first response
+  // Verify feedback exists
   const { data: currentFeedback, error: fetchError } = await supabase
     .from('feedback')
-    .select('user_id, response')
+    .select('id')
     .eq('id', feedbackId)
     .single();
 
@@ -39,8 +34,6 @@ export async function respondToFeedback(
     logger.error('Failed to fetch feedback:', fetchError);
     throw new Error('Feedback not found');
   }
-
-  const isFirstResponse = currentFeedback.response === null;
 
   const { error } = await supabase
     .from('feedback')
@@ -56,24 +49,7 @@ export async function respondToFeedback(
     throw new Error('Failed to submit response');
   }
 
-  // Only send notification on first response (not edits)
-  if (isFirstResponse) {
-    const mutationId = generateMutationId();
-
-    await enqueueDirectNotification({
-      recipientId: currentFeedback.user_id,
-      senderId: user.id,
-      notificationType: 'feedback_responded',
-      title: 'Svar på tilbakemeldingen din',
-      body: `${trimmedResponse.slice(0, 100)}${trimmedResponse.length > 100 ? '...' : ''}`,
-      dataPayload: {
-        type: 'feedback_responded',
-        feedback_id: feedbackId,
-        response_preview: trimmedResponse.slice(0, 150),
-      },
-      idempotencyKey: `feedback_responded:${feedbackId}:${mutationId}`,
-    });
-  }
+  // Notification is handled by DB trigger (a_on_feedback_responded_notify)
 
   logger.info('Feedback response submitted:', { feedbackId, adminId: user.id });
   return { success: true };

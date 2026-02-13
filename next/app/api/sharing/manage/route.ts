@@ -4,11 +4,7 @@ import { getSession } from "@/data-access/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
-import {
-  enqueueDirectNotification,
-  generateMutationId,
-  getOwnerName,
-} from "@/lib/notifications/enqueue";
+
 
 // Share limits per subscription tier
 const SHARE_LIMITS = {
@@ -283,27 +279,7 @@ async function handleCreateShare(
     );
   }
 
-  // Enqueue share_started notification to the recipient
-  try {
-    const mutationId = generateMutationId();
-    const ownerName = getOwnerName(user);
-
-    await enqueueDirectNotification({
-      recipientId: recipientUser.id,
-      senderId: user.id,
-      notificationType: "share_started",
-      title: `${ownerName} deler nå vaktene sine med deg`,
-      body: "Trykk for å se vaktene",
-      dataPayload: {
-        type: "share_started",
-        owner_id: user.id,
-      },
-      idempotencyKey: `share:${user.id}:${recipientUser.id}:${mutationId}`,
-    });
-  } catch (notifError) {
-    // Don't fail the share creation if notification fails
-    logger.warn("Failed to enqueue share notification:", notifError);
-  }
+  // Notification is handled by DB trigger (on_share_started_notify)
 
   // Invalidate caches
   invalidateAndRevalidate(user.id);
@@ -372,27 +348,7 @@ async function handleShareBack(
     );
   }
 
-  // Enqueue share_started notification to the recipient
-  try {
-    const mutationId = generateMutationId();
-    const ownerName = getOwnerName(user);
-
-    await enqueueDirectNotification({
-      recipientId,
-      senderId: user.id,
-      notificationType: "share_started",
-      title: `${ownerName} deler nå vaktene sine med deg`,
-      body: "Trykk for å se vaktene",
-      dataPayload: {
-        type: "share_started",
-        owner_id: user.id,
-      },
-      idempotencyKey: `share:${user.id}:${recipientId}:${mutationId}`,
-    });
-  } catch (notifError) {
-    // Don't fail the share creation if notification fails
-    logger.warn("Failed to enqueue share notification:", notifError);
-  }
+  // Notification is handled by DB trigger (on_share_started_notify)
 
   // Invalidate caches
   invalidateAndRevalidate(user.id);

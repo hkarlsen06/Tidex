@@ -18,23 +18,14 @@ This guide explains how to add new notification types with proper localization i
 
 ## Architecture Overview
 
-The notification system has **two main pathways**:
+The notification system uses a **single pathway**:
 
-### Pathway 1: Immediate Notifications (via `notifications_outbox`)
+### Immediate Notifications (via `notifications_outbox`)
 
-Used for: `share_started`, `feedback_responded`, `admin_broadcast`, same-day shift changes
-
-```
-Trigger → Build localized message → Insert to notifications_outbox → Edge function sends
-```
-
-### Pathway 2: Aggregated Notifications (via `notification_time_windows`)
-
-Used for: batched shift changes (add/update/delete within 15 minutes)
+Used for: `share_started`, `feedback_responded`, `feedback_submitted`, `admin_broadcast`, `shift_reminder`, `error_report`
 
 ```
-Trigger → Upsert to notification_time_windows → Cron processes window →
-Build localized message per recipient → Insert to notifications_outbox → Edge function sends
+DB trigger / Edge function → Build localized message → Insert to notifications_outbox → Edge function sends
 ```
 
 ### Key Design Principle
@@ -253,17 +244,6 @@ private handleNotificationTap(payload: PushNotificationPayload): void {
 
 ## Localization Helpers
 
-### Existing Helper Functions
-
-Located in `supabase/sql/functions/notification/localization_helpers.sql`:
-
-| Function | Purpose | Example Output (EN) | Example Output (NO) |
-|----------|---------|---------------------|---------------------|
-| `format_shift_date(date, is_today, locale)` | Format date | "Today" / "Monday, January 15" | "I dag" / "mandag 15. januar" |
-| `build_shift_title(owner, event, locale)` | Single shift title | "Alvilde added a shift" | "Alvilde la til en vakt" |
-| `build_shift_body(date, start, end, ...)` | Single shift body | "Today 08:00–16:00" | "I dag 08:00–16:00" |
-| `build_batched_body(added, updated, deleted, locale)` | Batched changes | "Added 2 shifts and deleted 1 shift" | "La til 2 vakter og slettet 1 vakt" |
-
 ### Creating New Helpers
 
 Follow this pattern for new localization functions:
@@ -367,20 +347,12 @@ The `data_payload` JSONB field is sent to the device for:
 
 | Type | Localized | Trigger Source | Notes |
 |------|-----------|----------------|-------|
-| `shared_shift_created` | Yes (SQL) | `user_shifts` INSERT | Same-day: immediate |
-| `shared_shift_updated` | Yes (SQL) | `user_shifts` UPDATE | Same-day: immediate |
-| `shared_shift_deleted` | Yes (SQL) | `user_shifts` soft-delete | Same-day: immediate |
-| `shared_shift_changes` | Yes (SQL) | `notification_time_windows` | Batched (15-min windows) |
-| `share_started` | **Needs update** | `shift_shares` INSERT | Currently hardcoded Norwegian |
-| `feedback_submitted` | No (admin-only) | `feedback` INSERT | Norwegian OK for admins |
-| `feedback_responded` | **Needs update** | `feedback` UPDATE | Should be localized |
+| `share_started` | Yes (SQL) | DB trigger on `shift_shares` INSERT | Localized in trigger function |
+| `feedback_submitted` | No (admin-only) | DB trigger on `feedback` INSERT | Norwegian OK for admins |
+| `feedback_responded` | Yes (SQL) | DB trigger on `feedback` UPDATE | Localized in trigger function |
 | `admin_broadcast` | No | Admin API | Pre-written messages |
-| `shift_reminder` | **No** (TypeScript) | Edge function | Built at send time |
-
-### Types Needing Localization Updates
-
-1. **`share_started`** - Currently uses hardcoded Norwegian
-2. **`feedback_responded`** - Should be localized for users
+| `shift_reminder` | No (TypeScript) | Edge function | Built at send time |
+| `error_report` | No | API route | Dev-only notification |
 
 ---
 
@@ -507,8 +479,6 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 | Table | Schema | Purpose |
 |-------|--------|---------|
 | `notifications_outbox` | `internal` | Primary delivery queue with pre-built messages |
-| `notification_time_windows` | `internal` | Aggregation for batched shift changes |
-| `notification_queue` | `internal` | Legacy queue (being phased out) |
 | `push_devices` | `internal` | User device tokens (APNs + FCM) |
 | `notification_preferences` | `public` | User notification settings |
 | `shift_reminders_sent` | `public` | Tracks sent reminders for deduplication |
@@ -519,10 +489,9 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 
 | Job | Schedule | Purpose |
 |-----|----------|---------|
-| `process-shift-notifications` | `*/15 * * * *` | Process batched shift change windows |
 | `process-shift-reminders` | `* * * * *` | Trigger shift reminders |
 | `cleanup-shift-reminders-sent` | `0 3 * * *` | Clean old reminder records |
-| `cleanup-shift-notification-events` | `0 4 * * *` | Clean resolved notification events |
+| `cleanup-shift-notification-events` | `0 4 * * *` | Clean sent outbox entries |
 
 ---
 
@@ -530,11 +499,11 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 
 | File | Purpose |
 |------|---------|
-| `supabase/sql/functions/notification/localization_helpers.sql` | Localization helper functions |
-| `supabase/sql/functions/notification/process_notification_windows.sql` | Batched notification processing |
-| `supabase/sql/functions/notification/enqueue_shift_notification.sql` | iOS RPC for shift notifications |
+| `supabase/sql/functions/trigger/queue_feedback_responded_notification.sql` | Feedback response trigger + notification |
+| `supabase/sql/functions/trigger/queue_share_started_notification.sql` | Share started trigger + notification |
 | `supabase/sql/functions/notification/claim_outbox_notifications.sql` | Atomic queue claiming |
 | `supabase/functions/send-push-notifications/index.ts` | Main delivery edge function |
 | `supabase/functions/process-shift-reminders/index.ts` | Reminder processing |
+| `next/lib/notifications/enqueue.ts` | Direct notification enqueueing (error_report) |
 | `lib/notifications/push-service.ts` | Web app push handling |
 | `ios/TidexApp/Native/Services/NotificationService.swift` | iOS push handling |
