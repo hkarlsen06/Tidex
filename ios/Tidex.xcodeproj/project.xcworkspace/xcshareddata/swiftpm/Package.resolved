@@ -22,7 +22,7 @@
     {
       "identity" : "googlesignin-ios",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Tidex-Payroll-Shifts/GoogleSignIn-iOS.git",
+      "location" : "https://github.com/TidexHQ/GoogleSignIn-iOS.git",
       "state" : {
         "revision" : "5dbc5fca14999c76b2b7ec0c380752761be4ae8b",
         "version" : "9.1.1"
@@ -76,7 +76,7 @@
     {
       "identity" : "supabase-swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Tidex-Payroll-Shifts/supabase-swift.git",
+      "location" : "https://github.com/TidexHQ/supabase-swift.git",
       "state" : {
         "revision" : "24d842b7ab065214b854db207440f8571f36187e",
         "version" : "2.42.1"

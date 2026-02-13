@@ -54,7 +54,7 @@ export function ContactPage({ dictionary }: ContactPageProps) {
             <h2 className="mb-4 text-2xl font-bold text-text-primary">{contact.github.title}</h2>
             <p className="mb-6 text-text-secondary">@kkarlsen06</p>
             <a
-              href="https://github.com/Tidex-Payroll-Shifts"
+              href="https://github.com/TidexHQ"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-secondary px-6 py-3 font-semibold text-text-primary shadow-app transition-colors hover:bg-surface-primary"
