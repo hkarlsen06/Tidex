@@ -117,25 +117,37 @@ final class SyncCoordinator: ObservableObject {
     logger.info("Sync state reset for user change")
   }
 
-  // MARK: - Device Locale Update
+  // MARK: - App Locale Update
 
-  /// Updates the user's raw_user_meta_data with the current device locale
-  /// This helps track which locale the user's device is set to for notifications/localization
-  private func updateDeviceLocale() async {
-    // Get the device's preferred language (e.g., "en", "no", "nb")
-    guard let languageCode = Locale.current.language.languageCode?.identifier else {
-      logger.debug("Could not determine device language code")
+  /// Keeps `raw_user_meta_data.locale` aligned with the active iPhone/app language.
+  /// Stores language code as-is (e.g. `nb`, `en`) for server-side localization.
+  private func updateAppLocaleMetadataIfNeeded() async {
+    guard let appLocaleCode = Locale.autoupdatingCurrent.language.languageCode?.identifier
+      .lowercased(),
+      !appLocaleCode.isEmpty
+    else {
+      logger.debug("Skipping locale metadata sync: app locale code is empty")
       return
     }
 
     do {
+      let currentMetadataLocale =
+        (try await supabase.auth.user()).userMetadata["locale"]?.value as? String
+      let normalizedCurrentLocale = currentMetadataLocale?.lowercased()
+
+      guard normalizedCurrentLocale != appLocaleCode else {
+        return
+      }
+
       _ = try await supabase.auth.update(
-        user: UserAttributes(data: ["locale": .string(languageCode)])
+        user: UserAttributes(data: ["locale": .string(appLocaleCode)])
       )
-      logger.debug("Updated user locale to: \(languageCode)")
+      logger.debug(
+        "Updated user locale metadata from \(normalizedCurrentLocale ?? "nil") to \(appLocaleCode)"
+      )
     } catch {
-      // Non-fatal - log but don't fail the sync
-      logger.warning("Failed to update device locale: \(error.localizedDescription)")
+      // Non-fatal - log but don't fail sync/foreground flow.
+      logger.warning("Failed to update app locale metadata: \(error.localizedDescription)")
     }
   }
 
@@ -204,6 +216,8 @@ final class SyncCoordinator: ObservableObject {
         error: "Sync already in progress"
       )
     case .skippedInterval:
+      // Keep locale metadata in sync even when full sync is interval-skipped.
+      await updateAppLocaleMetadataIfNeeded()
       return SyncResult(
         success: false,
         tableResults: [],
@@ -277,8 +291,8 @@ final class SyncCoordinator: ObservableObject {
   /// Performs the actual sync work (locale update, pull, push, widget update).
   /// Extracted so it can be raced against a timeout in `sync()`.
   private func performSyncWork(userId: String, startTime: Date) async -> SyncResult {
-    // Update device locale in user metadata (non-blocking, errors logged but not propagated)
-    await updateDeviceLocale()
+    // Keep locale metadata aligned with the app locale.
+    await updateAppLocaleMetadataIfNeeded()
 
     // Get or create sync state
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }

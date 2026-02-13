@@ -94,8 +94,12 @@ final class AuthService: ObservableObject {
     defer { isLoading = false }
 
     // Build user metadata
+    let localeCode =
+      Locale.autoupdatingCurrent.language.languageCode?.identifier.lowercased() ?? "en"
     var data: [String: AnyJSON] = [
-      "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))
+      "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date())),
+      // Keep metadata locale aligned with current iPhone/app language from first write.
+      "locale": .string(localeCode),
     ]
     if let fullName = fullName, !fullName.isEmpty {
       data["full_name"] = .string(fullName)
@@ -124,8 +128,12 @@ final class AuthService: ObservableObject {
     defer { isLoading = false }
 
     // Build user metadata
+    let localeCode =
+      Locale.autoupdatingCurrent.language.languageCode?.identifier.lowercased() ?? "en"
     var data: [String: AnyJSON] = [
-      "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))
+      "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date())),
+      // Keep metadata locale aligned with current iPhone/app language from first write.
+      "locale": .string(localeCode),
     ]
     if let fullName = fullName, !fullName.isEmpty {
       data["full_name"] = .string(fullName)
