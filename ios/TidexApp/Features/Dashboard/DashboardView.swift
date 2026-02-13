@@ -19,6 +19,10 @@ struct DashboardView: View {
   /// Selected shift for showing details sheet
   @State private var selectedShift: ShiftWithComputations?
 
+  /// Active featured shift target for action sheet actions
+  @State private var featuredShiftActionTarget: ShiftWithComputations?
+  @State private var showFeaturedShiftActions = false
+
   /// State for delete confirmation
   @State private var showDeleteConfirmation = false
   @State private var shiftToDelete: ShiftWithComputations?
@@ -125,6 +129,11 @@ struct DashboardView: View {
     .onChange(of: viewModel.dashboardData) { _, newData in
       configureCountdown(with: newData)
     }
+    .onChange(of: showFeaturedShiftActions) { _, isPresented in
+      if !isPresented {
+        featuredShiftActionTarget = nil
+      }
+    }
     .onDisappear {
       countdownManager.stop()
     }
@@ -153,6 +162,28 @@ struct DashboardView: View {
       }
     } message: {
       Text(.pushFailureMessage)
+    }
+    .confirmationDialog(
+      "",
+      isPresented: $showFeaturedShiftActions,
+      titleVisibility: .hidden,
+      presenting: featuredShiftActionTarget
+    ) { shift in
+      Button(String(localized: .shiftsDetails)) {
+        guard !viewModel.isUpdatingShift else { return }
+        featuredShiftActionTarget = nil
+        selectedShift = shift
+      }
+      Button(String(localized: .dashboardFeaturedShiftActionsEndNow)) {
+        guard !viewModel.isUpdatingShift else { return }
+        featuredShiftActionTarget = nil
+        Task {
+          await viewModel.endShiftNow(shift)
+        }
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {
+        featuredShiftActionTarget = nil
+      }
     }
     // Shift details sheet with full edit/delete capabilities
     .sheet(item: $selectedShift) { shift in
@@ -553,7 +584,12 @@ struct DashboardView: View {
         .contentShape(Rectangle())
         .onTapGesture {
           impactHaptic.impactOccurred()
-          selectedShift = featuredShift
+          if countdownManager.isShiftActive {
+            featuredShiftActionTarget = featuredShift
+            showFeaturedShiftActions = true
+          } else {
+            selectedShift = featuredShift
+          }
         }
       } else {
         EmptyShiftCard(onAddShift: {

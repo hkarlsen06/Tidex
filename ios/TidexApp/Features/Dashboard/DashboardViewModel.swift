@@ -1340,6 +1340,36 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     recurringShiftsRepository.getRecurringShift(id: id)
   }
 
+  /// End an active shift immediately using the current local device time.
+  /// Uses the existing update pipeline so sync/reload behavior stays consistent.
+  /// - Parameters:
+  ///   - shift: The shift to end now
+  ///   - now: Optional reference time for testing
+  func endShiftNow(_ shift: ShiftWithComputations, at now: Date = Date()) async {
+    guard !isUpdatingShift else { return }
+
+    (UIApplication.shared.delegate as? AppDelegate)?.endLiveActivity(for: shift.id)
+
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = Date.localTimeZone
+    formatter.dateFormat = "HH:mm"
+
+    let editResult = ShiftEditResult(
+      shiftId: shift.id,
+      shiftDate: shift.shiftDate,
+      startTime: String(shift.startTime.prefix(5)),
+      endTime: formatter.string(from: now),
+      isVirtualShiftConversion: shift.isVirtual,
+      recurringId: shift.shift.recurring_id,
+      originalDate: shift.shiftDate,
+      customSupplements: nil
+    )
+
+    await updateShift(editResult)
+  }
+
   /// Update a shift with new date/time values
   /// - Parameter editResult: The result from the shift edit form
   func updateShift(_ editResult: ShiftEditResult) async {
