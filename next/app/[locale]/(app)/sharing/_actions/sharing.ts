@@ -6,11 +6,7 @@ import { SharingLive } from "@/lib/layers/app";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
-import {
-  enqueueDirectNotification,
-  generateMutationId,
-  getOwnerName,
-} from "@/lib/notifications/enqueue";
+
 
 /**
  * Response type for sharing actions
@@ -68,24 +64,9 @@ export async function createShare(
   }).pipe(Effect.provide(SharingLive), Effect.scoped);
 
   try {
-    const result = await Effect.runPromise(program);
+    await Effect.runPromise(program);
 
-    // Enqueue share_started notification to the recipient
-    const mutationId = generateMutationId();
-    const ownerName = getOwnerName(user);
-
-    await enqueueDirectNotification({
-      recipientId: result.recipientId,
-      senderId: user.id,
-      notificationType: "share_started",
-      title: `${ownerName} deler nå vaktene sine med deg`,
-      body: "Trykk for å se vaktene",
-      dataPayload: {
-        type: "share_started",
-        owner_id: user.id,
-      },
-      idempotencyKey: `share:${user.id}:${result.recipientId}:${mutationId}`,
-    });
+    // Notification is handled by DB trigger (on_share_started_notify)
 
     // Invalidate both users' caches (owner and recipient)
     invalidateAndRevalidate(user.id);
@@ -289,22 +270,7 @@ export async function shareBack(recipientId: string): Promise<ActionResult> {
   try {
     await Effect.runPromise(program);
 
-    // Enqueue share_started notification to the recipient
-    const mutationId = generateMutationId();
-    const ownerName = getOwnerName(user);
-
-    await enqueueDirectNotification({
-      recipientId,
-      senderId: user.id,
-      notificationType: "share_started",
-      title: `${ownerName} deler nå vaktene sine med deg`,
-      body: "Trykk for å se vaktene",
-      dataPayload: {
-        type: "share_started",
-        owner_id: user.id,
-      },
-      idempotencyKey: `share:${user.id}:${recipientId}:${mutationId}`,
-    });
+    // Notification is handled by DB trigger (on_share_started_notify)
 
     // Invalidate both users' caches
     invalidateAndRevalidate(user.id);

@@ -6,11 +6,7 @@ import { detectAllRecurringConflicts } from '@/lib/recurring/conflicts';
 import type { ExistingShift } from '@/lib/recurring/conflicts';
 import { verifySession } from '@/data-access/auth';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
-import {
-  enqueueDirectNotification,
-  generateMutationId,
-  getOwnerName,
-} from '@/lib/notifications/enqueue';
+
 
 /**
  * Create a new recurring shift pattern
@@ -119,48 +115,6 @@ export async function createRecurringShift(
 
   if (!data) {
     throw new Error('Failed to create recurring shift: no data returned');
-  }
-
-  // Enqueue notification for recurring shift creation
-  const mutationId = generateMutationId();
-  const ownerName = getOwnerName(user);
-
-  // Get non-muted viewers for this owner
-  const { data: shares } = await supabase
-    .from('shift_shares')
-    .select('viewer_id')
-    .eq('owner_id', user.id)
-    .eq('muted', false);
-
-  if (shares && shares.length > 0) {
-    const { data: prefs } = await supabase
-      .from('notification_preferences')
-      .select('user_id, shared_shifts_enabled')
-      .in('user_id', shares.map((s) => s.viewer_id));
-
-    const prefsMap = new Map(prefs?.map((p) => [p.user_id, p.shared_shifts_enabled]) ?? []);
-    const eligibleViewers = shares
-      .map((s) => s.viewer_id)
-      .filter((id) => prefsMap.get(id) !== false);
-
-    // Enqueue notifications for each eligible viewer
-    await Promise.all(
-      eligibleViewers.map((viewerId) =>
-        enqueueDirectNotification({
-          recipientId: viewerId,
-          senderId: user.id,
-          notificationType: 'recurring_shift_created',
-          title: `${ownerName} la til en gjentagende vakt`,
-          body: `Trykk for å se vaktmønsteret`,
-          dataPayload: {
-            type: 'recurring_shift_created',
-            owner_id: user.id,
-            recurring_id: data.id,
-          },
-          idempotencyKey: `recurring:${data.id}:${viewerId}:${mutationId}`,
-        })
-      )
-    );
   }
 
   // Invalidate cache and revalidate paths to show new recurring shifts

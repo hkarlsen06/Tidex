@@ -4,10 +4,7 @@ import {
   verifyAdminFromRequest,
   isValidUUID,
 } from '../../_lib/verify-admin';
-import {
-  enqueueDirectNotification,
-  generateMutationId,
-} from '@/lib/notifications/enqueue';
+
 
 /**
  * POST /api/admin/feedback/respond
@@ -100,10 +97,10 @@ export async function POST(request: NextRequest) {
     // Use service client since we've already verified admin access
     const supabase = createSupabaseServiceClient();
 
-    // Get current feedback to check if this is the first response
+    // Verify feedback exists
     const { data: currentFeedback, error: fetchError } = await supabase
       .from('feedback')
-      .select('user_id, response')
+      .select('id')
       .eq('id', feedbackId)
       .single();
 
@@ -114,8 +111,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    const isFirstResponse = currentFeedback.response === null;
 
     // Update the feedback with the response
     const { error: updateError } = await supabase
@@ -135,32 +130,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only send notification on first response (not edits)
-    if (isFirstResponse) {
-      try {
-        const mutationId = generateMutationId();
-
-        await enqueueDirectNotification({
-          recipientId: currentFeedback.user_id,
-          senderId: adminResult.user.id,
-          notificationType: 'feedback_responded',
-          title: 'Svar på tilbakemeldingen din',
-          body: `${trimmedResponse.slice(0, 100)}${trimmedResponse.length > 100 ? '...' : ''}`,
-          dataPayload: {
-            type: 'feedback_responded',
-            feedback_id: feedbackId,
-            response_preview: trimmedResponse.slice(0, 150),
-          },
-          idempotencyKey: `feedback_responded:${feedbackId}:${mutationId}`,
-        });
-      } catch (notificationError) {
-        // Log but don't fail the request if notification fails
-        console.error(
-          '[admin/feedback/respond] Notification error:',
-          notificationError
-        );
-      }
-    }
+    // Notification is handled by DB trigger (a_on_feedback_responded_notify)
 
     console.info('[admin/feedback/respond] Response submitted:', {
       feedbackId,

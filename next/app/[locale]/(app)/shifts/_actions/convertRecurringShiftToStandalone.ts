@@ -5,11 +5,7 @@ import { logger } from "@/lib/logger";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
-import {
-  enqueueShiftNotification,
-  generateMutationId,
-  getOwnerName,
-} from "@/lib/notifications/enqueue";
+
 
 type ConvertInput = {
   recurringId: string;
@@ -67,7 +63,7 @@ export async function convertRecurringShiftToStandalone({
   }
 
   // Create standalone shift
-  const { data: insertedShift, error: insertError } = await supabase
+  const { error: insertError } = await supabase
     .from("user_shifts")
     .insert({
       user_id: user.id,
@@ -75,28 +71,13 @@ export async function convertRecurringShiftToStandalone({
       start_time: startTime,
       end_time: endTime,
     })
-    .select("id, shift_date, start_time, end_time")
+    .select("id")
     .single();
 
   if (insertError) {
     logger.error("Failed to create standalone shift:", insertError);
     throw new Error(ERRORS.FAILED_TO_CREATE_SHIFT);
   }
-
-  // Enqueue notification for the updated shift (conversion = update)
-  const mutationId = generateMutationId();
-  const ownerName = getOwnerName(user);
-
-  await enqueueShiftNotification({
-    ownerId: user.id,
-    ownerName,
-    shiftId: insertedShift.id,
-    shiftDate: insertedShift.shift_date,
-    startTime: insertedShift.start_time,
-    endTime: insertedShift.end_time,
-    eventType: "updated",
-    mutationId,
-  });
 
   // Invalidate cache and revalidate paths
   invalidateAndRevalidate(user.id);

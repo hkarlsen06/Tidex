@@ -1682,22 +1682,6 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Pushed shift \(shiftId.prefix(8))")
 
-        // Notify shared users if date or times changed
-        let dateOrTimesChanged =
-          dirtyFields.contains(.shiftDate) || dirtyFields.contains(.startTime)
-          || dirtyFields.contains(.endTime)
-        if dateOrTimesChanged {
-          await notifyShiftChange(
-            shiftId: shiftId,
-            shiftDate: returnedRow.shift_date,
-            startTime: returnedRow.start_time,
-            endTime: returnedRow.end_time,
-            eventType: "updated",
-            oldStartTime: oldSnapshot?.startTime,
-            oldEndTime: oldSnapshot?.endTime
-          )
-        }
-
         return .success
       } else {
         // Row wasn't updated - revision mismatch
@@ -1760,17 +1744,6 @@ final class SyncCoordinator: ObservableObject {
       )
 
       logger.debug("Deleted shift \(shiftId.prefix(8))")
-
-      // Notify shared users about the deleted shift (best-effort)
-      if let snapshot = snapshot {
-        await notifyShiftChange(
-          shiftId: shiftId,
-          shiftDate: snapshot.shiftDate,
-          startTime: snapshot.startTime,
-          endTime: snapshot.endTime,
-          eventType: "deleted"
-        )
-      }
 
       return .deleted
     } else {
@@ -1872,15 +1845,6 @@ final class SyncCoordinator: ObservableObject {
         )
 
         logger.debug("Inserted new shift \(shiftId.prefix(8))")
-
-        // Notify shared users about the new shift (best-effort)
-        await notifyShiftChange(
-          shiftId: shiftId,
-          shiftDate: returnedRow.shift_date,
-          startTime: returnedRow.start_time,
-          endTime: returnedRow.end_time,
-          eventType: "added"
-        )
 
         return .success
       } else {
@@ -3787,58 +3751,6 @@ final class SyncCoordinator: ObservableObject {
   // MARK: - Shift Notification Helper
 
   /// Notify shared users about a shift change via RPC
-  /// This is best-effort - failures are logged but don't affect sync success
-  ///
-  /// - Parameters:
-  ///   - shiftId: The shift's UUID
-  ///   - shiftDate: The shift date in YYYY-MM-DD format
-  ///   - startTime: The shift start time in HH:mm format
-  ///   - endTime: The shift end time in HH:mm format
-  ///   - eventType: The type of change: "added", "updated", or "deleted"
-  ///   - oldStartTime: For updates: the previous start time
-  ///   - oldEndTime: For updates: the previous end time
-  private func notifyShiftChange(
-    shiftId: String,
-    shiftDate: String,
-    startTime: String,
-    endTime: String,
-    eventType: String,
-    oldStartTime: String? = nil,
-    oldEndTime: String? = nil
-  ) async {
-    // Generate a unique mutation ID for idempotency
-    let mutationId = UUID().uuidString
-
-    do {
-      // Build RPC parameters
-      var params: [String: AnyJSON] = [
-        "p_shift_id": .string(shiftId),
-        "p_shift_date": .string(shiftDate),
-        "p_start_time": .string(startTime),
-        "p_end_time": .string(endTime),
-        "p_event_type": .string(eventType),
-        "p_mutation_id": .string(mutationId),
-      ]
-
-      // Include old times for update events (if times changed)
-      if let oldStart = oldStartTime, let oldEnd = oldEndTime {
-        params["p_old_start_time"] = .string(oldStart)
-        params["p_old_end_time"] = .string(oldEnd)
-      }
-
-      // Call the RPC - response contains {"queued": N, "delivery": "immediate"|"batched"|"none"}
-      let _: AnyJSON =
-        try await supabase
-        .rpc("enqueue_shift_notification", params: params)
-        .execute()
-        .value
-
-      logger.debug("Notified shift change: \(eventType) for \(shiftId.prefix(8))")
-    } catch {
-      // Best-effort: log but don't fail the sync
-      logger.warning("Failed to notify shift change: \(error.localizedDescription)")
-    }
-  }
 }
 
 // MARK: - Sync Errors

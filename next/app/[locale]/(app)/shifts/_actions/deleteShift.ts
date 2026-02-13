@@ -5,11 +5,7 @@ import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
-import {
-  enqueueShiftNotification,
-  generateMutationId,
-  getOwnerName,
-} from "@/lib/notifications/enqueue";
+
 
 type DeleteShiftInput = {
   shiftId: string;
@@ -60,21 +56,6 @@ export async function deleteShift(input: string | DeleteShiftInput) {
       throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
     }
 
-    // Enqueue notification for the deleted virtual shift
-    const mutationId = generateMutationId();
-    const ownerName = getOwnerName(user);
-
-    await enqueueShiftNotification({
-      ownerId: user.id,
-      ownerName,
-      shiftId: `${recurringId}:${shiftDate}`, // Composite ID for virtual shift
-      shiftDate,
-      startTime: recurring.start_time,
-      endTime: recurring.end_time,
-      eventType: "deleted",
-      mutationId,
-    });
-
     // Invalidate cache and revalidate paths
     invalidateAndRevalidate(user.id);
 
@@ -106,21 +87,6 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     .is("deleted_at", null); // Only delete if not already deleted
 
   if (error) throw new Error(error.message);
-
-  // Enqueue notification for the deleted shift
-  const mutationId = generateMutationId();
-  const ownerName = getOwnerName(user);
-
-  await enqueueShiftNotification({
-    ownerId: user.id,
-    ownerName,
-    shiftId: shift.id,
-    shiftDate: shift.shift_date,
-    startTime: shift.start_time,
-    endTime: shift.end_time,
-    eventType: "deleted",
-    mutationId,
-  });
 
   // Check if this date should be removed from any recurring shift exclusions
   // Get the weekday of the deleted shift

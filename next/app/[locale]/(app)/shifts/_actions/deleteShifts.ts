@@ -5,11 +5,7 @@ import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
-import {
-  enqueueShiftNotification,
-  generateMutationId,
-  getOwnerName,
-} from "@/lib/notifications/enqueue";
+
 
 type ShiftToDelete = {
   shiftId: string;
@@ -45,10 +41,6 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
       existing.push(shift.shiftDate!);
       exclusionsByRecurringId.set(shift.recurringId!, existing);
     }
-
-    // Process each recurring shift pattern
-    const mutationId = generateMutationId();
-    const ownerName = getOwnerName(user);
 
     for (const [recurringId, datesToExclude] of exclusionsByRecurringId) {
       const { data: recurring, error: recurringError } = await supabase
@@ -89,22 +81,6 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
         errors.push(`Failed to exclude dates from recurring shift ${recurringId}`);
       } else {
         deletedCount += datesToExclude.length;
-
-        // Enqueue notifications for each deleted virtual shift
-        await Promise.all(
-          datesToExclude.map((shiftDate) =>
-            enqueueShiftNotification({
-              ownerId: user.id,
-              ownerName,
-              shiftId: `${recurringId}:${shiftDate}`,
-              shiftDate,
-              startTime: recurring.start_time,
-              endTime: recurring.end_time,
-              eventType: "deleted",
-              mutationId,
-            })
-          )
-        );
       }
     }
   }
@@ -138,25 +114,6 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
         errors.push(deleteError.message);
       } else {
         deletedCount += count ?? shiftsToDelete.length;
-
-        // Enqueue notifications for each deleted shift
-        const mutationId = generateMutationId();
-        const ownerName = getOwnerName(user);
-
-        await Promise.all(
-          shiftsToDelete.map((shift) =>
-            enqueueShiftNotification({
-              ownerId: user.id,
-              ownerName,
-              shiftId: shift.id,
-              shiftDate: shift.shift_date,
-              startTime: shift.start_time,
-              endTime: shift.end_time,
-              eventType: "deleted",
-              mutationId,
-            })
-          )
-        );
 
         // Clean up recurring shift exclusions for deleted dates
         // Group by weekday for efficient processing

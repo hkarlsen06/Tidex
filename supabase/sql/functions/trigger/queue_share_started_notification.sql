@@ -84,3 +84,11 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+-- Trigger: on_share_started_notify
+-- Fires AFTER INSERT on shift_shares, queues notification for recipient
+DROP TRIGGER IF EXISTS on_share_started_notify ON public.shift_shares;
+CREATE TRIGGER on_share_started_notify
+  AFTER INSERT ON public.shift_shares
+  FOR EACH ROW
+  EXECUTE FUNCTION public.queue_share_started_notification();

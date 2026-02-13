@@ -90,10 +90,9 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 **Current Cron Jobs:**
 | Job Name | Schedule | Description |
 |----------|----------|-------------|
-| `process-shift-notifications` | `*/15 * * * *` | Process shift changes |
 | `process-shift-reminders` | `* * * * *` | Trigger reminders |
 | `cleanup-shift-reminders-sent` | `0 3 * * *` | Clean old records |
-| `cleanup-shift-notification-events` | `0 4 * * *` | Clean resolved events |
+| `cleanup-shift-notification-events` | `0 4 * * *` | Clean sent outbox entries |
 
 ## Agent Behavior Guidelines
 

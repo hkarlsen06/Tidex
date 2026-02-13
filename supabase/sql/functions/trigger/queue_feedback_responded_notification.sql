@@ -65,6 +65,10 @@ BEGIN
 END;
 $$;
 
--- Triggers on feedback table:
--- 1. a_on_feedback_responded_notify (AFTER UPDATE FOR EACH ROW) - queues notification for user
--- 2. z_on_feedback_updated_send_notifications (AFTER UPDATE FOR EACH STATEMENT) - fires push
+-- Trigger: a_on_feedback_responded_notify
+-- Fires AFTER UPDATE on feedback, queues notification for user when admin responds
+DROP TRIGGER IF EXISTS a_on_feedback_responded_notify ON public.feedback;
+CREATE TRIGGER a_on_feedback_responded_notify
+  AFTER UPDATE ON public.feedback
+  FOR EACH ROW
+  EXECUTE FUNCTION public.queue_feedback_responded_notification();
