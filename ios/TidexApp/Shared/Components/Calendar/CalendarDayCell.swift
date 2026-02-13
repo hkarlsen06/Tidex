@@ -80,6 +80,8 @@ struct CalendarDayCell<Content: View>: View {
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
   var showOverlapIndicator: Bool = false
+  /// Shows a small single-person icon indicator (e.g., when only one user has shifts)
+  var showSingleUserIndicator: Bool = false
 
   /// Optional custom content view (used when content == .custom)
   let customContent: (() -> Content)?
@@ -89,12 +91,14 @@ struct CalendarDayCell<Content: View>: View {
     style: CalendarCellStyle,
     content: CalendarCellContent,
     showOverlapIndicator: Bool = false,
+    showSingleUserIndicator: Bool = false,
     @ViewBuilder customContent: @escaping () -> Content
   ) {
     self.dayInfo = dayInfo
     self.style = style
     self.content = content
     self.showOverlapIndicator = showOverlapIndicator
+    self.showSingleUserIndicator = showSingleUserIndicator
     self.customContent = customContent
   }
 
@@ -138,6 +142,11 @@ struct CalendarDayCell<Content: View>: View {
         .font(.tidexMicro)
         .imageScale(.small)
         .foregroundColor(.tidexBlue)
+    } else if showSingleUserIndicator {
+      Image(systemName: "person.fill")
+        .font(.tidexMicro)
+        .imageScale(.small)
+        .foregroundColor(.green)
     } else if let weekNum = dayInfo.weekNumber {
       Text("\(weekNum)")
         .font(.tidexMicro)
@@ -285,12 +294,14 @@ extension CalendarDayCell where Content == EmptyView {
     dayInfo: CalendarDayInfo,
     style: CalendarCellStyle,
     content: CalendarCellContent,
-    showOverlapIndicator: Bool = false
+    showOverlapIndicator: Bool = false,
+    showSingleUserIndicator: Bool = false
   ) {
     self.dayInfo = dayInfo
     self.style = style
     self.content = content
     self.showOverlapIndicator = showOverlapIndicator
+    self.showSingleUserIndicator = showSingleUserIndicator
     self.customContent = nil
   }
 }

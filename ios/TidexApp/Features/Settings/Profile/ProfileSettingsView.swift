@@ -25,6 +25,12 @@ struct ProfileSettingsView: View {
   /// Whether to show the crop sheet
   @State private var showCropSheet = false
 
+  /// Prevent conflicting avatar modal presentations from rapid repeated taps
+  private var isAvatarActionInProgress: Bool {
+    viewModel.isUploadingAvatar || showImageSourcePicker || showRemoveAvatarConfirmation || showGalleryPicker
+      || showCamera || showCropSheet
+  }
+
   var body: some View {
     List {
       // Error banner (for avatar upload, name save, etc.)
@@ -82,31 +88,6 @@ struct ProfileSettingsView: View {
       .disabled(!viewModel.canConfirmDelete)
     } message: {
       Text(.profileDangerZoneDeleteAccountDialogDescription)
-    }
-    .confirmationDialog(
-      String(localized: .profilePersonalInfoRemoveImageConfirm),
-      isPresented: $showRemoveAvatarConfirmation,
-      titleVisibility: .visible
-    ) {
-      Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
-        Task {
-          await viewModel.removeProfilePicture()
-        }
-      }
-      Button(String(localized: .commonCancel), role: .cancel) {}
-    }
-    .confirmationDialog(
-      String(localized: .profilePersonalInfoChooseImageSource),
-      isPresented: $showImageSourcePicker,
-      titleVisibility: .visible
-    ) {
-      Button(String(localized: .profilePersonalInfoTakePhoto)) {
-        showCamera = true
-      }
-      Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
-        showGalleryPicker = true
-      }
-      Button(String(localized: .commonCancel), role: .cancel) {}
     }
     .photosPicker(
       isPresented: $showGalleryPicker,
@@ -335,15 +316,53 @@ struct ProfileSettingsView: View {
       // Buttons
       VStack(alignment: .leading, spacing: Spacing.xs) {
         Button {
-          showImageSourcePicker = true
+          Task { @MainActor in
+            showRemoveAvatarConfirmation = false
+            await Task.yield()
+            showImageSourcePicker = true
+          }
         } label: {
           uploadButtonLabel
         }
-        .disabled(viewModel.isUploadingAvatar)
+        .disabled(isAvatarActionInProgress)
+        .buttonStyle(.plain)
+        .confirmationDialog(
+          String(localized: .profilePersonalInfoChooseImageSource),
+          isPresented: $showImageSourcePicker,
+          titleVisibility: .visible
+        ) {
+          Button(String(localized: .profilePersonalInfoTakePhoto)) {
+            showImageSourcePicker = false
+            Task { @MainActor in
+              // Defer until dialog dismissal has settled.
+              await Task.yield()
+              showCamera = false
+              showCamera = true
+            }
+          }
+          Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
+            showImageSourcePicker = false
+            Task { @MainActor in
+              // Reset to ensure picker can always re-open after cancel.
+              selectedPhotoItem = nil
+              showGalleryPicker = false
+              // Defer until dialog dismissal has settled.
+              await Task.yield()
+              showGalleryPicker = true
+            }
+          }
+          Button(String(localized: .commonCancel), role: .cancel) {
+            showImageSourcePicker = false
+          }
+        }
 
         if viewModel.profilePictureUrl != nil {
           Button {
-            showRemoveAvatarConfirmation = true
+            Task { @MainActor in
+              showImageSourcePicker = false
+              await Task.yield()
+              showRemoveAvatarConfirmation = true
+            }
           } label: {
             HStack(spacing: Spacing.xxxs) {
               Image(systemName: "trash")
@@ -357,7 +376,20 @@ struct ProfileSettingsView: View {
             .background(Color.tidexError.opacity(0.1))
             .cornerRadius(CornerRadius.sm)
           }
-          .disabled(viewModel.isUploadingAvatar)
+          .disabled(isAvatarActionInProgress)
+          .buttonStyle(.plain)
+          .confirmationDialog(
+            String(localized: .profilePersonalInfoRemoveImageConfirm),
+            isPresented: $showRemoveAvatarConfirmation,
+            titleVisibility: .visible
+          ) {
+            Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
+              Task {
+                await viewModel.removeProfilePicture()
+              }
+            }
+            Button(String(localized: .commonCancel), role: .cancel) {}
+          }
         }
       }
 

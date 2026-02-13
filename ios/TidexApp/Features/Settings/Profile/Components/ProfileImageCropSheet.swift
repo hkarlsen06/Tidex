@@ -1,7 +1,7 @@
 import SwiftUI
-import TOCropViewController
+import CropViewController
 
-/// Sheet wrapper for cropping profile images using TOCropViewController
+/// Sheet wrapper for cropping profile images using CropViewController
 struct ProfileImageCropSheet: UIViewControllerRepresentable {
   let image: UIImage
   let onCrop: (UIImage) -> Void
@@ -9,7 +9,7 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
 
   func makeUIViewController(context: Context) -> UINavigationController {
     // Use circular cropping style - perfect for profile pictures
-    let cropViewController = TOCropViewController(croppingStyle: .circular, image: image)
+    let cropViewController = CropViewController(croppingStyle: .circular, image: image)
     cropViewController.delegate = context.coordinator
 
     // Hide rotate buttons for cleaner UI
@@ -33,7 +33,7 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     Coordinator(onCrop: onCrop, onCancel: onCancel)
   }
 
-  class Coordinator: NSObject, TOCropViewControllerDelegate {
+  class Coordinator: NSObject, CropViewControllerDelegate {
     let onCrop: (UIImage) -> Void
     let onCancel: () -> Void
 
@@ -43,14 +43,21 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     }
 
     func cropViewController(
-      _ cropViewController: TOCropViewController, didCropTo image: UIImage, with cropRect: CGRect,
+      _ cropViewController: CropViewController, didCropToImage image: UIImage, withRect cropRect: CGRect,
       angle: Int
     ) {
       onCrop(image)
     }
 
     func cropViewController(
-      _ cropViewController: TOCropViewController, didFinishCancelled cancelled: Bool
+      _ cropViewController: CropViewController, didCropToCircularImage image: UIImage, withRect cropRect: CGRect,
+      angle: Int
+    ) {
+      onCrop(image)
+    }
+
+    func cropViewController(
+      _ cropViewController: CropViewController, didFinishCancelled cancelled: Bool
     ) {
       if cancelled {
         onCancel()

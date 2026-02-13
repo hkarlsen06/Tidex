@@ -79,6 +79,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// User's own shifts for the currently displayed month (raw data, no payroll needed)
   @Published private(set) var userShiftsForMonth: [ShiftRow] = []
 
+  /// User's own earnings by date for the currently displayed month
+  @Published private(set) var userEarningsByDate: [String: CalendarEarningsData] = [:]
+
   // MARK: - Committed Display State
   // These values only update AFTER shift data is ready, ensuring atomic rendering
   // The calendar uses these to avoid showing the new month structure before data arrives
@@ -435,6 +438,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     inFlightRequestKey = nil
     selectedSharer = nil
     sharedShifts = []
+    userShiftsForMonth = []
+    userEarningsByDate = [:]
     lastCacheTime = nil
   }
 
@@ -568,6 +573,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     guard let userId else {
       userShiftsForMonth = []
+      userEarningsByDate = [:]
       return
     }
 
@@ -588,6 +594,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         .addingTimeInterval(-1)
     else {
       userShiftsForMonth = []
+      userEarningsByDate = [:]
       return
     }
 
@@ -632,6 +639,12 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     userShiftsForMonth = allShifts
+    userEarningsByDate = calculateUserEarningsByDate(
+      userId: userId,
+      shifts: allShifts,
+      year: year,
+      month: month
+    )
     logger.info(
       "Loaded \(allShifts.count) user shifts for superimpose (\(year)-\(month)) - includes virtual shifts"
     )
@@ -723,6 +736,50 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   }
 
   // MARK: - Private Methods
+
+  private func calculateUserEarningsByDate(
+    userId: String,
+    shifts: [ShiftRow],
+    year: Int,
+    month: Int
+  ) -> [String: CalendarEarningsData] {
+    guard !shifts.isEmpty else { return [:] }
+
+    let settings = SettingsRepository.shared.getSettings(for: userId)
+    let snapshots = SnapshotsRepository.shared.getSnapshots(for: userId)
+
+    let computedShifts = PayrollEngine.computeShiftsForMonth(
+      year: year,
+      month: month,
+      shifts: shifts,
+      recurring: [],
+      snapshots: snapshots,
+      settings: settings
+    )
+
+    var netByDate: [String: Double] = [:]
+    var grossByDate: [String: Double] = [:]
+    var hasTaxByDate: [String: Bool] = [:]
+
+    for shift in computedShifts {
+      let net = shift.taxEnabled ? shift.netPay : shift.grossPay
+      netByDate[shift.shiftDate, default: 0] += net
+      grossByDate[shift.shiftDate, default: 0] += shift.grossPay
+      hasTaxByDate[shift.shiftDate, default: false] =
+        hasTaxByDate[shift.shiftDate, default: false] || shift.taxEnabled
+    }
+
+    var earningsByDate: [String: CalendarEarningsData] = [:]
+    for (date, net) in netByDate {
+      earningsByDate[date] = CalendarEarningsData(
+        net: net,
+        gross: grossByDate[date] ?? net,
+        hasTaxEnabled: hasTaxByDate[date] ?? false
+      )
+    }
+
+    return earningsByDate
+  }
 
   private func getCurrentUserId() async throws -> String? {
     if let cached = cachedUserId {
