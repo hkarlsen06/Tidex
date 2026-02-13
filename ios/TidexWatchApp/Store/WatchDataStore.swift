@@ -10,6 +10,8 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataStor
 @Observable
 final class WatchDataStore {
   static let shared = WatchDataStore()
+  private static let appGroupId = "group.no.tidex.app"
+  private static let payloadStorageKey = "watch_data_payload_v1"
 
   private(set) var userShift: WatchShiftDTO?
   private(set) var friendShifts: [WatchShiftDTO] = []
@@ -30,7 +32,9 @@ final class WatchDataStore {
     return formatter.localizedString(for: lastUpdated, relativeTo: Date())
   }
 
-  private init() {}
+  private init() {
+    loadPersistedPayload()
+  }
 
   /// Update store with new payload from iPhone
   func update(from payload: WatchDataPayload) {
@@ -39,12 +43,39 @@ final class WatchDataStore {
     self.currencySymbol = payload.currencySymbol
     self.lastUpdated = payload.timestamp
     self.lastSyncTimestamp = payload.lastSyncTimestamp
+    persist(payload: payload)
 
     logger.info(
       "Store updated: user=\(payload.userShift != nil), friends=\(payload.friendShifts.count)")
 
     // Reload complications when data changes
     WidgetCenter.shared.reloadAllTimelines()
+  }
+
+  // MARK: - Persistence
+
+  private func persist(payload: WatchDataPayload) {
+    guard let userDefaults = UserDefaults(suiteName: Self.appGroupId),
+      let data = try? JSONEncoder().encode(payload)
+    else {
+      return
+    }
+    userDefaults.set(data, forKey: Self.payloadStorageKey)
+  }
+
+  private func loadPersistedPayload() {
+    guard let userDefaults = UserDefaults(suiteName: Self.appGroupId),
+      let data = userDefaults.data(forKey: Self.payloadStorageKey),
+      let payload = try? JSONDecoder().decode(WatchDataPayload.self, from: data)
+    else {
+      return
+    }
+
+    self.userShift = payload.userShift
+    self.friendShifts = payload.friendShifts
+    self.currencySymbol = payload.currencySymbol
+    self.lastUpdated = payload.timestamp
+    self.lastSyncTimestamp = payload.lastSyncTimestamp
   }
 
   // MARK: - Localization Helpers

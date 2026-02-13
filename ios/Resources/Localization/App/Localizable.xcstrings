@@ -611,6 +611,12 @@
             "value" : "88"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "88"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
