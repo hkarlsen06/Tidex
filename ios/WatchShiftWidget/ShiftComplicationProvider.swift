@@ -301,7 +301,7 @@ private var accessoryCornerView: some View {
       .font(.caption2)
       .monospacedDigit()
       .widgetLabel {
-        Text(cornerBottomCurvedText(range: range))
+        relativeCountdownText(range: range)
       }
   } else {
     Text("--")
@@ -388,9 +388,8 @@ private var accessoryCornerView: some View {
             .font(.caption2)
             .foregroundStyle(.secondary)
 
-          Text(rectangularTimerText(range: range))
+          relativeCountdownText(range: range)
             .font(.caption2)
-            .monospacedDigit()
             .lineLimit(1)
 
           if isActive {
@@ -487,25 +486,25 @@ private var accessoryCornerView: some View {
     return shortWeekdayText(for: shift)
   }
 
-  private func rectangularTimerText(range: (start: Date, end: Date)) -> String {
+  private func countdownTargetDate(for range: (start: Date, end: Date)) -> Date? {
     if entry.date < range.start {
-      return compactDuration(from: entry.date, to: range.start)
+      return range.start
     }
     if entry.date < range.end {
-      return compactDuration(from: entry.date, to: range.end)
+      return range.end
     }
-    return "--"
+    return nil
   }
 
-  private func compactDuration(from start: Date, to end: Date) -> String {
-    let formatter = DateComponentsFormatter()
-    formatter.allowedUnits = [.day, .hour, .minute]
-    formatter.unitsStyle = .full
-    formatter.maximumUnitCount = 2
-    formatter.zeroFormattingBehavior = [.dropLeading, .dropAll]
-
-    let duration = max(0, end.timeIntervalSince(start))
-    return formatter.string(from: duration) ?? "0m"
+  @ViewBuilder
+  private func relativeCountdownText(range: (start: Date, end: Date)) -> some View {
+    if let targetDate = countdownTargetDate(for: range) {
+      Text(targetDate, style: .relative)
+        .monospacedDigit()
+    } else {
+      Text("--")
+        .monospacedDigit()
+    }
   }
 
   private func activeShiftRing(progress: Double) -> some View {
@@ -532,40 +531,6 @@ private var accessoryCornerView: some View {
 
   private func cornerTopCurvedText(shift: WatchShiftDTO, range: (start: Date, end: Date)) -> String {
     return entry.date < range.start ? shift.startTime : shift.endTime
-  }
-
-  private func cornerBottomCurvedText(range: (start: Date, end: Date)) -> String {
-    let target = entry.date < range.start ? range.start : range.end
-    return upperCountdown(from: entry.date, to: target)
-  }
-
-  private func upperCountdown(from start: Date, to end: Date) -> String {
-    let totalMinutes = max(0, Int(end.timeIntervalSince(start)) / 60)
-    let days = totalMinutes / (24 * 60)
-    let hours = (totalMinutes % (24 * 60)) / 60
-    let minutes = totalMinutes % 60
-
-    if days > 0 {
-      if hours > 0 && minutes > 0 {
-        return "\(days)D \(hours)T \(minutes)MIN"
-      }
-      if hours > 0 {
-        return "\(days)D \(hours)T"
-      }
-      if minutes > 0 {
-        return "\(days)D \(minutes)MIN"
-      }
-      return "\(days)D"
-    }
-
-    if hours > 0 {
-      if minutes > 0 {
-        return "\(hours)H \(minutes)MIN"
-      }
-      return "\(hours)H"
-    }
-
-    return "\(max(1, minutes))MIN"
   }
 
 }
