@@ -1669,9 +1669,6 @@ final class SyncCoordinator: ObservableObject {
           deletedAt: nil
         )
 
-        // Get old values from last synced snapshot for notification (before marking pushed)
-        let oldSnapshot = UserShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot)
-
         await storeActor.markShiftPushed(
           id: shiftId,
           serverRow: returnedRow,
@@ -1732,9 +1729,6 @@ final class SyncCoordinator: ObservableObject {
       // Success - mark as deleted locally
       let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userShifts, id: shiftId)
       let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
-
-      // Get shift details from snapshot before marking deleted (for notification)
-      let snapshot = UserShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot)
 
       await storeActor.markShiftDeleted(
         id: shiftId,

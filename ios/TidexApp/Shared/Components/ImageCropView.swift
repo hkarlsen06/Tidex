@@ -1,17 +1,17 @@
 import SwiftUI
-import TOCropViewController
+import CropViewController
 
-/// Reusable SwiftUI wrapper for TOCropViewController
+/// Reusable SwiftUI wrapper for CropViewController
 /// Provides a familiar iOS Photos-style cropping experience
 struct ImageCropView: UIViewControllerRepresentable {
   let image: UIImage
-  let croppingStyle: TOCropViewCroppingStyle
+  let croppingStyle: CropViewCroppingStyle
   let onCrop: (UIImage) -> Void
   let onCancel: () -> Void
 
   init(
     image: UIImage,
-    croppingStyle: TOCropViewCroppingStyle = .circular,
+    croppingStyle: CropViewCroppingStyle = .circular,
     onCrop: @escaping (UIImage) -> Void,
     onCancel: @escaping () -> Void
   ) {
@@ -22,7 +22,7 @@ struct ImageCropView: UIViewControllerRepresentable {
   }
 
   func makeUIViewController(context: Context) -> UINavigationController {
-    let cropViewController = TOCropViewController(croppingStyle: croppingStyle, image: image)
+    let cropViewController = CropViewController(croppingStyle: croppingStyle, image: image)
     cropViewController.delegate = context.coordinator
 
     // Hide rotate buttons for cleaner UI
@@ -42,7 +42,7 @@ struct ImageCropView: UIViewControllerRepresentable {
     Coordinator(onCrop: onCrop, onCancel: onCancel)
   }
 
-  class Coordinator: NSObject, TOCropViewControllerDelegate {
+  class Coordinator: NSObject, CropViewControllerDelegate {
     let onCrop: (UIImage) -> Void
     let onCancel: () -> Void
 
@@ -52,14 +52,21 @@ struct ImageCropView: UIViewControllerRepresentable {
     }
 
     func cropViewController(
-      _ cropViewController: TOCropViewController, didCropTo image: UIImage, with cropRect: CGRect,
+      _ cropViewController: CropViewController, didCropToImage image: UIImage, withRect cropRect: CGRect,
       angle: Int
     ) {
       onCrop(image)
     }
 
     func cropViewController(
-      _ cropViewController: TOCropViewController, didFinishCancelled cancelled: Bool
+      _ cropViewController: CropViewController, didCropToCircularImage image: UIImage, withRect cropRect: CGRect,
+      angle: Int
+    ) {
+      onCrop(image)
+    }
+
+    func cropViewController(
+      _ cropViewController: CropViewController, didFinishCancelled cancelled: Bool
     ) {
       if cancelled {
         onCancel()

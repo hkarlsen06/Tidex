@@ -306,7 +306,8 @@ private struct SharedShiftsDetailView: View {
           highlightDates: highlightDates,
           highlightShiftIds: highlightShiftIds,
           isSuperimposing: viewModel.isSuperimposing,
-          userHoursByDate: viewModel.userHoursByDate
+          userHoursByDate: viewModel.userHoursByDate,
+          userEarningsByDate: viewModel.userEarningsByDate
         )
         .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity)
@@ -324,8 +325,8 @@ private struct SharedShiftsDetailView: View {
         Button {
           viewModel.toggleSuperimpose()
         } label: {
-          Image(systemName: "rectangle.on.rectangle")
-            .font(.tidexBodyMedium)
+          superimposeToggleLabel
+            .font(.tidexFootnoteMedium)
             .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
         }
       }
@@ -366,6 +367,27 @@ private struct SharedShiftsDetailView: View {
       .presentationDragIndicator(.visible)
       .interactiveDismissDisabled()
     }
+  }
+
+  private var superimposeToggleLabel: Text {
+    let resource: LocalizedStringResource =
+      viewModel.isSuperimposing
+      ? .sharingSuperimposeHideMyShifts
+      : .sharingSuperimposeShowMyShifts
+    let localized = String(localized: resource)
+
+    if
+      let attributed = try? AttributedString(
+        markdown: localized,
+        options: AttributedString.MarkdownParsingOptions(
+          interpretedSyntax: .inlineOnlyPreservingWhitespace
+        )
+      )
+    {
+      return Text(attributed)
+    }
+
+    return Text(localized)
   }
 
   private func monthSwipeDragGesture(containerWidth: CGFloat) -> some Gesture {
