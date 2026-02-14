@@ -208,6 +208,7 @@ private struct ChartOverlayContent: View {
   let data: [DailyData]
   @Binding var selectedDay: String?
   let currency: String
+  @State private var tooltipWidth: CGFloat = 0
 
   var body: some View {
     GeometryReader { geometry in
@@ -223,9 +224,24 @@ private struct ChartOverlayContent: View {
           }
 
         // Tooltip overlay
-        if let tooltipData = tooltipData(plotFrame: plotFrame) {
+        if let tooltipData = tooltipData(
+          plotFrame: plotFrame,
+          containerWidth: geometry.size.width
+        ) {
           TooltipView(dayData: tooltipData.dayData, currency: currency)
+            .fixedSize()
             .position(x: tooltipData.xPosition, y: 30)
+            .background(
+              GeometryReader { tooltipGeometry in
+                Color.clear.preference(
+                  key: TooltipWidthPreferenceKey.self,
+                  value: tooltipGeometry.size.width
+                )
+              }
+            )
+            .onPreferenceChange(TooltipWidthPreferenceKey.self) { width in
+              tooltipWidth = width
+            }
         }
       }
     }
@@ -251,7 +267,10 @@ private struct ChartOverlayContent: View {
     }
   }
 
-  private func tooltipData(plotFrame: CGRect) -> (dayData: DailyData, xPosition: CGFloat)? {
+  private func tooltipData(
+    plotFrame: CGRect,
+    containerWidth: CGFloat
+  ) -> (dayData: DailyData, xPosition: CGFloat)? {
     guard let selected = selectedDay,
       let dayData = data.first(where: { $0.date == selected }),
       let index = data.firstIndex(where: { $0.date == selected })
@@ -260,9 +279,26 @@ private struct ChartOverlayContent: View {
     }
 
     let barWidth = plotFrame.width / CGFloat(data.count)
-    let xPosition = plotFrame.origin.x + barWidth * (CGFloat(index) + 0.5)
+    let desiredX = plotFrame.origin.x + barWidth * (CGFloat(index) + 0.5)
+    let horizontalInset = Spacing.xs
+    let fallbackTooltipWidth: CGFloat = 120
+    let effectiveTooltipWidth =
+      tooltipWidth > 0 && tooltipWidth < (containerWidth - (horizontalInset * 2))
+      ? tooltipWidth : fallbackTooltipWidth
+    let halfTooltipWidth = effectiveTooltipWidth / 2
+    let minX = halfTooltipWidth + horizontalInset
+    let maxX = containerWidth - halfTooltipWidth - horizontalInset
+    let xPosition = maxX > minX ? min(max(desiredX, minX), maxX) : containerWidth / 2
 
     return (dayData: dayData, xPosition: xPosition)
+  }
+}
+
+private struct TooltipWidthPreferenceKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = nextValue()
   }
 }
 
