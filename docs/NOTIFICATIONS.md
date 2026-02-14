@@ -65,51 +65,7 @@ Choose a descriptive `snake_case` name following the pattern `feature_action`:
 
 Examples: `friend_request_received`, `subscription_expired`, `goal_achieved`
 
-### Step 2: Create Localization Helper Function
-
-Add to `supabase/sql/functions/notification/localization_helpers.sql`:
-
-```sql
--- ============================================================================
--- Build localized message for friend_request_received
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION internal.build_friend_request_message(
-  p_sender_name TEXT,
-  p_locale TEXT
-)
-RETURNS TABLE(title TEXT, body TEXT)
-LANGUAGE plpgsql
-IMMUTABLE
-AS $$
-BEGIN
-  IF p_locale = 'no' THEN
-    -- Norwegian
-    RETURN QUERY SELECT
-      'Venneforespørsel'::TEXT,
-      (p_sender_name || ' vil dele vakter med deg')::TEXT;
-  ELSE
-    -- English (default)
-    RETURN QUERY SELECT
-      'Friend Request'::TEXT,
-      (p_sender_name || ' wants to share shifts with you')::TEXT;
-  END IF;
-END;
-$$;
-
--- Grant permissions
-GRANT EXECUTE ON FUNCTION internal.build_friend_request_message TO service_role;
-```
-
-**Localization Guidelines:**
-
-- English is the default (`ELSE` branch)
-- Norwegian is checked explicitly (`IF p_locale = 'no'`)
-- Keep messages concise (titles < 50 chars, bodies < 150 chars)
-- Use `IMMUTABLE` for pure functions (better performance)
-- Always grant to `service_role`
-
-### Step 3: Create Trigger Function
+### Step 2: Create Trigger Function
 
 Create `supabase/sql/functions/trigger/queue_friend_request_notification.sql`:
 
@@ -148,9 +104,14 @@ BEGIN
   FROM auth.users u
   WHERE u.id = NEW.recipient_id;
 
-  -- Build localized message using helper function
-  SELECT title, body INTO v_title, v_body
-  FROM internal.build_friend_request_message(v_sender_name, v_recipient.locale);
+  -- Build localized message inline
+  IF v_recipient.locale = 'no' THEN
+    v_title := 'Venneforespørsel';
+    v_body := v_sender_name || ' vil dele vakter med deg';
+  ELSE
+    v_title := 'Friend Request';
+    v_body := v_sender_name || ' wants to share shifts with you';
+  END IF;
 
   -- Insert into notifications_outbox with pre-built message
   INSERT INTO internal.notifications_outbox (
@@ -463,8 +424,7 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 ## Checklist for New Notification Types
 
 - [ ] Define notification type name (`snake_case`)
-- [ ] Create localization helper function in `localization_helpers.sql`
-- [ ] Create trigger function in `supabase/sql/functions/trigger/`
+- [ ] Create trigger function in `supabase/sql/functions/trigger/` (with inline localized messages)
 - [ ] Create row-level database trigger on source table
 - [ ] Create statement-level trigger to fire edge function (use `z_` prefix)
 - [ ] Test with both English and Norwegian users
