@@ -227,6 +227,7 @@ private struct YearlyChartOverlay: View {
   let data: [MonthlyIncomeData]
   @Binding var selectedMonth: String?
   let currency: String
+  @State private var tooltipWidth: CGFloat = 0
 
   var body: some View {
     GeometryReader { geometry in
@@ -242,9 +243,24 @@ private struct YearlyChartOverlay: View {
           }
 
         // Tooltip overlay
-        if let tooltipData = tooltipData(plotFrame: plotFrame) {
+        if let tooltipData = tooltipData(
+          plotFrame: plotFrame,
+          containerWidth: geometry.size.width
+        ) {
           YearlyTooltipView(monthData: tooltipData.monthData, currency: currency)
+            .fixedSize()
             .position(x: tooltipData.xPosition, y: 30)
+            .background(
+              GeometryReader { tooltipGeometry in
+                Color.clear.preference(
+                  key: YearlyTooltipWidthPreferenceKey.self,
+                  value: tooltipGeometry.size.width
+                )
+              }
+            )
+            .onPreferenceChange(YearlyTooltipWidthPreferenceKey.self) { width in
+              tooltipWidth = width
+            }
         }
       }
     }
@@ -269,8 +285,10 @@ private struct YearlyChartOverlay: View {
     }
   }
 
-  private func tooltipData(plotFrame: CGRect) -> (monthData: MonthlyIncomeData, xPosition: CGFloat)?
-  {
+  private func tooltipData(
+    plotFrame: CGRect,
+    containerWidth: CGFloat
+  ) -> (monthData: MonthlyIncomeData, xPosition: CGFloat)? {
     guard let selected = selectedMonth,
       let monthData = data.first(where: { $0.month == selected }),
       let index = data.firstIndex(where: { $0.month == selected })
@@ -279,9 +297,26 @@ private struct YearlyChartOverlay: View {
     }
 
     let barWidth = plotFrame.width / CGFloat(data.count)
-    let xPosition = plotFrame.origin.x + barWidth * (CGFloat(index) + 0.5)
+    let desiredX = plotFrame.origin.x + barWidth * (CGFloat(index) + 0.5)
+    let horizontalInset = Spacing.xs
+    let fallbackTooltipWidth: CGFloat = 120
+    let effectiveTooltipWidth =
+      tooltipWidth > 0 && tooltipWidth < (containerWidth - (horizontalInset * 2))
+      ? tooltipWidth : fallbackTooltipWidth
+    let halfTooltipWidth = effectiveTooltipWidth / 2
+    let minX = halfTooltipWidth + horizontalInset
+    let maxX = containerWidth - halfTooltipWidth - horizontalInset
+    let xPosition = maxX > minX ? min(max(desiredX, minX), maxX) : containerWidth / 2
 
     return (monthData: monthData, xPosition: xPosition)
+  }
+}
+
+private struct YearlyTooltipWidthPreferenceKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = nextValue()
   }
 }
 
