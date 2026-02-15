@@ -1,9 +1,9 @@
-- Adicionados turnos compartilhados: veja turnos de amigos na lista, calendário e visualização detalhada
-- Adicionado gerenciamento de turnos recorrentes com datas de exclusão
-- Adicionada opção de silenciar notificações para turnos compartilhados
-- Adicionado suporte para 24:00 como horário de término do turno
-- Redesenhadas as configurações e gerenciamento de amigos com estilo nativo do iOS
-- Melhorado o calendário com dimensionamento dinâmico e visualização prévia de ganhos
-- Adicionado arraste para atualizar na aba Adicionar
-- Corrigido um problema que poderia causar uma tela preta ao iniciar
+- Adicionados pacotes bônus de mensagens do Wagey — compre 20 mensagens extras que nunca expiram
+- Adicionada capacidade de encerrar turnos ativos diretamente do painel
+- Adicionado perfil de amigo com controles de notificação e visibilidade de ganhos
+- Adicionada alternância de visualização de ganhos em turnos compartilhados
+- Adicionada confirmação ao limpar entradas de turno
+- Adicionado status editável de recibo de pagamento no painel
+- Melhorias no Wagey com etiquetas de ação mais inteligentes e melhor renderização de tabelas
+- Inicialização mais rápida do app e carregamento mais suave do painel
 - Correções de bugs e outras melhorias

@@ -1,11 +1,11 @@
 Seuraa työvuorojasi ja laske palkkasi Tidexillä.
 
 Ominaisuudet:
-• Helppo vuorojen kirjaaminen alku- ja loppuaikoineen
-• Automaattinen palkanlaskenta
+• Helppo vuorojen kirjaus alku- ja loppuaikoineen
+• Automaattinen palkkalaskenta
 • Kalenterinäkymä kaikista vuoroista
 • Ansaintakatsaus ja tilastot
-• Widget nopeaan käyttöön
+• Widget nopeaa käyttöä varten
 • Synkronointi laitteiden välillä
 
 Täydellinen työntekijöille, jotka haluavat pitää kirjaa työtunneistaan ja ansioistaan.

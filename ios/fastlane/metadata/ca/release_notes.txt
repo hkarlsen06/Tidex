@@ -1,9 +1,9 @@
-- Afegits torns compartits: consulta els torns d'amics a la llista, el calendari i la vista detallada
-- Afegida gestió de torns recurrents amb dates d'exclusió
-- Afegida opció per silenciar notificacions de torns compartits
-- Afegit suport per a 24:00 com a hora de finalització de torn
-- Redisseny de la configuració i gestió d'amics amb estil natiu d'iOS
-- Calendari millorat amb escalat dinàmic i previsualització d'ingressos
-- Afegit arrossegar per actualitzar a la pestanya Afegir
-- Solucionat un error que podia causar una pantalla negra en iniciar
+- Afegits paquets de missatges bonus de Wagey — compra 20 missatges extra que no caduquen mai
+- Afegida la possibilitat de finalitzar torns actius directament des del tauler
+- Afegit perfil d'amic amb controls de visibilitat de notificacions i ingressos
+- Afegit commutador de vista d'ingressos en torns compartits
+- Afegida confirmació en esborrar dades de torns
+- Afegit estat de rebut de nòmina editable al tauler
+- Millorat Wagey amb etiquetes d'acció més intel·ligents i millor visualització de taules
+- Inici d'aplicació més ràpid i càrrega més fluida del tauler
 - Correccions d'errors i altres millores

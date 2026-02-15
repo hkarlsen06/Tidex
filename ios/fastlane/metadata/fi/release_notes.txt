@@ -1,9 +1,9 @@
-- Lisätty jaetut vuorot: näe kavereiden vuorot lista-, kalenteri- ja yksityiskohtanäkymissä
-- Lisätty toistuvien vuorojen hallinta poissulkupäivineen
-- Lisätty ilmoitusten mykistys jaetuille vuoroille
-- Lisätty tuki kelloajalle 24:00 vuoron päättymisaikana
-- Uudistettu asetukset ja kaverien hallinta natiivilla iOS-tyylillä
-- Parannettu kalenteri dynaamisella skaalautumisella ja ansioiden esikatselulla
-- Lisätty vedä-päivittääksesi Lisää-välilehdelle
-- Korjattu ongelma, joka saattoi aiheuttaa mustan ruudun käynnistyksen yhteydessä
+- Lisätty Wagey-bonusviestipaketteja — osta 20 ylimääräistä viestiä, jotka eivät vanhene koskaan
+- Lisätty mahdollisuus lopettaa aktiiviset vuorot suoraan hallintapaneelista
+- Lisätty ystäväprofiili ilmoitusten ja ansioiden näkyvyyden hallinnalla
+- Lisätty ansionäkymän vaihto jaetuissa vuoroissa
+- Lisätty vahvistus vuorotietojen tyhjentämiseen
+- Lisätty muokattava palkkalaskelmatila hallintapaneeliin
+- Parannettu Wageyä älykkäämmillä toimintotunnisteilla ja paremmalla taulukonäytöllä
+- Nopeampi sovelluksen käynnistys ja sujuvampi hallintapaneelin lataus
 - Virheiden korjauksia ja muita parannuksia

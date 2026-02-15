@@ -1,9 +1,9 @@
-- Dodano udostępniane zmiany: przeglądaj zmiany znajomych w liście, kalendarzu i widoku szczegółów
-- Dodano zarządzanie cyklicznymi zmianami z datami wyłączeń
-- Dodano wyciszanie powiadomień dla udostępnianych zmian
-- Dodano obsługę 24:00 jako godziny zakończenia zmiany
-- Przeprojektowano ustawienia i zarządzanie znajomymi w natywnym stylu iOS
-- Ulepszono kalendarz z dynamicznym skalowaniem i podglądem zarobków
-- Dodano przeciągnij-aby-odświeżyć w zakładce Dodaj
-- Naprawiono błąd, który mógł powodować czarny ekran podczas uruchamiania
+- Dodano pakiety bonusowe Wagey — kup 20 dodatkowych wiadomości, które nigdy nie wygasają
+- Dodano możliwość zakończenia aktywnych zmian bezpośrednio z panelu
+- Dodano profil znajomego z kontrolą powiadomień i widoczności zarobków
+- Dodano przełączanie widoku zarobków w udostępnionych zmianach
+- Dodano potwierdzenie przy usuwaniu danych zmiany
+- Dodano edytowalny status paska wypłaty na panelu
+- Ulepszono Wagey dzięki inteligentniejszym etykietom działań i lepszemu renderowaniu tabel
+- Szybsze uruchamianie aplikacji i płynniejsze ładowanie panelu
 - Poprawki błędów i inne ulepszenia

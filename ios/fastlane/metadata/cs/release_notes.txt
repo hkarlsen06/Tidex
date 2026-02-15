@@ -1,9 +1,9 @@
-- Přidány sdílené směny: zobrazte směny přátel v seznamu, kalendáři a detailním zobrazení
-- Přidána správa opakujících se směn s vyjmutými daty
-- Přidáno ztlumení upozornění pro sdílené směny
-- Přidána podpora pro 24:00 jako čas konce směny
-- Přepracované nastavení a správa přátel v nativním iOS stylu
-- Vylepšený kalendář s dynamickým škálováním a náhledem výdělků
-- Přidáno potažení pro obnovení na kartě Přidat
-- Opravena chyba, která mohla způsobit černou obrazovku při spuštění
+- Přidány bonusové balíčky zpráv Wagey — kupte si 20 extra zpráv, které nikdy nevyprší
+- Přidána možnost ukončit aktivní směny přímo z hlavního panelu
+- Přidán profil přítele s nastavením viditelnosti upozornění a výdělků
+- Přidáno přepínání zobrazení výdělků ve sdílených směnách
+- Přidáno potvrzení při mazání údajů o směně
+- Přidán upravitelný stav výplatní pásky na hlavním panelu
+- Vylepšen Wagey s chytřejšími popisky akcí a lepším vykreslováním tabulek
+- Rychlejší spuštění aplikace a plynulejší načítání hlavního panelu
 - Opravy chyb a další vylepšení

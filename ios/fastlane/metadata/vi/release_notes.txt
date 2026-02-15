@@ -1,9 +1,9 @@
-- Thêm ca làm chia sẻ: xem ca làm của bạn bè trong danh sách, lịch và chi tiết
-- Thêm quản lý ca làm lặp lại với ngày loại trừ
-- Thêm tắt thông báo cho ca làm chia sẻ
-- Thêm hỗ trợ 24:00 làm giờ kết thúc ca
-- Thiết kế lại cài đặt và quản lý bạn bè theo phong cách iOS gốc
-- Cải thiện lịch với thu phóng động và xem trước thu nhập
-- Thêm kéo để làm mới ở tab Thêm
-- Sửa lỗi có thể gây màn hình đen khi khởi động
-- Sửa lỗi và cải tiến khác
+- Thêm gói tin nhắn thưởng Wagey — mua 20 tin nhắn bổ sung không bao giờ hết hạn
+- Thêm khả năng kết thúc ca làm đang hoạt động trực tiếp từ bảng điều khiển
+- Thêm hồ sơ bạn bè với các tùy chọn hiển thị thông báo và thu nhập
+- Thêm chế độ chuyển đổi xem thu nhập trong ca làm được chia sẻ
+- Thêm xác nhận khi xóa thông tin ca làm
+- Thêm trạng thái phiếu lương có thể chỉnh sửa trên bảng điều khiển
+- Cải thiện Wagey với nhãn hành động thông minh hơn và hiển thị bảng tốt hơn
+- Khởi động ứng dụng nhanh hơn và tải bảng điều khiển mượt mà hơn
+- Sửa lỗi và các cải tiến khác

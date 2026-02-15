@@ -1,9 +1,9 @@
-- Geteilte Schichten hinzugefügt: Schichten von Freunden in Listen-, Kalender- und Detailansicht anzeigen
-- Verwaltung wiederkehrender Schichten mit Ausschlussdaten hinzugefügt
-- Stummschaltung von Benachrichtigungen für geteilte Schichten hinzugefügt
-- Unterstützung für 24:00 als Schichtende hinzugefügt
-- Einstellungen und Freundeverwaltung im nativen iOS-Stil neu gestaltet
-- Kalender mit dynamischer Skalierung und Verdienstvorschau verbessert
-- Ziehen-zum-Aktualisieren im Hinzufügen-Tab hinzugefügt
-- Fehler behoben, der beim Start einen schwarzen Bildschirm verursachen konnte
+- Wagey-Bonusnachrichtenpakete hinzugefügt — kaufe 20 zusätzliche Nachrichten, die nie ablaufen
+- Möglichkeit hinzugefügt, aktive Schichten direkt vom Dashboard zu beenden
+- Freundesprofil mit Benachrichtigungs- und Einkommensanzeige-Einstellungen hinzugefügt
+- Umschaltung zwischen Stunden und Einkommen in geteilten Schichten hinzugefügt
+- Bestätigung beim Löschen von Schichtinformationen hinzugefügt
+- Bearbeitbarer Lohnzettel-Status im Dashboard hinzugefügt
+- Wagey mit intelligenteren Aktionsbeschriftungen und besserer Tabellendarstellung verbessert
+- Schnellerer App-Start und flüssigeres Laden des Dashboards
 - Fehlerbehebungen und weitere Verbesserungen

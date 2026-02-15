@@ -1,9 +1,9 @@
-- Aggiunti turni condivisi: visualizza i turni degli amici in lista, calendario e vista dettagli
-- Aggiunta gestione turni ricorrenti con date di esclusione
-- Aggiunta possibilità di silenziare le notifiche per i turni condivisi
-- Aggiunto supporto per 24:00 come orario di fine turno
-- Riprogettate impostazioni e gestione amici con stile iOS nativo
-- Migliorato il calendario con scalatura dinamica e anteprima dei guadagni
-- Aggiunto scorri-per-aggiornare nella scheda Aggiungi
-- Risolto un problema che poteva causare una schermata nera all'avvio
+- Aggiunti pacchetti bonus di messaggi Wagey — acquista 20 messaggi extra che non scadono mai
+- Aggiunta possibilità di terminare i turni attivi direttamente dalla dashboard
+- Aggiunto profilo amico con controlli per notifiche e visibilità delle entrate
+- Aggiunta visualizzazione delle entrate nei turni condivisi
+- Aggiunta conferma quando si cancellano i dati dei turni
+- Aggiunto stato modificabile della busta paga nella dashboard
+- Migliorato Wagey con etichette delle azioni più intelligenti e migliore rendering delle tabelle
+- Avvio dell'app più veloce e caricamento della dashboard più fluido
 - Correzioni di bug e altri miglioramenti

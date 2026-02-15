@@ -1,11 +1,11 @@
 Theo dõi ca làm việc và tính lương của bạn với Tidex.
 
 Tính năng:
-• Ghi nhận ca làm dễ dàng với giờ bắt đầu/kết thúc
+• Ghi nhận ca làm dễ dàng với thời gian bắt đầu/kết thúc
 • Tự động tính lương
-• Xem tất cả ca làm trên lịch
+• Xem tất cả ca làm theo lịch
 • Tổng quan thu nhập và thống kê
 • Widget để truy cập nhanh
-• Đồng bộ trên các thiết bị
+• Đồng bộ trên nhiều thiết bị
 
-Hoàn hảo cho người lao động muốn theo dõi giờ làm việc và thu nhập của mình.
+Hoàn hảo cho nhân viên muốn theo dõi giờ làm việc và thu nhập của mình.

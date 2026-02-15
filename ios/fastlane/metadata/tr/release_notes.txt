@@ -1,9 +1,9 @@
-- Paylaşılan vardiyalar eklendi: arkadaşlarınızın vardiyalarını liste, takvim ve detay görünümlerinde görün
-- İstisna tarihleriyle tekrarlayan vardiya yönetimi eklendi
-- Paylaşılan vardiyalar için bildirim sessize alma eklendi
-- Vardiya bitiş saati olarak 24:00 desteği eklendi
-- Ayarlar ve arkadaş yönetimi yerel iOS stiliyle yeniden tasarlandı
-- Dinamik ölçeklendirme ve kazanç önizlemesiyle takvim iyileştirildi
-- Ekle sekmesine aşağı kaydırarak yenile eklendi
-- Başlangıçta siyah ekrana neden olabilecek bir sorun düzeltildi
+- Wagey bonus mesaj paketleri eklendi — süresi dolmayan 20 ekstra mesaj satın alın
+- Aktif vardiyaları doğrudan kontrol panelinden sonlandırma özelliği eklendi
+- Bildirim ve kazanç görünürlüğü kontrolleriyle arkadaş profili eklendi
+- Paylaşılan vardiyalarda kazanç görünümü geçişi eklendi
+- Vardiya bilgilerini temizlerken onay eklendi
+- Kontrol panelinde düzenlenebilir bordro durumu eklendi
+- Wagey daha akıllı eylem etiketleri ve daha iyi tablo görünümüyle iyileştirildi
+- Daha hızlı uygulama başlatma ve daha akıcı kontrol paneli yükleme
 - Hata düzeltmeleri ve diğer iyileştirmeler

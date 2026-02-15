@@ -1,1 +1,1 @@
-turno,horario,salario,sueldo,trabajo,horas,tiempo,fichar,calendario,ingresos
+turno,registro,salario,sueldo,trabajo,horas,tiempo,horario,ingresos,calculadora
