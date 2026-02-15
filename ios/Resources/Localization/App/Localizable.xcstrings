@@ -155261,6 +155261,57 @@
         }
       }
     },
+    "paywall.bonus.buyFor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buy for %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kjøp for %@"
+          }
+        }
+      }
+    },
+    "paywall.bonus.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get 20 extra Wagey messages that never expire."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Få 20 ekstra Wagey-meldinger som aldri utløper."
+          }
+        }
+      }
+    },
+    "paywall.bonus.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "20 Bonus Messages"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "20 bonusmeldinger"
+          }
+        }
+      }
+    },
     "paywall.currentPlan" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -158348,6 +158399,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "月訂閱"
+          }
+        }
+      }
+    },
+    "paywall.or" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "or"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eller"
           }
         }
       }
@@ -319947,6 +320015,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法載入圖片。請試試另一張。"
+          }
+        }
+      }
+    },
+    "wagey.limitReached.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've used all your Wagey messages this month. Messages reset at the start of next month."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du har brukt alle Wagey-meldingene dine denne måneden. Meldingene tilbakestilles ved starten av neste måned."
+          }
+        }
+      }
+    },
+    "wagey.limitReached.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Message Limit Reached"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meldingsgrensen nådd"
           }
         }
       }

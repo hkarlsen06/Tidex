@@ -12,6 +12,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "WageyViewModel
 struct WageyInvocations: Codable {
   let count: Int
   let month: String?
+  let bonus: Int?
 
   /// Whether the stored month matches the current month
   /// If not, the count should be considered 0 (will reset on next invocation)
@@ -27,6 +28,11 @@ struct WageyInvocations: Codable {
   /// Returns 0 if the month doesn't match current month
   var effectiveCount: Int {
     isCurrentMonth ? count : 0
+  }
+
+  /// Effective bonus available
+  var effectiveBonus: Int {
+    bonus ?? 0
   }
 }
 
@@ -127,7 +133,12 @@ final class WageyViewModel {
 
   /// Number of messages remaining this month
   var remainingMessagesCount: Int {
-    max(0, messageLimit - messagesUsed)
+    max(0, messageLimit - messagesUsed) + bonusMessages
+  }
+
+  /// Number of bonus messages available
+  var bonusMessages: Int {
+    wageyInvocations?.effectiveBonus ?? 0
   }
 
   /// Whether to show the showcase (free tier + hasn't seen it)
@@ -284,9 +295,10 @@ final class WageyViewModel {
       // Check if limit is already reached based on profile data
       if let invocations = wageyInvocations {
         let used = invocations.effectiveCount
-        if used >= messageLimit {
-          limitReached = true
-        }
+        let remaining = max(0, messageLimit - used) + invocations.effectiveBonus
+        limitReached = remaining <= 0
+      } else {
+        limitReached = false
       }
     } catch {
       // Non-fatal - we can still use local counter as fallback
@@ -474,7 +486,6 @@ final class WageyViewModel {
   func resetLimitReached() {
     limitReached = false
     localMessagesSent = 0
-    wageyInvocations = nil
   }
 
   // MARK: - Private Helpers
@@ -623,30 +634,34 @@ final class WageyViewModel {
         hadSuccessfulToolCalls = true
       }
 
-    case .wageyLimit(let remaining, let days, let exceeded):
+    case .wageyLimit(let remaining, let days, let exceeded, let bonus):
       // Update wagey invocations from API response to stay in sync
       // The count is: limit - remaining
       let usedCount = max(0, messageLimit - remaining)
       let formatter = DateFormatter()
       formatter.dateFormat = "yyyy-MM"
       let currentMonth = formatter.string(from: Date())
-      wageyInvocations = WageyInvocations(count: usedCount, month: currentMonth)
+      wageyInvocations = WageyInvocations(count: usedCount, month: currentMonth, bonus: bonus)
       // Reset local counter since we have fresh server data
       localMessagesSent = 0
       resetDays = days
-      if remaining <= 0 {
-        limitReached = true
-      }
+      limitReached = (remaining + bonus) <= 0
 
       // Entitlement mismatch detection:
       // If server says exceeded but StoreKit has valid entitlements, trigger background sync
       // This handles cases where server doesn't know about a valid Apple subscription
+      // Only sync if user hasn't genuinely exceeded their StoreKit tier's limit
+      // (e.g., after downgrading from max to pro with usage exceeding pro's limit)
       if exceeded && StoreKitManager.shared.currentTier != .free {
-        logger.warning(
-          "Entitlement mismatch detected: server says exceeded but StoreKit has tier \(StoreKitManager.shared.currentTier.rawValue)"
-        )
-        Task {
-          await triggerEntitlementSync()
+        let storeKitTierLimit = Self.messageLimits[StoreKitManager.shared.currentTier] ?? 3
+        let currentUsed = wageyInvocations?.effectiveCount ?? 0
+        if currentUsed < storeKitTierLimit {
+          logger.warning(
+            "Entitlement mismatch detected: server says exceeded but StoreKit has tier \(StoreKitManager.shared.currentTier.rawValue)"
+          )
+          Task {
+            await triggerEntitlementSync()
+          }
         }
       }
 

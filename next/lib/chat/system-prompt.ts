@@ -29,6 +29,8 @@ export type SystemPromptContext = {
   used: number;
   /** Messages remaining (null = unlimited) */
   remaining: number | null;
+  /** Bonus messages available beyond monthly limit */
+  bonus: number;
   /** User's name for personalization */
   userName?: string;
 };
@@ -82,15 +84,17 @@ export function getSystemPrompt(context?: SystemPromptContext): string {
 Subscription tier: ${tierName}
 Monthly message limit: ${WAGEY_LIMITS[context.accessLevel]} messages
 Messages used this month (including this message): ${context.used}
-Messages remaining after this message: ${context.remaining}
+Monthly messages remaining after this message: ${context.remaining}
+Bonus messages available: ${context.bonus}
+Total messages available after this message: ${(context.remaining ?? 0) + context.bonus}
 Resets on the 1st of each month.
 ${canUpgrade ? `Can upgrade: Yes (higher tiers get more messages - Pro: ${WAGEY_LIMITS.pro}, Max: ${WAGEY_LIMITS.max})` : ""}
 
 IMPORTANT RULES:
 1. ALWAYS complete the user's request first. Never refuse to do work based on message limits - the backend handles access control, not you.
-2. Only mention limits if the user explicitly asks about them, OR if remaining is 0 (see rule 4).
+2. Only mention limits if the user explicitly asks about them, OR if total messages available is 0 (see rule 4).
 3. If asked about limits, provide accurate info. The "remaining" count already accounts for the current message. Never say messages are unlimited.
-${canUpgrade ? `4. If remaining is 0, after completing the user's request, briefly mention they've used all messages for the month and suggest upgrading for more messages next time.` : ""}
+${canUpgrade ? `4. If total messages available is 0, after completing the user's request, briefly mention they've used all messages for the month and suggest upgrading for more messages next time.` : ""}
 </user_limits>`
     : "";
 

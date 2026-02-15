@@ -101,6 +101,7 @@ export const WageyServiceLive = Layer.effect(
         // Get current usage from profile
         const currentMonth = getCurrentMonth();
         let used = 0;
+        let bonus = 0;
 
         // Fetch profile with wagey_invocations
         const profileResult = yield* supabase
@@ -124,6 +125,7 @@ export const WageyServiceLive = Layer.effect(
           if (invocations.month === currentMonth) {
             used = invocations.count;
           }
+          bonus = Math.max(0, invocations.bonus ?? 0);
         }
 
         const remaining = limit !== null ? Math.max(0, limit - used) : null;
@@ -135,6 +137,7 @@ export const WageyServiceLive = Layer.effect(
           limit,
           used,
           remaining,
+          bonus,
           resetDate,
         } satisfies WageyAccessResult;
       });
@@ -166,7 +169,7 @@ export const WageyServiceLive = Layer.effect(
           { retries: 0 } // No retries for atomic operations
         );
 
-        // RPC returns JSONB with { allowed, count, remaining }
+        // RPC returns JSONB with { allowed, count, remaining, bonus }
         const result = rpcResult as unknown as WageyInvocationResult;
 
         // Log result for debugging (use info level since debug doesn't exist)
@@ -188,6 +191,7 @@ export const WageyServiceLive = Layer.effect(
             allowed: false,
             count: 0,
             remaining: 0,
+            bonus: 0,
           } satisfies WageyInvocationResult);
         })
       );

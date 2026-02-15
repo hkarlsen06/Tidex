@@ -73,6 +73,11 @@ struct PaywallView: View {
           }
           .padding(.horizontal, Spacing.lg)
 
+          if contextType == .wageyLimit {
+            bonusAlternativeSection
+              .padding(.horizontal, Spacing.lg)
+          }
+
           // Error display
           if let error = viewModel.error {
             errorView(error)
@@ -168,6 +173,82 @@ struct PaywallView: View {
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+  }
+
+  private var bonusAlternativeSection: some View {
+    VStack(spacing: Spacing.md) {
+      HStack(spacing: Spacing.sm) {
+        Rectangle()
+          .fill(Color.tidexBorderSubtle)
+          .frame(height: 1)
+
+        Text(String(localized: "paywall.or"))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+
+        Rectangle()
+          .fill(Color.tidexBorderSubtle)
+          .frame(height: 1)
+      }
+
+      bonusCard
+    }
+  }
+
+  private var bonusCard: some View {
+    let bonusProduct = viewModel.bonusProduct
+
+    return VStack(alignment: .leading, spacing: Spacing.md) {
+      HStack(spacing: Spacing.sm) {
+        Image(systemName: "sparkles")
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundColor(.tidexBlue)
+
+        Text(bonusProduct?.displayName ?? String(localized: .paywallLoading))
+          .font(.tidexTitle2)
+          .foregroundColor(.tidexTextPrimary)
+
+        Spacer()
+      }
+
+      if let productDescription = bonusProduct?.description, !productDescription.isEmpty {
+        Text(productDescription)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      Button(action: {
+        Task {
+          await viewModel.purchaseBonus()
+        }
+      }) {
+        if viewModel.isPurchasing {
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            .frame(maxWidth: .infinity)
+        } else {
+          if let price = bonusProduct?.displayPrice {
+            Text(String(localized: .paywallBonusBuyFor(price)))
+              .font(.tidexButton)
+              .frame(maxWidth: .infinity)
+          } else {
+            Text(.paywallLoadingButton)
+              .font(.tidexButton)
+              .frame(maxWidth: .infinity)
+          }
+        }
+      }
+      .frame(height: 48)
+      .foregroundColor(.white)
+      .background(viewModel.bonusProduct != nil ? Color.tidexBlue : Color.tidexTextMuted)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .disabled(viewModel.bonusProduct == nil || viewModel.isPurchasing)
+    }
+    .padding(Spacing.mlg)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+    .tidexCardShadow(cornerRadius: CornerRadius.xxl)
   }
 
   // swiftlint:disable force_unwrapping

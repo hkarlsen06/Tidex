@@ -43,8 +43,17 @@ const APPLE_PRODUCT_TO_INTERNAL: Record<string, string> = {
   "no.tidex.max.year": "max_yearly",
 };
 
+// ---------- Consumable Product Mapping ----------
+// Maps consumable Apple product IDs to the number of bonus credits granted
+const CONSUMABLE_CREDITS: Record<string, number> = {
+  "no.tidex.wagey.20": 20,
+};
+
 // Allowed Apple product IDs (for validation)
-const ALLOWED_APPLE_PRODUCTS = Object.keys(APPLE_PRODUCT_TO_INTERNAL);
+const ALLOWED_APPLE_PRODUCTS = [
+  ...Object.keys(APPLE_PRODUCT_TO_INTERNAL),
+  ...Object.keys(CONSUMABLE_CREDITS),
+];
 
 function mapAppleProductToInternal(appleProductId: string): string {
   return APPLE_PRODUCT_TO_INTERNAL[appleProductId] ?? appleProductId;
@@ -430,6 +439,53 @@ async function upsertAppleSubscription(
   return { success: true };
 }
 
+// ---------- Consumable Credit (Idempotent) ----------
+async function creditConsumable(
+  userId: string,
+  transactionInfo: AppleTransactionInfo,
+  credits: number
+): Promise<{ success: boolean; alreadyCredited: boolean; error?: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, alreadyCredited: false, error: "Database not configured" };
+  }
+
+  // Insert into consumable_transactions (unique on apple_transaction_id)
+  const { error: insertError } = await supabaseAdmin
+    .from("consumable_transactions")
+    .insert({
+      user_id: userId,
+      apple_transaction_id: transactionInfo.transactionId,
+      apple_original_transaction_id: transactionInfo.originalTransactionId,
+      apple_product_id: transactionInfo.productId,
+      credits_granted: credits,
+      environment: transactionInfo.environment,
+    });
+
+  if (insertError) {
+    // Postgres unique violation = already credited
+    if (insertError.code === "23505") {
+      console.log(`[apple-verify] Consumable already credited: txn ${transactionInfo.transactionId}`);
+      return { success: true, alreadyCredited: true };
+    }
+    console.error("[apple-verify] Consumable insert failed:", insertError.message);
+    return { success: false, alreadyCredited: false, error: insertError.message };
+  }
+
+  // Atomically increment bonus on profiles.wagey_invocations
+  const { error: rpcError } = await supabaseAdmin.rpc("increment_wagey_bonus", {
+    p_user_id: userId,
+    p_credits: credits,
+  });
+
+  if (rpcError) {
+    console.error("[apple-verify] Bonus increment failed:", rpcError.message);
+    return { success: false, alreadyCredited: false, error: rpcError.message };
+  }
+
+  console.log(`[apple-verify] Credited ${credits} bonus to user ${userId}`);
+  return { success: true, alreadyCredited: false };
+}
+
 // ---------- Request Handlers ----------
 serve(async (req) => {
   // VERY FIRST THING: Log that we received the request
@@ -540,6 +596,23 @@ serve(async (req) => {
       return json({ error: "Unknown product ID" }, 400);
     }
 
+    // ---------- Consumable handling ----------
+    const consumableCredits = CONSUMABLE_CREDITS[transactionInfo.productId];
+    if (consumableCredits !== undefined) {
+      const creditResult = await creditConsumable(user.id, transactionInfo, consumableCredits);
+      if (!creditResult.success) {
+        return json({ error: creditResult.error ?? "Failed to credit consumable" }, 500);
+      }
+      console.log(`[apple-verify] Consumable processed: user=${user.id}, credits=${consumableCredits}, alreadyCredited=${creditResult.alreadyCredited}`);
+      return json({
+        ok: true,
+        type: "consumable",
+        credits: consumableCredits,
+        alreadyCredited: creditResult.alreadyCredited,
+      });
+    }
+
+    // ---------- Subscription handling ----------
     // Upsert subscription
     const upsertResult = await upsertAppleSubscription(
       user.id,

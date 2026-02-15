@@ -59,6 +59,18 @@ enum ProductID: String, CaseIterable {
   }
 }
 
+/// App Store product identifiers for consumable IAPs
+enum ConsumableProductID: String {
+  case wageyBonus20 = "no.tidex.wagey.20"
+
+  var credits: Int {
+    switch self {
+    case .wageyBonus20:
+      return 20
+    }
+  }
+}
+
 // MARK: - Server Entitlement
 
 /// Server entitlement from `user_entitlements` view via `get_my_entitlement()` RPC

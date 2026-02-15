@@ -13,6 +13,7 @@ import type { SubscriptionTier } from "@/lib/subscription/getUserTier";
 export type WageyInvocations = {
   readonly count: number;
   readonly month: string | null; // Format: "YYYY-MM"
+  readonly bonus: number;
 };
 
 /**
@@ -40,6 +41,8 @@ export type WageyAccessResult = {
   readonly used: number;
   /** Messages remaining this month (null = unlimited) */
   readonly remaining: number | null;
+  /** Bonus messages available beyond monthly tier limit */
+  readonly bonus: number;
   /** First day of next month when limit resets */
   readonly resetDate: Date | null;
 };
@@ -54,6 +57,8 @@ export type WageyInvocationResult = {
   readonly count: number;
   /** Remaining invocations this month */
   readonly remaining: number;
+  /** Remaining bonus invocations */
+  readonly bonus: number;
 };
 
 /**

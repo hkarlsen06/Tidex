@@ -61,7 +61,8 @@ final class StoreKitManager: ObservableObject {
     isLoadingProducts = true
     defer { isLoadingProducts = false }
 
-    let productIds = ProductID.allCases.map(\.rawValue)
+    var productIds = ProductID.allCases.map(\.rawValue)
+    productIds.append(ConsumableProductID.wageyBonus20.rawValue)
 
     do {
       products = try await Product.products(for: productIds)
@@ -78,6 +79,13 @@ final class StoreKitManager: ObservableObject {
   /// - Parameter productId: The ProductID to find
   /// - Returns: The Product if found
   func product(for productId: ProductID) -> Product? {
+    products.first { $0.id == productId.rawValue }
+  }
+
+  /// Get a consumable product by its ID
+  /// - Parameter productId: The ConsumableProductID to find
+  /// - Returns: The Product if found
+  func consumableProduct(for productId: ConsumableProductID) -> Product? {
     products.first { $0.id == productId.rawValue }
   }
 
@@ -170,6 +178,68 @@ final class StoreKitManager: ObservableObject {
     @unknown default:
       logger.warning("Unknown purchase result")
       return nil
+    }
+  }
+
+  /// Purchase a consumable product
+  /// Flow: local verify -> finish transaction -> upload JWS
+  /// Does not update subscription entitlements.
+  /// - Parameter product: The consumable product to purchase
+  /// - Returns: Whether JWS upload succeeded immediately
+  /// - Throws: PurchaseError on failure
+  func purchaseConsumable(_ product: Product) async throws -> Bool {
+    guard let userId = userId else {
+      throw PurchaseError.userNotConfigured
+    }
+
+    purchaseInProgress = true
+    defer { purchaseInProgress = false }
+
+    logger.info("Starting consumable purchase for product: \(product.id)")
+
+    let result: Product.PurchaseResult
+    do {
+      result = try await product.purchase()
+    } catch {
+      logger.error("Consumable purchase failed: \(error.localizedDescription)")
+      throw PurchaseError.networkError(underlying: error)
+    }
+
+    switch result {
+    case .success(let verification):
+      let jwsRepresentation = verification.jwsRepresentation
+
+      guard case .verified(let transaction) = verification else {
+        logger.error("Consumable transaction verification failed for \(product.id)")
+        throw PurchaseError.verificationFailed
+      }
+
+      await transaction.finish()
+      logger.info("Consumable transaction finished: \(transaction.productID)")
+
+      let upload = LocalPendingJWSUpload(
+        userId: userId,
+        jwsRepresentation: jwsRepresentation,
+        transactionId: String(transaction.id),
+        originalTransactionId: String(transaction.originalID),
+        productId: transaction.productID,
+        environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
+        priceDisplay: product.displayPrice
+      )
+
+      return await JWSUploadWorker.shared.uploadImmediately(upload)
+
+    case .userCancelled:
+      logger.info("Consumable purchase cancelled by user")
+      return false
+
+    case .pending:
+      logger.info("Consumable purchase pending")
+      return false
+
+    @unknown default:
+      logger.warning("Unknown consumable purchase result")
+      return false
     }
   }
 

@@ -28,9 +28,6 @@ struct WageyView: View {
   /// Whether to show the paywall when limit is reached
   @State private var showPaywall = false
 
-  /// Tier before showing paywall (to detect upgrade)
-  @State private var tierBeforePaywall: SubscriptionTier = .free
-
   /// Pending message to send after upgrade
   @State private var pendingMessage: String?
 
@@ -101,9 +98,7 @@ struct WageyView: View {
       }
     }
     .onChange(of: viewModel.limitReached) { _, isLimitReached in
-      let currentTier = EntitlementService.shared.effectiveTier
-      if isLimitReached && !showPaywall && currentTier == .free {
-        tierBeforePaywall = currentTier
+      if isLimitReached && !showPaywall {
         showPaywall = true
       }
     }
@@ -114,16 +109,12 @@ struct WageyView: View {
 
   /// Handle paywall dismiss - check if user upgraded
   private func handlePaywallDismiss() {
-    let currentTier = EntitlementService.shared.effectiveTier
+    Task {
+      await viewModel.fetchWageyUsage()
 
-    // If tier changed from free to paid, user successfully upgraded
-    if tierBeforePaywall == .free && currentTier != .free {
-      // Retry sending the pending message if there was one
-      if let message = pendingMessage {
+      if !viewModel.limitReached, let message = pendingMessage {
         pendingMessage = nil
-        Task {
-          await viewModel.sendMessage(message)
-        }
+        await viewModel.sendMessage(message)
       }
     }
   }
@@ -233,21 +224,14 @@ struct WageyView: View {
 
   /// Handle sending a message with an image, showing paywall if limit reached
   private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) {
-    let currentTier = EntitlementService.shared.effectiveTier
-
-    // If limit reached AND user is on free tier, show paywall
-    // If user has paid tier, don't show paywall even if server said limit reached
-    // (this can happen due to server cache lag after subscribing)
-    if viewModel.limitReached && currentTier == .free {
-      pendingMessage = content
-      tierBeforePaywall = currentTier
-      showPaywall = true
-      return
-    }
-
-    // If user upgraded but limitReached flag is stale, reset it
-    if viewModel.limitReached && currentTier != .free {
-      viewModel.resetLimitReached()
+    if viewModel.limitReached {
+      if viewModel.remainingMessagesCount > 0 {
+        viewModel.resetLimitReached()
+      } else {
+        pendingMessage = content
+        showPaywall = true
+        return
+      }
     }
 
     // Send the message (with or without image)
