@@ -60,6 +60,7 @@ struct SharedShiftsListView: View {
               month: month,
               currency: currency,
               showEarnings: sharer.showEarnings,
+              friendFirstName: sharer.firstNameOnly,
               highlightDates: highlightDates,
               highlightShiftIds: highlightShiftIds,
               isSuperimposing: isSuperimposing,

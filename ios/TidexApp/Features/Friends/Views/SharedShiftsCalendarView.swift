@@ -8,6 +8,7 @@ struct SharedShiftsCalendarView: View {
   let month: Int  // 1-12
   let currency: String
   let showEarnings: Bool
+  let friendFirstName: String
 
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
@@ -31,11 +32,6 @@ struct SharedShiftsCalendarView: View {
 
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
   private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
-
-  private enum LegendIndicator {
-    case overlap
-    case singleUser
-  }
 
   // MARK: - Computed Data
 
@@ -193,88 +189,42 @@ struct SharedShiftsCalendarView: View {
 
   /// Legend explaining the calendar indicators when superimpose is active
   private var superimposeLegend: some View {
-    HStack(spacing: Spacing.lg) {
-      // Both working
-      VStack(spacing: Spacing.xxxs) {
-        legendMiniCell(timeColor: .white, indicator: .overlap)
-        Text(.sharingSuperimposeLegendBoth)
-          .font(.tidexCaption)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      // Only you
-      VStack(spacing: Spacing.xxxs) {
-        legendMiniCell(timeColor: .white, indicator: .singleUser)
-        Text(.sharingSuperimposeLegendOnlyYou)
-          .font(.tidexCaption)
-          .foregroundColor(.tidexTextSecondary)
-      }
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
+      superimposeLegendRow(
+        icon: "person.2.fill",
+        iconColor: .tidexBlue,
+        description: Text(.sharingSuperimposeLegendBoth)
+      )
+      superimposeLegendRow(
+        icon: "person.fill",
+        iconColor: .tidexSuccess,
+        description: Text(.sharingSuperimposeLegendOnlyYou)
+      )
+      superimposeLegendRow(
+        icon: "person.fill",
+        iconColor: .tidexError,
+        description: Text(.sharingSuperimposeLegendOnlyFriend(friendFirstName))
+      )
     }
+    .frame(maxWidth: .infinity, alignment: .center)
+    .padding(.horizontal, Spacing.xxs)
   }
 
-  /// Miniature calendar cell used in the superimpose legend
-  private func legendMiniCell(timeColor: Color, indicator: LegendIndicator) -> some View {
-    ZStack {
-      // Day number (top-right, like real cells)
-      VStack {
-        HStack {
-          Spacer()
-          Text("5")
-            .font(.system(size: 8, weight: .semibold))
-            .foregroundColor(.tidexTextMuted)
-            .padding(.trailing, Spacing.xxs)
-            .padding(.top, 3)
-        }
-        Spacer()
-      }
+  private func superimposeLegendRow(
+    icon: String,
+    iconColor: Color,
+    description: Text
+  ) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+      Image(systemName: icon)
+        .font(.tidexFootnote.weight(.semibold))
+        .foregroundColor(iconColor)
+        .frame(width: Spacing.iconSize, alignment: .leading)
 
-      // Overlap icon (top-left, like real cells)
-      if indicator == .overlap {
-        VStack {
-          HStack {
-            Image(systemName: "person.2.fill")
-              .font(.system(size: 7, weight: .semibold))
-              .foregroundColor(.tidexBlue)
-              .padding(.leading, Spacing.xxs)
-              .padding(.top, Spacing.xxs)
-            Spacer()
-          }
-          Spacer()
-        }
-      } else if indicator == .singleUser {
-        VStack {
-          HStack {
-            Image(systemName: "person.fill")
-              .font(.system(size: 7, weight: .semibold))
-              .foregroundColor(.green)
-              .padding(.leading, Spacing.xxs)
-              .padding(.top, Spacing.xxs)
-            Spacer()
-          }
-          Spacer()
-        }
-      }
-
-      // Time text (centered, like real cells)
-      VStack(spacing: -3) {
-        Text("09:00")
-          .font(.tidexMicro.weight(.semibold))
-        Text("17:00")
-          .font(.tidexMicro.weight(.semibold))
-      }
-      .foregroundColor(timeColor)
-      .offset(y: 3)
+      description
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
     }
-    .frame(width: 44, height: 54)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xs)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xs)
-        .strokeBorder(Color.tidexTextMuted.opacity(0.2), lineWidth: 0.5)
-    )
-    .accessibilityHidden(true)
   }
 
   // MARK: - Calendar Grid
@@ -299,8 +249,11 @@ struct SharedShiftsCalendarView: View {
     let friendHasShift = !shiftsOnDay.isEmpty
     let userHasShift = dayInfo.dateISO.flatMap { userHoursByDate?[$0] } != nil
     let showOverlap = friendHasShift && userHasShift
-    let showSingleUserIndicator = isSuperimposing && userHasShift && !friendHasShift
-    let showHiddenFriendMetrics = isSuperimposing && friendHasShift && !userHasShift
+    let showOnlyUserIndicator = isSuperimposing && userHasShift && !friendHasShift
+    let showOnlyFriendIndicator = isSuperimposing && friendHasShift && !userHasShift
+    let showSingleUserIndicator = showOnlyUserIndicator || showOnlyFriendIndicator
+    let singleUserIndicatorColor: Color = showOnlyFriendIndicator ? .tidexError : .tidexSuccess
+    let showHiddenFriendMetrics = showOnlyFriendIndicator
 
     Group {
       if showHiddenFriendMetrics {
@@ -309,7 +262,8 @@ struct SharedShiftsCalendarView: View {
           style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
           content: .custom,
           showOverlapIndicator: showOverlap,
-          showSingleUserIndicator: showSingleUserIndicator
+          showSingleUserIndicator: showSingleUserIndicator,
+          singleUserIndicatorColor: singleUserIndicatorColor
         ) {
           hiddenFriendMetricsPlaceholder
         }
@@ -319,7 +273,8 @@ struct SharedShiftsCalendarView: View {
           style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
           content: cellContent(for: dayInfo),
           showOverlapIndicator: showOverlap,
-          showSingleUserIndicator: showSingleUserIndicator
+          showSingleUserIndicator: showSingleUserIndicator,
+          singleUserIndicatorColor: singleUserIndicatorColor
         )
       }
     }
@@ -425,7 +380,8 @@ struct SharedShiftsCalendarView: View {
     year: 2025,
     month: 1,
     currency: "kr",
-    showEarnings: true
+    showEarnings: true,
+    friendFirstName: "Alex"
   )
   .background(Color.tidexBackground)
 }
