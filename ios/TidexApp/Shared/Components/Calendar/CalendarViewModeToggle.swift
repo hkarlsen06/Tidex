@@ -36,7 +36,7 @@ struct CalendarViewModeToggle: View {
         let segmentWidth = innerWidth / segmentCount
         let selectedIndex: CGFloat = viewMode == .money && showMoneyOption ? 1 : 0
 
-        Capsule()
+        Capsule().fill(.clear)
           .tidexGlass(shape: .capsule, interactive: true)
           .frame(width: segmentWidth, height: controlHeight)
           .offset(x: inset + (selectedIndex * segmentWidth), y: inset)
