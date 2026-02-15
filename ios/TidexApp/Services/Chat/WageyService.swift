@@ -416,7 +416,8 @@ final class WageyService: ObservableObject {
         let resetDays = raw.resetDays
       else { return nil }
       return .wageyLimit(
-        remaining: remaining, resetDays: resetDays, exceeded: raw.exceeded ?? false)
+        remaining: remaining, resetDays: resetDays, exceeded: raw.exceeded ?? false,
+        bonus: raw.bonus ?? 0)
 
     case "wagey_no_access":
       return .wageyNoAccess
@@ -479,6 +480,7 @@ private struct RawChatChunk: Decodable {
   let remaining: Int?
   let resetDays: Int?
   let exceeded: Bool?
+  let bonus: Int?
 
   // Error chunk
   let error: String?

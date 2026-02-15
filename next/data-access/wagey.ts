@@ -63,6 +63,7 @@ async function getWageyAccessInternal(userId: string): Promise<WageyAccessResult
       limit: 0,
       used: 0,
       remaining: 0,
+      bonus: 0,
       resetDate: null,
     };
   }
@@ -115,6 +116,7 @@ export async function useWageyInvocation(
       allowed: false,
       count: 0,
       remaining: 0,
+      bonus: 0,
     };
   }
 }

@@ -62,6 +62,8 @@ export type ChatChunk =
       resetDays: number;
       /** Whether the limit was exceeded (added in 2.2.0, optional for backwards compatibility) */
       exceeded?: boolean;
+      /** Remaining bonus messages */
+      bonus?: number;
     }
   | {
       type: "wagey_no_access";
@@ -365,8 +367,20 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     const accessInfo = await getWageyAccessForUser(userId);
     const result = await useWageyInvocation(userId);
 
-    // Track if the limit was exceeded (for warning purposes, not blocking)
-    const limitExceeded = !result.allowed;
+    // Normalize usage fields so warning logic stays correct even if older backends
+    // omit bonus in RPC responses.
+    const remaining = Math.max(0, Number(result.remaining) || 0);
+    const bonusFromRpc = Number(result.bonus);
+    const fallbackBonus = Number(accessInfo.bonus ?? 0);
+    const bonus = Math.max(
+      0,
+      Number.isFinite(bonusFromRpc) ? bonusFromRpc : fallbackBonus
+    );
+    const effectiveRemaining = remaining + bonus;
+
+    // Track if the limit was exceeded (for warning purposes, not blocking).
+    // Only mark exceeded when the invocation was denied AND no effective credits remain.
+    const limitExceeded = !result.allowed && effectiveRemaining <= 0;
 
     // Send warning if limit exceeded, but continue processing (backwards compatible)
     // iOS 2.1.0 will receive this but the stream continues with content
@@ -374,9 +388,10 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     if (limitExceeded) {
       await stream.appendChunk({
         type: "wagey_limit",
-        remaining: result.remaining,
+        remaining,
         resetDays: getDaysUntilReset(),
         exceeded: true,
+        bonus,
       });
       // Note: We intentionally do NOT close the stream here anymore.
       // The operation continues and the device handles entitlement checks.
@@ -386,7 +401,8 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     const systemPromptContext: SystemPromptContext = {
       accessLevel: accessInfo.level,
       used: result.count,
-      remaining: result.remaining,
+      remaining,
+      bonus,
       userName,
     };
 
@@ -646,9 +662,10 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     // Always send usage info so client can update progress bar
     await stream.appendChunk({
       type: "wagey_limit",
-      remaining: result.remaining,
+      remaining,
       resetDays: getDaysUntilReset(),
       exceeded: limitExceeded,
+      bonus,
     });
 
     // Send compaction state for clients that support long-context continuity.
