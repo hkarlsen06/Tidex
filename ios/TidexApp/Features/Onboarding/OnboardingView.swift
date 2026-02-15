@@ -11,8 +11,10 @@ struct OnboardingView: View {
   @State private var currentPage = 0
   @State private var hourlyRate: Double = 0  // Set on appear based on locale
   @State private var hasInitializedRate = false
+  @State private var isSkipButtonVisible = false
 
   private let totalPages = 4
+  private let skipButtonRevealDelayNanoseconds: UInt64 = 1_500_000_000
 
   /// Default hourly rate based on locale
   /// Norwegian: 200 kr/hour, Others: $25/hour
@@ -90,7 +92,7 @@ struct OnboardingView: View {
       VStack {
         HStack {
           Spacer()
-          if currentPage == 0 {
+          if currentPage == 0 && isSkipButtonVisible {
             Button {
               withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                 currentPage = totalPages - 1
@@ -118,6 +120,20 @@ struct OnboardingView: View {
       if !hasInitializedRate {
         hourlyRate = defaultHourlyRate
         hasInitializedRate = true
+      }
+    }
+    .task(id: currentPage) {
+      guard currentPage == 0, !isSkipButtonVisible else { return }
+
+      try? await Task.sleep(nanoseconds: skipButtonRevealDelayNanoseconds)
+      guard currentPage == 0 else { return }
+
+      if reduceMotion {
+        isSkipButtonVisible = true
+      } else {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+          isSkipButtonVisible = true
+        }
       }
     }
   }

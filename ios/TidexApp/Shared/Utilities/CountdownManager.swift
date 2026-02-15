@@ -17,7 +17,7 @@ final class CountdownManager: ObservableObject {
 
   // MARK: - Private State
 
-  private var timer: Timer?
+  private var timerCancellable: AnyCancellable?
   private var shiftDate: String?
   private var startTime: String?
   private var endTime: String?
@@ -46,21 +46,21 @@ final class CountdownManager: ObservableObject {
 
   /// Stop the countdown timer
   func stop() {
-    timer?.invalidate()
-    timer = nil
+    timerCancellable?.cancel()
+    timerCancellable = nil
   }
 
   // MARK: - Private Methods
 
   private func startTimer() {
-    timer?.invalidate()
+    timerCancellable?.cancel()
 
-    // Update every second for responsive countdown
-    timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-      Task { @MainActor in
+    // Use common run loop mode so updates continue during gestures/scrolling.
+    timerCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
+      .autoconnect()
+      .sink { [weak self] _ in
         self?.updateCountdowns()
       }
-    }
   }
 
   private func updateCountdowns() {
@@ -99,6 +99,6 @@ final class CountdownManager: ObservableObject {
   }
 
   deinit {
-    timer?.invalidate()
+    timerCancellable?.cancel()
   }
 }
