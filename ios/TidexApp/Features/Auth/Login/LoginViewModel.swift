@@ -96,6 +96,7 @@ final class LoginViewModel: ObservableObject {
       return "+" + cleaned.dropFirst(2)
     }
 
+    // Future work: support multi-country local phone parsing instead of hardcoding +47 fallback.
     // Assume Norwegian number if no country code
     // Norwegian numbers are 8 digits
     if cleaned.count == 8 {

@@ -88,11 +88,11 @@ struct OnboardingView: View {
           reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
       }
 
-      // Skip button overlaid at top-right (only on first page)
+      // Skip button overlaid at top-right (all pages except last)
       VStack {
         HStack {
           Spacer()
-          if currentPage == 0 && isSkipButtonVisible {
+          if currentPage < totalPages - 1 && isSkipButtonVisible {
             Button {
               withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                 currentPage = totalPages - 1
@@ -123,10 +123,20 @@ struct OnboardingView: View {
       }
     }
     .task(id: currentPage) {
-      guard currentPage == 0, !isSkipButtonVisible else { return }
+      if isSkipButtonVisible {
+        if reduceMotion {
+          isSkipButtonVisible = false
+        } else {
+          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isSkipButtonVisible = false
+          }
+        }
+      }
+
+      guard currentPage < totalPages - 1 else { return }
 
       try? await Task.sleep(nanoseconds: skipButtonRevealDelayNanoseconds)
-      guard currentPage == 0 else { return }
+      guard currentPage < totalPages - 1 else { return }
 
       if reduceMotion {
         isSkipButtonVisible = true

@@ -13,8 +13,8 @@ enum BillingPeriod: String, CaseIterable {
 
   var displayName: String {
     switch self {
-    case .monthly: return "Monthly"
-    case .yearly: return "Yearly"
+    case .monthly: return String(localized: "paywall.monthly")
+    case .yearly: return String(localized: "paywall.yearly")
     }
   }
 }
@@ -124,7 +124,7 @@ final class PaywallViewModel: ObservableObject {
     await storeKitManager.loadProducts()
 
     if storeKitManager.products.isEmpty {
-      error = "Unable to load products. Please check your internet connection."
+      error = String(localized: "paywall.errors.loadProductsFailed")
     }
 
     isLoading = false
@@ -224,11 +224,11 @@ final class PaywallViewModel: ObservableObject {
         purchaseSucceeded = true
       } else {
         logger.info("No purchases to restore")
-        error = "No purchases found to restore."
+        error = String(localized: "subscription.restore.noPurchases")
       }
     } catch {
       logger.error("Restore failed: \(error.localizedDescription)")
-      self.error = "Failed to restore purchases. Please try again."
+      self.error = String(localized: "subscription.errors.restoreFailed")
     }
 
     isLoading = false
