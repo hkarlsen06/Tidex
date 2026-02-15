@@ -19,7 +19,8 @@
     "ios:l10n:validate": "swift ios/Scripts/validate-localization.swift",
     "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh",
     "swiftlint": "sh -c 'for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use pnpm swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\"' --",
-    "swift-format": "xcrun swift-format format --configuration .swift-format --recursive ios/ --in-place --parallel"
+    "swift-format": "xcrun swift-format format --configuration .swift-format --recursive ios/ --in-place --parallel",
+    "prepare": "husky"
   },
   "pnpm": {
     "overrides": {
@@ -36,5 +37,8 @@
       "supabase",
       "unrs-resolver"
     ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
