@@ -558,7 +558,9 @@ struct ShiftsCalendarView: View {
     let col = Int(location.x / colStep)
     let row = Int(location.y / rowStep)
 
-    guard col >= 0, col < CalendarGridHelper.columnCount, row >= 0, row < numRows else { return nil }
+    guard col >= 0, col < CalendarGridHelper.columnCount, row >= 0, row < numRows else {
+      return nil
+    }
 
     // Ignore hits in the inter-cell spacing gutters.
     let xInCell = location.x - CGFloat(col) * colStep
@@ -700,10 +702,13 @@ struct ShiftsCalendarView: View {
       } label: {
         Text(.commonCancel)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundColor(.tidexTextPrimary)
           .padding(.horizontal, Spacing.md)
           .frame(height: 44)
-          .background(Capsule().fill(Color.tidexBrandPrimary))
+          .background(
+            Capsule().fill(.clear)
+              .tidexGlass(shape: .capsule, interactive: true)
+          )
       }
       .buttonStyle(.plain)
       .disabled(isCopying || isMoving)
@@ -725,10 +730,13 @@ struct ShiftsCalendarView: View {
           Text(.shiftsDetails)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextOnBrand)
+        .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
-        .background(Capsule().fill(Color.tidexBrandPrimary))
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, interactive: true)
+        )
       }
       .buttonStyle(.plain)
 
@@ -738,9 +746,12 @@ struct ShiftsCalendarView: View {
       } label: {
         Image(systemName: "pencil")
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextMuted)
           .frame(width: 44, height: 44)
-          .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+          .background(
+            Capsule().fill(.clear)
+              .tidexGlass(shape: .capsule, interactive: true)
+          )
       }
       .buttonStyle(.plain)
 
@@ -750,9 +761,12 @@ struct ShiftsCalendarView: View {
       } label: {
         Image(systemName: "line.3.horizontal")
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextMuted)
           .frame(width: 44, height: 44)
-          .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+          .background(
+            Capsule().fill(.clear)
+              .tidexGlass(shape: .capsule, interactive: true)
+          )
       }
       .buttonStyle(.plain)
       .accessibilityLabel(Text(String(localized: "Flere handlinger")))
@@ -771,7 +785,7 @@ struct ShiftsCalendarView: View {
         HStack(spacing: Spacing.xxxs) {
           if isDeleting {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnDanger))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexError))
               .scaleEffect(0.7)
           } else {
             Image(systemName: "trash")
@@ -780,10 +794,13 @@ struct ShiftsCalendarView: View {
           Text(.shiftsActionsDelete)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextOnDanger)
+        .foregroundColor(.tidexError)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
-        .background(Capsule().fill(Color.tidexError))
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
+        )
       }
       .buttonStyle(.plain)
       .disabled(isDeleting)
@@ -798,10 +815,13 @@ struct ShiftsCalendarView: View {
           Text(.commonCancel)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextOnBrand)
+        .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
-        .background(Capsule().fill(Color.tidexBrandPrimary))
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, interactive: true)
+        )
       }
       .buttonStyle(.plain)
       .disabled(isDeleting)
