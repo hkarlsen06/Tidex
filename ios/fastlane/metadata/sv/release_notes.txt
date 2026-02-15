@@ -1,9 +1,9 @@
-- Lagt till delade pass: se vänners pass i lista, kalender och detaljvy
-- Lagt till hantering av återkommande pass med undantagsdatum
-- Lagt till möjlighet att tysta notiser för delade pass
-- Lagt till stöd för 24:00 som sluttid för pass
-- Omdesignade inställningar och vänhantering med native iOS-stil
-- Förbättrad kalender med dynamisk skalning och inkomstförhandsvisning
-- Lagt till dra-för-att-uppdatera på fliken Lägg till
-- Åtgärdat ett problem som kunde orsaka svart skärm vid start
+- Lagt till Wagey-bonuspaket — köp 20 extra meddelanden som aldrig går ut
+- Lagt till möjlighet att avsluta aktiva pass direkt från instrumentpanelen
+- Lagt till vänprofil med kontroller för aviseringar och inkomstvisning
+- Lagt till växling mellan timmar och inkomst i delade pass
+- Lagt till bekräftelse vid rensning av passinformation
+- Lagt till redigerbar lönespecifikationsstatus på instrumentpanelen
+- Förbättrad Wagey med smartare åtgärdsetiketter och bättre tabellrendering
+- Snabbare appstart och smidigare laddning av instrumentpanelen
 - Buggfixar och andra förbättringar

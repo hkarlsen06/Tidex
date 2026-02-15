@@ -1,9 +1,9 @@
-- Lagt til delte vakter: se venners vakter i liste, kalender og detaljvisning
-- Lagt til håndtering av gjentagende vakter med unntak for enkeltdager
-- Lagt til mulighet for å dempe varsler for delte vakter
-- Lagt til støtte for 24:00 som slutt-tid for vakter
-- Redesignet innstillinger og venneadministrasjon med native iOS-stil
-- Forbedret kalender med dynamisk skalering og inntektsforhåndsvisning
-- Lagt til dra-for-å-oppdatere på Legg til-fanen
-- Rettet en feil som kunne forårsake svart skjerm ved oppstart
+- Lagt til Wagey-bonuspakker — kjøp 20 ekstra meldinger som aldri utløper
+- Lagt til mulighet for å avslutte aktive vakter direkte fra dashbordet
+- Lagt til venneprofil med kontroller for varsler og inntektsvisning
+- Lagt til veksling mellom timer og inntekt i delte vakter
+- Lagt til bekreftelse ved sletting av vaktinformasjon
+- Lagt til redigerbar lønnsslipp-status på dashbordet
+- Forbedret Wagey med smartere handlingsetiketter og bedre tabellvisning
+- Raskere oppstart og jevnere innlasting av dashbordet
 - Feilrettinger og andre forbedringer

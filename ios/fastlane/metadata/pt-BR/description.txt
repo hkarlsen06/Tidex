@@ -1,11 +1,11 @@
 Acompanhe seus turnos de trabalho e calcule seus ganhos com o Tidex.
 
 Recursos:
-• Registro fácil de turnos com horários de entrada e saída
+• Registro fácil de turnos com horários de início e término
 • Cálculo automático de salários
 • Visualização em calendário de todos os turnos
-• Resumo de ganhos e estatísticas
+• Visão geral de ganhos e estatísticas
 • Widget para acesso rápido
 • Sincronização entre dispositivos
 
-Perfeito para funcionários que desejam acompanhar suas horas de trabalho e ganhos.
+Perfeito para funcionários que desejam controlar suas horas de trabalho e ganhos.

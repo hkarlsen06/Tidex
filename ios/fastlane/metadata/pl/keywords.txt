@@ -1,1 +1,1 @@
-zmiana,grafik,wynagrodzenie,pensja,praca,godziny,czas,harmonogram,zarobki
+zmiana,praca,wynagrodzenie,pensja,godziny,czas,harmonogram,zarobki,etat,kalkulator

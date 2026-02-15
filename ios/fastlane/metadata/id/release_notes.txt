@@ -1,9 +1,9 @@
-- Menambahkan shift bersama: lihat shift teman di daftar, kalender, dan tampilan detail
-- Menambahkan pengelolaan shift berulang dengan tanggal pengecualian
-- Menambahkan pembisuan notifikasi untuk shift bersama
-- Menambahkan dukungan untuk 24:00 sebagai waktu selesai shift
-- Mendesain ulang pengaturan dan pengelolaan teman dengan gaya iOS native
-- Meningkatkan kalender dengan penskalaan dinamis dan pratinjau pendapatan
-- Menambahkan tarik-untuk-menyegarkan pada tab Tambah
-- Memperbaiki masalah yang dapat menyebabkan layar hitam saat peluncuran
+- Ditambahkan paket pesan bonus Wagey — beli 20 pesan ekstra yang tidak pernah kedaluwarsa
+- Ditambahkan kemampuan untuk mengakhiri shift aktif langsung dari dasbor
+- Ditambahkan profil teman dengan kontrol notifikasi dan visibilitas pendapatan
+- Ditambahkan toggle tampilan pendapatan di shift yang dibagikan
+- Ditambahkan konfirmasi saat menghapus input shift
+- Ditambahkan status slip gaji yang dapat diedit di dasbor
+- Peningkatan Wagey dengan label tindakan yang lebih pintar dan rendering tabel yang lebih baik
+- Peluncuran aplikasi lebih cepat dan pemuatan dasbor lebih lancar
 - Perbaikan bug dan peningkatan lainnya

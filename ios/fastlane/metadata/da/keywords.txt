@@ -1,1 +1,1 @@
-vagt,timer,løn,arbejde,timeplan,indtægt,skift,job,penge,kalkulator
+vagt,timer,løn,arbejde,timeplan,indtægt,kalkulator,skift,job,penge

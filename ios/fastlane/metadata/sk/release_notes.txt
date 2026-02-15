@@ -1,9 +1,9 @@
-- Pridané zdieľané zmeny: zobrazenie zmien priateľov v zozname, kalendári a detailnom zobrazení
-- Pridaná správa opakujúcich sa zmien s dátumami vylúčenia
-- Pridané stlmenie upozornení pre zdieľané zmeny
-- Pridaná podpora pre 24:00 ako čas ukončenia zmeny
-- Prepracované nastavenia a správa priateľov v natívnom iOS štýle
-- Vylepšený kalendár s dynamickým škálovaním a náhľadom zárobkov
-- Pridané potiahnutie pre obnovenie na karte Pridať
-- Opravená chyba, ktorá mohla spôsobiť čiernu obrazovku pri spustení
+- Pridané bonusové balíčky správ Wagey — kúpte si 20 extra správ, ktoré nikdy nevyprší
+- Pridaná možnosť ukončiť aktívne zmeny priamo z prehľadu
+- Pridaný profil priateľa s nastaveniami viditeľnosti upozornení a zárobkov
+- Pridané prepínanie zobrazenia zárobkov v zdieľaných zmenách
+- Pridané potvrdenie pri mazaní údajov zmeny
+- Pridaný upraviteľný stav výplatnej pásky na prehľade
+- Vylepšený Wagey s inteligentnejšími popiskami akcií a lepším vykresľovaním tabuliek
+- Rýchlejšie spustenie aplikácie a plynulejšie načítanie prehľadu
 - Opravy chýb a ďalšie vylepšenia

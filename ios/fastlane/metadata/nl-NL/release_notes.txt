@@ -1,9 +1,9 @@
-- Gedeelde diensten toegevoegd: bekijk diensten van vrienden in lijst-, kalender- en detailweergave
-- Beheer van terugkerende diensten met uitzonderingsdatums toegevoegd
-- Meldingen dempen voor gedeelde diensten toegevoegd
-- Ondersteuning voor 24:00 als eindtijd van dienst toegevoegd
-- Instellingen en vriendenbeheer opnieuw ontworpen met native iOS-stijl
-- Kalender verbeterd met dynamische schaling en inkomstenvoorbeeld
-- Veeg-om-te-vernieuwen toegevoegd op het Toevoegen-tabblad
-- Probleem opgelost dat een zwart scherm bij opstarten kon veroorzaken
+- Wagey-bonuspakketten toegevoegd — koop 20 extra berichten die nooit verlopen
+- Mogelijkheid toegevoegd om actieve diensten direct vanuit het dashboard te beëindigen
+- Vriendenprofiel toegevoegd met instellingen voor meldingen en inkomstenzichtbaarheid
+- Weergavewisseling tussen uren en inkomsten toegevoegd in gedeelde diensten
+- Bevestiging toegevoegd bij het wissen van dienstgegevens
+- Bewerkbare loonstrookstatus toegevoegd op het dashboard
+- Wagey verbeterd met slimmere actielabels en betere tabelweergave
+- Snellere app-start en soepelere laadtijd van het dashboard
 - Bugfixes en andere verbeteringen

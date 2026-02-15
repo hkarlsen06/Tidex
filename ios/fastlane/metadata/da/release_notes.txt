@@ -1,9 +1,9 @@
-- Tilføjet delte vagter: se venners vagter i liste, kalender og detaljevisning
-- Tilføjet håndtering af tilbagevendende vagter med undtagelsesdatoer
-- Tilføjet mulighed for at slå notifikationer fra for delte vagter
-- Tilføjet support for 24:00 som sluttidspunkt for vagter
-- Redesignet indstillinger og vennehåndtering med native iOS-stil
-- Forbedret kalender med dynamisk skalering og indtægtsforhåndsvisning
-- Tilføjet træk-for-at-opdatere på Tilføj-fanen
-- Rettet en fejl, der kunne forårsage sort skærm ved opstart
+- Tilføjet Wagey-bonuspakker — køb 20 ekstra beskeder, der aldrig udløber
+- Tilføjet mulighed for at afslutte aktive vagter direkte fra dashboardet
+- Tilføjet venneprofil med kontrolelementer til notifikationer og indtægtsvisning
+- Tilføjet skift mellem timer og indtægt i delte vagter
+- Tilføjet bekræftelse ved sletning af vagtinformation
+- Tilføjet redigerbar lønseddel-status på dashboardet
+- Forbedret Wagey med smartere handlingsetiketter og bedre tabelvisning
+- Hurtigere opstart og mere jævn indlæsning af dashboardet
 - Fejlrettelser og andre forbedringer

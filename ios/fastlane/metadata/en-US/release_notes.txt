@@ -1,9 +1,9 @@
-- Added shared shifts: view friends' shifts in list, calendar, and detail views
-- Added recurring shift management with exclusion dates
-- Added notification muting for shared shifts
-- Added support for 24:00 as shift end time
-- Redesigned settings and friends management with native iOS style
-- Improved calendar with dynamic scaling and earnings preview
-- Added pull-to-refresh on the Add tab
-- Fixed an issue that could cause a black screen on launch
+- Added Wagey bonus message packs — buy 20 extra messages that never expire
+- Added ability to end active shifts directly from the dashboard
+- Added friend profile with notification and earnings visibility controls
+- Added earnings view toggle in shared shifts
+- Added confirmation when clearing shift inputs
+- Added editable payroll receipt status on the dashboard
+- Improved Wagey with smarter action labels and better table rendering
+- Faster app launch and smoother dashboard loading
 - Bug fixes and other improvements
