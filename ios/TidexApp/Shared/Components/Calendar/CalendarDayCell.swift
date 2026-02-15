@@ -82,6 +82,8 @@ struct CalendarDayCell<Content: View>: View {
   var showOverlapIndicator: Bool = false
   /// Shows a small single-person icon indicator (e.g., when only one user has shifts)
   var showSingleUserIndicator: Bool = false
+  /// Tint color for the single-person indicator (e.g., green for you, red for friend)
+  var singleUserIndicatorColor: Color = .tidexSuccess
 
   /// Optional custom content view (used when content == .custom)
   let customContent: (() -> Content)?
@@ -92,6 +94,7 @@ struct CalendarDayCell<Content: View>: View {
     content: CalendarCellContent,
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
+    singleUserIndicatorColor: Color = .tidexSuccess,
     @ViewBuilder customContent: @escaping () -> Content
   ) {
     self.dayInfo = dayInfo
@@ -99,6 +102,7 @@ struct CalendarDayCell<Content: View>: View {
     self.content = content
     self.showOverlapIndicator = showOverlapIndicator
     self.showSingleUserIndicator = showSingleUserIndicator
+    self.singleUserIndicatorColor = singleUserIndicatorColor
     self.customContent = customContent
   }
 
@@ -146,7 +150,7 @@ struct CalendarDayCell<Content: View>: View {
       Image(systemName: "person.fill")
         .font(.tidexMicro)
         .imageScale(.small)
-        .foregroundColor(.green)
+        .foregroundColor(singleUserIndicatorColor)
     } else if let weekNum = dayInfo.weekNumber {
       Text("\(weekNum)")
         .font(.tidexMicro)
@@ -295,13 +299,15 @@ extension CalendarDayCell where Content == EmptyView {
     style: CalendarCellStyle,
     content: CalendarCellContent,
     showOverlapIndicator: Bool = false,
-    showSingleUserIndicator: Bool = false
+    showSingleUserIndicator: Bool = false,
+    singleUserIndicatorColor: Color = .tidexSuccess
   ) {
     self.dayInfo = dayInfo
     self.style = style
     self.content = content
     self.showOverlapIndicator = showOverlapIndicator
     self.showSingleUserIndicator = showSingleUserIndicator
+    self.singleUserIndicatorColor = singleUserIndicatorColor
     self.customContent = nil
   }
 }

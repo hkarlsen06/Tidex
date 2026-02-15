@@ -891,6 +891,12 @@
             "value" : "%lld%%"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
