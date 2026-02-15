@@ -12,6 +12,7 @@ struct AddShiftView: View {
   @State private var keyboardHeight: CGFloat = 0
   @State private var tabTransitionOffset: CGFloat = 0
   @State private var tabTransitionOpacity: Double = 1
+  @State private var showStartFreshConfirmation = false
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -214,7 +215,22 @@ struct AddShiftView: View {
         tab == .add, viewModel.hasContent
       else { return }
       focusedTimeField = nil
-      viewModel.startFresh()
+      hideKeyboard()
+      showStartFreshConfirmation = true
+    }
+    .confirmationDialog(
+      String(localized: .addShiftStartFreshConfirmTitle),
+      isPresented: $showStartFreshConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .addShiftStartFreshConfirmAction), role: .destructive) {
+        focusedTimeField = nil
+        hideKeyboard()
+        viewModel.startFresh()
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {}
+    } message: {
+      Text(.addShiftStartFreshConfirmMessage)
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
     { notification in

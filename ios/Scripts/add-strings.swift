@@ -2,6 +2,12 @@
 
 import Foundation
 
+#if canImport(Darwin)
+  import Darwin
+#elseif canImport(Glibc)
+  import Glibc
+#endif
+
 // MARK: - Models
 
 private struct Catalog: Codable {
@@ -56,6 +62,9 @@ private enum AddStringError: Error, CustomStringConvertible {
   case invalidJSON
   case invalidUTF8Encoding
   case incompleteEntry(String)
+  case lockFileOpenFailed(String)
+  case lockFailed(String)
+  case invalidCatalogStructure(String)
 
   var description: String {
     switch self {
@@ -84,6 +93,12 @@ private enum AddStringError: Error, CustomStringConvertible {
     case .incompleteEntry(let key):
       return
         "Incomplete entry for key '\(key)': both --en and --nb values are required after each --key"
+    case .lockFileOpenFailed(let path):
+      return "Failed to open lock file at \(path)"
+    case .lockFailed(let path):
+      return "Failed to acquire lock for \(path)"
+    case .invalidCatalogStructure(let reason):
+      return "Invalid catalog structure: \(reason)"
     }
   }
 }
@@ -214,6 +229,142 @@ private func writeCatalog(_ catalog: Catalog, to path: String) throws {
   try outputString.write(toFile: path, atomically: true, encoding: .utf8)
 }
 
+private struct StringsObjectBounds {
+  let openBrace: String.Index
+  let closeBrace: String.Index
+  let hasEntries: Bool
+}
+
+private func quoteJSONString(_ value: String) throws -> String {
+  let data = try JSONEncoder().encode(value)
+  guard let encoded = String(data: data, encoding: .utf8) else {
+    throw AddStringError.invalidUTF8Encoding
+  }
+  return encoded.replacingOccurrences(of: "\\/", with: "/")
+}
+
+private func entryBlock(for entry: StringEntry) throws -> String {
+  let key = try quoteJSONString(entry.key)
+  let english = try quoteJSONString(entry.englishValue)
+  let norwegian = try quoteJSONString(entry.norwegianValue)
+
+  return """
+        \(key) : {
+          "extractionState" : "manual",
+          "localizations" : {
+            "en" : {
+              "stringUnit" : {
+                "state" : "translated",
+                "value" : \(english)
+              }
+            },
+            "nb" : {
+              "stringUnit" : {
+                "state" : "translated",
+                "value" : \(norwegian)
+              }
+            }
+          }
+        }
+    """
+}
+
+private func locateStringsObjectBounds(in contents: String) throws -> StringsObjectBounds {
+  guard let stringsKeyRange = contents.range(of: "\"strings\"") else {
+    throw AddStringError.invalidCatalogStructure("missing top-level 'strings' object")
+  }
+
+  guard let openBrace = contents[stringsKeyRange.upperBound...].firstIndex(of: "{") else {
+    throw AddStringError.invalidCatalogStructure("missing opening brace for 'strings'")
+  }
+
+  var index = contents.index(after: openBrace)
+  var depth = 1
+  var isInsideString = false
+  var isEscaping = false
+
+  while index < contents.endIndex {
+    let char = contents[index]
+
+    if isInsideString {
+      if isEscaping {
+        isEscaping = false
+      } else if char == "\\" {
+        isEscaping = true
+      } else if char == "\"" {
+        isInsideString = false
+      }
+    } else {
+      if char == "\"" {
+        isInsideString = true
+      } else if char == "{" {
+        depth += 1
+      } else if char == "}" {
+        depth -= 1
+        if depth == 0 {
+          let innerContents = contents[contents.index(after: openBrace)..<index]
+          let hasEntries = innerContents.contains { !$0.isWhitespace }
+          return StringsObjectBounds(
+            openBrace: openBrace, closeBrace: index, hasEntries: hasEntries)
+        }
+      }
+    }
+
+    index = contents.index(after: index)
+  }
+
+  throw AddStringError.invalidCatalogStructure("unterminated 'strings' object")
+}
+
+private func appendEntriesWithoutReordering(_ entries: [StringEntry], to path: String) throws {
+  guard !entries.isEmpty else { return }
+
+  var contents = try String(contentsOfFile: path, encoding: .utf8)
+  let bounds = try locateStringsObjectBounds(in: contents)
+
+  let closingLineStart =
+    contents[..<bounds.closeBrace].lastIndex(of: "\n")
+    .map { contents.index(after: $0) } ?? bounds.closeBrace
+  var insertionIndex = closingLineStart
+
+  if bounds.hasEntries {
+    let prefix = contents[..<closingLineStart]
+    guard let lastNonWhitespace = prefix.lastIndex(where: { !$0.isWhitespace }) else {
+      throw AddStringError.invalidCatalogStructure("could not locate last entry in 'strings'")
+    }
+    let commaInsertionIndex = contents.index(after: lastNonWhitespace)
+    contents.insert(",", at: commaInsertionIndex)
+    if commaInsertionIndex < insertionIndex {
+      insertionIndex = contents.index(after: insertionIndex)
+    }
+  }
+
+  let blocks = try entries.map(entryBlock).joined(separator: ",\n")
+  contents.insert(contentsOf: "\(blocks)\n", at: insertionIndex)
+  try contents.write(toFile: path, atomically: true, encoding: .utf8)
+}
+
+private func withExclusiveCatalogLock<T>(catalogPath: String, body: () throws -> T) throws -> T {
+  let lockPath = "\(catalogPath).lock"
+  let fd = open(lockPath, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+  guard fd >= 0 else {
+    throw AddStringError.lockFileOpenFailed(lockPath)
+  }
+
+  defer {
+    _ = close(fd)
+  }
+
+  guard flock(fd, LOCK_EX) == 0 else {
+    throw AddStringError.lockFailed(lockPath)
+  }
+  defer {
+    _ = flock(fd, LOCK_UN)
+  }
+
+  return try body()
+}
+
 private func run() throws {
   let config = try parseArgs()
 
@@ -221,28 +372,41 @@ private func run() throws {
     throw AddStringError.fileNotFound(config.catalogPath)
   }
 
-  let catalogURL = URL(fileURLWithPath: config.catalogPath)
-  let catalogData = try Data(contentsOf: catalogURL)
-  var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
-
   var addedCount = 0
   var updatedCount = 0
+  var addedEntries: [StringEntry] = []
 
-  for entry in config.entries {
-    switch processEntry(entry, in: &catalog) {
-    case .added: addedCount += 1
-    case .updated: updatedCount += 1
-    case .skipped: break
+  try withExclusiveCatalogLock(catalogPath: config.catalogPath) {
+    let catalogURL = URL(fileURLWithPath: config.catalogPath)
+    let catalogData = try Data(contentsOf: catalogURL)
+    var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
+
+    for entry in config.entries {
+      switch processEntry(entry, in: &catalog) {
+      case .added:
+        addedCount += 1
+        addedEntries.append(entry)
+      case .updated: updatedCount += 1
+      case .skipped: break
+      }
+    }
+
+    if updatedCount > 0 {
+      try writeCatalog(catalog, to: config.catalogPath)
+    } else if addedCount > 0 {
+      try appendEntriesWithoutReordering(addedEntries, to: config.catalogPath)
     }
   }
-
-  try writeCatalog(catalog, to: config.catalogPath)
 
   print("")
   var parts: [String] = []
   if addedCount > 0 { parts.append("\(addedCount) added") }
   if updatedCount > 0 { parts.append("\(updatedCount) updated") }
-  if !parts.isEmpty { print("Done: \(parts.joined(separator: ", "))") }
+  if !parts.isEmpty {
+    print("Done: \(parts.joined(separator: ", "))")
+  } else {
+    print("Done: no changes")
+  }
 
   if addedCount > 0 {
     print("\nUsage in code:")

@@ -2,6 +2,12 @@
 
 import Foundation
 
+#if canImport(Darwin)
+  import Darwin
+#elseif canImport(Glibc)
+  import Glibc
+#endif
+
 // MARK: - Models (must match add-strings.swift exactly to avoid mangling JSON)
 
 private struct Catalog: Codable {
@@ -50,6 +56,8 @@ private enum DeleteStringError: Error, CustomStringConvertible {
   case keyNotFound(String)
   case invalidJSON
   case invalidUTF8Encoding
+  case lockFileOpenFailed(String)
+  case lockFailed(String)
 
   var description: String {
     switch self {
@@ -74,6 +82,10 @@ private enum DeleteStringError: Error, CustomStringConvertible {
       return "Failed to parse string catalog JSON"
     case .invalidUTF8Encoding:
       return "Failed to convert output data to UTF-8 string"
+    case .lockFileOpenFailed(let path):
+      return "Failed to open lock file at \(path)"
+    case .lockFailed(let path):
+      return "Failed to acquire lock for \(path)"
     }
   }
 }
@@ -139,6 +151,27 @@ private func printEntry(key: String, entry: CatalogEntry) {
   }
 }
 
+private func withExclusiveCatalogLock<T>(catalogPath: String, body: () throws -> T) throws -> T {
+  let lockPath = "\(catalogPath).lock"
+  let fd = open(lockPath, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+  guard fd >= 0 else {
+    throw DeleteStringError.lockFileOpenFailed(lockPath)
+  }
+
+  defer {
+    _ = close(fd)
+  }
+
+  guard flock(fd, LOCK_EX) == 0 else {
+    throw DeleteStringError.lockFailed(lockPath)
+  }
+  defer {
+    _ = flock(fd, LOCK_UN)
+  }
+
+  return try body()
+}
+
 private func run() throws {
   let config = try parseArgs()
 
@@ -146,58 +179,60 @@ private func run() throws {
     throw DeleteStringError.fileNotFound(config.catalogPath)
   }
 
-  // Read catalog
-  let catalogURL = URL(fileURLWithPath: config.catalogPath)
-  let catalogData = try Data(contentsOf: catalogURL)
-  var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
+  try withExclusiveCatalogLock(catalogPath: config.catalogPath) {
+    // Read catalog
+    let catalogURL = URL(fileURLWithPath: config.catalogPath)
+    let catalogData = try Data(contentsOf: catalogURL)
+    var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
-  // Validate all keys exist first
-  var notFound: [String] = []
-  for key in config.keys where catalog.strings[key] == nil {
-    notFound.append(key)
-  }
-
-  if !notFound.isEmpty {
-    print("Keys not found in catalog:")
-    for key in notFound {
-      print("  \(key)")
+    // Validate all keys exist first
+    var notFound: [String] = []
+    for key in config.keys where catalog.strings[key] == nil {
+      notFound.append(key)
     }
-    if notFound.count < config.keys.count {
+
+    if !notFound.isEmpty {
+      print("Keys not found in catalog:")
+      for key in notFound {
+        print("  \(key)")
+      }
+      if notFound.count < config.keys.count {
+        print("")
+        print("Aborting — no keys were deleted. Fix the missing keys and try again.")
+      }
+      exit(1)
+    }
+
+    // Show what will be deleted
+    for key in config.keys {
+      if let entry = catalog.strings[key] {
+        printEntry(key: key, entry: entry)
+      }
+    }
+
+    if config.dryRun {
       print("")
-      print("Aborting — no keys were deleted. Fix the missing keys and try again.")
+      print("[dry-run] Would delete \(config.keys.count) key(s) from catalog")
+      return
     }
-    exit(1)
-  }
 
-  // Show what will be deleted
-  for key in config.keys {
-    if let entry = catalog.strings[key] {
-      printEntry(key: key, entry: entry)
+    // Remove all keys
+    for key in config.keys {
+      catalog.strings.removeValue(forKey: key)
     }
+
+    // Write back (same approach as add-strings to avoid mangling)
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    let outputData = try encoder.encode(catalog)
+
+    guard var outputString = String(data: outputData, encoding: .utf8) else {
+      throw DeleteStringError.invalidUTF8Encoding
+    }
+    outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
+
+    try outputString.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)
   }
-
-  if config.dryRun {
-    print("")
-    print("[dry-run] Would delete \(config.keys.count) key(s) from catalog")
-    return
-  }
-
-  // Remove all keys
-  for key in config.keys {
-    catalog.strings.removeValue(forKey: key)
-  }
-
-  // Write back (same approach as add-strings to avoid mangling)
-  let encoder = JSONEncoder()
-  encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-  let outputData = try encoder.encode(catalog)
-
-  guard var outputString = String(data: outputData, encoding: .utf8) else {
-    throw DeleteStringError.invalidUTF8Encoding
-  }
-  outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
-
-  try outputString.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)
 
   print("")
   print("Deleted \(config.keys.count) key(s) from string catalog")
