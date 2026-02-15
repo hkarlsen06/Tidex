@@ -45,6 +45,7 @@ struct ShiftsView: View {
 
   @StateObject private var viewModel = ShiftsViewModel()
   @ObservedObject private var celebrationManager = CelebrationManager.shared
+  @State private var operationErrorMessage: String?
 
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State private var selectedShift: ShiftWithComputations?
@@ -279,6 +280,21 @@ struct ShiftsView: View {
         shift.isVirtual
           ? String(localized: .shiftsExcludeConfirmMessage)
           : String(localized: .shiftsDeleteConfirmMessage))
+    }
+    .alert(
+      String(localized: .commonError),
+      isPresented: .init(
+        get: { operationErrorMessage != nil },
+        set: { if !$0 { operationErrorMessage = nil } }
+      )
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {
+        operationErrorMessage = nil
+      }
+    } message: {
+      if let operationErrorMessage {
+        Text(operationErrorMessage)
+      }
     }
     .onAppear {
       selectionHaptic.prepare()
@@ -647,8 +663,9 @@ struct ShiftsView: View {
 
       shiftToDelete = nil
     } catch {
-      // Error handling - could show an alert here
       logger.error("Failed to delete shift: \(error.localizedDescription)")
+      operationErrorMessage = ErrorTranslations.translate(error)
+      shiftToDelete = nil
     }
   }
 

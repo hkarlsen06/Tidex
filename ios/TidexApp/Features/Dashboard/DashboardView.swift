@@ -15,6 +15,7 @@ struct DashboardView: View {
 
   /// State for showing push notification failure alert
   @State private var showPushFailureAlert = false
+  @State private var operationErrorMessage: String?
 
   /// Selected shift for showing details sheet
   @State private var selectedShift: ShiftWithComputations?
@@ -167,6 +168,21 @@ struct DashboardView: View {
     } message: {
       Text(.pushFailureMessage)
     }
+    .alert(
+      String(localized: .commonError),
+      isPresented: .init(
+        get: { operationErrorMessage != nil },
+        set: { if !$0 { operationErrorMessage = nil } }
+      )
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {
+        operationErrorMessage = nil
+      }
+    } message: {
+      if let operationErrorMessage {
+        Text(operationErrorMessage)
+      }
+    }
     .confirmationDialog(
       "",
       isPresented: $showFeaturedShiftActions,
@@ -301,7 +317,7 @@ struct DashboardView: View {
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
     } catch {
-      // Error handling - could show an alert here
+      operationErrorMessage = ErrorTranslations.translate(error)
     }
 
     shiftToDelete = nil
@@ -327,7 +343,7 @@ struct DashboardView: View {
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
     } catch {
-      // Error handling - could show an alert here
+      operationErrorMessage = ErrorTranslations.translate(error)
     }
   }
 
@@ -343,7 +359,7 @@ struct DashboardView: View {
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
     } catch {
-      // Error handling - could show an alert here
+      operationErrorMessage = ErrorTranslations.translate(error)
     }
   }
 
