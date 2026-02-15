@@ -16,10 +16,9 @@ struct CountdownFormatter {
   static func formatShiftCountdown(
     shiftDate: String,
     startTime: String,
-    endTime: String
+    endTime: String,
+    now: Date = Date()
   ) -> (text: String, isActive: Bool, progress: Double) {
-    let now = Date()
-
     guard let shiftStart = parseShiftDateTime(date: shiftDate, time: startTime),
       let shiftEnd = parseShiftDateTime(
         date: shiftDate, time: endTime, crossesMidnight: endTime <= startTime)

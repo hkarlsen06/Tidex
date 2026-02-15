@@ -134,6 +134,10 @@ struct DashboardView: View {
         featuredShiftActionTarget = nil
       }
     }
+    .onAppear {
+      // Reconfigure timers when returning to the dashboard after a disappear cycle.
+      configureCountdown(with: viewModel.dashboardData)
+    }
     .onDisappear {
       countdownManager.stop()
     }
