@@ -279,6 +279,7 @@ private struct SharedShiftsDetailView: View {
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
+  @AppStorage("shiftsViewMode") private var showListView = false
   @State private var showProfile = false
   @State private var shouldNavigateBack = false
 
@@ -321,17 +322,19 @@ private struct SharedShiftsDetailView: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       // Superimpose toggle
-      ToolbarItem(placement: .topBarTrailing) {
-        Button {
-          viewModel.toggleSuperimpose()
-        } label: {
-          superimposeToggleLabel
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
+      if !showListView {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            viewModel.toggleSuperimpose()
+          } label: {
+            superimposeToggleLabel
+              .font(.tidexFootnoteMedium)
+              .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
+          }
         }
-      }
 
-      ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+      }
 
       // Friend display using UserMenuButton - tapping opens profile
       ToolbarItem(placement: .topBarTrailing) {
