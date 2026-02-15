@@ -12,6 +12,7 @@ extension View {
   func tidexGlass(
     shape: TidexGlassShape,
     tint: Color? = nil,
+    clear: Bool = false,
     interactive: Bool = false,
     disabled: Bool = false,
     fallbackOpacity: Double = 0.94
@@ -20,6 +21,7 @@ extension View {
       TidexGlassModifier(
         shape: shape,
         tint: tint,
+        clear: clear,
         interactive: interactive,
         disabled: disabled,
         fallbackOpacity: fallbackOpacity
@@ -32,12 +34,13 @@ private struct TidexGlassModifier: ViewModifier {
 
   let shape: TidexGlassShape
   let tint: Color?
+  let clear: Bool
   let interactive: Bool
   let disabled: Bool
   let fallbackOpacity: Double
 
   private var glassEffect: Glass {
-    var effect = Glass.regular
+    var effect: Glass = clear ? .clear : .regular
     if let tint {
       effect = effect.tint(tint)
     }

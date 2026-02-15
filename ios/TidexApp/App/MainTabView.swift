@@ -306,6 +306,7 @@ struct MainTabView: View {
           .buttonStyle(.plain)
           .tidexGlass(
             shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+            clear: true,
             interactive: true,
             disabled: disableHeavyCompositingForHangInvestigation
           )
@@ -329,6 +330,7 @@ struct MainTabView: View {
           .tidexGlass(
             shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
             tint: monthContext.hasConflictsInMonth ? Color.tidexWarning.opacity(0.3) : nil,
+            clear: true,
             interactive: true,
             disabled: disableHeavyCompositingForHangInvestigation
           )
@@ -363,6 +365,7 @@ struct MainTabView: View {
         .frame(height: MonthPickerLayout.height)
         .tidexGlass(
           shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+          clear: true,
           interactive: true,
           disabled: disableHeavyCompositingForHangInvestigation
         )
@@ -392,6 +395,7 @@ struct MainTabView: View {
           .tidexGlass(
             shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
             tint: addShiftCoordinator.canSubmit ? Color.tidexBlue.opacity(0.2) : nil,
+            clear: true,
             interactive: true,
             disabled: disableHeavyCompositingForHangInvestigation
           )
