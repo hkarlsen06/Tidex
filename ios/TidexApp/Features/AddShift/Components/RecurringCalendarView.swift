@@ -15,12 +15,6 @@ struct RecurringCalendarView: View {
 
       // Calendar grid
       calendarGrid
-
-      // Instructions
-      if viewModel.selectedDays.isEmpty {
-        CalendarInstructions()
-          .padding(.top, Spacing.md)
-      }
     }
   }
 
@@ -154,32 +148,6 @@ struct RecurringCalendarView: View {
     }
 
     return .empty
-  }
-}
-
-// MARK: - Calendar Instructions
-
-private struct CalendarInstructions: View {
-
-  var body: some View {
-    VStack(spacing: Spacing.xs) {
-      Image(systemName: "calendar.badge.plus")
-        .font(.system(size: 24))
-        .foregroundColor(.tidexTextMuted)
-
-      Text(.addShiftTapToSetAnchors)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.center)
-
-      Text(.addShiftOneAnchorPerWeekday)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-    }
-    .padding(Spacing.mlg)
-    .frame(maxWidth: .infinity)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 }
 

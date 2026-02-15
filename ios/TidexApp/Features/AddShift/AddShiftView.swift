@@ -322,11 +322,19 @@ private struct RecurringShiftContent: View {
 
   var body: some View {
     VStack(spacing: Spacing.mlg) {
-      DurationPicker(endCondition: $viewModel.endCondition)
+      RecurringCalendarView(viewModel: viewModel)
 
-      RepeatIntervalPicker(interval: $viewModel.repeatInterval)
+      // Chip bar showing selected anchor days
+      WeekdayChipBar(
+        selectedDays: viewModel.selectedDays,
+        onRemove: { weekday in
+          viewModel.removeAnchor(weekday: weekday)
+        }
+      )
 
-      // Time picker above calendar for better UX
+      Divider()
+        .background(Color.tidexBorder)
+
       TimeRangePicker(
         startTime: $viewModel.startTime,
         endTime: $viewModel.endTime,
@@ -335,18 +343,12 @@ private struct RecurringShiftContent: View {
         focusedFieldBinding: $focusedTimeField
       )
 
+      RepeatIntervalPicker(interval: $viewModel.repeatInterval)
+
       Divider()
         .background(Color.tidexBorder)
 
-      // Chip bar with preallocated space to prevent layout shifts
-      WeekdayChipBar(
-        selectedDays: viewModel.selectedDays,
-        onRemove: { weekday in
-          viewModel.removeAnchor(weekday: weekday)
-        }
-      )
-
-      RecurringCalendarView(viewModel: viewModel)
+      DurationPicker(endCondition: $viewModel.endCondition)
     }
     // Extra bottom padding to clear the month picker
     .padding(.bottom, Spacing.bottomScrollMargin)
