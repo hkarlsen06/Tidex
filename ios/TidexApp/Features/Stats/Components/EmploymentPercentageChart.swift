@@ -86,7 +86,7 @@ struct EmploymentPercentageChart: View {
       HStack(alignment: .firstTextBaseline) {
         // Yearly average percentage
         if let average = data.yearlyAverage {
-          Text(String(format: "%.1f%%", average))
+          Text(Self.formatPercent(average))
             .font(.tidexMonoDisplay)
             .foregroundColor(.tidexTextPrimary)
         } else {
@@ -185,9 +185,24 @@ struct EmploymentPercentageChart: View {
     return isCurrentMonth ? .tidexBlue : .tidexBlue.opacity(0.2)
   }
 
-  /// Format hours for display (e.g., "37.50" or "40.00")
+  /// Format hours for display (e.g., "37,50" or "40,00")
   private func formatHours(_ hours: Double) -> String {
-    return String(format: "%.2f", hours)
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 2
+    formatter.maximumFractionDigits = 2
+    formatter.locale = Locale.appLocale
+    return formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
+  }
+
+  /// Format percentage for display (e.g., "85,5%")
+  fileprivate static func formatPercent(_ value: Double) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 1
+    formatter.maximumFractionDigits = 1
+    formatter.locale = Locale.appLocale
+    return (formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)) + "%"
   }
 }
 
@@ -307,7 +322,7 @@ private struct TooltipView: View {
         .foregroundColor(.tidexTextPrimary)
 
       HStack(spacing: Spacing.xxs) {
-        Text(String(format: "%.1f%%", monthData.averagePercentage))
+        Text(EmploymentPercentageChart.formatPercent(monthData.averagePercentage))
           .font(.tidexMonoBody)
           .foregroundColor(.tidexBlue)
 

@@ -228,6 +228,9 @@ struct CustomSupplementsEditorSheet: View {
   /// Whether showing add/edit rule sheet
   @State private var showingRuleEditor = false
 
+  /// Whether the user has explicitly modified rules (added, edited, or deleted)
+  @State private var userHasModifiedRules: Bool = false
+
   /// Whether delete confirmation is showing
   @State private var ruleToDelete: CustomSupplementRuleWithId?
 
@@ -246,13 +249,13 @@ struct CustomSupplementsEditorSheet: View {
 
   /// Whether any changes have been made
   private var hasChanges: Bool {
-    // If we didn't have custom supplements and still don't have visible rules, no change
-    if !hadCustomSupplements && rules.isEmpty { return false }
-
     // If we had custom supplements, always allow save (might be clearing or modifying)
     if hadCustomSupplements { return true }
 
-    // Otherwise, we have new rules
+    // If user explicitly modified rules (added, edited, or deleted), allow save
+    if userHasModifiedRules { return true }
+
+    // Otherwise, only if we have non-empty rules (tariff loaded, not yet modified)
     return !rules.isEmpty
   }
 
@@ -489,11 +492,13 @@ struct CustomSupplementsEditorSheet: View {
       // Add new rule
       rules.append(rule)
     }
+    userHasModifiedRules = true
     editingRule = nil
   }
 
   private func deleteRule(_ rule: CustomSupplementRuleWithId) {
     rules.removeAll { $0.id == rule.id }
+    userHasModifiedRules = true
   }
 
   private func resetToStandard() {
@@ -506,12 +511,22 @@ struct CustomSupplementsEditorSheet: View {
     )
     nonApplicableRules = []
     hadCustomSupplements = false  // Treat as if we never had custom supplements
+    userHasModifiedRules = false
   }
 
   private func saveChanges() {
     UINotificationFeedbackGenerator().notificationOccurred(.success)
 
-    // If no rules and we're resetting, return nil to clear custom supplements
+    // If all rules were explicitly removed, save empty object to mean "no supplements"
+    // (distinct from nil which means "use tariff defaults")
+    if rules.isEmpty && nonApplicableRules.isEmpty
+      && (hadCustomSupplements || userHasModifiedRules)
+    {
+      onSave(CustomSupplementsData(rules: []))
+      return
+    }
+
+    // If no rules and no explicit modification, return nil (use tariff)
     if rules.isEmpty && !hadCustomSupplements {
       onSave(nil)
       return

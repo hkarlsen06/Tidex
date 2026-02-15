@@ -54,7 +54,7 @@ struct HoursStatCard: View {
     formatter.numberStyle = .decimal
     formatter.minimumFractionDigits = 0
     formatter.maximumFractionDigits = 1
-    formatter.locale = Locale(identifier: "nb_NO")
+    formatter.locale = Locale.appLocale
     return formatter.string(from: NSNumber(value: hours)) ?? "\(Int(hours))"
   }
 }
