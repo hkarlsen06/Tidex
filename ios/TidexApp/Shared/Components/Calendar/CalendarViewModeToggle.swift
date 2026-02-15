@@ -62,11 +62,11 @@ struct CalendarViewModeToggle: View {
           }
         } label: {
           HStack(spacing: Spacing.xxxs) {
-            Text("--:--")
-            Image(systemName: "clock")
-              .font(.tidexCaptionStrong)
+            Image(systemName: "clock.fill")
+              .font(.tidexLabel)
+            Text(.shiftsCalendarToggleHours)
+              .font(viewMode == .hours ? .tidexLabelStrong : .tidexSubheadline)
           }
-          .font(viewMode == .hours ? .tidexLabelStrong : .tidexSubheadline)
           .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
@@ -90,13 +90,17 @@ struct CalendarViewModeToggle: View {
               }
             }
           } label: {
-            Text("---- \(currency)")
-              .font(viewMode == .money ? .tidexLabelStrong : .tidexSubheadline)
-              .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, Spacing.sm)
-              .frame(height: controlHeight)
-              .contentShape(Rectangle())
+            HStack(spacing: Spacing.xxxs) {
+              Image(systemName: "banknote.fill")
+                .font(.tidexLabel)
+              Text(.shiftsCalendarToggleEarnings)
+                .font(viewMode == .money ? .tidexLabelStrong : .tidexSubheadline)
+            }
+            .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.sm)
+            .frame(height: controlHeight)
+            .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
         }
