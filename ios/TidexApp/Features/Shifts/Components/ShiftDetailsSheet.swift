@@ -40,10 +40,13 @@ struct ShiftDetailsSheet: View {
   @State private var editedDate: Date = Date()
 
   /// Edited start time
-  @State private var editedStartTime: Date = Date()
+  @State private var editedStartTime: Date?
 
   /// Edited end time
-  @State private var editedEndTime: Date = Date()
+  @State private var editedEndTime: Date?
+
+  /// Which time input field is focused (for TimeRangePicker)
+  @State private var focusedTimeField: TimeInputField?
 
   /// Edited custom supplements (nil = unchanged, set to clear or modify)
   @State private var editedSupplements: CustomSupplementsData?
@@ -413,9 +416,10 @@ struct ShiftDetailsSheet: View {
 
   /// Check if any changes have been made
   private var hasChanges: Bool {
+    guard let start = editedStartTime, let end = editedEndTime else { return false }
     let newDate = formatDateToISO(editedDate)
-    let newStartTime = formatTimeToString(editedStartTime)
-    let newEndTime = formatTimeToString(editedEndTime)
+    let newStartTime = formatTimeToString(start)
+    let newEndTime = formatTimeToString(end)
 
     return newDate != shift.shiftDate || newStartTime != String(shift.startTime.prefix(5))
       || newEndTime != String(shift.endTime.prefix(5)) || supplementsWereEdited
@@ -496,10 +500,11 @@ struct ShiftDetailsSheet: View {
 
   /// Save changes
   private func saveChanges() {
+    guard let startTime = editedStartTime, let endTime = editedEndTime else { return }
     // Validate times (basic validation)
     let newDate = formatDateToISO(editedDate)
-    let newStartTime = formatTimeToString(editedStartTime)
-    let newEndTime = formatTimeToString(editedEndTime)
+    let newStartTime = formatTimeToString(startTime)
+    let newEndTime = formatTimeToString(endTime)
 
     // Clear any previous error
     errorMessage = nil
@@ -590,111 +595,70 @@ struct ShiftDetailsSheet: View {
 
   private var editableTimeSection: some View {
     VStack(spacing: Spacing.md) {
-      // Section header
+      // Date picker row
       HStack {
-        Image(systemName: "pencil")
-          .foregroundColor(.tidexBlue)
-        Text(.shiftsEditTimeSection)
-          .font(.tidexLabelStrong)
+        Text(.shiftsDate)
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
         Spacer()
+        DatePicker(
+          "",
+          selection: $editedDate,
+          displayedComponents: .date
+        )
+        .labelsHidden()
+        .tint(.tidexBlue)
       }
 
-      // Editable fields card
-      VStack(spacing: Spacing.md) {
-        // Date picker row
-        HStack {
-          Text(.shiftsDate)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-          Spacer()
-          DatePicker(
-            "",
-            selection: $editedDate,
-            displayedComponents: .date
-          )
-          .labelsHidden()
-          .tint(.tidexBlue)
-        }
+      Divider()
 
-        Divider()
-
-        // Start time row
-        HStack {
-          Text(.shiftsStartTime)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-          Spacer()
-          DatePicker(
-            "",
-            selection: $editedStartTime,
-            displayedComponents: .hourAndMinute
-          )
-          .labelsHidden()
-          .tint(.tidexBlue)
-          .disabled(!canEditTimes)
-          .opacity(canEditTimes ? 1 : 0.5)
-        }
-
-        Divider()
-
-        // End time row
-        HStack {
-          Text(.shiftsEndTime)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-          Spacer()
-          DatePicker(
-            "",
-            selection: $editedEndTime,
-            displayedComponents: .hourAndMinute
-          )
-          .labelsHidden()
-          .tint(.tidexBlue)
-          .disabled(!canEditTimes)
-          .opacity(canEditTimes ? 1 : 0.5)
-        }
-
-        // Info about cross-midnight shifts
-        if isCrossMidnightShift {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "moon.fill")
-              .font(.tidexCaption)
-              .foregroundColor(.tidexBlue)
-            Text(.shiftsCrossMidnightInfo)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-            Spacer()
-          }
-          .padding(.top, Spacing.xxs)
-        }
-
-        // Virtual shift info (will be converted to regular shift)
-        if isVirtualShift {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "info.circle")
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexBlue)
-            Text(.shiftsVirtualConversionInfo)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-            Spacer()
-          }
-          .padding(.top, Spacing.xxs)
-        }
-      }
-      .padding(Spacing.md)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
+      // Time range picker (numeric keyboard input)
+      TimeRangePicker(
+        startTime: $editedStartTime,
+        endTime: $editedEndTime,
+        focusedFieldBinding: $focusedTimeField
       )
+
+      // Info about cross-midnight shifts
+      if isCrossMidnightShift {
+        HStack(spacing: Spacing.xs) {
+          Image(systemName: "moon.fill")
+            .font(.tidexCaption)
+            .foregroundColor(.tidexBlue)
+          Text(.shiftsCrossMidnightInfo)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
+          Spacer()
+        }
+        .padding(.top, Spacing.xxs)
+      }
+
+      // Virtual shift info (will be converted to regular shift)
+      if isVirtualShift {
+        HStack(spacing: Spacing.xs) {
+          Image(systemName: "info.circle")
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexBlue)
+          Text(.shiftsVirtualConversionInfo)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
+          Spacer()
+        }
+        .padding(.top, Spacing.xxs)
+      }
     }
+    .padding(Spacing.md)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
+        .fill(Color.tidexSurfacePrimary)
+    )
   }
 
   /// Whether the edited times represent a cross-midnight shift
   private var isCrossMidnightShift: Bool {
-    let startStr = formatTimeToString(editedStartTime)
-    let endStr = formatTimeToString(editedEndTime)
+    guard let start = editedStartTime, let end = editedEndTime else { return false }
+    let startStr = formatTimeToString(start)
+    let endStr = formatTimeToString(end)
     return endStr <= startStr && endStr != "00:00"
   }
 
