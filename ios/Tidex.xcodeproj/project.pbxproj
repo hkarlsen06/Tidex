@@ -27,7 +27,6 @@
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		11F0A0043011111100A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
-		D61778127607441CA2BF1FBF /* Resources/Localization/Widget/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 955621F053164F42944E9C0F /* Resources/Localization/Widget/Localizable.xcstrings */; };
 		E61778127607441CA2BF1FBF /* Resources/Localization/Watch/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
@@ -93,7 +92,6 @@
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/App/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
-		955621F053164F42944E9C0F /* Resources/Localization/Widget/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/Widget/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC732DB07C7200EA8C5F /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC742DB07C7200EA8C5F /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -131,6 +129,13 @@
 			);
 			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
 		};
+		115480372F3E9C1500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Localization/Widget/Localizable.xcstrings,
+			);
+			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
+		};
 		11828E5A2F2828A1008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -149,7 +154,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1140276C2F305643004065AD /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (115480352F3E9BF500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
+		1140276C2F305643004065AD /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (115480352F3E9BF500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, 115480372F3E9C1500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
 		114F0F432F2150EA00B587F0 /* TidexWatchApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (115480332F3E9BCD00FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexWatchApp; sourceTree = "<group>"; };
 		11546CED2F3E989700FC832F /* WatchShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (Supporting); path = WatchShiftWidget; sourceTree = "<group>"; };
 		11828D5E2F2828A1008A1A80 /* TidexApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828E5A2F2828A1008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexApp; sourceTree = "<group>"; };
@@ -209,7 +214,6 @@
 			isa = PBXGroup;
 			children = (
 				855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */,
-				955621F053164F42944E9C0F /* Resources/Localization/Widget/Localizable.xcstrings */,
 				A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */,
 			);
 			name = "Recovered References";
@@ -481,7 +485,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D61778127607441CA2BF1FBF /* Resources/Localization/Widget/Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
