@@ -11,6 +11,7 @@ export const marketingNo = {
     description: 'Lønnskalkulatoren som tar vakter, tillegg og tariff på alvor. Excel er over.',
     highlights: ['Nøyaktig', 'Rask', 'Privat', 'Stabil'],
     primaryCta: 'Åpne appen',
+    appStoreCta: 'Last ned fra App Store',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex-logo',
   },

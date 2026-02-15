@@ -95,6 +95,20 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
                     <Link href="#faq">{marketing.hero.secondaryCta}</Link>
                   </Button>
                 </div>
+                <a
+                  href="https://apps.apple.com/app/id6757129790"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block w-1/2 transition-opacity hover:opacity-80 sm:hidden"
+                >
+                  <Image
+                    src={`/badges/app-store-${locale}.svg`}
+                    alt={marketing.hero.appStoreCta}
+                    width={240}
+                    height={80}
+                    className="h-auto w-full"
+                  />
+                </a>
               </div>
             </div>
             <div className="mt-6 flex justify-center sm:mt-8">

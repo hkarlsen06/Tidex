@@ -11,6 +11,7 @@ export const marketingEn = {
     description: 'The wage calculator that treats shifts, supplements and tariffs seriously. Excel is history.',
     highlights: ['Accurate', 'Fast', 'Private', 'Reliable'],
     primaryCta: 'Open the app',
+    appStoreCta: 'Download on the App Store',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex logo',
   },
