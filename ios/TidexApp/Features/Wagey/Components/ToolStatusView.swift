@@ -37,12 +37,59 @@ struct ToolStatusView: View {
     toolCall.success == false || isTimedOut
   }
 
-  /// Display name for the tool
+  /// Display name for the tool, using action-specific names when available.
+  /// Strips trailing ellipsis once the tool call has completed.
   private var toolDisplayName: String {
-    toolNameMapping[toolCall.name] ?? toolCall.name
+    var name: String
+    if let actionName = actionSpecificName {
+      name = actionName
+    } else {
+      name = toolNameMapping[toolCall.name] ?? toolCall.name
+    }
+
+    if !isExecuting {
+      name = name.replacingOccurrences(of: "...", with: "")
+        .replacingOccurrences(of: "…", with: "")
+        .trimmingCharacters(in: .whitespaces)
+    }
+
+    return name
   }
 
-  /// Map tool names to user-friendly display strings
+  /// Try to extract the "action" field from tool arguments and return
+  /// an action-specific display name (e.g., "Creating shift..." instead of "Managing shift...")
+  private var actionSpecificName: String? {
+    guard let args = toolCall.arguments,
+      let data = args.data(using: .utf8),
+      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+      let action = json["action"] as? String
+    else { return nil }
+
+    let key = "\(toolCall.name).\(action)"
+    return actionNameMapping[key]
+  }
+
+  /// Map (tool_name.action) pairs to specific display names
+  private var actionNameMapping: [String: String] {
+    [
+      "manage_shift.create": String(localized: .wageyToolShiftCreating),
+      "manage_shift.update": String(localized: .wageyToolShiftUpdating),
+      "manage_shift.delete": String(localized: .wageyToolShiftDeleting),
+
+      "manage_recurring_shift.create": String(localized: .wageyToolRecurringCreating),
+      "manage_recurring_shift.update": String(localized: .wageyToolRecurringUpdating),
+      "manage_recurring_shift.delete": String(localized: .wageyToolRecurringDeleting),
+
+      "manage_recurring_exclusion.create": String(localized: .wageyToolExclusionAdding),
+      "manage_recurring_exclusion.delete": String(localized: .wageyToolExclusionRemoving),
+
+      "manage_wage_snapshots.create": String(localized: .wageyToolWageSnapshotAdding),
+      "manage_wage_snapshots.update": String(localized: .wageyToolWageSnapshotUpdating),
+      "manage_wage_snapshots.delete": String(localized: .wageyToolWageSnapshotDeleting),
+    ]
+  }
+
+  /// Fallback map for tools without action-specific names
   /// Tool names match those defined in lib/chat/tools.ts
   private var toolNameMapping: [String: String] {
     [
@@ -222,6 +269,7 @@ struct ToolStatusView: View {
 
 #Preview("Executing") {
   VStack(spacing: Spacing.sm) {
+    // Shows "Creating shift..." (action-specific)
     ToolStatusView(
       toolCall: ToolCall(
         id: "1",
@@ -232,11 +280,22 @@ struct ToolStatusView: View {
         success: nil
       ))
 
+    // Shows "Finding shifts..." (fallback)
     ToolStatusView(
       toolCall: ToolCall(
         id: "2",
         name: "query_shifts",
         arguments: "{\"start_date\":\"2025-01-01\",\"end_date\":\"2025-01-31\"}",
+        result: nil,
+        success: nil
+      ))
+
+    // Shows "Deleting shift..." (action-specific)
+    ToolStatusView(
+      toolCall: ToolCall(
+        id: "3",
+        name: "manage_shift",
+        arguments: "{\"action\":\"delete\",\"shift_id\":\"abc123\"}",
         result: nil,
         success: nil
       ))

@@ -213,7 +213,8 @@ struct YearlyIncomeChart: View {
       if kValue == floor(kValue) {
         return "\(Int(kValue))k"
       }
-      return String(format: "%.1fk", kValue).replacingOccurrences(of: ".", with: ",")
+      let sep = Locale.appLocale.decimalSeparator ?? ","
+      return String(format: "%.1fk", kValue).replacingOccurrences(of: ".", with: sep)
     }
 
     return "\(Int(value))"

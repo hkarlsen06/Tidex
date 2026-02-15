@@ -176,7 +176,8 @@ struct MonthlyProgressChart: View {
     if kValue == floor(kValue) {
       return "\(Int(kValue))k"
     }
-    return String(format: "%.1fk", kValue)
+    let sep = Locale.appLocale.decimalSeparator ?? ","
+    return String(format: "%.1fk", kValue).replacingOccurrences(of: ".", with: sep)
   }
 }
 

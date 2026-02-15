@@ -192,8 +192,8 @@ struct WeeklyBarChart: View {
       if kValue == floor(kValue) {
         return "\(Int(kValue))k"
       }
-      // Use comma as decimal separator for Norwegian locale
-      return String(format: "%.1fk", kValue).replacingOccurrences(of: ".", with: ",")
+      let sep = Locale.appLocale.decimalSeparator ?? ","
+      return String(format: "%.1fk", kValue).replacingOccurrences(of: ".", with: sep)
     }
 
     return "\(Int(value))"
