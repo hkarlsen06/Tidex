@@ -55,8 +55,11 @@ enum WatchDataConverter {
     let startDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
     let endDate = calendar.date(byAdding: .day, value: 7, to: now) ?? now
 
-    let shifts = ShiftsRepository.shared.getShifts(
-      for: userId, startDate: startDate, endDate: endDate)
+    let shifts = loadUserShiftsWithVirtual(
+      userId: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
 
     guard !shifts.isEmpty else { return nil }
 
@@ -125,6 +128,98 @@ enum WatchDataConverter {
       status: status,
       avatarImageData: avatarData
     )
+  }
+
+  /// Build user shifts from regular + generated virtual recurring shifts
+  /// Real shifts take precedence over virtual shifts on the same date
+  private static func loadUserShiftsWithVirtual(
+    userId: String,
+    startDate: Date,
+    endDate: Date
+  ) -> [ShiftRow] {
+    let regularShifts = ShiftsRepository.shared.getShifts(
+      for: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
+
+    let recurringPatterns = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
+    guard !recurringPatterns.isEmpty else { return regularShifts }
+
+    let startDateISO = startDate.toISODateString()
+    let endDateISO = endDate.toISODateString()
+    let monthsInRange = getMonthsInRange(startDate: startDate, endDate: endDate)
+
+    var virtualShifts: [ShiftRow] = []
+    var seenVirtualIds = Set<String>()
+
+    for recurring in recurringPatterns {
+      for (year, month) in monthsInRange {
+        let generated = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+          year: year,
+          month: month,
+          recurring: recurring
+        )
+
+        for virtual in generated {
+          guard virtual.date >= startDateISO, virtual.date <= endDateISO else { continue }
+
+          let virtualId = "virtual-\(recurring.id)-\(virtual.date)"
+          guard !seenVirtualIds.contains(virtualId) else { continue }
+          seenVirtualIds.insert(virtualId)
+
+          virtualShifts.append(
+            ShiftRow(
+              id: virtualId,
+              user_id: recurring.user_id,
+              shift_date: virtual.date,
+              start_time: recurring.cleanStartTime,
+              end_time: recurring.cleanEndTime,
+              custom_supplements: recurring.date_specific_supplements?[virtual.date],
+              created_at: nil,
+              updated_at: nil,
+              recurring_id: recurring.id,
+              recurring_anchor_weekday: virtual.weekday
+            ))
+        }
+      }
+    }
+
+    let regularDates = Set(regularShifts.map { $0.shift_date })
+    let dedupedVirtualShifts = virtualShifts.filter { !regularDates.contains($0.shift_date) }
+
+    return regularShifts + dedupedVirtualShifts
+  }
+
+  /// Get all (year, month) pairs within the given date range
+  private static func getMonthsInRange(startDate: Date, endDate: Date) -> [(Int, Int)] {
+    let calendar = Calendar.current
+    let startComponents = calendar.dateComponents([.year, .month], from: startDate)
+    let endComponents = calendar.dateComponents([.year, .month], from: endDate)
+
+    guard
+      let startYear = startComponents.year,
+      let startMonth = startComponents.month,
+      let endYear = endComponents.year,
+      let endMonth = endComponents.month
+    else {
+      return []
+    }
+
+    var months: [(Int, Int)] = []
+    var year = startYear
+    var month = startMonth
+
+    while year < endYear || (year == endYear && month <= endMonth) {
+      months.append((year, month))
+      month += 1
+      if month > 12 {
+        month = 1
+        year += 1
+      }
+    }
+
+    return months
   }
 
   // MARK: - Friend Shifts
