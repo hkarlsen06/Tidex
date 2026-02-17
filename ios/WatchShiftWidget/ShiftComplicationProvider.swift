@@ -119,11 +119,13 @@ struct ShiftCalculator {
 
     let todayMidnight = calendar.startOfDay(for: date)
     let shiftMidnight = calendar.startOfDay(for: shiftDate)
-    let daysRemaining = calendar.dateComponents([.day], from: todayMidnight, to: shiftMidnight).day ?? 0
+    let daysRemaining =
+      calendar.dateComponents([.day], from: todayMidnight, to: shiftMidnight).day ?? 0
 
     // Show "X days" if more than 1 day away
     if daysRemaining > 1 {
-      let dayLabel = daysRemaining == 1
+      let dayLabel =
+        daysRemaining == 1
         ? String(localized: "watch.day")
         : String(localized: "watch.days")
       return "\(daysRemaining) \(dayLabel)"
@@ -141,7 +143,8 @@ struct ShiftCalculator {
   func nextRefreshDate(after date: Date) -> Date {
     // Default fallback - 15 minutes
     let defaultInterval: TimeInterval = 15 * 60
-    guard let fallbackDate = calendar.date(byAdding: .second, value: Int(defaultInterval), to: date) else {
+    guard let fallbackDate = calendar.date(byAdding: .second, value: Int(defaultInterval), to: date)
+    else {
       return date.addingTimeInterval(defaultInterval)
     }
 
@@ -219,22 +222,21 @@ struct ShiftComplicationProvider: TimelineProvider {
   ) {
     Task { @MainActor in
       let now = Date()
-      let entry = ShiftComplicationEntry(
-        date: now,
-        shift: currentUserShift()
-      )
+      let shift = currentUserShift()
+      let entries = timelineEntries(now: now, shift: shift)
 
       let nextUpdate: Date
-      if let shift = entry.shift {
+      if let shift {
         let calculator = ShiftCalculator(shift: shift)
         nextUpdate = calculator.nextRefreshDate(after: now)
       } else {
         // No shift - refresh in 15 minutes
-        nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: now)
+        nextUpdate =
+          Calendar.current.date(byAdding: .minute, value: 15, to: now)
           ?? now.addingTimeInterval(15 * 60)
       }
 
-      let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+      let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
       completion(timeline)
     }
   }
@@ -252,6 +254,60 @@ struct ShiftComplicationProvider: TimelineProvider {
     }
     return payload
   }
+
+  /// Build timeline entries at important boundaries to avoid stale countdown/state transitions.
+  /// The system can still delay reloads, so we pre-seed start/end timestamps when possible.
+  private func timelineEntries(now: Date, shift: WatchShiftDTO?) -> [ShiftComplicationEntry] {
+    var entries: [ShiftComplicationEntry] = [
+      ShiftComplicationEntry(date: now, shift: shift)
+    ]
+
+    guard let shift else { return entries }
+
+    let calculator = ShiftCalculator(shift: shift)
+    guard let range = calculator.dateRange() else { return entries }
+
+    if range.start > now {
+      entries.append(ShiftComplicationEntry(date: range.start, shift: shift))
+    }
+
+    if range.end > now {
+      entries.append(ShiftComplicationEntry(date: range.end, shift: shift))
+    }
+
+    // Seed near-term minute checkpoints to keep active/soon-starting countdowns responsive.
+    // This reduces visible "hangs" when the provider isn't invoked exactly on schedule.
+    let secondsUntilStart = range.start.timeIntervalSince(now)
+    let shouldSeedMinuteEntries = range.start <= now || secondsUntilStart <= 90 * 60
+
+    if shouldSeedMinuteEntries {
+      let calendar = Calendar.current
+      let minuteHorizon = now.addingTimeInterval(120 * 60)
+      let checkpointEnd = range.end < minuteHorizon ? range.end : minuteHorizon
+      var cursor = calendar.date(byAdding: .minute, value: 1, to: now) ?? checkpointEnd
+
+      while cursor < checkpointEnd {
+        entries.append(ShiftComplicationEntry(date: cursor, shift: shift))
+        guard let next = calendar.date(byAdding: .minute, value: 1, to: cursor) else { break }
+        cursor = next
+      }
+    }
+
+    // Keep strictly increasing dates; WidgetKit expects ordered entries.
+    entries.sort { $0.date < $1.date }
+    var deduped: [ShiftComplicationEntry] = []
+    deduped.reserveCapacity(entries.count)
+    var seenTimestamps = Set<TimeInterval>()
+
+    for entry in entries {
+      let secondTimestamp = floor(entry.date.timeIntervalSince1970)
+      if seenTimestamps.insert(secondTimestamp).inserted {
+        deduped.append(entry)
+      }
+    }
+
+    return deduped
+  }
 }
 
 // MARK: - Complication Views
@@ -259,6 +315,9 @@ struct ShiftComplicationProvider: TimelineProvider {
 struct ShiftComplicationView: View {
   @Environment(\.widgetFamily) var family
   let entry: ShiftComplicationEntry
+
+  /// Use live wall-clock time during rendering to reduce stale UI when timeline refresh is delayed.
+  private var renderDate: Date { Date() }
 
   /// Cached calculator for the current shift - computed once per render
   private var calculator: ShiftCalculator? {
@@ -289,25 +348,25 @@ struct ShiftComplicationView: View {
     }
   }
 
-@ViewBuilder
-private var accessoryCornerView: some View {
-  if let shift = entry.shift,
-     let calculator,
-     let range = calculator.dateRange(),
-     entry.date < range.end
-  {
-    Text(cornerTopCurvedText(shift: shift, range: range))
-      .widgetCurvesContent()          // <- this makes it follow the corner curve
-      .font(.caption2)
-      .monospacedDigit()
-      .widgetLabel {
-        relativeCountdownText(range: range)
-      }
-  } else {
-    Text("--")
-      .widgetCurvesContent()
+  @ViewBuilder
+  private var accessoryCornerView: some View {
+    if let shift = entry.shift,
+      let calculator,
+      let range = calculator.dateRange(),
+      renderDate < range.end
+    {
+      Text(cornerTopCurvedText(shift: shift, range: range))
+        .widgetCurvesContent()  // <- this makes it follow the corner curve
+        .font(.caption2)
+        .monospacedDigit()
+        .widgetLabel {
+          relativeCountdownText(range: range)
+        }
+    } else {
+      Text("--")
+        .widgetCurvesContent()
+    }
   }
-}
 
   // MARK: - Circular
 
@@ -317,8 +376,9 @@ private var accessoryCornerView: some View {
       AccessoryWidgetBackground()
 
       if let calculator = calculator,
-         calculator.isActive(at: entry.date),
-         let progress = calculator.progress(at: entry.date) {
+        calculator.isActive(at: renderDate),
+        let progress = calculator.progress(at: renderDate)
+      {
         activeShiftRing(progress: progress)
       }
 
@@ -327,7 +387,7 @@ private var accessoryCornerView: some View {
           Text(shortWeekdayText(for: shift))
             .font(.caption2)
             .foregroundStyle(.secondary)
-          Text(calculator.highlightedText(at: entry.date))
+          Text(calculator.highlightedText(at: renderDate))
             .font(.caption)
             .fontWeight(.semibold)
             .multilineTextAlignment(.center)
@@ -348,15 +408,18 @@ private var accessoryCornerView: some View {
       let calculator = calculator,
       let range = calculator.dateRange()
     {
-      let isActive = calculator.isActive(at: entry.date)
-      let progress = calculator.progress(at: entry.date) ?? 0
+      let isActive = calculator.isActive(at: renderDate)
+      let progress = calculator.progress(at: renderDate) ?? 0
 
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 6) {
-          Label(shift.status == .active ? activeTitle : nextShiftTitle, systemImage: statusIcon(for: shift.status))
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
+          Label(
+            shift.status == .active ? activeTitle : nextShiftTitle,
+            systemImage: statusIcon(for: shift.status)
+          )
+          .font(.caption2)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
 
           Spacer(minLength: 4)
 
@@ -411,7 +474,7 @@ private var accessoryCornerView: some View {
   @ViewBuilder
   private var accessoryInlineView: some View {
     if let calculator = calculator {
-      Text("\(shiftLabel) \(calculator.highlightedText(at: entry.date))")
+      Text("\(shiftLabel) \(calculator.highlightedText(at: renderDate))")
     } else {
       Text(noShiftsTitle)
     }
@@ -473,7 +536,7 @@ private var accessoryCornerView: some View {
     }
 
     let calendar = Calendar.current
-    let nowStart = calendar.startOfDay(for: entry.date)
+    let nowStart = calendar.startOfDay(for: renderDate)
     let shiftStart = calendar.startOfDay(for: shiftDate)
     let dayDiff = calendar.dateComponents([.day], from: nowStart, to: shiftStart).day ?? 0
 
@@ -487,10 +550,10 @@ private var accessoryCornerView: some View {
   }
 
   private func countdownTargetDate(for range: (start: Date, end: Date)) -> Date? {
-    if entry.date < range.start {
+    if renderDate < range.start {
       return range.start
     }
-    if entry.date < range.end {
+    if renderDate < range.end {
       return range.end
     }
     return nil
@@ -499,7 +562,7 @@ private var accessoryCornerView: some View {
   @ViewBuilder
   private func relativeCountdownText(range: (start: Date, end: Date)) -> some View {
     if let targetDate = countdownTargetDate(for: range) {
-      Text(targetDate, style: .relative)
+      Text(targetDate, style: .timer)
         .monospacedDigit()
     } else {
       Text("--")
@@ -519,7 +582,8 @@ private var accessoryCornerView: some View {
         Circle()
           .trim(from: 0.0, to: min(1.0, max(0.0, progress)))  // Clamp progress
           .stroke(
-            style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+          )
           .rotationEffect(.degrees(-90))
           .foregroundStyle(Color.accentColor)
           .widgetAccentable()
@@ -529,8 +593,9 @@ private var accessoryCornerView: some View {
     .offset(y: -1)
   }
 
-  private func cornerTopCurvedText(shift: WatchShiftDTO, range: (start: Date, end: Date)) -> String {
-    return entry.date < range.start ? shift.startTime : shift.endTime
+  private func cornerTopCurvedText(shift: WatchShiftDTO, range: (start: Date, end: Date)) -> String
+  {
+    return renderDate < range.start ? shift.startTime : shift.endTime
   }
 
 }
