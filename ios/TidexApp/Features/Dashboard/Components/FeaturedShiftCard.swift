@@ -27,7 +27,7 @@ struct FeaturedShiftCard: View {
   }
 
   private var dateParts: ShiftCardDateParts {
-    ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.appLocale)
+    ShiftCardFormatter.dateParts(for: shift.shiftDate)
   }
 
   private struct LiveShiftState {
@@ -118,20 +118,17 @@ struct FeaturedShiftCard: View {
         ShiftCardContentLayout(centerTrailing: !showBreakdown) {
           // Row 1: Day name and date
           HStack(spacing: Spacing.xxs) {
-            Text(dateParts.dayName)
+            Text(dateParts.weekday)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Text("·")
               .foregroundColor(.tidexTextMuted)
-            HStack(spacing: Spacing.xxs) {
-              Text(dateParts.dayNumber)
-                .contentTransition(.numericText())
-              Text(dateParts.monthName)
-            }
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
+            Text(dateParts.dayMonth)
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextMuted)
+              .contentTransition(.numericText())
           }
-          .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
+          .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)
         } leadingBottom: {
           // Row 2: Time range
           timeRangeLabel

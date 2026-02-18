@@ -70,22 +70,18 @@ struct PayrollCard: View {
           Image(systemName: "banknote")
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
-          Text(dateParts.dayName)
+          Text(dateParts.weekday)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
           Text("·")
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
-          HStack(spacing: 0) {
-            Text(dateParts.dayNumber)
-              .contentTransition(.numericText())
-            Text(" ")
-            Text(dateParts.monthName)
-          }
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
+          Text(dateParts.dayMonth)
+            .font(.tidexLabel)
+            .foregroundColor(.tidexTextMuted)
+            .contentTransition(.numericText())
         }
-        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayNumber)
+        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)
       }
     } trailingTop: {
       // Right side: amount
@@ -175,10 +171,7 @@ struct PayrollCard: View {
   // MARK: - Formatting
 
   private var dateParts: ShiftCardDateParts {
-    ShiftCardFormatter.dateParts(
-      for: payrollDate.toISODateString(),
-      locale: Locale.appLocale
-    )
+    ShiftCardFormatter.dateParts(for: payrollDate)
   }
 
   private func formatCurrency(_ amount: Double) -> String {

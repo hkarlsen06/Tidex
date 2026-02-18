@@ -243,25 +243,11 @@ private struct ShiftPreviewCard: View {
     )
   }
 
-  /// Format date: "Mandag · 15. januar" (Norwegian) or "Monday · 15 January" (English)
+  /// Format date using system locale: "Monday, January 15" (English) or "Mandag 15. januar" (Norwegian)
   /// Friends tab uses full month names for better readability
   private static func formatDate(shiftDate: String) -> String {
     guard let date = Date.fromISODateString(shiftDate) else { return "" }
-
-    let locale = Locale.appLocale
-    let dayName = FormatterCache.weekdayFormatter(locale: locale)
-      .string(from: date)
-      .sentenceCased()
-
-    let dayNumber = Calendar.current.component(.day, from: date)
-    let daySuffix = String(localized: .commonDaySuffix)
-    let dayString = "\(dayNumber)\(daySuffix)"
-
-    let monthName = FormatterCache.monthNameFormatter(locale: locale)
-      .string(from: date)
-      .lowercased()
-
-    return "\(dayName) · \(dayString) \(monthName)"
+    return date.formatted(.dateTime.weekday(.wide).day().month(.wide)).sentenceCased()
   }
 
   private static func makeSchedule(for shift: SharedShiftData) -> ShiftSchedule? {

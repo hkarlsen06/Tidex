@@ -34,7 +34,7 @@ struct ShiftRowCard: View {
   }
 
   private var dateParts: ShiftCardDateParts {
-    ShiftCardFormatter.dateParts(for: shift.shiftDate, locale: Locale.appLocale)
+    ShiftCardFormatter.dateParts(for: shift.shiftDate)
   }
 
   private var isRTL: Bool {
@@ -67,12 +67,12 @@ struct ShiftRowCard: View {
     ShiftCardContentLayout(centerTrailing: !showBreakdown && !excludedFromTotal) {
       // Row 1: Day name and date
       HStack(spacing: Spacing.xxs) {
-        Text(dateParts.dayName)
+        Text(dateParts.weekday)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
         Text("·")
           .foregroundColor(.tidexTextMuted)
-        Text("\(dateParts.dayNumber) \(dateParts.monthName)")
+        Text(dateParts.dayMonth)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
       }
