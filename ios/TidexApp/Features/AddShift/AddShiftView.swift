@@ -145,9 +145,24 @@ struct AddShiftView: View {
           Text(.tabsAdd)
             .font(.headline)
             .foregroundColor(.tidexTextPrimary)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         ToolbarItem(placement: .topBarTrailing) {
-          AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
+          HStack(spacing: Spacing.xs) {
+            Button {
+              presentStartFreshConfirmation()
+            } label: {
+              Image(systemName: "arrow.uturn.backward.circle.fill")
+                .font(.tidexHeadline)
+                .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
+            }
+            .buttonStyle(.plain)
+            .disabled(!viewModel.hasContent)
+            .accessibilityLabel(Text(.commonBack))
+
+            AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
+          }
+          .fixedSize(horizontal: true, vertical: false)
         }
         .sharedBackgroundVisibility(.hidden)
       }
@@ -210,14 +225,6 @@ struct AddShiftView: View {
         }
       )
     }
-    .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
-      guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
-        tab == .add, viewModel.hasContent
-      else { return }
-      focusedTimeField = nil
-      hideKeyboard()
-      showStartFreshConfirmation = true
-    }
     .confirmationDialog(
       String(localized: .addShiftStartFreshConfirmTitle),
       isPresented: $showStartFreshConfirmation,
@@ -267,6 +274,14 @@ struct AddShiftView: View {
   private func hideKeyboard() {
     UIApplication.shared.sendAction(
       #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+  }
+
+  /// Show the "start fresh" confirmation when there is form content to clear.
+  private func presentStartFreshConfirmation() {
+    guard viewModel.hasContent else { return }
+    focusedTimeField = nil
+    hideKeyboard()
+    showStartFreshConfirmation = true
   }
 
   /// Label for keyboard accessory button - "Next" when in start field, "Done" otherwise

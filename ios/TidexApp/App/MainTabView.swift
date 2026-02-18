@@ -100,9 +100,10 @@ struct MainTabView: View {
 
         if newTab == selectedTab {
           if newTab == .add {
-            // Add tab - reset form state
-            NotificationCenter.default.post(
-              name: .tabReselected, object: nil, userInfo: ["tab": newTab])
+            // Add tab - re-tap should return to current month when needed
+            if !monthContext.isCurrentMonth {
+              monthContext.goToCurrentMonth()
+            }
           } else if newTab == .sharing {
             // Sharing tab - keep existing behavior (deselect sharer)
             NotificationCenter.default.post(
