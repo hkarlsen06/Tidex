@@ -329,14 +329,11 @@ struct ShiftHomeWidgetView: View {
   private var topHeaderRow: some View {
     Group {
       if let countdownTarget = todayShiftStartDateTime {
-        // Timer + earnings as concatenated Text so the timer doesn't expand the layout.
-        (Text(countdownTarget, style: .timer)
-          .foregroundColor(accentColor)
-          + Text("  ")
-          + Text(entry.netEarnings)
-          .foregroundColor(secondaryTextColor))
+        // Timer + earnings as interpolated Text so the timer doesn't expand the layout.
+        Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
           .font(.system(size: 15, weight: .semibold))
           .monospacedDigit()
+          .foregroundColor(accentColor)
           .multilineTextAlignment(.center)
           .widgetAccentable()
           .lineLimit(1)
