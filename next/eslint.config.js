@@ -88,7 +88,7 @@ const config = [
           alwaysTryTypes: true,
         },
       },
-      "import/core-modules": ["server-only"],
+      "import/core-modules": ["server-only", "motion-plus/react", "motion-plus/animate-view", "motion-plus/animate-activity"],
     },
     rules: {
       "import/no-anonymous-default-export": "warn",
