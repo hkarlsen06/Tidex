@@ -2524,6 +2524,7 @@
       }
     },
     "(initial)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3084,6 +3085,7 @@
       }
     },
     "[%@]" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5604,6 +5606,7 @@
       }
     },
     "%@ pending" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7004,6 +7007,7 @@
       }
     },
     "%@ work days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7844,6 +7848,7 @@
       }
     },
     "%@/%@ weeks" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -75813,6 +75818,7 @@
       }
     },
     "Debug" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -85365,6 +85371,7 @@
       }
     },
     "Loading summary..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -98289,6 +98296,7 @@
       }
     },
     "No pattern" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -98569,6 +98577,7 @@
       }
     },
     "No shifts" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -99130,6 +99139,7 @@
       }
     },
     "Not loaded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -189832,6 +189842,7 @@
       }
     },
     "Running validation tests..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -266253,6 +266264,7 @@
       }
     },
     "Shift Reminders" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -289328,6 +289340,7 @@
       }
     },
     "Smart Notifications" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -309559,6 +309572,7 @@
       }
     },
     "Syncing..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -311806,6 +311820,7 @@
       }
     },
     "Tests verify offline sync functionality according to Phase 8 test plan." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -312086,6 +312101,7 @@
       }
     },
     "This removes all local data and sync state on this device." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -338780,6 +338796,7 @@
       }
     },
     "Work Pattern" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
