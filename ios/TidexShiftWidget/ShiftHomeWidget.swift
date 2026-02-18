@@ -242,6 +242,31 @@ struct ShiftHomeWidgetView: View {
     renderingMode != .fullColor
   }
 
+  /// Shift start timestamp for today's upcoming shifts (used for live countdown timer)
+  private var todayShiftStartDateTime: Date? {
+    guard entry.hasShift,
+      entry.layoutState == .todayOrTomorrow,
+      entry.daysRemaining == 0,
+      !entry.shiftHasStarted,
+      !entry.shiftHasEnded
+    else {
+      return nil
+    }
+
+    let timeComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
+    guard timeComponents.count >= 2 else {
+      return nil
+    }
+
+    let calendar = Calendar.current
+    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
+    components.hour = timeComponents[0]
+    components.minute = timeComponents[1]
+    components.second = 0
+
+    return calendar.date(from: components)
+  }
+
   var body: some View {
     ZStack {
       // Adaptive background
@@ -302,19 +327,33 @@ struct ShiftHomeWidgetView: View {
 
   /// Top header row: Date and Earnings centered
   private var topHeaderRow: some View {
-    HStack(spacing: 6) {
-      // Date
-      Text(entry.shiftDate)
-        .font(.system(size: 15, weight: .semibold))
-        .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-        .widgetAccentable(entry.hasShift)
-        .lineLimit(1)
+    Group {
+      if let countdownTarget = todayShiftStartDateTime {
+        // Timer + earnings as concatenated Text so the timer doesn't expand the layout.
+        (Text(countdownTarget, style: .timer)
+          .foregroundColor(accentColor)
+          + Text("  ")
+          + Text(entry.netEarnings)
+          .foregroundColor(secondaryTextColor))
+          .font(.system(size: 15, weight: .semibold))
+          .monospacedDigit()
+          .multilineTextAlignment(.center)
+          .widgetAccentable()
+          .lineLimit(1)
+      } else {
+        HStack(spacing: 6) {
+          Text(entry.shiftDate)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+            .widgetAccentable(entry.hasShift)
+            .lineLimit(1)
 
-      // Earnings
-      Text(entry.netEarnings)
-        .font(.system(size: 15, weight: .semibold))
-        .foregroundColor(secondaryTextColor)
-        .lineLimit(1)
+          Text(entry.netEarnings)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(secondaryTextColor)
+            .lineLimit(1)
+        }
+      }
     }
   }
 
@@ -586,11 +625,56 @@ struct ShiftWidgetProvider: TimelineProvider {
   }
 
   func getTimeline(in _: Context, completion: @escaping (Timeline<ShiftWidgetEntry>) -> Void) {
-    let entry = createEntry()
+    let now = Date()
+    let calendar = Calendar.current
+    let entry = createEntry(at: now)
 
-    // Refresh every 15 minutes or at next midnight
-    let refreshDate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
-    let timeline = Timeline(entries: [entry], policy: .after(refreshDate))
+    var entries = [entry]
+
+    // For today's shift, add transition entries at start/end times so the widget
+    // updates exactly when the shift state changes (no stale countdown/timer).
+    if entry.hasShift,
+      entry.layoutState == .todayOrTomorrow,
+      entry.daysRemaining == 0
+    {
+      let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
+      let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
+
+      // Transition entry at shift start
+      if !entry.shiftHasStarted, startComponents.count >= 2 {
+        var sc = calendar.dateComponents([.year, .month, .day], from: now)
+        sc.hour = startComponents[0]
+        sc.minute = startComponents[1]
+        sc.second = 0
+        if let shiftStart = calendar.date(from: sc), shiftStart > now {
+          entries.append(createEntry(at: shiftStart))
+        }
+      }
+
+      // Transition entry at shift end
+      if !entry.shiftHasEnded, endComponents.count >= 2, startComponents.count >= 2 {
+        var ec = calendar.dateComponents([.year, .month, .day], from: now)
+        ec.hour = endComponents[0]
+        ec.minute = endComponents[1]
+        ec.second = 0
+        if var shiftEnd = calendar.date(from: ec) {
+          // Handle cross-midnight shifts (end time <= start time)
+          let startMinutes = startComponents[0] * 60 + startComponents[1]
+          let endMinutes = endComponents[0] * 60 + endComponents[1]
+          if endMinutes <= startMinutes {
+            shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
+          }
+          if shiftEnd > now {
+            entries.append(createEntry(at: shiftEnd))
+          }
+        }
+      }
+    }
+
+    // Refresh at next midnight to pick up day transitions and new shift data
+    let tomorrow = calendar.startOfDay(
+      for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
+    let timeline = Timeline(entries: entries, policy: .after(tomorrow))
     completion(timeline)
   }
 
@@ -617,9 +701,9 @@ struct ShiftWidgetProvider: TimelineProvider {
     return abs(components.day ?? 0)
   }
 
-  /// Determine if the shift has already started by comparing current time to shift start
-  /// Returns true if we're past the shift's start time on the shift date
-  private func hasShiftStarted(shiftDateString: String, startTime: String) -> Bool {
+  /// Determine if the shift has already started by comparing the given time to shift start
+  /// Returns true if `now` is at or past the shift's start time on the shift date
+  private func hasShiftStarted(shiftDateString: String, startTime: String, at now: Date) -> Bool {
     guard let shiftDate = parseShiftDate(shiftDateString) else {
       return false
     }
@@ -639,14 +723,16 @@ struct ShiftWidgetProvider: TimelineProvider {
       return false
     }
 
-    return Date() >= shiftStartDateTime
+    return now >= shiftStartDateTime
   }
 
-  /// Determine if the shift has already ended by comparing current time to shift end
-  /// Returns true ONLY if the shift is TODAY and we're past the end time
+  /// Determine if the shift has already ended by comparing the given time to shift end
+  /// Returns true ONLY if the shift end time is today (relative to `now`) and we're past it
   /// For past day shifts, returns false (those use pastShift layout with countdown instead)
   /// Note: For cross-midnight shifts (end <= start), adds 1 day to end time
-  private func hasShiftEnded(shiftDateString: String, startTime: String, endTime: String) -> Bool {
+  private func hasShiftEnded(
+    shiftDateString: String, startTime: String, endTime: String, at now: Date
+  ) -> Bool {
     guard let shiftDate = parseShiftDate(shiftDateString) else {
       return false
     }
@@ -681,12 +767,12 @@ struct ShiftWidgetProvider: TimelineProvider {
         calendar.date(byAdding: .day, value: 1, to: shiftEndDateTime) ?? shiftEndDateTime
     }
 
-    guard Date() >= shiftEndDateTime else {
+    guard now >= shiftEndDateTime else {
       return false
     }
 
     // Only treat as "ended" if the end time is today
-    return calendar.isDate(shiftEndDateTime, inSameDayAs: Date())
+    return calendar.isDate(shiftEndDateTime, inSameDayAs: now)
   }
 
   /// Determine the layout state based on midnight crossings
@@ -724,7 +810,7 @@ struct ShiftWidgetProvider: TimelineProvider {
     }
   }
 
-  private func createEntry() -> ShiftWidgetEntry {
+  private func createEntry(at now: Date) -> ShiftWidgetEntry {
     // Get stored currency (may be nil if never set)
     let storedCurrency = getStoredCurrency()
 
@@ -768,13 +854,15 @@ struct ShiftWidgetProvider: TimelineProvider {
     var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shift.shiftDate)
 
     // Check if shift has already started (for time emphasis swap)
-    let shiftStarted = hasShiftStarted(shiftDateString: shift.shiftDate, startTime: shift.startTime)
+    let shiftStarted = hasShiftStarted(
+      shiftDateString: shift.shiftDate, startTime: shift.startTime, at: now)
 
     // Check if shift has already ended (for showing "Ferdig" / "Done")
     let shiftEnded = hasShiftEnded(
       shiftDateString: shift.shiftDate,
       startTime: shift.startTime,
-      endTime: shift.endTime
+      endTime: shift.endTime,
+      at: now
     )
 
     // Adjust layout state for active/ended shifts
@@ -796,7 +884,7 @@ struct ShiftWidgetProvider: TimelineProvider {
     let deepLinkURL = URL(string: "tidex://shifts?dates=\(shift.shiftDate)&action=highlight")
 
     return ShiftWidgetEntry(
-      date: Date(),
+      date: now,
       shiftDate: formattedDate,
       startTime: shift.startTime,
       endTime: shift.endTime,
