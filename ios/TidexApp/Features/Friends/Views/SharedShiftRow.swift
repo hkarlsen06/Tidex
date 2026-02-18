@@ -15,25 +15,8 @@ struct SharedShiftRow: View {
     ShiftCardFormatter.formattedHours(shift.paidHours, locale: Locale.appLocale)
   }
 
-  private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
-    guard let date = Date.fromISODateString(shift.shiftDate) else {
-      return ("", "", "")
-    }
-
-    let locale = Locale.appLocale
-
-    let dayName = FormatterCache.weekdayFormatter(locale: locale)
-      .string(from: date)
-      .sentenceCased()
-
-    let dayNumber = FormatterCache.dayFormatter(locale: locale)
-      .string(from: date)
-
-    let monthName = FormatterCache.shortMonthFormatter(locale: locale)
-      .string(from: date)
-      .lowercased()
-
-    return (dayName, dayNumber, monthName)
+  private var dateParts: ShiftCardDateParts {
+    ShiftCardFormatter.dateParts(for: shift.shiftDate)
   }
 
   // MARK: - Body
@@ -44,12 +27,12 @@ struct SharedShiftRow: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         // Day name and date
         HStack(spacing: Spacing.xxs) {
-          Text(dateParts.dayName)
+          Text(dateParts.weekday)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
           Text("·")
             .foregroundColor(.tidexTextMuted)
-          Text("\(dateParts.dayNumber) \(dateParts.monthName)")
+          Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextMuted)
         }

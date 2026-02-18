@@ -9,23 +9,8 @@ struct TodayPlaceholderCard: View {
 
   // MARK: - Computed Properties
 
-  private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
-    let date = Date()
-    let formatter = DateFormatter()
-
-    // Get day name (full)
-    formatter.dateFormat = "EEEE"
-    let dayName = formatter.string(from: date).sentenceCased()
-
-    // Get day number
-    formatter.dateFormat = "d"
-    let dayNumber = formatter.string(from: date) + String(localized: .commonDaySuffix)
-
-    // Get month name (short)
-    formatter.dateFormat = "MMM"
-    let monthName = formatter.string(from: date).lowercased()
-
-    return (dayName, dayNumber, monthName)
+  private var dateParts: ShiftCardDateParts {
+    ShiftCardFormatter.dateParts(for: Date.now)
   }
 
   // MARK: - Body
@@ -43,12 +28,12 @@ struct TodayPlaceholderCard: View {
     ShiftCardContentLayout(centerTrailing: true) {
       // Date (left side)
       HStack(spacing: Spacing.xxs) {
-        Text(dateParts.dayName)
+        Text(dateParts.weekday)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
         Text("·")
           .foregroundColor(.tidexTextMuted)
-        Text("\(dateParts.dayNumber) \(dateParts.monthName)")
+        Text(dateParts.dayMonth)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextMuted)
       }

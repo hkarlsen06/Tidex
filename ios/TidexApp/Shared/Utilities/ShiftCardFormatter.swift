@@ -1,30 +1,26 @@
 import Foundation
 
-struct ShiftCardDateParts {
-  let dayName: String
-  let dayNumber: String
-  let monthName: String
+struct ShiftCardDateParts: Equatable {
+  let weekday: String
+  let dayMonth: String
 }
 
 /// Shared formatting helpers for shift cards to avoid duplicated logic.
 enum ShiftCardFormatter {
   private static let formatterCache = ShiftCardFormatterCache()
 
-  static func dateParts(for isoDate: String, locale: Locale) -> ShiftCardDateParts {
+  static func dateParts(for isoDate: String) -> ShiftCardDateParts {
     guard let date = Date.fromISODateString(isoDate) else {
-      return ShiftCardDateParts(dayName: "", dayNumber: "", monthName: "")
+      return ShiftCardDateParts(weekday: "", dayMonth: "")
     }
+    return dateParts(for: date)
+  }
 
-    let dayNameFormatter = formatterCache.formatter(locale: locale, format: "EEEE")
-    let dayName = dayNameFormatter.string(from: date).sentenceCased()
-
-    let dayNumberFormatter = formatterCache.formatter(locale: locale, format: "d")
-    let dayNumber = dayNumberFormatter.string(from: date) + String(localized: .commonDaySuffix)
-
-    let monthFormatter = formatterCache.formatter(locale: locale, format: "MMM")
-    let monthName = monthFormatter.string(from: date).lowercased()
-
-    return ShiftCardDateParts(dayName: dayName, dayNumber: dayNumber, monthName: monthName)
+  static func dateParts(for date: Date) -> ShiftCardDateParts {
+    ShiftCardDateParts(
+      weekday: date.formatted(.dateTime.weekday(.wide)).sentenceCased(),
+      dayMonth: date.formatted(.dateTime.day().month(.abbreviated))
+    )
   }
 
   static func formattedHours(_ hours: Double, locale: Locale) -> String {
