@@ -1,5 +1,4 @@
 import ActivityKit
-import BackgroundTasks
 import Sentry
 import Supabase
 import UIKit
@@ -16,9 +15,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   // App Group identifier for shared storage
   private let appGroupId = "group.no.tidex.app"
-
-  // Background task identifier for shift checking
-  private let shiftCheckTaskId = "no.tidex.app.shiftcheck"
 
   private let apnsTokenDefaultsKey = "apns_device_token"
 
@@ -79,9 +75,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Must be set before any notifications arrive
     UNUserNotificationCenter.current().delegate = self
 
-    // Apple requires BGTask handlers to be registered before app finishes launching
-    registerBackgroundTasks()
-
     // Apple recommends activating WCSession early in launch
     WatchConnectivityManager.shared.activateSession()
 
@@ -96,7 +89,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     Task { @MainActor [weak self] in
       Haptics.prepareSounds()
       ImageCache.shared.clearExpired()
-      self?.scheduleNextShiftLiveActivity()
       self?.checkAndStartLiveActivityIfNeeded()
     }
 
@@ -110,118 +102,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   // fully manage the window, SwiftUI's fallback is unreliable — causing a permanent black
   // screen on launch.
 
-  // MARK: - Background Tasks for Live Activity
-
-  private func registerBackgroundTasks() {
-    let registered = BGTaskScheduler.shared.register(
-      forTaskWithIdentifier: shiftCheckTaskId,
-      using: nil
-    ) { [weak self] task in
-      guard let refreshTask = task as? BGAppRefreshTask else {
-        print("[BGTask] Received task with wrong type")
-        return
-      }
-      self?.handleShiftCheckTask(refreshTask)
-    }
-
-    if registered {
-      print("[BGTask] Successfully registered task handler for \(shiftCheckTaskId)")
-    } else {
-      print("[BGTask] Failed to register task handler - may already be registered")
-    }
-  }
-
-  /// Schedule a background task to start a Live Activity when the next shift begins.
-  ///
-  /// This replaces the old 15-minute polling approach with targeted scheduling:
-  /// - Reads cached shifts from App Group storage
-  /// - Finds the next shift that hasn't started yet
-  /// - Schedules ONE task for 1 minute after that shift's start time
-  /// - When the task fires, it starts the Live Activity and schedules the next shift
-  ///
-  /// Note: BGTaskScheduler only allows one pending task per identifier,
-  /// so we always schedule just the next upcoming shift.
-  func scheduleNextShiftLiveActivity() {
-    // Cancel any existing scheduled task first
-    BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: shiftCheckTaskId)
-    print("[BGTask] Cancelled existing background tasks")
-
-    guard let userDefaults = sharedUserDefaults(),
-      let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
-      let data = shiftsJson.data(using: .utf8),
-      let shifts = try? JSONDecoder().decode([StoredShift].self, from: data)
-    else {
-      print("[BGTask] No shifts found in App Group storage")
-      return
-    }
-
-    let now = Date()
-
-    // Find the next shift start time that's in the future
-    let nextShiftStart =
-      shifts
-      .compactMap { getShiftStartDate($0) }
-      .filter { $0 > now }
-      .min()
-
-    guard let shiftStart = nextShiftStart else {
-      print("[BGTask] No upcoming shifts to schedule background task for")
-      return
-    }
-
-    // Schedule task for 1 minute AFTER the shift starts
-    // This ensures isShiftOngoing() returns true when the task runs
-    let scheduledTime = shiftStart.addingTimeInterval(60)
-
-    let request = BGAppRefreshTaskRequest(identifier: shiftCheckTaskId)
-    request.earliestBeginDate = scheduledTime
-
-    do {
-      try BGTaskScheduler.shared.submit(request)
-      let formatter = ISO8601DateFormatter()
-      print("[BGTask] Scheduled background task for \(formatter.string(from: scheduledTime))")
-    } catch {
-      print("[BGTask] Failed to schedule: \(error.localizedDescription)")
-    }
-  }
-
-  /// Parse a shift's start date/time into a Date object
-  private func getShiftStartDate(_ shift: StoredShift) -> Date? {
-    shiftDateTimeFormatter().date(from: "\(shift.shiftDate) \(shift.startTime)")
-  }
-
-  private func handleShiftCheckTask(_ task: BGAppRefreshTask) {
-    print("[BGTask] Background task fired - checking for ongoing shifts")
-
-    // Set expiration handler
-    task.expirationHandler = {
-      print("[BGTask] Task expiring - completing with failure")
-      task.setTaskCompleted(success: false)
-    }
-
-    // Check for ongoing shifts and start Live Activity if needed
-    checkAndStartLiveActivity { [weak self] success in
-      print("[BGTask] Completed with success: \(success)")
-      task.setTaskCompleted(success: success)
-      // Schedule the next shift's Live Activity
-      self?.scheduleNextShiftLiveActivity()
-    }
-  }
-
-  private func checkAndStartLiveActivity(completion: @escaping (Bool) -> Void) {
-    checkAndStartLiveActivityIfNeeded()
-    completion(true)
-  }
-
   /// Check if there's an ongoing shift and start a Live Activity if needed.
   /// Also ends any Live Activities for shifts that are no longer ongoing.
   /// This is called from:
-  /// - Background task handler (when the scheduled task fires)
   /// - App foreground (when user opens the app)
   /// - App launch (in didFinishLaunchingWithOptions)
   /// - After widget storage update (when shifts are synced/edited)
   ///
-  /// This ensures the Live Activity starts reliably, not just depending on BGTask timing.
+  /// This ensures the Live Activity starts whenever the app is active and data is refreshed.
   func checkAndStartLiveActivityIfNeeded() {
     // Check if Live Activities are enabled
     let authInfo = ActivityAuthorizationInfo()

@@ -166,12 +166,8 @@ enum NativeWidgetStorage {
     // Trigger widget reload
     reloadWidgetTimelines()
 
-    // Reschedule Live Activity background task for the next upcoming shift
-    // This ensures the background task is always scheduled for the soonest shift
+    // Re-check in-app Live Activity state after fresh shift data is written.
     if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-      appDelegate.scheduleNextShiftLiveActivity()
-      // Also check if there's an ongoing shift that needs a Live Activity right now
-      // This handles the case where the app is opened during a shift and sync just completed
       appDelegate.checkAndStartLiveActivityIfNeeded()
     }
 
