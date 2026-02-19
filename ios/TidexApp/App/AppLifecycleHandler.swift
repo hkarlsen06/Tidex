@@ -21,8 +21,7 @@ final class AppLifecycleHandler {
     scheduleLoadingRecoveryIfNeeded()
     BiometricAuthService.shared.handleAppForeground()
     AppCoordinator.shared.handleAppForeground()
-    (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
-    (UIApplication.shared.delegate as? AppDelegate)?.endBackgroundTaskIfNeeded()
+    runForegroundLiveActivityMaintenance()
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
     // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
     // objectWillChange on the root ObservableObject does.
@@ -56,6 +55,14 @@ final class AppLifecycleHandler {
     (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
     // Defensive: ensure blur is shown when entering background.
     PrivacyBlurManager.showIfNeeded()
+  }
+
+  private func runForegroundLiveActivityMaintenance() {
+    guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
+    // Keep background scheduling and active shift state in sync on every foreground activation.
+    appDelegate.scheduleNextShiftLiveActivity()
+    appDelegate.checkAndStartLiveActivityIfNeeded()
+    appDelegate.endBackgroundTaskIfNeeded()
   }
 
   // MARK: - Loading Recovery

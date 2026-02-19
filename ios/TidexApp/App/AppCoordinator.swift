@@ -303,6 +303,11 @@ final class AppCoordinator: ObservableObject {
         case .signedOut:
           self.appState = .unauthenticated
           self.pendingMFAFactor = nil
+          self.userId = nil
+          self.userDisplayName = ""
+          self.userAvatarUrl = nil
+          self.hasFinishedOnboardingRemotely = false
+          self.initialSyncComplete = false
 
         case .tokenRefreshed:
           // Token refreshed, state unchanged
@@ -686,6 +691,12 @@ final class AppCoordinator: ObservableObject {
         }
         await Task { @MainActor in
           WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+        }.value
+
+        // Re-evaluate completed-shift celebration after foreground sync (or sync skip).
+        await Task { @MainActor in
+          guard self.userId == userId else { return }
+          ShiftCompletionCelebrationManager.shared.checkForCelebrationFromLocal(userId: userId)
         }.value
       } catch {
         // No session available
