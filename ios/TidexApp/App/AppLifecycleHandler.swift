@@ -59,8 +59,7 @@ final class AppLifecycleHandler {
 
   private func runForegroundLiveActivityMaintenance() {
     guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
-    // Keep background scheduling and active shift state in sync on every foreground activation.
-    appDelegate.scheduleNextShiftLiveActivity()
+    // Reconcile Live Activity state against current shifts when returning to foreground.
     appDelegate.checkAndStartLiveActivityIfNeeded()
     appDelegate.endBackgroundTaskIfNeeded()
   }
