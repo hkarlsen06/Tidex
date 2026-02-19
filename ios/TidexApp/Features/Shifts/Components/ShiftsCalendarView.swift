@@ -385,10 +385,10 @@ struct ShiftsCalendarView: View {
     }
     if isSelected || isInDragPreview {
       return CalendarCellStyle(
-        backgroundColor: Color.tidexBlue.opacity(0.15),
+        backgroundColor: isToday ? Color.tidexBlue.opacity(0.2) : .tidexSurfacePrimary,
         borderColor: .tidexBlue,
         borderWidth: 2,
-        dayNumberColor: .tidexTextPrimary
+        dayNumberColor: isToday ? .tidexBlue : .tidexTextPrimary
       )
     }
     if hasConflict {
