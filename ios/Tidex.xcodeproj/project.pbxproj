@@ -106,6 +106,13 @@
 			);
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
 		};
+		11546CFD2F3E989900FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Supporting/Info.plist,
+			);
+			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
+		};
 		1154802F2F3E9BA700FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -150,13 +157,6 @@
 				SharedKeychainStorage.swift,
 			);
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
-		};
-		11546CFD2F3E989900FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Supporting/Info.plist,
-			);
-			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 

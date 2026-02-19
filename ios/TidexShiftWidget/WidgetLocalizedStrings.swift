@@ -12,6 +12,7 @@ extension LocalizedStringResource {
   static var widgetDoneCapitalized: LocalizedStringResource { "Done" }
   static var widgetLeft: LocalizedStringResource { "left" }
   static var widgetStart: LocalizedStringResource { "start" }
+  static var widgetEnd: LocalizedStringResource { "end" }
   static var widgetEnds: LocalizedStringResource { "Ends" }
   static var widgetHours: LocalizedStringResource { "hours" }
   static var widgetActive: LocalizedStringResource { "Active" }

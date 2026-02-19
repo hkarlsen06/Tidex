@@ -1,5 +1,5 @@
-import SwiftUI
 import CropViewController
+import SwiftUI
 
 /// Sheet wrapper for cropping profile images using CropViewController
 struct ProfileImageCropSheet: UIViewControllerRepresentable {
@@ -8,13 +8,19 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
   let onCancel: () -> Void
 
   func makeUIViewController(context: Context) -> UINavigationController {
-    // Use circular cropping style - perfect for profile pictures
-    let cropViewController = CropViewController(croppingStyle: .circular, image: image)
+    // Use default (square) cropping style - squircle clipping is applied at display time
+    let cropViewController = CropViewController(croppingStyle: .default, image: image)
     cropViewController.delegate = context.coordinator
 
     // Hide rotate buttons for cleaner UI
     cropViewController.rotateButtonsHidden = true
     cropViewController.rotateClockwiseButtonHidden = true
+
+    // Lock to square aspect ratio for avatar use
+    cropViewController.aspectRatioPreset = CGSize(width: 1, height: 1)
+    cropViewController.aspectRatioLockEnabled = true
+    cropViewController.resetAspectRatioEnabled = false
+    cropViewController.aspectRatioPickerButtonHidden = true
 
     // Customize button titles
     cropViewController.doneButtonTitle = NSLocalizedString("profile.imageCrop.confirm", comment: "")
@@ -43,14 +49,16 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     }
 
     func cropViewController(
-      _ cropViewController: CropViewController, didCropToImage image: UIImage, withRect cropRect: CGRect,
+      _ cropViewController: CropViewController, didCropToImage image: UIImage,
+      withRect cropRect: CGRect,
       angle: Int
     ) {
       onCrop(image)
     }
 
     func cropViewController(
-      _ cropViewController: CropViewController, didCropToCircularImage image: UIImage, withRect cropRect: CGRect,
+      _ cropViewController: CropViewController, didCropToCircularImage image: UIImage,
+      withRect cropRect: CGRect,
       angle: Int
     ) {
       onCrop(image)
