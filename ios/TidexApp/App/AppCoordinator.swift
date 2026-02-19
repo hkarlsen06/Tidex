@@ -168,7 +168,7 @@ final class AppCoordinator: ObservableObject {
 
   /// Timeout for initial session check (in nanoseconds)
   /// If authStateChanges doesn't emit .initialSession within this time, we check manually
-  private static let initialSessionTimeout: UInt64 = 250_000_000  // 0.25 seconds
+  private static let initialSessionTimeout: UInt64 = 500_000_000  // 0.5 seconds
 
   /// Timeout for MFA/terms network checks (in nanoseconds)
   /// If these checks hang (slow network, unresponsive server), fall back to .unauthenticated
@@ -194,7 +194,7 @@ final class AppCoordinator: ObservableObject {
       // This can happen if there's no stored session or the SDK initialization is slow.
       if self.appState == .loading && !self.didReceiveInitialSession {
         launchLog.warning(
-          "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.25s")
+          "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
         await self.performInitialSessionCheck()
       }
     }

@@ -164,8 +164,8 @@ final class ProfileSettingsViewModel: ObservableObject {
           data: ["full_name": .string(displayName)]
         ))
 
-      // Refresh session to get updated JWT
-      _ = try? await supabase.auth.refreshSession()
+      // Refresh session to get updated JWT via serialized auth path
+      _ = try? await AuthSessionManager.shared.forceRefresh()
 
       originalDisplayName = displayName
 
