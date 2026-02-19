@@ -161,6 +161,7 @@ struct CalendarDayCell<Content: View>: View {
   private var leadingMarkerSlot: some View {
     Text("88")
       .font(.tidexMicro)
+      .fixedSize(horizontal: true, vertical: false)
       .hidden()
       .accessibilityHidden(true)
       .overlay(alignment: .leading) {
