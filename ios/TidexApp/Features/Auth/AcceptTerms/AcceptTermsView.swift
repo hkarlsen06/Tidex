@@ -214,8 +214,8 @@ struct AcceptTermsView: View {
             data: ["terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))]
           ))
 
-        // Refresh session to get updated JWT
-        _ = try await supabase.auth.refreshSession()
+        // Refresh session to get updated JWT via serialized auth path
+        _ = try await AuthSessionManager.shared.forceRefresh()
 
         // Notify coordinator that terms were accepted
         await MainActor.run {

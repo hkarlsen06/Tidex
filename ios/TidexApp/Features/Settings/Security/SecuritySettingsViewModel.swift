@@ -266,8 +266,8 @@ final class SecuritySettingsViewModel: ObservableObject {
           ))
       }
 
-      // Refresh session
-      _ = try? await supabase.auth.refreshSession()
+      // Refresh session via serialized auth path to avoid refresh races
+      _ = try? await AuthSessionManager.shared.forceRefresh()
 
       Haptics.play(.success)
 
@@ -500,8 +500,8 @@ final class SecuritySettingsViewModel: ObservableObject {
         type: .phoneChange
       )
 
-      // Refresh session
-      _ = try? await supabase.auth.refreshSession()
+      // Refresh session via serialized auth path to avoid refresh races
+      _ = try? await AuthSessionManager.shared.forceRefresh()
 
       Haptics.play(.success)
 
@@ -646,7 +646,7 @@ final class SecuritySettingsViewModel: ObservableObject {
     // Refresh session so the cached user data no longer includes the removed factor.
     // listFactors() reads from the cached session, so without this it would still
     // return the old factor on subsequent loads.
-    _ = try? await supabase.auth.refreshSession()
+    _ = try? await AuthSessionManager.shared.forceRefresh()
 
     // Re-fetch factors from server to confirm deletion and ensure consistency
     await loadMFAFactors()

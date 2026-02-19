@@ -497,12 +497,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       return
     }
 
-    do {
-      // Get current user session for auth and user ID
-      let session = try await supabase.auth.session
+    apnsRegistrationInFlight = true
+    defer { apnsRegistrationInFlight = false }
 
-      apnsRegistrationInFlight = true
-      defer { apnsRegistrationInFlight = false }
+    do {
+      // Route session access through AuthSessionManager to avoid refresh races
+      // with other startup/foreground tasks that also need auth.
+      let session = try await AuthSessionManager.shared.getSession()
 
       // Build API request
       let url = APIConfiguration.webAppBaseURL.appendingPathComponent("api/push-device")

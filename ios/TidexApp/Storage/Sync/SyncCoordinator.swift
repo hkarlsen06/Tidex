@@ -122,8 +122,9 @@ final class SyncCoordinator: ObservableObject {
   /// Keeps `raw_user_meta_data.locale` aligned with the active iPhone/app language.
   /// Stores language code as-is (e.g. `nb`, `en`) for server-side localization.
   private func updateAppLocaleMetadataIfNeeded() async {
-    guard let appLocaleCode = Locale.autoupdatingCurrent.language.languageCode?.identifier
-      .lowercased(),
+    guard
+      let appLocaleCode = Locale.autoupdatingCurrent.language.languageCode?.identifier
+        .lowercased(),
       !appLocaleCode.isEmpty
     else {
       logger.debug("Skipping locale metadata sync: app locale code is empty")
@@ -131,8 +132,10 @@ final class SyncCoordinator: ObservableObject {
     }
 
     do {
-      let currentMetadataLocale =
-        (try await supabase.auth.user()).userMetadata["locale"]?.value as? String
+      // Route session access through AuthSessionManager to avoid refresh races
+      // with other launch/foreground tasks.
+      let session = try await AuthSessionManager.shared.getSession()
+      let currentMetadataLocale = session.user.userMetadata["locale"]?.value as? String
       let normalizedCurrentLocale = currentMetadataLocale?.lowercased()
 
       guard normalizedCurrentLocale != appLocaleCode else {
