@@ -26880,6 +26880,23 @@
           }
         }
       }
+    },
+    "end" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "end"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "slutt"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -26,6 +26,41 @@ extension ShiftWidgetEntry {
 
     return calendar.date(from: components)
   }
+
+  /// Shift end timestamp for active shifts (used for countdown to shift end)
+  fileprivate var shiftEndDateTime: Date? {
+    guard hasShift,
+      shiftHasStarted,
+      !shiftHasEnded
+    else {
+      return nil
+    }
+
+    let calendar = Calendar.current
+    let startComponents = startTime.split(separator: ":").compactMap { Int($0) }
+    let endComponents = endTime.split(separator: ":").compactMap { Int($0) }
+    guard startComponents.count >= 2, endComponents.count >= 2 else {
+      return nil
+    }
+
+    var components = calendar.dateComponents([.year, .month, .day], from: date)
+    components.hour = endComponents[0]
+    components.minute = endComponents[1]
+    components.second = 0
+
+    guard var endDate = calendar.date(from: components) else {
+      return nil
+    }
+
+    // Handle cross-midnight shifts (end time <= start time)
+    let startMinutes = startComponents[0] * 60 + startComponents[1]
+    let endMinutes = endComponents[0] * 60 + endComponents[1]
+    if endMinutes <= startMinutes {
+      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+    }
+
+    return endDate
+  }
 }
 
 // MARK: - Lock Screen Widget Views (iOS 16+)
@@ -84,15 +119,17 @@ struct ShiftAccessoryCircularView: View {
               .font(.system(size: 9, weight: .medium))
               .textCase(.uppercase)
           }
-        } else if entry.shiftHasStarted {
-          // Shift in progress: show end time
+        } else if let shiftEnd = entry.shiftEndDateTime {
+          // Shift in progress: show live countdown to end
           VStack(spacing: 0) {
-            Image(systemName: "clock.fill")
-              .font(.system(size: 12))
-
-            Text(entry.endTime)
-              .font(.system(size: 14, weight: .semibold, design: .rounded))
+            Text(shiftEnd, style: .timer)
+              .font(.system(size: 13, weight: .bold, design: .rounded))
               .monospacedDigit()
+              .lineLimit(1)
+
+            Text(.widgetEnd)
+              .font(.system(size: 9, weight: .medium))
+              .textCase(.uppercase)
           }
         } else {
           // Today/tomorrow: show start time
@@ -135,6 +172,11 @@ struct ShiftAccessoryRectangularView: View {
 
           if let countdownTarget = entry.lockScreenCountdownTargetDate {
             Text(countdownTarget, style: .timer)
+              .font(.system(size: 11, weight: .semibold, design: .rounded))
+              .monospacedDigit()
+              .lineLimit(1)
+          } else if let shiftEnd = entry.shiftEndDateTime {
+            Text(shiftEnd, style: .timer)
               .font(.system(size: 11, weight: .semibold, design: .rounded))
               .monospacedDigit()
               .lineLimit(1)
@@ -202,10 +244,14 @@ struct ShiftAccessoryInlineView: View {
         } icon: {
           Image(systemName: "hourglass")
         }
-      } else if entry.shiftHasStarted {
-        // In progress: "Ends 15:00"
-        let endsText = String(localized: .widgetEnds)
-        Label("\(endsText) \(entry.endTime)", systemImage: "clock.fill")
+      } else if let shiftEnd = entry.shiftEndDateTime {
+        // In progress: live countdown to end
+        Label {
+          Text(shiftEnd, style: .timer)
+            .monospacedDigit()
+        } icon: {
+          Image(systemName: "hourglass.bottomhalf.filled")
+        }
       } else {
         // Today/tomorrow: "I dag 07:00"
         Label("\(entry.shiftDate) \(entry.startTime)", systemImage: "briefcase.fill")

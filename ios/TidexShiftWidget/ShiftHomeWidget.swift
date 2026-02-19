@@ -267,6 +267,41 @@ struct ShiftHomeWidgetView: View {
     return calendar.date(from: components)
   }
 
+  /// Shift end timestamp for active shifts (used for live countdown to shift end)
+  private var todayShiftEndDateTime: Date? {
+    guard entry.hasShift,
+      entry.shiftHasStarted,
+      !entry.shiftHasEnded
+    else {
+      return nil
+    }
+
+    let calendar = Calendar.current
+    let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
+    let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
+    guard startComponents.count >= 2, endComponents.count >= 2 else {
+      return nil
+    }
+
+    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
+    components.hour = endComponents[0]
+    components.minute = endComponents[1]
+    components.second = 0
+
+    guard var endDate = calendar.date(from: components) else {
+      return nil
+    }
+
+    // Handle cross-midnight shifts (end time <= start time)
+    let startMinutes = startComponents[0] * 60 + startComponents[1]
+    let endMinutes = endComponents[0] * 60 + endComponents[1]
+    if endMinutes <= startMinutes {
+      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+    }
+
+    return endDate
+  }
+
   var body: some View {
     ZStack {
       // Adaptive background
@@ -329,8 +364,17 @@ struct ShiftHomeWidgetView: View {
   private var topHeaderRow: some View {
     Group {
       if let countdownTarget = todayShiftStartDateTime {
-        // Timer + earnings as interpolated Text so the timer doesn't expand the layout.
+        // Timer countdown to shift start + earnings
         Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
+          .font(.system(size: 15, weight: .semibold))
+          .monospacedDigit()
+          .foregroundColor(accentColor)
+          .multilineTextAlignment(.center)
+          .widgetAccentable()
+          .lineLimit(1)
+      } else if let shiftEnd = todayShiftEndDateTime {
+        // Timer countdown to shift end + earnings
+        Text("\(shiftEnd, style: .timer)  \(entry.netEarnings)")
           .font(.system(size: 15, weight: .semibold))
           .monospacedDigit()
           .foregroundColor(accentColor)

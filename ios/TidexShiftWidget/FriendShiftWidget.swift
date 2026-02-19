@@ -192,11 +192,54 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     }
 
     // Create entry (will use API data if available, otherwise cached)
-    let entry = createEntry(for: friend, fromAPI: apiFriend)
+    let now = Date()
+    let calendar = Calendar.current
+    let entry = createEntry(for: friend, fromAPI: apiFriend, at: now)
 
-    // Refresh every 15 minutes
-    let refreshDate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
-    return Timeline(entries: [entry], policy: .after(refreshDate))
+    var entries = [entry]
+
+    // Add transition entries at shift start/end for today's shifts
+    if entry.hasShift,
+      entry.layoutState == .todayOrTomorrow,
+      entry.daysRemaining == 0
+    {
+      let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
+      let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
+
+      // Transition entry at shift start
+      if !entry.shiftHasStarted, startComponents.count >= 2 {
+        var sc = calendar.dateComponents([.year, .month, .day], from: now)
+        sc.hour = startComponents[0]
+        sc.minute = startComponents[1]
+        sc.second = 0
+        if let shiftStart = calendar.date(from: sc), shiftStart > now {
+          entries.append(createEntry(for: friend, fromAPI: apiFriend, at: shiftStart))
+        }
+      }
+
+      // Transition entry at shift end
+      if !entry.shiftHasEnded, endComponents.count >= 2, startComponents.count >= 2 {
+        var ec = calendar.dateComponents([.year, .month, .day], from: now)
+        ec.hour = endComponents[0]
+        ec.minute = endComponents[1]
+        ec.second = 0
+        if var shiftEnd = calendar.date(from: ec) {
+          let startMinutes = startComponents[0] * 60 + startComponents[1]
+          let endMinutes = endComponents[0] * 60 + endComponents[1]
+          if endMinutes <= startMinutes {
+            shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
+          }
+          if shiftEnd > now {
+            entries.append(createEntry(for: friend, fromAPI: apiFriend, at: shiftEnd))
+          }
+        }
+      }
+    }
+
+    // Refresh at next midnight to pick up day transitions
+    let tomorrow = calendar.startOfDay(
+      for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
+    return Timeline(entries: entries, policy: .after(tomorrow))
   }
 
   /// Update App Group cache with fresh data from API
@@ -281,7 +324,10 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
   /// - Parameters:
   ///   - friend: The friend entity from widget config
   ///   - fromAPI: Optional fresh data from API (if available)
-  private func createEntry(for friend: FriendEntity, fromAPI: FriendWithShift?)
+  ///   - at: The date for this timeline entry
+  private func createEntry(
+    for friend: FriendEntity, fromAPI: FriendWithShift?, at now: Date = Date()
+  )
     -> FriendShiftWidgetEntry
   {
     let storedCurrency = getStoredCurrency()
@@ -332,11 +378,12 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shiftDate)
 
     // Check if shift has started/ended
-    let shiftStarted = hasShiftStarted(shiftDateString: shiftDate, startTime: startTime)
+    let shiftStarted = hasShiftStarted(shiftDateString: shiftDate, startTime: startTime, at: now)
     let shiftEnded = hasShiftEnded(
       shiftDateString: shiftDate,
       startTime: startTime,
-      endTime: endTime
+      endTime: endTime,
+      at: now
     )
 
     // Adjust layout state for active/ended shifts
@@ -367,7 +414,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     let deepLinkURL = URL(string: "tidex://sharing?user=\(friend.id)&dates=\(shiftDate)")
 
     return FriendShiftWidgetEntry(
-      date: Date(),
+      date: now,
       friendId: friend.id,
       friendName: friend.displayName,
       friendInitials: friend.initials,
@@ -404,7 +451,9 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     return abs(components.day ?? 0)
   }
 
-  private func hasShiftStarted(shiftDateString: String, startTime: String) -> Bool {
+  private func hasShiftStarted(shiftDateString: String, startTime: String, at now: Date = Date())
+    -> Bool
+  {
     guard let shiftDate = parseShiftDate(shiftDateString) else { return false }
 
     let timeComponents = startTime.split(separator: ":").compactMap { Int($0) }
@@ -416,10 +465,12 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     components.minute = timeComponents[1]
 
     guard let shiftStartDateTime = calendar.date(from: components) else { return false }
-    return Date() >= shiftStartDateTime
+    return now >= shiftStartDateTime
   }
 
-  private func hasShiftEnded(shiftDateString: String, startTime: String, endTime: String) -> Bool {
+  private func hasShiftEnded(
+    shiftDateString: String, startTime: String, endTime: String, at now: Date = Date()
+  ) -> Bool {
     guard let shiftDate = parseShiftDate(shiftDateString) else { return false }
 
     let calendar = Calendar.current
@@ -443,8 +494,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         calendar.date(byAdding: .day, value: 1, to: shiftEndDateTime) ?? shiftEndDateTime
     }
 
-    guard Date() >= shiftEndDateTime else { return false }
-    return calendar.isDate(shiftEndDateTime, inSameDayAs: Date())
+    guard now >= shiftEndDateTime else { return false }
+    return calendar.isDate(shiftEndDateTime, inSameDayAs: now)
   }
 
   private func determineLayoutState(shiftDateString: String) -> (
@@ -644,6 +695,66 @@ struct FriendShiftWidgetView: View {
     return secondaryTextColor
   }
 
+  /// Shift start timestamp for today's upcoming friend shifts (countdown to start)
+  private var todayShiftStartDateTime: Date? {
+    guard entry.hasShift,
+      entry.layoutState == .todayOrTomorrow,
+      entry.daysRemaining == 0,
+      !entry.shiftHasStarted,
+      !entry.shiftHasEnded
+    else {
+      return nil
+    }
+
+    let timeComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
+    guard timeComponents.count >= 2 else {
+      return nil
+    }
+
+    let calendar = Calendar.current
+    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
+    components.hour = timeComponents[0]
+    components.minute = timeComponents[1]
+    components.second = 0
+
+    return calendar.date(from: components)
+  }
+
+  /// Shift end timestamp for active friend shifts (countdown to end)
+  private var todayShiftEndDateTime: Date? {
+    guard entry.hasShift,
+      entry.shiftHasStarted,
+      !entry.shiftHasEnded
+    else {
+      return nil
+    }
+
+    let calendar = Calendar.current
+    let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
+    let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
+    guard startComponents.count >= 2, endComponents.count >= 2 else {
+      return nil
+    }
+
+    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
+    components.hour = endComponents[0]
+    components.minute = endComponents[1]
+    components.second = 0
+
+    guard var endDate = calendar.date(from: components) else {
+      return nil
+    }
+
+    // Handle cross-midnight shifts (end time <= start time)
+    let startMinutes = startComponents[0] * 60 + startComponents[1]
+    let endMinutes = endComponents[0] * 60 + endComponents[1]
+    if endMinutes <= startMinutes {
+      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+    }
+
+    return endDate
+  }
+
   var body: some View {
     ZStack {
       backgroundColor
@@ -715,20 +826,58 @@ struct FriendShiftWidgetView: View {
   }
 
   private var topHeaderRow: some View {
-    HStack(spacing: 6) {
-      // Date (matching standard widget layout)
-      Text(entry.shiftDate)
-        .font(.system(size: 15, weight: .semibold))
-        .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-        .widgetAccentable(entry.hasShift)
-        .lineLimit(1)
+    Group {
+      if let countdownTarget = todayShiftStartDateTime {
+        // Timer countdown to shift start + earnings
+        if entry.showEarnings {
+          Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
+            .font(.system(size: 15, weight: .semibold))
+            .monospacedDigit()
+            .foregroundColor(accentColor)
+            .multilineTextAlignment(.center)
+            .widgetAccentable()
+            .lineLimit(1)
+        } else {
+          Text(countdownTarget, style: .timer)
+            .font(.system(size: 15, weight: .semibold))
+            .monospacedDigit()
+            .foregroundColor(accentColor)
+            .widgetAccentable()
+            .lineLimit(1)
+        }
+      } else if let shiftEnd = todayShiftEndDateTime {
+        // Timer countdown to shift end + earnings
+        if entry.showEarnings {
+          Text("\(shiftEnd, style: .timer)  \(entry.netEarnings)")
+            .font(.system(size: 15, weight: .semibold))
+            .monospacedDigit()
+            .foregroundColor(accentColor)
+            .multilineTextAlignment(.center)
+            .widgetAccentable()
+            .lineLimit(1)
+        } else {
+          Text(shiftEnd, style: .timer)
+            .font(.system(size: 15, weight: .semibold))
+            .monospacedDigit()
+            .foregroundColor(accentColor)
+            .widgetAccentable()
+            .lineLimit(1)
+        }
+      } else {
+        HStack(spacing: 6) {
+          Text(entry.shiftDate)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+            .widgetAccentable(entry.hasShift)
+            .lineLimit(1)
 
-      // Earnings (if visible)
-      if entry.showEarnings {
-        Text(entry.netEarnings)
-          .font(.system(size: 15, weight: .semibold))
-          .foregroundColor(secondaryTextColor)
-          .lineLimit(1)
+          if entry.showEarnings {
+            Text(entry.netEarnings)
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundColor(secondaryTextColor)
+              .lineLimit(1)
+          }
+        }
       }
     }
   }

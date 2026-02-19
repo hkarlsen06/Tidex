@@ -549,20 +549,15 @@ struct ShiftComplicationView: View {
     return shortWeekdayText(for: shift)
   }
 
-  private func countdownTargetDate(for range: (start: Date, end: Date)) -> Date? {
-    if renderDate < range.start {
-      return range.start
-    }
-    if renderDate < range.end {
-      return range.end
-    }
-    return nil
-  }
-
   @ViewBuilder
   private func relativeCountdownText(range: (start: Date, end: Date)) -> some View {
-    if let targetDate = countdownTargetDate(for: range) {
-      Text(targetDate, style: .timer)
+    if renderDate < range.start {
+      // Before shift: count down to start
+      Text(timerInterval: renderDate...range.start, countsDown: true)
+        .monospacedDigit()
+    } else if renderDate < range.end {
+      // During shift: count down to end
+      Text(timerInterval: renderDate...range.end, countsDown: true)
         .monospacedDigit()
     } else {
       Text("--")

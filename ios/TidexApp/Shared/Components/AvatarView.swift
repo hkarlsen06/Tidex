@@ -6,7 +6,7 @@ struct AvatarView: View {
   let url: String?
   let initials: String
   let size: CGFloat
-  /// Optional corner radius for concentric design. When nil, uses circular shape.
+  /// Optional corner radius for concentric design. When nil, uses a squircle proportional to size.
   var cornerRadius: CGFloat?
 
   /// Standard avatar sizes for consistency
@@ -19,12 +19,13 @@ struct AvatarView: View {
     static let large: CGFloat = 44
   }
 
+  /// Squircle corner radius proportional to avatar size (~22%, matching iOS icon proportions)
+  private var resolvedCornerRadius: CGFloat {
+    cornerRadius ?? (size * 0.22)
+  }
+
   private var shape: some Shape {
-    if let cornerRadius {
-      AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-    } else {
-      AnyShape(Circle())
-    }
+    AnyShape(RoundedRectangle(cornerRadius: resolvedCornerRadius, style: .continuous))
   }
 
   var body: some View {
