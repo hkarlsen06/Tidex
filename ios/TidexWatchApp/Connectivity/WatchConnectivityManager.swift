@@ -62,6 +62,10 @@ final class WatchConnectivityManager: NSObject {
 
         if iphoneSuccess {
           logger.info("iPhone refresh successful")
+          // Ensure complications/widgets re-evaluate immediately after manual refresh.
+          // When applicationContext delivery is delayed, this still forces a refresh
+          // against the latest persisted payload.
+          WidgetCenter.shared.reloadAllTimelines()
           isRefreshing = false
           return
         }

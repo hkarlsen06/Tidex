@@ -152,9 +152,13 @@ struct ShiftCalculator {
       return fallbackDate
     }
 
-    // Before shift starts - refresh when shift starts (or default interval, whichever is sooner)
+    // Before shift starts, refresh aggressively to reduce stale state at boundary.
     if date < range.start {
-      return range.start < fallbackDate ? range.start : fallbackDate
+      let preStartInterval: TimeInterval = 5 * 60
+      let preStartFallback =
+        calendar.date(byAdding: .second, value: Int(preStartInterval), to: date)
+        ?? date.addingTimeInterval(preStartInterval)
+      return range.start < preStartFallback ? range.start : preStartFallback
     }
 
     // During shift - refresh every minute for progress updates
@@ -266,26 +270,42 @@ struct ShiftComplicationProvider: TimelineProvider {
 
     let calculator = ShiftCalculator(shift: shift)
     guard let range = calculator.dateRange() else { return entries }
+    let calendar = Calendar.current
 
+    // Seed extra entries around boundaries so we recover quickly if one boundary tick is delayed.
+    let boundaryOffsetsInSeconds = [0, 5, 15, 30, 60]
+    let boundaries = [range.start, range.end]
+    for boundary in boundaries where boundary > now {
+      for offset in boundaryOffsetsInSeconds {
+        guard let checkpoint = calendar.date(byAdding: .second, value: offset, to: boundary),
+          checkpoint > now
+        else { continue }
+        entries.append(ShiftComplicationEntry(date: checkpoint, shift: shift))
+      }
+    }
+
+    // Seed minute checkpoints for active shifts and around upcoming shift start.
+    // For far-future shifts, this places entries in a start window so transition logic
+    // can still flip even if the provider isn't re-invoked exactly at the boundary.
+    let checkpointWindowStart: Date
     if range.start > now {
-      entries.append(ShiftComplicationEntry(date: range.start, shift: shift))
+      let preStartWindow =
+        calendar.date(byAdding: .minute, value: -15, to: range.start) ?? range.start
+      checkpointWindowStart = preStartWindow > now ? preStartWindow : now
+    } else {
+      checkpointWindowStart = now
     }
 
-    if range.end > now {
-      entries.append(ShiftComplicationEntry(date: range.end, shift: shift))
+    let minuteHorizon: Date
+    if range.start > now {
+      minuteHorizon = calendar.date(byAdding: .minute, value: 120, to: range.start) ?? range.end
+    } else {
+      minuteHorizon = now.addingTimeInterval(120 * 60)
     }
+    let checkpointEnd = range.end < minuteHorizon ? range.end : minuteHorizon
 
-    // Seed near-term minute checkpoints to keep active/soon-starting countdowns responsive.
-    // This reduces visible "hangs" when the provider isn't invoked exactly on schedule.
-    let secondsUntilStart = range.start.timeIntervalSince(now)
-    let shouldSeedMinuteEntries = range.start <= now || secondsUntilStart <= 90 * 60
-
-    if shouldSeedMinuteEntries {
-      let calendar = Calendar.current
-      let minuteHorizon = now.addingTimeInterval(120 * 60)
-      let checkpointEnd = range.end < minuteHorizon ? range.end : minuteHorizon
-      var cursor = calendar.date(byAdding: .minute, value: 1, to: now) ?? checkpointEnd
-
+    if checkpointWindowStart < checkpointEnd {
+      var cursor = nextMinuteBoundary(after: checkpointWindowStart, calendar: calendar)
       while cursor < checkpointEnd {
         entries.append(ShiftComplicationEntry(date: cursor, shift: shift))
         guard let next = calendar.date(byAdding: .minute, value: 1, to: cursor) else { break }
@@ -308,6 +328,16 @@ struct ShiftComplicationProvider: TimelineProvider {
 
     return deduped
   }
+
+  private func nextMinuteBoundary(after date: Date, calendar: Calendar) -> Date {
+    let withSecondZero = calendar.date(bySetting: .second, value: 0, of: date) ?? date
+    let aligned =
+      calendar.date(bySetting: .nanosecond, value: 0, of: withSecondZero) ?? withSecondZero
+    if aligned > date {
+      return aligned
+    }
+    return calendar.date(byAdding: .minute, value: 1, to: aligned) ?? date.addingTimeInterval(60)
+  }
 }
 
 // MARK: - Complication Views
@@ -315,6 +345,12 @@ struct ShiftComplicationProvider: TimelineProvider {
 struct ShiftComplicationView: View {
   @Environment(\.widgetFamily) var family
   let entry: ShiftComplicationEntry
+
+  private enum ShiftDisplayState {
+    case upcoming
+    case active
+    case ended
+  }
 
   /// Use live wall-clock time during rendering to reduce stale UI when timeline refresh is delayed.
   private var renderDate: Date { Date() }
@@ -413,9 +449,10 @@ struct ShiftComplicationView: View {
 
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 6) {
+          let effectiveStatus = displayStatus(for: range)
           Label(
-            shift.status == .active ? activeTitle : nextShiftTitle,
-            systemImage: statusIcon(for: shift.status)
+            effectiveStatus == .active ? activeTitle : nextShiftTitle,
+            systemImage: statusIcon(for: effectiveStatus)
           )
           .font(.caption2)
           .foregroundStyle(.secondary)
@@ -551,13 +588,8 @@ struct ShiftComplicationView: View {
 
   @ViewBuilder
   private func relativeCountdownText(range: (start: Date, end: Date)) -> some View {
-    if renderDate < range.start {
-      // Before shift: count down to start
-      Text(timerInterval: renderDate...range.start, countsDown: true)
-        .monospacedDigit()
-    } else if renderDate < range.end {
-      // During shift: count down to end
-      Text(timerInterval: renderDate...range.end, countsDown: true)
+    if let targetDate = countdownTargetDate(for: range) {
+      Text(timerInterval: renderDate...targetDate, countsDown: true)
         .monospacedDigit()
     } else {
       Text("--")
@@ -590,7 +622,44 @@ struct ShiftComplicationView: View {
 
   private func cornerTopCurvedText(shift: WatchShiftDTO, range: (start: Date, end: Date)) -> String
   {
-    return renderDate < range.start ? shift.startTime : shift.endTime
+    switch displayState(for: range) {
+    case .upcoming:
+      return shift.startTime
+    case .active, .ended:
+      return shift.endTime
+    }
+  }
+
+  private func displayState(for range: (start: Date, end: Date)) -> ShiftDisplayState {
+    if renderDate < range.start {
+      return .upcoming
+    }
+    if renderDate < range.end {
+      return .active
+    }
+    return .ended
+  }
+
+  private func countdownTargetDate(for range: (start: Date, end: Date)) -> Date? {
+    switch displayState(for: range) {
+    case .upcoming:
+      return range.start
+    case .active:
+      return range.end
+    case .ended:
+      return nil
+    }
+  }
+
+  private func displayStatus(for range: (start: Date, end: Date)) -> ShiftPreviewStatus {
+    switch displayState(for: range) {
+    case .upcoming:
+      return .upcoming
+    case .active:
+      return .active
+    case .ended:
+      return .past
+    }
   }
 
 }
