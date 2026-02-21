@@ -30,6 +30,9 @@ struct DashboardView: View {
 
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?
+  @State private var showMonthlyGoalEditSheet = false
+  @State private var monthlyGoalEditInitialValue: Int?
+  @State private var monthlyGoalEditMonthLabel: String = ""
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -203,6 +206,14 @@ struct DashboardView: View {
       }
       Button(String(localized: .commonCancel), role: .cancel) {
         featuredShiftActionTarget = nil
+      }
+    }
+    .sheet(isPresented: $showMonthlyGoalEditSheet) {
+      MonthlyGoalEditSheet(
+        monthLabel: monthlyGoalEditMonthLabel,
+        initialGoal: monthlyGoalEditInitialValue
+      ) { value in
+        try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
       }
     }
     // Shift details sheet with full edit/delete capabilities
@@ -568,8 +579,13 @@ struct DashboardView: View {
         shiftCount: data.currentMonthShiftCount,
         plannedCount: data.currentMonthPlannedCount,
         percentageChange: data.percentageChangeVsPrevious,
-        taxEnabled: data.currentMonthTaxEnabled
+        taxEnabled: data.currentMonthTaxEnabled,
+        monthlyGoal: data.currentMonthGoal
       )
+      .contentShape(Rectangle())
+      .onTapGesture {
+        openMonthlyGoalEditor(data: data)
+      }
 
       // Featured Shift Card - exact height on regular Dynamic Type to avoid
       // skeleton/content vertical recentering during the loading transition.
@@ -580,6 +596,15 @@ struct DashboardView: View {
         featuredShiftSection(data: data)
       }
     }
+  }
+
+  private func openMonthlyGoalEditor(data: DashboardData) {
+    impactHaptic.impactOccurred()
+    monthlyGoalEditInitialValue = data.currentMonthGoal.flatMap {
+      $0 > 0 ? Int($0.rounded()) : nil
+    }
+    monthlyGoalEditMonthLabel = "\(viewModel.displayMonthName) \(viewModel.displayYear)"
+    showMonthlyGoalEditSheet = true
   }
 
   // MARK: - Featured Shift Section
@@ -662,6 +687,7 @@ struct DashboardView: View {
               plannedCount: 0,
               percentageChange: nil,
               taxEnabled: false,
+              monthlyGoal: nil,
               isLoading: true
             )
 

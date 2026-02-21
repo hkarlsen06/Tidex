@@ -36,6 +36,7 @@ struct DashboardData: Equatable {
   let currentMonthPlannedCount: Int  // Future shifts
   let percentageChangeVsPrevious: Double?
   let currentMonthTaxEnabled: Bool
+  let currentMonthGoal: Double?  // nil when no monthly goal is configured
 
   // Featured Shift Card
   // For current month: next upcoming shift (or nil if none)
@@ -584,6 +585,31 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     objectWillChange.send()
   }
 
+  /// Save month-specific goal override for the currently displayed month.
+  func saveMonthlyGoalForDisplayedMonth(_ goal: Int?) async throws {
+    if cachedUserId == nil {
+      cachedUserId = try await getCurrentUserId()
+    }
+
+    guard let userId = cachedUserId else {
+      throw DashboardError.notAuthenticated
+    }
+
+    guard
+      let updatedSettings = try await settingsRepository.saveMonthlyGoalForMonth(
+        userId: userId,
+        year: displayYear,
+        month: displayMonth,
+        goal: goal
+      )
+    else {
+      throw DashboardError.noLocalData
+    }
+
+    settings = updatedSettings
+    dashboardData = buildDashboardData()
+  }
+
   /// Reload dashboard from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
@@ -1125,6 +1151,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       now: now
     )
     let displayTaxEnabled = displayedMonthShifts.first?.taxEnabled ?? false
+    let monthlyGoal = settings?.effectiveMonthlyGoal(year: displayYM.year, month: displayYM.month)
+      .flatMap { $0 > 0 ? Double($0) : nil }
 
     // Count completed and planned shifts
     let completedShifts = displayedMonthShifts.filter { shift in
@@ -1185,6 +1213,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       currentMonthPlannedCount: plannedShifts.count,
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
+      currentMonthGoal: monthlyGoal,
       featuredShift: featuredShift,
       isFeaturedShiftToday: isFeaturedShiftToday,
       featuredShiftIsBestShift: featuredShiftIsBestShift,
@@ -1231,6 +1260,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       now: now
     )
     let displayTaxEnabled = displayedMonthShifts.first?.taxEnabled ?? false
+    let monthlyGoal = settings.effectiveMonthlyGoal(year: displayYM.year, month: displayYM.month)
+      .flatMap { $0 > 0 ? Double($0) : nil }
 
     let completedShifts = displayedMonthShifts.filter { shift in
       Date.hasShiftEnded(
@@ -1283,6 +1314,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       currentMonthPlannedCount: plannedShifts.count,
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
+      currentMonthGoal: monthlyGoal,
       featuredShift: featuredShift,
       isFeaturedShiftToday: isFeaturedShiftToday,
       featuredShiftIsBestShift: featuredShiftIsBestShift,

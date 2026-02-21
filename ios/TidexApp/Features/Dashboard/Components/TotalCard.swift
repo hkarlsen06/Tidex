@@ -15,6 +15,7 @@ struct TotalCard: View {
   let plannedCount: Int  // Future/planned shift count
   let percentageChange: Double?
   let taxEnabled: Bool
+  let monthlyGoal: Double?  // Optional monthly goal used for thin progress bar under total
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
 
@@ -77,6 +78,26 @@ struct TotalCard: View {
     !dynamicTypeSize.isAccessibilitySize
   }
 
+  private var goalTarget: Double? {
+    guard let monthlyGoal, monthlyGoal > 0 else { return nil }
+    return monthlyGoal
+  }
+
+  private var showGoalProgressBar: Bool {
+    isLoading || goalTarget != nil
+  }
+
+  /// Progress fraction for monthly goal (0.0-1.0), clamped.
+  private var goalProgressFraction: Double {
+    guard let goalTarget else { return 0 }
+    return min(max(mainDisplayValue / goalTarget, 0), 1)
+  }
+
+  private var goalProgressPercentText: String {
+    let percent = Int((goalProgressFraction * 100).rounded())
+    return "\(percent)%"
+  }
+
   // MARK: - Subtitle Text
 
   /// Subtitle type for determining which content to show
@@ -137,6 +158,8 @@ struct TotalCard: View {
 
       mainAmountDisplay
         .frame(height: usesFixedTypographyFrames ? 88 : nil)
+
+      goalProgressBar
 
       subtitleContent
         .frame(height: usesFixedTypographyFrames ? 24 : nil)
@@ -242,6 +265,49 @@ struct TotalCard: View {
   }
 
   @ViewBuilder
+  private var goalProgressBar: some View {
+    if showGoalProgressBar {
+      HStack(spacing: Spacing.xs) {
+        GeometryReader { geometry in
+          ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: CornerRadius.xs)
+              .fill(Color.tidexSurfaceSecondary)
+              .frame(height: 8)
+
+            RoundedRectangle(cornerRadius: CornerRadius.xs)
+              .fill(Color.tidexBlue)
+              .frame(
+                width: geometry.size.width * (isLoading ? 0.45 : goalProgressFraction),
+                height: 8
+              )
+              .animation(.easeOut(duration: 0.6), value: goalProgressFraction)
+          }
+        }
+        .frame(height: 8)
+
+        if isLoading {
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
+            .fill(Color.tidexTextMuted.opacity(0.3))
+            .frame(width: 34, height: 14)
+        } else {
+          Text(goalProgressPercentText)
+            .font(.tidexLabel)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundColor(.tidexBlue)
+            .frame(width: 34, alignment: .trailing)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      // Make the amount feel anchored to the bar, then restore breathing room
+      // before the subtitle row.
+      .padding(.top, -Spacing.xxs)
+      .padding(.bottom, Spacing.sm)
+    }
+  }
+
+  @ViewBuilder
   private var mainAmountDisplay: some View {
     if showDashes {
       // Skeleton placeholder line matching the height of the large text
@@ -287,7 +353,8 @@ struct TotalCard: View {
       shiftCount: 8,
       plannedCount: 3,
       percentageChange: 15,
-      taxEnabled: true
+      taxEnabled: true,
+      monthlyGoal: 20000
     )
 
     // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
@@ -299,7 +366,8 @@ struct TotalCard: View {
       shiftCount: 5,
       plannedCount: 0,
       percentageChange: -8,
-      taxEnabled: true
+      taxEnabled: true,
+      monthlyGoal: 15000
     )
 
     // Case 3: No future shifts, no tax → "5 vakter"
@@ -311,7 +379,8 @@ struct TotalCard: View {
       shiftCount: 5,
       plannedCount: 0,
       percentageChange: -8,
-      taxEnabled: false
+      taxEnabled: false,
+      monthlyGoal: 15000
     )
 
     // Case 4: Has future/planned shifts but NO real earnings yet → "3 vakter planlagt"
@@ -323,7 +392,8 @@ struct TotalCard: View {
       shiftCount: 3,
       plannedCount: 3,
       percentageChange: nil,
-      taxEnabled: false
+      taxEnabled: false,
+      monthlyGoal: 15000
     )
 
     // Case 5: Zero earnings (shows dashes with skeleton subtitle)
@@ -335,7 +405,8 @@ struct TotalCard: View {
       shiftCount: 0,
       plannedCount: 0,
       percentageChange: nil,
-      taxEnabled: false
+      taxEnabled: false,
+      monthlyGoal: nil
     )
   }
   .padding(.horizontal, Spacing.lg)
