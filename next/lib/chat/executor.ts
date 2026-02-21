@@ -1407,11 +1407,14 @@ async function executeGetStatistics(
 
   try {
     // Get user's currency and stats data in parallel
+    // Always use English locale for tool responses — the AI assistant handles
+    // localization to the user's language when formatting its response
     const [currency, statsData] = await Promise.all([
       getUserCurrency(userId),
       getStatsDataForApi(userId, {
         year: input.year,
         month: input.month,
+        locale: "en",
       }),
     ]);
 
@@ -1437,11 +1440,13 @@ async function executeGetStatistics(
         message = tr.statsFullYear;
         break;
       case "yearly_months":
-        data = statsData.yearlyMonths;
+        // Strip fullMonth — AI can derive from monthNumber
+        data = statsData.yearlyMonths.map(({ fullMonth: _, ...rest }) => rest);
         message = tr.statsYearlyMonths;
         break;
       case "this_week":
-        data = statsData.thisWeek;
+        // Strip fullDay — AI can derive from fullDate (YYYY-MM-DD)
+        data = statsData.thisWeek.map(({ fullDay: _, ...rest }) => rest);
         message = tr.statsThisWeek;
         break;
       case "monthly_goal":
