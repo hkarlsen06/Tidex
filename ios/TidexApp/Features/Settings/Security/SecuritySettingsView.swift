@@ -7,6 +7,11 @@ struct SecuritySettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel = SecuritySettingsViewModel()
 
+  /// Whether AI data sharing is enabled (Wagey consent)
+  @State private var aiDataSharingEnabled = WageyViewModel.shared.hasConsentedToAISharing
+  /// Whether to show the consent view when re-enabling AI data sharing
+  @State private var showAIConsentSheet = false
+
   var body: some View {
     List {
       // Error message
@@ -40,6 +45,9 @@ struct SecuritySettingsView: View {
         biometricLockSection
       }
 
+      // AI data sharing section
+      aiDataSharingSection
+
       // Password section
       passwordSection
 
@@ -54,8 +62,24 @@ struct SecuritySettingsView: View {
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .securityTitle))
     .navigationBarTitleDisplayMode(.inline)
+    .onAppear {
+      aiDataSharingEnabled = WageyViewModel.shared.hasConsentedToAISharing
+    }
     .task {
       await viewModel.loadSecurityInfo()
+    }
+    .sheet(isPresented: $showAIConsentSheet) {
+      WageyConsentView(
+        onAgree: {
+          WageyViewModel.shared.grantAIConsent()
+          aiDataSharingEnabled = true
+          showAIConsentSheet = false
+        },
+        onDecline: {
+          aiDataSharingEnabled = false
+          showAIConsentSheet = false
+        }
+      )
     }
     .sheet(isPresented: $viewModel.showPasswordForm) {
       passwordFormSheet
@@ -165,6 +189,46 @@ struct SecuritySettingsView: View {
         .tint(.tidexBlue)
         .listRowBackground(Color.tidexSurfacePrimary)
       }
+    }
+  }
+
+  // MARK: - AI Data Sharing Section
+
+  private var aiDataSharingSection: some View {
+    Section(
+      header: Text(String(localized: .settingsWageyAiDataSharing)),
+      footer: Text(.settingsWageyAiDataSharingDescription)
+    ) {
+      Toggle(
+        isOn: Binding(
+          get: { aiDataSharingEnabled },
+          set: { newValue in
+            if newValue {
+              showAIConsentSheet = true
+            } else {
+              aiDataSharingEnabled = false
+              WageyViewModel.shared.revokeAIConsent()
+            }
+          }
+        )
+      ) {
+        HStack(spacing: Spacing.sm) {
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
+            .fill(Color.purple.opacity(0.75))
+            .frame(width: 29, height: 29)
+            .overlay(
+              Image(systemName: "sparkles")
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+            )
+
+          Text(String(localized: .settingsWageyAiDataSharing))
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+        }
+      }
+      .tint(.tidexBlue)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
