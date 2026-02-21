@@ -1,21 +1,30 @@
+import type { ReactNode } from 'react';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
 type PrivacyContent = Dictionary['legal']['privacy'];
 
 interface PrivacyPolicyProps {
   content: PrivacyContent;
+  headerAction?: ReactNode;
 }
 
-export function PrivacyPolicy({ content }: PrivacyPolicyProps) {
+export function PrivacyPolicy({ content, headerAction }: PrivacyPolicyProps) {
   const formattedDate = new Date(content.lastUpdatedDate).toLocaleDateString(content.dateLocale);
 
   return (
     <div className="prose prose-sm max-w-none dark:prose-invert space-y-6">
-      <div>
-        <h1>{content.title}</h1>
-        <p className="text-text-muted" suppressHydrationWarning>
-          {content.lastUpdatedLabel}: {formattedDate}
-        </p>
+      <div className="not-prose mb-2 flex flex-wrap items-start gap-3">
+        <div>
+          <h1 className="text-text-primary text-3xl font-semibold">{content.title}</h1>
+          <p className="text-text-muted" suppressHydrationWarning>
+            {content.lastUpdatedLabel}: {formattedDate}
+          </p>
+        </div>
+        {headerAction && (
+          <div className="shrink-0">
+            {headerAction}
+          </div>
+        )}
       </div>
 
       {content.sections.map((section) => (

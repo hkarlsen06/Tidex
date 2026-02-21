@@ -48,7 +48,6 @@ export default async function LocaleTermsPage({ params }: LocaleTermsPageProps) 
       locale={locale as Locale}
       dictionary={dictionary}
       variant="terms"
-      path="/terms"
     />
   );
 }

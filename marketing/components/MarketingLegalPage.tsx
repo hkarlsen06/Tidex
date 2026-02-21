@@ -11,21 +11,21 @@ interface MarketingLegalPageProps {
   locale: Locale;
   dictionary: Pick<Dictionary, 'marketing' | 'legal'>;
   variant: 'terms' | 'privacy' | 'security';
-  path: '/terms' | '/privacy' | '/security';
 }
 
-export function MarketingLegalPage({ locale, dictionary, variant, path }: MarketingLegalPageProps) {
+export function MarketingLegalPage({ locale, dictionary, variant }: MarketingLegalPageProps) {
   let content: ReactNode;
+  const localeSwitcher = <MarketingLocaleToggle />;
 
   switch (variant) {
     case 'terms':
-      content = <TermsOfService content={dictionary.legal.terms} />;
+      content = <TermsOfService content={dictionary.legal.terms} headerAction={localeSwitcher} />;
       break;
     case 'privacy':
-      content = <PrivacyPolicy content={dictionary.legal.privacy} />;
+      content = <PrivacyPolicy content={dictionary.legal.privacy} headerAction={localeSwitcher} />;
       break;
     case 'security':
-      content = <SecurityPolicy content={dictionary.legal.security} />;
+      content = <SecurityPolicy content={dictionary.legal.security} headerAction={localeSwitcher} />;
       break;
   }
 
@@ -33,9 +33,6 @@ export function MarketingLegalPage({ locale, dictionary, variant, path }: Market
     <div className="min-h-screen bg-background">
       <LocaleLangSetter locale={locale} />
       <div className="container mx-auto max-w-4xl px-4 py-12">
-        <div className="mb-6 flex justify-end">
-          <MarketingLocaleToggle currentLocale={locale} path={path} />
-        </div>
         {content}
       </div>
     </div>

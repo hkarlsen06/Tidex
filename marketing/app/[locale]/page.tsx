@@ -57,5 +57,5 @@ export default async function LocaleLandingPage({ params }: LocalePageProps) {
 
   const dictionary = getMarketingDictionary(locale as Locale);
 
-  return <LandingPage locale={locale as Locale} dictionary={dictionary} path="" />;
+  return <LandingPage locale={locale as Locale} dictionary={dictionary} />;
 }

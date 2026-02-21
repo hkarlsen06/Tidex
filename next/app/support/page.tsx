@@ -97,13 +97,23 @@ export default function SupportPage() {
           <div className="space-y-4">
             <div className="bg-surface-secondary rounded-lg p-6 border border-border-subtle">
               <h3 className="font-medium text-text-primary mb-2">
+                Do you have a native iOS app?
+              </h3>
+              <p className="text-text-secondary">
+                Yes. The iOS app is available on the App Store and is built with
+                SwiftUI. It shares the same backend and account data as the web
+                app, so your shifts, settings, and subscription stay
+                consistent across devices.
+              </p>
+            </div>
+            <div className="bg-surface-secondary rounded-lg p-6 border border-border-subtle">
+              <h3 className="font-medium text-text-primary mb-2">
                 How do I cancel my subscription?
               </h3>
               <p className="text-text-secondary">
-                iOS subscriptions can be managed through your Apple ID
-                subscription settings. Go to Settings &gt; [Your Name] &gt;
-                Subscriptions on your iPhone or iPad to manage or cancel your
-                subscription.
+                iOS subscriptions are managed through your Apple ID settings on
+                iPhone/iPad: Settings &gt; [Your Name] &gt; Subscriptions.
+                Web subscriptions are managed in-app under Account settings.
               </p>
             </div>
             <div className="bg-surface-secondary rounded-lg p-6 border border-border-subtle">
@@ -111,8 +121,8 @@ export default function SupportPage() {
                 How do I delete my account?
               </h3>
               <p className="text-text-secondary">
-                To delete your Tidex account and all associated data, contact
-                support at{" "}
+                To delete your Tidex account and all associated data, sign in at
+                our web app or iOS app and contact support at{" "}
                 <a
                   href="mailto:contact@tidex.no"
                   className="text-blue-500 hover:text-blue-400 underline"

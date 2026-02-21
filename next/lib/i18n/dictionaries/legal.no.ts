@@ -315,7 +315,7 @@ export const legalNo = {
     },
     title: 'Retningslinjer for sikkerhetsrapportering',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2025-01-10',
+    lastUpdatedDate: '2026-02-21',
     dateLocale: 'nb-NO',
     sections: [
       {

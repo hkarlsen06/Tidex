@@ -48,52 +48,59 @@ export const marketingEn = {
     description: 'Everything you need to know about shifts, reports and how we handle your data.',
     items: [
       {
+        question: 'What does it cost? Is it free?',
+        answers: [
+          'Yes, you can get started for free with core features.',
+          'For advanced usage, Pro provides unlimited months for NOK 29 per month.',
+        ],
+      },
+      {
+        question: 'Is there a native iOS app?',
+        answers: [
+          'Yes. Tidex has a native iOS app built with SwiftUI, available from the App Store.',
+          'Both web and iOS share the same Supabase backend, so your shifts, settings and subscription are consistent across devices.',
+        ],
+      },
+      {
+        question: 'Can I still use it in my browser on mobile?',
+        answers: [
+          'Yes. The web app is fully responsive and can also be added to your home screen from Safari or Chrome.',
+          'If you prefer the native experience, the iOS app adds extra platform features like push notifications, widgets, and Apple Watch connectivity where supported.',
+        ],
+      },
+      {
         question: 'How are breaks handled?',
         answers: [
-          'We calculate your salary intelligently. If you work more than 5.5 hours we automatically deduct a 30-minute break, just like most employers do.',
-          'Working nights or long shifts? No problem. The calculator handles everything from regular days to overnight work. You can change the break rules in settings if your workplace uses something else.',
+          'We calculate salary smartly: if you work more than 5.5 hours, a 30-minute break is deducted automatically, with the same defaults used by most employers.',
+          'If your workplace uses different rules, you can override break behavior in settings, including shifts that cross midnight.',
         ],
       },
       {
         question: 'How do overtime and supplements work?',
         answers: [
           'Tell us which supplements you are entitled to and we handle the rest automatically. Evening supplement from 18:00? Weekend supplement? Configure the rules once.',
-          'When you log a shift the calculator looks at the day and time, then adds the correct supplements on top of your base pay. Easy.',
-        ],
-      },
-      {
-        question: 'Where is my data stored?',
-        answers: [
-          'Safe and sound. All of your settings live in our Supabase database.',
-          'When you sign in we sync your shifts and settings to the cloud so you can move between phone and desktop without losing anything.',
+          'When you log a shift, the calculator checks the date and time and applies the right supplements on top of your base pay.',
         ],
       },
       {
         question: 'Can I download salary reports?',
         answers: [
-          'Absolutely. Export every shift as a PDF or Excel (CSV) whenever you need it — perfect for submitting timesheets or staying on top of the month.',
-          'The report includes all details: hours worked, breaks, supplements and total pay per shift.',
+          'Absolutely. Export every shift as PDF or Excel (CSV) any time, e.g. for payroll and timesheet reporting.',
+          'Reports include working hours, breaks, supplements and total pay for each shift.',
         ],
       },
       {
-        question: 'What does it cost? Is it free?',
+        question: 'Where is my data stored?',
         answers: [
-          'Yes, getting started is completely free. You can use the calculator as much as you like, but you can only keep shifts for one month at a time — which is enough for most people.',
-          'Need more? Our Pro plan unlocks unlimited months for just NOK 29 per month — less than a cup of coffee each week.',
-        ],
-      },
-      {
-        question: 'Can I use it like an app on my phone?',
-        answers: [
-          'Yes. Install it as an app by opening the site in Safari or Chrome and choosing “Add to Home Screen”.',
-          'It behaves like a regular app with its own icon. You need internet to sync, but most features keep working even if the connection is slow.',
+          'Your account data is stored in secure Supabase tables.',
+          'The iOS app uses local-first storage and syncs with the shared backend, so you can move between phone and web without losing data.',
         ],
       },
       {
         question: 'Is my data safe?',
         answers: [
-          'Absolutely. We take privacy seriously. Your data (shifts and hourly rates) is only sent to the server when you choose to sign in — never otherwise.',
-          'We only store what the calculator needs to function: your shifts, settings and profile photo. Nothing more.',
+          'Absolutely. We take privacy seriously. Your shift data is only sent to the server when needed for sign-in and sync.',
+          'We only persist what is required for app functionality: your shifts, settings and profile details.',
         ],
       },
     ],

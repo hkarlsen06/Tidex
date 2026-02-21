@@ -315,7 +315,7 @@ export const legalEn = {
     },
     title: 'Security Disclosure Policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2025-01-10',
+    lastUpdatedDate: '2026-02-21',
     dateLocale: 'en-US',
     sections: [
       {
