@@ -45,7 +45,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
       {/* Single subtle gradient accent at top */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-100 bg-linear-to-b from-brand-gradient-start/8 to-transparent" />
 
-      <section className="relative flex min-h-[100svh] w-full items-stretch overflow-hidden pt-[max(2rem,env(safe-area-inset-top))]">
+      <section className="relative flex min-h-svh w-full items-stretch overflow-hidden pt-[max(2rem,env(safe-area-inset-top))]">
         <div className="relative mx-auto flex w-full max-w-3xl flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-0 sm:pb-8">
           <div className="relative flex flex-1 flex-col items-center justify-center gap-7 text-center sm:gap-8">
             <div className="space-y-5 sm:space-y-7">
@@ -55,7 +55,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
                 width={280}
                 height={80}
                 priority
-                className="mx-auto h-auto w-[min(78vw,280px)] animate-in fade-in zoom-in-95 duration-700 sm:w-[280px]"
+                className="mx-auto h-auto w-[min(78vw,280px)] animate-in fade-in zoom-in-95 duration-700 sm:w-70"
               />
               <div className="space-y-4 sm:space-y-6">
                 <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-5xl">
