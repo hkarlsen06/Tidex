@@ -25,8 +25,7 @@ struct MonthlyProgressChart: View {
   /// Generate Y-axis tick values
   private var yAxisTicks: [Double] {
     let max = maxYValue
-    // Aim for ~5 ticks
-    let step = calculateNiceStep(max: max, targetTicks: 5)
+    let step = calculateNiceStep(max: max, targetTicks: targetYAxisTickCount)
     var ticks: [Double] = []
     var value: Double = 0
     while value <= max {
@@ -34,6 +33,12 @@ struct MonthlyProgressChart: View {
       value += step
     }
     return ticks
+  }
+
+  /// Dynamic Y-axis tick density to keep labels readable across ranges
+  private var targetYAxisTickCount: Int {
+    // Increase density for larger values so high earners still get useful granularity.
+    min(6, max(4, Int(maxYValue / 30_000) + 4))
   }
 
   /// X-axis tick values (days to show: 1, 5, 10, 15, 20, 25, last day)
@@ -149,16 +154,21 @@ struct MonthlyProgressChart: View {
 
   /// Calculate a "nice" step value for axis ticks
   private func calculateNiceStep(max: Double, targetTicks: Int) -> Double {
+    guard max > 0, targetTicks > 0 else { return 1_000 }
+
     let roughStep = max / Double(targetTicks)
     let magnitude = pow(10, floor(log10(roughStep)))
     let normalized = roughStep / magnitude
 
+    // Round up to avoid too-dense labels (e.g., prefer 4k over 2k when rough step is ~2.5k).
     let niceStep: Double
-    if normalized < 1.5 {
+    if normalized <= 1 {
       niceStep = magnitude
-    } else if normalized < 3 {
+    } else if normalized <= 2 {
       niceStep = 2 * magnitude
-    } else if normalized < 7 {
+    } else if normalized <= 4 {
+      niceStep = 4 * magnitude
+    } else if normalized <= 5 {
       niceStep = 5 * magnitude
     } else {
       niceStep = 10 * magnitude
