@@ -36,25 +36,14 @@ struct WageyView: View {
   @State private var pendingMessage: String?
 
   var body: some View {
-    if showConsent {
-      // Show consent view first - user must agree before using Wagey
-      WageyConsentView(
-        onAgree: {
-          viewModel.grantAIConsent()
-          showConsent = false
-          // After consenting, check if showcase should show
-          showShowcase = viewModel.shouldShowShowcase
-        },
-        onDecline: {
-          dismiss()
-        }
-      )
-    } else if showShowcase {
-      // Show showcase for first-time free users (after consent)
+    if showShowcase {
+      // Show showcase first so the user learns what Wagey is
       WageyShowcaseView(
         onTryWagey: {
           viewModel.markShowcaseSeen()
           showShowcase = false
+          // After showcase, check if consent is still needed
+          showConsent = viewModel.shouldShowConsent
         },
         onClose: {
           // Close the entire Wagey flow
@@ -62,6 +51,17 @@ struct WageyView: View {
         }
       )
       .environmentObject(coordinator)
+    } else if showConsent {
+      // Then ask for data-sharing consent before using Wagey
+      WageyConsentView(
+        onAgree: {
+          viewModel.grantAIConsent()
+          showConsent = false
+        },
+        onDecline: {
+          dismiss()
+        }
+      )
     } else {
       chatInterface
     }

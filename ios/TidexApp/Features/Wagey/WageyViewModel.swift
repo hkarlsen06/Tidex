@@ -144,9 +144,9 @@ final class WageyViewModel {
     wageyInvocations?.effectiveBonus ?? 0
   }
 
-  /// Whether to show the showcase (free tier + hasn't seen it + has already consented)
+  /// Whether to show the showcase (free tier + hasn't seen it)
   var shouldShowShowcase: Bool {
-    currentTier == .free && !hasSeenShowcase && hasConsentedToAISharing
+    currentTier == .free && !hasSeenShowcase
   }
 
   /// Whether to show the consent view (hasn't consented yet)
