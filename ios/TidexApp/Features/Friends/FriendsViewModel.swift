@@ -120,6 +120,15 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Required by MonthNavigable protocol
   var isLoading: Bool { isLoadingSharers || isLoadingShifts }
 
+  /// Current transition phase for month animations
+  var transitionPhase: MonthTransitionPhase {
+    MonthTransitionPhase(
+      year: committedYear,
+      month: committedMonth,
+      direction: navigationDirection
+    )
+  }
+
   // MARK: - Private State
 
   private var cachedUserId: String?

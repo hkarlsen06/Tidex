@@ -228,7 +228,7 @@ struct ShiftsCalendarView: View {
         monthName: monthName,
         year: year,
         selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
-        phase: nil,
+        phase: phase,
         totals: headerTotals,
         trailingAccessory: nil
       )
@@ -237,9 +237,8 @@ struct ShiftsCalendarView: View {
         .padding(.bottom, Spacing.xs)
 
       if let phase {
-        StaggeredCardsContainer(phase: phase, config: .default) {
-          calendarGrid
-        }
+        calendarGrid
+          .cardTransition(phase: phase, config: .default)
       } else {
         calendarGrid
       }

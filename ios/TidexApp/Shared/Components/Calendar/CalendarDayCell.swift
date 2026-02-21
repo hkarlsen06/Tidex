@@ -70,6 +70,8 @@ enum CalendarCellContent: Equatable {
 /// Base calendar day cell with consistent layout
 /// Handles week number, day number, background, border, and content
 struct CalendarDayCell<Content: View>: View {
+  @ScaledMetric(relativeTo: .caption) private var metricDynamicTypeScale: CGFloat = 1
+
   let dayInfo: CalendarDayInfo
   let style: CalendarCellStyle
   let content: CalendarCellContent
@@ -179,21 +181,26 @@ struct CalendarDayCell<Content: View>: View {
     case .hours(let hoursData, let color):
       let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
       metricContainer(lineCount: 2) { fontSize in
-        VStack(spacing: stackedMetricSpacing) {
-          calendarMetricText(hoursData.start, color: color, fontSize: fontSize)
-            .environment(\.layoutDirection, .leftToRight)
-          calendarMetricText(endDisplay, color: color, fontSize: fontSize)
-            .environment(\.layoutDirection, .leftToRight)
-        }
+        calendarStackedMetricText(
+          firstValue: hoursData.start,
+          firstColor: color,
+          secondValue: endDisplay,
+          secondColor: color,
+          fontSize: fontSize,
+          fontWeight: .bold
+        )
+        .environment(\.layoutDirection, .leftToRight)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
 
     case .earnings(let amount, let color):
+      let formattedAmount = CalendarGridHelper.formatCompactCurrency(amount)
       metricContainer(lineCount: 1) { fontSize in
         calendarMetricText(
-          CalendarGridHelper.formatCompactCurrency(amount),
+          formattedAmount,
           color: color,
-          fontSize: fontSize
+          fontSize: fontSize,
+          fontWeight: .bold
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
@@ -201,27 +208,28 @@ struct CalendarDayCell<Content: View>: View {
     case .earningsBreakdown(let earnings, let color, let beforeTaxColor):
       Group {
         if earnings.hasTaxEnabled {
+          let net = CalendarGridHelper.formatCompactCurrency(earnings.net)
+          let gross = CalendarGridHelper.formatCompactCurrency(earnings.gross)
           metricContainer(lineCount: 2) { fontSize in
-            VStack(spacing: stackedMetricSpacing) {
-              calendarMetricText(
-                CalendarGridHelper.formatCompactCurrency(earnings.net),
-                color: color,
-                fontSize: fontSize
-              )
-              calendarMetricText(
-                CalendarGridHelper.formatCompactCurrency(earnings.gross),
-                color: beforeTaxColor,
-                fontSize: fontSize
-              )
-            }
+            calendarStackedMetricText(
+              firstValue: net,
+              firstColor: color,
+              secondValue: gross,
+              secondColor: beforeTaxColor,
+              fontSize: fontSize,
+              fontWeight: .bold
+            )
+            .environment(\.layoutDirection, .leftToRight)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
         } else {
+          let gross = CalendarGridHelper.formatCompactCurrency(earnings.gross)
           metricContainer(lineCount: 1) { fontSize in
             calendarMetricText(
-              CalendarGridHelper.formatCompactCurrency(earnings.gross),
+              gross,
               color: color,
-              fontSize: fontSize
+              fontSize: fontSize,
+              fontWeight: .bold
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
@@ -273,21 +281,52 @@ struct CalendarDayCell<Content: View>: View {
     let safeLineCount = max(lineCount, 1)
     let usableWidth = max(size.width - (horizontalInset * 2), 0)
     let widthBound = usableWidth * 0.4
-    let interlineSpacing = CGFloat(max(safeLineCount - 1, 0)) * abs(stackedMetricSpacing)
+    let interlineSpacing = CGFloat(max(safeLineCount - 1, 0)) * stackedMetricSpacing
     let usableHeight = max(size.height - interlineSpacing, 0)
     let heightPerLine = usableHeight / CGFloat(safeLineCount)
     let heightBound = heightPerLine * 0.9
 
-    return max(9, min(widthBound, heightBound))
+    let defaultFitSize = min(widthBound, heightBound)
+
+    // Keep the existing fill behavior at default Dynamic Type, but allow some growth
+    // for larger accessibility categories when there is still room in the cell.
+    let widthCeiling = widthBound
+    let heightCeiling = heightPerLine * 0.98
+    let fitCeiling = min(widthCeiling, heightCeiling)
+    let dynamicTypeAdjusted = defaultFitSize * metricDynamicTypeScale
+
+    return max(9, min(dynamicTypeAdjusted, fitCeiling))
   }
 
-  private func calendarMetricText(_ value: String, color: Color, fontSize: CGFloat) -> some View {
+  private func calendarStackedMetricText(
+    firstValue: String,
+    firstColor: Color,
+    secondValue: String,
+    secondColor: Color,
+    fontSize: CGFloat,
+    fontWeight: Font.Weight
+  ) -> some View {
+    VStack(spacing: stackedMetricSpacing) {
+      calendarMetricText(firstValue, color: firstColor, fontSize: fontSize, fontWeight: fontWeight)
+      calendarMetricText(
+        secondValue, color: secondColor, fontSize: fontSize, fontWeight: fontWeight)
+    }
+    .frame(maxWidth: .infinity, alignment: .center)
+  }
+
+  private func calendarMetricText(
+    _ value: String,
+    color: Color,
+    fontSize: CGFloat,
+    fontWeight: Font.Weight
+  ) -> some View {
     Text(value)
-      .font(.system(size: fontSize, weight: .bold))
+      .font(.system(size: fontSize, weight: fontWeight))
       .foregroundColor(color)
       .lineLimit(1)
       .minimumScaleFactor(0.7)
       .allowsTightening(true)
+      .monospacedDigit()
       .frame(maxWidth: .infinity, alignment: .center)
   }
 }

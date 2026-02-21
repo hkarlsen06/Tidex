@@ -918,6 +918,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Non-blocking month data loader
   /// Uses cache for instant display, fetches in background if needed
   /// IMPORTANT: Commits display state (year/month) atomically with shift data
+  private func applyCommittedMonthSnapshot(
+    shifts computedShifts: [ShiftWithComputations],
+    year: Int,
+    month: Int
+  ) {
+    self.shifts = computedShifts
+    self.weekGroups = self.groupShiftsByWeek(computedShifts)
+    self.committedYear = year
+    self.committedMonth = month
+  }
+
   private func loadShiftsForDisplayedMonthNonBlocking() {
     let targetYear = displayYear
     let targetMonth = displayMonth
@@ -933,10 +944,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // ATOMIC UPDATE: Set shifts and committed state together
       // This ensures the calendar structure and data update in the same render pass
-      self.shifts = displayCache.shifts
-      self.weekGroups = groupShiftsByWeek(displayCache.shifts)
-      self.committedYear = targetYear
-      self.committedMonth = targetMonth
+      applyCommittedMonthSnapshot(
+        shifts: displayCache.shifts,
+        year: targetYear,
+        month: targetMonth
+      )
 
       // Update last accessed time for LRU tracking
       displayCache.lastAccessed = Date()
@@ -1201,10 +1213,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // ATOMIC UPDATE: Set shifts and committed state together
       // This ensures the calendar structure and data update in the same render pass
-      self.shifts = computedShifts
-      self.weekGroups = groupShiftsByWeek(computedShifts)
-      self.committedYear = displayYM.year
-      self.committedMonth = displayYM.month
+      applyCommittedMonthSnapshot(
+        shifts: computedShifts,
+        year: displayYM.year,
+        month: displayYM.month
+      )
 
       // Find next upcoming shift (only on current month)
       if isCurrentMonth {
@@ -1318,10 +1331,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // ATOMIC UPDATE: Set shifts and committed state together
       // This ensures the calendar structure and data update in the same render pass
-      self.shifts = computedShifts
-      self.weekGroups = groupShiftsByWeek(computedShifts)
-      self.committedYear = loadYear
-      self.committedMonth = loadMonth
+      applyCommittedMonthSnapshot(
+        shifts: computedShifts,
+        year: loadYear,
+        month: loadMonth
+      )
 
       // Find next upcoming shift (only on current month)
       if isCurrentMonth {

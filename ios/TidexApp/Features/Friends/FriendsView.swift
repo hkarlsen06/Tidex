@@ -303,6 +303,7 @@ private struct SharedShiftsDetailView: View {
           shifts: viewModel.sharedShifts,
           year: viewModel.committedYear,
           month: viewModel.committedMonth,
+          phase: viewModel.transitionPhase,
           isLoading: viewModel.isLoadingShifts,
           highlightDates: highlightDates,
           highlightShiftIds: highlightShiftIds,
@@ -379,14 +380,12 @@ private struct SharedShiftsDetailView: View {
       : .sharingSuperimposeShowMyShifts
     let localized = String(localized: resource)
 
-    if
-      let attributed = try? AttributedString(
-        markdown: localized,
-        options: AttributedString.MarkdownParsingOptions(
-          interpretedSyntax: .inlineOnlyPreservingWhitespace
-        )
+    if let attributed = try? AttributedString(
+      markdown: localized,
+      options: AttributedString.MarkdownParsingOptions(
+        interpretedSyntax: .inlineOnlyPreservingWhitespace
       )
-    {
+    ) {
       return Text(attributed)
     }
 
