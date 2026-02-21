@@ -17,7 +17,7 @@ enum TermsVersion {
 
   /// Fallback terms version date (used when API is unavailable)
   /// Keep this updated when terms change as a safety net
-  private static let fallbackVersionDate = "2025-01-10"
+  private static let fallbackVersionDate = "2026-02-21"
 
   /// Cached version date (fetched from API)
   private static var cachedVersionDate: String?

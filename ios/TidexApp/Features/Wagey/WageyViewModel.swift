@@ -108,6 +108,9 @@ final class WageyViewModel {
   /// Whether the user has seen the showcase (per user, stored in UserDefaults)
   private(set) var hasSeenShowcase: Bool = false
 
+  /// Whether the user has consented to AI data sharing (per user, stored in UserDefaults)
+  private(set) var hasConsentedToAISharing: Bool = false
+
   // MARK: - Computed Properties for Usage
 
   /// The user's current subscription tier
@@ -144,6 +147,11 @@ final class WageyViewModel {
   /// Whether to show the showcase (free tier + hasn't seen it)
   var shouldShowShowcase: Bool {
     currentTier == .free && !hasSeenShowcase
+  }
+
+  /// Whether to show the consent view (hasn't consented yet)
+  var shouldShowConsent: Bool {
+    !hasConsentedToAISharing
   }
 
   /// Estimated total character count across all messages (proxy for token usage)
@@ -214,6 +222,7 @@ final class WageyViewModel {
   private init() {
     loadConversations()
     loadShowcaseState()
+    loadConsentState()
     observeTierChanges()
   }
 
@@ -263,6 +272,36 @@ final class WageyViewModel {
     UserDefaults.standard.removeObject(forKey: showcaseKey(for: userId))
   }
 
+  // MARK: - AI Consent State Management
+
+  /// UserDefaults key for AI data sharing consent (per user)
+  private func consentKey(for userId: String) -> String {
+    "wagey.hasConsentedToAISharing.\(userId)"
+  }
+
+  /// Load the consent state from UserDefaults
+  private func loadConsentState() {
+    guard let userId = AppCoordinator.shared.userId else {
+      hasConsentedToAISharing = false
+      return
+    }
+    hasConsentedToAISharing = UserDefaults.standard.bool(forKey: consentKey(for: userId))
+  }
+
+  /// Mark that the user has consented to AI data sharing
+  func grantAIConsent() {
+    guard let userId = AppCoordinator.shared.userId else { return }
+    hasConsentedToAISharing = true
+    UserDefaults.standard.set(true, forKey: consentKey(for: userId))
+  }
+
+  /// Revoke consent for AI data sharing (called from Settings)
+  func revokeAIConsent() {
+    guard let userId = AppCoordinator.shared.userId else { return }
+    hasConsentedToAISharing = false
+    UserDefaults.standard.set(false, forKey: consentKey(for: userId))
+  }
+
   // MARK: - Conversation Management
 
   /// Load all conversations for the current user
@@ -271,6 +310,7 @@ final class WageyViewModel {
     cachedUserId = userId
     conversations = conversationsRepository.getConversations(for: userId)
     loadShowcaseState()
+    loadConsentState()
   }
 
   /// Fetch wagey usage data from the profiles table
@@ -381,8 +421,8 @@ final class WageyViewModel {
   ///   - content: The message content to send
   ///   - image: Optional image attachment
   func sendMessage(_ content: String, image: ImageAttachment?) async {  // swiftlint:disable:this async_without_await
-    // Don't send if already streaming or limit reached
-    guard !isStreaming && !limitReached else { return }
+    // Don't send if already streaming, limit reached, or consent revoked
+    guard !isStreaming && !limitReached && hasConsentedToAISharing else { return }
 
     // Clear any previous error
     error = nil
