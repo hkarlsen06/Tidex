@@ -17,7 +17,7 @@ export const legalNo = {
     },
     title: 'Vilkår for bruk',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-01-16',
+    lastUpdatedDate: '2026-02-21',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -191,7 +191,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2025-01-10',
+    lastUpdatedDate: '2026-02-21',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -209,6 +209,7 @@ export const legalNo = {
           { boldLabel: 'Skiftdata:', text: 'Arbeidstider, pauser, lønnsinnstillinger og relatert informasjon du registrerer.' },
           { boldLabel: 'Autentiseringsinformasjon:', text: 'Informasjon om økter (cookies) for å holde deg innlogget.' },
           { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Stripe (nettsidekjøp) eller Apple (iOS-kjøp i appen). Vi lagrer ikke kortinformasjon.' },
+          { boldLabel: 'AI-assistentdata:', text: 'Når du bruker Wagey AI-assistenten, blir meldingene du sender (inkludert tekst og bilder), visningsnavnet ditt og skiftdata som hentes under samtalen behandlet av en tredjeparts AI-tjeneste (se punkt 5).' },
         ],
       },
       {
@@ -219,6 +220,7 @@ export const legalNo = {
           { text: 'Autentisere og administrere kontoen din.' },
           { text: 'Behandle abonnementsbetalinger via Stripe (nettside) eller Apple (iOS-appen).' },
           { text: 'Kommunisere med deg om tjenesten.' },
+          { text: 'Tilby AI-drevet assistanse gjennom Wagey-funksjonen, inkludert å svare på spørsmål om skiftene dine, hjelpe med å administrere skift og beregne lønn. Dette krever sending av relevante data til en tredjeparts AI-tjeneste (se punkt 5).' },
         ],
         importantNote: {
           label: 'Viktig:',
@@ -269,8 +271,16 @@ export const legalNo = {
               text: 'personvernerklæring',
             },
           },
+          {
+            boldLabel: 'Anthropic (Claude AI):',
+            text: 'Wagey AI-assistenten drives av Claude, en stor språkmodell utviklet av Anthropic. Når du bruker Wagey, sendes følgende data til Anthropics API for behandling: meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger). Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Anthropic behandler data i samsvar med deres {link}.',
+            link: {
+              href: 'https://www.anthropic.com/privacy',
+              text: 'personvernerklæring',
+            },
+          },
         ],
-        closingParagraph: 'Vi deler ikke dataene dine med andre tredjeparter.',
+        closingParagraph: 'Data deles kun med Anthropic når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med andre tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',
