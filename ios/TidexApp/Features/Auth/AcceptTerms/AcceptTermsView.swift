@@ -134,16 +134,20 @@ struct AcceptTermsView: View {
           safariURL = url
         }
       } label: {
-        HStack {
+        HStack(alignment: .top, spacing: Spacing.sm) {
           Image(systemName: "doc.text")
             .font(.tidexBody)
+            .frame(width: 20, alignment: .leading)
           Text(.acceptTermsViewTerms)
             .font(.tidexBody)
-          Spacer()
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
           Image(systemName: "arrow.up.right")
             .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundColor(.tidexTextPrimary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.msm)
@@ -158,16 +162,20 @@ struct AcceptTermsView: View {
           safariURL = url
         }
       } label: {
-        HStack {
+        HStack(alignment: .top, spacing: Spacing.sm) {
           Image(systemName: "shield")
             .font(.tidexBody)
+            .frame(width: 20, alignment: .leading)
           Text(.acceptTermsViewPrivacy)
             .font(.tidexBody)
-          Spacer()
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
           Image(systemName: "arrow.up.right")
             .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundColor(.tidexTextPrimary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.msm)

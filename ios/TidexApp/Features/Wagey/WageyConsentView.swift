@@ -198,16 +198,20 @@ struct WageyConsentView: View {
           safariURL = url
         }
       } label: {
-        HStack {
+        HStack(alignment: .top, spacing: Spacing.sm) {
           Image(systemName: "shield")
             .font(.tidexBody)
+            .frame(width: 20, alignment: .leading)
           Text(.wageyConsentPrivacyLink)
             .font(.tidexBody)
-          Spacer()
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
           Image(systemName: "arrow.up.right")
             .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundColor(.tidexTextPrimary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.msm)
@@ -221,16 +225,20 @@ struct WageyConsentView: View {
           safariURL = url
         }
       } label: {
-        HStack {
+        HStack(alignment: .top, spacing: Spacing.sm) {
           Image(systemName: "lock.shield")
             .font(.tidexBody)
+            .frame(width: 20, alignment: .leading)
           Text(.wageyConsentAnthropicPrivacyLink)
             .font(.tidexBody)
-          Spacer()
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
           Image(systemName: "arrow.up.right")
             .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextMuted)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundColor(.tidexTextPrimary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.msm)
