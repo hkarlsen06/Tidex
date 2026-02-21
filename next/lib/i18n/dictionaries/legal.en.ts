@@ -191,7 +191,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2025-01-10',
+    lastUpdatedDate: '2026-02-21',
     dateLocale: 'en-US',
     sections: [
       {
@@ -209,6 +209,7 @@ export const legalEn = {
           { boldLabel: 'Shift data:', text: 'Working hours, breaks, salary settings and related information you register.' },
           { boldLabel: 'Authentication data:', text: 'Session (cookie) information that keeps you logged in.' },
           { boldLabel: 'Payment data:', text: 'Handled by Stripe (website purchases) or Apple (iOS in-app purchases). We do not store card information.' },
+          { boldLabel: 'AI assistant data:', text: 'When you use the Wagey AI assistant, the messages you send (including text and images), your display name, and shift data retrieved during the conversation are processed by a third-party AI service (see section 5).' },
         ],
       },
       {
@@ -219,6 +220,7 @@ export const legalEn = {
           { text: 'Authenticate and manage your account.' },
           { text: 'Process subscription payments via Stripe (website) or Apple (iOS app).' },
           { text: 'Communicate with you about the service.' },
+          { text: 'Provide AI-powered assistance through the Wagey feature, including answering questions about your shifts, helping manage shifts, and calculating wages. This requires sending relevant data to a third-party AI service (see section 5).' },
         ],
         importantNote: {
           label: 'Important:',
@@ -269,8 +271,16 @@ export const legalEn = {
               text: 'privacy policy',
             },
           },
+          {
+            boldLabel: 'Anthropic (Claude AI):',
+            text: 'The Wagey AI assistant is powered by Claude, a large language model developed by Anthropic. When you use Wagey, the following data is sent to Anthropic\'s API for processing: the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings). This data is sent only when you actively use the Wagey feature and have given your explicit consent. Anthropic processes data in accordance with their {link}.',
+            link: {
+              href: 'https://www.anthropic.com/privacy',
+              text: 'privacy policy',
+            },
+          },
         ],
-        closingParagraph: 'We do not share your data with any other third parties.',
+        closingParagraph: 'Data is only shared with Anthropic when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with any other third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

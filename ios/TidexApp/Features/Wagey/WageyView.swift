@@ -13,12 +13,16 @@ struct WageyView: View {
   /// Whether to show the conversation history sheet
   @State private var showHistory = false
 
+  /// Whether to show the consent view for AI data sharing
+  @State private var showConsent: Bool
+
   /// Whether to show the showcase for first-time free users
   /// Initialize based on ViewModel state so it shows immediately
   @State private var showShowcase: Bool
 
   init() {
-    // Check if showcase should be shown at initialization time
+    // Check if consent and showcase should be shown at initialization time
+    _showConsent = State(initialValue: WageyViewModel.shared.shouldShowConsent)
     _showShowcase = State(initialValue: WageyViewModel.shared.shouldShowShowcase)
   }
 
@@ -32,8 +36,21 @@ struct WageyView: View {
   @State private var pendingMessage: String?
 
   var body: some View {
-    // Show showcase directly (no animation) or the chat interface
-    if showShowcase {
+    if showConsent {
+      // Show consent view first - user must agree before using Wagey
+      WageyConsentView(
+        onAgree: {
+          viewModel.grantAIConsent()
+          showConsent = false
+          // After consenting, check if showcase should show
+          showShowcase = viewModel.shouldShowShowcase
+        },
+        onDecline: {
+          dismiss()
+        }
+      )
+    } else if showShowcase {
+      // Show showcase for first-time free users (after consent)
       WageyShowcaseView(
         onTryWagey: {
           viewModel.markShowcaseSeen()
