@@ -12,7 +12,6 @@ import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import type { Locale } from '@/lib/i18n/config';
 import { MarketingLocaleToggle } from './MarketingLocaleToggle';
 import { LocaleLangSetter } from './LocaleLangSetter';
-import ViewportHeightSetter from './ViewportHeightSetter';
 import { buildLocalizedMarketingPath } from '../lib/paths';
 
 const featureIcons = {
@@ -25,10 +24,9 @@ const featureIcons = {
 interface LandingPageProps {
   locale: Locale;
   dictionary: Pick<Dictionary, 'marketing' | 'legal'>;
-  path?: string;
 }
 
-export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps) {
+export function LandingPage({ locale, dictionary }: LandingPageProps) {
   const marketing = dictionary.marketing;
   const heroHighlights = marketing.hero.highlights;
   const features = marketing.features.items.map((item) => ({
@@ -44,76 +42,76 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
   return (
     <main className="relative min-h-screen bg-background text-text-primary">
       <LocaleLangSetter locale={locale} />
-      <ViewportHeightSetter />
       {/* Single subtle gradient accent at top */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-100 bg-linear-to-b from-brand-gradient-start/8 to-transparent" />
 
-      <section className="relative flex min-h-[calc(var(--hero-initial-dvh,100dvh))] w-full items-center justify-center pb-[calc(5rem+env(safe-area-inset-bottom))] pt-8 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pt-12 lg:pb-[calc(7rem+env(safe-area-inset-bottom))]">
-        <div className="relative w-full max-w-4xl px-6 sm:px-0">
-          <div className="relative mx-auto w-full max-w-lg sm:max-w-xl">
-            <div className="relative flex w-full flex-col items-center gap-8 overflow-hidden rounded-2xl border border-border-subtle bg-surface-primary px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-12 shadow-app max-h-190 sm:max-h-205 sm:px-12">
-              <div className="relative flex flex-col items-center gap-8 text-center">
-                <Image
-                  src="/icons/tidex-wordmark.webp"
-                  alt={marketing.hero.imageAlt}
-                  width={280}
-                  height={80}
-                  priority
-                  className="animate-in fade-in zoom-in-95 duration-700"
-                />
-                <div className="space-y-5">
-                  <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-                    {marketing.hero.title}
-                  </h1>
-                  <p className="text-pretty text-base text-text-secondary sm:text-lg">
-                    {marketing.hero.description}
-                  </p>
-                </div>
-                {/* Utilitarian feature list instead of pill badges */}
-                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted">
-                  {heroHighlights.map((highlight, index) => (
-                    <span key={highlight} className="flex items-center gap-2">
-                      {index > 0 && <span className="hidden sm:inline text-border-subtle">•</span>}
-                      <span className="font-medium">{highlight}</span>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-                  <Button
-                    asChild
-                    className="h-11 w-full rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors sm:w-auto"
-                  >
-                    <a href="https://app.tidex.no">
-                      {marketing.hero.primaryCta}
-                    </a>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="h-11 w-full rounded-lg border-border-subtle bg-transparent px-8 text-base font-medium text-text-primary hover:bg-surface-secondary hover:border-text-muted transition-colors sm:w-auto"
-                  >
-                    <Link href="#faq">{marketing.hero.secondaryCta}</Link>
-                  </Button>
-                </div>
-                <a
-                  href="https://apps.apple.com/app/id6757129790"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 block w-1/2 transition-opacity hover:opacity-80 sm:hidden"
-                >
-                  <Image
-                    src={`/badges/app-store-${locale}.svg`}
-                    alt={marketing.hero.appStoreCta}
-                    width={240}
-                    height={80}
-                    className="h-auto w-full"
-                  />
-                </a>
+      <section className="relative flex min-h-[100svh] w-full items-stretch overflow-hidden pt-[max(2rem,env(safe-area-inset-top))]">
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-0 sm:pb-8">
+          <div className="relative flex flex-1 flex-col items-center justify-center gap-7 text-center sm:gap-8">
+            <div className="space-y-5 sm:space-y-7">
+              <Image
+                src="/icons/tidex-wordmark.webp"
+                alt={marketing.hero.imageAlt}
+                width={280}
+                height={80}
+                priority
+                className="mx-auto h-auto w-[min(78vw,280px)] animate-in fade-in zoom-in-95 duration-700 sm:w-[280px]"
+              />
+              <div className="space-y-4 sm:space-y-6">
+                <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-5xl">
+                  {marketing.hero.title}
+                </h1>
+                <p className="text-pretty text-base text-text-secondary sm:text-lg max-w-2xl mx-auto">
+                  {marketing.hero.description}
+                </p>
               </div>
             </div>
-            <div className="mt-6 flex justify-center sm:mt-8">
-              <MarketingLocaleToggle currentLocale={locale} path={path} />
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted">
+              {heroHighlights.map((highlight, index) => (
+                <span key={highlight} className="flex items-center gap-2">
+                  {index > 0 && <span className="hidden sm:inline text-border-subtle">•</span>}
+                  <span className="font-medium">{highlight}</span>
+                </span>
+              ))}
             </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-4 pt-5 sm:pt-8">
+            <div className="flex justify-center">
+              <MarketingLocaleToggle />
+            </div>
+
+            <div className="flex w-full flex-col gap-3 sm:mt-1 sm:flex-row sm:items-center sm:justify-center">
+              <Button
+                asChild
+                className="h-14 w-full rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors sm:h-11 sm:w-auto"
+              >
+                <a href="https://app.tidex.no">
+                  {marketing.hero.primaryCta}
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-14 w-full rounded-lg border-border-subtle bg-transparent px-8 text-base font-medium text-text-primary hover:bg-surface-secondary hover:border-text-muted transition-colors sm:h-11 sm:w-auto"
+              >
+                <Link href="#faq">{marketing.hero.secondaryCta}</Link>
+              </Button>
+            </div>
+            <a
+              href="https://apps.apple.com/app/id6757129790"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block w-1/2 transition-opacity hover:opacity-80 sm:w-auto"
+            >
+              <Image
+                src={`/badges/app-store-${locale}.svg`}
+                alt={marketing.hero.appStoreCta}
+                width={240}
+                height={80}
+                className="h-auto w-full"
+              />
+            </a>
           </div>
         </div>
       </section>
@@ -226,7 +224,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
           <div className="text-sm text-text-muted">
             {marketing.footer.copyright}
           </div>
-          <div className="flex items-center gap-6 text-sm">
+          <div className="flex w-full flex-col items-start gap-2 text-sm sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-6">
             <Link href={payrollDocsHref} className="text-text-secondary hover:text-text-primary transition-colors">
               {marketing.footer.payrollDocs}
             </Link>

@@ -48,7 +48,6 @@ export default async function LocalePrivacyPage({ params }: LocalePrivacyPagePro
       locale={locale as Locale}
       dictionary={dictionary}
       variant="privacy"
-      path="/privacy"
     />
   );
 }

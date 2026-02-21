@@ -48,7 +48,6 @@ export default async function LocaleSecurityPage({ params }: LocaleSecurityPageP
       locale={locale as Locale}
       dictionary={dictionary}
       variant="security"
-      path="/security"
     />
   );
 }

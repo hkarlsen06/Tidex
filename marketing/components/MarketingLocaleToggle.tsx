@@ -1,34 +1,5 @@
-import Link from 'next/link';
-import { locales, localeNames, type Locale } from '@/lib/i18n/config';
-import { buildLocalizedMarketingPath } from '../lib/paths';
+import { LocaleSwitcher } from '@appui/LocaleSwitcher';
 
-interface MarketingLocaleToggleProps {
-  currentLocale: Locale;
-  path?: string;
-}
-
-export function MarketingLocaleToggle({ currentLocale, path = '' }: MarketingLocaleToggleProps) {
-  return (
-    <div className="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-surface-primary p-1 text-sm font-medium">
-      {locales.map((locale) => {
-        const isActive = locale === currentLocale;
-        const href = buildLocalizedMarketingPath(locale, path);
-
-        return (
-          <Link
-            key={locale}
-            href={href}
-            aria-current={isActive ? 'page' : undefined}
-            className={`rounded-md px-3 py-1.5 transition-colors ${
-              isActive
-                ? 'bg-brand-gradient-start text-text-inverse'
-                : 'text-text-muted hover:text-text-primary hover:bg-surface-secondary'
-            }`}
-          >
-            {localeNames[locale]}
-          </Link>
-        );
-      })}
-    </div>
-  );
+export function MarketingLocaleToggle() {
+  return <LocaleSwitcher />;
 }
