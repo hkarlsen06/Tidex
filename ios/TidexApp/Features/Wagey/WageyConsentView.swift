@@ -13,10 +13,23 @@ struct WageyConsentView: View {
   /// URL for opening Safari to view the privacy policy
   @State private var safariURL: URL?
 
-  /// Privacy policy URL
+  /// Anthropic privacy policy URL
+  private static let anthropicPrivacyURL = URL(string: "https://www.anthropic.com/privacy")
+
+  /// Tidex privacy policy URL
   private var privacyURL: URL? {
     URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
   }
+
+  /// Shared gradient used for hero and agree button
+  private static let brandGradient = LinearGradient(
+    colors: [
+      Color(red: 0.35, green: 0.45, blue: 0.95),
+      Color(red: 0.55, green: 0.35, blue: 0.9),
+    ],
+    startPoint: .leading,
+    endPoint: .trailing
+  )
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
@@ -68,14 +81,7 @@ struct WageyConsentView: View {
 
   private var heroSection: some View {
     ZStack {
-      LinearGradient(
-        colors: [
-          Color(red: 0.35, green: 0.45, blue: 0.95),
-          Color(red: 0.55, green: 0.35, blue: 0.9),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
+      Self.brandGradient
 
       Circle()
         .fill(Color.white.opacity(0.15))
@@ -211,7 +217,7 @@ struct WageyConsentView: View {
         .background(Color.tidexBorderSubtle)
 
       Button {
-        if let url = URL(string: "https://www.anthropic.com/privacy") {
+        if let url = Self.anthropicPrivacyURL {
           safariURL = url
         }
       } label: {
@@ -261,16 +267,7 @@ struct WageyConsentView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 56)
         .foregroundStyle(.white)
-        .background(
-          LinearGradient(
-            colors: [
-              Color(red: 0.35, green: 0.45, blue: 0.95),
-              Color(red: 0.55, green: 0.35, blue: 0.9),
-            ],
-            startPoint: .leading,
-            endPoint: .trailing
-          )
-        )
+        .background(Self.brandGradient)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
         .shadow(color: Color(red: 0.45, green: 0.4, blue: 0.9).opacity(0.3), radius: 12, y: 6)
       }

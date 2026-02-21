@@ -421,8 +421,8 @@ final class WageyViewModel {
   ///   - content: The message content to send
   ///   - image: Optional image attachment
   func sendMessage(_ content: String, image: ImageAttachment?) async {  // swiftlint:disable:this async_without_await
-    // Don't send if already streaming or limit reached
-    guard !isStreaming && !limitReached else { return }
+    // Don't send if already streaming, limit reached, or consent revoked
+    guard !isStreaming && !limitReached && hasConsentedToAISharing else { return }
 
     // Clear any previous error
     error = nil
