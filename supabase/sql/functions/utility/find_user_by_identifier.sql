@@ -56,8 +56,8 @@ AS $$
     u.email,
     u.phone,
     COALESCE(
-      u.raw_user_meta_data->>'firstName',
-      u.raw_user_meta_data->>'full_name'
+      u.raw_user_meta_data->>'full_name',
+      u.raw_user_meta_data->>'name'
     ) as first_name,
     u.raw_user_meta_data->>'avatar_url' as oauth_avatar_url
   FROM auth.users u

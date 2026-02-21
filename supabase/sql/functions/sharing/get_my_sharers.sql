@@ -27,7 +27,6 @@ AS $function$
     au.email,
     au.phone,
     COALESCE(
-      au.raw_user_meta_data->>'firstName',
       au.raw_user_meta_data->>'full_name',
       au.raw_user_meta_data->>'name'
     ) AS first_name,
