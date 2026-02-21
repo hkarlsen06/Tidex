@@ -157,16 +157,17 @@ final class WageyViewModel {
   /// Estimated total character count across all messages (proxy for token usage)
   var estimatedConversationCharacters: Int {
     messages.reduce(0) { total, message in
-      total + message.contentBlocks.reduce(0) { blockTotal, block in
-        switch block {
-        case .text(let text):
-          return blockTotal + text.count
-        case .toolCall(let toolCall):
-          return blockTotal + (toolCall.arguments?.count ?? 0) + (toolCall.result?.count ?? 0)
-        case .image:
-          return blockTotal
+      total
+        + message.contentBlocks.reduce(0) { blockTotal, block in
+          switch block {
+          case .text(let text):
+            return blockTotal + text.count
+          case .toolCall(let toolCall):
+            return blockTotal + (toolCall.arguments?.count ?? 0) + (toolCall.result?.count ?? 0)
+          case .image:
+            return blockTotal
+          }
         }
-      }
     }
   }
 
@@ -302,11 +303,37 @@ final class WageyViewModel {
     UserDefaults.standard.set(false, forKey: consentKey(for: userId))
   }
 
+  /// Reset all in-memory user-scoped state.
+  /// Called when signing out or switching authenticated user contexts.
+  func resetForUserChange() {
+    cancelStream()
+    conversations = []
+    currentConversationId = nil
+    messages = []
+    activeContentBlocks = []
+    limitReached = false
+    localMessagesSent = 0
+    resetDays = 0
+    wageyInvocations = nil
+    error = nil
+    isSyncingEntitlement = false
+    entitlementSyncMessage = nil
+    hasSeenShowcase = false
+    hasConsentedToAISharing = false
+    isSidebarVisible = false
+    cachedUserId = nil
+    hadSuccessfulToolCalls = false
+    currentAssistantMessageId = nil
+  }
+
   // MARK: - Conversation Management
 
   /// Load all conversations for the current user
   func loadConversations() {
-    guard let userId = AppCoordinator.shared.userId else { return }
+    guard let userId = AppCoordinator.shared.userId else {
+      resetForUserChange()
+      return
+    }
     cachedUserId = userId
     conversations = conversationsRepository.getConversations(for: userId)
     loadShowcaseState()
@@ -545,7 +572,8 @@ final class WageyViewModel {
       let messageChars = message.contentBlocks.reduce(0) { blockTotal, block in
         switch block {
         case .text(let text): return blockTotal + text.count
-        case .toolCall(let tc): return blockTotal + (tc.arguments?.count ?? 0) + (tc.result?.count ?? 0)
+        case .toolCall(let tc):
+          return blockTotal + (tc.arguments?.count ?? 0) + (tc.result?.count ?? 0)
         case .image: return blockTotal
         }
       }

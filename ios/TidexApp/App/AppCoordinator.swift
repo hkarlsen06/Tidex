@@ -818,6 +818,9 @@ final class AppCoordinator: ObservableObject {
     // Cancel all tracked background tasks to prevent stale state updates
     cancelAllBackgroundTasks()
 
+    // Reset in-memory Wagey state so consent/chat state cannot leak across users
+    WageyViewModel.shared.resetForUserChange()
+
     // Clear widget storage
     NativeWidgetStorage.clearWidgetStorage()
     NativeWidgetStorage.clearFriendWidgetStorage()
