@@ -144,9 +144,10 @@ final class WageyViewModel {
     wageyInvocations?.effectiveBonus ?? 0
   }
 
-  /// Whether to show the showcase (free tier + hasn't seen it)
+  /// Whether to show the showcase (any user who hasn't seen it yet)
+  /// All users should understand what Wagey is before consenting to data sharing
   var shouldShowShowcase: Bool {
-    currentTier == .free && !hasSeenShowcase
+    !hasSeenShowcase
   }
 
   /// Whether to show the consent view (hasn't consented yet)
