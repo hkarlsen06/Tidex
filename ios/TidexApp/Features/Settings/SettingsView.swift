@@ -11,10 +11,6 @@ struct SettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
 
-  /// Whether AI data sharing is enabled (Wagey consent)
-  @State private var aiDataSharingEnabled = WageyViewModel.shared.hasConsentedToAISharing
-  /// Whether to show the consent view when re-enabling AI data sharing
-  @State private var showAIConsentSheet = false
   /// Whether the current user is an admin
   @State private var isAdmin = false
   /// Whether sign out is in progress
@@ -133,7 +129,6 @@ struct SettingsView: View {
             navigationPath.append(SettingsDestination.appearance)
           }
 
-          aiDataSharingToggle
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
@@ -276,25 +271,8 @@ struct SettingsView: View {
         .toolbarRole(.editor)
       }
     }
-    .onAppear {
-      // Refresh toggle state in case consent changed elsewhere (e.g. Wagey consent view)
-      aiDataSharingEnabled = WageyViewModel.shared.hasConsentedToAISharing
-    }
     .task {
       await checkAdminStatus()
-    }
-    .sheet(isPresented: $showAIConsentSheet) {
-      WageyConsentView(
-        onAgree: {
-          WageyViewModel.shared.grantAIConsent()
-          aiDataSharingEnabled = true
-          showAIConsentSheet = false
-        },
-        onDecline: {
-          aiDataSharingEnabled = false
-          showAIConsentSheet = false
-        }
-      )
     }
     .alert(
       String(localized: .userMenuLogoutEverywhereConfirmTitle),
@@ -309,51 +287,6 @@ struct SettingsView: View {
     } message: {
       Text(.userMenuLogoutEverywhereConfirmDescription)
     }
-  }
-
-  // MARK: - AI Data Sharing Toggle
-
-  private var aiDataSharingToggle: some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: "sparkles")
-        .font(.system(size: 14))
-        .foregroundColor(.white)
-        .frame(width: 29, height: 29)
-        .background(
-          Color.purple.opacity(0.75),
-          in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-        )
-
-      VStack(alignment: .leading, spacing: 0) {
-        Text(String(localized: .settingsWageyAiDataSharing))
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(String(localized: .settingsWageyAiDataSharingDescription))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .lineLimit(2)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-
-      Spacer()
-
-      Toggle("", isOn: Binding(
-        get: { aiDataSharingEnabled },
-        set: { newValue in
-          if newValue {
-            // Show consent view so user reviews what they're agreeing to
-            showAIConsentSheet = true
-          } else {
-            aiDataSharingEnabled = false
-            WageyViewModel.shared.revokeAIConsent()
-          }
-        }
-      ))
-        .labelsHidden()
-        .tint(.tidexBlue)
-    }
-    .padding(.vertical, Spacing.xxxs)
   }
 
   // MARK: - Sign Out Rows

@@ -306,7 +306,11 @@ final class WageyViewModel {
   /// Reset all in-memory user-scoped state.
   /// Called when signing out or switching authenticated user contexts.
   func resetForUserChange() {
-    cancelStream()
+    // Cancel without finalizing/saving partial assistant output to avoid reentrant resets.
+    streamTask?.cancel()
+    streamTask = nil
+    isStreaming = false
+
     conversations = []
     currentConversationId = nil
     messages = []
