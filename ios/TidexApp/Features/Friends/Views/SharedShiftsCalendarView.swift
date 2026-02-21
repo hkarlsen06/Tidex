@@ -6,6 +6,7 @@ struct SharedShiftsCalendarView: View {
   let shifts: [ShiftWithComputations]
   let year: Int
   let month: Int  // 1-12
+  var phase: MonthTransitionPhase? = nil
   let currency: String
   let showEarnings: Bool
   let friendFirstName: String
@@ -141,16 +142,7 @@ struct SharedShiftsCalendarView: View {
 
   private var headerRow: some View {
     HStack {
-      // Month name + Year
-      HStack(spacing: Spacing.xxxs) {
-        Text(monthName)
-          .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(String(year))
-          .font(.tidexBodyLarge)
-          .foregroundColor(.tidexTextMuted)
-      }
+      monthYearLabel
 
       Spacer()
 
@@ -161,6 +153,32 @@ struct SharedShiftsCalendarView: View {
     }
     .padding(.horizontal, Spacing.xxs)
     .padding(.bottom, Spacing.sm)
+  }
+
+  @ViewBuilder
+  private var monthYearLabel: some View {
+    if let phase {
+      HStack(spacing: Spacing.xxxs) {
+        Text(monthName)
+          .font(.tidexTitle2)
+          .foregroundColor(.tidexTextPrimary)
+
+        Text(String(year))
+          .font(.tidexBodyLarge)
+          .foregroundColor(.tidexTextMuted)
+      }
+      .textTransition(phase: phase, config: .default)
+    } else {
+      HStack(spacing: Spacing.xxxs) {
+        Text(monthName)
+          .font(.tidexTitle2)
+          .foregroundColor(.tidexTextPrimary)
+
+        Text(String(year))
+          .font(.tidexBodyLarge)
+          .foregroundColor(.tidexTextMuted)
+      }
+    }
   }
 
   /// Earnings display - shows monthly totals
@@ -229,11 +247,19 @@ struct SharedShiftsCalendarView: View {
 
   // MARK: - Calendar Grid
 
+  @ViewBuilder
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: month)
 
-    return CalendarMonthGrid(days: days) { dayInfo in
+    let grid = CalendarMonthGrid(days: days) { dayInfo in
       calendarDayView(for: dayInfo)
+    }
+
+    if let phase {
+      grid
+        .cardTransition(phase: phase, config: .default)
+    } else {
+      grid
     }
   }
 

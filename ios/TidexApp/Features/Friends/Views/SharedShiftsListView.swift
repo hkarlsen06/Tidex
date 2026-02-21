@@ -9,6 +9,7 @@ struct SharedShiftsListView: View {
   let shifts: [ShiftWithComputations]
   let year: Int
   let month: Int
+  let phase: MonthTransitionPhase?
   let isLoading: Bool
 
   /// Dates to highlight from notification deeplink
@@ -58,6 +59,7 @@ struct SharedShiftsListView: View {
               shifts: shifts,
               year: year,
               month: month,
+              phase: phase,
               currency: currency,
               showEarnings: sharer.showEarnings,
               friendFirstName: sharer.firstNameOnly,
@@ -323,6 +325,7 @@ private struct BellShake {
     shifts: [],
     year: 2025,
     month: 1,
+    phase: nil,
     isLoading: false
   )
   .background(Color.tidexBackground)
