@@ -27,6 +27,22 @@ next-env.d.ts
 .build
 ios/App/Scripts/.build/
 
+# build output
+dev-site/out/
+dev-site/.next/
+marketing/out/
+marketing/.next/
+ios/build/
+
+# Xcode user state
+*.xcuserstate
+
+# App Store screenshots
+ios/ASConnectScreenshots/
+
+# backups
+next/backups/
+
 # local env files
 .env
 .env.*

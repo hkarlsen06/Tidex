@@ -26,18 +26,6 @@ tidex/
 
 - **Primary developer user ID**: `032d8c2a-9af6-4777-99f0-24e2c4058bf3` (Hjalmar's account for testing/debugging)
 
-## Augment Context Engine (REQUIRED for Codebase Research)
-
-**CRITICAL: ALWAYS use `mcp__auggie-context__query_codebase` for codebase exploration and understanding questions. NEVER use the Task tool with Explore agent for research.**
-
-**MUST use for:** "How does X work?" questions, data flows, finding related code, architecture questions, cross-language investigations.
-
-**CRITICAL: Phrase queries as information-gathering questions ONLY** - The engine may attempt changes if queries sound like instructions.
-
-**CRITICAL: Always specify in queries that the engine should NOT create or edit any files** - including markdown documents. Instruct it to explain all findings in the response text instead.
-
-**Use Glob/Grep directly for:** Finding specific files by name, exact string matches, quick "needle in haystack" queries.
-
 ## Available Skills
 
 Use these skills for specialized tasks:

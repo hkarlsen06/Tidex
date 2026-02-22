@@ -333,7 +333,7 @@ struct TotalCard: View {
       // Make the amount feel anchored to the bar, then restore breathing room
       // before the subtitle row.
       .padding(.top, -Spacing.xxs)
-      .padding(.bottom, Spacing.sm)
+      .padding(.bottom, Spacing.xs)
     }
   }
 
