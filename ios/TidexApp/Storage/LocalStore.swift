@@ -1162,6 +1162,7 @@ actor LocalStoreActor {
     if let existing = try modelContext.fetch(descriptor).first {
       // Update existing
       existing.monthlyGoal = settings.monthlyGoal
+      existing.monthlyGoalsByMonthData = settings.monthlyGoalsByMonthData
       existing.defaultShiftsView = settings.defaultShiftsView
       existing.profilePictureUrl = settings.profilePictureUrl
       existing.payrollDay = settings.payrollDay
@@ -1216,6 +1217,7 @@ actor LocalStoreActor {
     theme: String = "system",
     calendarAnimationStyle: String = "horizontal",
     monthlyGoal: Int? = nil,
+    monthlyGoalsByMonth: [String: Int] = [:],
     defaultShiftsView: String? = nil,
     halfTaxMonth: Int? = nil
   ) throws -> UserSettings {
@@ -1224,6 +1226,7 @@ actor LocalStoreActor {
     // Build the server snapshot for sync tracking
     let serverSnapshot = UserSettingsServerSnapshot(
       monthlyGoal: monthlyGoal,
+      monthlyGoalsByMonth: monthlyGoalsByMonth,
       defaultShiftsView: defaultShiftsView,
       profilePictureUrl: nil,
       payrollDay: payrollDay,
@@ -1241,6 +1244,7 @@ actor LocalStoreActor {
     if payrollDay != nil { dirtyFields.append(.payrollDay) }
     if currency != nil { dirtyFields.append(.currency) }
     if monthlyGoal != nil { dirtyFields.append(.monthlyGoal) }
+    if !monthlyGoalsByMonth.isEmpty { dirtyFields.append(.monthlyGoalsByMonth) }
     if defaultShiftsView != nil { dirtyFields.append(.defaultShiftsView) }
     if halfTaxMonth != nil { dirtyFields.append(.halfTaxMonth) }
 
@@ -1250,6 +1254,8 @@ actor LocalStoreActor {
     let localSettings = LocalUserSettings(
       userId: userId,
       monthlyGoal: monthlyGoal,
+      monthlyGoalsByMonthData: (try? canonicalJSONEncoder.encode(monthlyGoalsByMonth))
+        ?? Data(),
       defaultShiftsView: defaultShiftsView,
       profilePictureUrl: nil,
       payrollDay: payrollDay,
@@ -1300,6 +1306,7 @@ actor LocalStoreActor {
   func updateUserSettings(
     userId: String,
     monthlyGoal: Int?,
+    monthlyGoalsByMonth: [String: Int]?,
     defaultShiftsView: String?,
     profilePictureUrl: String?,
     payrollDay: Int?,
@@ -1322,6 +1329,13 @@ actor LocalStoreActor {
     if let newGoal = monthlyGoal, newGoal != localSettings.monthlyGoal {
       localSettings.monthlyGoal = newGoal
       newDirtyFields.insert(.monthlyGoal)
+    }
+
+    if let newMonthlyGoalsByMonth = monthlyGoalsByMonth,
+      newMonthlyGoalsByMonth != localSettings.monthlyGoalsByMonth
+    {
+      localSettings.monthlyGoalsByMonth = newMonthlyGoalsByMonth
+      newDirtyFields.insert(.monthlyGoalsByMonth)
     }
 
     if let newView = defaultShiftsView, newView != localSettings.defaultShiftsView {
@@ -1465,6 +1479,7 @@ actor LocalStoreActor {
     }
 
     localSettings.monthlyGoal = serverSnapshot.monthlyGoal
+    localSettings.monthlyGoalsByMonth = serverSnapshot.monthlyGoalsByMonth
     localSettings.defaultShiftsView = serverSnapshot.defaultShiftsView
     localSettings.profilePictureUrl = serverSnapshot.profilePictureUrl
     localSettings.payrollDay = serverSnapshot.payrollDay
@@ -1891,6 +1906,7 @@ actor LocalStoreActor {
     let dateFormatter = ISO8601DateFormatter()
 
     existing.monthlyGoal = serverRow.monthly_goal
+    existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
     existing.defaultShiftsView = serverRow.default_shifts_view
     existing.profilePictureUrl = serverRow.profile_picture_url
     existing.payrollDay = serverRow.payroll_day
@@ -1947,6 +1963,9 @@ actor LocalStoreActor {
 
     if !localDirtyFields.contains(.monthlyGoal) {
       existing.monthlyGoal = serverRow.monthly_goal
+    }
+    if !localDirtyFields.contains(.monthlyGoalsByMonth) {
+      existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
     }
     if !localDirtyFields.contains(.defaultShiftsView) {
       existing.defaultShiftsView = serverRow.default_shifts_view
@@ -2381,6 +2400,7 @@ actor LocalStoreActor {
     let dateFormatter = ISO8601DateFormatter()
 
     existing.monthlyGoal = serverRow.monthly_goal
+    existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
     existing.defaultShiftsView = serverRow.default_shifts_view
     existing.profilePictureUrl = serverRow.profile_picture_url
     existing.payrollDay = serverRow.payroll_day
@@ -2438,6 +2458,7 @@ actor LocalStoreActor {
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
     existing.monthlyGoal = serverSnapshot.monthlyGoal
+    existing.monthlyGoalsByMonth = serverSnapshot.monthlyGoalsByMonth
     existing.defaultShiftsView = serverSnapshot.defaultShiftsView
     existing.profilePictureUrl = serverSnapshot.profilePictureUrl
     existing.payrollDay = serverSnapshot.payrollDay

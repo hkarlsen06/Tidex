@@ -189,7 +189,9 @@ final class StatsService: ObservableObject {
 
       // Build monthly goal
       let monthlyGoal: MonthlyGoal
-      if let goalTarget = settings.monthly_goal, goalTarget > 0 {
+      if let goalTarget = settings.effectiveMonthlyGoal(year: targetYear, month: targetMonth),
+        goalTarget > 0
+      {
         let progress = currentTotals.net
         let percentage = (progress / Double(goalTarget)) * 100
         let remaining = max(Double(goalTarget) - progress, 0)

@@ -54,6 +54,7 @@ enum WageSnapshotField: String, Codable, CaseIterable {
 /// Field keys for tracking dirty fields on LocalUserSettings
 enum UserSettingsField: String, Codable, CaseIterable {
   case monthlyGoal = "monthly_goal"
+  case monthlyGoalsByMonth = "monthly_goals_by_month"
   case defaultShiftsView = "default_shifts_view"
   case profilePictureUrl = "profile_picture_url"
   case payrollDay = "payroll_day"

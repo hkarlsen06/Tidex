@@ -22,6 +22,9 @@ struct TotalCard: View {
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+  /// Animated fraction for the monthly goal progress bar.
+  @State private var animatedGoalProgressFraction: Double = 0
+
   /// Tracks whether the launch count-up animation has already played this session.
   /// Static so it persists across view recreations but resets on app restart.
   private static var hasPlayedLaunchAnimation = false
@@ -91,6 +94,12 @@ struct TotalCard: View {
   private var goalProgressFraction: Double {
     guard let goalTarget else { return 0 }
     return min(max(mainDisplayValue / goalTarget, 0), 1)
+  }
+
+  /// Rendered fraction for the progress bar.
+  /// Keep loading state visually empty, then animate to the real value on load completion.
+  private var renderedGoalProgressFraction: Double {
+    isLoading ? 0 : goalProgressFraction
   }
 
   private var goalProgressPercentText: String {
@@ -174,6 +183,20 @@ struct TotalCard: View {
     )
     .tidexCardShadow()
     .shimmer(isActive: isLoading)
+    .onChange(of: renderedGoalProgressFraction) { _, newValue in
+      withAnimation(.easeOut(duration: 0.6)) {
+        animatedGoalProgressFraction = newValue
+      }
+    }
+    .onAppear {
+      if renderedGoalProgressFraction > 0 {
+        withAnimation(.easeOut(duration: 0.6)) {
+          animatedGoalProgressFraction = renderedGoalProgressFraction
+        }
+      } else {
+        animatedGoalProgressFraction = 0
+      }
+    }
   }
 
   // MARK: - Subviews
@@ -277,10 +300,9 @@ struct TotalCard: View {
             RoundedRectangle(cornerRadius: CornerRadius.xs)
               .fill(Color.tidexBlue)
               .frame(
-                width: geometry.size.width * (isLoading ? 0.45 : goalProgressFraction),
+                width: geometry.size.width * animatedGoalProgressFraction,
                 height: 8
               )
-              .animation(.easeOut(duration: 0.6), value: goalProgressFraction)
           }
         }
         .frame(height: 8)
@@ -288,15 +310,23 @@ struct TotalCard: View {
         if isLoading {
           RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.3))
-            .frame(width: 34, height: 14)
+            .frame(width: 46, height: 14)
         } else {
-          Text(goalProgressPercentText)
-            .font(.tidexLabel)
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .foregroundColor(.tidexBlue)
-            .frame(width: 34, alignment: .trailing)
+          ZStack(alignment: .trailing) {
+            // Reserve width for the widest value so the live text never truncates.
+            Text("100%")
+              .font(.tidexLabel)
+              .monospacedDigit()
+              .hidden()
+
+            Text(goalProgressPercentText)
+              .font(.tidexLabel)
+              .monospacedDigit()
+              .lineLimit(1)
+              .foregroundColor(.tidexBlue)
+          }
+          .fixedSize(horizontal: true, vertical: false)
+          .layoutPriority(1)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

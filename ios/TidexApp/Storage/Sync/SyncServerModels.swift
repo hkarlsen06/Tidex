@@ -135,6 +135,7 @@ struct SyncUserSettingsRow: Codable {
   let updated_at: String
   let last_active: String?
   let monthly_goal: Int?
+  let monthly_goals_by_month: [String: Int]?
   let default_shifts_view: String?
   let profile_picture_url: String?
   let payroll_day: Int?
@@ -152,6 +153,7 @@ struct SyncUserSettingsRow: Codable {
       updated_at: updated_at,
       last_active: last_active,
       monthly_goal: monthly_goal,
+      monthly_goals_by_month: monthly_goals_by_month,
       default_shifts_view: default_shifts_view,
       profile_picture_url: profile_picture_url,
       payroll_day: payroll_day,

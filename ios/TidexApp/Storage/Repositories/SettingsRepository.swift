@@ -119,6 +119,7 @@ final class SettingsRepository: ObservableObject {
   /// - Parameters:
   ///   - userId: User ID
   ///   - monthlyGoal: New monthly goal (optional)
+  ///   - monthlyGoalsByMonth: Sparse month-specific goals keyed by YYYY-MM (optional)
   ///   - defaultShiftsView: New default shifts view (optional)
   ///   - profilePictureUrl: New profile picture URL (optional)
   ///   - payrollDay: New payroll day (optional)
@@ -130,6 +131,7 @@ final class SettingsRepository: ObservableObject {
   func updateSettings(
     for userId: String,
     monthlyGoal: Int? = nil,
+    monthlyGoalsByMonth: [String: Int]? = nil,
     defaultShiftsView: String? = nil,
     profilePictureUrl: String? = nil,
     payrollDay: Int? = nil,
@@ -142,6 +144,7 @@ final class SettingsRepository: ObservableObject {
       let updatedSettings = try await localStore.storeActor.updateUserSettings(
         userId: userId,
         monthlyGoal: monthlyGoal,
+        monthlyGoalsByMonth: monthlyGoalsByMonth,
         defaultShiftsView: defaultShiftsView,
         profilePictureUrl: profilePictureUrl,
         payrollDay: payrollDay,
@@ -163,6 +166,52 @@ final class SettingsRepository: ObservableObject {
     } catch {
       throw error
     }
+  }
+
+  /// Save a month-specific goal override.
+  /// If goal equals baseline monthly_goal, the month key is removed (fallback behavior).
+  func saveMonthlyGoalForMonth(
+    userId: String,
+    year: Int,
+    month: Int,
+    goal: Int?
+  ) async throws -> UserSettings? {
+    guard month >= 1 && month <= 12 else { return nil }
+
+    guard let localSettings = getLocalSettings(for: userId) else {
+      logger.warning("Settings not found for month-specific goal update: \(userId)")
+      return nil
+    }
+
+    var updatedMonthlyGoalsByMonth = localSettings.monthlyGoalsByMonth
+    let monthKey = UserSettings.monthKey(year: year, month: month)
+    let baselineGoal = localSettings.monthlyGoal
+
+    if let goal, goal > 0 {
+      if let baselineGoal, baselineGoal == goal {
+        updatedMonthlyGoalsByMonth.removeValue(forKey: monthKey)
+      } else {
+        updatedMonthlyGoalsByMonth[monthKey] = goal
+      }
+    } else {
+      updatedMonthlyGoalsByMonth.removeValue(forKey: monthKey)
+    }
+
+    let updatedSettings = try await localStore.storeActor.updateUserSettings(
+      userId: userId,
+      monthlyGoal: nil,
+      monthlyGoalsByMonth: updatedMonthlyGoalsByMonth,
+      defaultShiftsView: nil,
+      profilePictureUrl: nil,
+      payrollDay: nil,
+      theme: nil,
+      calendarAnimationStyle: nil,
+      halfTaxMonth: nil,
+      currency: nil
+    )
+
+    triggerSync(userId: userId)
+    return updatedSettings
   }
 
   /// Clear the profile picture URL (set to nil)

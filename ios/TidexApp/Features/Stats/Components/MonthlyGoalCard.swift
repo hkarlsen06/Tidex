@@ -4,6 +4,7 @@ import SwiftUI
 /// Displays a progress bar with gradient fill
 struct MonthlyGoalCard: View {
   let goal: MonthlyGoal
+  var onTap: (() -> Void)?
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -64,6 +65,10 @@ struct MonthlyGoalCard: View {
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
+    .contentShape(Rectangle())
+    .onTapGesture {
+      onTap?()
+    }
   }
 
   // MARK: - Subviews
@@ -129,6 +134,7 @@ struct MonthlyGoalCard: View {
 
 /// Empty state for when monthly goal is not enabled
 struct MonthlyGoalEmptyCard: View {
+  var onTap: (() -> Void)?
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -153,6 +159,10 @@ struct MonthlyGoalEmptyCard: View {
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
+    .contentShape(Rectangle())
+    .onTapGesture {
+      onTap?()
+    }
   }
 }
 
@@ -166,7 +176,8 @@ struct MonthlyGoalEmptyCard: View {
         progress: 12808,
         percentage: 85.4,
         remaining: 2192
-      )
+      ),
+      onTap: nil
     )
 
     // Goal reached
@@ -177,11 +188,12 @@ struct MonthlyGoalEmptyCard: View {
         progress: 17500,
         percentage: 116.7,
         remaining: 0
-      )
+      ),
+      onTap: nil
     )
 
     // Not enabled
-    MonthlyGoalEmptyCard()
+    MonthlyGoalEmptyCard(onTap: nil)
   }
   .padding()
   .background(Color.tidexBackground)

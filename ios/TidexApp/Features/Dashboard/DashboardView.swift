@@ -9,6 +9,13 @@ struct DashboardView: View {
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab
 
+  private struct MonthlyGoalEditContext: Identifiable {
+    let id = UUID()
+    let monthDate: Date
+    let baselineGoal: Int?
+    let initialGoal: Int?
+  }
+
   @StateObject private var viewModel = DashboardViewModel()
   @StateObject private var countdownManager = CountdownManager()
   @ObservedObject private var pushManager = PushNotificationManager.shared
@@ -30,9 +37,7 @@ struct DashboardView: View {
 
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?
-  @State private var showMonthlyGoalEditSheet = false
-  @State private var monthlyGoalEditInitialValue: Int?
-  @State private var monthlyGoalEditMonthLabel: String = ""
+  @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -208,13 +213,16 @@ struct DashboardView: View {
         featuredShiftActionTarget = nil
       }
     }
-    .sheet(isPresented: $showMonthlyGoalEditSheet) {
+    .sheet(item: $monthlyGoalEditContext) { context in
       MonthlyGoalEditSheet(
-        monthLabel: monthlyGoalEditMonthLabel,
-        initialGoal: monthlyGoalEditInitialValue
+        monthDate: context.monthDate,
+        baselineGoal: context.baselineGoal,
+        initialGoal: context.initialGoal
       ) { value in
         try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
       }
+      .presentationDetents([.fraction(0.35), .medium])
+      .presentationDragIndicator(.visible)
     }
     // Shift details sheet with full edit/delete capabilities
     .sheet(item: $selectedShift) { shift in
@@ -584,7 +592,7 @@ struct DashboardView: View {
       )
       .contentShape(Rectangle())
       .onTapGesture {
-        openMonthlyGoalEditor(data: data)
+        openMonthlyGoalEditor()
       }
 
       // Featured Shift Card - exact height on regular Dynamic Type to avoid
@@ -598,13 +606,32 @@ struct DashboardView: View {
     }
   }
 
-  private func openMonthlyGoalEditor(data: DashboardData) {
+  private func openMonthlyGoalEditor() {
     impactHaptic.impactOccurred()
-    monthlyGoalEditInitialValue = data.currentMonthGoal.flatMap {
+    let baseline = viewModel.baselineMonthlyGoal
+    let override = viewModel.displayedMonthOverrideGoal
+    let effectiveGoal = viewModel.dashboardData?.currentMonthGoal.flatMap {
       $0 > 0 ? Int($0.rounded()) : nil
     }
-    monthlyGoalEditMonthLabel = "\(viewModel.displayMonthName) \(viewModel.displayYear)"
-    showMonthlyGoalEditSheet = true
+
+    let initialGoal =
+      override
+      ?? effectiveGoal.flatMap { effective in
+        if let baseline, effective == baseline {
+          return nil
+        }
+        return effective
+      }
+    let monthDate =
+      Calendar.current.date(
+        from: DateComponents(year: viewModel.displayYear, month: viewModel.displayMonth, day: 1)
+      ) ?? Date()
+
+    monthlyGoalEditContext = MonthlyGoalEditContext(
+      monthDate: monthDate,
+      baselineGoal: baseline,
+      initialGoal: initialGoal
+    )
   }
 
   // MARK: - Featured Shift Section

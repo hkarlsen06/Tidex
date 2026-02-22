@@ -15,6 +15,8 @@ struct UserSettings: Codable, Equatable {
   let last_active: String?
   /// Monthly earnings goal
   let monthly_goal: Int?
+  /// Sparse month-specific goal overrides keyed by YYYY-MM
+  let monthly_goals_by_month: [String: Int]?
   /// Default view for shifts (calendar, list, etc.)
   let default_shifts_view: String?
   /// Profile picture URL
@@ -40,6 +42,20 @@ struct UserSettings: Codable, Equatable {
     default_shifts_view ?? "calendar"
   }
 
+  /// Resolve goal for a specific month with override-first fallback to baseline.
+  func effectiveMonthlyGoal(year: Int, month: Int) -> Int? {
+    let monthKey = UserSettings.monthKey(year: year, month: month)
+    if let override = monthly_goals_by_month?[monthKey], override > 0 {
+      return override
+    }
+    guard let baseline = monthly_goal, baseline > 0 else { return nil }
+    return baseline
+  }
+
+  static func monthKey(year: Int, month: Int) -> String {
+    String(format: "%04d-%02d", year, month)
+  }
+
   /// Static default settings for when user has no settings
   static func defaults(for userId: String) -> UserSettings {
     UserSettings(
@@ -48,6 +64,7 @@ struct UserSettings: Codable, Equatable {
       updated_at: nil,
       last_active: nil,
       monthly_goal: nil,
+      monthly_goals_by_month: nil,
       default_shifts_view: "calendar",
       profile_picture_url: nil,
       payroll_day: 1,

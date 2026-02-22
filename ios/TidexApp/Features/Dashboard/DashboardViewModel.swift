@@ -142,6 +142,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// Computed month name for immediate display (doesn't wait for API)
   var displayMonthName: String { monthContext.displayMonthName }
 
+  /// Baseline monthly goal from settings (global fallback goal).
+  var baselineMonthlyGoal: Int? {
+    settings?.monthly_goal.flatMap { $0 > 0 ? $0 : nil }
+  }
+
+  /// Month-specific override for the currently displayed month, if present.
+  var displayedMonthOverrideGoal: Int? {
+    let monthKey = UserSettings.monthKey(year: displayYear, month: displayMonth)
+    return settings?.monthly_goals_by_month?[monthKey].flatMap { $0 > 0 ? $0 : nil }
+  }
+
   // MARK: - User Profile Data (for UserMenuButton)
 
   /// User's display name (derived from email or metadata)

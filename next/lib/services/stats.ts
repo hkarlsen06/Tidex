@@ -511,10 +511,20 @@ export const StatsServiceLive = Layer.effect(
         const basePercentage = totalPay > 0 ? (monthBasePay / totalPay) * 100 : 0;
         const supplementPercentage = totalPay > 0 ? (monthSupplementPay / totalPay) * 100 : 0;
 
-        // Calculate monthly goal progress
-        const monthlyGoalTarget = (userSettings as DbUserSettings).monthly_goal
-          ? Number((userSettings as DbUserSettings).monthly_goal)
-          : 0;
+        // Calculate monthly goal progress (month override -> baseline fallback)
+        const monthGoalKey = `${focusYear}-${String(focusMonth).padStart(2, "0")}`;
+        const monthGoalOverrides = (userSettings as DbUserSettings).monthly_goals_by_month ?? null;
+        const monthGoalOverrideValue = monthGoalOverrides?.[monthGoalKey];
+        const monthGoalOverride =
+          typeof monthGoalOverrideValue === "number" && monthGoalOverrideValue > 0
+            ? monthGoalOverrideValue
+            : null;
+        const baselineGoalValue = (userSettings as DbUserSettings).monthly_goal;
+        const baselineGoal =
+          typeof baselineGoalValue === "number" && baselineGoalValue > 0
+            ? Number(baselineGoalValue)
+            : 0;
+        const monthlyGoalTarget = monthGoalOverride ?? baselineGoal;
         const monthlyGoalEnabled = monthlyGoalTarget > 0;
         const goalProgress = taxEnabled ? monthEarningsNet : monthEarnings;
         const goalPercentage = monthlyGoalEnabled ? (goalProgress / monthlyGoalTarget) * 100 : 0;

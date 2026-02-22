@@ -41,6 +41,7 @@ export type UserSettings = {
   half_tax_month?: number | null; // Month number (11=November, 12=December) for half tax deduction
   payroll_day?: number | null;
   monthly_goal?: number | null;
+  monthly_goals_by_month?: Record<string, number> | null; // YYYY-MM -> goal override
 };
 
 export type SupplementRule = {
