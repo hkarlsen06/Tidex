@@ -58,7 +58,20 @@ AS $function$
           'created_at', us.created_at,
           'updated_at', us.updated_at,
           'last_active', us.last_active,
-          'monthly_goal', us.monthly_goal,
+          'monthly_goal',
+            COALESCE(
+              CASE
+                WHEN jsonb_typeof(us.monthly_goals_by_month) = 'object'
+                  AND COALESCE(
+                    us.monthly_goals_by_month ->> to_char(make_date(p_year, p_month, 1), 'YYYY-MM'),
+                    ''
+                  ) ~ '^[0-9]+$'
+                THEN (us.monthly_goals_by_month ->> to_char(make_date(p_year, p_month, 1), 'YYYY-MM'))::integer
+                ELSE NULL
+              END,
+              us.monthly_goal
+            ),
+          'monthly_goals_by_month', us.monthly_goals_by_month,
           'default_shifts_view', us.default_shifts_view,
           'profile_picture_url', us.profile_picture_url,
           'payroll_day', us.payroll_day,

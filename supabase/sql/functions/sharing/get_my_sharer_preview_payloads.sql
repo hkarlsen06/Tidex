@@ -52,6 +52,7 @@ AS $function$
           'updated_at', us.updated_at,
           'last_active', us.last_active,
           'monthly_goal', us.monthly_goal,
+          'monthly_goals_by_month', us.monthly_goals_by_month,
           'default_shifts_view', us.default_shifts_view,
           'profile_picture_url', us.profile_picture_url,
           'payroll_day', us.payroll_day,

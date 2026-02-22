@@ -35,6 +35,7 @@ struct SharingRPCSharerRow: Codable, Sendable {
 struct SharingRPCUserSettings: Codable, Sendable {
   let userId: String?
   let monthlyGoal: Double?
+  let monthlyGoalsByMonth: [String: Int]?
   let defaultShiftsView: String?
   let profilePictureUrl: String?
   let payrollDay: Int?
@@ -50,6 +51,7 @@ struct SharingRPCUserSettings: Codable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case userId = "user_id"
     case monthlyGoal = "monthly_goal"
+    case monthlyGoalsByMonth = "monthly_goals_by_month"
     case defaultShiftsView = "default_shifts_view"
     case profilePictureUrl = "profile_picture_url"
     case payrollDay = "payroll_day"
@@ -309,10 +311,12 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     sharerId = try container.decode(String.self, forKey: .sharerId)
     showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
-    settings = try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
+    settings =
+      try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
       ?? SharingRPCUserSettings(
         userId: sharerId,
         monthlyGoal: nil,
+        monthlyGoalsByMonth: nil,
         defaultShiftsView: nil,
         profilePictureUrl: nil,
         payrollDay: nil,
@@ -325,7 +329,8 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
     recurringShifts =
       try container.decodeIfPresent([SharingRPCRecurringShiftRow].self, forKey: .recurringShifts)
       ?? []
-    snapshots = try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
+    snapshots =
+      try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
       ?? []
   }
 }
@@ -362,10 +367,12 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     ownerId = try container.decode(String.self, forKey: .ownerId)
     showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
-    settings = try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
+    settings =
+      try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
       ?? SharingRPCUserSettings(
         userId: ownerId,
         monthlyGoal: nil,
+        monthlyGoalsByMonth: nil,
         defaultShiftsView: nil,
         profilePictureUrl: nil,
         payrollDay: nil,
@@ -378,7 +385,8 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
     recurringShifts =
       try container.decodeIfPresent([SharingRPCRecurringShiftRow].self, forKey: .recurringShifts)
       ?? []
-    snapshots = try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
+    snapshots =
+      try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
       ?? []
   }
 }
@@ -479,8 +487,10 @@ enum SharingComputeCore {
   private static let fallbackBaseRate = 184.54
 
   private static let presetSupplementRules: [SharingRPCSupplementRule] = [
-    SharingRPCSupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22, percent: nil),
-    SharingRPCSupplementRule(days: [1, 2, 3, 4, 5], from: "21:00", to: "24:00", rate: 45, percent: nil),
+    SharingRPCSupplementRule(
+      days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22, percent: nil),
+    SharingRPCSupplementRule(
+      days: [1, 2, 3, 4, 5], from: "21:00", to: "24:00", rate: 45, percent: nil),
     SharingRPCSupplementRule(days: [6], from: "13:00", to: "15:00", rate: 45, percent: nil),
     SharingRPCSupplementRule(days: [6], from: "15:00", to: "18:00", rate: 55, percent: nil),
     SharingRPCSupplementRule(days: [6], from: "18:00", to: "24:00", rate: 110, percent: nil),
@@ -654,7 +664,8 @@ enum SharingComputeCore {
     now: Date = Date()
   ) -> SharingComputedPreview {
     guard !shifts.isEmpty else {
-      return SharingComputedPreview(sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
+      return SharingComputedPreview(
+        sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
     }
 
     let sortedShifts = shifts.sorted { lhs, rhs in
@@ -665,12 +676,16 @@ enum SharingComputeCore {
     }
 
     for shift in sortedShifts {
-      guard let (start, end) = shiftInterval(shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime) else {
+      guard
+        let (start, end) = shiftInterval(
+          shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+      else {
         continue
       }
 
       if now >= start && now <= end {
-        return SharingComputedPreview(sharerId: sharerId, shift: shift, status: .active, showEarnings: showEarnings)
+        return SharingComputedPreview(
+          sharerId: sharerId, shift: shift, status: .active, showEarnings: showEarnings)
       }
     }
 
@@ -680,22 +695,28 @@ enum SharingComputeCore {
       }
 
       if start > now {
-        return SharingComputedPreview(sharerId: sharerId, shift: shift, status: .upcoming, showEarnings: showEarnings)
+        return SharingComputedPreview(
+          sharerId: sharerId, shift: shift, status: .upcoming, showEarnings: showEarnings)
       }
     }
 
     let pastShifts = sortedShifts.filter { shift in
-      guard let (_, end) = shiftInterval(shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime) else {
+      guard
+        let (_, end) = shiftInterval(
+          shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+      else {
         return false
       }
       return end < now
     }
 
     if let mostRecentPast = pastShifts.last {
-      return SharingComputedPreview(sharerId: sharerId, shift: mostRecentPast, status: .past, showEarnings: showEarnings)
+      return SharingComputedPreview(
+        sharerId: sharerId, shift: mostRecentPast, status: .past, showEarnings: showEarnings)
     }
 
-    return SharingComputedPreview(sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
+    return SharingComputedPreview(
+      sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
   }
 
   static func sortPreviews(_ previews: [SharingComputedPreview]) -> [SharingComputedPreview] {
@@ -708,7 +729,9 @@ enum SharingComputeCore {
         return lhsPriority < rhsPriority
       }
 
-      guard let lhsDateTime = shiftDateTime(shiftDate: lhs.shift?.shiftDate, time: lhs.shift?.startTime),
+      guard
+        let lhsDateTime = shiftDateTime(
+          shiftDate: lhs.shift?.shiftDate, time: lhs.shift?.startTime),
         let rhsDateTime = shiftDateTime(shiftDate: rhs.shift?.shiftDate, time: rhs.shift?.startTime)
       else {
         return lhs.shift != nil
@@ -800,7 +823,8 @@ enum SharingComputeCore {
     let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
     let breakMethod = snapshot?.effectiveBreakMethod ?? .proportional
     let breakThreshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
-    let breakMinutes = breakEnabled ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes) : 0
+    let breakMinutes =
+      breakEnabled ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes) : 0
 
     let breakResult = applyBreakDeduction(
       periods: periods,
@@ -836,7 +860,9 @@ enum SharingComputeCore {
     )
   }
 
-  private static func resolveBaseRate(snapshot: SharingRPCWageSnapshot?, mode: SharingRPCMode) -> Double {
+  private static func resolveBaseRate(snapshot: SharingRPCWageSnapshot?, mode: SharingRPCMode)
+    -> Double
+  {
     if let wage = snapshot?.hourlyWage, wage > 0 {
       return wage
     }
@@ -1027,7 +1053,9 @@ enum SharingComputeCore {
         notes.append("Deducted proportionally across periods")
 
       case .baseOnly:
-        let sortedIndices = adjusted.indices.sorted { adjusted[$0].supplementRate < adjusted[$1].supplementRate }
+        let sortedIndices = adjusted.indices.sorted {
+          adjusted[$0].supplementRate < adjusted[$1].supplementRate
+        }
 
         for idx in sortedIndices {
           guard remaining > 0 else { break }
@@ -1063,7 +1091,9 @@ enum SharingComputeCore {
     )
   }
 
-  private static func resolveSupplementRate(rule: SharingRPCSupplementRule, baseRate: Double) -> Double {
+  private static func resolveSupplementRate(rule: SharingRPCSupplementRule, baseRate: Double)
+    -> Double
+  {
     if let rate = rule.rate, !rate.isNaN {
       return rate
     }
@@ -1083,7 +1113,8 @@ enum SharingComputeCore {
   ) -> SharingRPCWageSnapshot? {
     let baseline = snapshots.first { $0.fromDate == nil }
 
-    let dated = snapshots
+    let dated =
+      snapshots
       .filter { $0.fromDate != nil }
       .sorted { ($0.fromDate ?? "") < ($1.fromDate ?? "") }
 
@@ -1541,7 +1572,8 @@ enum FriendsAPIClient {
       accessToken: accessToken
     )
 
-    let rowsBySharerId = Dictionary(payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
+    let rowsBySharerId = Dictionary(
+      payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
 
     var previews: [SharingComputedPreview] = []
     previews.reserveCapacity(activeSharers.count)
@@ -1575,7 +1607,8 @@ enum FriendsAPIClient {
     }
 
     let sortedPreviews = SharingComputeCore.sortPreviews(previews)
-    let previewMap = Dictionary(sortedPreviews.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
+    let previewMap = Dictionary(
+      sortedPreviews.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
 
     let results = activeSharers.map { sharer in
       let preview = previewMap[sharer.id]
@@ -1656,7 +1689,8 @@ enum FriendsAPIClient {
     do {
       request.httpBody = try JSONSerialization.data(withJSONObject: body)
     } catch {
-      throw FriendsAPIError.networkError(underlying: "Failed to encode RPC body: \(error.localizedDescription)")
+      throw FriendsAPIError.networkError(
+        underlying: "Failed to encode RPC body: \(error.localizedDescription)")
     }
 
     do {

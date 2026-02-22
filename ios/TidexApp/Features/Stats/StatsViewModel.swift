@@ -21,6 +21,17 @@ final class StatsViewModel: ObservableObject {
   /// User's selected currency (from settings)
   @Published private(set) var currency: String = "kr"
 
+  /// Baseline monthly goal from settings (global fallback goal).
+  var baselineMonthlyGoal: Int? {
+    settings?.monthly_goal.flatMap { $0 > 0 ? $0 : nil }
+  }
+
+  /// Month-specific override for the currently displayed month, if present.
+  var displayedMonthOverrideGoal: Int? {
+    let monthKey = UserSettings.monthKey(year: displayYear, month: displayMonth)
+    return settings?.monthly_goals_by_month?[monthKey].flatMap { $0 > 0 ? $0 : nil }
+  }
+
   // MARK: - Month Navigation State (from SharedMonthContext)
 
   @Published private(set) var displayYear: Int
@@ -40,6 +51,7 @@ final class StatsViewModel: ObservableObject {
   private let monthContext: SharedMonthContext
   private let syncCoordinator: SyncCoordinator
   private var cancellables = Set<AnyCancellable>()
+  private var settings: UserSettings?
 
   // MARK: - Initialization
 
@@ -119,8 +131,11 @@ final class StatsViewModel: ObservableObject {
     do {
       // Load user's currency from settings
       let session = try await AuthSessionManager.shared.getSession()
-      if let settings = settingsRepository.getSettings(for: session.normalizedUserId) {
-        currency = settings.currency ?? "kr"
+      if let loadedSettings = settingsRepository.getSettings(for: session.normalizedUserId) {
+        settings = loadedSettings
+        currency = loadedSettings.currency ?? "kr"
+      } else {
+        settings = nil
       }
 
       stats = try await statsService.computeStats(year: displayYear, month: displayMonth)
@@ -147,6 +162,24 @@ final class StatsViewModel: ObservableObject {
     }
 
     _ = await refreshTask.result
+  }
+
+  /// Save month-specific goal override for the displayed month.
+  func saveMonthlyGoalForDisplayedMonth(_ goal: Int?) async throws {
+    let session = try await AuthSessionManager.shared.getSession()
+
+    let updatedSettings = try await settingsRepository.saveMonthlyGoalForMonth(
+      userId: session.normalizedUserId,
+      year: displayYear,
+      month: displayMonth,
+      goal: goal
+    )
+    if let updatedSettings {
+      settings = updatedSettings
+    }
+
+    statsService.clearCache()
+    await loadStats()
   }
 
   /// Performs pull-to-refresh sync and local recompute.

@@ -8,7 +8,15 @@ struct StatsView: View {
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab
 
+  private struct MonthlyGoalEditContext: Identifiable {
+    let id = UUID()
+    let monthDate: Date
+    let baselineGoal: Int?
+    let initialGoal: Int?
+  }
+
   @StateObject private var viewModel = StatsViewModel()
+  @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -69,6 +77,17 @@ struct StatsView: View {
         }
       }
       .iPadToolbarTransaction()
+      .sheet(item: $monthlyGoalEditContext) { context in
+        MonthlyGoalEditSheet(
+          monthDate: context.monthDate,
+          baselineGoal: context.baselineGoal,
+          initialGoal: context.initialGoal
+        ) { value in
+          try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
+        }
+        .presentationDetents([.fraction(0.35), .medium])
+        .presentationDragIndicator(.visible)
+      }
     }
     .task {
       await viewModel.loadStats()
@@ -93,7 +112,8 @@ struct StatsView: View {
             grossEarnings: stats.currentMonth.totalEarnings,
             netEarnings: stats.currentMonth.totalEarningsNet,
             taxEnabled: stats.tax.enabled,
-            percentageChange: stats.percentageChange
+            percentageChange: stats.percentageChange,
+            onTap: { openMonthlyGoalEditor() }
           )
 
           // Hours and Shifts cards (side by side)
@@ -104,9 +124,12 @@ struct StatsView: View {
 
           // Monthly Goal Card
           if stats.monthlyGoal.enabled {
-            MonthlyGoalCard(goal: stats.monthlyGoal)
+            MonthlyGoalCard(
+              goal: stats.monthlyGoal,
+              onTap: { openMonthlyGoalEditor() }
+            )
           } else {
-            MonthlyGoalEmptyCard()
+            MonthlyGoalEmptyCard(onTap: { openMonthlyGoalEditor() })
           }
 
           sectionHeader(.statsSectionCharts)
@@ -166,6 +189,36 @@ struct StatsView: View {
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.top, Spacing.xs)
+  }
+
+  private func openMonthlyGoalEditor() {
+    selectionHaptic.selectionChanged()
+    let baseline = viewModel.baselineMonthlyGoal
+    let override = viewModel.displayedMonthOverrideGoal
+    let effectiveGoal =
+      viewModel.stats?.monthlyGoal.enabled == true
+      ? Int((viewModel.stats?.monthlyGoal.target ?? 0).rounded())
+      : nil
+
+    let initialGoal =
+      override
+      ?? effectiveGoal.flatMap { effective in
+        guard effective > 0 else { return nil }
+        if let baseline, effective == baseline {
+          return nil
+        }
+        return effective
+      }
+    let monthDate =
+      Calendar.current.date(
+        from: DateComponents(year: viewModel.displayYear, month: viewModel.displayMonth, day: 1)
+      ) ?? Date()
+
+    monthlyGoalEditContext = MonthlyGoalEditContext(
+      monthDate: monthDate,
+      baselineGoal: baseline,
+      initialGoal: initialGoal
+    )
   }
 
   // MARK: - Weekly Chart Section

@@ -234,7 +234,8 @@ final class SharingService: ObservableObject {
           settings: SharedUserSettings(
             payroll_day: payloadRow.settings.payrollDay,
             half_tax_month: payloadRow.settings.halfTaxMonth,
-            monthly_goal: payloadRow.settings.monthlyGoal
+            monthly_goal: payloadRow.settings.monthlyGoal,
+            monthly_goals_by_month: payloadRow.settings.monthlyGoalsByMonth
           ),
           payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil
         )

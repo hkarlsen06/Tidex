@@ -50,6 +50,7 @@ export type DbUserSettings = {
   half_tax_month?: number | null;
   payroll_day?: number | null;
   monthly_goal?: number | null;
+  monthly_goals_by_month?: Record<string, number> | null;
   profile_picture_url?: string | null;
   created_at?: string;
   updated_at?: string;

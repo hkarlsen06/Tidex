@@ -19,6 +19,10 @@ final class LocalUserSettings {
   /// Monthly earnings goal
   var monthlyGoal: Int?
 
+  /// Sparse month-specific goal overrides keyed by YYYY-MM.
+  /// Stored as encoded JSON object for SwiftData compatibility.
+  var monthlyGoalsByMonthData: Data?
+
   /// Default view for shifts (calendar, list, etc.)
   var defaultShiftsView: String?
 
@@ -122,11 +126,37 @@ final class LocalUserSettings {
     calendarAnimationStyle ?? "horizontal"
   }
 
+  var monthlyGoalsByMonth: [String: Int] {
+    get {
+      guard let monthlyGoalsByMonthData, !monthlyGoalsByMonthData.isEmpty else {
+        return [:]
+      }
+
+      do {
+        return try syncJSONDecoder.decode([String: Int].self, from: monthlyGoalsByMonthData)
+      } catch {
+        SyncLogger.shared.log(
+          "Corrupted monthlyGoalsByMonthData for user settings \(userId): \(error.localizedDescription)",
+          level: .error
+        )
+        return [:]
+      }
+    }
+    set {
+      monthlyGoalsByMonthData =
+        (try? canonicalJSONEncoder.encode(
+          newValue.sorted { $0.key < $1.key }.reduce(into: [String: Int]()) {
+            $0[$1.key] = $1.value
+          })) ?? Data()
+    }
+  }
+
   // MARK: - Initialization
 
   init(
     userId: String,
     monthlyGoal: Int? = nil,
+    monthlyGoalsByMonthData: Data? = nil,
     defaultShiftsView: String? = nil,
     profilePictureUrl: String? = nil,
     payrollDay: Int? = nil,
@@ -146,6 +176,7 @@ final class LocalUserSettings {
   ) {
     self.userId = userId
     self.monthlyGoal = monthlyGoal
+    self.monthlyGoalsByMonthData = monthlyGoalsByMonthData
     self.defaultShiftsView = defaultShiftsView
     self.profilePictureUrl = profilePictureUrl
     self.payrollDay = payrollDay
@@ -175,6 +206,7 @@ final class LocalUserSettings {
 /// Snapshot of server data for user settings
 struct UserSettingsServerSnapshot: Codable, Equatable {
   let monthlyGoal: Int?
+  let monthlyGoalsByMonth: [String: Int]
   let defaultShiftsView: String?
   let profilePictureUrl: String?
   let payrollDay: Int?
@@ -186,6 +218,21 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   let updatedAt: Date
   let revision: Int64
 
+  private enum CodingKeys: String, CodingKey {
+    case monthlyGoal
+    case monthlyGoalsByMonth
+    case defaultShiftsView
+    case profilePictureUrl
+    case payrollDay
+    case theme
+    case calendarAnimationStyle
+    case halfTaxMonth
+    case currency
+    case lastActive
+    case updatedAt
+    case revision
+  }
+
   /// Create snapshot from a UserSettings server response
   static func from(
     row: UserSettings,
@@ -196,6 +243,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
 
     return UserSettingsServerSnapshot(
       monthlyGoal: row.monthly_goal,
+      monthlyGoalsByMonth: row.monthly_goals_by_month ?? [:],
       defaultShiftsView: row.default_shifts_view,
       profilePictureUrl: row.profile_picture_url,
       payrollDay: row.payroll_day,
@@ -233,6 +281,9 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     if monthlyGoal != other.monthlyGoal {
       changed.insert(.monthlyGoal)
     }
+    if monthlyGoalsByMonth != other.monthlyGoalsByMonth {
+      changed.insert(.monthlyGoalsByMonth)
+    }
     if defaultShiftsView != other.defaultShiftsView {
       changed.insert(.defaultShiftsView)
     }
@@ -262,6 +313,27 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   }
 }
 
+extension UserSettingsServerSnapshot {
+  /// Backward-compatible decoding for persisted snapshots written before
+  /// monthlyGoalsByMonth was introduced.
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    monthlyGoal = try container.decodeIfPresent(Int.self, forKey: .monthlyGoal)
+    monthlyGoalsByMonth =
+      try container.decodeIfPresent([String: Int].self, forKey: .monthlyGoalsByMonth) ?? [:]
+    defaultShiftsView = try container.decodeIfPresent(String.self, forKey: .defaultShiftsView)
+    profilePictureUrl = try container.decodeIfPresent(String.self, forKey: .profilePictureUrl)
+    payrollDay = try container.decodeIfPresent(Int.self, forKey: .payrollDay)
+    theme = try container.decode(String.self, forKey: .theme)
+    calendarAnimationStyle = try container.decode(String.self, forKey: .calendarAnimationStyle)
+    halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
+    currency = try container.decodeIfPresent(String.self, forKey: .currency)
+    lastActive = try container.decodeIfPresent(Date.self, forKey: .lastActive)
+    updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    revision = try container.decode(Int64.self, forKey: .revision)
+  }
+}
+
 // MARK: - Conversion Extensions
 
 extension LocalUserSettings {
@@ -275,6 +347,7 @@ extension LocalUserSettings {
       updated_at: dateFormatter.string(from: serverUpdatedAt),
       last_active: lastActive.map { dateFormatter.string(from: $0) },
       monthly_goal: monthlyGoal,
+      monthly_goals_by_month: monthlyGoalsByMonth.isEmpty ? nil : monthlyGoalsByMonth,
       default_shifts_view: defaultShiftsView,
       profile_picture_url: profilePictureUrl,
       payroll_day: payrollDay,
@@ -306,6 +379,9 @@ extension LocalUserSettings {
     return LocalUserSettings(
       userId: serverRow.user_id,
       monthlyGoal: serverRow.monthly_goal,
+      monthlyGoalsByMonthData: (try? canonicalJSONEncoder.encode(
+        serverRow.monthly_goals_by_month ?? [:]))
+        ?? Data(),
       defaultShiftsView: serverRow.default_shifts_view,
       profilePictureUrl: serverRow.profile_picture_url,
       payrollDay: serverRow.payroll_day,

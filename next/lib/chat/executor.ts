@@ -1625,6 +1625,20 @@ async function executeManageSettings(
 
       // Format settings for AI consumption
       // Note: pause/tax settings are now per-snapshot (use get_wage_info tool)
+      const baselineMonthlyGoal =
+        typeof settings.monthly_goal === "number" && settings.monthly_goal > 0
+          ? settings.monthly_goal
+          : null;
+      const monthlyGoalOverrides = settings.monthly_goals_by_month ?? {};
+      const now = new Date();
+      const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+      const overrideGoalValue = monthlyGoalOverrides[currentMonthKey];
+      const overrideMonthlyGoal =
+        typeof overrideGoalValue === "number" && overrideGoalValue > 0
+          ? overrideGoalValue
+          : null;
+      const effectiveMonthlyGoal = overrideMonthlyGoal ?? baselineMonthlyGoal;
+
       const formattedSettings = {
         display: {
           theme: settings.theme || "system",
@@ -1637,7 +1651,10 @@ async function executeManageSettings(
           halfTaxMonth: settings.half_tax_month,
         },
         goals: {
-          monthlyGoal: settings.monthly_goal,
+          monthlyGoal: effectiveMonthlyGoal,
+          monthlyGoalBaseline: baselineMonthlyGoal,
+          monthlyGoalForMonth: currentMonthKey,
+          monthlyGoalsByMonth: monthlyGoalOverrides,
           payrollDay: settings.payroll_day,
         },
         preferences: {

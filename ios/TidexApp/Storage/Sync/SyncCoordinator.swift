@@ -1508,10 +1508,14 @@ final class SyncCoordinator: ObservableObject {
     let localSettings = LocalUserSettings(
       userId: serverRow.user_id,
       monthlyGoal: serverRow.monthly_goal,
+      monthlyGoalsByMonthData: (try? canonicalJSONEncoder.encode(
+        serverRow.monthly_goals_by_month ?? [:]))
+        ?? Data(),
       defaultShiftsView: serverRow.default_shifts_view,
       profilePictureUrl: serverRow.profile_picture_url,
       payrollDay: serverRow.payroll_day,
       theme: serverRow.theme,
+      calendarAnimationStyle: serverRow.calendar_animation_style,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       lastActive: lastActive,
@@ -2993,6 +2997,19 @@ final class SyncCoordinator: ObservableObject {
         updateData["monthly_goal"] = .null
       }
     }
+    if dirtyFields.contains(.monthlyGoalsByMonth) {
+      let encoded = try requireEncode(
+        settings.monthlyGoalsByMonth,
+        typeName: "UserSettings.monthlyGoalsByMonth"
+      )
+      let decoded = try requireAnyJSON(
+        encoded,
+        table: .userSettings,
+        id: userId,
+        field: "monthly_goals_by_month"
+      )
+      updateData["monthly_goals_by_month"] = decoded
+    }
     if dirtyFields.contains(.defaultShiftsView) {
       if let view = settings.defaultShiftsView {
         updateData["default_shifts_view"] = .string(view)
@@ -3110,6 +3127,18 @@ final class SyncCoordinator: ObservableObject {
       "theme": .string(settings.theme),
       "calendar_animation_style": .string(settings.effectiveCalendarAnimationStyle),
     ]
+
+    let monthlyGoalsByMonthEncoded = try requireEncode(
+      settings.monthlyGoalsByMonth,
+      typeName: "UserSettings.monthlyGoalsByMonth"
+    )
+    let monthlyGoalsByMonthDecoded = try requireAnyJSON(
+      monthlyGoalsByMonthEncoded,
+      table: .userSettings,
+      id: userId,
+      field: "monthly_goals_by_month"
+    )
+    insertData["monthly_goals_by_month"] = monthlyGoalsByMonthDecoded
 
     // Optional fields
     if let goal = settings.monthlyGoal {

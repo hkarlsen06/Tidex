@@ -47,6 +47,7 @@ struct SharedUserSettings: Codable, Equatable {
   let payroll_day: Int?
   let half_tax_month: Int?
   let monthly_goal: Double?
+  let monthly_goals_by_month: [String: Int]?
 }
 
 /// Payout tax settings from the API

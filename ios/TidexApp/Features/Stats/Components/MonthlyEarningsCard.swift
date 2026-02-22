@@ -7,6 +7,7 @@ struct MonthlyEarningsCard: View {
   let netEarnings: Double
   let taxEnabled: Bool
   let percentageChange: Double?
+  var onTap: (() -> Void)?
 
   @Environment(\.userCurrency) private var currency
 
@@ -89,6 +90,10 @@ struct MonthlyEarningsCard: View {
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.card)
     .tidexCardShadow()
+    .contentShape(Rectangle())
+    .onTapGesture {
+      onTap?()
+    }
   }
 
   // MARK: - Formatting
@@ -105,7 +110,8 @@ struct MonthlyEarningsCard: View {
       grossEarnings: 13772,
       netEarnings: 12808,
       taxEnabled: true,
-      percentageChange: -32
+      percentageChange: -32,
+      onTap: nil
     )
 
     // With positive change
@@ -113,7 +119,8 @@ struct MonthlyEarningsCard: View {
       grossEarnings: 20000,
       netEarnings: 18500,
       taxEnabled: true,
-      percentageChange: 15
+      percentageChange: 15,
+      onTap: nil
     )
 
     // No tax
@@ -121,7 +128,8 @@ struct MonthlyEarningsCard: View {
       grossEarnings: 15000,
       netEarnings: 15000,
       taxEnabled: false,
-      percentageChange: 5
+      percentageChange: 5,
+      onTap: nil
     )
   }
   .padding()
