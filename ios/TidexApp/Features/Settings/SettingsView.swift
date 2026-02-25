@@ -11,8 +11,9 @@ struct SettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
 
-  /// Whether the current user is an admin
-  @State private var isAdmin = false
+  /// Whether the current user can access admin settings
+  /// Requires both admin role and AAL2 assurance level.
+  @State private var canAccessAdminSettings = false
   /// Whether sign out is in progress
   @State private var isSigningOut = false
   /// Whether global sign out is in progress
@@ -177,7 +178,7 @@ struct SettingsView: View {
         .listRowBackground(Color.tidexSurfacePrimary)
 
         // MARK: - Admin
-        if isAdmin {
+        if canAccessAdminSettings {
           Section(header: Text(String(localized: .settingsGroupAdmin))) {
             SettingsMenuItem(
               icon: "shield.lefthalf.filled.badge.checkmark",
@@ -360,17 +361,20 @@ struct SettingsView: View {
   private func checkAdminStatus() async {
     do {
       let session = try await AuthSessionManager.shared.getSession()
-      // Check app_metadata for admin role
-      // The role is stored in app_metadata which is set by the backend
-      if let appMetadata = session.user.appMetadata["role"],
+      guard let appMetadata = session.user.appMetadata["role"],
         case .string(let role) = appMetadata,
         role == "admin"
-      {
-        isAdmin = true
+      else {
+        canAccessAdminSettings = false
+        return
       }
+
+      let mfaStatus = try await AuthService.shared.getMFAStatus()
+      canAccessAdminSettings = mfaStatus.currentLevel == "aal2"
     } catch {
-      // Silently fail - non-admin is the default
-      logger.debug("Could not check admin status: \(error.localizedDescription)")
+      // Silently fail closed - hide admin menu item by default.
+      canAccessAdminSettings = false
+      logger.debug("Could not check admin access status: \(error.localizedDescription)")
     }
   }
 

@@ -92,9 +92,8 @@ ${canUpgrade ? `Can upgrade: Yes (higher tiers get more messages - Pro: ${WAGEY_
 
 IMPORTANT RULES:
 1. ALWAYS complete the user's request first. Never refuse to do work based on message limits - the backend handles access control, not you.
-2. Only mention limits if the user explicitly asks about them, OR if total messages available is 0 (see rule 4).
-3. If asked about limits, provide accurate info. The "remaining" count already accounts for the current message. Never say messages are unlimited.
-${canUpgrade ? `4. If total messages available is 0, after completing the user's request, briefly mention they've used all messages for the month and suggest upgrading for more messages next time.` : ""}
+2. Only mention limits if the user explicitly asks about them.
+3. If asked about limits, provide accurate info. The "remaining" count already accounts for the current user message. Your own responses do NOT consume message credits - only user messages are counted. Never say messages are unlimited.
 </user_limits>`
     : "";
 
