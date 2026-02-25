@@ -3,6 +3,8 @@ import UIKit
 
 /// Pre-auth onboarding simulator that mirrors the Add tab single-shift flow.
 struct PreAuthAddShiftSimulatorScreen: View {
+  let initialCurrency: String
+  let onCurrencyChanged: (String) -> Void
   let onContinue:
     (_ fromTotals: CalendarHeaderTotals?, _ toTotals: CalendarHeaderTotals?, _ currency: String)
       -> Void
@@ -11,10 +13,29 @@ struct PreAuthAddShiftSimulatorScreen: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-  @StateObject private var viewModel = PreAuthAddShiftSimulatorViewModel()
+  @StateObject private var viewModel: PreAuthAddShiftSimulatorViewModel
   @State private var focusedTimeField: TimeInputField?
   @State private var relaxFocusInAddStage = false
   @State private var focusRelaxToken = 0
+
+  init(
+    initialCurrency: String,
+    onCurrencyChanged: @escaping (String) -> Void,
+    onContinue:
+      @escaping (
+        _ fromTotals: CalendarHeaderTotals?, _ toTotals: CalendarHeaderTotals?, _ currency: String
+      ) -> Void,
+    onSkip: @escaping () -> Void,
+    onBaselineReady: @escaping (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void
+  ) {
+    self.initialCurrency = initialCurrency
+    self.onCurrencyChanged = onCurrencyChanged
+    self.onContinue = onContinue
+    self.onSkip = onSkip
+    self.onBaselineReady = onBaselineReady
+    _viewModel = StateObject(
+      wrappedValue: PreAuthAddShiftSimulatorViewModel(initialCurrency: initialCurrency))
+  }
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -116,10 +137,14 @@ struct PreAuthAddShiftSimulatorScreen: View {
     }
     .onAppear {
       onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
+      OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
       scheduleFocusRelaxIfNeeded()
     }
     .onChange(of: focusStage) { _, _ in
       scheduleFocusRelaxIfNeeded()
+    }
+    .onChange(of: initialCurrency) { _, newCurrency in
+      syncCurrencyFromParent(newCurrency)
     }
     .userCurrency(viewModel.currency)
     .animation(
@@ -162,9 +187,15 @@ struct PreAuthAddShiftSimulatorScreen: View {
         .fixedSize(horizontal: true, vertical: false)
       }
 
-      Text(.tabsAdd)
-        .font(.headline)
-        .foregroundColor(.tidexTextPrimary)
+      OnboardingCurrencyCapsuleSelector(
+        selectedCurrency: Binding(
+          get: { viewModel.currency },
+          set: { selectedCurrency in
+            handleCurrencySelection(selectedCurrency)
+          }
+        )
+      )
+      .fixedSize(horizontal: true, vertical: false)
     }
     .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
     .padding(.horizontal, isIPhone ? Spacing.sm : Spacing.md)
@@ -248,6 +279,21 @@ struct PreAuthAddShiftSimulatorScreen: View {
       viewModel.toolbarTotals ?? viewModel.baselineToolbarTotals,
       viewModel.currency
     )
+  }
+
+  private func handleCurrencySelection(_ selectedCurrency: String) {
+    guard selectedCurrency != viewModel.currency else { return }
+
+    viewModel.applyCurrency(selectedCurrency)
+    onCurrencyChanged(viewModel.currency)
+    OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
+    onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
+  }
+
+  private func syncCurrencyFromParent(_ selectedCurrency: String) {
+    guard selectedCurrency != viewModel.currency else { return }
+    viewModel.applyCurrency(selectedCurrency)
+    onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
   }
 
   private func hideKeyboard() {
@@ -370,6 +416,8 @@ private struct PreAuthSimulatorToolbarTotals: View {
 
 #Preview {
   PreAuthAddShiftSimulatorScreen(
+    initialCurrency: "kr",
+    onCurrencyChanged: { _ in },
     onContinue: { _, _, _ in },
     onSkip: {},
     onBaselineReady: { _, _ in }

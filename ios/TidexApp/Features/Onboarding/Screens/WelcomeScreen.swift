@@ -3,6 +3,7 @@ import SwiftUI
 /// Screen 1: Welcome/Hero
 /// Establishes brand, creates emotional connection, sets expectation
 struct WelcomeScreen: View {
+  let currency: String
 
   // Entrance animation states - animate once, then stillness
   @State private var showLogo = false
@@ -80,11 +81,12 @@ struct WelcomeScreen: View {
     }
   }
 
-  /// Sample amount for the ghosted preview (locale-aware)
-  /// Norwegian: ~24k kr (typical monthly wage)
-  /// Others: ~$3,200 (typical US monthly wage)
+  /// Sample amount for the ghosted preview driven by selected currency wage defaults.
   private var ghostedAmountText: String {
-    Locale.current.isNorwegian ? "24 380 kr" : "$3,240"
+    let hourlyWage = OnboardingCurrencyResolver.defaultHourlyWage(for: currency)
+    let estimatedMonthlyHours = 162.0
+    let estimatedNet = hourlyWage * estimatedMonthlyHours * 0.8
+    return CurrencyConfig.format(estimatedNet, currency: currency)
   }
 
   @ViewBuilder
@@ -202,6 +204,6 @@ struct WelcomeScreen: View {
 }
 
 #Preview {
-  WelcomeScreen()
+  WelcomeScreen(currency: "kr")
     .background(Color.tidexBackground)
 }

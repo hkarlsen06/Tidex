@@ -28,7 +28,7 @@ struct HowItWorksScreen: View {
   init(
     totalFrom: CalendarHeaderTotals? = nil,
     totalTo: CalendarHeaderTotals? = nil,
-    currency: String = Locale.current.isNorwegian ? "kr" : "$",
+    currency: String = OnboardingCurrencyResolver.detectDefaultCurrency(),
     isActive: Bool = false,
     shouldShowConfetti: Bool = false,
     shouldAnimateTotalFromPrevious: Bool = false,
@@ -44,7 +44,7 @@ struct HowItWorksScreen: View {
   }
 
   var body: some View {
-    let featuredShift = Self.makeOnboardingFeaturedShift()
+    let featuredShift = Self.makeOnboardingFeaturedShift(currency: currency)
 
     VStack(spacing: 0) {
       Text(.onboardingHowTitle)
@@ -169,7 +169,7 @@ struct HowItWorksScreen: View {
     .userCurrency(currency)
   }
 
-  private static func makeOnboardingFeaturedShift() -> ShiftWithComputations {
+  private static func makeOnboardingFeaturedShift(currency: String) -> ShiftWithComputations {
     let current = Date.currentYearMonth()
     let day = min(12, Date.daysInMonth(year: current.year, month: current.month))
     let dateISO = String(format: "%04d-%02d-%02d", current.year, current.month, day)
@@ -187,7 +187,7 @@ struct HowItWorksScreen: View {
       id: "onboarding-how-snapshot",
       user_id: "onboarding-demo",
       from_date: nil,
-      hourly_wage: Locale.current.isNorwegian ? 200.0 : 25.0,
+      hourly_wage: OnboardingCurrencyResolver.defaultHourlyWage(for: currency),
       wage_level: nil,
       tariff_type_id: nil,
       supplements: SupplementRulesSnapshot(rules: []),

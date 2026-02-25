@@ -790,6 +790,7 @@ final class AppCoordinator: ObservableObject {
   private func performSignOut(global: Bool) async {
     // Reset biometric state before sign-out to ensure clean state for next user
     BiometricAuthService.shared.reset()
+    OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
 
     // Clear all cached data
     await clearAllCachedData()

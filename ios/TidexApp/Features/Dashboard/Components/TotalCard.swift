@@ -309,27 +309,27 @@ struct TotalCard: View {
         }
         .frame(height: 8)
 
-        if isLoading {
-          RoundedRectangle(cornerRadius: CornerRadius.xxs)
-            .fill(Color.tidexTextMuted.opacity(0.3))
-            .frame(width: 46, height: 14)
-        } else {
-          ZStack(alignment: .trailing) {
-            // Reserve width for the widest value so the live text never truncates.
-            Text("100%")
-              .font(.tidexLabel)
-              .monospacedDigit()
-              .hidden()
+        ZStack(alignment: .trailing) {
+          // Always present — anchors both the width and height to the real font metrics.
+          Text("100%")
+            .font(.tidexLabel)
+            .monospacedDigit()
+            .hidden()
 
+          if showDashes {
+            RoundedRectangle(cornerRadius: CornerRadius.xxs)
+              .fill(Color.tidexTextMuted.opacity(0.3))
+              .frame(width: 46, height: 14)
+          } else {
             Text(goalProgressPercentText)
               .font(.tidexLabel)
               .monospacedDigit()
               .lineLimit(1)
               .foregroundColor(.tidexBlue)
           }
-          .fixedSize(horizontal: true, vertical: false)
-          .layoutPriority(1)
         }
+        .fixedSize(horizontal: true, vertical: false)
+        .layoutPriority(1)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       // Make the amount feel anchored to the bar, then restore breathing room

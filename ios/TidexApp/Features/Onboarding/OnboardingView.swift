@@ -11,10 +11,12 @@ struct OnboardingView: View {
   @State private var currentPage = 0
   @State private var isSkipButtonVisible = false
   @State private var simulatorBaselineTotals: CalendarHeaderTotals?
-  @State private var simulatorCurrency = Locale.current.isNorwegian ? "kr" : "$"
+  @State private var preAuthCurrency: String = {
+    OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+      ?? OnboardingCurrencyResolver.detectDefaultCurrency()
+  }()
   @State private var howItWorksFromTotals: CalendarHeaderTotals?
   @State private var howItWorksToTotals: CalendarHeaderTotals?
-  @State private var howItWorksCurrency = Locale.current.isNorwegian ? "kr" : "$"
   @State private var howItWorksShouldShowConfetti = false
   @State private var howItWorksShouldAnimateFromPrevious = false
   @State private var howItWorksTotalCardSeed = 0
@@ -29,15 +31,17 @@ struct OnboardingView: View {
     currentPage == simulatorPage
   }
 
-  private var canShowGlobalSkip: Bool {
-    currentPage < totalPages - 1
-      && !isSimulatorPage
-      && currentPage != howItWorksPage
+  private var isWelcomePage: Bool {
+    currentPage == 0
+  }
+
+  private var canShowWelcomeHeaderControls: Bool {
+    isWelcomePage
   }
 
   private var fallbackHowItWorksTotals: CalendarHeaderTotals {
-    // Match simulator baseline defaults: 5 shifts * 7.5 paid hours at locale-based hourly wage.
-    let hourlyRate = Locale.current.isNorwegian ? 200.0 : 25.0
+    // Match simulator baseline defaults: 5 shifts * 7.5 paid hours at currency-tier default wage.
+    let hourlyRate = OnboardingCurrencyResolver.defaultHourlyWage(for: preAuthCurrency)
     let gross = hourlyRate * 37.5
     let net = gross * 0.8
     return CalendarHeaderTotals(primary: net, secondary: gross)
@@ -52,10 +56,14 @@ struct OnboardingView: View {
       VStack(spacing: 0) {
         // Page content - takes full height, skip button overlaid
         TabView(selection: $currentPage) {
-          WelcomeScreen()
+          WelcomeScreen(currency: preAuthCurrency)
             .tag(0)
 
           PreAuthAddShiftSimulatorScreen(
+            initialCurrency: preAuthCurrency,
+            onCurrencyChanged: { currency in
+              preAuthCurrency = currency
+            },
             onContinue: { fromTotals, toTotals, currency in
               completeSimulatorAndAdvance(
                 fromTotals: fromTotals,
@@ -68,7 +76,7 @@ struct OnboardingView: View {
             },
             onBaselineReady: { baselineTotals, currency in
               simulatorBaselineTotals = baselineTotals
-              simulatorCurrency = currency
+              preAuthCurrency = currency
             }
           )
           .tag(1)
@@ -76,7 +84,7 @@ struct OnboardingView: View {
           HowItWorksScreen(
             totalFrom: howItWorksFromTotals,
             totalTo: howItWorksToTotals,
-            currency: howItWorksCurrency,
+            currency: preAuthCurrency,
             isActive: currentPage == 2,
             shouldShowConfetti: howItWorksShouldShowConfetti,
             shouldAnimateTotalFromPrevious: howItWorksShouldAnimateFromPrevious,
@@ -127,33 +135,14 @@ struct OnboardingView: View {
             reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
         }
       }
-
-      // Skip button overlaid at top-right (all pages except last)
-      VStack {
-        HStack {
-          Spacer()
-          if canShowGlobalSkip && isSkipButtonVisible {
-            Button {
-              withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                currentPage = totalPages - 1
-              }
-            } label: {
-              Text(.onboardingSkip)
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextSecondary)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.xs)
-            }
-            .tidexGlass(shape: .capsule, interactive: true)
-            .padding(.trailing, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .transition(.opacity.combined(with: .scale(scale: 0.9)))
-          }
-        }
-        Spacer()
+    }
+    .safeAreaInset(edge: .top, spacing: 0) {
+      if canShowWelcomeHeaderControls {
+        welcomeTopHeader
       }
-      .animation(
-        reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
+    }
+    .onAppear {
+      OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
     }
     .task(id: currentPage) {
       if isSkipButtonVisible {
@@ -166,10 +155,10 @@ struct OnboardingView: View {
         }
       }
 
-      guard canShowGlobalSkip else { return }
+      guard canShowWelcomeHeaderControls else { return }
 
       try? await Task.sleep(nanoseconds: skipButtonRevealDelayNanoseconds)
-      guard canShowGlobalSkip else { return }
+      guard canShowWelcomeHeaderControls else { return }
 
       if reduceMotion {
         isSkipButtonVisible = true
@@ -181,15 +170,67 @@ struct OnboardingView: View {
     }
   }
 
+  @ViewBuilder
+  private var welcomeTopHeader: some View {
+    ZStack(alignment: .center) {
+      HStack(spacing: Spacing.sm) {
+        if isSkipButtonVisible {
+          Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+              currentPage = totalPages - 1
+            }
+          } label: {
+            Text(.onboardingSkip)
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextSecondary)
+              .lineLimit(1)
+              .minimumScaleFactor(0.9)
+              .allowsTightening(true)
+              .padding(.horizontal, Spacing.sm)
+              .padding(.vertical, Spacing.xxxs)
+          }
+          .fixedSize(horizontal: true, vertical: false)
+          .buttonStyle(.plain)
+          .tidexGlass(shape: .capsule, interactive: true)
+          .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        }
+
+        Spacer(minLength: 0)
+      }
+
+      OnboardingCurrencyCapsuleSelector(
+        selectedCurrency: Binding(
+          get: { preAuthCurrency },
+          set: { selectedCurrency in
+            guard selectedCurrency != preAuthCurrency else { return }
+            preAuthCurrency = selectedCurrency
+            OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
+          }
+        )
+      )
+      .fixedSize(horizontal: true, vertical: false)
+    }
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.xxxs)
+    .padding(.bottom, Spacing.sm)
+    .background(Color.tidexBackground)
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8),
+      value: isSkipButtonVisible
+    )
+  }
+
   private func completeSimulatorAndAdvance(
     fromTotals: CalendarHeaderTotals?,
     toTotals: CalendarHeaderTotals?,
     currency: String
   ) {
     isAdvancingFromSimulatorAdd = true
+    preAuthCurrency = currency
     howItWorksFromTotals = fromTotals ?? simulatorBaselineTotals
     howItWorksToTotals = toTotals ?? fromTotals ?? simulatorBaselineTotals
-    howItWorksCurrency = currency
     howItWorksShouldShowConfetti = true
     howItWorksShouldAnimateFromPrevious = true
     howItWorksTotalCardSeed += 1
@@ -219,7 +260,6 @@ struct OnboardingView: View {
         let baseline = simulatorBaselineTotals
         howItWorksFromTotals = baseline
         howItWorksToTotals = baseline
-        howItWorksCurrency = simulatorCurrency
         howItWorksShouldShowConfetti = false
         howItWorksShouldAnimateFromPrevious = false
         howItWorksTotalCardSeed += 1

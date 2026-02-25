@@ -303,7 +303,7 @@ private struct CurrencyPickerSheet: View {
                 }
               } header: {
                 HStack {
-                  Text(group.label)
+                  Text(group.localizedLabel)
                     .font(.tidexFootnoteStrong)
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
