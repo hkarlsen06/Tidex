@@ -839,9 +839,13 @@ final class AppCoordinator: ObservableObject {
     // Clear image cache
     ImageCache.shared.clearAll()
 
-    // Clear all UserDefaults (APNs registration cache, preferences, etc.)
     if let bundleId = Bundle.main.bundleIdentifier {
+      let seenPreAuthOnboarding = UserDefaults.standard.bool(
+        forKey: "hasCompletedPreAuthOnboarding")
       UserDefaults.standard.removePersistentDomain(forName: bundleId)
+      if seenPreAuthOnboarding {
+        UserDefaults.standard.set(true, forKey: "hasCompletedPreAuthOnboarding")
+      }
     }
 
     // Reset sync coordinator state for new user
