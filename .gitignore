@@ -37,6 +37,9 @@ ios/build/
 # Xcode user state
 *.xcuserstate
 
+# Generated at build time — never commit
+ios/BuildNumber.xcconfig
+
 # App Store screenshots
 ios/ASConnectScreenshots/
 
