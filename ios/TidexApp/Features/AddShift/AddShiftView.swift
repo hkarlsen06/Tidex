@@ -381,44 +381,49 @@ private struct AddShiftToolbarTotals: View {
   @State private var lastDisplayedSecondary: Double = 0
 
   var body: some View {
-    if let totals {
-      if let secondary = totals.secondary {
+    Group {
+      if let totals, let primary = totals.primary {
         VStack(alignment: .trailing, spacing: Spacing.micro) {
           animatedAmount(
-            totals.primary,
+            primary,
             lastDisplayed: lastDisplayedPrimary,
             onUpdate: { lastDisplayedPrimary = $0 }
           )
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
 
-          animatedAmount(
-            secondary,
-            lastDisplayed: lastDisplayedSecondary,
-            onUpdate: { lastDisplayedSecondary = $0 }
-          )
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          if let secondary = totals.secondary {
+            HStack(alignment: .center, spacing: Spacing.xxxs) {
+              Image(systemName: "plus")
+                .font(.caption2.weight(.bold))
+
+              animatedAmount(
+                secondary,
+                lastDisplayed: lastDisplayedSecondary,
+                onUpdate: { lastDisplayedSecondary = $0 },
+                allowsZero: true
+              )
+              .font(.tidexFootnote)
+            }
+            .foregroundColor(.tidexBlue)
+            .transition(.offset(y: -4).combined(with: .opacity))
+          }
         }
-      } else if let primary = totals.primary {
-        animatedAmount(
-          primary,
-          lastDisplayed: lastDisplayedPrimary,
-          onUpdate: { lastDisplayedPrimary = $0 }
-        )
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+        .transition(.offset(x: 6).combined(with: .opacity))
       }
     }
+    .animation(.spring(response: 0.26, dampingFraction: 0.86), value: totals?.primary)
+    .animation(.spring(response: 0.26, dampingFraction: 0.86), value: totals?.secondary)
   }
 
   @ViewBuilder
   private func animatedAmount(
     _ amount: Double?,
     lastDisplayed: Double,
-    onUpdate: @escaping (Double) -> Void
+    onUpdate: @escaping (Double) -> Void,
+    allowsZero: Bool = false
   ) -> some View {
-    if let amount, amount > 0 {
+    if let amount, allowsZero ? amount >= 0 : amount > 0 {
       CurrencyCountUpText(
         amount: amount,
         animateOnAppear: false,

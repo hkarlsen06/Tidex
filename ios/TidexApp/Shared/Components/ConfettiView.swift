@@ -18,6 +18,8 @@ struct ConfettiView: View {
 
   /// Whether the confetti animation is active
   let isActive: Bool
+  /// Vertical launch point as a ratio of container height.
+  var launchYRatio: CGFloat = 0.3
 
   /// Callback when animation completes
   var onComplete: (() -> Void)?
@@ -49,7 +51,8 @@ struct ConfettiView: View {
           ConfettiParticleView(
             particle: particle,
             phase: animationPhase,
-            containerSize: geometry.size
+            containerSize: geometry.size,
+            launchYRatio: launchYRatio
           )
         }
       }
@@ -118,10 +121,11 @@ private struct ConfettiParticleView: View {
   let particle: ConfettiParticle
   let phase: ConfettiView.AnimationPhase
   let containerSize: CGSize
+  let launchYRatio: CGFloat
 
   /// Initial position at center-top of container
   private var startPosition: CGPoint {
-    CGPoint(x: containerSize.width / 2, y: containerSize.height * 0.3)
+    CGPoint(x: containerSize.width / 2, y: containerSize.height * launchYRatio)
   }
 
   /// Explosion position (outward from center)

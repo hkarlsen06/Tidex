@@ -3,6 +3,10 @@ import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
+extension Notification.Name {
+  static let debugRestartPreAuthOnboarding = Notification.Name("debugRestartPreAuthOnboarding")
+}
+
 /// Root view wrapper that ensures a seamless launch experience.
 ///
 /// The first SwiftUI frame renders a lightweight `LoadingView` with zero singleton
@@ -149,6 +153,11 @@ private struct RootContent: View {
       Button(String(localized: .alertsOk), role: .cancel) {}
     } message: {
       Text(.alertsStorageIssueMessage)
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .debugRestartPreAuthOnboarding)) { _ in
+      hasCompletedPreAuthOnboarding = false
+      showAuthAfterOnboarding = false
+      authDestination = .login
     }
   }
 }

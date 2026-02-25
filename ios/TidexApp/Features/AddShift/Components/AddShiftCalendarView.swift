@@ -1,11 +1,24 @@
 import SwiftUI
 import UIKit
 
+/// Minimal contract needed by AddShiftCalendarView.
+/// Lets us reuse the exact calendar UI in onboarding without coupling to AddShiftViewModel.
+@MainActor
+protocol AddShiftCalendarViewModeling: AnyObject {
+  var selectedDates: Set<String> { get }
+  var conflictDates: Set<String> { get }
+  var existingShiftHours: [String: HoursData] { get }
+  var previewEarnings: [String: CalendarEarningsData] { get }
+  var displayMonth: Date { get }
+
+  func toggleDate(_ dateISO: String)
+}
+
 /// Multi-select calendar for choosing shift dates in AddShift
 /// Uses the same visual style as ShiftsCalendarView but adapted for date selection
 /// Supports tap to toggle date selection with existing shift and conflict indicators
-struct AddShiftCalendarView: View {
-  @ObservedObject var viewModel: AddShiftViewModel
+struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & ObservableObject>: View {
+  @ObservedObject var viewModel: ViewModel
 
   private let calendar = Calendar.current
 

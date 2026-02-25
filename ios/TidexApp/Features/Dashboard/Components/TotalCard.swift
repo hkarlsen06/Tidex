@@ -18,6 +18,8 @@ struct TotalCard: View {
   let monthlyGoal: Double?  // Optional monthly goal used for thin progress bar under total
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
+  /// Disable one-time launch animation for contexts that need controlled transitions.
+  var disableLaunchAnimation: Bool = false
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -346,7 +348,7 @@ struct TotalCard: View {
         .frame(width: 200, height: 56)
     } else {
       // Animate count-up on app launch AND on month changes
-      let shouldAnimateOnAppear = !Self.hasPlayedLaunchAnimation
+      let shouldAnimateOnAppear = !disableLaunchAnimation && !Self.hasPlayedLaunchAnimation
       CountUpText(
         targetValue: mainDisplayValue,
         duration: 0.8,
