@@ -2,7 +2,12 @@
 // Change these values to update version across all targets (App, Widget, Watch)
 //
 // MARKETING_VERSION = User-visible version (e.g., 2.0.0)
-// CURRENT_PROJECT_VERSION = Build number (e.g., 210126.2)
+// CURRENT_PROJECT_VERSION = Generated at build time from BuildNumber.xcconfig (UTC timestamp)
 
-MARKETING_VERSION = 2.2.2
-CURRENT_PROJECT_VERSION = 210226.3
+MARKETING_VERSION = 2.3.0
+
+// Build number is generated at build time by the "Generate BuildNumber.xcconfig"
+// Run Script phase. BuildNumber.xcconfig is git-ignored and never committed.
+// Placeholder — overridden at build time by BuildNumber.xcconfig (git-ignored).
+CURRENT_PROJECT_VERSION = 00000000.0000
+#include? "BuildNumber.xcconfig"
