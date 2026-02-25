@@ -235,19 +235,32 @@ struct LoginView: View {
   // MARK: - Footer
 
   private var footerView: some View {
-    HStack(spacing: Spacing.xxs) {
-      Text(.loginNoAccount)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+    VStack(spacing: Spacing.sm) {
+      HStack(spacing: Spacing.xxs) {
+        Text(.loginNoAccount)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
 
-      Button(action: {
-        onNavigateToSignup?()
-      }) {
-        Text(.loginCreateAccount)
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexBlue)
+        Button(action: {
+          onNavigateToSignup?()
+        }) {
+          Text(.loginCreateAccount)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexBlue)
+        }
+        .buttonStyle(.plain)
       }
-      .buttonStyle(.plain)
+
+      #if DEBUG
+        Button {
+          NotificationCenter.default.post(name: .debugRestartPreAuthOnboarding, object: nil)
+        } label: {
+          Text(String(localized: "debug.auth.restart_pre_auth_onboarding", table: "Localizable"))
+            .font(.tidexFootnoteMedium)
+            .foregroundColor(.tidexBlue)
+        }
+        .buttonStyle(.plain)
+      #endif
     }
   }
 }

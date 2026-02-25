@@ -13,6 +13,8 @@ struct FeaturedShiftCard: View {
   var progress: Double?
   /// When true, shows a "+" prefix and uses blue color for the amount (used in celebration overlay)
   var showIncreaseHighlight: Bool = false
+  /// Whether footer text/badge under the card should be shown.
+  var showFooter: Bool = true
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
@@ -202,32 +204,34 @@ struct FeaturedShiftCard: View {
 
         // Footer text below the card (countdown or "Best shift")
         // Uses fixed height to prevent layout shift during transitions
-        Group {
-          if let text = displayedFooterText {
-            if isBestShift {
-              HStack(spacing: Spacing.xxxs) {
-                Image(systemName: "star.fill")
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexBlue)
-                Text(text)
-                  .font(.tidexLabel)
-                  .foregroundColor(.tidexTextSecondary)
+        if showFooter {
+          Group {
+            if let text = displayedFooterText {
+              if isBestShift {
+                HStack(spacing: Spacing.xxxs) {
+                  Image(systemName: "star.fill")
+                    .font(.tidexCaptionRegular)
+                    .foregroundColor(.tidexBlue)
+                  Text(text)
+                    .font(.tidexLabel)
+                    .foregroundColor(.tidexTextSecondary)
+                }
+              } else {
+                ShiftCountdownBadge(
+                  text: text,
+                  status: status,
+                  finalCountdownSeconds: liveState.finalCountdownSeconds
+                )
               }
             } else {
-              ShiftCountdownBadge(
-                text: text,
-                status: status,
-                finalCountdownSeconds: liveState.finalCountdownSeconds
-              )
+              // Skeleton placeholder bar matching other empty states
+              RoundedRectangle(cornerRadius: CornerRadius.xxs)
+                .fill(Color.tidexTextMuted.opacity(0.3))
+                .frame(width: 80, height: 14)
             }
-          } else {
-            // Skeleton placeholder bar matching other empty states
-            RoundedRectangle(cornerRadius: CornerRadius.xxs)
-              .fill(Color.tidexTextMuted.opacity(0.3))
-              .frame(width: 80, height: 14)
           }
+          .frame(height: 20)  // Fixed height prevents vertical jerk
         }
-        .frame(height: 20)  // Fixed height prevents vertical jerk
       }
     }
   }

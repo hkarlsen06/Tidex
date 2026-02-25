@@ -8,8 +8,6 @@ struct OAuthButtonsView: View {
   let onAppleTap: () -> Void
   var isLoading: Bool = false
 
-  @Environment(\.colorScheme) private var colorScheme
-
   var body: some View {
     VStack(spacing: Spacing.sm) {
       // Native Apple Sign-In Button
@@ -32,7 +30,6 @@ struct OAuthButtonsView: View {
 private struct NativeAppleSignInButton: View {
   let action: () -> Void
   var isLoading: Bool = false
-
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -41,7 +38,7 @@ private struct NativeAppleSignInButton: View {
     } onCompletion: { _ in
       // We ignore this - actual auth is handled by the action
     }
-    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+    .signInWithAppleButtonStyle(colorScheme == .dark ? .whiteOutline : .black)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .disabled(isLoading)
     .opacity(isLoading ? 0.6 : 1)
@@ -65,7 +62,6 @@ private struct GoogleSignInButton: View {
   let title: String
   let action: () -> Void
   var isLoading: Bool = false
-
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -87,6 +83,10 @@ private struct GoogleSignInButton: View {
       .frame(maxWidth: .infinity)
       .frame(height: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)
+      .overlay {
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(colorScheme == .dark ? Color.clear : Color.black.opacity(0.16), lineWidth: 1)
+      }
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())

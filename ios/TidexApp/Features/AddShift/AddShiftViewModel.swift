@@ -484,8 +484,19 @@ final class AddShiftViewModel: ObservableObject {
 
     guard totals.gross > 0 else { return nil }
 
+    let baselineTotals = ConflictExclusion.combinedEarnings(
+      existingByDate: existingEarnings,
+      previewByDate: [:],
+      conflictDates: []
+    )
+
     let primaryAmount = totals.hasTaxEnabled ? totals.net : totals.gross
-    let secondaryAmount = totals.hasTaxEnabled ? totals.gross : nil
+    let baselinePrimary = baselineTotals.hasTaxEnabled ? baselineTotals.net : baselineTotals.gross
+    let secondaryAmount: Double? = {
+      guard !previewByDate.isEmpty else { return nil }
+      let delta = max(primaryAmount - baselinePrimary, 0)
+      return delta > 0 ? delta : nil
+    }()
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
@@ -1530,3 +1541,5 @@ final class AddShiftViewModel: ObservableObject {
     }
   }
 }
+
+extension AddShiftViewModel: AddShiftCalendarViewModeling {}

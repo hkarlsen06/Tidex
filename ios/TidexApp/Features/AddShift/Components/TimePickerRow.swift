@@ -479,6 +479,8 @@ struct TimeRangePicker: View {
   var scrollId: String?
   /// Optional binding to expose/control which field is focused (for keyboard accessory)
   var focusedFieldBinding: Binding<TimeInputField?>?
+  /// Optional preset chip ranges (used by onboarding simulator).
+  var presetRanges: [TimeRangeCount]? = nil
   @State private var focusController = TimeInputFocusController()
 
   /// Shortened label for start time field
@@ -520,7 +522,8 @@ struct TimeRangePicker: View {
           onSelect: { range in
             applyTimeRange(range)
           },
-          activeRangeId: activeRangeId
+          activeRangeId: activeRangeId,
+          presetRanges: presetRanges
         )
       }
     }

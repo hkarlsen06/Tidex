@@ -28,6 +28,10 @@ struct RecentTimesChips: View {
   /// ID of the currently active time range (matches TimeRangeCount.id)
   var activeRangeId: String?
 
+  /// Optional fixed ranges for demo/preview contexts.
+  /// When provided, repository loading is bypassed.
+  var presetRanges: [TimeRangeCount]? = nil
+
   /// Shifts repository for querying shift data
   private let shiftsRepository = ShiftsRepository.shared
 
@@ -58,11 +62,25 @@ struct RecentTimesChips: View {
       }
     }
     .onAppear {
-      loadTimeRangeCounts()
+      loadTimeRangeCountsIfNeeded()
     }
     .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
-      loadTimeRangeCounts()
+      loadTimeRangeCountsIfNeeded()
     }
+  }
+
+  private func loadTimeRangeCountsIfNeeded() {
+    if let presetRanges {
+      timeRangeCounts = presetRanges.sorted { lhs, rhs in
+        if lhs.count == rhs.count {
+          return lhs.id < rhs.id
+        }
+        return lhs.count > rhs.count
+      }
+      return
+    }
+
+    loadTimeRangeCounts()
   }
 
   /// Count time range combinations from all user shifts
