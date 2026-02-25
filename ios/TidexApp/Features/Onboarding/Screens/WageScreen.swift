@@ -9,6 +9,7 @@ struct WageScreen: View {
   var onBack: (() -> Void)? = nil
 
   @State private var isLoadingTariffData = false
+  @State private var showingTariffDisabledInfoAlert = false
 
   var body: some View {
     ZStack {
@@ -114,6 +115,16 @@ struct WageScreen: View {
         }
       }
     }
+    .alert(
+      String(localized: "onboarding.wage.tariff_disabled_info.title", table: "Localizable"),
+      isPresented: $showingTariffDisabledInfoAlert
+    ) {
+      Button(String(localized: .alertsOk), role: .cancel) {}
+    } message: {
+      Text(
+        String(localized: "onboarding.wage.tariff_disabled_info.message", table: "Localizable")
+      )
+    }
     .onAppear {
       if !data.hasInitializedWageForLocale {
         // Initialize custom wage based on currency's wage range tier (only once)
@@ -156,10 +167,13 @@ struct WageScreen: View {
 
   @ViewBuilder
   private var wageTypeToggle: some View {
+    let isTariffEnabled = data.currency == "kr"
+
     HStack(spacing: Spacing.sm) {
       WageTypeButton(
         title: String(localized: .onboardingWageCustom),
         isSelected: data.wageType == .custom,
+        isEnabled: true,
         action: {
           withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             data.wageType = .custom
@@ -170,10 +184,14 @@ struct WageScreen: View {
       WageTypeButton(
         title: String(localized: .onboardingWageTariff),
         isSelected: data.wageType == .tariff,
+        isEnabled: isTariffEnabled,
         action: {
           withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             data.wageType = .tariff
           }
+        },
+        onDisabledTap: {
+          showingTariffDisabledInfoAlert = true
         }
       )
     }
@@ -348,26 +366,55 @@ struct WageScreen: View {
 private struct WageTypeButton: View {
   let title: String
   let isSelected: Bool
+  let isEnabled: Bool
   let action: () -> Void
+  var onDisabledTap: (() -> Void)? = nil
 
   var body: some View {
     Button(action: {
+      guard isEnabled else {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        onDisabledTap?()
+        return
+      }
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
       action()
     }) {
       Text(title)
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(textColor)
         .frame(maxWidth: .infinity)
         .frame(height: 48)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
+        .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .overlay(
           RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
+            .stroke(borderColor, lineWidth: 1)
         )
     }
     .buttonStyle(.plain)
+    .opacity(isEnabled ? 1 : 0.55)
+  }
+
+  private var textColor: Color {
+    if isSelected {
+      return isEnabled ? .white : .tidexTextMuted
+    }
+    return isEnabled ? .tidexTextSecondary : .tidexTextMuted
+  }
+
+  private var backgroundColor: Color {
+    if isSelected {
+      return isEnabled ? .tidexBrandPrimary : .tidexSurfaceSecondary
+    }
+    return .tidexSurfaceSecondary
+  }
+
+  private var borderColor: Color {
+    if isSelected {
+      return isEnabled ? .clear : .tidexBorder
+    }
+    return .tidexBorder
   }
 }
 

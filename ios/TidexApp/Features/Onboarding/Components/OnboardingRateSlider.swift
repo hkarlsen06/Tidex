@@ -176,6 +176,7 @@ struct OnboardingRateSlider: View {
     Slider(
       value: $value,
       in: minValue...maxValue,
+      step: 1,
       onEditingChanged: { isEditing in
         if isEditing {
           UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -219,13 +220,9 @@ struct OnboardingRateSlider: View {
     }
   }
 
-  /// Format value with up to 2 decimal places (shows decimals only if needed)
+  /// Format value for display as whole numbers.
   private func formatValueWithDecimals(_ amount: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 0
-    formatter.maximumFractionDigits = 2
-    return formatter.string(from: NSNumber(value: amount)) ?? "0"
+    formatValue(amount)
   }
 
   // MARK: - Tappable Value Views
@@ -353,12 +350,12 @@ struct OnboardingRateSlider: View {
   }
 
   private func applyCustomValue() {
-    // Parse the input, handling both comma and period as decimal separator
+    // Parse the input, handling both comma and period as decimal separator.
     let normalized = inputText.replacingOccurrences(of: ",", with: ".")
     if let parsed = Double(normalized) {
-      // Allow any positive value 0-10000 when manually entered (not limited by slider range)
+      // Allow any positive value 0-10000 when manually entered (not limited by slider range).
       let clamped = min(max(parsed, 0), 10000)
-      let rounded = (clamped * 100).rounded() / 100
+      let rounded = clamped.rounded()
       value = rounded
     }
     showingCustomInput = false

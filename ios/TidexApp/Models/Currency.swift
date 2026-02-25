@@ -76,6 +76,22 @@ struct CurrencyGroup: Identifiable {
   var id: String { label }
 }
 
+extension CurrencyGroup {
+  /// Localized display label for picker section headers.
+  var localizedLabel: String {
+    switch label {
+    case "Krone":
+      return String(localized: "common.currency_group_krone", table: "Localizable")
+    case "Popular":
+      return String(localized: "common.currency_group_popular", table: "Localizable")
+    case "Other":
+      return String(localized: "common.currency_group_other", table: "Localizable")
+    default:
+      return label
+    }
+  }
+}
+
 /// Currency configuration matching the Next.js app
 enum CurrencyConfig {
   /// All currency groups (Krone first, then Popular, then Other)

@@ -18,6 +18,7 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
     didSet { updateConflictsAndPreviews() }
   }
 
+  @Published private(set) var currency: String
   @Published private(set) var conflictDates: Set<String> = []
   @Published private(set) var previewEarnings: [String: CalendarEarningsData] = [:]
   @Published private(set) var existingShiftHours: [String: HoursData] = [:]
@@ -27,13 +28,12 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
   let displayMonth: Date
   let displayYear: Int
   let displayMonthNumber: Int
-  let currency: String
   let presetTimeRanges: [TimeRangeCount]
 
   private let payrollDay: Int = 15
-  private let snapshots: [WageSnapshot]
+  private var snapshots: [WageSnapshot]
   private let existingShifts: [ShiftRow]
-  private let existingShiftEarnings: [String: CalendarEarningsData]
+  private var existingShiftEarnings: [String: CalendarEarningsData]
 
   var displayMonthName: String {
     CalendarGridHelper.monthName(from: displayMonth, locale: .appLocale)
@@ -47,7 +47,7 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
     !selectedDates.isEmpty && hasValidTimes
   }
 
-  init() {
+  init(initialCurrency: String = OnboardingCurrencyResolver.detectDefaultCurrency()) {
     let current = Date.currentYearMonth()
     displayYear = current.year
     displayMonthNumber = current.month
@@ -58,7 +58,11 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
     components.day = 1
     displayMonth = Calendar.current.date(from: components) ?? Date()
 
-    currency = Locale.current.isNorwegian ? "kr" : "$"
+    let resolvedCurrency =
+      OnboardingCurrencyResolver.isSupportedCurrency(initialCurrency)
+      ? initialCurrency
+      : OnboardingCurrencyResolver.detectDefaultCurrency()
+    currency = resolvedCurrency
 
     presetTimeRanges = [
       TimeRangeCount(startTime: "08:00", endTime: "16:00", count: 9),
@@ -68,24 +72,13 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
       TimeRangeCount(startTime: "22:00", endTime: "06:00", count: 2),
     ]
 
-    let defaultHourlyWage = Locale.current.isNorwegian ? 200.0 : 25.0
-    snapshots = [Self.makeBaselineSnapshot(hourlyWage: defaultHourlyWage)]
-
+    snapshots = []
     existingShifts = Self.makeSeededShifts(year: current.year, month: current.month)
+    existingShiftEarnings = [:]
 
     existingShiftHours = Self.buildExistingHoursMap(from: existingShifts)
-    existingShiftEarnings = Self.buildExistingEarningsMap(
-      shifts: existingShifts,
-      snapshots: snapshots,
-      payrollDay: payrollDay
-    )
 
-    baselineToolbarTotals = computeToolbarTotals(
-      previewByDate: [:],
-      conflicts: []
-    )
-
-    updateConflictsAndPreviews()
+    rebuildCurrencyDependentData(for: resolvedCurrency)
   }
 
   func toggleDate(_ dateISO: String) {
@@ -97,6 +90,18 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
 
     let generator = UIImpactFeedbackGenerator(style: .light)
     generator.impactOccurred()
+  }
+
+  func applyCurrency(_ symbol: String) {
+    let nextCurrency =
+      OnboardingCurrencyResolver.isSupportedCurrency(symbol)
+      ? symbol
+      : OnboardingCurrencyResolver.detectDefaultCurrency()
+
+    guard nextCurrency != currency else { return }
+
+    currency = nextCurrency
+    rebuildCurrencyDependentData(for: nextCurrency)
   }
 
   // MARK: - Computation
@@ -117,6 +122,26 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
       return "24:00"
     }
     return formatted
+  }
+
+  private func rebuildCurrencyDependentData(for symbol: String) {
+    snapshots = [
+      Self.makeBaselineSnapshot(
+        hourlyWage: OnboardingCurrencyResolver.defaultHourlyWage(for: symbol))
+    ]
+
+    existingShiftEarnings = Self.buildExistingEarningsMap(
+      shifts: existingShifts,
+      snapshots: snapshots,
+      payrollDay: payrollDay
+    )
+
+    baselineToolbarTotals = computeToolbarTotals(
+      previewByDate: [:],
+      conflicts: []
+    )
+
+    updateConflictsAndPreviews()
   }
 
   private func updateConflictsAndPreviews() {

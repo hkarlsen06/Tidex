@@ -122,14 +122,13 @@ struct SupplementRuleEditor: View {
             Spacer()
 
             OnboardingButton(
-              title: String(localized: .onboardingSupplementsSave),
+              title: String(localized: primaryButtonTitle),
               action: {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                onSave(editedRule)
+                handlePrimaryActionTap()
               }
             )
-            .disabled(!canSave)
-            .opacity(canSave ? 1 : 0.5)
+            .disabled(!canSave && !canAdvanceToNextStep)
+            .opacity((canSave || canAdvanceToNextStep) ? 1 : 0.5)
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.xl)
             .background(
@@ -165,6 +164,54 @@ struct SupplementRuleEditor: View {
   private var canSave: Bool {
     !editedRule.days.isEmpty && !editedRule.fromTime.isEmpty && !editedRule.toTime.isEmpty
       && editedRule.value > 0
+      && hasSelectedType
+  }
+
+  private var canAdvanceToNextStep: Bool {
+    switch currentStep {
+    case .days:
+      return !editedRule.days.isEmpty
+    case .time:
+      return !editedRule.fromTime.isEmpty && !editedRule.toTime.isEmpty
+    case .type:
+      return true
+    case .value:
+      return false
+    }
+  }
+
+  private var primaryButtonTitle: LocalizedStringResource {
+    canSave ? .onboardingSupplementsSave : .commonNext
+  }
+
+  private func handlePrimaryActionTap() {
+    if canSave {
+      UINotificationFeedbackGenerator().notificationOccurred(.success)
+      onSave(editedRule)
+      return
+    }
+
+    guard canAdvanceToNextStep else { return }
+
+    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+      switch currentStep {
+      case .days:
+        // Pre-filled default times are valid, so allow moving straight to type.
+        currentStep =
+          (!editedRule.fromTime.isEmpty && !editedRule.toTime.isEmpty)
+          ? .type
+          : .time
+      case .time:
+        currentStep = .type
+      case .type:
+        // Accept the currently shown type as the chosen type when tapping Next.
+        hasSelectedType = true
+        currentStep = .value
+      case .value:
+        break
+      }
+    }
   }
 
   // MARK: - Days Section

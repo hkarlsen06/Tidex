@@ -97,6 +97,7 @@ struct PostAuthOnboardingView: View {
             onComplete: {
               // Clear saved onboarding draft data on successful completion
               OnboardingData.clearSavedData()
+              OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
               onComplete()
             },
             onRetry: {
@@ -127,6 +128,11 @@ struct PostAuthOnboardingView: View {
     }
     .onAppear {
       initializeOnboarding()
+    }
+    .onChange(of: saveManager.status) { oldStatus, newStatus in
+      if oldStatus != .success && newStatus == .success {
+        OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
+      }
     }
     .onChange(of: currentScreen) { _, newScreen in
       // Save progress when screen changes (except success and loading screens)
@@ -202,6 +208,11 @@ struct PostAuthOnboardingView: View {
       currentScreen = savedScreen
       return
     }
+
+    onboardingData.currency =
+      OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+      ?? OnboardingCurrencyResolver.detectDefaultCurrency()
+    onboardingData.hasInitializedWageForLocale = false
 
     // Default start
     currentScreen = .wage

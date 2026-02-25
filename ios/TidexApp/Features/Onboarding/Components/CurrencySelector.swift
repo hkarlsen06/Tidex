@@ -42,7 +42,45 @@ struct CurrencySelector: View {
       .buttonStyle(.plain)
     }
     .sheet(isPresented: $showingPicker) {
-      CurrencyPickerSheet(
+      OnboardingCurrencyPickerSheet(
+        selectedCurrency: $selectedCurrency,
+        isPresented: $showingPicker
+      )
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
+    }
+  }
+}
+
+/// Capsule-style currency selector used in pre-auth simulator header.
+struct OnboardingCurrencyCapsuleSelector: View {
+  @Binding var selectedCurrency: String
+
+  @State private var showingPicker = false
+
+  var body: some View {
+    Button(action: {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      showingPicker = true
+    }) {
+      HStack(spacing: Spacing.xxxs) {
+        Text(CurrencyConfig.get(selectedCurrency).value)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextSecondary)
+          .lineLimit(1)
+
+        Image(systemName: "chevron.down")
+          .font(.caption.weight(.semibold))
+          .foregroundColor(.tidexTextMuted)
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.xs)
+    }
+    .buttonStyle(.plain)
+    .tidexGlass(shape: .capsule, interactive: true)
+    .accessibilityLabel(Text(.onboardingCurrencyTitle))
+    .sheet(isPresented: $showingPicker) {
+      OnboardingCurrencyPickerSheet(
         selectedCurrency: $selectedCurrency,
         isPresented: $showingPicker
       )
@@ -54,7 +92,7 @@ struct CurrencySelector: View {
 
 // MARK: - Currency Picker Sheet
 
-private struct CurrencyPickerSheet: View {
+struct OnboardingCurrencyPickerSheet: View {
   @Binding var selectedCurrency: String
   @Binding var isPresented: Bool
 
@@ -81,7 +119,7 @@ private struct CurrencyPickerSheet: View {
                 }
               } header: {
                 HStack {
-                  Text(group.label)
+                  Text(group.localizedLabel)
                     .font(.tidexFootnoteStrong)
                     .foregroundColor(.tidexTextMuted)
                     .textCase(.uppercase)
@@ -143,6 +181,9 @@ private struct CurrencyRow: View {
 #Preview {
   VStack {
     CurrencySelector(selectedCurrency: .constant("kr"))
+      .padding()
+
+    OnboardingCurrencyCapsuleSelector(selectedCurrency: .constant("$"))
       .padding()
   }
   .background(Color.tidexBackground)
