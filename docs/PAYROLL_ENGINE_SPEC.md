@@ -1,8 +1,8 @@
 # Tidex Payroll Engine Specification
 
-> **Version:** 1.1
-> **Last Updated:** 2026-01-14
-> **Source of Truth:** Next.js app on the main branch
+> **Version:** 1.2
+> **Last Updated:** 2026-02-26
+> **Source of Truth:** Next.js app on the `feature/multi-job` branch (merging to main)
 > **Purpose:** Enable re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results
 
 ---
@@ -12,9 +12,10 @@
 The Tidex payroll engine computes wage earnings for work shifts. It takes shift data (date, start/end time) and wage settings (hourly rate, supplements, tax, break deductions) to produce deterministic earnings values.
 
 ### Inputs
-- **Shift data**: `shift_date` (ISO), `start_time` (HH:MM), `end_time` (HH:MM), optional custom supplements
-- **Wage snapshot**: Hourly wage, supplement rules, tax settings, break deduction settings
-- **User settings**: Payroll day, half-tax month, monthly goal
+- **Shift data**: `shift_date` (ISO), `start_time` (HH:MM), `end_time` (HH:MM), optional custom supplements, `job_id`
+- **Wage snapshot**: Hourly wage, supplement rules, tax settings, break deduction settings, `job_id`
+- **Job**: Name, color, `payroll_day`, `half_tax_month`, `monthly_goal` (now the primary source; user settings mirrored for legacy clients)
+- **User settings**: Global preferences; `payroll_day`/`half_tax_month`/`monthly_goal` kept as fallback during compatibility window
 
 ### Outputs
 - `durationHours`: Raw duration before break deduction
@@ -31,6 +32,8 @@ The Tidex payroll engine computes wage earnings for work shifts. It takes shift 
 3. **Cross-midnight support**: Shifts spanning midnight are calculated as continuous time
 4. **Payout-date-based tax/snapshot**: Tax and snapshot selection use payout date, not worked date
 5. **Precision**: 3 decimal places for hours, 2 decimal places for currency
+6. **Job-scoped snapshots**: Each shift is matched to wage snapshots that belong to the same job; legacy (job-less) snapshots serve as fallback
+7. **Job-scoped payroll day**: `payroll_day` is resolved from the shift's job first, then falls back to `user_settings.payroll_day`
 
 ### Definitions
 
@@ -38,24 +41,29 @@ The Tidex payroll engine computes wage earnings for work shifts. It takes shift 
 |------|------------|
 | **Shift** | A stored work period with date, start time, end time |
 | **Virtual shift** | A computed occurrence from a recurring shift template (not persisted) |
-| **Wage snapshot** | Point-in-time capture of wage, supplement, tax, and break settings |
-| **Baseline snapshot** | Snapshot with `from_date = NULL`, serves as fallback |
+| **Wage snapshot** | Point-in-time capture of wage, supplement, tax, and break settings — now scoped to a job |
+| **Baseline snapshot** | Snapshot with `from_date = NULL`, serves as fallback within its job bucket |
 | **Supplement window** | Time-of-day range when a supplement rate applies |
 | **Payout date** | Date when wages are paid (typically month after work + payroll day) |
 | **Payroll period** | The calendar month whose earnings are grouped for a payout |
 | **Month grouping** | Shifts worked in month M are paid in month M+1 |
+| **Job** | An employer/workplace entity that groups shifts and wage snapshots; owns `payroll_day`, `half_tax_month`, `monthly_goal` |
+| **Default job** | Each user has exactly one active default job; shifts without an explicit `job_id` are assigned here |
+| **Legacy snapshot** | A `wage_snapshot` with `job_id = NULL`; used as fallback when no job-specific snapshot exists |
 
 ### Entry Points
 
 **Pure function (core calculation):**
 ```typescript
-computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/calc.ts
+computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll/calc.ts
 ```
 
 **Effect-wrapped (with validation):**
 ```typescript
-computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effect.ts
+computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll/effect.ts
 ```
+
+The `job` parameter is currently reserved for future use (e.g., per-job payroll day in the pure function). Payroll day resolution is performed upstream in `ShiftsService` before calling `computeShift`.
 
 ---
 
@@ -67,6 +75,7 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 |--------|------|----------|---------|
 | `id` | `uuid` | No | Primary key, unique shift identifier |
 | `user_id` | `uuid` | Yes | Foreign key to `auth.users` |
+| `job_id` | `uuid` | No | Foreign key to `public.jobs` (NOT NULL; assigned by DB trigger when client omits it) |
 | `shift_date` | `date` | No | The date of the shift (ISO: `YYYY-MM-DD`) |
 | `start_time` | `text` | No | Start time in `HH:MM` format |
 | `end_time` | `text` | No | End time in `HH:MM` format (supports cross-midnight) |
@@ -76,6 +85,7 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 **Behavior notes:**
 - When `end_time <= start_time`, shift crosses midnight (e.g., 22:00 to 06:00)
 - `custom_supplements` when present completely replaces snapshot supplements for this shift
+- Legacy clients that do not send `job_id` are automatically assigned the user's default job by a DB trigger
 
 ### B.2 `recurring_shifts` — Recurring Shift Templates
 
@@ -83,6 +93,7 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 |--------|------|----------|---------|
 | `id` | `uuid` | No | Primary key |
 | `user_id` | `uuid` | No | Foreign key to `auth.users` |
+| `job_id` | `uuid` | No | Foreign key to `public.jobs` (NOT NULL; all generated virtual shifts inherit this job) |
 | `start_time` | `timetz` | No | Shift start time with timezone |
 | `end_time` | `timetz` | No | Shift end time with timezone |
 | `repeat_interval_weeks` | `smallint` | No | 0 = every week, 1 = every 2 weeks, ..., 8 = every 9 weeks |
@@ -95,6 +106,7 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 - Virtual shifts are generated at runtime, never persisted
 - `selected_days` keys are weekday numbers (0=Sunday to 6=Saturday)
 - Values are anchor ISO dates from which recurrence starts
+- A recurring pattern and all its generated virtual shifts belong to one job; there is no per-occurrence job override
 - **Note:** Table does NOT have `created_at` or `updated_at` columns
 
 ### B.3 `wage_snapshots` — Point-in-Time Wage Settings
@@ -103,7 +115,8 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 |--------|------|----------|---------|---------|
 | `id` | `uuid` | No | - | Primary key |
 | `user_id` | `uuid` | No | - | Foreign key to `auth.users` |
-| `from_date` | `date` | Yes | - | Effective date (`NULL` = baseline snapshot) |
+| `job_id` | `uuid` | No | - | Foreign key to `public.jobs` (NOT NULL; controls which job's wage history is used) |
+| `from_date` | `date` | Yes | - | Effective date (`NULL` = baseline snapshot for this job) |
 | `hourly_wage` | `numeric` | No | - | Base hourly wage in NOK |
 | `wage_level` | `integer` | Yes | - | Tariff level (1-9) or `NULL` for custom wage |
 | `supplements` | `jsonb` | No | `'[]'::jsonb` | Array of `SupplementRule` objects (wrapped in `{ rules: [...] }` at runtime) |
@@ -115,13 +128,18 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 | `break_deduction_minutes` | `integer` | Yes | `30` | Break duration in minutes |
 | `created_at` | `timestamptz` | Yes | - | Creation timestamp |
 
+**Unique constraints (updated for multi-job):**
+- `UNIQUE (user_id, job_id) WHERE from_date IS NULL AND deleted_at IS NULL` — one baseline per (user, job)
+- `UNIQUE (user_id, job_id, from_date) WHERE from_date IS NOT NULL AND deleted_at IS NULL` — one snapshot per (user, job, date)
+
 **Behavior notes:**
-- Only one baseline snapshot (`from_date = NULL`) allowed per user
+- Snapshots are **job-scoped**: each bucket belongs to a specific `job_id`
+- Only one baseline snapshot (`from_date = NULL`) allowed per (user, job) pair
+- Legacy snapshots (`job_id = NULL`, created before migration) serve as fallback bucket
 - **Snapshot selection uses TWO different dates:**
   - **Wage, supplements, break settings**: Selected based on **shift date** (the date the shift is worked)
-  - **Tax settings only**: Selected based on **payout date** (shift month + 1, on payroll day)
-- For a target date D: choose latest snapshot where `from_date <= D` and `from_date IS NOT NULL`
-- If none found, use baseline snapshot
+  - **Tax settings only**: Selected based on **payout date** (shift month + 1, on job's payroll day)
+- For a target date D: choose latest snapshot where `from_date <= D` and `from_date IS NOT NULL`; fallback chain: job-specific dated → job-specific baseline → legacy dated → legacy baseline
 - **Note:** DB stores `supplements` as `'[]'::jsonb` but code expects `{ rules: [...] }` structure
 
 ### B.4 `user_settings` — User Preferences
@@ -142,8 +160,41 @@ computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effec
 
 **Behavior notes:**
 - Wage settings have been moved to `wage_snapshots` (historical accuracy)
-- `payroll_day` is used to calculate payout dates for snapshot selection
+- `payroll_day`, `half_tax_month`, `monthly_goal` are now primarily owned by the `jobs` table; `user_settings` keeps mirrored copies for legacy client compatibility during the transition window
+- DB triggers keep `user_settings` and the default job in sync in both directions
+- `payroll_day` is used to calculate payout dates for snapshot selection; resolution order: job's `payroll_day` → `user_settings.payroll_day` → app fallback (`1`)
 - `half_tax_month` applies to payout month, not worked month
+
+### B.4.5 `jobs` — Employer/Workplace Entities
+
+Each user has one or more jobs. New table added in the multi-job rollout.
+
+| Column | Type | Nullable | Default | Purpose |
+|--------|------|----------|---------|---------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key |
+| `user_id` | `uuid` | No | - | Foreign key to `auth.users` (ON DELETE CASCADE) |
+| `name` | `text` | No | - | Display name (1-100 chars) |
+| `color` | `text` | Yes | `NULL` | Hex color string (`#RRGGBB`) or NULL |
+| `is_default` | `boolean` | No | `false` | Exactly one active default per user |
+| `sort_order` | `smallint` | No | `0` | Display ordering |
+| `payroll_day` | `integer` | Yes | `15` | Day of month (1-31) payroll is received for this job |
+| `half_tax_month` | `integer` | Yes | `NULL` | Month (11 or 12) for half-tax; `NULL` = disabled |
+| `monthly_goal` | `integer` | Yes | `20000` | Monthly earnings goal for this job |
+| `archived_at` | `timestamptz` | Yes | `NULL` | Set when archived; hides from Add Shift pickers |
+| `deleted_at` | `timestamptz` | Yes | `NULL` | Soft-delete; retained for historical data |
+| `created_at` | `timestamptz` | No | `now()` | Creation timestamp |
+| `updated_at` | `timestamptz` | No | `now()` | Last update timestamp (maintained by trigger) |
+| `revision` | `bigint` | No | `1` | Incremented on each update (for sync) |
+
+**Unique constraints:**
+- `UNIQUE (user_id) WHERE is_default = true AND deleted_at IS NULL AND archived_at IS NULL` — one active default per user
+
+**Behavior notes:**
+- Every user gets a default job ("Jobb") created automatically on sign-up
+- A default job cannot be deleted; the user must designate another job as default first
+- Archived jobs (`archived_at IS NOT NULL`) remain visible in historical shift views but are excluded from Add Shift pickers
+- Soft-deleted jobs (`deleted_at IS NOT NULL`) are excluded from all active queries
+- `payroll_day` resolution for payout date: job value → `user_settings.payroll_day` → `1`
 
 ### B.5 JSONB Structure: `SupplementRule`
 
@@ -316,6 +367,69 @@ const netAmount = gross - taxAmount;
 From `@/lib/payroll/types.ts`:
 
 ```typescript
+// ShiftRow now includes job_id
+type ShiftRow = {
+  id: string;
+  user_id: string;
+  job_id?: string | null;   // Set to default job if omitted by legacy clients
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  hourly_wage_snapshot?: number | null;
+  supplement_rules_snapshot?: { rules: SupplementRule[] } | null;
+  custom_supplements?: CustomSupplementsData | null;
+  recurring_id?: string;
+  recurring_anchor_weekday?: number;
+};
+
+// WageSnapshot now includes job_id
+type WageSnapshot = {
+  id: string;
+  user_id: string;
+  job_id?: string | null;   // NULL for legacy/migrated snapshots (fallback bucket)
+  from_date: string | null;
+  hourly_wage: number;
+  wage_level: number | null;
+  tariff_type_id: string | null;
+  supplements: { rules: SupplementRule[] };
+  tax_enabled: boolean;
+  tax_percentage: number;
+  break_enabled: boolean;
+  break_method: BreakMethod;
+  break_threshold_hours: number;
+  break_deduction_minutes: number;
+  created_at?: string;
+};
+
+// New Job type
+type Job = {
+  id: string;
+  user_id: string;
+  name: string;
+  color?: string | null;
+  is_default: boolean;
+  sort_order: number;
+  payroll_day?: number | null;
+  half_tax_month?: number | null;
+  monthly_goal?: number | null;
+  archived_at?: string | null;
+  deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+// ShiftData now includes jobs array
+type ShiftData = {
+  shifts: readonly ShiftWithComputations[];
+  defaultView: string;
+  settings: UserSettings;
+  jobs: readonly Job[];            // All active (non-deleted) jobs for the user
+  aggregates: ShiftsAggregates;
+  payoutTaxSettings: PayoutTaxSettings;
+  currentPayoutTaxSettings: PayoutTaxSettings;
+  breakDeductionEnabled: boolean;
+};
+
 type ShiftWithComputations = ShiftRow & {
   computed: ShiftComputed;
   tax_enabled?: boolean;
@@ -352,27 +466,107 @@ type BreakAudit = {
 
 ### D.2 Pipeline Steps
 
-#### Step 1: Fetch Stored Shifts
+#### Step 1: Fetch Stored Shifts, Recurring Shifts, Jobs, and Snapshots (concurrent)
+
+All four queries run in parallel via `Effect.all(..., { concurrency: 4 })`:
 
 ```typescript
 // From ShiftsService in @/lib/services/shifts.ts
-const { data } = await supabase
-  .from("user_shifts")
-  .select("*")
-  .eq("user_id", userId)
-  .gte("shift_date", startDate)
-  .lte("shift_date", endDate)
-  .order("shift_date", { ascending: false })
-  .limit(limit);
+const [shifts, recurringShifts, jobs, allSnapshots] = await Promise.all([
+  supabase.from("user_shifts")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .eq("job_id", jobId)    // optional — only if filtering by job
+    .gte("shift_date", startDate)
+    .lte("shift_date", endDate)
+    .limit(limit),
+
+  supabase.from("recurring_shifts")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .eq("job_id", jobId),   // optional
+
+  supabase.from("jobs")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true }),
+
+  supabase.from("wage_snapshots")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("from_date", { ascending: false, nullsFirst: false }),
+]);
 ```
 
-#### Step 2: Fetch Recurring Shift Templates
+**Jobs post-processing:**
+```typescript
+const jobsById = new Map(jobs.map(j => [j.id, j]));
+const defaultJob = jobs.find(j => j.is_default && j.archived_at == null)
+                ?? jobs.find(j => j.is_default)
+                ?? jobs[0]
+                ?? null;
+```
+
+**Payroll day resolution:**
+```typescript
+const payrollDayForJob = (targetJobId?: string | null): number =>
+  jobsById.get(targetJobId ?? "")?.payroll_day
+  ?? defaultJob?.payroll_day
+  ?? userSettings?.payroll_day
+  ?? 1;  // hard fallback
+```
+
+#### Step 2: Build Snapshot Buckets
+
+Snapshots are grouped into buckets keyed by `job_id` (or `"__legacy__"` for `job_id = NULL`):
 
 ```typescript
-const { data: recurringShifts } = await supabase
-  .from("recurring_shifts")
-  .select("*")
-  .eq("user_id", userId);
+const buildSnapshotBuckets = (snapshots: WageSnapshot[]) => {
+  const map = new Map<string, { dated: WageSnapshot[]; baseline: WageSnapshot | null }>();
+
+  for (const snapshot of snapshots) {
+    const key = snapshot.job_id ?? "__legacy__";
+    const bucket = map.get(key) ?? { dated: [], baseline: null };
+
+    if (snapshot.from_date === null) {
+      bucket.baseline = snapshot;
+    } else {
+      bucket.dated.push(snapshot);
+    }
+    map.set(key, bucket);
+  }
+
+  for (const bucket of map.values()) {
+    bucket.dated.sort((a, b) => b.from_date.localeCompare(a.from_date));
+  }
+
+  return map;
+};
+```
+
+**Snapshot resolution with job-scoped fallback chain:**
+```typescript
+const resolveSnapshotForDate = (buckets, snapshots, date, jobId?) => {
+  const preferredKeys = [jobId ?? "__legacy__", "__legacy__"];
+
+  // Try dated snapshots first
+  for (const key of preferredKeys) {
+    const dated = buckets.get(key)?.dated.find(s => s.from_date <= date);
+    if (dated) return dated;
+  }
+
+  // Then baselines
+  for (const key of preferredKeys) {
+    const baseline = buckets.get(key)?.baseline;
+    if (baseline) return baseline;
+  }
+
+  return snapshots.find(s => s.from_date === null) ?? null;
+};
 ```
 
 #### Step 3: Generate Virtual Shifts
@@ -410,36 +604,51 @@ function isInPhase(dateISO, anchorISO, interval) {
 }
 ```
 
-#### Step 4: Collect All Shift Dates
-
-```typescript
-const storedDates = shifts.map(s => s.shift_date);
-const virtualDates = virtualShifts.map(vs => vs.date);
-const allDates = [...storedDates, ...virtualDates];
-```
-
-#### Step 5: Batch Snapshot Lookup
-
-```typescript
-// Fetch all user's wage snapshots once
-const snapshots = await getUserWageSnapshots(userId);
-
-// Use binary search for O(log n) lookup per date
-for (const shiftDate of allDates) {
-  const payoutDate = calculatePayoutDate(year, month, payrollDay);
-  const snapshot = findSnapshotForDate(payoutDate, snapshots);
-  snapshotMap.set(shiftDate, snapshot);
-}
-```
-
-#### Step 6: Compute Each Shift
+#### Step 4: Compute Stored Shifts (job-scoped snapshot lookup)
 
 ```typescript
 for (const shift of shifts) {
-  const snapshot = snapshotMap.get(shift.shift_date);
-  const computed = computeShift(shift, settings, PRESET_RULES, snapshot);
-  result.push({ ...shift, computed, tax_enabled, tax_percentage });
+  const shiftJobId = shift.job_id ?? defaultJobId;
+
+  // Wage/supplement/break snapshot: use shift date, job-scoped
+  const snapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, shift.shift_date, shiftJobId);
+
+  // Tax snapshot: use payout date for THIS shift's job
+  const payoutDate = calculatePayoutDate(year, month, payrollDayForJob(shiftJobId));
+  const taxSnapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, payoutDate, shiftJobId);
+
+  const computed = computeShift(
+    shift, userSettings, PRESET_SUPPLEMENT_RULES, snapshot,
+    shiftJobId ? jobsById.get(shiftJobId) ?? null : null
+  );
+
+  result.push({
+    ...shift,
+    job_id: shiftJobId,
+    computed,
+    tax_enabled: taxSnapshot?.tax_enabled ?? false,
+    tax_percentage: taxSnapshot?.tax_percentage ?? 0,
+  });
 }
+```
+
+#### Step 5: Compute Virtual Shifts (same job-scoped logic)
+
+Virtual shifts inherit `job_id` from their parent recurring shift template. Snapshot lookup and payroll day resolution follow identical logic to Step 4.
+
+#### Step 6: Sort and Aggregate
+
+```typescript
+const allShifts = [...storedShifts, ...virtualShifts]
+  .sort((a, b) => a.shift_date.localeCompare(b.shift_date));
+
+const aggregates = allShifts.reduce(
+  (acc, shift) => ({
+    totalHours: acc.totalHours + shift.computed.paidHours,
+    totalEarnings: acc.totalEarnings + shift.computed.gross,
+  }),
+  { totalHours: 0, totalEarnings: 0 }
+);
 ```
 
 ### D.3 Date-Range Inclusion Rules
@@ -549,65 +758,64 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
 - Fixed: New Year's Day, Labour Day (May 1), Constitution Day (May 17), Christmas Day, Boxing Day
 - Moveable (Easter-based): Maundy Thursday, Good Friday, Easter Sunday, Easter Monday, Ascension Day, Whit Sunday, Whit Monday
 
-### E.3 Snapshot Selection Algorithm
+### E.3 Snapshot Selection Algorithm (Job-Scoped)
 
-**IMPORTANT: Two different lookups are performed for each shift:**
+**IMPORTANT: Two different lookups are performed for each shift, both are job-scoped:**
 
-1. **Wage/Supplement/Break Snapshot**: Looked up by **shift date** (when the work is performed)
-2. **Tax Snapshot**: Looked up by **payout date** (when wages are received, shift month + 1)
+1. **Wage/Supplement/Break Snapshot**: Looked up by **shift date** + **shift's job_id**
+2. **Tax Snapshot**: Looked up by **payout date** + **shift's job_id** (payout date uses the job's payroll day)
 
-From `@/lib/services/shifts.ts`:
+**Fallback chain for each lookup:**
 
-```typescript
-// Wage/supplement snapshot based on shift date
-const snapshot = snapshotMap.get(shift.shift_date) ?? null;
-// Tax snapshot based on payout date (when the shift is paid out)
-const payoutDate = getPayoutDateForShift(shift.shift_date);
-const taxSnapshot = payoutSnapshotMap.get(payoutDate) ?? null;
+```
+1. Job-specific bucket → dated snapshot where from_date <= targetDate
+2. Job-specific bucket → baseline snapshot (from_date = NULL)
+3. Legacy bucket ("__legacy__") → dated snapshot where from_date <= targetDate
+4. Legacy bucket ("__legacy__") → baseline snapshot
+5. Any snapshot with from_date = NULL
+6. null (calculation uses defaults)
 ```
 
-**Binary search algorithm** (used for both lookups):
+This chain ensures backward compatibility: snapshots created before multi-job migration (no `job_id`) still resolve correctly.
+
+**Lookup algorithm** (linear scan within pre-sorted bucket, O(n) per shift):
 
 ```typescript
-function findSnapshotForDate(targetDate: string, snapshots: WageSnapshot[]): WageSnapshot | null {
-  // snapshots sorted by from_date DESC (newest first)
+const resolveSnapshotForDate = (
+  buckets: Map<string, SnapshotBucket>,
+  snapshots: WageSnapshot[],
+  date: string,
+  jobId?: string | null
+): WageSnapshot | null => {
+  const preferredKeys = [jobId ?? "__legacy__", "__legacy__"];
 
-  // Find baseline (from_date = NULL) for fallback
-  const baseline = snapshots.find(s => s.from_date === null);
-
-  // Filter to only dated snapshots and sort ascending for binary search
-  const datedSnapshots = snapshots
-    .filter(s => s.from_date !== null)
-    .reverse(); // Now ascending
-
-  // Binary search: find the latest snapshot where from_date <= targetDate
-  let left = 0, right = datedSnapshots.length - 1;
-  let result = null;
-
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    if (datedSnapshots[mid].from_date <= targetDate) {
-      result = datedSnapshots[mid];
-      left = mid + 1; // Look for later valid snapshot
-    } else {
-      right = mid - 1;
-    }
+  // Try dated snapshots first (bucket is sorted DESC by from_date)
+  for (const key of preferredKeys) {
+    const dated = buckets.get(key)?.dated.find(s => s.from_date <= date);
+    if (dated) return dated;
   }
 
-  return result || baseline || null;
-}
+  // Then baselines
+  for (const key of preferredKeys) {
+    const baseline = buckets.get(key)?.baseline ?? null;
+    if (baseline) return baseline;
+  }
+
+  return snapshots.find(s => s.from_date === null) ?? null;
+};
 ```
 
 **Selection rules:**
-1. Find latest dated snapshot where `from_date <= targetDate`
-2. If none found, use baseline snapshot (`from_date = NULL`)
-3. If no baseline, return null (calculation will use defaults)
+1. Find latest dated snapshot in job bucket where `from_date <= targetDate`
+2. If none, use job bucket's baseline snapshot (`from_date = NULL`)
+3. If none, fall back to legacy bucket (same search)
+4. If still none, return null (calculation uses defaults)
 
 **Inclusive from_date:** A snapshot with `from_date = 2025-02-01` applies to target dates >= 2025-02-01
 
 **Example:**
-- Shift on 2025-01-15, payroll day = 20
-- Wage snapshot lookup: `targetDate = 2025-01-15` (shift date)
+- Shift on 2025-01-15, job's payroll day = 20
+- Wage snapshot lookup: `targetDate = 2025-01-15`, `jobId = job-uuid` (shift date)
 - Tax snapshot lookup: `targetDate = 2025-02-20` (payout date)
 
 ### E.4 Multiple Snapshots Same Date
@@ -917,7 +1125,9 @@ const net = gross - taxAmount;
 ### F.12 Complete Computation Flow (Pseudocode)
 
 ```
-FUNCTION computeShift(shift, settings, presetRules, snapshot):
+FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
+  // Note: job parameter is reserved for future use.
+  // payroll_day resolution happens upstream in ShiftsService before this call.
   // 1. Parse times
   start_minutes = toMinutes(shift.start_time)
   end_minutes = toMinutes(shift.end_time)
@@ -1201,9 +1411,9 @@ async function loadMonth(year: number, month: number) {
 ### H.3 API Routes
 
 **`GET /api/shifts`:**
-- Accepts: `year`, `month`
+- Accepts: `year`, `month`, optional `jobId`
 - Uses `getComputedShiftsForApi()` (no automatic redirect)
-- Returns: `{ shifts, settings, payoutTaxSettings }`
+- Returns: `{ shifts, settings, jobs, payoutTaxSettings }`
 - Caching: `Cache-Control: private, max-age=300, stale-while-revalidate=60`
 
 **`POST /api/shifts`:**
@@ -1219,6 +1429,7 @@ async function loadMonth(year: number, month: number) {
 | `user-shifts` | `getComputedShifts()` | Shift CRUD operations |
 | `user-settings` | `getUserSettings()` | Settings updates |
 | `user-wages` | `getUserWageSnapshots()` | Wage snapshot mutations |
+| `user-jobs` | `getUserJobs()` | Job CRUD operations |
 
 **Invalidation pattern:**
 ```typescript
@@ -1239,9 +1450,24 @@ function createShift(overrides: Partial<ShiftRow> = {}): ShiftRow {
   return {
     id: crypto.randomUUID(),
     user_id: "test-user-id",
+    job_id: "test-job-id",   // Added: all shifts now have a job_id
     shift_date: "2025-01-15",
     start_time: "09:00",
     end_time: "17:00",
+    ...overrides,
+  };
+}
+
+function createJob(overrides: Partial<Job> = {}): Job {
+  return {
+    id: "test-job-id",
+    user_id: "test-user-id",
+    name: "Jobb",
+    is_default: true,
+    sort_order: 0,
+    payroll_day: 15,
+    half_tax_month: null,
+    monthly_goal: 20000,
     ...overrides,
   };
 }
@@ -1669,9 +1895,12 @@ expect(excludedIds.has("shift-a")).toBe(false);
 | `applyBreakDeduction` | `@/lib/payroll/breaks.ts` | Break deduction logic |
 | `PRESET_SUPPLEMENT_RULES` | `@/lib/payroll/presets.ts` | Tariff supplement rules |
 | `adjustPayrollDate` | `@/lib/payroll/adjust-payroll-date.ts` | Holiday adjustment |
-| `ShiftsService` | `@/lib/services/shifts.ts` | Effect-based shift loading |
+| `ShiftsService` | `@/lib/services/shifts.ts` | Effect-based shift + job loading |
+| `JobsService` | `@/lib/services/jobs.ts` | Effect-based job CRUD |
 | `getComputedShifts` | `@dal/shifts.ts` | DAL Promise wrapper |
-| `getUserWageSnapshots` | `@dal/wage-snapshots.ts` | Wage snapshot access |
+| `getUserJobs` | `@dal/jobs.ts` | Job list with caching |
+| `getDefaultJob` | `@dal/jobs.ts` | Default job lookup |
+| `getUserWageSnapshots` | `@dal/wage-snapshots.ts` | Wage snapshot access (all jobs) |
 | `getSnapshotForDate` | `@dal/wage-snapshots.ts` | Single-date snapshot lookup |
 | `TotalCard` | `components/app/TotalCard.tsx` | Monthly total display |
 | `NextPayrollCard` | `components/app/NextPayrollCard.tsx` | Payout display |
@@ -1690,6 +1919,7 @@ expect(excludedIds.has("shift-a")).toBe(false);
 2. **Date parsing**: Use UTC-based parsing to avoid DST issues: `YYYY-MM-DDT00:00:00Z`
 3. **Numeric precision**: Use decimal types or fixed-point arithmetic for currency
 4. **JSON parsing**: `supplements.rules` may be nested inside `{ rules: [...] }` object
+5. **Job resolution**: A shift without `job_id` should be assigned the user's default job before calculation
 
 ### Common Pitfalls
 
@@ -1697,14 +1927,57 @@ expect(excludedIds.has("shift-a")).toBe(false);
 2. **Weekday calculation**: JavaScript's `getDay()` returns 0-6 (Sunday-Saturday), needs mapping
 3. **Break threshold**: Uses strict `>` comparison, not `>=`
 4. **Payout month calculation**: January + 1 = February (handle year rollover)
-5. **Snapshot selection**: Two different lookups required:
-   - Wage/supplements/break: Use **shift date**
-   - Tax settings: Use **payout date** (shift month + 1)
+5. **Snapshot selection**: Two different lookups required, both job-scoped:
+   - Wage/supplements/break: Use **shift date** + **shift's job_id**
+   - Tax settings: Use **payout date** (shift month + 1) + **shift's job_id**
 6. **Cross-midnight**: End time can be less than start time (add 24 hours)
+7. **Payroll day resolution**: Job's `payroll_day` takes priority over `user_settings.payroll_day`
+8. **Legacy snapshots**: Snapshots with `job_id = NULL` serve as fallback; do not discard them
 
 ---
 
 ## Verification Log
+
+---
+
+**Date:** 2026-02-26
+**Version:** 1.2
+
+### Changes Made (Multi-Job Rollout)
+
+#### Section A (Overview)
+- ➕ Added `job_id` and `Job` to Inputs
+- ➕ Added invariants 6 and 7 (job-scoped snapshots, job-scoped payroll day)
+- ➕ Added `Job`, `Default job`, `Legacy snapshot` to Definitions
+- ⚠️ Updated `computeShift` entry point signature to include optional `job?` parameter
+
+#### Section B (Data Model)
+- ➕ **B.1**: Added `job_id` column to `user_shifts` (NOT NULL, assigned by trigger for legacy clients)
+- ➕ **B.2**: Added `job_id` column to `recurring_shifts` (NOT NULL; all virtual shifts inherit it)
+- ➕ **B.3**: Added `job_id` column to `wage_snapshots` (NOT NULL); updated uniqueness constraints to include `job_id`; updated behavior notes for job-scoped fallback chain
+- ⚠️ **B.4**: Added note that `payroll_day`/`half_tax_month`/`monthly_goal` are now owned by `jobs`; `user_settings` mirrors for legacy compatibility
+- ➕ **B.4.5**: New `jobs` table documented
+- ➕ **D.1**: Added `ShiftRow.job_id`, `WageSnapshot.job_id`, `Job` type, `ShiftData.jobs` to type definitions
+
+#### Section D (Pipeline)
+- ➕ Rewrote D.2 Step 1: jobs and snapshots now fetched in parallel (4-way concurrent query)
+- ➕ Added Step 2: snapshot bucket construction with `buildSnapshotBuckets`
+- ➕ Updated Step 4: compute uses job-scoped `resolveSnapshotForDate` + job-aware payroll day
+- ➕ Updated Step 5: virtual shifts also use job-scoped logic
+
+#### Section E (Snapshot Selection)
+- ➕ **E.3**: Rewrote snapshot selection to be job-scoped with documented fallback chain
+
+#### Section H (API)
+- ⚠️ **H.3**: `GET /api/shifts` response now includes `jobs` array; accepts optional `jobId`
+- ➕ **H.4**: Added `user-jobs` cache tag
+
+#### Appendix
+- ➕ Added `JobsService`, `getUserJobs`, `getDefaultJob` to file reference
+- ➕ Added `createJob()` factory to test case factory section
+- ➕ Added multi-job pitfalls to Common Pitfalls
+
+---
 
 **Date:** 2026-01-14
 **Version:** 1.1
