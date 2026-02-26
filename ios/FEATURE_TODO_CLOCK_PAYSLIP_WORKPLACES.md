@@ -1,6 +1,6 @@
 # Feature TODO: Clock Flow, Payslip Analysis, Workplaces
 
-Last updated: 2026-02-24
+Last updated: 2026-02-26
 Owner: Product + iOS
 Status: Draft, validated against current code contracts
 
@@ -269,8 +269,9 @@ This document is intentionally implementation-aware for the current local-first 
   - created_at / updated_at / deleted_at / revision
 - [ ] Add `job_id` to `user_shifts`, `recurring_shifts`, and `wage_snapshots` (not `workplaceId`)
 - [ ] Make `job_id` mandatory for all newly created shifts after migration
-- [ ] Define migration strategy: create default job per user, backfill `job_id`, then enforce NOT NULL
-- [ ] Move payroll-engine-dependent settings to job scope per `MULTI_JOB_PLAN.md`
+- [ ] Define migration strategy: create default job per user, backfill `job_id`, install DB trigger fallback for missing `job_id`, then enforce NOT NULL
+- [ ] Keep legacy compatibility: mirror `payroll_day`, `half_tax_month`, and `monthly_goal` between default job and `user_settings` during migration window
+- [ ] Move payroll-engine-dependent settings to job scope per `MULTI_JOB_PLAN.md` (without removing legacy reads in V1)
 - [ ] Add sync schema/model updates and migrations for all affected iOS sync row/local model types
 
 ### Add/Edit flow TODO
@@ -310,6 +311,7 @@ This document is intentionally implementation-aware for the current local-first 
 - [ ] User can filter shifts by workplace
 - [ ] Existing shift behavior remains stable for users with one workplace
 - [ ] Filters only affect Shifts list in V1
+- [ ] Pre-multi-job app versions remain functional against migrated schema (legacy writes without `job_id` still work)
 
 ### Decisions confirmed (2026-02-24)
 
@@ -331,6 +333,7 @@ This document is intentionally implementation-aware for the current local-first 
 ## Cross-feature dependencies
 
 - [ ] Data model migrations and sync contracts must be planned together
+- [ ] Backwards-compatibility DB layer (default job assignment + settings mirror) must ship before app versions that depend on `job_id`
 - [ ] Widget and Live Activity updates should be tested against active shift + workplace/job metadata
 - [ ] Export and Wagey should align on new fields (`job_id`, workplace label, active shift semantics)
 - [ ] Notification strategies should be reviewed for active shifts and workplace context
@@ -347,3 +350,4 @@ This document is intentionally implementation-aware for the current local-first 
 - [x] Clock flow: immediate clock-in, review on clock-out, one cross-midnight shift, dashed temporary UI, supplements editable only after save, logout drops temporary shift
 - [x] Payslip mode: paid-tier, ephemeral files, normal Wagey conversation history, own-account tools only, no dedicated export flow
 - [x] Workplaces: mandatory workplace assignment, picker for 2+, per-workplace payroll settings, archive+delete support, recurring pattern locked to one workplace, mixed-day split outline, session-only filters (backend field name: `job_id`)
+- [x] Multi-job rollout must keep old clients functional via DB compatibility layer (missing `job_id` fallback + mirrored legacy settings)

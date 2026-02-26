@@ -5,6 +5,7 @@
 ## Table of Contents
 
 - [Design Principles](#design-principles)
+- [Backward Compatibility Contract](#backward-compatibility-contract)
 - [Current State Summary](#current-state-summary)
 - [Phase 1: Database Schema](#phase-1-database-schema)
 - [Phase 2: Backend Services & Sync](#phase-2-backend-services--sync)
@@ -12,6 +13,7 @@
 - [Phase 4: Next.js App Changes](#phase-4-nextjs-app-changes)
 - [Phase 5: UI — Job Management](#phase-5-ui--job-management)
 - [Phase 6: UI — Filtering & Aggregation](#phase-6-ui--filtering--aggregation)
+- [Rollout Gates (Backwards Compatibility)](#rollout-gates-backwards-compatibility)
 - [Edge Cases & Open Questions](#edge-cases--open-questions)
 - [File Impact Reference](#file-impact-reference)
 
@@ -24,6 +26,16 @@
 3. **Backwards-compatible migration.** Existing data migrates to a default job with zero behavior change.
 4. **Progressive complexity.** Job management is additive UI — no existing screens are removed or reorganized for single-job users.
 
+## Backward Compatibility Contract
+
+This is non-negotiable for rollout safety:
+
+1. **Legacy writes must keep working.** Older iOS/web clients that do not send `job_id` must still be able to insert/update `user_shifts`, `recurring_shifts`, and `wage_snapshots`.
+2. **Legacy settings contract stays live.** `user_settings.payroll_day`, `user_settings.half_tax_month`, and `user_settings.monthly_goal` must remain readable/writable during a compatibility window.
+3. **Additive payload changes only.** Shared SQL payloads must keep existing keys and add new `job` fields without removing old `settings` keys.
+4. **No destructive schema removal in V1.** Do not drop legacy columns or legacy behavior until telemetry confirms migration to job-aware clients.
+5. **Order matters.** Deploy DB compatibility layer first, then ship app changes, then enforce stricter constraints.
+
 ---
 
 ## Current State Summary
@@ -35,9 +47,9 @@
 | `user_shifts` | 886 | `user_id` only | Add `job_id` FK |
 | `recurring_shifts` | 10 | `user_id` only | Add `job_id` FK |
 | `wage_snapshots` | 64 | `user_id` only | Add `job_id` FK |
-| `user_settings` | 54 | `user_id` only | Move job-specific fields to `jobs` |
+| `user_settings` | 54 | `user_id` only | Keep legacy fields during compatibility window (dual-write with default `jobs` row) |
 
-### Fields that move from `user_settings` to `jobs`
+### Fields that become job-scoped (while staying mirrored on `user_settings` for legacy clients)
 
 | Field | Why it's job-specific |
 |-------|----------------------|
@@ -47,7 +59,7 @@
 
 ### Fields that stay on `user_settings` (user-global)
 
-`theme`, `currency`, `default_shifts_view`, `calendar_animation_style`, `profile_picture_url`, `last_active`
+`theme`, `currency`, `default_shifts_view`, `calendar_animation_style`, `profile_picture_url`, `last_active`, `monthly_goals_by_month`
 
 ### Unique constraints affected
 
@@ -55,6 +67,8 @@
 |-------|-------------------|----------------------|
 | `idx_wage_snapshots_baseline` | `UNIQUE (user_id) WHERE from_date IS NULL` | `UNIQUE (user_id, job_id) WHERE from_date IS NULL` |
 | `idx_wage_snapshots_unique_date` | `UNIQUE (user_id, from_date) WHERE from_date IS NOT NULL` | `UNIQUE (user_id, job_id, from_date) WHERE from_date IS NOT NULL` |
+
+Compatibility note: old indexes must not be removed until `job_id` is fully backfilled and insert triggers are live.
 
 ### RLS policies affected (all reference `user_id = auth.uid()` — no change needed for auth, but shared-shifts policies need `job_id` projection):
 - `user_shifts`: 5 policies (SELECT includes shift_shares join)
@@ -73,8 +87,10 @@
 | `user_has_any_shifts` | No change needed (still user-scoped) |
 | `user_has_shift_in_month` | No change needed |
 
-### Triggers (no changes needed)
-- `set_updated_at_revision` on `user_shifts`, `recurring_shifts`, `wage_snapshots`, `user_settings` — generic, column-agnostic
+### Triggers (new required compatibility triggers)
+- Existing `set_updated_at_revision` triggers remain.
+- Add `job_id` assignment/ownership triggers on `user_shifts`, `recurring_shifts`, `wage_snapshots`.
+- Add dual-write mirror triggers between default `jobs` row and legacy `user_settings` payroll fields.
 
 ---
 
@@ -97,6 +113,7 @@ CREATE TABLE public.jobs (
   monthly_goal          integer DEFAULT 20000,
 
   -- Sync metadata
+  archived_at timestamptz DEFAULT NULL,
   deleted_at  timestamptz DEFAULT NULL,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now(),
@@ -106,7 +123,7 @@ CREATE TABLE public.jobs (
 -- Each user can have at most one default job
 CREATE UNIQUE INDEX idx_jobs_default
   ON public.jobs (user_id)
-  WHERE is_default = true AND deleted_at IS NULL;
+  WHERE is_default = true AND deleted_at IS NULL AND archived_at IS NULL;
 
 CREATE INDEX idx_jobs_user_id ON public.jobs (user_id);
 CREATE INDEX idx_jobs_user_revision ON public.jobs (user_id, revision);
@@ -134,65 +151,176 @@ ALTER TABLE public.wage_snapshots
 CREATE INDEX idx_wage_snapshots_job_id ON public.wage_snapshots (job_id);
 ```
 
-### 1.3 Migrate existing data
+### 1.3 Add compatibility helper + `job_id` assignment triggers (required before NOT NULL)
 
 ```sql
--- Create a default job for every user who has any data
-INSERT INTO public.jobs (user_id, name, is_default, payroll_day, half_tax_month, monthly_goal)
-SELECT DISTINCT
-  u.user_id,
-  'Jobb',  -- Norwegian default name
-  true,
-  COALESCE(u.payroll_day, 15),
-  u.half_tax_month,
-  COALESCE(u.monthly_goal, 20000)
-FROM public.user_settings u;
+-- Guarantees every user has exactly one active default job when needed
+CREATE OR REPLACE FUNCTION public.ensure_default_job(p_user_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_job_id uuid;
+BEGIN
+  SELECT j.id INTO v_job_id
+  FROM public.jobs j
+  WHERE j.user_id = p_user_id
+    AND j.is_default = true
+    AND j.deleted_at IS NULL
+    AND j.archived_at IS NULL
+  LIMIT 1;
 
--- Assign all existing shifts to default job
-UPDATE public.user_shifts us
-SET job_id = j.id
-FROM public.jobs j
-WHERE j.user_id = us.user_id AND j.is_default = true;
+  IF v_job_id IS NULL THEN
+    INSERT INTO public.jobs (user_id, name, is_default)
+    VALUES (p_user_id, 'Jobb', true)
+    ON CONFLICT DO NOTHING;
 
--- Assign all existing recurring shifts
-UPDATE public.recurring_shifts rs
-SET job_id = j.id
-FROM public.jobs j
-WHERE j.user_id = rs.user_id AND j.is_default = true;
+    SELECT j.id INTO v_job_id
+    FROM public.jobs j
+    WHERE j.user_id = p_user_id
+      AND j.is_default = true
+      AND j.deleted_at IS NULL
+      AND j.archived_at IS NULL
+    LIMIT 1;
+  END IF;
 
--- Assign all existing wage snapshots
-UPDATE public.wage_snapshots ws
-SET job_id = j.id
-FROM public.jobs j
-WHERE j.user_id = ws.user_id AND j.is_default = true;
+  RETURN v_job_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.assign_job_id_and_validate_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.job_id IS NULL THEN
+    NEW.job_id := public.ensure_default_job(NEW.user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.jobs j
+    WHERE j.id = NEW.job_id
+      AND j.user_id = NEW.user_id
+      AND j.deleted_at IS NULL
+      AND j.archived_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'job_id must belong to same user';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER user_shifts_assign_job_id
+  BEFORE INSERT OR UPDATE OF user_id, job_id ON public.user_shifts
+  FOR EACH ROW
+  EXECUTE FUNCTION public.assign_job_id_and_validate_owner();
+
+CREATE TRIGGER recurring_shifts_assign_job_id
+  BEFORE INSERT OR UPDATE OF user_id, job_id ON public.recurring_shifts
+  FOR EACH ROW
+  EXECUTE FUNCTION public.assign_job_id_and_validate_owner();
+
+CREATE TRIGGER wage_snapshots_assign_job_id
+  BEFORE INSERT OR UPDATE OF user_id, job_id ON public.wage_snapshots
+  FOR EACH ROW
+  EXECUTE FUNCTION public.assign_job_id_and_validate_owner();
 ```
 
-### 1.4 Add NOT NULL constraint (after migration)
+### 1.4 Migrate existing data
 
 ```sql
+-- Create default jobs for every user that already has data in any affected table
+WITH all_user_ids AS (
+  SELECT user_id FROM public.user_settings
+  UNION
+  SELECT user_id FROM public.user_shifts
+  UNION
+  SELECT user_id FROM public.recurring_shifts
+  UNION
+  SELECT user_id FROM public.wage_snapshots
+)
+INSERT INTO public.jobs (user_id, name, is_default, payroll_day, half_tax_month, monthly_goal)
+SELECT
+  u.user_id,
+  'Jobb',
+  true,
+  COALESCE(us.payroll_day, 15),
+  us.half_tax_month,
+  COALESCE(us.monthly_goal, 20000)
+FROM all_user_ids u
+LEFT JOIN public.user_settings us ON us.user_id = u.user_id
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.jobs j
+  WHERE j.user_id = u.user_id
+    AND j.is_default = true
+    AND j.deleted_at IS NULL
+    AND j.archived_at IS NULL
+);
+
+-- Backfill rows created before triggers existed
+UPDATE public.user_shifts s
+SET job_id = public.ensure_default_job(s.user_id)
+WHERE s.job_id IS NULL;
+
+UPDATE public.recurring_shifts r
+SET job_id = public.ensure_default_job(r.user_id)
+WHERE r.job_id IS NULL;
+
+UPDATE public.wage_snapshots w
+SET job_id = public.ensure_default_job(w.user_id)
+WHERE w.job_id IS NULL;
+```
+
+### 1.5 Set `job_id` NOT NULL (after compatibility triggers + backfill)
+
+```sql
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.user_shifts WHERE job_id IS NULL) THEN
+    RAISE EXCEPTION 'user_shifts still has NULL job_id';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.recurring_shifts WHERE job_id IS NULL) THEN
+    RAISE EXCEPTION 'recurring_shifts still has NULL job_id';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.wage_snapshots WHERE job_id IS NULL) THEN
+    RAISE EXCEPTION 'wage_snapshots still has NULL job_id';
+  END IF;
+END $$;
+
 ALTER TABLE public.user_shifts ALTER COLUMN job_id SET NOT NULL;
 ALTER TABLE public.recurring_shifts ALTER COLUMN job_id SET NOT NULL;
 ALTER TABLE public.wage_snapshots ALTER COLUMN job_id SET NOT NULL;
 ```
 
-### 1.5 Update unique constraints on `wage_snapshots`
+### 1.6 Update unique constraints on `wage_snapshots` (safe order)
 
 ```sql
--- Drop old constraints
-DROP INDEX IF EXISTS idx_wage_snapshots_baseline;
-DROP INDEX IF EXISTS idx_wage_snapshots_unique_date;
-
--- Create new job-scoped constraints
-CREATE UNIQUE INDEX idx_wage_snapshots_baseline
+-- Create new indexes first (temporary names)
+CREATE UNIQUE INDEX idx_wage_snapshots_baseline_job
   ON public.wage_snapshots (user_id, job_id)
   WHERE from_date IS NULL AND deleted_at IS NULL;
 
-CREATE UNIQUE INDEX idx_wage_snapshots_unique_date
+CREATE UNIQUE INDEX idx_wage_snapshots_unique_date_job
   ON public.wage_snapshots (user_id, job_id, from_date)
   WHERE from_date IS NOT NULL AND deleted_at IS NULL;
+
+-- Remove old user-only uniqueness constraints
+DROP INDEX IF EXISTS idx_wage_snapshots_baseline;
+DROP INDEX IF EXISTS idx_wage_snapshots_unique_date;
+
+-- Keep canonical index names expected by existing tooling/docs
+ALTER INDEX idx_wage_snapshots_baseline_job RENAME TO idx_wage_snapshots_baseline;
+ALTER INDEX idx_wage_snapshots_unique_date_job RENAME TO idx_wage_snapshots_unique_date;
 ```
 
-### 1.6 RLS policies for `jobs`
+### 1.7 RLS policies for `jobs`
 
 ```sql
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
@@ -210,7 +338,7 @@ CREATE POLICY "Users can view own or shared jobs" ON public.jobs
   );
 
 CREATE POLICY "Users can insert own jobs" ON public.jobs
-  FOR INSERT TO public
+  FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can update own jobs" ON public.jobs
@@ -228,7 +356,7 @@ CREATE POLICY "Require MFA for users who enrolled" ON public.jobs
   USING (check_mfa_aal());
 ```
 
-### 1.7 Triggers for `jobs`
+### 1.8 Triggers for `jobs`
 
 ```sql
 -- Reuse existing trigger function
@@ -238,7 +366,7 @@ CREATE TRIGGER set_updated_at_revision
   EXECUTE FUNCTION set_updated_at_and_revision();
 ```
 
-### 1.8 Update `handle_new_user` to create default job
+### 1.9 Update `handle_new_user` to create default job
 
 ```sql
 -- Updated handle_new_user
@@ -258,9 +386,81 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-### 1.9 Update `prepare_user_for_deletion`
+### 1.10 Update `prepare_user_for_deletion`
 
 Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup sequence (before cascade deletes the rest).
+
+### 1.11 Keep legacy `user_settings` fields in sync during compatibility window
+
+```sql
+-- OLD CLIENTS -> NEW MODEL
+-- When legacy clients update payroll fields on user_settings, mirror them to default job.
+CREATE OR REPLACE FUNCTION public.sync_legacy_settings_to_default_job()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_job_id uuid;
+BEGIN
+  IF pg_trigger_depth() > 1 THEN
+    RETURN NEW;
+  END IF;
+
+  v_job_id := public.ensure_default_job(NEW.user_id);
+
+  UPDATE public.jobs
+  SET payroll_day = NEW.payroll_day,
+      half_tax_month = NEW.half_tax_month,
+      monthly_goal = NEW.monthly_goal
+  WHERE id = v_job_id;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER user_settings_mirror_to_jobs
+  AFTER INSERT OR UPDATE OF payroll_day, half_tax_month, monthly_goal
+  ON public.user_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION public.sync_legacy_settings_to_default_job();
+
+-- NEW MODEL -> OLD CLIENTS
+-- When default job payroll fields change, mirror back to user_settings so old apps still read correct values.
+CREATE OR REPLACE FUNCTION public.sync_default_job_to_legacy_settings()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF pg_trigger_depth() > 1 THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.is_default = true THEN
+    -- Update only existing user_settings rows to avoid creating partial rows
+    -- that might violate required-column/default assumptions.
+    UPDATE public.user_settings
+    SET payroll_day = NEW.payroll_day,
+        half_tax_month = NEW.half_tax_month,
+        monthly_goal = NEW.monthly_goal
+    WHERE user_id = NEW.user_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER jobs_mirror_to_user_settings
+  AFTER INSERT OR UPDATE OF payroll_day, half_tax_month, monthly_goal, is_default
+  ON public.jobs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.sync_default_job_to_legacy_settings();
+```
+
+Do **not** drop `payroll_day`, `half_tax_month`, or `monthly_goal` from `user_settings` in V1.
 
 ---
 
@@ -268,9 +468,9 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 ### 2.1 Update SQL functions
 
-- [ ] **`get_shared_month_payload`** — Add `job_id` to `jsonb_build_object(...)` for shifts, recurring_shifts, and snapshots. Add a `jobs` field to the result containing the owner's jobs array.
-- [ ] **`get_my_sharer_preview_payloads`** — Same changes as above.
-- [ ] **`get_shifts_due_for_reminder`** — Join `jobs` to include `job_name` in results so notification text can say "Shift at Coop Extra in 1 hour".
+- [ ] **`get_shared_month_payload`** — Add `job_id` to shift/recurring/snapshot JSON projections and add `jobs` array. Keep existing `settings` keys (`payroll_day`, `half_tax_month`, `monthly_goal`) for old clients.
+- [ ] **`get_my_sharer_preview_payloads`** — Same additive strategy as above (no key removals).
+- [ ] **`get_shifts_due_for_reminder`** — Join `jobs` for `job_name`, with safe fallback to default label if job metadata is missing.
 
 ### 2.2 Update iOS sync engine
 
@@ -281,7 +481,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 **Changes:**
 - [ ] Add new sync table for `jobs` — fetch from `public.jobs`, store as `LocalJob` (new SwiftData model)
 - [ ] Sync `jobs` before shifts/snapshots (jobs must exist before FK references)
-- [ ] Add `job_id` to `SyncShiftRow`, `SyncRecurringShiftRow`, `SyncWageSnapshotRow`
+- [ ] Add `job_id` to `SyncShiftRow`, `SyncRecurringShiftRow`, `SyncWageSnapshotRow` (decode as optional during rollout; resolve nil to default job)
 - [ ] Add `SyncJobRow` server model
 
 ### 2.3 Update Next.js services
@@ -298,7 +498,8 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 - [ ] Add `jobs` DAL (`next/data-access/jobs.ts`)
 - [ ] Update `ShiftsService.getShiftsWithComputations()` to accept optional `jobId` filter
 - [ ] Update snapshot lookup to be job-scoped: `getSnapshotsForDates(userId, jobId, dates)`
-- [ ] Update payroll calculation to read `payroll_day` from job instead of user_settings
+- [ ] Update payroll calculation to read `payroll_day` from job with fallback to mirrored legacy `user_settings.payroll_day`
+- [ ] Keep `SettingsService` dual-write compatibility for default job fields during transition
 - [ ] Update stats queries to support per-job and aggregated views
 
 ### 2.4 Update payroll engine
@@ -323,6 +524,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 **Changes:**
 - [ ] Include `job_id` in shift creation/update payloads
+- [ ] Keep server-side compatibility when `job_id` is omitted (DB trigger fills default job)
 - [ ] Add job-scoped validation where needed
 
 **Files (under `next/app/[locale]/(app)/settings/pay/_actions/`):**
@@ -330,6 +532,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 **Changes:**
 - [ ] Add `job_id` to snapshot creation/update
+- [ ] Keep server-side compatibility when `job_id` is omitted (DB trigger fills default job)
 - [ ] Update `checkExistingSnapshot` to be job-scoped
 
 ---
@@ -345,8 +548,8 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 ### 3.2 Update existing models
 
 **Files:**
-- `ios/TidexApp/Models/Shift.swift` — Add `job_id` to `ShiftRow` and `CodingKeys`
-- `ios/TidexApp/Models/WageSnapshot.swift` — Add `job_id`
+- `ios/TidexApp/Models/Shift.swift` — Add `job_id` to `ShiftRow` and `CodingKeys` (decode defensively for rollout)
+- `ios/TidexApp/Models/WageSnapshot.swift` — Add `job_id` (decode defensively for rollout)
 - `ios/TidexApp/Storage/Models/LocalUserShift.swift` — Add `jobId` property, update `UserShiftServerSnapshot`, update `UserShiftField` enum
 - `ios/TidexApp/Storage/Models/LocalRecurringShift.swift` — Add `jobId`, update snapshot and field enum
 - `ios/TidexApp/Storage/Models/LocalWageSnapshot.swift` — Add `jobId`, update snapshot and field enum
@@ -365,7 +568,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 - `ios/TidexApp/Services/Payroll/BreakDeduction.swift`
 
 **Changes:**
-- [ ] Read `payroll_day` from job context instead of user settings
+- [ ] Read `payroll_day` from job context, with fallback to mirrored legacy `user_settings` values
 
 ### 3.5 Update iOS widget / complications
 
@@ -395,7 +598,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 **Files:**
 - Components that render shared shift data need to handle `job_id` and display job names
-- The sharing SQL functions (updated in Phase 2.1) will provide job context
+- The sharing SQL functions (updated in Phase 2.1) will provide job context while preserving existing settings keys
 
 ---
 
@@ -404,21 +607,27 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 ### 5.1 Job settings page
 
 - [ ] New settings section (or page) for managing jobs
-- [ ] Create/edit/delete jobs
+- [ ] Create/edit/archive/delete jobs
 - [ ] Set job name, color, payroll_day, half_tax_month, monthly_goal
 - [ ] Reorder jobs (sort_order)
 - [ ] Cannot delete the last/default job (guard)
+- [ ] Archived jobs are hidden from Add Shift pickers but remain visible in historical views
 
 ### 5.2 Job selector in shift creation
 
 - [ ] Add job picker to `AddShiftCoordinator` (iOS) and add-shift page (Next.js)
-- [ ] Default to the user's default job (or last-used job)
-- [ ] Only show picker if user has 2+ jobs (invisible for single-job users)
+- [ ] If user has exactly one active job, assign it automatically
+- [ ] If user has 2+ active jobs, show picker and require explicit selection before save
+- [ ] Keep picker hidden for single-job users (invisible by default)
 
 ### 5.3 Job indicator on shift cards
 
 - [ ] Color dot or badge on `ShiftRowCard` (iOS) and shift list items (Next.js)
 - [ ] Only show if user has 2+ jobs
+- [ ] Calendar day outline rendering for mixed-job days:
+  - split top-to-bottom by all jobs present that day
+  - top segment = earliest shift job color
+  - bottom segment = latest shift job color
 
 ### 5.4 Onboarding
 
@@ -431,7 +640,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 ### 6.1 Job filter in shift views
 
-- [ ] Filter bar/pill in calendar and list views
+- [ ] V1: filter bar/pill in **Shifts list** only (defer calendar filtering)
 - [ ] Options: "All jobs" (default), or filter to a specific job
 - [ ] Persist filter preference per session (not across sessions)
 
@@ -451,7 +660,26 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 - [ ] Wage snapshot timeline is per-job
 - [ ] Job picker to switch between job wage histories
-- [ ] Global pay settings (payroll_day, half_tax_month) move to job settings
+- [ ] UI source of truth for pay settings moves to job settings (while DB keeps legacy mirrored fields for old clients)
+
+---
+
+## Rollout Gates (Backwards Compatibility)
+
+1. **Gate A: DB compatibility layer live**
+   - `jobs` exists
+   - `job_id` columns exist
+   - assignment triggers + mirror triggers exist
+   - backfill complete (`NULL job_id` count = 0)
+2. **Gate B: legacy client smoke pass**
+   - old iOS build can still create/edit/delete shift
+   - old iOS build can still create/edit wage snapshot
+   - old iOS build can still change `payroll_day`/`half_tax_month`/`monthly_goal`
+3. **Gate C: new app rollout**
+   - new iOS/web writes explicit `job_id`
+   - job-aware UI/features enabled
+4. **Gate D: deprecation (future, not V1)**
+   - only after telemetry/version floor is met, remove mirror triggers and legacy fields
 
 ---
 
@@ -462,9 +690,15 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 | Question | Decision |
 |----------|----------|
 | What happens when a user deletes a job with existing shifts? | Soft-delete the job. Shifts remain but are hidden from active views. User can reassign shifts before deletion. |
+| Do we support both archive and delete? | Yes. Archive (`archived_at`) hides job from Add Shift pickers; delete is soft-delete (`deleted_at`). |
 | Can shifts exist without a job? | No. `job_id NOT NULL` after migration. |
+| Is workplace/job selection mandatory? | Yes. With 2+ active jobs, user must explicitly pick one before save; with 1 active job it is auto-assigned. |
 | What's the default job name? | "Jobb" (Norwegian). User can rename immediately. |
 | How does sharing work with multiple jobs? | Share access is still user-level (all jobs). Shared views show job names as context. |
+| How are recurring shifts assigned? | A recurring pattern and all generated virtual shifts belong to one job (no per-occurrence override). |
+| Where does V1 filtering apply? | Shifts list only. Calendar filtering is deferred. |
+| How are mixed-job calendar days visualized? | Day outline is split top-to-bottom from earliest shift color to latest shift color. |
+| How do old clients continue to work? | DB compatibility triggers assign default `job_id` on missing writes and mirror payroll fields between default job and `user_settings`. |
 
 ### Open (decide before implementation)
 
@@ -472,7 +706,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 - [ ] **Job-scoped shift sharing?** — Should users be able to share only specific jobs? (Recommendation: defer — keep user-level sharing initially.)
 - [ ] **Tax across jobs** — Norwegian tax brackets apply to combined income. Should the app show a combined tax view? (Recommendation: defer — show per-job tax for now, aggregate later.)
 - [ ] **Maximum number of jobs** — Should we cap it? (Recommendation: cap at 10 to keep UI clean.)
-- [ ] **Job archiving** — Should users be able to archive old jobs (vs. delete)? Archived jobs hide from pickers but shifts remain visible in history. (Recommendation: yes, add `archived_at` column.)
+- [ ] **Legacy deprecation gate** — What exact telemetry threshold and app-version floor must be met before removing mirrored `user_settings` fields/triggers?
 
 ---
 
@@ -482,9 +716,13 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 
 | File / Resource | Type of change |
 |----------------|----------------|
-| New migration: `create_jobs_table` | DDL |
-| New migration: `add_job_id_columns` | DDL + data migration |
+| New migration: `create_jobs_table` | DDL (includes `archived_at`) |
+| New migration: `add_job_id_columns` | DDL + compatibility triggers + data migration |
 | New migration: `update_wage_snapshot_constraints` | DDL |
+| New SQL function: `ensure_default_job` | Compatibility helper |
+| New SQL trigger fn: `assign_job_id_and_validate_owner` | Compatibility + integrity |
+| New SQL trigger fn: `sync_legacy_settings_to_default_job` | Legacy mirror |
+| New SQL trigger fn: `sync_default_job_to_legacy_settings` | Legacy mirror |
 | `supabase/sql/functions/sharing/get_shared_month_payload.sql` | Update SQL |
 | `supabase/sql/functions/sharing/get_my_sharer_preview_payloads.sql` | Update SQL |
 | `supabase/sql/functions/notification/get_shifts_due_for_reminder.sql` | Update SQL |
@@ -533,7 +771,7 @@ Add `DELETE FROM public.jobs WHERE user_id = target_user_id;` to the cleanup seq
 | `next/lib/payroll/types.ts` | Add `job_id` to types, add `Job` type |
 | `next/lib/payroll/calc.ts` | Accept job context |
 | `next/lib/services/shifts.ts` | Job-scoped queries + snapshot lookup |
-| `next/lib/services/settings.ts` | Remove job-specific field reads |
+| `next/lib/services/settings.ts` | Keep legacy field compatibility + dual-write bridge |
 | `next/lib/services/stats.ts` | Per-job + aggregate stats |
 | `next/data-access/shifts.ts` | Pass job filter |
 | `next/data-access/wage-snapshots.ts` | Job-scoped snapshot CRUD |
