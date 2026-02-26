@@ -178,6 +178,10 @@ final class AppCoordinator: ObservableObject {
   /// After this, force transition to .unauthenticated regardless of what's pending
   private static let maxLoadingTimeout: UInt64 = 15_000_000_000  // 15 seconds
 
+  /// Number of repeated launch/session timeouts before we force a stable fallback state.
+  private static let launchSessionTimeoutRecoveryThreshold = 3
+  private static let launchSessionTimeoutCountKey = "auth.launch_session_timeout_count"
+
   /// Fallback check in case authStateChanges doesn't emit .initialSession promptly
   /// This handles edge cases where the Supabase SDK doesn't emit the initial event
   private func setupInitialSessionCheck() {
@@ -206,9 +210,27 @@ final class AppCoordinator: ObservableObject {
       // session is non-optional - throws if no session exists
       // Use AuthSessionManager to prevent concurrent refresh race conditions
       let session = try await AuthSessionManager.shared.getSession(allowProactiveRefresh: false)
+      resetLaunchSessionTimeoutCount()
       // Returning user — skip MFA, go straight to terms check
       await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
     } catch {
+      if isLaunchSessionTimeoutError(error) {
+        if handleRepeatedLaunchSessionTimeoutIfNeeded() {
+          return
+        }
+        launchLog.warning(
+          "[Launch] Initial session check timed out; keeping loading state for retry")
+        return
+      }
+
+      // Transient timeout/network failures should not immediately force logout.
+      if AuthSessionManager.shared.isTransientNetworkError(error)
+        || (error as? AuthSessionManagerError) != nil
+      {
+        launchLog.warning(
+          "[Launch] Initial session check transient failure; keeping loading state")
+        return
+      }
       launchLog.info("[Launch] AppCoordinator → .unauthenticated (no session)")
       appState = .unauthenticated
     }
@@ -268,6 +290,7 @@ final class AppCoordinator: ObservableObject {
 
           // On app launch, check if we have a valid session
           if let session = session {
+            self.resetLaunchSessionTimeoutCount()
             if BiometricAuthService.shared.isLocked {
               // When biometric lock is active, the SDK wraps session access in
               // withBiometrics() which triggers a biometric prompt. The .initialSession
@@ -301,13 +324,7 @@ final class AppCoordinator: ObservableObject {
           await self.checkMFAAndUpdateState()
 
         case .signedOut:
-          self.appState = .unauthenticated
-          self.pendingMFAFactor = nil
-          self.userId = nil
-          self.userDisplayName = ""
-          self.userAvatarUrl = nil
-          self.hasFinishedOnboardingRemotely = false
-          self.initialSyncComplete = false
+          self.applySignedOutState()
 
         case .tokenRefreshed:
           // Token refreshed, state unchanged
@@ -509,6 +526,63 @@ final class AppCoordinator: ObservableObject {
     }
   }
 
+  private func isLaunchSessionTimeoutError(_ error: Error) -> Bool {
+    guard let timeoutError = error as? AuthSessionManagerError else { return false }
+    switch timeoutError {
+    case .sessionFetchTimedOut, .refreshTimedOut:
+      return true
+    }
+  }
+
+  private func incrementLaunchSessionTimeoutCount() -> Int {
+    let current = UserDefaults.standard.integer(forKey: Self.launchSessionTimeoutCountKey)
+    let updated = current + 1
+    UserDefaults.standard.set(updated, forKey: Self.launchSessionTimeoutCountKey)
+    return updated
+  }
+
+  private func resetLaunchSessionTimeoutCount() {
+    UserDefaults.standard.removeObject(forKey: Self.launchSessionTimeoutCountKey)
+  }
+
+  /// After repeated launch-time auth session timeouts, force a stable fallback state.
+  /// Timeouts can be transient, so avoid destructive cache/session purges here.
+  private func handleRepeatedLaunchSessionTimeoutIfNeeded(previousState: AppState = .loading)
+    -> Bool
+  {
+    let timeoutCount = incrementLaunchSessionTimeoutCount()
+    guard timeoutCount >= Self.launchSessionTimeoutRecoveryThreshold else {
+      return false
+    }
+
+    launchLog.error(
+      "[Launch] Repeated auth session timeouts (\(timeoutCount)); forcing stable fallback state"
+    )
+
+    applyRecoverableAuthFailureFallback(previousState: previousState)
+    resetLaunchSessionTimeoutCount()
+    return true
+  }
+
+  /// Recover from transient auth/session failures without forcing a destructive sign-out.
+  /// If we were previously in a stable state, restore it; otherwise pick a safe fallback.
+  private func applyRecoverableAuthFailureFallback(previousState: AppState) {
+    let fallbackState: AppState
+    switch previousState {
+    case .authenticated, .termsRequired, .mfaRequired, .unauthenticated:
+      fallbackState = previousState
+    case .loading:
+      fallbackState = userId != nil ? .authenticated : .unauthenticated
+    }
+
+    if self.appState != fallbackState {
+      launchLog.warning(
+        "[Auth] Recoverable session failure; transitioning \(String(describing: self.appState)) -> \(String(describing: fallbackState))"
+      )
+      self.appState = fallbackState
+    }
+  }
+
   /// Load onboarding completion state from user metadata
   /// Called before setting appState to .authenticated to prevent PostAuthOnboarding flash
   private func loadOnboardingStateFromUser(_ user: User) {
@@ -668,12 +742,46 @@ final class AppCoordinator: ObservableObject {
       do {
         // Use AuthSessionManager to prevent concurrent refresh race conditions
         let session = try await AuthSessionManager.shared.getSession()
+        await MainActor.run {
+          self.resetLaunchSessionTimeoutCount()
+        }
         let userId = session.normalizedUserId
 
         // If userId already exists, ensure it matches the current session
         let currentUserId = await Task { @MainActor in self.userId }.value
         if let currentUserId, currentUserId != userId {
           return
+        }
+
+        // Periodically force a server-side token refresh while online to detect
+        // remote/global sign-out in a bounded window.
+        if await AuthSessionManager.shared.shouldValidateSessionOnForeground() {
+          do {
+            _ = try await AuthSessionManager.shared.forceRefresh()
+            await MainActor.run {
+              AuthSessionManager.shared.markForegroundValidation()
+            }
+          } catch {
+            if await AuthSessionManager.shared.isSessionRevokedError(error) {
+              launchLog.warning(
+                "[Auth] Foreground validation detected revoked session; transitioning to unauthenticated"
+              )
+              // Best effort: clear local session cache in SDK storage.
+              try? await supabase.auth.signOut(scope: .local)
+              Task { @MainActor [weak self] in
+                guard let self else { return }
+                await self.clearAllCachedData()
+                self.applySignedOutState()
+              }
+              return
+            }
+
+            if !(await AuthSessionManager.shared.isTransientNetworkError(error)) {
+              launchLog.warning(
+                "[Auth] Foreground validation failed: \(error.localizedDescription, privacy: .public)"
+              )
+            }
+          }
         }
 
         if let appDelegate = await MainActor.run(body: {
@@ -801,16 +909,13 @@ final class AppCoordinator: ObservableObject {
       } else {
         try await authService.signOut()
       }
-      // Auth state listener will update appState to .unauthenticated
     } catch {
-      // Force state change even if sign out fails
-      appState = .unauthenticated
+      // Fallback: ensure local session is cleared even if primary sign-out call failed.
+      try? await supabase.auth.signOut(scope: .local)
     }
 
-    userId = nil
-    // Clear user profile data to prevent stale data showing for next user
-    userDisplayName = ""
-    userAvatarUrl = nil
+    // Always transition immediately; auth listener can still emit signedOut afterward.
+    applySignedOutState()
   }
 
   /// Clear all cached data without signing out
@@ -855,18 +960,50 @@ final class AppCoordinator: ObservableObject {
     initialSyncComplete = false
   }
 
+  private func applySignedOutState() {
+    resetLaunchSessionTimeoutCount()
+    AuthSessionManager.shared.resetForegroundValidationState()
+    appState = .unauthenticated
+    pendingMFAFactor = nil
+    userId = nil
+    userDisplayName = ""
+    userAvatarUrl = nil
+    hasFinishedOnboardingRemotely = false
+    initialSyncComplete = false
+  }
+
   /// Force a session check (useful for debugging or manual refresh)
   func checkSession() async {
+    let previousState = appState
     appState = .loading
 
     do {
       if try await authService.getSession() != nil {
+        resetLaunchSessionTimeoutCount()
         // Recovery / manual refresh — skip MFA, just check terms
         await checkTermsAndUpdateState()
       } else {
         appState = .unauthenticated
       }
     } catch {
+      if isLaunchSessionTimeoutError(error) {
+        if handleRepeatedLaunchSessionTimeoutIfNeeded(previousState: previousState) {
+          return
+        }
+        launchLog.warning("[Launch] checkSession timed out; applying non-destructive fallback")
+        applyRecoverableAuthFailureFallback(previousState: previousState)
+        return
+      }
+
+      // Avoid false logout loops when startup auth hits transient network/session timeouts.
+      if AuthSessionManager.shared.isTransientNetworkError(error)
+        || (error as? AuthSessionManagerError) != nil
+      {
+        launchLog.warning(
+          "[Launch] checkSession transient failure; applying non-destructive fallback")
+        applyRecoverableAuthFailureFallback(previousState: previousState)
+        return
+      }
       appState = .unauthenticated
     }
   }

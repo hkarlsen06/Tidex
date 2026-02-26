@@ -4,6 +4,20 @@ import Supabase
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AuthSessionManager")
 
+enum AuthSessionManagerError: Error, LocalizedError {
+  case sessionFetchTimedOut
+  case refreshTimedOut
+
+  var errorDescription: String? {
+    switch self {
+    case .sessionFetchTimedOut:
+      return "Session fetch timed out"
+    case .refreshTimedOut:
+      return "Session refresh timed out"
+    }
+  }
+}
+
 /// Manages auth session access with refresh serialization to prevent race conditions.
 ///
 /// ## Problem Solved
@@ -29,8 +43,14 @@ final class AuthSessionManager: ObservableObject {
   /// Buffer time before token expiry to trigger proactive refresh (60 seconds)
   private let refreshBuffer: TimeInterval = 60
 
+  /// Maximum time to wait for a session fetch or token refresh operation (20 seconds)
+  private let sessionOperationTimeout: UInt64 = 20_000_000_000  // nanoseconds
+
   /// Maximum time to wait for an existing refresh task before timing out (30 seconds)
   private let refreshTaskTimeout: UInt64 = 30_000_000_000  // nanoseconds
+
+  /// Minimum interval between explicit foreground server validations (5 minutes)
+  private let foregroundValidationInterval: TimeInterval = 300
 
   // MARK: - State
 
@@ -39,6 +59,9 @@ final class AuthSessionManager: ObservableObject {
 
   /// Whether a refresh is currently in progress
   @Published private(set) var isRefreshing = false
+
+  /// Last time we validated session state against server via explicit refresh
+  private var lastForegroundValidationAt: Date?
 
   // MARK: - Initialization
 
@@ -68,8 +91,8 @@ final class AuthSessionManager: ObservableObject {
       // Timeout occurred, existing task will be cancelled and we'll start fresh below
     }
 
-    // Get the current session
-    let session = try await supabase.auth.session
+    // Get the current session with timeout protection
+    let session = try await fetchSessionWithTimeout()
 
     // Check if token is close to expiry and needs proactive refresh
     let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
@@ -137,6 +160,62 @@ final class AuthSessionManager: ObservableObject {
     return try await performRefresh()
   }
 
+  /// Whether foreground flow should perform an explicit server validation refresh.
+  /// This helps detect remote/global sign-out within a bounded window.
+  func shouldValidateSessionOnForeground() -> Bool {
+    guard let lastForegroundValidationAt else { return true }
+    return Date().timeIntervalSince(lastForegroundValidationAt) >= foregroundValidationInterval
+  }
+
+  /// Mark that a successful explicit server validation occurred.
+  func markForegroundValidation() {
+    lastForegroundValidationAt = Date()
+  }
+
+  /// Reset foreground validation throttle state (e.g. when auth session ends).
+  func resetForegroundValidationState() {
+    lastForegroundValidationAt = nil
+  }
+
+  /// Best-effort classification of revoked/invalid refresh-session errors.
+  func isSessionRevokedError(_ error: Error) -> Bool {
+    let message = error.localizedDescription.lowercased()
+    return
+      message.contains("refresh token not found")
+      || message.contains("invalid refresh token")
+      || (message.contains("refresh token") && message.contains("revoked"))
+      || message.contains("invalid_grant")
+      || message.contains("session_not_found")
+  }
+
+  /// Best-effort classification of transient network errors where we should not sign user out.
+  func isTransientNetworkError(_ error: Error) -> Bool {
+    let transientCodes: Set<URLError.Code> = [
+      .timedOut,
+      .cannotFindHost,
+      .cannotConnectToHost,
+      .networkConnectionLost,
+      .dnsLookupFailed,
+      .notConnectedToInternet,
+      .internationalRoamingOff,
+      .callIsActive,
+      .dataNotAllowed,
+    ]
+
+    if let urlError = error as? URLError {
+      return transientCodes.contains(urlError.code)
+    }
+
+    let nsError = error as NSError
+    if nsError.domain == NSURLErrorDomain,
+      let code = URLError.Code(rawValue: nsError.code) as URLError.Code?
+    {
+      return transientCodes.contains(code)
+    }
+
+    return false
+  }
+
   // MARK: - Private Methods
 
   /// Waits for an existing refresh task with a timeout to prevent deadlocks.
@@ -188,6 +267,52 @@ final class AuthSessionManager: ObservableObject {
     }
   }
 
+  /// Fetch current session with timeout protection to avoid indefinite stalls.
+  private func fetchSessionWithTimeout() async throws -> Session {
+    return try await withThrowingTaskGroup(of: Session.self) { group in
+      group.addTask {
+        try await supabase.auth.session
+      }
+
+      group.addTask {
+        try await Task.sleep(nanoseconds: self.sessionOperationTimeout)
+        throw AuthSessionManagerError.sessionFetchTimedOut
+      }
+
+      // group.next() returns nil only when the group is empty or externally cancelled,
+      // neither of which is possible here with 2 non-cancelled tasks.
+      guard let result = try await group.next() else {
+        assertionFailure("group.next() returned nil with 2 non-cancelled tasks")
+        throw AuthSessionManagerError.sessionFetchTimedOut
+      }
+      group.cancelAll()
+      return result
+    }
+  }
+
+  /// Refresh session with timeout protection to avoid indefinite stalls.
+  private func refreshSessionWithTimeout() async throws -> Session {
+    return try await withThrowingTaskGroup(of: Session.self) { group in
+      group.addTask {
+        try await supabase.auth.refreshSession()
+      }
+
+      group.addTask {
+        try await Task.sleep(nanoseconds: self.sessionOperationTimeout)
+        throw AuthSessionManagerError.refreshTimedOut
+      }
+
+      // group.next() returns nil only when the group is empty or externally cancelled,
+      // neither of which is possible here with 2 non-cancelled tasks.
+      guard let result = try await group.next() else {
+        assertionFailure("group.next() returned nil with 2 non-cancelled tasks")
+        throw AuthSessionManagerError.refreshTimedOut
+      }
+      group.cancelAll()
+      return result
+    }
+  }
+
   /// Performs the actual refresh operation, ensuring only one refresh happens at a time.
   private func performRefresh() async throws -> Session {
     // Double-check we're not already refreshing (for safety)
@@ -211,12 +336,15 @@ final class AuthSessionManager: ObservableObject {
       }
 
       do {
-        let session = try await supabase.auth.refreshSession()
+        guard let self else {
+          throw AuthSessionManagerError.refreshTimedOut
+        }
+        let session = try await self.refreshSessionWithTimeout()
         logger.info("Token refreshed successfully, new expiry: \(session.expiresAt)")
 
         // Store refreshed token in shared keychain
         await MainActor.run {
-          self?.storeTokenInSharedKeychain(session)
+          self.storeTokenInSharedKeychain(session)
         }
 
         return session
@@ -248,6 +376,7 @@ final class AuthSessionManager: ObservableObject {
 
   /// Clear the access token from shared keychain (called on sign out)
   func clearSharedKeychain() {
+    lastForegroundValidationAt = nil
     do {
       try SharedKeychainStorage.clearAccessToken()
       logger.info("Cleared shared keychain")

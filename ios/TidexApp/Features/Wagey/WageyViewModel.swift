@@ -350,6 +350,10 @@ final class WageyViewModel {
     guard let userId = AppCoordinator.shared.userId else { return }
 
     do {
+      // Ensure refresh/session access is serialized to avoid refresh-token races
+      // when Wagey opens during startup/foreground auth activity.
+      _ = try await AuthSessionManager.shared.getSession()
+
       let profile: ProfileData =
         try await supabase
         .from("profiles")
