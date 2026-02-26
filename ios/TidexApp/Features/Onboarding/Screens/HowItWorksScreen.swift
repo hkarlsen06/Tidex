@@ -24,6 +24,14 @@ struct HowItWorksScreen: View {
   @State private var isConfettiActive = false
   @State private var lastConfettiSeed = -1
   @State private var entranceSequenceID = 0
+  @State private var focusedStepIndex: Int? = nil
+  @State private var hasCompletedFocusSequence = false
+  @State private var step1TitleFocusTrigger = 0
+  @State private var step2TitleFocusTrigger = 0
+  @State private var step3TitleFocusTrigger = 0
+
+  private let titleFocusStartDelay: TimeInterval = 0.7
+  private let perStepTitleFocusDuration: TimeInterval = 1.32
 
   init(
     totalFrom: CalendarHeaderTotals? = nil,
@@ -45,6 +53,8 @@ struct HowItWorksScreen: View {
 
   var body: some View {
     let featuredShift = Self.makeOnboardingFeaturedShift(currency: currency)
+    let isStep2Dimmed = shouldDimStep(at: 1)
+    let isStep3Dimmed = shouldDimStep(at: 2)
 
     VStack(spacing: 0) {
       Text(.onboardingHowTitle)
@@ -68,7 +78,9 @@ struct HowItWorksScreen: View {
             index: 0,
             isVisible: step1Visible,
             progressState: .active,
-            showConnector: false
+            showConnector: false,
+            isDimmedForFocus: shouldDimStep(at: 0),
+            titleFocusTrigger: step1TitleFocusTrigger
           )
           .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
           .padding(.bottom, Spacing.xxl)
@@ -80,13 +92,16 @@ struct HowItWorksScreen: View {
             index: 0,
             isVisible: step2Visible,
             progressState: .upcoming,
-            showConnector: false
+            showConnector: false,
+            isDimmedForFocus: shouldDimStep(at: 1),
+            titleFocusTrigger: step2TitleFocusTrigger
           )
           .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
 
           OnboardingHowItWorksShiftPreviewCard(
             shift: featuredShift,
-            isVisible: shiftPreviewVisible
+            isVisible: shiftPreviewVisible,
+            isDimmedForFocus: isStep2Dimmed
           )
 
           StepItem(
@@ -96,7 +111,9 @@ struct HowItWorksScreen: View {
             index: 0,
             isVisible: step3Visible,
             progressState: .future,
-            showConnector: false
+            showConnector: false,
+            isDimmedForFocus: shouldDimStep(at: 2),
+            titleFocusTrigger: step3TitleFocusTrigger
           )
           .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
         }
@@ -112,12 +129,13 @@ struct HowItWorksScreen: View {
         )
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, Spacing.md)
-        .opacity(totalCardVisible ? StepProgressState.future.contentOpacity : 0)
+        .opacity(totalCardVisible ? (isStep3Dimmed ? 0.46 : 1.0) : 0)
         .offset(y: totalCardVisible ? 0 : 16)
         .animation(
           .spring(response: 0.42, dampingFraction: 0.84),
           value: totalCardVisible
         )
+        .animation(.easeInOut(duration: 0.26), value: isStep3Dimmed)
 
         Spacer()
           .frame(height: 20)
@@ -256,6 +274,8 @@ struct HowItWorksScreen: View {
         outcomeVisible = true
       }
     }
+
+    scheduleStepFocusSequence(sequenceID: sequenceID)
   }
 
   private func resetEntranceState() {
@@ -265,12 +285,63 @@ struct HowItWorksScreen: View {
     step3Visible = false
     totalCardVisible = false
     outcomeVisible = false
+    focusedStepIndex = nil
+    hasCompletedFocusSequence = false
+    step1TitleFocusTrigger = 0
+    step2TitleFocusTrigger = 0
+    step3TitleFocusTrigger = 0
+  }
+
+  private func shouldDimStep(at index: Int) -> Bool {
+    guard
+      !hasCompletedFocusSequence,
+      let focusedStepIndex
+    else {
+      return false
+    }
+
+    return focusedStepIndex != index
+  }
+
+  private func scheduleStepFocusSequence(sequenceID: Int) {
+    for step in 0..<3 {
+      let delay = titleFocusStartDelay + (Double(step) * perStepTitleFocusDuration)
+      DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        guard sequenceID == entranceSequenceID else { return }
+        withAnimation(.easeInOut(duration: 0.26)) {
+          focusedStepIndex = step
+        }
+
+        DispatchQueue.main.async {
+          switch step {
+          case 0:
+            step1TitleFocusTrigger += 1
+          case 1:
+            step2TitleFocusTrigger += 1
+          case 2:
+            step3TitleFocusTrigger += 1
+          default:
+            break
+          }
+        }
+      }
+    }
+
+    let sequenceCompletionDelay = titleFocusStartDelay + (3 * perStepTitleFocusDuration)
+    DispatchQueue.main.asyncAfter(deadline: .now() + sequenceCompletionDelay) {
+      guard sequenceID == entranceSequenceID else { return }
+      withAnimation(.easeOut(duration: 0.25)) {
+        focusedStepIndex = nil
+        hasCompletedFocusSequence = true
+      }
+    }
   }
 }
 
 private struct OnboardingHowItWorksShiftPreviewCard: View {
   let shift: ShiftWithComputations
   let isVisible: Bool
+  let isDimmedForFocus: Bool
 
   var body: some View {
     FeaturedShiftCard(
@@ -287,12 +358,13 @@ private struct OnboardingHowItWorksShiftPreviewCard: View {
     .padding(.top, Spacing.md)
     .padding(.bottom, Spacing.xxl)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .opacity(isVisible ? StepProgressState.upcoming.contentOpacity : 0)
+    .opacity(isVisible ? (isDimmedForFocus ? 0.46 : 1.0) : 0)
     .offset(y: isVisible ? 0 : 18)
     .animation(
       .spring(response: 0.4, dampingFraction: 0.82).delay(0.24),
       value: isVisible
     )
+    .animation(.easeInOut(duration: 0.26), value: isDimmedForFocus)
   }
 }
 
