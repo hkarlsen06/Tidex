@@ -651,7 +651,8 @@ struct DashboardView: View {
           isToday: data.isFeaturedShiftToday,
           isBestShift: data.featuredShiftIsBestShift,
           countdownText: countdownManager.shiftCountdownText,
-          progress: shiftProgress
+          progress: shiftProgress,
+          finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
         )
         .contentShape(Rectangle())
         .onTapGesture {

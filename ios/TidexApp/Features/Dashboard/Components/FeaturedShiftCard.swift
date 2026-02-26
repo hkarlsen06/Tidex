@@ -11,6 +11,8 @@ struct FeaturedShiftCard: View {
   let countdownText: String?  // Countdown text shown below the card
   /// Progress through the shift (0-100), shows a subtle progress bar when provided (for active shifts)
   var progress: Double?
+  /// Remaining seconds in the final countdown window for active shifts.
+  var finalCountdownSeconds: Int? = nil
   /// When true, shows a "+" prefix and uses blue color for the amount (used in celebration overlay)
   var showIncreaseHighlight: Bool = false
   /// Whether footer text/badge under the card should be shown.
@@ -30,40 +32,6 @@ struct FeaturedShiftCard: View {
 
   private var dateParts: ShiftCardDateParts {
     ShiftCardFormatter.dateParts(for: shift.shiftDate)
-  }
-
-  private struct LiveShiftState {
-    let countdownText: String?
-    let progress: Double?
-    let finalCountdownSeconds: Int?
-  }
-
-  private func liveShiftState(at now: Date) -> LiveShiftState {
-    guard !isBestShift else {
-      return LiveShiftState(
-        countdownText: countdownText,
-        progress: progress,
-        finalCountdownSeconds: nil
-      )
-    }
-
-    let (text, isActive, liveProgress) = CountdownFormatter.formatShiftCountdown(
-      shiftDate: shift.shiftDate,
-      startTime: shift.startTime,
-      endTime: shift.endTime,
-      now: now
-    )
-
-    return LiveShiftState(
-      countdownText: text == "---" ? countdownText : text,
-      progress: isActive ? liveProgress : nil,
-      finalCountdownSeconds: CountdownFormatter.finalCountdownSecondsForShift(
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        now: now
-      )
-    )
   }
 
   private func hasProgress(_ value: Double?) -> Bool {
@@ -109,129 +77,126 @@ struct FeaturedShiftCard: View {
   // MARK: - Body
 
   var body: some View {
-    TimelineView(.periodic(from: .now, by: 1)) { context in
-      let liveState = liveShiftState(at: context.date)
-      let displayedProgress = isBestShift ? progress : liveState.progress
-      let displayedFooterText = footerText(countdown: liveState.countdownText ?? countdownText)
-      let status = countdownStatus(progress: displayedProgress, at: context.date)
+    let displayedProgress = progress
+    let displayedFooterText = footerText(countdown: countdownText)
+    let status = countdownStatus(progress: displayedProgress, at: Date())
 
-      VStack(spacing: Spacing.sm) {
-        // Main card content
-        ShiftCardContentLayout(centerTrailing: !showBreakdown) {
-          // Row 1: Day name and date
-          HStack(spacing: Spacing.xxs) {
-            Text(dateParts.weekday)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Text("·")
-              .foregroundColor(.tidexTextMuted)
-            Text(dateParts.dayMonth)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextMuted)
-              .contentTransition(.numericText())
-          }
-          .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)
-        } leadingBottom: {
-          // Row 2: Time range
-          timeRangeLabel
-        } trailingTop: {
-          // Net/gross amount
-          let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-          HStack(spacing: Spacing.micro) {
-            if showIncreaseHighlight {
-              Text("+")
-                .font(.tidexTitle)
-                .tracking(-0.5)
-                .foregroundColor(.tidexBlue)
-            }
-            CurrencyCountUpText(
-              amount: displayAmount,
-              duration: 0.8,
-              animateOnAppear: true,
-              animateChanges: true
-            )
-            .font(.tidexTitle)
-            .tracking(-0.5)
-            .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
-          }
-        } trailingBottom: {
-          // Breakdown (gross - tax) when tax enabled
-          if showBreakdown {
-            HStack(spacing: Spacing.xxs) {
-              Text(formatPlainAmount(shift.grossPay))
-                .contentTransition(.numericText(value: shift.grossPay))
-              Text("−")
-              Text(formatPlainAmount(shift.taxAmount))
-                .contentTransition(.numericText(value: shift.taxAmount))
-            }
-            .font(.tidexSubheadline)
+    VStack(spacing: Spacing.sm) {
+      // Main card content
+      ShiftCardContentLayout(centerTrailing: !showBreakdown) {
+        // Row 1: Day name and date
+        HStack(spacing: Spacing.xxs) {
+          Text(dateParts.weekday)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+          Text("·")
             .foregroundColor(.tidexTextMuted)
-            .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
-            .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
+          Text(dateParts.dayMonth)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextMuted)
+            .contentTransition(.numericText())
+        }
+        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)
+      } leadingBottom: {
+        // Row 2: Time range
+        timeRangeLabel
+      } trailingTop: {
+        // Net/gross amount
+        let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
+        HStack(spacing: Spacing.micro) {
+          if showIncreaseHighlight {
+            Text("+")
+              .font(.tidexTitle)
+              .tracking(-0.5)
+              .foregroundColor(.tidexBlue)
+          }
+          CurrencyCountUpText(
+            amount: displayAmount,
+            duration: 0.8,
+            animateOnAppear: true,
+            animateChanges: true
+          )
+          .font(.tidexTitle)
+          .tracking(-0.5)
+          .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
+        }
+      } trailingBottom: {
+        // Breakdown (gross - tax) when tax enabled
+        if showBreakdown {
+          HStack(spacing: Spacing.xxs) {
+            Text(formatPlainAmount(shift.grossPay))
+              .contentTransition(.numericText(value: shift.grossPay))
+            Text("−")
+            Text(formatPlainAmount(shift.taxAmount))
+              .contentTransition(.numericText(value: shift.taxAmount))
+          }
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextMuted)
+          .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)
+          .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)
+        }
+      }
+      .padding(.horizontal, Spacing.mlg)
+      .padding(.vertical, Spacing.lg)
+      .background(Color.tidexSurfacePrimary)
+      .overlay(alignment: .leading) {
+        // Progress bar overlay - fills from left based on progress (for active shifts)
+        // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
+        // The clipShape on the parent handles the rounded corners
+        if hasProgress(displayedProgress) {
+          GeometryReader { geometry in
+            Rectangle()
+              .fill(Color.tidexBlue.opacity(0.1))
+              .frame(width: geometry.size.width * (animatedProgress / 100))
           }
         }
-        .padding(.horizontal, Spacing.mlg)
-        .padding(.vertical, Spacing.lg)
-        .background(Color.tidexSurfacePrimary)
-        .overlay(alignment: .leading) {
-          // Progress bar overlay - fills from left based on progress (for active shifts)
-          // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
-          // The clipShape on the parent handles the rounded corners
-          if hasProgress(displayedProgress) {
-            GeometryReader { geometry in
-              Rectangle()
-                .fill(Color.tidexBlue.opacity(0.1))
-                .frame(width: geometry.size.width * (animatedProgress / 100))
-            }
-          }
+      }
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+      .tidexCardShadow()
+      .onChange(of: displayedProgress) { _, newValue in
+        // Animate to new progress value
+        withAnimation(.linear(duration: 1.0)) {
+          animatedProgress = newValue ?? 0
         }
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
-        .tidexCardShadow()
-        .onChange(of: displayedProgress) { _, newValue in
-          // Animate to new progress value
+      }
+      .onAppear {
+        // Animate from 0 to current progress on appear (matches CSS animation)
+        if hasProgress(displayedProgress) {
           withAnimation(.linear(duration: 1.0)) {
-            animatedProgress = newValue ?? 0
+            animatedProgress = displayedProgress ?? 0
           }
         }
-        .onAppear {
-          // Animate from 0 to current progress on appear (matches CSS animation)
-          if hasProgress(displayedProgress) {
-            withAnimation(.linear(duration: 1.0)) {
-              animatedProgress = displayedProgress ?? 0
-            }
-          }
-        }
+      }
 
-        // Footer text below the card (countdown or "Best shift")
-        // Uses fixed height to prevent layout shift during transitions
-        if showFooter {
-          Group {
-            if let text = displayedFooterText {
-              if isBestShift {
-                HStack(spacing: Spacing.xxxs) {
-                  Image(systemName: "star.fill")
-                    .font(.tidexCaptionRegular)
-                    .foregroundColor(.tidexBlue)
-                  Text(text)
-                    .font(.tidexLabel)
-                    .foregroundColor(.tidexTextSecondary)
-                }
-              } else {
-                ShiftCountdownBadge(
-                  text: text,
-                  status: status,
-                  finalCountdownSeconds: liveState.finalCountdownSeconds
-                )
+      // Footer text below the card (countdown or "Best shift")
+      // Uses fixed height to prevent layout shift during transitions
+      if showFooter {
+        Group {
+          if let text = displayedFooterText {
+            if isBestShift {
+              HStack(spacing: Spacing.xxxs) {
+                Image(systemName: "star.fill")
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexBlue)
+                Text(text)
+                  .font(.tidexLabel)
+                  .foregroundColor(.tidexTextSecondary)
               }
             } else {
-              // Skeleton placeholder bar matching other empty states
-              RoundedRectangle(cornerRadius: CornerRadius.xxs)
-                .fill(Color.tidexTextMuted.opacity(0.3))
-                .frame(width: 80, height: 14)
+              ShiftCountdownBadge(
+                text: text,
+                status: status,
+                finalCountdownSeconds: finalCountdownSeconds
+              )
             }
+          } else {
+            // Skeleton placeholder bar matching other empty states
+            RoundedRectangle(cornerRadius: CornerRadius.xxs)
+              .fill(Color.tidexTextMuted.opacity(0.3))
+              .frame(width: 80, height: 14)
           }
-          .frame(height: 20)  // Fixed height prevents vertical jerk
         }
+        .frame(height: 20)  // Fixed height prevents vertical jerk
       }
     }
   }

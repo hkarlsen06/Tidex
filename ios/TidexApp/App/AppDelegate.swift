@@ -20,6 +20,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   /// Prevents duplicate APNs registration calls while one is in flight
   private var apnsRegistrationInFlight = false
+  /// Serial queue for Live Activity maintenance to avoid stacked foreground/sync triggers.
+  private let liveActivityQueue = DispatchQueue(
+    label: "no.tidex.app.live-activity-maintenance",
+    qos: .utility
+  )
+  private var liveActivityMaintenanceInFlight = false
 
   private func shiftDateTimeFormatter() -> DateFormatter {
     FormatterCache.shiftDateTimeFormatter(timeZone: .current)
@@ -111,6 +117,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   ///
   /// This ensures the Live Activity starts whenever the app is active and data is refreshed.
   func checkAndStartLiveActivityIfNeeded() {
+    liveActivityQueue.async { [weak self] in
+      guard let self else { return }
+      guard !self.liveActivityMaintenanceInFlight else { return }
+
+      self.liveActivityMaintenanceInFlight = true
+      defer { self.liveActivityMaintenanceInFlight = false }
+      self.performLiveActivityMaintenance()
+    }
+  }
+
+  private func performLiveActivityMaintenance() {
     // Check if Live Activities are enabled
     let authInfo = ActivityAuthorizationInfo()
     guard authInfo.areActivitiesEnabled else {
