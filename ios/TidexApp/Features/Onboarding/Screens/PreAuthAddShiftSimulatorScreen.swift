@@ -17,6 +17,8 @@ struct PreAuthAddShiftSimulatorScreen: View {
   @State private var focusedTimeField: TimeInputField?
   @State private var relaxFocusInAddStage = false
   @State private var focusRelaxToken = 0
+  @State private var hasAcknowledgedTotals = false
+  @State private var hintShimmerTrigger = 0
 
   init(
     initialCurrency: String,
@@ -52,6 +54,8 @@ struct PreAuthAddShiftSimulatorScreen: View {
       return String(localized: "onboarding.add_simulator.focus.calendar", table: "Localizable")
     case .times:
       return String(localized: "onboarding.add_simulator.focus.times", table: "Localizable")
+    case .totals:
+      return String(localized: "onboarding.add_simulator.focus.totals", table: "Localizable")
     case .add:
       return String(localized: "onboarding.add_simulator.focus.add", table: "Localizable")
     }
@@ -61,14 +65,25 @@ struct PreAuthAddShiftSimulatorScreen: View {
     if viewModel.selectedDates.isEmpty {
       return .calendar
     }
-    if viewModel.canContinue {
-      return .add
+    guard viewModel.canContinue else {
+      return .times
     }
-    return .times
+    if !hasAcknowledgedTotals {
+      return .totals
+    }
+    return .add
   }
 
   private var shouldDimNonFocusedSections: Bool {
     !(focusStage == .add && relaxFocusInAddStage)
+  }
+
+  private var isAddButtonEnabled: Bool {
+    viewModel.canContinue && focusStage == .add
+  }
+
+  private var shouldShowTotalsAcknowledgement: Bool {
+    focusStage == .totals
   }
 
   var body: some View {
@@ -110,14 +125,11 @@ struct PreAuthAddShiftSimulatorScreen: View {
             )
           }
 
-          Text(simulatorHint)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
-            .multilineTextAlignment(.center)
-            .lineLimit(3)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .layoutPriority(1)
+          OnboardingHintShimmerText(
+            text: simulatorHint,
+            trigger: hintShimmerTrigger
+          )
+          .layoutPriority(1)
         }
         .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
@@ -131,6 +143,14 @@ struct PreAuthAddShiftSimulatorScreen: View {
     .safeAreaInset(edge: .bottom, spacing: 0) {
       bottomShell
     }
+    .overlay(alignment: .bottom) {
+      if shouldShowTotalsAcknowledgement {
+        totalsAcknowledgementButton
+          .padding(.bottom, MonthPickerLayout.bottomPadding + Spacing.sm)
+          .transition(.opacity.combined(with: .scale(scale: 0.94)))
+          .zIndex(3)
+      }
+    }
     .onTapGesture {
       focusedTimeField = nil
       hideKeyboard()
@@ -139,9 +159,13 @@ struct PreAuthAddShiftSimulatorScreen: View {
       onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
       scheduleFocusRelaxIfNeeded()
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        triggerHintShimmer()
+      }
     }
     .onChange(of: focusStage) { _, _ in
       scheduleFocusRelaxIfNeeded()
+      triggerHintShimmer()
     }
     .onChange(of: initialCurrency) { _, newCurrency in
       syncCurrencyFromParent(newCurrency)
@@ -185,6 +209,22 @@ struct PreAuthAddShiftSimulatorScreen: View {
           showDelta: viewModel.canContinue
         )
         .fixedSize(horizontal: true, vertical: false)
+        .simulatorFocusStyle(
+          isFocused: !shouldDimNonFocusedSections || focusStage == .totals,
+          reduceTransparency: reduceTransparency
+        )
+        .scaleEffect(focusStage == .totals ? 1.03 : 1.0)
+        .overlay(alignment: .bottomTrailing) {
+          GeometryReader { geometry in
+            TotalsFocusSweepIndicator(
+              isActive: focusStage == .totals,
+              reduceMotion: reduceMotion,
+              trackWidth: max(geometry.size.width, 44)
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .offset(y: Spacing.sm)
+          }
+        }
       }
 
       OnboardingCurrencyCapsuleSelector(
@@ -238,20 +278,20 @@ struct PreAuthAddShiftSimulatorScreen: View {
         } label: {
           Image(systemName: "plus")
             .font(.tidexHeadline)
-            .foregroundColor(viewModel.canContinue ? .tidexBlue : .tidexTextMuted)
+            .foregroundColor(isAddButtonEnabled ? .tidexBlue : .tidexTextMuted)
             .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!viewModel.canContinue)
+        .disabled(!isAddButtonEnabled)
         .tidexGlass(
           shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          tint: viewModel.canContinue ? Color.tidexBlue.opacity(0.2) : nil,
+          tint: isAddButtonEnabled ? Color.tidexBlue.opacity(0.2) : nil,
           clear: true,
-          interactive: viewModel.canContinue,
-          disabled: !viewModel.canContinue
+          interactive: isAddButtonEnabled,
+          disabled: !isAddButtonEnabled
         )
-        .opacity(viewModel.canContinue ? 1.0 : 0.6)
+        .opacity(isAddButtonEnabled ? 1.0 : 0.6)
         .accessibilityLabel(Text(.tabsAdd))
         .simulatorFocusStyle(
           isFocused: !shouldDimNonFocusedSections || focusStage == .add,
@@ -268,7 +308,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
   }
 
   private func handleAddTap() {
-    guard viewModel.canContinue else { return }
+    guard isAddButtonEnabled else { return }
 
     focusedTimeField = nil
     hideKeyboard()
@@ -279,6 +319,15 @@ struct PreAuthAddShiftSimulatorScreen: View {
       viewModel.toolbarTotals ?? viewModel.baselineToolbarTotals,
       viewModel.currency
     )
+  }
+
+  private func handleTotalsAcknowledged() {
+    guard focusStage == .totals else { return }
+
+    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+      hasAcknowledgedTotals = true
+    }
   }
 
   private func handleCurrencySelection(_ selectedCurrency: String) {
@@ -296,9 +345,31 @@ struct PreAuthAddShiftSimulatorScreen: View {
     onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
   }
 
+  private func triggerHintShimmer() {
+    hintShimmerTrigger += 1
+  }
+
   private func hideKeyboard() {
     UIApplication.shared.sendAction(
       #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+  }
+
+  @ViewBuilder
+  private var totalsAcknowledgementButton: some View {
+    Button {
+      handleTotalsAcknowledged()
+    } label: {
+      Text(
+        String(localized: "onboarding.add_simulator.acknowledge_totals", table: "Localizable")
+      )
+      .font(.tidexBodyMedium)
+      .foregroundColor(.tidexBlue)
+      .lineLimit(1)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.xxxs)
+    }
+    .buttonStyle(.plain)
+    .tidexGlass(shape: .capsule, interactive: true)
   }
 
   private func scheduleFocusRelaxIfNeeded() {
@@ -315,11 +386,125 @@ struct PreAuthAddShiftSimulatorScreen: View {
       }
     }
   }
+
+}
+
+private struct OnboardingHintShimmerText: View {
+  let text: String
+  let trigger: Int
+
+  @State private var shimmerStartDate: Date?
+  @State private var isShimmerActive = false
+  @State private var cycleToken = 0
+
+  private let shimmerDuration = PreAuthSimulatorAnimationTiming.hintSweepDuration
+  private let shimmerCleanupDelay = PreAuthSimulatorAnimationTiming.hintCleanupDelay
+
+  var body: some View {
+    Group {
+      if isShimmerActive {
+        TimelineView(.animation) { context in
+          shimmerText(styledText(at: context.date))
+        }
+      } else {
+        shimmerText(staticText)
+      }
+    }
+    .onChange(of: trigger) { _, _ in
+      runShimmerCycle()
+    }
+    .onDisappear {
+      cycleToken += 1
+      isShimmerActive = false
+      shimmerStartDate = nil
+    }
+  }
+
+  private var staticText: AttributedString {
+    var attributed = AttributedString(text)
+    let basePointSize = UIFont.preferredFont(forTextStyle: .footnote).pointSize
+    attributed.font = .system(size: basePointSize, weight: .regular, design: .default)
+    attributed.foregroundColor = .tidexTextMuted
+    return attributed
+  }
+
+  private func shimmerText(_ attributed: AttributedString) -> some View {
+    Text(attributed)
+      .multilineTextAlignment(.center)
+      .lineLimit(3)
+      .fixedSize(horizontal: false, vertical: true)
+      .frame(maxWidth: .infinity, alignment: .center)
+  }
+
+  private func styledText(at currentDate: Date) -> AttributedString {
+    var attributed = AttributedString(text)
+    let characterCount = max(text.count, 1)
+    let basePointSize = UIFont.preferredFont(forTextStyle: .footnote).pointSize
+
+    guard
+      isShimmerActive,
+      let shimmerStartDate
+    else {
+      attributed.font = .system(size: basePointSize, weight: .regular, design: .default)
+      attributed.foregroundColor = .tidexTextMuted
+      return attributed
+    }
+
+    let elapsed = max(currentDate.timeIntervalSince(shimmerStartDate), 0)
+    let progress = CGFloat(min(elapsed / shimmerDuration, 1))
+    let radius = max(CGFloat(characterCount) * 0.24, 4)
+    let startCenter = -radius
+    let endCenter = CGFloat(max(characterCount - 1, 1)) + radius
+    let center = startCenter + ((endCenter - startCenter) * progress)
+
+    var charIndex = 0
+    var stringIndex = text.startIndex
+
+    while stringIndex < text.endIndex {
+      let nextIndex = text.index(after: stringIndex)
+      let charRange = stringIndex..<nextIndex
+      if let attributedRange = Range(charRange, in: attributed) {
+        let distance = abs(CGFloat(charIndex) - center)
+        let intensity = max(0, 1 - (distance / radius))
+        let weight: Font.Weight =
+          intensity > 0.6 ? .bold : (intensity > 0.25 ? .semibold : .regular)
+        let size = basePointSize * (1 + (0.09 * intensity))
+        let color: Color = intensity > 0.08 ? .tidexBlue : .tidexTextMuted
+
+        attributed[attributedRange].font = .system(size: size, weight: weight, design: .default)
+        attributed[attributedRange].foregroundColor = color
+      }
+      stringIndex = nextIndex
+      charIndex += 1
+    }
+
+    return attributed
+  }
+
+  private func runShimmerCycle() {
+    cycleToken += 1
+    let token = cycleToken
+    shimmerStartDate = Date()
+    isShimmerActive = true
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + shimmerDuration + shimmerCleanupDelay) {
+      guard token == cycleToken else { return }
+      isShimmerActive = false
+      shimmerStartDate = nil
+    }
+  }
+}
+
+private enum PreAuthSimulatorAnimationTiming {
+  static let hintSweepDuration: TimeInterval = 1.28
+  static let hintCleanupDelay: TimeInterval = 0.08
+  static let totalsIndicatorStartDelay: TimeInterval = hintSweepDuration + hintCleanupDelay
 }
 
 private enum PreAuthSimulatorFocusStage {
   case calendar
   case times
+  case totals
   case add
 }
 
@@ -336,6 +521,108 @@ extension View {
         .opacity(0.55)
         .saturation(0.45)
         .blur(radius: reduceTransparency ? 0 : 1.5)
+    }
+  }
+}
+
+/// Blue focus indicator under totals: dot -> line to the right -> dot again from the left.
+private struct TotalsFocusSweepIndicator: View {
+  let isActive: Bool
+  let reduceMotion: Bool
+  let trackWidth: CGFloat
+
+  @State private var cycleToken = 0
+  @State private var hasPlayedCurrentActivation = false
+  @State private var leadingProgress: CGFloat = 0
+  @State private var trailingProgress: CGFloat = 0
+  @State private var indicatorOpacity: CGFloat = 0
+
+  private let dotDiameter: CGFloat = 7
+  private let lineHeight: CGFloat = 5
+  private let expandDuration: TimeInterval = 0.54
+  private let collapseDuration: TimeInterval = 0.58
+  private let fadeOutDuration: TimeInterval = 0.18
+  private let startDelay = PreAuthSimulatorAnimationTiming.totalsIndicatorStartDelay
+
+  var body: some View {
+    let travel = trackWidth - dotDiameter
+    let startX = travel * leadingProgress
+    let endX = travel * trailingProgress
+    let width = max(dotDiameter, (endX - startX) + dotDiameter)
+
+    Capsule(style: .continuous)
+      .fill(Color.tidexBlue)
+      .frame(width: width, height: lineHeight)
+      .offset(x: startX)
+      .frame(width: trackWidth, height: dotDiameter, alignment: .leading)
+      .opacity(indicatorOpacity)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+      .onAppear {
+        syncAnimationState()
+      }
+      .onChange(of: isActive) { _, _ in
+        syncAnimationState()
+      }
+      .onDisappear {
+        cycleToken += 1
+      }
+  }
+
+  private func syncAnimationState() {
+    cycleToken += 1
+    let token = cycleToken
+
+    if !isActive {
+      withAnimation(.easeOut(duration: 0.2)) {
+        leadingProgress = 0
+        trailingProgress = 0
+        indicatorOpacity = 0
+      }
+      hasPlayedCurrentActivation = false
+      return
+    }
+
+    guard !hasPlayedCurrentActivation else { return }
+
+    leadingProgress = 0
+    trailingProgress = 0
+    indicatorOpacity = 0
+
+    hasPlayedCurrentActivation = true
+
+    runSingleCycle(token: token)
+  }
+
+  private func runSingleCycle(token: Int) {
+    guard token == cycleToken, isActive else { return }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + startDelay) {
+      guard token == cycleToken, isActive else { return }
+
+      guard !reduceMotion else {
+        indicatorOpacity = 1
+        return
+      }
+
+      indicatorOpacity = 1
+      withAnimation(.easeInOut(duration: expandDuration)) {
+        trailingProgress = 1
+      }
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + expandDuration) {
+        guard token == cycleToken, isActive else { return }
+        withAnimation(.easeInOut(duration: collapseDuration)) {
+          leadingProgress = 1
+        }
+      }
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + expandDuration + collapseDuration) {
+        guard token == cycleToken, isActive else { return }
+        withAnimation(.easeOut(duration: fadeOutDuration)) {
+          indicatorOpacity = 0
+        }
+      }
     }
   }
 }

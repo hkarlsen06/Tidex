@@ -33,6 +33,8 @@ struct StepItem: View {
   let isVisible: Bool
   let progressState: StepProgressState
   let showConnector: Bool  // Show line to next step
+  let isDimmedForFocus: Bool
+  let titleFocusTrigger: Int
 
   @State private var showCheckPulse = false
 
@@ -45,13 +47,17 @@ struct StepItem: View {
   private let connectorHeight: CGFloat = 20
 
   var body: some View {
+    let emphasisOpacity = isDimmedForFocus ? 0.5 : 1.0
+    let descriptionOpacity = isDimmedForFocus ? 0.42 : 0.9
+    let iconBackgroundOpacity = isDimmedForFocus ? 0.1 : 0.2
+
     HStack(alignment: .top, spacing: Spacing.md) {
       // Left column: Icon + connector line (vertically stacked, centered)
       VStack(spacing: 0) {
         // Icon circle with optional check pulse
         ZStack {
           Circle()
-            .fill(Color.tidexBlue.opacity(progressState.iconBackgroundOpacity))
+            .fill(Color.tidexBlue.opacity(iconBackgroundOpacity))
             .frame(width: iconSize, height: iconSize)
 
           // Checkmark pulse ring (only for active step)
@@ -66,7 +72,7 @@ struct StepItem: View {
           Image(systemName: icon)
             .font(.tidexHeadline)
             .foregroundColor(.tidexBlue)
-            .opacity(progressState.contentOpacity)
+            .opacity(emphasisOpacity)
         }
 
         // Connector line below icon
@@ -88,12 +94,24 @@ struct StepItem: View {
         Text(title)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
-          .opacity(progressState.contentOpacity)
+          .opacity(emphasisOpacity)
+          .overlay(alignment: .bottomLeading) {
+            GeometryReader { geometry in
+              StepTitleFocusIndicator(
+                trackWidth: max(geometry.size.width, 28),
+                trigger: titleFocusTrigger,
+                isVisible: isVisible
+              )
+              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+              .offset(y: Spacing.xxxs + 1)
+            }
+          }
+          .padding(.bottom, Spacing.xxxs + 2)
 
         Text(description)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
-          .opacity(progressState.contentOpacity * 0.9)
+          .opacity(descriptionOpacity)
       }
       .frame(minHeight: iconSize, alignment: .center)
 
@@ -106,6 +124,7 @@ struct StepItem: View {
         .delay(entranceDelay),
       value: isVisible
     )
+    .animation(.easeInOut(duration: 0.26), value: isDimmedForFocus)
     .onChange(of: isVisible) { _, visible in
       // Trigger checkmark pulse for active step after entrance
       if visible && progressState == .active {
@@ -129,6 +148,81 @@ extension StepItem {
     self.isVisible = isVisible
     self.progressState = .active
     self.showConnector = false
+    self.isDimmedForFocus = false
+    self.titleFocusTrigger = 0
+  }
+}
+
+private struct StepTitleFocusIndicator: View {
+  let trackWidth: CGFloat
+  let trigger: Int
+  let isVisible: Bool
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var animationToken = 0
+  @State private var leadingProgress: CGFloat = 0
+  @State private var trailingProgress: CGFloat = 0
+  @State private var indicatorOpacity: CGFloat = 0
+
+  private let dotDiameter: CGFloat = 6
+  private let lineHeight: CGFloat = 4
+  private let expandDuration: TimeInterval = 0.54
+  private let collapseDuration: TimeInterval = 0.58
+  private let fadeOutDuration: TimeInterval = 0.18
+
+  var body: some View {
+    let travel = trackWidth - dotDiameter
+    let startX = travel * leadingProgress
+    let endX = travel * trailingProgress
+    let width = max(dotDiameter, (endX - startX) + dotDiameter)
+
+    Capsule(style: .continuous)
+      .fill(Color.tidexBlue)
+      .frame(width: width, height: lineHeight)
+      .offset(x: startX)
+      .frame(width: trackWidth, height: dotDiameter, alignment: .leading)
+      .opacity(Double(indicatorOpacity) * (isVisible ? 1.0 : 0.0))
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+      .onChange(of: trigger) { _, _ in
+        runOneShot()
+      }
+      .onDisappear {
+        animationToken += 1
+      }
+  }
+
+  private func runOneShot() {
+    animationToken += 1
+    let token = animationToken
+    leadingProgress = 0
+    trailingProgress = 0
+    indicatorOpacity = 1
+
+    guard !reduceMotion else {
+      withAnimation(.easeOut(duration: fadeOutDuration)) {
+        indicatorOpacity = 0
+      }
+      return
+    }
+
+    withAnimation(.easeInOut(duration: expandDuration)) {
+      trailingProgress = 1
+    }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + expandDuration) {
+      guard token == animationToken else { return }
+      withAnimation(.easeInOut(duration: collapseDuration)) {
+        leadingProgress = 1
+      }
+    }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + expandDuration + collapseDuration) {
+      guard token == animationToken else { return }
+      withAnimation(.easeOut(duration: fadeOutDuration)) {
+        indicatorOpacity = 0
+      }
+    }
   }
 }
 
@@ -141,7 +235,9 @@ extension StepItem {
       index: 0,
       isVisible: true,
       progressState: .active,
-      showConnector: true
+      showConnector: true,
+      isDimmedForFocus: false,
+      titleFocusTrigger: 1
     )
 
     StepItem(
@@ -151,7 +247,9 @@ extension StepItem {
       index: 1,
       isVisible: true,
       progressState: .upcoming,
-      showConnector: true
+      showConnector: true,
+      isDimmedForFocus: false,
+      titleFocusTrigger: 0
     )
 
     StepItem(
@@ -161,7 +259,9 @@ extension StepItem {
       index: 2,
       isVisible: true,
       progressState: .future,
-      showConnector: false
+      showConnector: false,
+      isDimmedForFocus: false,
+      titleFocusTrigger: 0
     )
   }
   .padding(.horizontal, Spacing.lg)
