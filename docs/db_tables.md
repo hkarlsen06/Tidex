@@ -18,15 +18,25 @@ Reference documentation for Tidex database tables and relationships.
         │                           │                           │
         ▼                           ▼                           ▼
 ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
-│   profiles    │           │  user_shifts  │           │ shift_shares  │
-│user_settings  │           │recurring_shifts│          │(owner↔viewer) │
-│ subscriptions │           │ wage_snapshots │           └───────────────┘
-│notification_  │           │ push_devices  │
-│  preferences  │           │shift_reminders│
-│app_account_   │           │   _sent       │
-│    tokens     │           │   feedback    │
+│   profiles    │           │     jobs      │           │ shift_shares  │
+│user_settings  │           │  user_shifts  │           │(owner↔viewer) │
+│ subscriptions │           │recurring_shifts│           └───────────────┘
+│notification_  │           │ wage_snapshots │
+│  preferences  │           │ push_devices  │
+│app_account_   │           │shift_reminders│
+│    tokens     │           │   _sent       │
+│               │           │   feedback    │
 └───────────────┘           └───────────────┘
-
+                                    │
+                             jobs owns 1:N
+                                    │
+                    ┌───────────────┴───────────────┐
+                    │                               │
+             ┌──────────────┐             ┌─────────────────┐
+             │ user_shifts  │             │  wage_snapshots  │
+             │ recurring_   │             │                 │
+             │   shifts     │             └─────────────────┘
+             └──────────────┘
 
                     ┌───────────────┐
                     │ tariff_types  │
@@ -60,12 +70,16 @@ Each user can have many of these records.
 
 | One (Parent) | Many (Child) | Description |
 |--------------|--------------|-------------|
+| `auth.users` | `jobs` | One user → many jobs/employers |
 | `auth.users` | `user_shifts` | One user → many individual shifts |
 | `auth.users` | `recurring_shifts` | One user → many recurring shift patterns |
 | `auth.users` | `wage_snapshots` | One user → many wage history records |
 | `auth.users` | `push_devices` | One user → many registered devices |
 | `auth.users` | `shift_reminders_sent` | One user → many sent reminder records |
 | `auth.users` | `feedback` | One user → many feedback submissions |
+| `jobs` | `user_shifts` | One job → many shifts belonging to that job |
+| `jobs` | `recurring_shifts` | One job → many recurring patterns belonging to that job |
+| `jobs` | `wage_snapshots` | One job → many wage history records for that job |
 | `tariff_types` | `tariff_versions` | One tariff agreement → many versions over time |
 | `impersonation_sessions` | `impersonation_audit_log` | One session → many audit entries |
 
@@ -78,6 +92,35 @@ Each user can have many of these records.
 ---
 
 ## Tables (public schema)
+
+### jobs
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| **id** | `uuid` | PK, default: `gen_random_uuid()` |
+| user_id | `uuid` | FK → auth.users (ON DELETE CASCADE), NOT NULL |
+| name | `text` | NOT NULL, 1-100 chars |
+| color | `text` | nullable, format: `#RRGGBB` |
+| is_default | `boolean` | NOT NULL, default: false |
+| sort_order | `smallint` | NOT NULL, default: 0 |
+| payroll_day | `integer` | range: 1-31, default: 15 |
+| half_tax_month | `integer` | values: 11, 12, or null |
+| monthly_goal | `integer` | default: 20000 |
+| archived_at | `timestamptz` | nullable (archived = hidden from Add Shift pickers) |
+| deleted_at | `timestamptz` | nullable (soft delete) |
+| created_at | `timestamptz` | NOT NULL, default: `now()` |
+| updated_at | `timestamptz` | NOT NULL, default: `now()` |
+| revision | `bigint` | NOT NULL, default: 1 |
+
+**Unique constraints:**
+- `UNIQUE (user_id) WHERE is_default = true AND deleted_at IS NULL AND archived_at IS NULL`
+
+**Notes:**
+- Every user gets a default job ("Jobb") on sign-up
+- Payroll settings (`payroll_day`, `half_tax_month`, `monthly_goal`) have been moved here from `user_settings`; `user_settings` keeps mirrored copies for legacy client compatibility
+- DB triggers keep `user_settings` and the default job in sync bidirectionally
+
+---
 
 ### profiles
 
@@ -164,6 +207,7 @@ Each user can have many of these records.
 |--------|------|-------------|
 | **id** | `uuid` | PK |
 | user_id | `uuid` | FK → auth.users, NOT NULL |
+| job_id | `uuid` | FK → jobs, NOT NULL (assigned by trigger when omitted by legacy clients) |
 | shift_date | `date` | NOT NULL |
 | start_time | `text` | NOT NULL |
 | end_time | `text` | NOT NULL |
@@ -181,6 +225,7 @@ Each user can have many of these records.
 |--------|------|-------------|
 | **id** | `uuid` | PK |
 | user_id | `uuid` | FK → auth.users, default: auth.uid() |
+| job_id | `uuid` | FK → jobs, NOT NULL (all generated virtual shifts inherit this job) |
 | start_time | `timetz` | NOT NULL |
 | end_time | `timetz` | NOT NULL |
 | repeat_interval_weeks | `smallint` | NOT NULL |
@@ -201,7 +246,8 @@ Each user can have many of these records.
 |--------|------|-------------|
 | **id** | `uuid` | PK |
 | user_id | `uuid` | FK → auth.users |
-| from_date | `date` | unique per user |
+| job_id | `uuid` | FK → jobs, NOT NULL (controls which job's wage history applies) |
+| from_date | `date` | unique per (user, job); NULL = baseline snapshot for this job |
 | hourly_wage | `numeric` | NOT NULL |
 | wage_level | `integer` | null = custom, 1-9 = tariff level |
 | tariff_type_id | `text` | FK → internal.tariff_types |
@@ -216,6 +262,10 @@ Each user can have many of these records.
 | revision | `bigint` | default: 1 |
 | created_at | `timestamptz` | |
 | updated_at | `timestamptz` | |
+
+**Unique constraints (updated for multi-job):**
+- `UNIQUE (user_id, job_id) WHERE from_date IS NULL AND deleted_at IS NULL`
+- `UNIQUE (user_id, job_id, from_date) WHERE from_date IS NOT NULL AND deleted_at IS NULL`
 
 ---
 
@@ -330,4 +380,4 @@ Each user can have many of these records.
 
 ---
 
-*Last updated: 2026-02-03*
+*Last updated: 2026-02-26*
