@@ -23,13 +23,45 @@ struct TotalCard: View {
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// Animated fraction for the monthly goal progress bar.
   @State private var animatedGoalProgressFraction: Double = 0
+  /// Second-pass overlay progress (0...1) that sweeps gradient over the filled blue bar.
+  @State private var goalReachedOverlayProgress: Double = 0
+  /// Pending delayed task for activating reached-goal visuals.
+  @State private var goalVisualTask: Task<Void, Never>?
 
   /// Tracks whether the launch count-up animation has already played this session.
   /// Static so it persists across view recreations but resets on app restart.
   private static var hasPlayedLaunchAnimation = false
+
+  private let goalFillAnimationDuration: Double = 0.52
+  private let goalReachedSweepDuration: Double = 0.4
+
+  private struct GlitterSpeck: Identifiable {
+    let id: Int
+    let x: CGFloat
+    let y: CGFloat
+    let size: CGFloat
+    let opacity: Double
+  }
+
+  // Deterministic sparkle texture so the bar feels premium, not noisy.
+  private static let glitterSpecks: [GlitterSpeck] = [
+    .init(id: 0, x: 0.07, y: 0.32, size: 1.6, opacity: 0.55),
+    .init(id: 1, x: 0.13, y: 0.66, size: 1.2, opacity: 0.42),
+    .init(id: 2, x: 0.21, y: 0.45, size: 1.4, opacity: 0.50),
+    .init(id: 3, x: 0.30, y: 0.22, size: 1.8, opacity: 0.62),
+    .init(id: 4, x: 0.37, y: 0.70, size: 1.1, opacity: 0.40),
+    .init(id: 5, x: 0.46, y: 0.38, size: 1.5, opacity: 0.56),
+    .init(id: 6, x: 0.54, y: 0.60, size: 1.3, opacity: 0.47),
+    .init(id: 7, x: 0.63, y: 0.30, size: 1.7, opacity: 0.60),
+    .init(id: 8, x: 0.72, y: 0.68, size: 1.2, opacity: 0.44),
+    .init(id: 9, x: 0.81, y: 0.41, size: 1.6, opacity: 0.58),
+    .init(id: 10, x: 0.90, y: 0.24, size: 1.4, opacity: 0.52),
+    .init(id: 11, x: 0.95, y: 0.62, size: 1.1, opacity: 0.38),
+  ]
 
   // MARK: - Computed Properties
 
@@ -92,10 +124,15 @@ struct TotalCard: View {
     isLoading || goalTarget != nil
   }
 
-  /// Progress fraction for monthly goal (0.0-1.0), clamped.
-  private var goalProgressFraction: Double {
+  /// Raw progress fraction for monthly goal (can exceed 1.0 when over target).
+  private var rawGoalProgressFraction: Double {
     guard let goalTarget else { return 0 }
-    return min(max(mainDisplayValue / goalTarget, 0), 1)
+    return max(mainDisplayValue / goalTarget, 0)
+  }
+
+  /// Progress fraction used for bar fill (0.0-1.0), clamped to the track.
+  private var goalProgressFraction: Double {
+    min(rawGoalProgressFraction, 1)
   }
 
   /// Rendered fraction for the progress bar.
@@ -105,8 +142,30 @@ struct TotalCard: View {
   }
 
   private var goalProgressPercentText: String {
-    let percent = Int((goalProgressFraction * 100).rounded())
+    let percent = Int((rawGoalProgressFraction * 100).rounded())
     return "\(percent)%"
+  }
+
+  private var isGoalReachedOrExceeded: Bool {
+    !isLoading && rawGoalProgressFraction >= 1
+  }
+
+  private var showGoalReachedOverlay: Bool {
+    goalReachedOverlayProgress > 0
+  }
+
+  private var goalReachedOverlayStyle: AnyShapeStyle {
+    AnyShapeStyle(
+      LinearGradient(
+        colors: [
+          .tidexBrandPrimary,
+          .tidexBlue,
+          .tidexBlue.opacity(0.82),
+        ],
+        startPoint: .leading,
+        endPoint: .trailing
+      )
+    )
   }
 
   // MARK: - Subtitle Text
@@ -186,18 +245,15 @@ struct TotalCard: View {
     .tidexCardShadow()
     .shimmer(isActive: isLoading)
     .onChange(of: renderedGoalProgressFraction) { _, newValue in
-      withAnimation(.easeOut(duration: 0.6)) {
-        animatedGoalProgressFraction = newValue
-      }
+      animateGoalProgress(to: newValue)
+      syncGoalReachedVisualsAfterProgressAnimation(for: newValue)
     }
     .onAppear {
-      if renderedGoalProgressFraction > 0 {
-        withAnimation(.easeOut(duration: 0.6)) {
-          animatedGoalProgressFraction = renderedGoalProgressFraction
-        }
-      } else {
-        animatedGoalProgressFraction = 0
-      }
+      animateGoalProgress(to: renderedGoalProgressFraction)
+      syncGoalReachedVisualsAfterProgressAnimation(for: renderedGoalProgressFraction)
+    }
+    .onDisappear {
+      goalVisualTask?.cancel()
     }
   }
 
@@ -305,13 +361,45 @@ struct TotalCard: View {
                 width: geometry.size.width * animatedGoalProgressFraction,
                 height: 8
               )
+
+            RoundedRectangle(cornerRadius: CornerRadius.xs)
+              .fill(goalReachedOverlayStyle)
+              .frame(
+                width: geometry.size.width
+                  * animatedGoalProgressFraction
+                  * goalReachedOverlayProgress,
+                height: 8
+              )
+              .shadow(
+                color: showGoalReachedOverlay ? Color.tidexBlue.opacity(0.4) : .clear,
+                radius: 8,
+                x: 0,
+                y: 0
+              )
+              .shadow(
+                color: showGoalReachedOverlay ? Color.tidexBlue.opacity(0.28) : .clear,
+                radius: 14,
+                x: 0,
+                y: 0
+              )
+              .overlay {
+                if showGoalReachedOverlay {
+                  RoundedRectangle(cornerRadius: CornerRadius.xs)
+                    .stroke(Color.white.opacity(0.28), lineWidth: 0.8)
+                }
+              }
+              .overlay {
+                if showGoalReachedOverlay {
+                  goalGlitterOverlay
+                }
+              }
           }
         }
         .frame(height: 8)
 
         ZStack(alignment: .trailing) {
           // Always present — anchors both the width and height to the real font metrics.
-          Text("100%")
+          Text("999%")
             .font(.tidexLabel)
             .monospacedDigit()
             .hidden()
@@ -326,6 +414,12 @@ struct TotalCard: View {
               .monospacedDigit()
               .lineLimit(1)
               .foregroundColor(.tidexBlue)
+              .shadow(
+                color: showGoalReachedOverlay ? Color.tidexBlue.opacity(0.35) : .clear,
+                radius: 6,
+                x: 0,
+                y: 0
+              )
           }
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -337,6 +431,78 @@ struct TotalCard: View {
       .padding(.top, -Spacing.xxs)
       .padding(.bottom, Spacing.xs)
     }
+  }
+
+  private var goalGlitterOverlay: some View {
+    TimelineView(.animation(minimumInterval: reduceMotion ? 0.35 : 1.0 / 24.0)) { context in
+      let time = context.date.timeIntervalSinceReferenceDate
+      GeometryReader { geometry in
+        ZStack {
+          ForEach(Self.glitterSpecks) { speck in
+            glitterSpeckView(speck, time: time, size: geometry.size)
+          }
+          glitterSheenOverlay
+        }
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs))
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func glitterSpeckView(_ speck: GlitterSpeck, time: TimeInterval, size: CGSize)
+    -> some View
+  {
+    let xRatio = glitterXRatio(for: speck, time: time)
+    let yRatio = glitterYRatio(for: speck, time: time)
+    let opacity = speck.opacity * glitterTwinkle(for: speck, time: time)
+
+    Circle()
+      .fill(Color.white.opacity(opacity))
+      .frame(width: speck.size, height: speck.size)
+      .position(
+        x: size.width * xRatio,
+        y: size.height * yRatio
+      )
+  }
+
+  private var glitterSheenOverlay: some View {
+    LinearGradient(
+      colors: [
+        Color.white.opacity(0.20),
+        Color.clear,
+        Color.white.opacity(0.10),
+      ],
+      startPoint: .topLeading,
+      endPoint: .bottomTrailing
+    )
+  }
+
+  private func glitterXRatio(for speck: GlitterSpeck, time: TimeInterval) -> CGFloat {
+    guard !reduceMotion else { return speck.x }
+    let frequency = 0.9 + Double(speck.id % 4) * 0.16
+    let phase = Double(speck.id)
+    let drift = CGFloat(sin(time * frequency + phase) * 0.018)
+    return clamp(speck.x + drift, lower: 0.02, upper: 0.98)
+  }
+
+  private func glitterYRatio(for speck: GlitterSpeck, time: TimeInterval) -> CGFloat {
+    guard !reduceMotion else { return speck.y }
+    let frequency = 1.1 + Double(speck.id % 3) * 0.2
+    let phase = Double(speck.id) * 0.6
+    let drift = CGFloat(cos(time * frequency + phase) * 0.11)
+    return clamp(speck.y + drift, lower: 0.12, upper: 0.88)
+  }
+
+  private func glitterTwinkle(for speck: GlitterSpeck, time: TimeInterval) -> Double {
+    guard !reduceMotion else { return 1.0 }
+    let frequency = 2.4 + Double(speck.id % 5) * 0.35
+    let phase = Double(speck.id)
+    let normalizedSine = (sin(time * frequency + phase) + 1) / 2
+    return 0.78 + (normalizedSine * 0.22)
+  }
+
+  private func clamp(_ value: CGFloat, lower: CGFloat, upper: CGFloat) -> CGFloat {
+    min(upper, max(lower, value))
   }
 
   @ViewBuilder
@@ -368,6 +534,35 @@ struct TotalCard: View {
   }
 
   // MARK: - Formatting
+
+  private func animateGoalProgress(to newValue: Double) {
+    withAnimation(.spring(duration: goalFillAnimationDuration, bounce: 0.06)) {
+      animatedGoalProgressFraction = newValue
+    }
+  }
+
+  /// Keep the fill blue while it animates, then sweep a gradient overlay from left to right once full.
+  private func syncGoalReachedVisualsAfterProgressAnimation(for renderedProgress: Double) {
+    goalVisualTask?.cancel()
+
+    guard isGoalReachedOrExceeded && renderedProgress >= 1 else {
+      withAnimation(.easeOut(duration: 0.2)) {
+        goalReachedOverlayProgress = 0
+      }
+      return
+    }
+
+    goalReachedOverlayProgress = 0
+    goalVisualTask = Task { @MainActor in
+      let delay = UInt64(goalFillAnimationDuration * 1_000_000_000)
+      try? await Task.sleep(nanoseconds: delay)
+      guard !Task.isCancelled, isGoalReachedOrExceeded else { return }
+
+      withAnimation(.easeOut(duration: goalReachedSweepDuration)) {
+        goalReachedOverlayProgress = 1
+      }
+    }
+  }
 
   private func formatCurrency(_ amount: Double) -> String {
     CurrencyConfig.format(amount, currency: currency)
