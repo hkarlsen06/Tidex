@@ -11,6 +11,7 @@ final class CountdownManager: ObservableObject {
   @Published private(set) var shiftCountdownText: String?
   @Published private(set) var isShiftActive: Bool = false
   @Published private(set) var shiftProgress: Double = 0  // 0-100, only meaningful when isShiftActive
+  @Published private(set) var finalShiftCountdownSeconds: Int?
   @Published private(set) var payrollCountdownText: String?
   @Published private(set) var isPayrollToday: Bool = false
   @Published private(set) var isPayrollPast: Bool = false
@@ -77,10 +78,16 @@ final class CountdownManager: ObservableObject {
       self.shiftCountdownText = text
       self.isShiftActive = isActive
       self.shiftProgress = progress
+      self.finalShiftCountdownSeconds = CountdownFormatter.finalCountdownSecondsForShift(
+        shiftDate: shiftDate,
+        startTime: startTime,
+        endTime: endTime
+      )
     } else {
       self.shiftCountdownText = nil
       self.isShiftActive = false
       self.shiftProgress = 0
+      self.finalShiftCountdownSeconds = nil
     }
 
     // Update payroll countdown
