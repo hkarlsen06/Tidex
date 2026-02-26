@@ -439,13 +439,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
         print("[APNs] API error (\(httpResponse.statusCode)): \(errorMessage)")
         await MainActor.run {
-          PushNotificationManager.shared.serverRegistrationFailed(errorMessage)
+          PushNotificationManager.shared.serverRegistrationFailed(errorMessage, underlying: nil)
         }
       }
     } catch {
       print("[APNs] Failed to register token: \(error)")
       await MainActor.run {
-        PushNotificationManager.shared.serverRegistrationFailed(error.localizedDescription)
+        PushNotificationManager.shared.serverRegistrationFailed(
+          error.localizedDescription,
+          underlying: error
+        )
       }
     }
   }

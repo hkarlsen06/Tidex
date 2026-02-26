@@ -53,6 +53,45 @@ final class PushNotificationManager: ObservableObject {
     self.hasUserDismissedAlert = UserDefaults.standard.bool(forKey: alertDismissedKey)
   }
 
+  private func isTransientNetworkError(_ error: Error) -> Bool {
+    let transientCodes: Set<URLError.Code> = [
+      .timedOut,
+      .cannotFindHost,
+      .cannotConnectToHost,
+      .networkConnectionLost,
+      .dnsLookupFailed,
+      .notConnectedToInternet,
+      .internationalRoamingOff,
+      .callIsActive,
+      .dataNotAllowed,
+    ]
+
+    if let urlError = error as? URLError {
+      return transientCodes.contains(urlError.code)
+    }
+
+    let nsError = error as NSError
+    if nsError.domain == NSURLErrorDomain,
+      let code = URLError.Code(rawValue: nsError.code) as URLError.Code?
+    {
+      return transientCodes.contains(code)
+    }
+
+    return false
+  }
+
+  private func messageLooksTransientNetworkFailure(_ message: String) -> Bool {
+    let lowercased = message.lowercased()
+    return
+      lowercased.contains("offline")
+      || lowercased.contains("timed out")
+      || lowercased.contains("network connection")
+      || lowercased.contains("could not connect")
+      || lowercased.contains("cannot connect")
+      || lowercased.contains("could not find host")
+      || lowercased.contains("dns")
+  }
+
   // MARK: - State Updates
 
   /// Called when push registration succeeds
@@ -68,11 +107,20 @@ final class PushNotificationManager: ObservableObject {
 
   /// Called when APNs registration fails (iOS-level failure)
   func apnsRegistrationFailed(_ error: Error) {
+    if isTransientNetworkError(error) {
+      return
+    }
     registrationState = .apnsFailed(error.localizedDescription)
   }
 
   /// Called when server API registration fails
-  func serverRegistrationFailed(_ message: String) {
+  func serverRegistrationFailed(_ message: String, underlying error: Error? = nil) {
+    if let error, isTransientNetworkError(error) {
+      return
+    }
+    if messageLooksTransientNetworkFailure(message) {
+      return
+    }
     registrationState = .serverFailed(message)
   }
 
