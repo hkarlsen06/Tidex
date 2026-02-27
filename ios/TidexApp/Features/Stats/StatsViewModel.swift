@@ -20,6 +20,8 @@ final class StatsViewModel: ObservableObject {
 
   /// User's selected currency (from settings)
   @Published private(set) var currency: String = "kr"
+  @Published private(set) var activeJobs: [Job] = []
+  @Published private(set) var selectedJobId: String?
 
   /// Baseline monthly goal from settings (global fallback goal).
   var baselineMonthlyGoal: Int? {
@@ -48,6 +50,7 @@ final class StatsViewModel: ObservableObject {
 
   private let statsService: StatsService
   private let settingsRepository: SettingsRepository
+  private let jobsRepository: JobsRepository
   private let monthContext: SharedMonthContext
   private let syncCoordinator: SyncCoordinator
   private var cancellables = Set<AnyCancellable>()
@@ -58,11 +61,13 @@ final class StatsViewModel: ObservableObject {
   init(
     statsService: StatsService? = nil,
     settingsRepository: SettingsRepository? = nil,
+    jobsRepository: JobsRepository? = nil,
     monthContext: SharedMonthContext? = nil,
     syncCoordinator: SyncCoordinator? = nil
   ) {
     self.statsService = statsService ?? StatsService.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
+    self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
 
@@ -121,6 +126,23 @@ final class StatsViewModel: ObservableObject {
     monthContext.goToCurrentMonth()
   }
 
+  var shouldShowJobFilter: Bool {
+    activeJobs.count > 1
+  }
+
+  var selectedJobName: String? {
+    guard let selectedJobId else { return nil }
+    return activeJobs.first(where: { $0.id == selectedJobId })?.name
+  }
+
+  func selectJobFilter(_ jobId: String?) {
+    guard selectedJobId != jobId else { return }
+    selectedJobId = jobId
+    Task {
+      await loadStats()
+    }
+  }
+
   // MARK: - Public Methods
 
   /// Load stats for the displayed month from local data
@@ -131,6 +153,17 @@ final class StatsViewModel: ObservableObject {
     do {
       // Load user's currency from settings
       let session = try await AuthSessionManager.shared.getSession()
+      let userId = session.normalizedUserId
+
+      let jobs = jobsRepository.getNonDeletedJobs(for: userId)
+      activeJobs = jobs
+      if let selectedJobId, !jobs.contains(where: { $0.id == selectedJobId }) {
+        self.selectedJobId = nil
+      }
+      if jobs.count <= 1 {
+        self.selectedJobId = nil
+      }
+
       if let loadedSettings = settingsRepository.getSettings(for: session.normalizedUserId) {
         settings = loadedSettings
         currency = loadedSettings.currency ?? "kr"
@@ -138,7 +171,11 @@ final class StatsViewModel: ObservableObject {
         settings = nil
       }
 
-      stats = try await statsService.computeStats(year: displayYear, month: displayMonth)
+      stats = try await statsService.computeStats(
+        year: displayYear,
+        month: displayMonth,
+        jobId: selectedJobId
+      )
       logger.info(
         "Loaded stats for \(self.displayYear)-\(self.displayMonth): \(self.stats?.currentMonth.shiftCount ?? 0) shifts"
       )

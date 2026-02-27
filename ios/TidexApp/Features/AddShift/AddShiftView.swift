@@ -225,6 +225,17 @@ struct AddShiftView: View {
         }
       )
     }
+    .sheet(isPresented: $viewModel.showSubmitJobChooser) {
+      AddShiftJobChooserSheet(
+        jobs: viewModel.submissionJobs,
+        onSelect: { jobId in
+          viewModel.selectJobForShiftCreation(jobId)
+        },
+        onCancel: {
+          viewModel.dismissJobSelection()
+        }
+      )
+    }
     .confirmationDialog(
       String(localized: .addShiftStartFreshConfirmTitle),
       isPresented: $showStartFreshConfirmation,
@@ -312,8 +323,18 @@ private struct SingleShiftContent: View {
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
 
+  private var leadingJobAccessory: AnyView? {
+    guard viewModel.submissionJobs.count > 1 else { return nil }
+    return AnyView(
+      AddShiftJobSelectionChip(
+        selectedJob: viewModel.selectedJob,
+        onTap: { viewModel.presentJobSelection() }
+      )
+    )
+  }
+
   var body: some View {
-    VStack(spacing: 0) {
+    VStack(spacing: Spacing.sm) {
       AddShiftCalendarView(viewModel: viewModel)
 
       TimeRangePicker(
@@ -321,7 +342,8 @@ private struct SingleShiftContent: View {
         endTime: $viewModel.endTime,
         scrollProxy: scrollProxy,
         scrollId: "singleTimePicker",
-        focusedFieldBinding: $focusedTimeField
+        focusedFieldBinding: $focusedTimeField,
+        leadingChipAccessory: leadingJobAccessory
       )
       .padding(.top, Spacing.sm)
     }
@@ -334,6 +356,16 @@ private struct RecurringShiftContent: View {
   @ObservedObject var viewModel: AddShiftViewModel
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
+
+  private var leadingJobAccessory: AnyView? {
+    guard viewModel.submissionJobs.count > 1 else { return nil }
+    return AnyView(
+      AddShiftJobSelectionChip(
+        selectedJob: viewModel.selectedJob,
+        onTap: { viewModel.presentJobSelection() }
+      )
+    )
+  }
 
   var body: some View {
     VStack(spacing: Spacing.mlg) {
@@ -355,7 +387,8 @@ private struct RecurringShiftContent: View {
         endTime: $viewModel.endTime,
         scrollProxy: scrollProxy,
         scrollId: "recurringTimePicker",
-        focusedFieldBinding: $focusedTimeField
+        focusedFieldBinding: $focusedTimeField,
+        leadingChipAccessory: leadingJobAccessory
       )
 
       RepeatIntervalPicker(interval: $viewModel.repeatInterval)
@@ -367,6 +400,115 @@ private struct RecurringShiftContent: View {
     }
     // Extra bottom padding to clear the month picker
     .padding(.bottom, Spacing.bottomScrollMargin)
+  }
+}
+
+private struct AddShiftJobSelectionChip: View {
+  let selectedJob: Job?
+  let onTap: () -> Void
+
+  var body: some View {
+    Button(action: onTap) {
+      HStack(spacing: Spacing.xxxs) {
+        if let selectedJob {
+          WorkplaceNameText(
+            name: selectedJob.name,
+            colorHex: selectedJob.color,
+            font: .tidexMonoCaption,
+            fallbackBadgeColor: .tidexBlue,
+            badgeHorizontalPadding: Spacing.xs,
+            badgeVerticalPadding: 2
+          )
+          .lineLimit(1)
+          .truncationMode(.tail)
+        } else {
+          HStack(spacing: Spacing.xxxs) {
+            Image(systemName: "building.2")
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexBlue)
+
+            Text(String(localized: "settings.pay.choose_workplace.title"))
+              .font(.tidexMonoCaption)
+              .foregroundColor(.tidexBlue)
+          }
+          .padding(.horizontal, Spacing.sm)
+          .padding(.vertical, Spacing.xs)
+          .background(Color.tidexBlue.opacity(0.12))
+          .clipShape(Capsule())
+        }
+
+        Image(systemName: "chevron.down")
+          .font(.tidexMicro)
+          .foregroundColor(.tidexTextMuted)
+      }
+      .frame(height: 36)
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+private struct AddShiftJobChooserSheet: View {
+  let jobs: [Job]
+  let onSelect: (String) -> Void
+  let onCancel: () -> Void
+
+  private var detentHeight: CGFloat {
+    let visibleRows = max(1, min(jobs.count, 4))
+    return CGFloat(visibleRows) * 70 + 120
+  }
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: Spacing.sm) {
+          ForEach(jobs, id: \.id) { job in
+            Button {
+              onSelect(job.id)
+            } label: {
+              HStack(spacing: Spacing.sm) {
+                WorkplaceNameText(
+                  name: job.name,
+                  colorHex: job.color,
+                  font: .tidexBodyMedium,
+                  fallbackBadgeColor: .tidexBlue
+                )
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexTextMuted)
+              }
+              .padding(.horizontal, Spacing.md)
+              .padding(.vertical, Spacing.md)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(Color.tidexSurfaceSecondary)
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+              .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+          }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.md)
+      }
+      .scrollIndicators(.hidden)
+      .background(Color.tidexBackground)
+      .navigationTitle(String(localized: "settings.pay.choose_workplace.title"))
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: .commonCancel)) {
+            onCancel()
+          }
+        }
+      }
+    }
+    .presentationDetents([.height(detentHeight)])
+    .presentationDragIndicator(.visible)
   }
 }
 

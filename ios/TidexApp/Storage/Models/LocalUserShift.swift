@@ -18,6 +18,9 @@ final class LocalUserShift {
 
   // MARK: - Shift Data
 
+  /// Job that owns this shift (nullable during rollout compatibility)
+  var jobId: String?
+
   /// Date of the shift (stored as Date, derived from YYYY-MM-DD)
   var shiftDate: Date
 
@@ -134,6 +137,7 @@ final class LocalUserShift {
   init(
     id: String,
     userId: String,
+    jobId: String? = nil,
     shiftDate: Date,
     startTime: String,
     endTime: String,
@@ -149,6 +153,7 @@ final class LocalUserShift {
   ) {
     self.id = id
     self.userId = userId
+    self.jobId = jobId
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
@@ -174,6 +179,7 @@ final class LocalUserShift {
 /// Snapshot of server data for a user shift
 /// Used for conflict detection and field-level diffing
 struct UserShiftServerSnapshot: Codable, Equatable {
+  let jobId: String?
   let shiftDate: String
   let startTime: String
   let endTime: String
@@ -184,6 +190,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
 
   /// Create snapshot from a ShiftRow server response
   static func from(  // swiftlint:disable:this function_parameter_count
+    jobId: String?,
     shiftDate: String,
     startTime: String,
     endTime: String,
@@ -194,6 +201,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
   ) -> UserShiftServerSnapshot {
     let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
     return UserShiftServerSnapshot(
+      jobId: jobId,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
@@ -225,6 +233,9 @@ struct UserShiftServerSnapshot: Codable, Equatable {
   func changedFields(from other: UserShiftServerSnapshot) -> Set<UserShiftField> {
     var changed: Set<UserShiftField> = []
 
+    if jobId != other.jobId {
+      changed.insert(.jobId)
+    }
     if shiftDate != other.shiftDate {
       changed.insert(.shiftDate)
     }
@@ -250,6 +261,7 @@ extension LocalUserShift {
     ShiftRow(
       id: id,
       user_id: userId,
+      job_id: jobId,
       shift_date: shiftDateString,
       start_time: startTime,
       end_time: endTime,
@@ -279,6 +291,7 @@ extension LocalUserShift {
     }
 
     let snapshot = UserShiftServerSnapshot.from(
+      jobId: serverRow.job_id,
       shiftDate: serverRow.shift_date,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
@@ -291,6 +304,7 @@ extension LocalUserShift {
     return LocalUserShift(
       id: serverRow.id,
       userId: userId,
+      jobId: serverRow.job_id,
       shiftDate: shiftDate,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,

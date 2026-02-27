@@ -105,6 +105,11 @@ struct StatsView: View {
       ScrollView {
         VStack(spacing: Spacing.md) {
           Color.clear.frame(height: 0).id("stats-top")
+
+          if viewModel.shouldShowJobFilter {
+            statsJobFilterRow
+          }
+
           sectionHeader(.statsSectionOverview)
 
           // Monthly Earnings Card (large)
@@ -189,6 +194,80 @@ struct StatsView: View {
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.top, Spacing.xs)
+  }
+
+  @ViewBuilder
+  private var statsJobFilterRow: some View {
+    let selectedJob = viewModel.activeJobs.first(where: { $0.id == viewModel.selectedJobId })
+
+    HStack {
+      Text(.jobsFilterTitle)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      Spacer()
+
+      Menu {
+        Button {
+          selectionHaptic.selectionChanged()
+          viewModel.selectJobFilter(nil)
+        } label: {
+          if viewModel.selectedJobId == nil {
+            Label(String(localized: .jobsFilterAll), systemImage: "checkmark")
+          } else {
+            Text(.jobsFilterAll)
+          }
+        }
+
+        ForEach(viewModel.activeJobs) { job in
+          Button {
+            selectionHaptic.selectionChanged()
+            viewModel.selectJobFilter(job.id)
+          } label: {
+            if viewModel.selectedJobId == job.id {
+              Label {
+                WorkplaceNameText(
+                  name: job.name,
+                  colorHex: job.color,
+                  fallbackBadgeColor: .tidexBlue
+                )
+              } icon: {
+                Image(systemName: "checkmark")
+              }
+            } else {
+              WorkplaceNameText(
+                name: job.name,
+                colorHex: job.color,
+                fallbackBadgeColor: .tidexBlue
+              )
+            }
+          }
+        }
+      } label: {
+        HStack(spacing: Spacing.xs) {
+          if let selectedJob {
+            WorkplaceNameText(
+              name: selectedJob.name,
+              colorHex: selectedJob.color,
+              font: .tidexBody,
+              fallbackBadgeColor: .tidexBlue
+            )
+          } else {
+            Text(viewModel.selectedJobName ?? String(localized: .jobsFilterAll))
+              .font(.tidexBody)
+              .foregroundColor(.tidexTextPrimary)
+          }
+          Image(systemName: "chevron.down")
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(Color.tidexSurfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+      }
+      .menuStyle(.button)
+    }
   }
 
   private func openMonthlyGoalEditor() {

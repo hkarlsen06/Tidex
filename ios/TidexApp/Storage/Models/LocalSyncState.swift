@@ -32,6 +32,12 @@ final class LocalSyncState {
   // These use server-managed updated_at timestamps for incremental sync.
   // A tie-breaker (id) is used when multiple rows share the same timestamp.
 
+  /// Last synced updated_at for jobs table
+  var lastJobsUpdatedAt: Date?
+
+  /// Tie-breaker ID at the last synced updated_at for jobs
+  var lastJobsUpdatedAtTieId: String?
+
   /// Last synced updated_at for user_shifts table
   var lastUserShiftsUpdatedAt: Date?
 
@@ -84,6 +90,8 @@ final class LocalSyncState {
     lastSuccessfulSyncAt: Date? = nil,
     lastSyncAttemptAt: Date? = nil,
     lastSyncError: String? = nil,
+    lastJobsUpdatedAt: Date? = nil,
+    lastJobsUpdatedAtTieId: String? = nil,
     lastUserShiftsUpdatedAt: Date? = nil,
     lastUserShiftsUpdatedAtTieId: String? = nil,
     lastRecurringShiftsUpdatedAt: Date? = nil,
@@ -103,6 +111,8 @@ final class LocalSyncState {
     self.lastSuccessfulSyncAt = lastSuccessfulSyncAt
     self.lastSyncAttemptAt = lastSyncAttemptAt
     self.lastSyncError = lastSyncError
+    self.lastJobsUpdatedAt = lastJobsUpdatedAt
+    self.lastJobsUpdatedAtTieId = lastJobsUpdatedAtTieId
     self.lastUserShiftsUpdatedAt = lastUserShiftsUpdatedAt
     self.lastUserShiftsUpdatedAtTieId = lastUserShiftsUpdatedAtTieId
     self.lastRecurringShiftsUpdatedAt = lastRecurringShiftsUpdatedAt
@@ -132,6 +142,9 @@ final class LocalSyncState {
   /// Get updated_at cursor for a specific table
   func updatedAtCursor(for table: SyncTable) -> SyncCursor {
     switch table {
+    case .jobs:
+      return SyncCursor(
+        updatedAt: lastJobsUpdatedAt, tieId: lastJobsUpdatedAtTieId ?? "")
     case .userShifts:
       return SyncCursor(
         updatedAt: lastUserShiftsUpdatedAt, tieId: lastUserShiftsUpdatedAtTieId ?? "")
@@ -154,6 +167,9 @@ final class LocalSyncState {
   /// Update updated_at cursor for a specific table
   func updateUpdatedAtCursor(for table: SyncTable, updatedAt: Date, tieId: String) {
     switch table {
+    case .jobs:
+      lastJobsUpdatedAt = updatedAt
+      lastJobsUpdatedAtTieId = tieId
     case .userShifts:
       lastUserShiftsUpdatedAt = updatedAt
       lastUserShiftsUpdatedAtTieId = tieId
@@ -177,6 +193,8 @@ final class LocalSyncState {
   /// Get cursor for a specific table (DEPRECATED - use updatedAtCursor instead)
   func cursor(for table: SyncTable) -> Int64 {
     switch table {
+    case .jobs:
+      return 0
     case .userShifts:
       return lastRevisionUserShifts
     case .recurringShifts:
@@ -193,6 +211,8 @@ final class LocalSyncState {
   /// Update cursor for a specific table (DEPRECATED - use updateUpdatedAtCursor instead)
   func updateCursor(for table: SyncTable, to revision: Int64) {
     switch table {
+    case .jobs:
+      break
     case .userShifts:
       lastRevisionUserShifts = revision
     case .recurringShifts:
@@ -226,6 +246,8 @@ final class LocalSyncState {
   /// Reset all cursors (for full re-sync)
   func resetAllCursors() {
     // Reset updated_at cursors
+    lastJobsUpdatedAt = nil
+    lastJobsUpdatedAtTieId = nil
     lastUserShiftsUpdatedAt = nil
     lastUserShiftsUpdatedAtTieId = nil
     lastRecurringShiftsUpdatedAt = nil
@@ -275,6 +297,7 @@ struct SyncCursor {
 
 /// Tables that participate in sync
 enum SyncTable: String, CaseIterable {
+  case jobs = "jobs"
   case userShifts = "user_shifts"
   case recurringShifts = "recurring_shifts"
   case wageSnapshots = "wage_snapshots"
@@ -289,6 +312,7 @@ enum SyncTable: String, CaseIterable {
   /// Display name for logging
   var displayName: String {
     switch self {
+    case .jobs: return "Jobs"
     case .userShifts: return "User Shifts"
     case .recurringShifts: return "Recurring Shifts"
     case .wageSnapshots: return "Wage Snapshots"

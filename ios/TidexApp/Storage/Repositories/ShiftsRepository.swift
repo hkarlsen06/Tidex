@@ -45,6 +45,29 @@ final class ShiftsRepository: ObservableObject {
     }
   }
 
+  /// During compatibility rollout, legacy local rows can still have nil jobId.
+  /// Treat those rows as belonging to the active default job only.
+  private func shouldIncludeLegacyNilJobRows(for userId: String, selectedJobId: String) -> Bool {
+    let context = localStore.mainContext
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId
+          && job.deletedAt == nil
+          && job.archivedAt == nil
+          && job.isDefault == true
+      }
+    )
+
+    do {
+      guard let defaultJob = try context.fetch(descriptor).first else { return false }
+      return defaultJob.id == selectedJobId
+    } catch {
+      logger.error(
+        "Failed to determine default job for legacy fallback: \(error.localizedDescription)")
+      return false
+    }
+  }
+
   // MARK: - Read Operations (Local Only)
 
   /// Get all non-deleted shifts for a user within a date range
@@ -56,23 +79,34 @@ final class ShiftsRepository: ObservableObject {
   func getShifts(
     for userId: String,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    jobId: String? = nil
   ) -> [ShiftRow] {
     let context = localStore.mainContext
 
-    // Build predicate for date range and non-deleted (including pending deletes)
-    // Note: Can't use computed `isPendingDelete` in #Predicate - must use stored `syncStatusRaw`
-    let descriptor = FetchDescriptor<LocalUserShift>(
-      predicate: #Predicate { shift in
-        shift.userId == userId && shift.serverDeletedAt == nil
-          && shift.syncStatusRaw != "pendingDelete" && shift.shiftDate >= startDate
-          && shift.shiftDate <= endDate
-      },
-      sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
-    )
-
     do {
-      let localShifts: [LocalUserShift] = try context.fetch(descriptor)
+      let descriptor = FetchDescriptor<LocalUserShift>(
+        predicate: #Predicate { shift in
+          shift.userId == userId && shift.serverDeletedAt == nil
+            && shift.syncStatusRaw != "pendingDelete" && shift.shiftDate >= startDate
+            && shift.shiftDate <= endDate
+        },
+        sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
+      )
+      let fetchedShifts = try context.fetch(descriptor)
+
+      let localShifts: [LocalUserShift]
+      if let jobId {
+        let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
+        if includeLegacyNil {
+          localShifts = fetchedShifts.filter { $0.jobId == jobId || $0.jobId == nil }
+        } else {
+          localShifts = fetchedShifts.filter { $0.jobId == jobId }
+        }
+      } else {
+        localShifts = fetchedShifts
+      }
+
       return localShifts.map { $0.toShiftRow() }
     } catch {
       logger.error("Failed to fetch shifts: \(error.localizedDescription)")
@@ -83,20 +117,31 @@ final class ShiftsRepository: ObservableObject {
   /// Get all non-deleted shifts for a user (no date filter)
   /// - Parameter userId: User ID
   /// - Returns: Array of ShiftRow objects
-  func getAllShifts(for userId: String) -> [ShiftRow] {
+  func getAllShifts(for userId: String, jobId: String? = nil) -> [ShiftRow] {
     let context = localStore.mainContext
 
-    // Note: Can't use computed `isPendingDelete` in #Predicate - must use stored `syncStatusRaw`
-    let descriptor = FetchDescriptor<LocalUserShift>(
-      predicate: #Predicate { shift in
-        shift.userId == userId && shift.serverDeletedAt == nil
-          && shift.syncStatusRaw != "pendingDelete"
-      },
-      sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
-    )
-
     do {
-      let localShifts: [LocalUserShift] = try context.fetch(descriptor)
+      let descriptor = FetchDescriptor<LocalUserShift>(
+        predicate: #Predicate { shift in
+          shift.userId == userId && shift.serverDeletedAt == nil
+            && shift.syncStatusRaw != "pendingDelete"
+        },
+        sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
+      )
+      let fetchedShifts = try context.fetch(descriptor)
+
+      let localShifts: [LocalUserShift]
+      if let jobId {
+        let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
+        if includeLegacyNil {
+          localShifts = fetchedShifts.filter { $0.jobId == jobId || $0.jobId == nil }
+        } else {
+          localShifts = fetchedShifts.filter { $0.jobId == jobId }
+        }
+      } else {
+        localShifts = fetchedShifts
+      }
+
       return localShifts.map { $0.toShiftRow() }
     } catch {
       logger.error("Failed to fetch all shifts: \(error.localizedDescription)")
@@ -172,6 +217,7 @@ final class ShiftsRepository: ObservableObject {
   /// The shift will be marked as dirty and pushed to server during next sync
   /// - Parameters:
   ///   - userId: User ID
+  ///   - jobId: Job ID (optional for compatibility; server assigns default when omitted)
   ///   - shiftDate: Date of the shift
   ///   - startTime: Start time (HH:mm)
   ///   - endTime: End time (HH:mm)
@@ -179,6 +225,7 @@ final class ShiftsRepository: ObservableObject {
   /// - Returns: The created ShiftRow
   func createShift(
     userId: String,
+    jobId: String? = nil,
     shiftDate: Date,
     startTime: String,
     endTime: String,
@@ -186,6 +233,7 @@ final class ShiftsRepository: ObservableObject {
   ) async throws -> ShiftRow {
     let createdShift = try await localStore.storeActor.createUserShift(
       userId: userId,
+      jobId: jobId,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
@@ -217,6 +265,7 @@ final class ShiftsRepository: ObservableObject {
   /// - Returns: Updated ShiftRow if successful
   func updateShift(
     id: String,
+    jobId: String? = nil,
     shiftDate: Date? = nil,
     startTime: String? = nil,
     endTime: String? = nil,
@@ -225,6 +274,7 @@ final class ShiftsRepository: ObservableObject {
     do {
       let updatedShift = try await localStore.storeActor.updateUserShift(
         id: id,
+        jobId: jobId,
         shiftDate: shiftDate,
         startTime: startTime,
         endTime: endTime,
@@ -405,6 +455,7 @@ final class ShiftsRepository: ObservableObject {
   /// - Throws: ShiftCreationError.monthLimitReached if free user is blocked
   func createShiftWithTierCheck(
     userId: String,
+    jobId: String? = nil,
     shiftDate: Date,
     startTime: String,
     endTime: String,
@@ -418,6 +469,7 @@ final class ShiftsRepository: ObservableObject {
 
     return try await createShift(
       userId: userId,
+      jobId: jobId,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,

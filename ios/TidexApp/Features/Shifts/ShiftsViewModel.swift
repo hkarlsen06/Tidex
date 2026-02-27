@@ -100,6 +100,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   // MARK: - Dependencies (Local-First Repositories)
 
   private let shiftsRepository: ShiftsRepository
+  private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
@@ -184,6 +185,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Next upcoming shift (for countdown display)
   @Published private(set) var nextUpcomingShift: ShiftWithComputations?
 
+  /// All non-deleted jobs for metadata rendering (badges/colors in shift cards).
+  @Published private(set) var activeJobs: [Job] = []
+
   // MARK: - Selection State
 
   /// Selected dates (ISO strings). Persists across month navigation.
@@ -253,6 +257,19 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   var selectedDateShifts: [ShiftWithComputations] {
     guard selectedDates.count == 1, let dateISO = selectedDates.first else { return [] }
     return shifts.filter { $0.shiftDate == dateISO }
+  }
+
+  var shouldShowJobIndicators: Bool {
+    activeJobs.count > 1
+  }
+
+  private var activeJobsById: [String: Job] {
+    Dictionary(uniqueKeysWithValues: activeJobs.map { ($0.id, $0) })
+  }
+
+  func jobForShift(_ shift: ShiftWithComputations) -> Job? {
+    guard let jobId = shift.shift.job_id else { return nil }
+    return activeJobsById[jobId]
   }
 
   /// Recompute cached selection summary for header UI.
@@ -333,6 +350,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   init(
     shiftsRepository: ShiftsRepository? = nil,
+    jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
@@ -341,6 +359,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   ) {
     // Use provided repositories or default to shared instances
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+    self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
@@ -678,6 +697,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Create a new shift with the same times at the target date
       _ = try await shiftsRepository.createShift(
         userId: userId,
+        jobId: sourceShift.shift.job_id,
         shiftDate: targetDate,
         startTime: sourceShift.startTime,
         endTime: sourceShift.endTime,
@@ -880,9 +900,14 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         )
         logger.info("✅ Added exclusion for \(editResult.originalDate)")
 
+        let sourceJobId =
+          shifts.first(where: { $0.id == editResult.shiftId })?.shift.job_id
+          ?? recurringShifts.first(where: { $0.id == recurringId })?.job_id
+
         // Step 2: Create a new regular shift with the edited values
         _ = try await shiftsRepository.createShift(
           userId: userId,
+          jobId: sourceJobId,
           shiftDate: newDate,
           startTime: editResult.startTime,
           endTime: editResult.endTime,
@@ -1024,6 +1049,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchCache.removeAll()
     prefetchTasks.removeAll()
     cachedUserId = nil
+    activeJobs = []
 
     await loadShiftsFromLocal()
 
@@ -1080,6 +1106,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       settings = nil
       snapshots = []
       recurringShifts = []
+      activeJobs = []
 
       // Reload from local repositories
       await loadShiftsFromLocal()
@@ -1111,6 +1138,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchCache.removeAll()
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
+    activeJobs = []
 
     // Also clear in-memory recurring shifts cache so exclusions are picked up
     recurringShifts = []
@@ -1143,6 +1171,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       guard let userId = cachedUserId else {
         throw ShiftsError.notAuthenticated
       }
+
+      activeJobs = jobsRepository.getNonDeletedJobs(for: userId)
 
       // Load settings from local store
       if settings == nil {
@@ -1193,7 +1223,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         recurring: recurringShifts,
         snapshots: snapshots,
         settings: currentSettings,
-        visibleRange: visibleRange
+        visibleRange: visibleRange,
+        jobs: activeJobs
       )
 
       // Cache the computed results
@@ -1269,6 +1300,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         throw ShiftsError.notAuthenticated
       }
 
+      activeJobs = jobsRepository.getNonDeletedJobs(for: userId)
+
       // Load settings and snapshots from local if not cached
       if settings == nil {
         settings = settingsRepository.getSettings(for: userId)
@@ -1311,7 +1344,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         recurring: recurringShifts,
         snapshots: snapshots,
         settings: currentSettings,
-        visibleRange: visibleRange
+        visibleRange: visibleRange,
+        jobs: activeJobs
       )
 
       // Cache the computed results
@@ -1499,7 +1533,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         recurring: self.recurringShifts,
         snapshots: self.snapshots,
         settings: currentSettings,
-        visibleRange: visibleRange
+        visibleRange: visibleRange,
+        jobs: self.activeJobs
       )
 
       // Store in full computed cache

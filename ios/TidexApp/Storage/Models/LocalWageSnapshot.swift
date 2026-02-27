@@ -18,6 +18,9 @@ final class LocalWageSnapshot {
 
   // MARK: - Wage Snapshot Data
 
+  /// Job that owns this snapshot (nullable during rollout compatibility)
+  var jobId: String?
+
   /// Effective date (nullable for baseline snapshot)
   var fromDate: Date?
 
@@ -182,6 +185,7 @@ final class LocalWageSnapshot {
   init(
     id: String,
     userId: String,
+    jobId: String? = nil,
     fromDate: Date? = nil,
     hourlyWage: Double,
     wageLevel: Int? = nil,
@@ -204,6 +208,7 @@ final class LocalWageSnapshot {
   ) {
     self.id = id
     self.userId = userId
+    self.jobId = jobId
     self.fromDate = fromDate
     self.hourlyWage = hourlyWage
     self.wageLevel = wageLevel
@@ -235,6 +240,7 @@ final class LocalWageSnapshot {
 
 /// Snapshot of server data for a wage snapshot
 struct WageSnapshotServerSnapshot: Codable, Equatable {
+  let jobId: String?
   let fromDate: String?
   let hourlyWage: Double
   let wageLevel: Int?
@@ -258,6 +264,7 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
     deletedAt: Date?
   ) -> WageSnapshotServerSnapshot {
     WageSnapshotServerSnapshot(
+      jobId: row.job_id,
       fromDate: row.from_date,
       hourlyWage: row.hourly_wage,
       wageLevel: row.wage_level,
@@ -296,6 +303,9 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
   func changedFields(from other: WageSnapshotServerSnapshot) -> Set<WageSnapshotField> {
     var changed: Set<WageSnapshotField> = []
 
+    if jobId != other.jobId {
+      changed.insert(.jobId)
+    }
     if fromDate != other.fromDate {
       changed.insert(.fromDate)
     }
@@ -342,6 +352,7 @@ extension LocalWageSnapshot {
     WageSnapshot(
       id: id,
       user_id: userId,
+      job_id: jobId,
       from_date: fromDateString,
       hourly_wage: hourlyWage,
       wage_level: wageLevel,
@@ -383,6 +394,7 @@ extension LocalWageSnapshot {
     return LocalWageSnapshot(
       id: serverRow.id,
       userId: serverRow.user_id,
+      jobId: serverRow.job_id,
       fromDate: fromDate,
       hourlyWage: serverRow.hourly_wage,
       wageLevel: serverRow.wage_level,

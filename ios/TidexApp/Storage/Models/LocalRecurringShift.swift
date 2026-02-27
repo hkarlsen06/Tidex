@@ -18,6 +18,9 @@ final class LocalRecurringShift {
 
   // MARK: - Recurring Shift Data
 
+  /// Job that owns this recurring pattern (nullable during rollout compatibility)
+  var jobId: String?
+
   /// Start time in HH:mm format
   var startTime: String
 
@@ -157,6 +160,7 @@ final class LocalRecurringShift {
   init(
     id: String,
     userId: String,
+    jobId: String? = nil,
     startTime: String,
     endTime: String,
     repeatIntervalWeeks: Int,
@@ -175,6 +179,7 @@ final class LocalRecurringShift {
   ) {
     self.id = id
     self.userId = userId
+    self.jobId = jobId
     self.startTime = startTime
     self.endTime = endTime
     self.repeatIntervalWeeks = repeatIntervalWeeks
@@ -202,6 +207,7 @@ final class LocalRecurringShift {
 
 /// Snapshot of server data for a recurring shift
 struct RecurringShiftServerSnapshot: Codable, Equatable {
+  let jobId: String?
   let startTime: String
   let endTime: String
   let repeatIntervalWeeks: Int
@@ -221,6 +227,7 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
     deletedAt: Date?
   ) -> RecurringShiftServerSnapshot {
     RecurringShiftServerSnapshot(
+      jobId: row.job_id,
       startTime: row.cleanStartTime,
       endTime: row.cleanEndTime,
       repeatIntervalWeeks: row.repeat_interval_weeks,
@@ -257,6 +264,9 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
   func changedFields(from other: RecurringShiftServerSnapshot) -> Set<RecurringShiftField> {
     var changed: Set<RecurringShiftField> = []
 
+    if jobId != other.jobId {
+      changed.insert(.jobId)
+    }
     if startTime != other.startTime {
       changed.insert(.startTime)
     }
@@ -291,6 +301,7 @@ extension LocalRecurringShift {
     RecurringShiftRow(
       id: id,
       user_id: userId,
+      job_id: jobId,
       start_time: startTime,
       end_time: endTime,
       repeat_interval_weeks: repeatIntervalWeeks,
@@ -320,6 +331,7 @@ extension LocalRecurringShift {
     return LocalRecurringShift(
       id: serverRow.id,
       userId: serverRow.user_id,
+      jobId: serverRow.job_id,
       startTime: serverRow.cleanStartTime,
       endTime: serverRow.cleanEndTime,
       repeatIntervalWeeks: serverRow.repeat_interval_weeks,

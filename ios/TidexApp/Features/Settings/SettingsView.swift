@@ -20,8 +20,37 @@ struct SettingsView: View {
   @State private var isSigningOutGlobal = false
   /// Whether to show the global sign out confirmation alert
   @State private var showSignOutEverywhereAlert = false
+  /// Whether to show the pay job chooser before opening pay settings.
+  @State private var showPayJobChooser = false
+  /// Whether to show quick add-job sheet from the pay chooser.
+  @State private var showPayAddJobSheet = false
+  /// Whether to show job management from pay chooser.
+  @State private var showPayJobManagement = false
+  /// Active jobs used in pay chooser.
+  @State private var payChooserJobs: [Job] = []
+  /// Archived jobs for optional display in job management.
+  @State private var payArchivedJobs: [Job] = []
+  /// Currency used to initialize job wage setup flow.
+  @State private var payChooserCurrency: String = "kr"
+  /// User ID for the current pay chooser session.
+  @State private var payChooserUserId: String?
+  /// Selected job in the pay chooser (confirmed explicitly before navigation).
+  @State private var selectedPayChooserJobId: String?
+  /// Toggles archived jobs visibility in the management sheet.
+  @State private var showArchivedPayJobs = false
+  /// Error shown when preparing pay chooser/add fails.
+  @State private var payChooserError: String?
+  /// Error shown when managing jobs from the pay chooser.
+  @State private var payJobManagementError: String?
+  /// Job currently processing archive/restore action.
+  @State private var payJobManagementLoadingJobId: String?
+  /// Guards against duplicate pay-entry taps while loading job state.
+  @State private var isOpeningPaySettings = false
   /// Navigation path for settings subviews
   @State private var navigationPath = NavigationPath()
+
+  private let jobsRepository = JobsRepository.shared
+  private let settingsRepository = SettingsRepository.shared
 
   /// Settings navigation destinations
   enum SettingsDestination: Hashable {
@@ -30,7 +59,7 @@ struct SettingsView: View {
     case subscription
     case notifications
     case appearance
-    case pay
+    case pay(jobId: String?)
     case recurringShifts
     case data
     case feedback
@@ -141,7 +170,9 @@ struct SettingsView: View {
             description: String(localized: .settingsMenuPayDescription),
             iconBackgroundColor: .green
           ) {
-            navigationPath.append(SettingsDestination.pay)
+            Task {
+              await openPaySettings()
+            }
           }
 
           SettingsMenuItem(
@@ -253,8 +284,8 @@ struct SettingsView: View {
             NotificationSettingsView()
           case .appearance:
             AppearanceSettingsView()
-          case .pay:
-            PaySettingsView()
+          case .pay(let jobId):
+            PaySettingsView(initialJobId: jobId)
           case .recurringShifts:
             RecurringShiftsSettingsView()
           case .data:
@@ -274,6 +305,17 @@ struct SettingsView: View {
     }
     .task {
       await checkAdminStatus()
+    }
+    .sheet(isPresented: $showPayJobChooser) {
+      payJobChooserSheet
+    }
+    .sheet(isPresented: $showPayAddJobSheet) {
+      AddJobSheet(
+        initialCurrency: payChooserCurrency,
+        existingJobNeedingSetup: payChooserJobs.count == 1 ? payChooserJobs.first : nil
+      ) { input in
+        await createPayJobAndOpen(input: input)
+      }
     }
     .alert(
       String(localized: .userMenuLogoutEverywhereConfirmTitle),
@@ -390,6 +432,361 @@ struct SettingsView: View {
     await coordinator.signOutGlobal()
     dismiss()
     isSigningOutGlobal = false
+  }
+
+  private func openPaySettings() async {
+    guard !isOpeningPaySettings else { return }
+    isOpeningPaySettings = true
+    defer { isOpeningPaySettings = false }
+
+    do {
+      let userId = try await AuthSessionManager.shared.getUserId()
+      payChooserUserId = userId
+      refreshPayJobLists(for: userId)
+      payChooserCurrency = settingsRepository.getSettings(for: userId)?.currency ?? "kr"
+      payChooserError = nil
+      payJobManagementError = nil
+      showArchivedPayJobs = false
+
+      if payChooserJobs.count > 1 {
+        showPayJobChooser = true
+      } else {
+        navigationPath.append(SettingsDestination.pay(jobId: payChooserJobs.first?.id))
+      }
+    } catch {
+      logger.error("Failed to prepare pay settings: \(error.localizedDescription)")
+      payChooserError = error.localizedDescription
+      showPayJobChooser = true
+    }
+  }
+
+  private func createPayJobAndOpen(input: AddJobSetupInput) async -> Bool {
+    do {
+      let userId = try await AuthSessionManager.shared.getUserId()
+
+      if let existingJobSetup = input.existingJobSetup {
+        guard
+          try await jobsRepository.updateJob(
+            userId: userId,
+            jobId: existingJobSetup.id,
+            name: existingJobSetup.name,
+            color: existingJobSetup.color
+          ) != nil
+        else {
+          payChooserError = String(localized: .settingsPayErrorLoadFailed)
+          return false
+        }
+      }
+
+      let createdJob = try await jobsRepository.createJobWithBaselineSnapshot(
+        userId: userId,
+        name: input.name,
+        color: input.color,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal,
+        baselineSnapshot: input.baselineSnapshot
+      )
+
+      refreshPayJobLists(for: userId)
+
+      showPayJobChooser = false
+      showPayJobManagement = false
+      navigationPath.append(SettingsDestination.pay(jobId: createdJob.id))
+      return true
+    } catch {
+      logger.error("Failed to create pay job from chooser: \(error.localizedDescription)")
+      payChooserError = error.localizedDescription
+      return false
+    }
+  }
+
+  private func openPayForSelectedJob(_ jobId: String) {
+    selectedPayChooserJobId = jobId
+    showPayJobChooser = false
+    navigationPath.append(SettingsDestination.pay(jobId: jobId))
+  }
+
+  private func openAddPayJob() {
+    showPayJobManagement = false
+    showPayJobChooser = false
+    DispatchQueue.main.async {
+      showPayAddJobSheet = true
+    }
+  }
+
+  private func refreshPayJobLists(for userId: String) {
+    payChooserJobs = sortJobs(jobsRepository.getActiveJobs(for: userId))
+
+    payArchivedJobs = sortJobs(
+      jobsRepository.getAllJobs(for: userId, includeArchived: true, includeDeleted: false)
+        .filter { $0.archived_at != nil }
+    )
+
+    if let selectedPayChooserJobId,
+      payChooserJobs.contains(where: { $0.id == selectedPayChooserJobId }) == false
+    {
+      self.selectedPayChooserJobId =
+        payChooserJobs.first(where: { $0.is_default })?.id
+        ?? payChooserJobs.first?.id
+      return
+    }
+
+    if selectedPayChooserJobId == nil {
+      selectedPayChooserJobId =
+        payChooserJobs.first(where: { $0.is_default })?.id
+        ?? payChooserJobs.first?.id
+    }
+  }
+
+  private func sortJobs(_ jobs: [Job]) -> [Job] {
+    jobs.sorted { lhs, rhs in
+      if lhs.sort_order == rhs.sort_order {
+        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+      }
+      return lhs.sort_order < rhs.sort_order
+    }
+  }
+
+  private func archivePayJob(_ jobId: String) async {
+    guard let payChooserUserId else {
+      payJobManagementError = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      return
+    }
+
+    payJobManagementError = nil
+    payJobManagementLoadingJobId = jobId
+    defer { payJobManagementLoadingJobId = nil }
+
+    do {
+      try await jobsRepository.archiveJob(userId: payChooserUserId, jobId: jobId)
+      refreshPayJobLists(for: payChooserUserId)
+    } catch {
+      payJobManagementError = error.localizedDescription
+    }
+  }
+
+  private func restorePayJob(_ jobId: String) async {
+    guard let payChooserUserId else {
+      payJobManagementError = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      return
+    }
+
+    payJobManagementError = nil
+    payJobManagementLoadingJobId = jobId
+    defer { payJobManagementLoadingJobId = nil }
+
+    do {
+      try await jobsRepository.restoreJob(userId: payChooserUserId, jobId: jobId)
+      refreshPayJobLists(for: payChooserUserId)
+    } catch {
+      payJobManagementError = error.localizedDescription
+    }
+  }
+
+  @ViewBuilder
+  private var payJobChooserSheet: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: Spacing.sm) {
+          ForEach(payChooserJobs, id: \.id) { job in
+            Button {
+              openPayForSelectedJob(job.id)
+            } label: {
+              HStack(spacing: Spacing.sm) {
+                WorkplaceNameText(
+                  name: job.name,
+                  colorHex: job.color,
+                  font: .tidexBodyMedium,
+                  fallbackBadgeColor: .tidexBlue
+                )
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexTextMuted)
+              }
+              .padding(.horizontal, Spacing.md)
+              .padding(.vertical, Spacing.md)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(Color.tidexSurfaceSecondary)
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+              .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+          }
+
+          Button {
+            openAddPayJob()
+          } label: {
+            HStack(spacing: Spacing.sm) {
+              Image(systemName: "plus.circle.fill")
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexBlue)
+
+              Text(String(localized: "settings.pay.add_job.cta"))
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexTextPrimary)
+
+              Spacer()
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+          }
+          .buttonStyle(.plain)
+          .frame(maxWidth: .infinity)
+
+          if let payChooserError {
+            Text(payChooserError)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexError)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+        .frame(maxWidth: .infinity)
+      }
+      .scrollIndicators(.hidden)
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.sm)
+      .padding(.bottom, Spacing.md)
+      .background(Color.tidexBackground)
+      .navigationTitle(String(localized: "settings.pay.choose_workplace.title"))
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: .commonCancel)) {
+            showPayJobChooser = false
+          }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            showPayJobManagement = true
+          } label: {
+            Image(systemName: "gearshape")
+          }
+        }
+      }
+    }
+    .presentationDetents([.height(payJobChooserDetentHeight)])
+    .presentationDragIndicator(.visible)
+    .sheet(isPresented: $showPayJobManagement) {
+      payJobManagementSheet
+    }
+  }
+
+  @ViewBuilder
+  private var payJobManagementSheet: some View {
+    NavigationStack {
+      List {
+        Section {
+          ForEach(payChooserJobs, id: \.id) { job in
+            HStack(spacing: Spacing.sm) {
+              WorkplaceNameText(
+                name: job.name,
+                colorHex: job.color,
+                fallbackBadgeColor: .tidexBlue
+              )
+
+              Spacer()
+
+              if payJobManagementLoadingJobId == job.id {
+                ProgressView()
+                  .controlSize(.small)
+              } else {
+                Button(String(localized: "settings.pay.manage_jobs.archive")) {
+                  Task {
+                    await archivePayJob(job.id)
+                  }
+                }
+                .disabled(job.is_default || payChooserJobs.count <= 1)
+              }
+            }
+          }
+        } header: {
+          Text(String(localized: "settings.pay.manage_jobs.active_title"))
+        } footer: {
+          Text(String(localized: "settings.pay.manage_jobs.active_footer"))
+        }
+
+        Section {
+          Button(
+            showArchivedPayJobs
+              ? String(localized: "settings.pay.manage_jobs.hide_archived")
+              : String(localized: "settings.pay.manage_jobs.show_archived")
+          ) {
+            showArchivedPayJobs.toggle()
+          }
+        }
+
+        if showArchivedPayJobs {
+          if payArchivedJobs.isEmpty {
+            Section {
+              Text(String(localized: "settings.pay.manage_jobs.archived_empty"))
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexTextSecondary)
+            } header: {
+              Text(String(localized: "settings.pay.manage_jobs.archived_title"))
+            }
+          } else {
+            Section(String(localized: "settings.pay.manage_jobs.archived_title")) {
+              ForEach(payArchivedJobs, id: \.id) { job in
+                HStack(spacing: Spacing.sm) {
+                  WorkplaceNameText(
+                    name: job.name,
+                    colorHex: job.color,
+                    fallbackBadgeColor: .tidexBlue
+                  )
+
+                  Spacer()
+
+                  if payJobManagementLoadingJobId == job.id {
+                    ProgressView()
+                      .controlSize(.small)
+                  } else {
+                    Button(String(localized: "settings.pay.manage_jobs.restore")) {
+                      Task {
+                        await restorePayJob(job.id)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if let payJobManagementError {
+          Section {
+            Text(payJobManagementError)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexError)
+          }
+        }
+      }
+      .navigationTitle(String(localized: "settings.pay.manage_jobs.title"))
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button(String(localized: .commonCancel)) {
+            showPayJobManagement = false
+          }
+        }
+      }
+    }
+    .presentationDetents([.medium, .large])
+    .presentationDragIndicator(.visible)
+  }
+
+  private var payJobChooserDetentHeight: CGFloat {
+    let visibleRows = max(2, min(payChooserJobs.count + 1, 6))
+    let errorHeight = payChooserError == nil ? 0 : 32
+    return CGFloat(visibleRows) * 70 + 120 + CGFloat(errorHeight)
   }
 }
 
@@ -681,6 +1078,7 @@ struct SettingsMenuItem: View {
       }
       .padding(.vertical, Spacing.xxxs)
       .frame(minHeight: 56)
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }

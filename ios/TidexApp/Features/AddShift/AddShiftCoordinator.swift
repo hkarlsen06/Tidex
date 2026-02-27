@@ -19,6 +19,12 @@ final class AddShiftCoordinator: ObservableObject {
   /// Whether the view is currently loading (submitting)
   @Published private(set) var isLoading: Bool = false
 
+  /// Whether the current add-shift context requires explicit job selection before submit.
+  @Published private(set) var requiresJobSelection: Bool = false
+
+  /// Currently selected job for add-shift context.
+  @Published private(set) var selectedJobId: String?
+
   /// Publisher for triggering the add action from outside (tab bar tap)
   let triggerAddAction = PassthroughSubject<Void, Never>()
 
@@ -37,6 +43,12 @@ final class AddShiftCoordinator: ObservableObject {
   /// Update the loading state (called by AddShiftViewModel)
   func updateIsLoading(_ isLoading: Bool) {
     self.isLoading = isLoading
+  }
+
+  /// Update job selection context (called by AddShiftViewModel)
+  func updateJobSelection(selectedJobId: String?, requiresJobSelection: Bool) {
+    self.selectedJobId = selectedJobId
+    self.requiresJobSelection = requiresJobSelection
   }
 
   /// Trigger the add action (called from MainTabView when Add tab is tapped)

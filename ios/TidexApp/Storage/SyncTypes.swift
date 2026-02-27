@@ -19,6 +19,7 @@ enum SyncStatus: String, Codable {
 
 /// Field keys for tracking dirty fields on LocalUserShift
 enum UserShiftField: String, Codable, CaseIterable {
+  case jobId = "job_id"
   case shiftDate = "shift_date"
   case startTime = "start_time"
   case endTime = "end_time"
@@ -27,6 +28,7 @@ enum UserShiftField: String, Codable, CaseIterable {
 
 /// Field keys for tracking dirty fields on LocalRecurringShift
 enum RecurringShiftField: String, Codable, CaseIterable {
+  case jobId = "job_id"
   case startTime = "start_time"
   case endTime = "end_time"
   case repeatIntervalWeeks = "repeat_interval_weeks"
@@ -38,6 +40,7 @@ enum RecurringShiftField: String, Codable, CaseIterable {
 
 /// Field keys for tracking dirty fields on LocalWageSnapshot
 enum WageSnapshotField: String, Codable, CaseIterable {
+  case jobId = "job_id"
   case fromDate = "from_date"
   case hourlyWage = "hourly_wage"
   case wageLevel = "wage_level"
@@ -49,6 +52,19 @@ enum WageSnapshotField: String, Codable, CaseIterable {
   case breakMethod = "break_method"
   case breakThresholdHours = "break_threshold_hours"
   case breakDeductionMinutes = "break_deduction_minutes"
+}
+
+/// Field keys for tracking dirty fields on LocalJob
+enum JobField: String, Codable, CaseIterable {
+  case name = "name"
+  case color = "color"
+  case isDefault = "is_default"
+  case sortOrder = "sort_order"
+  case payrollDay = "payroll_day"
+  case halfTaxMonth = "half_tax_month"
+  case monthlyGoal = "monthly_goal"
+  case archivedAt = "archived_at"
+  case deletedAt = "deleted_at"
 }
 
 /// Field keys for tracking dirty fields on LocalUserSettings

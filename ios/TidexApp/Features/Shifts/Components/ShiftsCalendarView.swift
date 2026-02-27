@@ -25,6 +25,7 @@ struct ShiftsCalendarView: View {
   let monthNumber: Int  // 1-12
   let currency: String
   let showEarnings: Bool
+  let jobs: [Job]
 
   /// Transition phase for header text animations
   var phase: MonthTransitionPhase?
@@ -93,6 +94,11 @@ struct ShiftsCalendarView: View {
   @State private var showSingleSelectionOverflowMenu = false
   @State private var showSingleSelectionDeleteConfirm = false
   @State private var showMultiSelectionDeleteConfirm = false
+
+  private struct DayJobTimeColors {
+    let topColor: Color
+    let bottomColor: Color
+  }
 
   // MARK: - Gesture State
 
@@ -203,6 +209,33 @@ struct ShiftsCalendarView: View {
     return result
   }
 
+  private var jobsById: [String: Job] {
+    Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+  }
+
+  private var defaultJobId: String? {
+    jobs.first(where: { $0.is_default })?.id
+  }
+
+  private var dayJobTimeColorsByDate: [String: DayJobTimeColors] {
+    var result: [String: DayJobTimeColors] = [:]
+
+    for (dateISO, shiftsOnDay) in shiftsByDate where !shiftsOnDay.isEmpty {
+      let sortedShifts = shiftsOnDay.sorted { lhs, rhs in
+        CalendarGridHelper.timeToMinutes(lhs.startTime)
+          < CalendarGridHelper.timeToMinutes(rhs.startTime)
+      }
+
+      guard let earliestShift = sortedShifts.first else { continue }
+      guard let topColor = resolvedJobColor(for: earliestShift) else { continue }
+
+      // For days with multiple shifts, always use the earliest shift's workplace color.
+      result[dateISO] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
+    }
+
+    return result
+  }
+
   private var multiDeleteConfirmTitle: String {
     let count = selectedDates.count
     if Locale.appLocale.isNorwegian {
@@ -299,6 +332,15 @@ struct ShiftsCalendarView: View {
       let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
       let isToday = dayInfo.dateISO == todayISO()
       let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
+      let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
+      let shouldColorJobTimes =
+        !dayInfo.isOutsideMonth
+        && !isSelected
+        && !isInDragPreview
+        && !isNewlyAdded
+        && !isDeepLinkHighlighted
+        && !shiftsOnDay.isEmpty
+        && dayJobTimeColors != nil
 
       CalendarDayCell(
         dayInfo: dayInfo,
@@ -312,7 +354,8 @@ struct ShiftsCalendarView: View {
         ),
         content: cellContent(
           for: dayInfo,
-          hasShifts: !shiftsOnDay.isEmpty
+          dayJobTimeColors: dayJobTimeColors,
+          shouldColorJobTimes: shouldColorJobTimes
         )
       )
     }
@@ -409,7 +452,11 @@ struct ShiftsCalendarView: View {
     return .default
   }
 
-  private func cellContent(for dayInfo: CalendarDayInfo, hasShifts: Bool) -> CalendarCellContent {
+  private func cellContent(
+    for dayInfo: CalendarDayInfo,
+    dayJobTimeColors: DayJobTimeColors?,
+    shouldColorJobTimes: Bool
+  ) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
 
     let effectiveViewMode = showEarnings ? viewMode : .hours
@@ -417,10 +464,29 @@ struct ShiftsCalendarView: View {
     if effectiveViewMode == .money, let earnings = earningsByDate[dateISO] {
       return .earningsBreakdown(earnings)
     } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
+      if shouldColorJobTimes, let dayJobTimeColors {
+        return .hours(
+          hoursData,
+          color: dayJobTimeColors.topColor,
+          secondaryColor: dayJobTimeColors.bottomColor
+        )
+      }
       return .hours(hoursData)
     }
 
     return .empty
+  }
+
+  private func resolvedJobColor(for shift: ShiftWithComputations) -> Color? {
+    let effectiveJobId = shift.shift.job_id ?? defaultJobId
+    guard
+      let effectiveJobId,
+      let job = jobsById[effectiveJobId],
+      let uiColor = WorkplaceColor.hexToUIColor(job.color)
+    else {
+      return nil
+    }
+    return Color(uiColor: uiColor)
   }
 
   // MARK: - Gesture Handling
@@ -907,6 +973,7 @@ struct ShiftsCalendarView: View {
           monthNumber: 1,
           currency: "kr",
           showEarnings: true,
+          jobs: [],
           selectedDates: $selectedDates,
           confirmingDelete: false,
           isDeleting: false,

@@ -7,6 +7,9 @@ struct ShiftRowCard: View {
   let isToday: Bool
   let hasConflict: Bool
   let excludedFromTotal: Bool
+  let showJobIndicator: Bool
+  let jobName: String?
+  let jobColorHex: String?
   let onTap: (() -> Void)?
 
   @Environment(\.userCurrency) private var currency
@@ -18,12 +21,18 @@ struct ShiftRowCard: View {
     isToday: Bool,
     hasConflict: Bool = false,
     excludedFromTotal: Bool = false,
+    showJobIndicator: Bool = false,
+    jobName: String? = nil,
+    jobColorHex: String? = nil,
     onTap: (() -> Void)? = nil
   ) {
     self.shift = shift
     self.isToday = isToday
     self.hasConflict = hasConflict
     self.excludedFromTotal = excludedFromTotal
+    self.showJobIndicator = showJobIndicator
+    self.jobName = jobName
+    self.jobColorHex = jobColorHex
     self.onTap = onTap
   }
 
@@ -33,12 +42,24 @@ struct ShiftRowCard: View {
     shift.taxEnabled && shift.taxAmount > 0
   }
 
+  private var shouldRenderJobBadge: Bool {
+    showJobIndicator && (jobName?.isEmpty == false)
+  }
+
+  private var hasTrailingBottomContent: Bool {
+    excludedFromTotal || shouldRenderJobBadge || showBreakdown
+  }
+
   private var dateParts: ShiftCardDateParts {
     ShiftCardFormatter.dateParts(for: shift.shiftDate)
   }
 
   private var isRTL: Bool {
     layoutDirection == .rightToLeft
+  }
+
+  private var maxJobBadgeWidth: CGFloat {
+    96
   }
 
   private var timeRangeText: String {
@@ -64,17 +85,19 @@ struct ShiftRowCard: View {
   /// The card's visual content (extracted for cleaner code)
   @ViewBuilder
   private var cardContent: some View {
-    ShiftCardContentLayout(centerTrailing: !showBreakdown && !excludedFromTotal) {
+    ShiftCardContentLayout(centerTrailing: !hasTrailingBottomContent) {
       // Row 1: Day name and date
-      HStack(spacing: Spacing.xxs) {
-        Text(dateParts.weekday)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-        Text("·")
-          .foregroundColor(.tidexTextMuted)
-        Text(dateParts.dayMonth)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextMuted)
+      HStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.xxs) {
+          Text(dateParts.weekday)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+          Text("·")
+            .foregroundColor(.tidexTextMuted)
+          Text(dateParts.dayMonth)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextMuted)
+        }
       }
     } leadingBottom: {
       // Row 2: Time range
@@ -93,6 +116,18 @@ struct ShiftRowCard: View {
         Text(.shiftsExcludedFromTotal)
           .font(.tidexMicro)
           .foregroundColor(.tidexWarning)
+      } else if shouldRenderJobBadge, let jobName, !jobName.isEmpty {
+        WorkplaceNameText(
+          name: jobName,
+          colorHex: jobColorHex,
+          font: .tidexCaptionRegular,
+          fallbackBadgeColor: .tidexBlue,
+          badgeHorizontalPadding: Spacing.xs,
+          badgeVerticalPadding: 2
+        )
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .frame(maxWidth: maxJobBadgeWidth, alignment: .trailing)
       } else if showBreakdown {
         // Breakdown (gross - tax) when tax enabled
         HStack(spacing: Spacing.xxs) {
@@ -165,6 +200,7 @@ struct ShiftRowCard: View {
     }
     .font(.tidexFootnote)
   }
+
 }
 
 // Preview disabled - requires full app context

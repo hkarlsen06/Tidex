@@ -82,6 +82,7 @@ struct ShiftsView: View {
   @AppStorage("shiftsViewMode") private var showListView = false
   @State private var tabTransitionOffset: CGFloat = 0
   @State private var tabTransitionOpacity: Double = 1
+  @State private var selectedListJobId: String?
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -103,7 +104,54 @@ struct ShiftsView: View {
 
   // MARK: - Body
 
-  var body: some View {
+  @ViewBuilder
+  private var mainContentLayer: some View {
+    if let error = viewModel.error {
+      errorView(error: error)
+    } else if viewModel.isLoading && viewModel.shifts.isEmpty {
+      loadingView
+    } else {
+      // Unified content view - handles both empty and populated states
+      // This ensures StaggeredCardsContainer persists across month changes
+      shiftsContent
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var shiftsToolbarContent: some ToolbarContent {
+    // Share button (only in calendar view, not list view)
+    if !showListView {
+      ToolbarItem(placement: .topBarLeading) {
+        Button {
+          impactHaptic.impactOccurred()
+          showingShareOptions = true
+        } label: {
+          Image(systemName: "square.and.arrow.up")
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+            .offset(y: -1)
+        }
+      }
+    }
+
+    // Selection mode toggle (only in calendar view)
+    if !showListView {
+      ToolbarSpacer(.fixed, placement: .topBarLeading)
+      ToolbarItem(placement: .topBarLeading) {
+        selectionModeToggleButton
+      }
+    }
+
+    // User menu on trailing side
+    ToolbarItem(placement: .topBarTrailing) {
+      UserMenuButton(
+        displayName: coordinator.userDisplayName,
+        avatarUrl: coordinator.userAvatarUrl
+      )
+    }
+  }
+
+  private var navigationContent: some View {
     NavigationStack {
       ZStack(alignment: .bottom) {
         // Background that fills entire screen including safe areas
@@ -111,18 +159,8 @@ struct ShiftsView: View {
           .ignoresSafeArea()
 
         // Content area - fills entire screen, content scrolls behind month picker
-        Group {
-          if let error = viewModel.error {
-            errorView(error: error)
-          } else if viewModel.isLoading && viewModel.shifts.isEmpty {
-            loadingView
-          } else {
-            // Unified content view - handles both empty and populated states
-            // This ensures StaggeredCardsContainer persists across month changes
-            shiftsContent
-          }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        mainContentLayer
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         // Month picker is now in shared overlay in MainTabView
 
@@ -140,292 +178,313 @@ struct ShiftsView: View {
       .navigationBarTitleDisplayMode(.inline)
       .iPadToolbarBackground()
       .toolbar {
-        // Share button (only in calendar view, not list view)
-        if !showListView {
-          ToolbarItem(placement: .topBarLeading) {
-            Button {
-              impactHaptic.impactOccurred()
-              showingShareOptions = true
-            } label: {
-              Image(systemName: "square.and.arrow.up")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
-                .offset(y: -1)
-            }
-          }
-        }
-        // Selection mode toggle (only in calendar view)
-        if !showListView {
-          ToolbarSpacer(.fixed, placement: .topBarLeading)
-          ToolbarItem(placement: .topBarLeading) {
-            selectionModeToggleButton
-          }
-        }
-        // User menu on trailing side
-        ToolbarItem(placement: .topBarTrailing) {
-          UserMenuButton(
-            displayName: coordinator.userDisplayName,
-            avatarUrl: coordinator.userAvatarUrl
-          )
-        }
+        shiftsToolbarContent
       }
       .iPadToolbarTransaction()
     }
-    .task {
-      await viewModel.loadShifts()
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
-      // Reload shifts when they change (e.g., after adding a shift)
-      Task {
-        await viewModel.reloadFromLocal()
-      }
-    }
-    .onChange(of: selectedTab) { oldTab, newTab in
-      guard newTab == .shifts, oldTab == .add else { return }
-      tabTransitionOffset = -28
-      tabTransitionOpacity = 0.92
-      withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-        tabTransitionOffset = 0
-        tabTransitionOpacity = 1
-      }
-    }
-    // Pass user's currency to all child views
-    .userCurrency(viewModel.currency)
-    // Shift details sheet (item-based to guarantee data availability)
-    .sheet(item: $selectedShift) { shift in
-      ShiftDetailsSheet(
-        shift: shift,
-        onDelete: {
-          selectedShift = nil
-          // Small delay before showing delete confirmation
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            shiftToDelete = shift
-            showDeleteConfirmation = true
-          }
-        },
-        onUpdate: { editResult in
-          selectedShift = nil
+  }
+
+  var body: some View {
+    bodyWithSecondarySheets
+  }
+
+  private var baseBody: AnyView {
+    AnyView(navigationContent)
+  }
+
+  private var bodyWithLifecycle: AnyView {
+    AnyView(
+      baseBody
+        .task {
+          await viewModel.loadShifts()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+          // Reload shifts when they change (e.g., after adding a shift)
           Task {
-            await viewModel.updateShift(editResult)
+            await viewModel.reloadFromLocal()
           }
-        },
-        onEditRecurring: { recurringId in
-          selectedShift = nil
-          // Small delay to allow sheet to dismiss
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let recurring = viewModel.getRecurringShift(id: recurringId) {
-              recurringShiftToEdit = recurring
+        }
+        .onChange(of: selectedTab) { oldTab, newTab in
+          guard newTab == .shifts, oldTab == .add else { return }
+          tabTransitionOffset = -28
+          tabTransitionOpacity = 0.92
+          withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+            tabTransitionOffset = 0
+            tabTransitionOpacity = 1
+          }
+        }
+        // Pass user's currency to all child views
+        .userCurrency(viewModel.currency)
+    )
+  }
+
+  private var bodyWithPrimarySheetsAndAlerts: AnyView {
+    AnyView(
+      bodyWithLifecycle
+        // Shift details sheet (item-based to guarantee data availability)
+        .sheet(item: $selectedShift) { shift in
+          ShiftDetailsSheet(
+            shift: shift,
+            onDelete: {
+              selectedShift = nil
+              // Small delay before showing delete confirmation
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                shiftToDelete = shift
+                showDeleteConfirmation = true
+              }
+            },
+            onUpdate: { editResult in
+              selectedShift = nil
+              Task {
+                await viewModel.updateShift(editResult)
+              }
+            },
+            onEditRecurring: { recurringId in
+              selectedShift = nil
+              // Small delay to allow sheet to dismiss
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                  recurringShiftToEdit = recurring
+                }
+              }
+            },
+            tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
+          )
+          .presentationDetents([.medium, .large])
+          .presentationDragIndicator(.visible)
+        }
+        // Sheet for editing directly (opens in edit mode from swipe action)
+        .sheet(item: $shiftToEditDirectly) { shift in
+          ShiftDetailsSheet(
+            shift: shift,
+            onDelete: {
+              shiftToEditDirectly = nil
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                shiftToDelete = shift
+                showDeleteConfirmation = true
+              }
+            },
+            onUpdate: { editResult in
+              shiftToEditDirectly = nil
+              Task {
+                await viewModel.updateShift(editResult)
+              }
+            },
+            onEditRecurring: { recurringId in
+              shiftToEditDirectly = nil
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                  recurringShiftToEdit = recurring
+                }
+              }
+            },
+            startInEditMode: true,
+            tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
+          )
+          .presentationDetents([.medium, .large])
+          .presentationDragIndicator(.visible)
+        }
+        // Delete confirmation alert
+        .alert(
+          shiftToDelete?.isVirtual == true
+            ? String(localized: .shiftsExcludeConfirmTitle)
+            : String(localized: .shiftsDeleteConfirmTitle),
+          isPresented: $showDeleteConfirmation,
+          presenting: shiftToDelete
+        ) { shift in
+          Button(String(localized: .commonCancel), role: .cancel) {
+            shiftToDelete = nil
+          }
+          Button(
+            shift.isVirtual
+              ? String(localized: .shiftsExcludeButton)
+              : String(localized: .shiftsDeleteButton),
+            role: .destructive
+          ) {
+            Task {
+              await deleteShift(shift)
             }
           }
-        },
-        tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
-      )
-      .presentationDetents([.medium, .large])
-      .presentationDragIndicator(.visible)
-    }
-    // Sheet for editing directly (opens in edit mode from swipe action)
-    .sheet(item: $shiftToEditDirectly) { shift in
-      ShiftDetailsSheet(
-        shift: shift,
-        onDelete: {
-          shiftToEditDirectly = nil
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            shiftToDelete = shift
-            showDeleteConfirmation = true
+        } message: { shift in
+          Text(
+            shift.isVirtual
+              ? String(localized: .shiftsExcludeConfirmMessage)
+              : String(localized: .shiftsDeleteConfirmMessage))
+        }
+        .alert(
+          String(localized: .commonError),
+          isPresented: .init(
+            get: { operationErrorMessage != nil },
+            set: { if !$0 { operationErrorMessage = nil } }
+          )
+        ) {
+          Button(String(localized: .commonOk), role: .cancel) {
+            operationErrorMessage = nil
           }
-        },
-        onUpdate: { editResult in
-          shiftToEditDirectly = nil
-          Task {
-            await viewModel.updateShift(editResult)
+        } message: {
+          if let operationErrorMessage {
+            Text(operationErrorMessage)
           }
-        },
-        onEditRecurring: { recurringId in
-          shiftToEditDirectly = nil
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let recurring = viewModel.getRecurringShift(id: recurringId) {
-              recurringShiftToEdit = recurring
+        }
+    )
+  }
+
+  private var bodyWithStateObservers: AnyView {
+    AnyView(
+      bodyWithPrimarySheetsAndAlerts
+        .onAppear {
+          selectionHaptic.prepare()
+          impactHaptic.prepare()
+          celebrationHaptic.prepare()
+          // Handle any pending deep link on initial appearance
+          handleDeepLink(coordinator.pendingDeepLink)
+        }
+        // Handle view mode switch (toggle is in shared overlay)
+        .onChange(of: showListView) { _, isListView in
+          if isListView {
+            viewModel.isSelectionModeEnabled = false
+          }
+        }
+        .onChange(of: viewModel.activeJobs) { _, jobs in
+          guard !jobs.isEmpty else {
+            selectedListJobId = nil
+            return
+          }
+          if jobs.count <= 1 {
+            selectedListJobId = nil
+            return
+          }
+          if let selectedListJobId,
+            !jobs.contains(where: { $0.id == selectedListJobId })
+          {
+            self.selectedListJobId = nil
+          }
+        }
+        // Disable animations during view mode transition to prevent lag
+        .animation(.none, value: showListView)
+        // Confetti overlay for celebration when shifts are added
+        .overlay {
+          ConfettiView(isActive: showConfetti) {
+            showConfetti = false
+            celebrationManager.confettiDidShow()
+          }
+          .allowsHitTesting(false)
+        }
+        // Listen for "use share button" from the screenshot prompt overlay (hosted in MainTabView)
+        .onReceive(NotificationCenter.default.publisher(for: .screenshotPromptUseShareButton)) {
+          _ in
+          showingShareOptions = true
+        }
+        // Trigger celebration when shifts are added (check on view appear and when month matches)
+        .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
+          if shouldShow
+            && celebrationManager.shouldShowConfetti(
+              forYear: viewModel.committedYear, month: viewModel.committedMonth)
+          {
+            triggerCelebration()
+          }
+        }
+        .onChange(of: viewModel.committedMonth) { _, _ in
+          // Check if we should show confetti for the newly committed (visible) month
+          if celebrationManager.shouldShowConfetti(
+            forYear: viewModel.committedYear, month: viewModel.committedMonth)
+          {
+            triggerCelebration()
+          }
+          // Check if we have a pending deep link for this month
+          if let dateISO = highlightedDateISO, !viewModel.isLoading {
+            selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+          }
+        }
+        // Deep link handling - navigate to specific date from widget
+        .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+          handleDeepLink(deepLink)
+        }
+        // When shifts finish loading, check if we should highlight/select a date from deep link
+        .onChange(of: viewModel.isLoading) { _, isLoading in
+          if !isLoading, let dateISO = highlightedDateISO {
+            logger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
+            selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+          }
+        }
+        // Also watch for shifts array changes (handles cases where shifts update without loading state change)
+        .onChange(of: viewModel.shifts) { _, shifts in
+          if let dateISO = highlightedDateISO, !shifts.isEmpty {
+            selectShiftFromDeepLink(dateISO: dateISO, shifts: shifts)
+          }
+        }
+    )
+  }
+
+  private var bodyWithSecondarySheets: AnyView {
+    AnyView(
+      bodyWithStateObservers
+        // Day shifts sheet (when tapping a calendar day)
+        .sheet(item: $selectedDayForSheet) { daySelection in
+          DayShiftsSheet(
+            dateISO: daySelection.dateISO,
+            shifts: daySelection.shifts,
+            onShiftTapped: { shift in
+              selectedDayForSheet = nil
+              // Small delay before showing details to allow sheet dismiss animation
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                selectedShift = shift
+              }
+            },
+            excludedFromTotalIds: viewModel.excludedFromTotalIds
+          )
+          .presentationDetents([.medium])
+          .presentationDragIndicator(.visible)
+        }
+        // Recurring shift editor sheet
+        .sheet(item: $recurringShiftToEdit) { recurring in
+          RecurringShiftEditorSheet(
+            recurringShift: recurring,
+            onSave: { editResult in
+              recurringShiftToEdit = nil
+              Task {
+                await viewModel.updateRecurringShift(editResult)
+              }
+            },
+            onDelete: {
+              let recurringId = recurring.id
+              recurringShiftToEdit = nil
+              Task {
+                await viewModel.deleteRecurringShift(recurringId)
+              }
+            }
+          )
+          .presentationDetents([.large])
+          .presentationDragIndicator(.visible)
+        }
+        // Calendar share options sheet
+        .sheet(
+          isPresented: $showingShareOptions,
+          onDismiss: {
+            // Check if we have a pending share action
+            if let url = shareImageURL {
+              presentShareSheet(with: [url])
+            } else if let image = shareImage {
+              presentShareSheet(with: [image])
             }
           }
-        },
-        startInEditMode: true,
-        tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
-      )
-      .presentationDetents([.medium, .large])
-      .presentationDragIndicator(.visible)
-    }
-    // Delete confirmation alert
-    .alert(
-      shiftToDelete?.isVirtual == true
-        ? String(localized: .shiftsExcludeConfirmTitle)
-        : String(localized: .shiftsDeleteConfirmTitle),
-      isPresented: $showDeleteConfirmation,
-      presenting: shiftToDelete
-    ) { shift in
-      Button(String(localized: .commonCancel), role: .cancel) {
-        shiftToDelete = nil
-      }
-      Button(
-        shift.isVirtual
-          ? String(localized: .shiftsExcludeButton)
-          : String(localized: .shiftsDeleteButton),
-        role: .destructive
-      ) {
-        Task {
-          await deleteShift(shift)
+        ) {
+          CalendarShareOptionsSheet(
+            onShowEarnings: {
+              // Prepare the image first, then dismiss - share sheet shows on dismiss
+              prepareCalendarImage(includeEarnings: true)
+              showingShareOptions = false
+            },
+            onHideEarnings: {
+              // Prepare the image first, then dismiss - share sheet shows on dismiss
+              prepareCalendarImage(includeEarnings: false)
+              showingShareOptions = false
+            }
+          )
+          .presentationDetents([.height(260)])
+          .presentationDragIndicator(.visible)
         }
-      }
-    } message: { shift in
-      Text(
-        shift.isVirtual
-          ? String(localized: .shiftsExcludeConfirmMessage)
-          : String(localized: .shiftsDeleteConfirmMessage))
-    }
-    .alert(
-      String(localized: .commonError),
-      isPresented: .init(
-        get: { operationErrorMessage != nil },
-        set: { if !$0 { operationErrorMessage = nil } }
-      )
-    ) {
-      Button(String(localized: .commonOk), role: .cancel) {
-        operationErrorMessage = nil
-      }
-    } message: {
-      if let operationErrorMessage {
-        Text(operationErrorMessage)
-      }
-    }
-    .onAppear {
-      selectionHaptic.prepare()
-      impactHaptic.prepare()
-      celebrationHaptic.prepare()
-      // Handle any pending deep link on initial appearance
-      handleDeepLink(coordinator.pendingDeepLink)
-    }
-    // Handle view mode switch (toggle is in shared overlay)
-    .onChange(of: showListView) { _, isListView in
-      if isListView {
-        viewModel.isSelectionModeEnabled = false
-      }
-    }
-    // Disable animations during view mode transition to prevent lag
-    .animation(.none, value: showListView)
-    // Confetti overlay for celebration when shifts are added
-    .overlay {
-      ConfettiView(isActive: showConfetti) {
-        showConfetti = false
-        celebrationManager.confettiDidShow()
-      }
-      .allowsHitTesting(false)
-    }
-    // Listen for "use share button" from the screenshot prompt overlay (hosted in MainTabView)
-    .onReceive(NotificationCenter.default.publisher(for: .screenshotPromptUseShareButton)) { _ in
-      showingShareOptions = true
-    }
-    // Trigger celebration when shifts are added (check on view appear and when month matches)
-    .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
-      if shouldShow
-        && celebrationManager.shouldShowConfetti(
-          forYear: viewModel.committedYear, month: viewModel.committedMonth)
-      {
-        triggerCelebration()
-      }
-    }
-    .onChange(of: viewModel.committedMonth) { _, _ in
-      // Check if we should show confetti for the newly committed (visible) month
-      if celebrationManager.shouldShowConfetti(
-        forYear: viewModel.committedYear, month: viewModel.committedMonth)
-      {
-        triggerCelebration()
-      }
-      // Check if we have a pending deep link for this month
-      if let dateISO = highlightedDateISO, !viewModel.isLoading {
-        selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
-      }
-    }
-    // Deep link handling - navigate to specific date from widget
-    .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
-      handleDeepLink(deepLink)
-    }
-    // When shifts finish loading, check if we should highlight/select a date from deep link
-    .onChange(of: viewModel.isLoading) { _, isLoading in
-      if !isLoading, let dateISO = highlightedDateISO {
-        logger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
-        selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
-      }
-    }
-    // Also watch for shifts array changes (handles cases where shifts update without loading state change)
-    .onChange(of: viewModel.shifts) { _, shifts in
-      if let dateISO = highlightedDateISO, !shifts.isEmpty {
-        selectShiftFromDeepLink(dateISO: dateISO, shifts: shifts)
-      }
-    }
-    // Day shifts sheet (when tapping a calendar day)
-    .sheet(item: $selectedDayForSheet) { daySelection in
-      DayShiftsSheet(
-        dateISO: daySelection.dateISO,
-        shifts: daySelection.shifts,
-        onShiftTapped: { shift in
-          selectedDayForSheet = nil
-          // Small delay before showing details to allow sheet dismiss animation
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            selectedShift = shift
-          }
-        },
-        excludedFromTotalIds: viewModel.excludedFromTotalIds
-      )
-      .presentationDetents([.medium])
-      .presentationDragIndicator(.visible)
-    }
-    // Recurring shift editor sheet
-    .sheet(item: $recurringShiftToEdit) { recurring in
-      RecurringShiftEditorSheet(
-        recurringShift: recurring,
-        onSave: { editResult in
-          recurringShiftToEdit = nil
-          Task {
-            await viewModel.updateRecurringShift(editResult)
-          }
-        },
-        onDelete: {
-          let recurringId = recurring.id
-          recurringShiftToEdit = nil
-          Task {
-            await viewModel.deleteRecurringShift(recurringId)
-          }
-        }
-      )
-      .presentationDetents([.large])
-      .presentationDragIndicator(.visible)
-    }
-    // Calendar share options sheet
-    .sheet(
-      isPresented: $showingShareOptions,
-      onDismiss: {
-        // Check if we have a pending share action
-        if let url = shareImageURL {
-          presentShareSheet(with: [url])
-        } else if let image = shareImage {
-          presentShareSheet(with: [image])
-        }
-      }
-    ) {
-      CalendarShareOptionsSheet(
-        onShowEarnings: {
-          // Prepare the image first, then dismiss - share sheet shows on dismiss
-          prepareCalendarImage(includeEarnings: true)
-          showingShareOptions = false
-        },
-        onHideEarnings: {
-          // Prepare the image first, then dismiss - share sheet shows on dismiss
-          prepareCalendarImage(includeEarnings: false)
-          showingShareOptions = false
-        }
-      )
-      .presentationDetents([.height(260)])
-      .presentationDragIndicator(.visible)
-    }
+    )
   }
 
   // MARK: - Calendar Share
@@ -792,6 +851,7 @@ struct ShiftsView: View {
               monthNumber: viewModel.committedMonth,
               currency: viewModel.currency,
               showEarnings: true,
+              jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
                 viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
@@ -903,7 +963,7 @@ struct ShiftsView: View {
   /// Shifts list panel for iPad landscape (right side)
   @ViewBuilder
   private var shiftsPanelForIPad: some View {
-    if viewModel.shifts.isEmpty && !viewModel.isCurrentMonth {
+    if filteredListShifts.isEmpty && !viewModel.isCurrentMonth {
       // Empty state for past/future months
       ScrollView {
         ShiftsEmptyState(
@@ -925,6 +985,15 @@ struct ShiftsView: View {
       // Shift list
       ScrollViewReader { proxy in
         List {
+          if shouldShowListJobFilter {
+            Section {
+              listJobFilterBar
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.tidexBackground)
+                .listRowSeparator(.hidden)
+            }
+          }
+
           ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
             Section {
               ForEach(weekGroup.items) { item in
@@ -992,6 +1061,7 @@ struct ShiftsView: View {
               monthNumber: viewModel.committedMonth,
               currency: viewModel.currency,
               showEarnings: true,
+              jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
                 viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
@@ -1114,7 +1184,7 @@ struct ShiftsView: View {
   private var listViewContent: some View {
     // Show empty state only when there are no shifts AND it's not current month
     // (current month with no shifts shows just the today placeholder card in the list)
-    if viewModel.shifts.isEmpty && !viewModel.isCurrentMonth {
+    if filteredListShifts.isEmpty && !viewModel.isCurrentMonth {
       // Empty state for past/future months with no shifts
       ScrollView {
         ShiftsEmptyState(
@@ -1145,14 +1215,34 @@ struct ShiftsView: View {
 
   // MARK: - Shift List Content (shared between calendar and list modes)
 
+  private var shouldShowListJobFilter: Bool {
+    viewModel.activeJobs.count > 1
+  }
+
+  private var defaultActiveJobId: String? {
+    viewModel.activeJobs.first(where: { $0.is_default })?.id
+  }
+
+  private var filteredListShifts: [ShiftWithComputations] {
+    guard let selectedListJobId else { return viewModel.shifts }
+    let defaultJobId = defaultActiveJobId
+    return viewModel.shifts.filter { shift in
+      if shift.shift.job_id == selectedListJobId {
+        return true
+      }
+      // Compatibility fallback for legacy rows that can still have nil job_id.
+      return shift.shift.job_id == nil && selectedListJobId == defaultJobId
+    }
+  }
+
   /// Build flat list of items (shifts + placeholder) sorted by date
   private var shiftListItems: [ShiftListItem] {
-    var items: [ShiftListItem] = viewModel.shifts.map { .shift($0) }
+    var items: [ShiftListItem] = filteredListShifts.map { .shift($0) }
 
     // Add today's placeholder if current month and no shift today
     if viewModel.isCurrentMonth {
       let today = todayISO()
-      let hasShiftToday = viewModel.shifts.contains { $0.shiftDate == today }
+      let hasShiftToday = filteredListShifts.contains { $0.shiftDate == today }
       if !hasShiftToday {
         items.append(.todayPlaceholder)
       }
@@ -1223,6 +1313,15 @@ struct ShiftsView: View {
     // Styled with .listRowBackground() and .listRowSeparator(.hidden) for custom look
     ScrollViewReader { proxy in
       List {
+        if shouldShowListJobFilter {
+          Section {
+            listJobFilterBar
+              .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+              .listRowBackground(Color.tidexBackground)
+              .listRowSeparator(.hidden)
+          }
+        }
+
         ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
           Section {
             ForEach(weekGroup.items) { item in
@@ -1314,10 +1413,76 @@ struct ShiftsView: View {
     }
   }
 
+  @ViewBuilder
+  private var listJobFilterBar: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.jobsFilterTitle)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: Spacing.xs) {
+          listJobFilterChip(
+            title: String(localized: .jobsFilterAll),
+            colorHex: nil,
+            isWorkplace: false,
+            isSelected: selectedListJobId == nil
+          ) {
+            selectedListJobId = nil
+          }
+
+          ForEach(viewModel.activeJobs) { job in
+            listJobFilterChip(
+              title: job.name,
+              colorHex: job.color,
+              isWorkplace: true,
+              isSelected: selectedListJobId == job.id
+            ) {
+              selectedListJobId = job.id
+            }
+          }
+        }
+      }
+    }
+    .padding(.vertical, Spacing.xxxs)
+  }
+
+  @ViewBuilder
+  private func listJobFilterChip(
+    title: String,
+    colorHex: String?,
+    isWorkplace: Bool,
+    isSelected: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Group {
+        if isSelected {
+          Text(title)
+            .font(.tidexFootnoteStrong)
+            .foregroundColor(.white)
+        } else {
+          WorkplaceNameText(
+            name: title,
+            colorHex: colorHex,
+            font: .tidexFootnoteStrong,
+            fallbackBadgeColor: isWorkplace ? .tidexBlue : nil
+          )
+        }
+      }
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
+      .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
+      .clipShape(Capsule())
+    }
+    .buttonStyle(.plain)
+  }
+
   /// Individual shift card row (visual content only - swipe actions are on List row)
   @ViewBuilder
   private func shiftCardRow(shift: ShiftWithComputations) -> some View {
     let isNextUpcoming = viewModel.nextUpcomingShift?.id == shift.id
+    let shiftJob = viewModel.jobForShift(shift)
 
     VStack(spacing: Spacing.xs) {
       ShiftRowCard(
@@ -1325,6 +1490,9 @@ struct ShiftsView: View {
         isToday: shift.shiftDate == todayISO(),
         hasConflict: viewModel.conflictingShiftIds.contains(shift.id),
         excludedFromTotal: viewModel.excludedFromTotalIds.contains(shift.id),
+        showJobIndicator: viewModel.shouldShowJobIndicators,
+        jobName: shiftJob?.name,
+        jobColorHex: shiftJob?.color,
         onTap: {
           selectionHaptic.selectionChanged()
           handleShiftTapped(shift)

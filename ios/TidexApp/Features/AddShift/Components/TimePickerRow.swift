@@ -481,6 +481,8 @@ struct TimeRangePicker: View {
   var focusedFieldBinding: Binding<TimeInputField?>?
   /// Optional preset chip ranges (used by onboarding simulator).
   var presetRanges: [TimeRangeCount]? = nil
+  /// Optional accessory displayed to the left of recent time chips.
+  var leadingChipAccessory: AnyView? = nil
   @State private var focusController = TimeInputFocusController()
 
   /// Shortened label for start time field
@@ -518,13 +520,21 @@ struct TimeRangePicker: View {
           )
         }
 
-        RecentTimesChips(
-          onSelect: { range in
-            applyTimeRange(range)
-          },
-          activeRangeId: activeRangeId,
-          presetRanges: presetRanges
-        )
+        HStack(spacing: Spacing.xs) {
+          if let leadingChipAccessory {
+            leadingChipAccessory
+              .fixedSize(horizontal: true, vertical: false)
+          }
+
+          RecentTimesChips(
+            onSelect: { range in
+              applyTimeRange(range)
+            },
+            activeRangeId: activeRangeId,
+            presetRanges: presetRanges
+          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
       }
     }
     .frame(height: 92)  // Time inputs (~56pt) + spacing (8pt) + chips (28pt)
