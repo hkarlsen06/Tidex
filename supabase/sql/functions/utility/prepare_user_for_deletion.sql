@@ -20,7 +20,6 @@ BEGIN
   END IF;
 
   -- SECURITY: Ensure the calling user can only delete their own account
-  -- auth.uid() returns the ID of the currently authenticated user
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
   END IF;
@@ -40,10 +39,9 @@ BEGIN
   -- - internal.admin_broadcasts (SET NULL - preserves broadcast history)
   -- - internal.impersonation_sessions (SET NULL - preserves session history)
   -- - internal.apple_orphan_notifications (SET NULL)
-  -- - All public schema tables (CASCADE via existing FKs)
+  -- - public.jobs and dependent tables (CASCADE from auth.users)
 
   -- Log the account deletion preparation (before the user is deleted)
-  -- This will have target_user_id set to NULL after auth user deletion
   INSERT INTO internal.admin_audit_log (
     admin_id,
     action,
@@ -65,7 +63,6 @@ BEGIN
 END;
 $$;
 
--- Grant execute permission to authenticated users (they can only delete themselves)
 GRANT EXECUTE ON FUNCTION public.prepare_user_for_deletion(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.prepare_user_for_deletion(uuid) IS

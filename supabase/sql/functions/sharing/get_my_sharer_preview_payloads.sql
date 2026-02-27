@@ -24,7 +24,8 @@ RETURNS TABLE (
   settings jsonb,
   shifts jsonb,
   recurring_shifts jsonb,
-  snapshots jsonb
+  snapshots jsonb,
+  jobs jsonb
 )
 LANGUAGE sql
 STABLE
@@ -75,6 +76,7 @@ AS $function$
           jsonb_build_object(
             'id', s.id,
             'user_id', s.user_id,
+            'job_id', s.job_id,
             'shift_date', s.shift_date,
             'start_time', s.start_time,
             'end_time', s.end_time,
@@ -98,6 +100,7 @@ AS $function$
           jsonb_build_object(
             'id', r.id,
             'user_id', r.user_id,
+            'job_id', r.job_id,
             'start_time', r.start_time,
             'end_time', r.end_time,
             'repeat_interval_weeks', r.repeat_interval_weeks,
@@ -122,6 +125,7 @@ AS $function$
             WHEN a.show_earnings THEN jsonb_build_object(
               'id', w.id,
               'user_id', w.user_id,
+              'job_id', w.job_id,
               'from_date', w.from_date,
               'hourly_wage', w.hourly_wage,
               'wage_level', w.wage_level,
@@ -138,6 +142,7 @@ AS $function$
             ELSE jsonb_build_object(
               'id', w.id,
               'user_id', w.user_id,
+              'job_id', w.job_id,
               'from_date', w.from_date,
               'hourly_wage', 0,
               'wage_level', NULL,
@@ -159,7 +164,33 @@ AS $function$
           AND w.deleted_at IS NULL
       ),
       '[]'::jsonb
-    ) AS snapshots
+    ) AS snapshots,
+    COALESCE(
+      (
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'id', j.id,
+            'user_id', j.user_id,
+            'name', j.name,
+            'color', j.color,
+            'is_default', j.is_default,
+            'sort_order', j.sort_order,
+            'payroll_day', j.payroll_day,
+            'half_tax_month', j.half_tax_month,
+            'monthly_goal', j.monthly_goal,
+            'archived_at', j.archived_at,
+            'deleted_at', j.deleted_at,
+            'created_at', j.created_at,
+            'updated_at', j.updated_at
+          )
+          ORDER BY j.sort_order ASC, j.created_at ASC, j.id ASC
+        )
+        FROM public.jobs j
+        WHERE j.user_id = a.sharer_id
+          AND j.deleted_at IS NULL
+      ),
+      '[]'::jsonb
+    ) AS jobs
   FROM authorized a
   ORDER BY a.sharer_id;
 $function$;

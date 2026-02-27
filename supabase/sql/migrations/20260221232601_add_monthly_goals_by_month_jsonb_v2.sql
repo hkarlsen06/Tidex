@@ -1,6 +1,3 @@
--- Migration: add_monthly_goals_by_month_jsonb
--- Applied remotely as version 20260221232601 (add_monthly_goals_by_month_jsonb_v2)
-
 create or replace function public.is_valid_monthly_goals_by_month(p_value jsonb)
 returns boolean
 language sql
@@ -23,11 +20,21 @@ as $$
 $$;
 
 alter table public.user_settings
-  add column monthly_goals_by_month jsonb not null default '{}'::jsonb;
+  add column if not exists monthly_goals_by_month jsonb not null default '{}'::jsonb;
 
-alter table public.user_settings
-  add constraint user_settings_monthly_goals_by_month_valid_entries
-  check (public.is_valid_monthly_goals_by_month(monthly_goals_by_month));
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_settings_monthly_goals_by_month_valid_entries'
+      and conrelid = 'public.user_settings'::regclass
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_monthly_goals_by_month_valid_entries
+      check (public.is_valid_monthly_goals_by_month(monthly_goals_by_month));
+  end if;
+end $$;
 
 comment on column public.user_settings.monthly_goals_by_month is
-  'Sparse month-specific goal overrides keyed by YYYY-MM. Falls back to monthly_goal when key is missing.';
+  'Sparse month-specific goal overrides keyed by YYYY-MM. Falls back to monthly_goal when key is missing.';;

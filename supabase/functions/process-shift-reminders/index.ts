@@ -28,6 +28,7 @@ interface DueReminder {
   end_time: string;
   reminder_minutes: number;
   minutes_until_shift: number;
+  job_name?: string | null;
 }
 
 interface PushDevice {
@@ -76,7 +77,8 @@ function buildReminderMessage(
   minutesUntil: number,
   shiftDate: string,
   startTime: string,
-  endTime: string
+  endTime: string,
+  jobName?: string | null
 ): { title: string; body: string } {
   // Use CEIL consistently (matches SQL) to avoid "1 time" when there's 1h 29m left
   const hours = Math.ceil(minutesUntil / 60);
@@ -107,7 +109,9 @@ function buildReminderMessage(
     dayText = dayText.charAt(0).toUpperCase() + dayText.slice(1);
   }
 
-  const body = `${dayText} kl. ${formatTime(startTime)}-${formatTime(endTime)}`;
+  const baseBody = `${dayText} kl. ${formatTime(startTime)}-${formatTime(endTime)}`;
+  const safeJobName = jobName?.trim();
+  const body = safeJobName ? `${baseBody} · ${safeJobName}` : baseBody;
   return { title, body };
 }
 
@@ -207,7 +211,8 @@ async function sendReminderToFcm(
     reminder.minutes_until_shift,
     reminder.shift_date,
     reminder.start_time,
-    reminder.end_time
+    reminder.end_time,
+    reminder.job_name
   );
 
   // Extract shift_id from instance_key (format: "single:{id}:{date}:{start}")
