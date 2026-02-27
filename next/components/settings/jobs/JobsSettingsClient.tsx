@@ -36,17 +36,38 @@ type ActionResponse = { success: true; data?: unknown } | { error: string };
 
 const EMPTY_FORM: FormState = {
   name: '',
-  color: '#3b82f6',
+  color: '#3B82F6',
   payrollDay: '15',
   monthlyGoal: '20000',
   halfTaxMonth: 'none',
 };
 
+// Curated 24-color palette matching iOS WorkplaceColorCarousel (no grayscale)
+const JOB_COLOR_PALETTE = [
+  '#3B82F6', '#22C55E', '#EF4444', '#F59E0B',
+  '#A855F7', '#14B8A6', '#EC4899', '#06B6D4',
+  '#6366F1', '#8B5CF6', '#10B981', '#84CC16',
+  '#F97316', '#EAB308', '#F43F5E', '#D946EF',
+  '#0EA5E9', '#2563EB', '#16A34A', '#DC2626',
+  '#EA580C', '#7C3AED', '#0891B2', '#BE123C',
+];
+
+function getContrastColor(hex: string): string {
+  const h = hex.replace(/^#/, '');
+  if (h.length !== 6) return '#ffffff';
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return (1.05) / (lum + 0.05) >= (lum + 0.05) / 0.05 ? '#ffffff' : '#000000';
+}
+
 function toFormState(job?: Job | null): FormState {
   if (!job) return EMPTY_FORM;
   return {
     name: job.name ?? '',
-    color: job.color ?? '#3b82f6',
+    color: job.color ?? '#3B82F6',
     payrollDay: job.payroll_day?.toString() ?? '15',
     monthlyGoal: job.monthly_goal?.toString() ?? '20000',
     halfTaxMonth: job.half_tax_month?.toString() ?? 'none',
@@ -323,14 +344,33 @@ export function JobsSettingsClient({ jobs }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="job-color">{t.pages.settings.jobs.colorLabel}</Label>
-              <Input
-                id="job-color"
-                type="color"
-                value={form.color}
-                onChange={(event) => setForm((prev) => ({ ...prev, color: event.target.value }))}
-                disabled={pending}
-              />
+              <Label>{t.pages.settings.jobs.colorLabel}</Label>
+              <div className="grid grid-cols-8 gap-2">
+                {JOB_COLOR_PALETTE.map((hex) => {
+                  const isSelected = form.color.toUpperCase() === hex.toUpperCase();
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => setForm((prev) => ({ ...prev, color: hex }))}
+                      className="relative h-8 w-8 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-highlight"
+                      style={{ backgroundColor: hex }}
+                      aria-label={hex}
+                      aria-pressed={isSelected}
+                    >
+                      {isSelected && (
+                        <span
+                          className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+                          style={{ color: getContrastColor(hex) }}
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
