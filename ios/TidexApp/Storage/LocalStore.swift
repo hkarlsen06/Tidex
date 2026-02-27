@@ -60,6 +60,7 @@ final class LocalStore {
 
     // Create schema with all local models
     let schema = Schema([
+      LocalJob.self,
       LocalUserShift.self,
       LocalRecurringShift.self,
       LocalWageSnapshot.self,
@@ -158,6 +159,7 @@ actor LocalStoreActor {
   func resetAllData() {
     do {
       try modelContext.delete(model: LocalUserShift.self)
+      try modelContext.delete(model: LocalJob.self)
       try modelContext.delete(model: LocalRecurringShift.self)
       try modelContext.delete(model: LocalWageSnapshot.self)
       try modelContext.delete(model: LocalUserSettings.self)
@@ -279,6 +281,402 @@ actor LocalStoreActor {
 
   // MARK: - User Shift Operations
 
+  // MARK: - Jobs Operations
+
+  /// Upsert a job from server data
+  func upsertJob(_ job: LocalJob) throws {
+    let descriptor = FetchDescriptor<LocalJob>()
+    let existing = try modelContext.fetch(descriptor).first { $0.id == job.id }
+
+    if let existing {
+      existing.userId = job.userId
+      existing.name = job.name
+      existing.color = job.color
+      existing.isDefault = job.isDefault
+      existing.sortOrder = job.sortOrder
+      existing.payrollDay = job.payrollDay
+      existing.halfTaxMonth = job.halfTaxMonth
+      existing.monthlyGoal = job.monthlyGoal
+      existing.archivedAt = job.archivedAt
+      existing.deletedAt = job.deletedAt
+      existing.createdAt = job.createdAt
+      existing.serverUpdatedAt = job.serverUpdatedAt
+      existing.serverRevision = job.serverRevision
+      existing.syncStatusRaw = job.syncStatusRaw
+      existing.dirtyFields = job.dirtyFields
+      existing.lastSyncedSnapshot = job.lastSyncedSnapshot
+      existing.localUpdatedAt = job.localUpdatedAt
+      existing.conflictServerSnapshot = job.conflictServerSnapshot
+    } else {
+      modelContext.insert(job)
+    }
+  }
+
+  func getJob(id: String) throws -> LocalJob? {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+    return try modelContext.fetch(descriptor).first
+  }
+
+  func getAllJobs(userId: String) throws -> [LocalJob] {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.userId == userId }
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
+  /// Get dirty jobs that need to be pushed
+  func getDirtyJobs(userId: String) throws -> [LocalJob] {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId
+          && (job.syncStatusRaw == "dirty" || job.syncStatusRaw == "pendingDelete"
+            || (job.syncStatusRaw == "conflict" && job.serverRevision == 0))
+      }
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
+  // MARK: - Local Job Write Operations
+
+  // swiftlint:disable:next function_parameter_count
+  func createJob(
+    userId: String,
+    name: String,
+    color: String?,
+    isDefault: Bool,
+    sortOrder: Int,
+    payrollDay: Int?,
+    halfTaxMonth: Int?,
+    monthlyGoal: Int?
+  ) throws -> Job {
+    let id = UUID().lowercasedString
+    let now = Date()
+    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if isDefault {
+      let existingDescriptor = FetchDescriptor<LocalJob>(
+        predicate: #Predicate { job in
+          job.userId == userId && job.deletedAt == nil && job.archivedAt == nil
+        }
+      )
+      let existingJobs = try modelContext.fetch(existingDescriptor)
+      for existing in existingJobs where existing.isDefault {
+        existing.isDefault = false
+        existing.dirtyFieldKeys.insert(.isDefault)
+        existing.localUpdatedAt = now
+        if existing.syncStatus == .clean {
+          existing.syncStatus = .dirty
+        }
+      }
+    }
+
+    let serverSnapshot = JobServerSnapshot(
+      name: trimmedName,
+      color: color,
+      isDefault: isDefault,
+      sortOrder: sortOrder,
+      payrollDay: payrollDay,
+      halfTaxMonth: halfTaxMonth,
+      monthlyGoal: monthlyGoal,
+      archivedAt: nil,
+      deletedAt: nil,
+      updatedAt: now,
+      revision: 0
+    )
+
+    let dirtyFieldsData =
+      (try? canonicalJSONEncoder.encode(JobField.allCases.map(\.rawValue)))
+      ?? Data()
+
+    let localJob = LocalJob(
+      id: id,
+      userId: userId,
+      name: trimmedName,
+      color: color,
+      isDefault: isDefault,
+      sortOrder: sortOrder,
+      payrollDay: payrollDay,
+      halfTaxMonth: halfTaxMonth,
+      monthlyGoal: monthlyGoal,
+      archivedAt: nil,
+      deletedAt: nil,
+      createdAt: now,
+      serverUpdatedAt: now,
+      serverRevision: 0,
+      syncStatus: .dirty,
+      dirtyFields: dirtyFieldsData,
+      lastSyncedSnapshot: serverSnapshot.encoded(),
+      localUpdatedAt: now,
+      conflictServerSnapshot: nil
+    )
+
+    modelContext.insert(localJob)
+    try modelContext.save()
+    return localJob.toJob()
+  }
+
+  func updateJobMetadata(
+    id: String,
+    name: String,
+    color: String?
+  ) throws -> Job {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    var newDirtyFields = localJob.dirtyFieldKeys
+    let now = Date()
+    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if localJob.name != trimmedName {
+      localJob.name = trimmedName
+      newDirtyFields.insert(.name)
+    }
+
+    if localJob.color != color {
+      localJob.color = color
+      newDirtyFields.insert(.color)
+    }
+
+    localJob.dirtyFieldKeys = newDirtyFields
+    localJob.localUpdatedAt = now
+
+    if !newDirtyFields.isEmpty && localJob.syncStatus == .clean {
+      localJob.syncStatus = .dirty
+    }
+
+    try modelContext.save()
+    return localJob.toJob()
+  }
+
+  func updateJobPaySettings(
+    id: String,
+    payrollDay: Int,
+    halfTaxMonth: Int?,
+    monthlyGoal: Int?
+  ) throws -> Job {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    var newDirtyFields = localJob.dirtyFieldKeys
+    let now = Date()
+
+    if localJob.payrollDay != payrollDay {
+      localJob.payrollDay = payrollDay
+      newDirtyFields.insert(.payrollDay)
+    }
+
+    if localJob.halfTaxMonth != halfTaxMonth {
+      localJob.halfTaxMonth = halfTaxMonth
+      newDirtyFields.insert(.halfTaxMonth)
+    }
+
+    if localJob.monthlyGoal != monthlyGoal {
+      localJob.monthlyGoal = monthlyGoal
+      newDirtyFields.insert(.monthlyGoal)
+    }
+
+    localJob.dirtyFieldKeys = newDirtyFields
+    localJob.localUpdatedAt = now
+
+    if !newDirtyFields.isEmpty && localJob.syncStatus == .clean {
+      localJob.syncStatus = .dirty
+    }
+
+    try modelContext.save()
+    return localJob.toJob()
+  }
+
+  func setJobDefault(userId: String, jobId: String) throws {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId && job.deletedAt == nil && job.archivedAt == nil
+      }
+    )
+    let jobs = try modelContext.fetch(descriptor)
+    let now = Date()
+
+    for job in jobs {
+      let shouldBeDefault = job.id == jobId
+      guard job.isDefault != shouldBeDefault else { continue }
+      job.isDefault = shouldBeDefault
+      job.dirtyFieldKeys.insert(.isDefault)
+      job.localUpdatedAt = now
+      if job.syncStatus == .clean {
+        job.syncStatus = .dirty
+      }
+    }
+
+    try modelContext.save()
+  }
+
+  func archiveJob(id: String, archivedAt: Date = Date()) throws -> String {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    localJob.archivedAt = archivedAt
+    localJob.isDefault = false
+    localJob.dirtyFieldKeys.insert(.archivedAt)
+    localJob.dirtyFieldKeys.insert(.isDefault)
+    localJob.localUpdatedAt = archivedAt
+    if localJob.syncStatus == .clean {
+      localJob.syncStatus = .dirty
+    }
+
+    try modelContext.save()
+    return localJob.userId
+  }
+
+  func restoreJob(id: String, sortOrder: Int) throws -> String {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    let now = Date()
+    localJob.archivedAt = nil
+    localJob.sortOrder = sortOrder
+    localJob.dirtyFieldKeys.insert(.archivedAt)
+    localJob.dirtyFieldKeys.insert(.sortOrder)
+    localJob.localUpdatedAt = now
+    if localJob.syncStatus == .clean {
+      localJob.syncStatus = .dirty
+    }
+
+    try modelContext.save()
+    return localJob.userId
+  }
+
+  func reorderJobs(userId: String, orderedJobIds: [String]) throws {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId && job.deletedAt == nil && job.archivedAt == nil
+      }
+    )
+
+    let jobs = try modelContext.fetch(descriptor)
+    let now = Date()
+    let orderById = Dictionary(uniqueKeysWithValues: orderedJobIds.enumerated().map { ($1, $0) })
+
+    for job in jobs {
+      guard let newOrder = orderById[job.id], job.sortOrder != newOrder else { continue }
+      job.sortOrder = newOrder
+      job.dirtyFieldKeys.insert(.sortOrder)
+      job.localUpdatedAt = now
+      if job.syncStatus == .clean {
+        job.syncStatus = .dirty
+      }
+    }
+
+    try modelContext.save()
+  }
+
+  func markJobPendingDelete(id: String) throws -> String {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    let now = Date()
+    localJob.deletedAt = now
+    localJob.isDefault = false
+    localJob.syncStatus = .pendingDelete
+    localJob.dirtyFieldKeys.insert(.deletedAt)
+    localJob.dirtyFieldKeys.insert(.isDefault)
+    localJob.localUpdatedAt = now
+
+    try modelContext.save()
+    return localJob.userId
+  }
+
+  func resolveStoredJobConflictKeepLocal(id: String) throws {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    guard localJob.syncStatus == .conflict else {
+      throw LocalStoreWriteError.notInConflict
+    }
+
+    guard
+      let serverSnapshot = JobServerSnapshot.decode(
+        from: localJob.conflictServerSnapshot ?? Data()
+      )
+    else {
+      throw LocalStoreWriteError.missingConflictSnapshot
+    }
+
+    localJob.serverRevision = serverSnapshot.revision
+    localJob.serverUpdatedAt = serverSnapshot.updatedAt
+    localJob.syncStatus = .dirty
+    localJob.conflictServerSnapshot = nil
+    localJob.localUpdatedAt = Date()
+
+    try modelContext.save()
+  }
+
+  func resolveStoredJobConflictKeepServer(id: String) throws {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    guard localJob.syncStatus == .conflict else {
+      throw LocalStoreWriteError.notInConflict
+    }
+
+    let conflictData = localJob.conflictServerSnapshot ?? Data()
+    guard let serverSnapshot = JobServerSnapshot.decode(from: conflictData) else {
+      throw LocalStoreWriteError.missingConflictSnapshot
+    }
+
+    localJob.name = serverSnapshot.name
+    localJob.color = serverSnapshot.color
+    localJob.isDefault = serverSnapshot.isDefault
+    localJob.sortOrder = serverSnapshot.sortOrder
+    localJob.payrollDay = serverSnapshot.payrollDay
+    localJob.halfTaxMonth = serverSnapshot.halfTaxMonth
+    localJob.monthlyGoal = serverSnapshot.monthlyGoal
+    localJob.archivedAt = serverSnapshot.archivedAt
+    localJob.deletedAt = serverSnapshot.deletedAt
+    localJob.serverRevision = serverSnapshot.revision
+    localJob.serverUpdatedAt = serverSnapshot.updatedAt
+    localJob.syncStatus = .clean
+    localJob.dirtyFieldKeys = []
+    localJob.lastSyncedSnapshot = conflictData
+    localJob.conflictServerSnapshot = nil
+    localJob.localUpdatedAt = Date()
+
+    try modelContext.save()
+  }
+
   /// Upsert a user shift from server data
   func upsertUserShift(_ shift: LocalUserShift) throws {
     let shiftId = shift.id
@@ -288,6 +686,7 @@ actor LocalStoreActor {
 
     if let existing = try modelContext.fetch(descriptor).first {
       // Update existing - copy all fields
+      existing.jobId = shift.jobId
       existing.shiftDate = shift.shiftDate
       existing.startTime = shift.startTime
       existing.endTime = shift.endTime
@@ -340,6 +739,7 @@ actor LocalStoreActor {
 
   func createUserShift(
     userId: String,
+    jobId: String? = nil,
     shiftDate: Date,
     startTime: String,
     endTime: String,
@@ -354,6 +754,7 @@ actor LocalStoreActor {
     let shiftDateString = dateFormatter.string(from: shiftDate)
 
     let snapshot = UserShiftServerSnapshot(
+      jobId: jobId,
       shiftDate: shiftDateString,
       startTime: startTime,
       endTime: endTime,
@@ -369,6 +770,7 @@ actor LocalStoreActor {
     let localShift = LocalUserShift(
       id: id,
       userId: userId,
+      jobId: jobId,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
@@ -390,6 +792,7 @@ actor LocalStoreActor {
 
   func updateUserShift(
     id: String,
+    jobId: String? = nil,
     shiftDate: Date?,
     startTime: String?,
     endTime: String?,
@@ -405,6 +808,11 @@ actor LocalStoreActor {
 
     var newDirtyFields = localShift.dirtyFieldKeys
     let now = Date()
+
+    if let newJobId = jobId, newJobId != localShift.jobId {
+      localShift.jobId = newJobId
+      newDirtyFields.insert(.jobId)
+    }
 
     if let newDate = shiftDate, newDate != localShift.shiftDate {
       localShift.shiftDate = newDate
@@ -508,6 +916,7 @@ actor LocalStoreActor {
 
     localShift.shiftDate =
       dateFormatter.date(from: serverSnapshot.shiftDate) ?? localShift.shiftDate
+    localShift.jobId = serverSnapshot.jobId
     localShift.startTime = serverSnapshot.startTime
     localShift.endTime = serverSnapshot.endTime
     localShift.customSupplements = serverSnapshot.customSupplements
@@ -534,6 +943,7 @@ actor LocalStoreActor {
 
     if let existing = try modelContext.fetch(descriptor).first {
       // Update existing
+      existing.jobId = shift.jobId
       existing.startTime = shift.startTime
       existing.endTime = shift.endTime
       existing.repeatIntervalWeeks = shift.repeatIntervalWeeks
@@ -590,6 +1000,7 @@ actor LocalStoreActor {
   // swiftlint:disable:next function_parameter_count
   func createRecurringShift(
     userId: String,
+    jobId: String? = nil,
     startTime: String,
     endTime: String,
     repeatIntervalWeeks: Int,
@@ -607,6 +1018,7 @@ actor LocalStoreActor {
     let supplementsData = dateSpecificSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
 
     let serverSnapshot = RecurringShiftServerSnapshot(
+      jobId: jobId,
       startTime: startTime,
       endTime: endTime,
       repeatIntervalWeeks: repeatIntervalWeeks,
@@ -625,6 +1037,7 @@ actor LocalStoreActor {
     let localShift = LocalRecurringShift(
       id: id,
       userId: userId,
+      jobId: jobId,
       startTime: startTime,
       endTime: endTime,
       repeatIntervalWeeks: repeatIntervalWeeks,
@@ -650,6 +1063,7 @@ actor LocalStoreActor {
   // swiftlint:disable:next function_parameter_count
   func updateRecurringShift(
     id: String,
+    jobId: String? = nil,
     startTime: String?,
     endTime: String?,
     repeatIntervalWeeks: Int?,
@@ -668,6 +1082,11 @@ actor LocalStoreActor {
 
     var newDirtyFields = localShift.dirtyFieldKeys
     let now = Date()
+
+    if let newJobId = jobId, newJobId != localShift.jobId {
+      localShift.jobId = newJobId
+      newDirtyFields.insert(.jobId)
+    }
 
     if let newStart = startTime, newStart != localShift.startTime {
       localShift.startTime = newStart
@@ -821,6 +1240,7 @@ actor LocalStoreActor {
     }
 
     localShift.startTime = serverSnapshot.startTime
+    localShift.jobId = serverSnapshot.jobId
     localShift.endTime = serverSnapshot.endTime
     localShift.repeatIntervalWeeks = serverSnapshot.repeatIntervalWeeks
     localShift.selectedDays = serverSnapshot.selectedDays
@@ -850,6 +1270,7 @@ actor LocalStoreActor {
 
     if let existing = try modelContext.fetch(descriptor).first {
       // Update existing
+      existing.jobId = snapshot.jobId
       existing.fromDate = snapshot.fromDate
       existing.hourlyWage = snapshot.hourlyWage
       existing.wageLevel = snapshot.wageLevel
@@ -910,6 +1331,7 @@ actor LocalStoreActor {
   // swiftlint:disable:next function_parameter_count
   func createWageSnapshot(
     userId: String,
+    jobId: String? = nil,
     fromDate: Date?,
     hourlyWage: Double,
     wageLevel: Int?,
@@ -931,6 +1353,7 @@ actor LocalStoreActor {
     let fromDateString = fromDate.map { dateFormatter.string(from: $0) }
 
     let serverSnapshot = WageSnapshotServerSnapshot(
+      jobId: jobId,
       fromDate: fromDateString,
       hourlyWage: hourlyWage,
       wageLevel: wageLevel,
@@ -953,6 +1376,7 @@ actor LocalStoreActor {
     let localSnapshot = LocalWageSnapshot(
       id: id,
       userId: userId,
+      jobId: jobId,
       fromDate: fromDate,
       hourlyWage: hourlyWage,
       wageLevel: wageLevel,
@@ -982,6 +1406,7 @@ actor LocalStoreActor {
   // swiftlint:disable:next function_parameter_count
   func updateWageSnapshot(
     id: String,
+    jobId: String? = nil,
     hourlyWage: Double?,
     wageLevel: Int?,
     supplements: SupplementRulesSnapshot?,
@@ -1002,6 +1427,11 @@ actor LocalStoreActor {
 
     var newDirtyFields = localSnapshot.dirtyFieldKeys
     let now = Date()
+
+    if let newJobId = jobId, newJobId != localSnapshot.jobId {
+      localSnapshot.jobId = newJobId
+      newDirtyFields.insert(.jobId)
+    }
 
     if let newWage = hourlyWage, newWage != localSnapshot.hourlyWage {
       localSnapshot.hourlyWage = newWage
@@ -1129,6 +1559,7 @@ actor LocalStoreActor {
     let dateFormatter = isoDateFormatter
 
     localSnapshot.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
+    localSnapshot.jobId = serverSnapshot.jobId
     localSnapshot.hourlyWage = serverSnapshot.hourlyWage
     localSnapshot.wageLevel = serverSnapshot.wageLevel
     localSnapshot.supplements = serverSnapshot.supplements
@@ -1502,11 +1933,19 @@ actor LocalStoreActor {
 
   /// Get all records with conflicts for a user
   func getConflicts(userId: String) throws -> (
+    jobs: [LocalJob],
     shifts: [LocalUserShift],
     recurringShifts: [LocalRecurringShift],
     wageSnapshots: [LocalWageSnapshot],
     settings: LocalUserSettings?
   ) {
+    let jobsDescriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId && job.syncStatusRaw == "conflict"
+      }
+    )
+    let jobs = try modelContext.fetch(jobsDescriptor)
+
     let shiftsDescriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { shift in
         shift.userId == userId && shift.syncStatusRaw == "conflict"
@@ -1535,31 +1974,35 @@ actor LocalStoreActor {
     )
     let settings = try modelContext.fetch(settingsDescriptor).first
 
-    return (shifts, recurringShifts, wageSnapshots, settings)
+    return (jobs, shifts, recurringShifts, wageSnapshots, settings)
   }
 
   /// Check if user has any conflicts
   func hasConflicts(userId: String) throws -> Bool {
     let conflicts = try getConflicts(userId: userId)
-    return !conflicts.shifts.isEmpty || !conflicts.recurringShifts.isEmpty
+    return !conflicts.jobs.isEmpty || !conflicts.shifts.isEmpty
+      || !conflicts.recurringShifts.isEmpty
       || !conflicts.wageSnapshots.isEmpty || conflicts.settings != nil
   }
 
   /// Check if user has any pending changes
   func hasPendingChanges(userId: String) throws -> Bool {
+    let dirtyJobs = try getDirtyJobs(userId: userId)
     let dirtyShifts = try getDirtyUserShifts(userId: userId)
     let dirtyRecurring = try getDirtyRecurringShifts(userId: userId)
     let dirtySnapshots = try getDirtyWageSnapshots(userId: userId)
     let dirtySettings = try getDirtyUserSettings(userId: userId)
 
-    return !dirtyShifts.isEmpty || !dirtyRecurring.isEmpty || !dirtySnapshots.isEmpty
+    return !dirtyJobs.isEmpty || !dirtyShifts.isEmpty || !dirtyRecurring.isEmpty
+      || !dirtySnapshots.isEmpty
       || dirtySettings != nil
   }
 
   /// Count total conflicts for a user
   func countConflicts(userId: String) throws -> Int {
     let conflicts = try getConflicts(userId: userId)
-    return conflicts.shifts.count + conflicts.recurringShifts.count + conflicts.wageSnapshots.count
+    return conflicts.jobs.count + conflicts.shifts.count + conflicts.recurringShifts.count
+      + conflicts.wageSnapshots.count
       + (conflicts.settings != nil ? 1 : 0)
   }
 
@@ -1575,6 +2018,110 @@ actor LocalStoreActor {
 
     update(state)
     try? modelContext.save()
+  }
+
+  // MARK: - Sync Update Operations for Jobs
+
+  // swiftlint:disable:next function_parameter_count
+  func updateJobFromServer(
+    id: String,
+    serverRow: SyncJobRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    archivedAt: Date?,
+    deletedAt: Date?,
+    snapshot: JobServerSnapshot
+  ) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.name = serverRow.name
+    existing.color = serverRow.color
+    existing.isDefault = serverRow.is_default
+    existing.sortOrder = serverRow.sort_order
+    existing.payrollDay = serverRow.payroll_day
+    existing.halfTaxMonth = serverRow.half_tax_month
+    existing.monthlyGoal = serverRow.monthly_goal
+    existing.archivedAt = archivedAt
+    existing.deletedAt = deletedAt
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.lastSyncedSnapshot = snapshot.encoded()
+    existing.localUpdatedAt = Date()
+  }
+
+  func markJobConflict(id: String, serverSnapshot: JobServerSnapshot?) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.syncStatus = .conflict
+    existing.conflictServerSnapshot = serverSnapshot?.encoded()
+  }
+
+  func updateJobConflictSnapshot(id: String, serverSnapshot: JobServerSnapshot) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.conflictServerSnapshot = serverSnapshot.encoded()
+  }
+
+  // swiftlint:disable:next function_parameter_count
+  func autoMergeJob(
+    id: String,
+    serverRow: SyncJobRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    archivedAt: Date?,
+    deletedAt: Date?,
+    newSnapshot: JobServerSnapshot,
+    localDirtyFields: Set<JobField>
+  ) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    if !localDirtyFields.contains(.name) {
+      existing.name = serverRow.name
+    }
+    if !localDirtyFields.contains(.color) {
+      existing.color = serverRow.color
+    }
+    if !localDirtyFields.contains(.isDefault) {
+      existing.isDefault = serverRow.is_default
+    }
+    if !localDirtyFields.contains(.sortOrder) {
+      existing.sortOrder = serverRow.sort_order
+    }
+    if !localDirtyFields.contains(.payrollDay) {
+      existing.payrollDay = serverRow.payroll_day
+    }
+    if !localDirtyFields.contains(.halfTaxMonth) {
+      existing.halfTaxMonth = serverRow.half_tax_month
+    }
+    if !localDirtyFields.contains(.monthlyGoal) {
+      existing.monthlyGoal = serverRow.monthly_goal
+    }
+    if !localDirtyFields.contains(.archivedAt) {
+      existing.archivedAt = archivedAt
+    }
+    if !localDirtyFields.contains(.deletedAt) {
+      existing.deletedAt = deletedAt
+    }
+
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.lastSyncedSnapshot = newSnapshot.encoded()
   }
 
   // MARK: - Sync Update Operations for User Shifts
@@ -1596,6 +2143,7 @@ actor LocalStoreActor {
 
     let dateFormatter = isoDateFormatter
 
+    existing.jobId = serverRow.job_id
     existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
@@ -1651,6 +2199,9 @@ actor LocalStoreActor {
     let dateFormatter = isoDateFormatter
 
     // Apply server changes only for non-dirty fields
+    if !localDirtyFields.contains(.jobId) {
+      existing.jobId = serverRow.job_id
+    }
     if !localDirtyFields.contains(.shiftDate) {
       existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     }
@@ -1690,6 +2241,7 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
+    existing.jobId = serverRow.job_id
     existing.startTime = serverRow.cleanStartTime
     existing.endTime = serverRow.cleanEndTime
     existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
@@ -1745,6 +2297,9 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
+    if !localDirtyFields.contains(.jobId) {
+      existing.jobId = serverRow.job_id
+    }
     if !localDirtyFields.contains(.startTime) {
       existing.startTime = serverRow.cleanStartTime
     }
@@ -1795,6 +2350,7 @@ actor LocalStoreActor {
 
     let dateFormatter = isoDateFormatter
 
+    existing.jobId = serverRow.job_id
     existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
     existing.hourlyWage = serverRow.hourly_wage
     existing.wageLevel = serverRow.wage_level
@@ -1851,6 +2407,9 @@ actor LocalStoreActor {
 
     let dateFormatter = isoDateFormatter
 
+    if !localDirtyFields.contains(.jobId) {
+      existing.jobId = serverRow.job_id
+    }
     if !localDirtyFields.contains(.fromDate) {
       existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
     }
@@ -1999,6 +2558,135 @@ actor LocalStoreActor {
 
   // MARK: - Push Operations for User Shifts
 
+  // MARK: - Push Operations for Jobs
+
+  // swiftlint:disable:next function_parameter_count
+  func markJobPushed(
+    id: String,
+    serverRow: SyncJobRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    archivedAt: Date?,
+    deletedAt: Date?,
+    snapshot: JobServerSnapshot
+  ) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.name = serverRow.name
+    existing.color = serverRow.color
+    existing.isDefault = serverRow.is_default
+    existing.sortOrder = serverRow.sort_order
+    existing.payrollDay = serverRow.payroll_day
+    existing.halfTaxMonth = serverRow.half_tax_month
+    existing.monthlyGoal = serverRow.monthly_goal
+    existing.archivedAt = archivedAt
+    existing.deletedAt = deletedAt
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.lastSyncedSnapshot = snapshot.encoded()
+    existing.conflictServerSnapshot = nil
+    existing.localUpdatedAt = Date()
+  }
+
+  func markJobClean(id: String) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  func markJobDeleted(
+    id: String,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    deletedAt: Date?
+  ) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.deletedAt = deletedAt
+    existing.isDefault = false
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  // swiftlint:disable:next function_parameter_count
+  func rebaseJob(
+    id: String,
+    serverRow: SyncJobRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    archivedAt: Date?,
+    deletedAt: Date?,
+    newSnapshot: JobServerSnapshot,
+    localDirtyFields: Set<JobField>
+  ) {
+    autoMergeJob(
+      id: id,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      archivedAt: archivedAt,
+      deletedAt: deletedAt,
+      newSnapshot: newSnapshot,
+      localDirtyFields: localDirtyFields
+    )
+  }
+
+  func resolveJobConflictKeepServer(id: String, serverSnapshot: JobServerSnapshot) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.name = serverSnapshot.name
+    existing.color = serverSnapshot.color
+    existing.isDefault = serverSnapshot.isDefault
+    existing.sortOrder = serverSnapshot.sortOrder
+    existing.payrollDay = serverSnapshot.payrollDay
+    existing.halfTaxMonth = serverSnapshot.halfTaxMonth
+    existing.monthlyGoal = serverSnapshot.monthlyGoal
+    existing.archivedAt = serverSnapshot.archivedAt
+    existing.deletedAt = serverSnapshot.deletedAt
+    existing.serverUpdatedAt = serverSnapshot.updatedAt
+    existing.serverRevision = serverSnapshot.revision
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.lastSyncedSnapshot = serverSnapshot.encoded()
+    existing.conflictServerSnapshot = nil
+    existing.localUpdatedAt = Date()
+  }
+
+  func resolveJobConflictKeepLocal(id: String, serverRevision: Int64) {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.serverRevision = serverRevision
+    existing.syncStatus = .dirty
+    existing.conflictServerSnapshot = nil
+  }
+
   /// Mark a shift as successfully pushed (clean)
   func markShiftPushed(
     id: String,
@@ -2016,6 +2704,7 @@ actor LocalStoreActor {
     let dateFormatter = isoDateFormatter
 
     // Update with canonical server values
+    existing.jobId = serverRow.job_id
     existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
@@ -2098,6 +2787,7 @@ actor LocalStoreActor {
     let dateFormatter = isoDateFormatter
 
     // Overwrite local with server snapshot
+    existing.jobId = serverSnapshot.jobId
     existing.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? existing.shiftDate
     existing.startTime = serverSnapshot.startTime
     existing.endTime = serverSnapshot.endTime
@@ -2142,6 +2832,7 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
+    existing.jobId = serverRow.job_id
     existing.startTime = serverRow.cleanStartTime
     existing.endTime = serverRow.cleanEndTime
     existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
@@ -2222,6 +2913,7 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
+    existing.jobId = serverSnapshot.jobId
     existing.startTime = serverSnapshot.startTime
     existing.endTime = serverSnapshot.endTime
     existing.repeatIntervalWeeks = serverSnapshot.repeatIntervalWeeks
@@ -2268,6 +2960,7 @@ actor LocalStoreActor {
 
     let dateFormatter = isoDateFormatter
 
+    existing.jobId = serverRow.job_id
     existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
     existing.hourlyWage = serverRow.hourly_wage
     existing.wageLevel = serverRow.wage_level
@@ -2350,6 +3043,7 @@ actor LocalStoreActor {
 
     let dateFormatter = isoDateFormatter
 
+    existing.jobId = serverSnapshot.jobId
     existing.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
     existing.hourlyWage = serverSnapshot.hourlyWage
     existing.wageLevel = serverSnapshot.wageLevel

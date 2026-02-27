@@ -78,6 +78,8 @@ enum EndCondition: Codable, Equatable {
 struct RecurringShiftRow: Codable, Identifiable, Equatable {
   let id: String
   let user_id: String
+  /// Job that owns this recurring pattern (nullable during rollout compatibility)
+  var job_id: String? = nil
   /// Start time (HH:mm or HH:mm:ss+TZ from timetz)
   let start_time: String
   /// End time (HH:mm or HH:mm:ss+TZ from timetz)

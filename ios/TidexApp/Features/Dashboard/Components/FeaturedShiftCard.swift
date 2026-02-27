@@ -9,6 +9,9 @@ struct FeaturedShiftCard: View {
   let isToday: Bool
   let isBestShift: Bool  // true = showing best shift, false = showing next shift
   let countdownText: String?  // Countdown text shown below the card
+  let showJobIndicator: Bool
+  let jobName: String?
+  let jobColorHex: String?
   /// Progress through the shift (0-100), shows a subtle progress bar when provided (for active shifts)
   var progress: Double?
   /// Remaining seconds in the final countdown window for active shifts.
@@ -17,6 +20,30 @@ struct FeaturedShiftCard: View {
   var showIncreaseHighlight: Bool = false
   /// Whether footer text/badge under the card should be shown.
   var showFooter: Bool = true
+
+  init(
+    shift: ShiftWithComputations,
+    isToday: Bool,
+    isBestShift: Bool,
+    countdownText: String?,
+    showJobIndicator: Bool = false,
+    jobName: String? = nil,
+    jobColorHex: String? = nil,
+    progress: Double? = nil,
+    showIncreaseHighlight: Bool = false,
+    showFooter: Bool = true
+  ) {
+    self.shift = shift
+    self.isToday = isToday
+    self.isBestShift = isBestShift
+    self.countdownText = countdownText
+    self.showJobIndicator = showJobIndicator
+    self.jobName = jobName
+    self.jobColorHex = jobColorHex
+    self.progress = progress
+    self.showIncreaseHighlight = showIncreaseHighlight
+    self.showFooter = showFooter
+  }
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
@@ -66,6 +93,18 @@ struct FeaturedShiftCard: View {
     layoutDirection == .rightToLeft
   }
 
+  private var maxJobBadgeWidth: CGFloat {
+    96
+  }
+
+  private var shouldRenderJobBadge: Bool {
+    showJobIndicator && (jobName?.isEmpty == false)
+  }
+
+  private var hasTrailingBottomContent: Bool {
+    shouldRenderJobBadge || showBreakdown
+  }
+
   private var timeRangeText: String {
     return ShiftCardFormatter.localizedTimeRange(
       start: shift.startTime,
@@ -83,7 +122,7 @@ struct FeaturedShiftCard: View {
 
     VStack(spacing: Spacing.sm) {
       // Main card content
-      ShiftCardContentLayout(centerTrailing: !showBreakdown) {
+      ShiftCardContentLayout(centerTrailing: !hasTrailingBottomContent) {
         // Row 1: Day name and date
         HStack(spacing: Spacing.xxs) {
           Text(dateParts.weekday)
@@ -103,7 +142,7 @@ struct FeaturedShiftCard: View {
       } trailingTop: {
         // Net/gross amount
         let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-        HStack(spacing: Spacing.micro) {
+        HStack(spacing: Spacing.xxxs) {
           if showIncreaseHighlight {
             Text("+")
               .font(.tidexTitle)
@@ -121,8 +160,20 @@ struct FeaturedShiftCard: View {
           .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
         }
       } trailingBottom: {
-        // Breakdown (gross - tax) when tax enabled
-        if showBreakdown {
+        if shouldRenderJobBadge, let jobName, !jobName.isEmpty {
+          WorkplaceNameText(
+            name: jobName,
+            colorHex: jobColorHex,
+            font: .tidexCaptionRegular,
+            fallbackBadgeColor: .tidexBlue,
+            badgeHorizontalPadding: Spacing.xs,
+            badgeVerticalPadding: 2
+          )
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .frame(maxWidth: maxJobBadgeWidth, alignment: .trailing)
+        } else if showBreakdown {
+          // Breakdown (gross - tax) when tax enabled
           HStack(spacing: Spacing.xxs) {
             Text(formatPlainAmount(shift.grossPay))
               .contentTransition(.numericText(value: shift.grossPay))

@@ -168,7 +168,7 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
       var data:
         (
           settings: UserSettings, rawShifts: [ShiftRow], snapshots: [WageSnapshot],
-          recurring: [RecurringShiftRow]
+          recurring: [RecurringShiftRow], jobs: [Job]
         )?
 
       for attempt in 1...maxAttempts {
@@ -176,7 +176,7 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
         data = await MainActor.run {
           () -> (
             settings: UserSettings, rawShifts: [ShiftRow], snapshots: [WageSnapshot],
-            recurring: [RecurringShiftRow]
+            recurring: [RecurringShiftRow], jobs: [Job]
           )? in
           let settingsRepository = SettingsRepository.shared
           guard let settings = settingsRepository.getSettings(for: userIdSnapshot) else {
@@ -186,6 +186,7 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
           let shiftsRepository = ShiftsRepository.shared
           let snapshotsRepository = SnapshotsRepository.shared
           let recurringShiftsRepository = RecurringShiftsRepository.shared
+          let jobsRepository = JobsRepository.shared
 
           let startDate = Date.firstDayOfMonthDate(year: current.year, month: current.month)
           let endDate = Date.lastDayOfMonthDate(year: current.year, month: current.month)
@@ -197,8 +198,9 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
           )
           let snapshots = snapshotsRepository.getSnapshots(for: userIdSnapshot)
           let recurring = recurringShiftsRepository.getRecurringShifts(for: userIdSnapshot)
+          let jobs = jobsRepository.getNonDeletedJobs(for: userIdSnapshot)
 
-          return (settings, rawShifts, snapshots, recurring)
+          return (settings, rawShifts, snapshots, recurring, jobs)
         }
 
         if data != nil {
@@ -218,7 +220,8 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
         shifts: data.rawShifts,
         recurring: data.recurring,
         snapshots: data.snapshots,
-        settings: data.settings
+        settings: data.settings,
+        jobs: data.jobs
       )
 
       let totals = PayrollEngine.summarizeShiftTotals(

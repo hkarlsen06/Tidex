@@ -7,6 +7,7 @@ import Foundation
 struct SyncShiftRow: Codable {
   let id: String
   let user_id: String
+  let job_id: String?
   let shift_date: String
   let start_time: String
   let end_time: String
@@ -21,6 +22,7 @@ struct SyncShiftRow: Codable {
     ShiftRow(
       id: id,
       user_id: user_id,
+      job_id: job_id,
       shift_date: shift_date,
       start_time: start_time,
       end_time: end_time,
@@ -34,6 +36,7 @@ struct SyncShiftRow: Codable {
 struct SyncRecurringShiftRow: Codable {
   let id: String
   let user_id: String
+  let job_id: String?
   let start_time: String
   let end_time: String
   let repeat_interval_weeks: Int
@@ -76,6 +79,7 @@ struct SyncRecurringShiftRow: Codable {
     RecurringShiftRow(
       id: id,
       user_id: user_id,
+      job_id: job_id,
       start_time: start_time,
       end_time: end_time,
       repeat_interval_weeks: repeat_interval_weeks,
@@ -91,6 +95,7 @@ struct SyncRecurringShiftRow: Codable {
 struct SyncWageSnapshotRow: Codable {
   let id: String
   let user_id: String
+  let job_id: String?
   let from_date: String?
   let hourly_wage: Double
   let wage_level: Int?
@@ -112,6 +117,7 @@ struct SyncWageSnapshotRow: Codable {
     WageSnapshot(
       id: id,
       user_id: user_id,
+      job_id: job_id,
       from_date: from_date,
       hourly_wage: hourly_wage,
       wage_level: wage_level,
@@ -126,6 +132,24 @@ struct SyncWageSnapshotRow: Codable {
       created_at: created_at
     )
   }
+}
+
+/// Extended jobs row with sync metadata fields
+struct SyncJobRow: Codable {
+  let id: String
+  let user_id: String
+  let name: String
+  let color: String?
+  let is_default: Bool
+  let sort_order: Int
+  let payroll_day: Int?
+  let half_tax_month: Int?
+  let monthly_goal: Int?
+  let archived_at: String?
+  let deleted_at: String?
+  let created_at: String?
+  let updated_at: String
+  let revision: Int64
 }
 
 /// Extended user settings row with sync metadata fields

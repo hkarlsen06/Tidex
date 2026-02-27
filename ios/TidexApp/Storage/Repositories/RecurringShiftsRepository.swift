@@ -30,13 +30,65 @@ final class RecurringShiftsRepository: ObservableObject {
     }
   }
 
+  /// During compatibility rollout, legacy local rows can still have nil jobId.
+  /// Treat those rows as belonging to the active default job only.
+  private func shouldIncludeLegacyNilJobRows(for userId: String, selectedJobId: String) -> Bool {
+    let context = localStore.mainContext
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId
+          && job.deletedAt == nil
+          && job.archivedAt == nil
+          && job.isDefault == true
+      }
+    )
+
+    do {
+      guard let defaultJob = try context.fetch(descriptor).first else { return false }
+      return defaultJob.id == selectedJobId
+    } catch {
+      logger.error(
+        "Failed to determine default job for legacy fallback: \(error.localizedDescription)")
+      return false
+    }
+  }
+
   // MARK: - Read Operations (Local Only)
 
   /// Get all non-deleted recurring shifts for a user
   /// - Parameter userId: User ID
   /// - Returns: Array of RecurringShiftRow objects
-  func getRecurringShifts(for userId: String) -> [RecurringShiftRow] {
+  func getRecurringShifts(for userId: String, jobId: String? = nil) -> [RecurringShiftRow] {
     let context = localStore.mainContext
+
+    if let jobId {
+      let selectedJobDescriptor = FetchDescriptor<LocalRecurringShift>(
+        predicate: #Predicate { shift in
+          shift.userId == userId && shift.serverDeletedAt == nil
+            && shift.syncStatusRaw != "pendingDelete" && shift.jobId == jobId
+        }
+      )
+
+      do {
+        var localShifts = try context.fetch(selectedJobDescriptor)
+
+        if shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId) {
+          let legacyNilDescriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { shift in
+              shift.userId == userId && shift.serverDeletedAt == nil
+                && shift.syncStatusRaw != "pendingDelete" && shift.jobId == nil
+            }
+          )
+          let legacyNilShifts = try context.fetch(legacyNilDescriptor)
+          localShifts.append(contentsOf: legacyNilShifts)
+        }
+
+        return localShifts.map { $0.toRecurringShiftRow() }
+      } catch {
+        logger.error("Failed to fetch recurring shifts: \(error.localizedDescription)")
+        return []
+      }
+    }
 
     // Filter out both server-deleted and locally pending delete shifts
     let descriptor = FetchDescriptor<LocalRecurringShift>(
@@ -132,6 +184,7 @@ final class RecurringShiftsRepository: ObservableObject {
   /// - Returns: Created RecurringShiftRow
   func createRecurringShift(
     userId: String,
+    jobId: String? = nil,
     startTime: String,
     endTime: String,
     repeatIntervalWeeks: Int,
@@ -142,6 +195,7 @@ final class RecurringShiftsRepository: ObservableObject {
   ) async throws -> RecurringShiftRow {
     let createdShift = try await localStore.storeActor.createRecurringShift(
       userId: userId,
+      jobId: jobId,
       startTime: startTime,
       endTime: endTime,
       repeatIntervalWeeks: repeatIntervalWeeks,
@@ -172,6 +226,7 @@ final class RecurringShiftsRepository: ObservableObject {
   /// - Returns: Updated RecurringShiftRow if successful
   func updateRecurringShift(
     id: String,
+    jobId: String? = nil,
     startTime: String? = nil,
     endTime: String? = nil,
     repeatIntervalWeeks: Int? = nil,
@@ -183,6 +238,7 @@ final class RecurringShiftsRepository: ObservableObject {
     do {
       let updatedShift = try await localStore.storeActor.updateRecurringShift(
         id: id,
+        jobId: jobId,
         startTime: startTime,
         endTime: endTime,
         repeatIntervalWeeks: repeatIntervalWeeks,

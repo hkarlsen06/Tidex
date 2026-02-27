@@ -6,6 +6,8 @@ import Foundation
 struct ShiftRow: Codable, Identifiable, Equatable {
   let id: String
   let user_id: String?
+  /// Job that owns this shift (nullable during rollout compatibility)
+  let job_id: String?
   /// Shift date in ISO format (YYYY-MM-DD)
   let shift_date: String
   /// Start time (HH:mm)
@@ -31,13 +33,22 @@ struct ShiftRow: Codable, Identifiable, Equatable {
   }
 
   enum CodingKeys: String, CodingKey {
-    case id, user_id, shift_date, start_time, end_time, custom_supplements, created_at, updated_at
+    case id
+    case user_id
+    case job_id
+    case shift_date
+    case start_time
+    case end_time
+    case custom_supplements
+    case created_at
+    case updated_at
   }
 
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     id = try container.decode(String.self, forKey: .id)
     user_id = try container.decodeIfPresent(String.self, forKey: .user_id)
+    job_id = try container.decodeIfPresent(String.self, forKey: .job_id)
     shift_date = try container.decode(String.self, forKey: .shift_date)
     start_time = try container.decode(String.self, forKey: .start_time)
     end_time = try container.decode(String.self, forKey: .end_time)
@@ -52,6 +63,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
   init(
     id: String,
     user_id: String?,
+    job_id: String? = nil,
     shift_date: String,
     start_time: String,
     end_time: String,
@@ -63,6 +75,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
   ) {
     self.id = id
     self.user_id = user_id
+    self.job_id = job_id
     self.shift_date = shift_date
     self.start_time = start_time
     self.end_time = end_time

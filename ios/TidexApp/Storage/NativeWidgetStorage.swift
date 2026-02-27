@@ -240,6 +240,8 @@ enum NativeWidgetStorage {
 
     // Load shifts from repository
     let shiftsRepository = ShiftsRepository.shared
+    let jobsRepository = JobsRepository.shared
+    let jobs = jobsRepository.getNonDeletedJobs(for: userId)
 
     let currentMonthShifts = shiftsRepository.getShifts(
       for: userId,
@@ -260,7 +262,8 @@ enum NativeWidgetStorage {
       shifts: currentMonthShifts,
       recurring: recurringPatterns,
       snapshots: snapshots,
-      settings: settings
+      settings: settings,
+      jobs: jobs
     )
 
     let computedPreviousShifts = PayrollEngine.computeShiftsForMonth(
@@ -269,7 +272,8 @@ enum NativeWidgetStorage {
       shifts: previousMonthShifts,
       recurring: recurringPatterns,
       snapshots: snapshots,
-      settings: settings
+      settings: settings,
+      jobs: jobs
     )
 
     // Get half-tax month from settings

@@ -43,7 +43,7 @@ enum CalendarCellContent: Equatable {
   case empty
 
   /// Display hours (start and end times)
-  case hours(HoursData, color: Color = .tidexTextPrimary)
+  case hours(HoursData, color: Color = .tidexTextPrimary, secondaryColor: Color? = nil)
 
   /// Display earnings amount
   case earnings(Double, color: Color = .tidexTextPrimary)
@@ -178,14 +178,15 @@ struct CalendarDayCell<Content: View>: View {
       Color.clear
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-    case .hours(let hoursData, let color):
+    case .hours(let hoursData, let color, let secondaryColor):
       let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
+      let endColor = secondaryColor ?? color
       metricContainer(lineCount: 2) { fontSize in
         calendarStackedMetricText(
           firstValue: hoursData.start,
           firstColor: color,
           secondValue: endDisplay,
-          secondColor: color,
+          secondColor: endColor,
           fontSize: fontSize,
           fontWeight: .bold
         )

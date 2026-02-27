@@ -58,6 +58,17 @@ struct DashboardData: Equatable {
   }
 }
 
+struct PayrollCardVariant: Identifiable, Equatable {
+  let id: String
+  let title: String
+  let colorHex: String?
+  let payoutDate: Date
+  let gross: Double
+  let net: Double?
+  let tax: Double?
+  let taxEnabled: Bool
+}
+
 // MARK: - Dashboard Error
 
 enum DashboardError: Error, LocalizedError {
@@ -114,6 +125,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   // MARK: - Dependencies (Local-First Repositories)
 
   private let shiftsRepository: ShiftsRepository
+  private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
@@ -153,12 +165,137 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     return settings?.monthly_goals_by_month?[monthKey].flatMap { $0 > 0 ? $0 : nil }
   }
 
+  func payrollCardVariants(fallback: DashboardData, defaultTitle: String) -> [PayrollCardVariant] {
+    guard let userId = resolveUserIdForPayrollVariants() else {
+      return [
+        PayrollCardVariant(
+          id: "default",
+          title: defaultTitle,
+          colorHex: nil,
+          payoutDate: fallback.payrollDate,
+          gross: fallback.previousMonthGross,
+          net: fallback.previousMonthNet,
+          tax: fallback.previousMonthTax,
+          taxEnabled: fallback.previousMonthTaxEnabled
+        )
+      ]
+    }
+
+    let jobs = jobsRepository.getNonDeletedJobs(for: userId)
+    guard jobs.count > 1 else {
+      return [
+        PayrollCardVariant(
+          id: "default",
+          title: defaultTitle,
+          colorHex: nil,
+          payoutDate: fallback.payrollDate,
+          gross: fallback.previousMonthGross,
+          net: fallback.previousMonthNet,
+          tax: fallback.previousMonthTax,
+          taxEnabled: fallback.previousMonthTaxEnabled
+        )
+      ]
+    }
+
+    let calendar = Calendar.current
+    let now = Date()
+    let displayYM = (year: displayYear, month: displayMonth)
+    let previousYM = Date.previousYearMonth(from: displayYM)
+    let fallbackPayrollDay = settings?.effectivePayrollDay ?? 15
+    let halfTaxMonth = settings?.half_tax_month
+    let defaultJobId = jobs.first(where: { $0.is_default })?.id
+
+    let sortedJobs = jobs.sorted { lhs, rhs in
+      let lhsDay = lhs.payroll_day ?? fallbackPayrollDay
+      let rhsDay = rhs.payroll_day ?? fallbackPayrollDay
+      let lhsNext = nextUpcomingPayoutDate(from: now, payrollDay: lhsDay, calendar: calendar)
+      let rhsNext = nextUpcomingPayoutDate(from: now, payrollDay: rhsDay, calendar: calendar)
+
+      if lhsNext == rhsNext {
+        if lhs.sort_order == rhs.sort_order {
+          return lhs.name.localizedCompare(rhs.name) == .orderedAscending
+        }
+        return lhs.sort_order < rhs.sort_order
+      }
+
+      return lhsNext < rhsNext
+    }
+
+    return sortedJobs.map { job in
+      let payrollDay = job.payroll_day ?? fallbackPayrollDay
+      let payoutDate = PayrollDateAdjuster.adjustPayrollDate(
+        payrollDay: payrollDay,
+        month: displayYM.month,
+        year: displayYM.year
+      )
+
+      let jobShifts = previousMonthShifts.filter { shift in
+        guard let shiftJobId = shift.shift.job_id else {
+          return job.id == defaultJobId
+        }
+        return shiftJobId == job.id
+      }
+
+      let totals = PayrollEngine.summarizeShiftTotals(
+        shifts: jobShifts,
+        halfTaxMonth: halfTaxMonth,
+        earningsMonth: previousYM.month,
+        now: now
+      )
+      let taxEnabled = jobShifts.contains { $0.taxEnabled }
+      let tax = taxEnabled ? totals.gross - totals.net : nil
+
+      return PayrollCardVariant(
+        id: job.id,
+        title: job.name,
+        colorHex: job.color,
+        payoutDate: payoutDate,
+        gross: totals.gross,
+        net: taxEnabled ? totals.net : nil,
+        tax: tax,
+        taxEnabled: taxEnabled
+      )
+    }
+  }
+
+  /// Resolve a stable user ID for payroll card variants while reload is in-flight.
+  /// This prevents a transient fallback to single-card UI during `cachedUserId` resets.
+  private func resolveUserIdForPayrollVariants() -> String? {
+    if let cachedUserId, !cachedUserId.isEmpty {
+      return cachedUserId
+    }
+
+    if let settingsUserId = settings?.user_id, !settingsUserId.isEmpty {
+      return settingsUserId
+    }
+
+    if let coordinatorUserId = AppCoordinator.shared.getCurrentUserId(), !coordinatorUserId.isEmpty
+    {
+      return coordinatorUserId
+    }
+
+    return nil
+  }
+
   // MARK: - User Profile Data (for UserMenuButton)
 
   /// User's display name (derived from email or metadata)
   @Published private(set) var userDisplayName: String = ""
   /// User's profile picture URL
   @Published private(set) var userAvatarUrl: String?
+  /// All non-deleted jobs used for dashboard workplace metadata.
+  @Published private(set) var displayJobs: [Job] = []
+
+  var shouldShowJobIndicators: Bool {
+    displayJobs.count > 1
+  }
+
+  func jobForShift(_ shift: ShiftWithComputations) -> Job? {
+    let defaultJobId = displayJobs.first(where: { $0.is_default })?.id
+    let effectiveJobId = shift.shift.job_id ?? defaultJobId
+    guard let effectiveJobId else { return nil }
+    return displayJobs.first(where: { $0.id == effectiveJobId })
+  }
 
   // MARK: - Private State
 
@@ -198,6 +335,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   init(
     shiftsRepository: ShiftsRepository? = nil,
+    jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
@@ -207,6 +345,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     // Use provided repositories or default to shared instances
     // Using optional parameters avoids Swift 6 MainActor isolation errors
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+    self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
@@ -491,6 +630,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     monthCache.removeAll()
     prefetchTasks.removeAll()
     cachedUserId = nil
+    displayJobs = []
 
     await loadDashboardFromLocal()
 
@@ -638,6 +778,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     monthCache.removeAll()
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
+    displayJobs = []
     settings = nil  // Force re-read settings from repository
     snapshots = []  // Force re-read snapshots from repository
     recurringShifts = []  // Force re-read recurring shifts from repository
@@ -675,6 +816,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       guard let userId = cachedUserId else {
         throw DashboardError.notAuthenticated
       }
+
+      displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
 
       // Load settings from local store
       if settings == nil {
@@ -757,6 +900,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
       let capturedCurrency = currentSettings.currency ?? "kr"
+      let capturedJobs = displayJobs
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
@@ -765,7 +909,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           shifts: displayShifts,
           recurring: capturedRecurring,
           snapshots: capturedSnapshots,
-          settings: currentSettings
+          settings: currentSettings,
+          jobs: capturedJobs
         )
 
         let previousComputed = PayrollEngine.computeShiftsForMonth(
@@ -774,7 +919,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           shifts: fetchedPreviousShifts,
           recurring: capturedRecurring,
           snapshots: capturedSnapshots,
-          settings: currentSettings
+          settings: currentSettings,
+          jobs: capturedJobs
         )
 
         let dashboardData = Self.buildDashboardDataOffMain(
@@ -854,6 +1000,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         throw DashboardError.notAuthenticated
       }
 
+      displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
+
       // Load settings and snapshots from local if not cached
       if settings == nil {
         settings = await LocalStore.shared.storeActor.fetchUserSettings(userId: userId)
@@ -903,6 +1051,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
       let capturedCurrency = currentSettings.currency ?? "kr"
+      let capturedJobs = displayJobs
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
@@ -911,7 +1060,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           shifts: displayShifts,
           recurring: capturedRecurring,
           snapshots: capturedSnapshots,
-          settings: currentSettings
+          settings: currentSettings,
+          jobs: capturedJobs
         )
 
         let previousComputed = PayrollEngine.computeShiftsForMonth(
@@ -920,7 +1070,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           shifts: fetchedPreviousShifts,
           recurring: capturedRecurring,
           snapshots: capturedSnapshots,
-          settings: currentSettings
+          settings: currentSettings,
+          jobs: capturedJobs
         )
 
         let dashboardData = Self.buildDashboardDataOffMain(
@@ -1034,6 +1185,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
+      let capturedJobs = displayJobs
 
       let computedShifts = await Task.detached(priority: .utility) {
         PayrollEngine.computeShiftsForMonth(
@@ -1042,7 +1194,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           shifts: fetchedShifts,
           recurring: capturedRecurring,
           snapshots: capturedSnapshots,
-          settings: settings
+          settings: settings,
+          jobs: capturedJobs
         )
       }.value
 
@@ -1505,6 +1658,35 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// Adjusts backwards if the date falls on a weekend, Monday, or Norwegian public holiday
   private func calculatePayrollDate(year: Int, month: Int, day: Int) -> Date {
     return PayrollDateAdjuster.adjustPayrollDate(payrollDay: day, month: month, year: year)
+  }
+
+  private func nextUpcomingPayoutDate(from date: Date, payrollDay: Int, calendar: Calendar) -> Date
+  {
+    let startOfToday = calendar.startOfDay(for: date)
+    let currentComponents = calendar.dateComponents([.year, .month], from: startOfToday)
+    let currentYear = currentComponents.year ?? displayYear
+    let currentMonth = currentComponents.month ?? displayMonth
+
+    let currentMonthPayout = PayrollDateAdjuster.adjustPayrollDate(
+      payrollDay: payrollDay,
+      month: currentMonth,
+      year: currentYear
+    )
+
+    if currentMonthPayout >= startOfToday {
+      return currentMonthPayout
+    }
+
+    let nextMonthDate = calendar.date(byAdding: .month, value: 1, to: startOfToday) ?? startOfToday
+    let nextMonthComponents = calendar.dateComponents([.year, .month], from: nextMonthDate)
+    let nextYear = nextMonthComponents.year ?? currentYear
+    let nextMonth = nextMonthComponents.month ?? currentMonth
+
+    return PayrollDateAdjuster.adjustPayrollDate(
+      payrollDay: payrollDay,
+      month: nextMonth,
+      year: nextYear
+    )
   }
 
   private func monthName(year: Int, month: Int) -> String {

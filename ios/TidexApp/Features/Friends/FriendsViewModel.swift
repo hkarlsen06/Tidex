@@ -756,6 +756,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     let settings = SettingsRepository.shared.getSettings(for: userId)
     let snapshots = SnapshotsRepository.shared.getSnapshots(for: userId)
+    let jobs = JobsRepository.shared.getNonDeletedJobs(for: userId)
 
     let computedShifts = PayrollEngine.computeShiftsForMonth(
       year: year,
@@ -763,7 +764,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       shifts: shifts,
       recurring: [],
       snapshots: snapshots,
-      settings: settings
+      settings: settings,
+      jobs: jobs
     )
 
     var netByDate: [String: Double] = [:]

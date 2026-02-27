@@ -5,7 +5,11 @@ import UIKit
 
 /// Card for editing global pay settings: currency, monthly goal, payroll day, half-tax month
 struct GlobalPaySettingsCard: View {
-  let settings: UserSettings?
+  let jobId: String?
+  let currency: String
+  let monthlyGoal: Int?
+  let payrollDay: Int
+  let halfTaxMonth: Int?
   /// Whether currency can be changed (false if tariff snapshots exist)
   let canChangeCurrency: Bool
   let onUpdateMonthlyGoal: (Int?) -> Void
@@ -13,11 +17,11 @@ struct GlobalPaySettingsCard: View {
   let onUpdateHalfTaxMonth: (Int?) async -> Void
   let onUpdateCurrency: (String) async -> Void
 
-  @State private var currency: String = "kr"
+  @State private var selectedCurrency: String = "kr"
   @State private var monthlyGoalText: String = ""
-  @State private var payrollDay: Int = 1
-  @State private var halfTaxMonth: Int? = nil
-  @State private var isInitialized = false
+  @State private var selectedPayrollDay: Int = 1
+  @State private var selectedHalfTaxMonth: Int? = nil
+  @State private var initializedJobId: String?
   @State private var showingCurrencyPicker = false
 
   var body: some View {
@@ -44,17 +48,14 @@ struct GlobalPaySettingsCard: View {
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .tidexCardShadow()
     .onAppear {
-      initializeFromSettings()
+      initializeFromInputs(force: true)
     }
-    .onChange(of: settings) { _, _ in
-      // Only re-initialize if settings changed externally (not from our edits)
-      if !isInitialized {
-        initializeFromSettings()
-      }
+    .onChange(of: jobId) { _, _ in
+      initializeFromInputs(force: true)
     }
     .sheet(isPresented: $showingCurrencyPicker) {
       CurrencyPickerSheet(
-        selectedCurrency: $currency,
+        selectedCurrency: $selectedCurrency,
         isPresented: $showingCurrencyPicker,
         onSelect: { newCurrency in
           Task {
@@ -67,21 +68,22 @@ struct GlobalPaySettingsCard: View {
     }
   }
 
-  private func initializeFromSettings() {
-    guard !isInitialized else { return }
+  private func initializeFromInputs(force: Bool = false) {
+    if !force, initializedJobId == jobId {
+      return
+    }
 
-    currency = settings?.currency ?? "kr"
+    selectedCurrency = currency
 
-    if let goal = settings?.monthly_goal {
+    if let goal = monthlyGoal {
       monthlyGoalText = "\(goal)"
     } else {
       monthlyGoalText = ""
     }
 
-    payrollDay = settings?.effectivePayrollDay ?? 1
-    halfTaxMonth = settings?.half_tax_month
-
-    isInitialized = true
+    selectedPayrollDay = payrollDay
+    selectedHalfTaxMonth = halfTaxMonth
+    initializedJobId = jobId
   }
 
   // MARK: - Currency Input
@@ -100,7 +102,7 @@ struct GlobalPaySettingsCard: View {
         }
       }) {
         HStack {
-          Text(CurrencyConfig.get(currency).label)
+          Text(CurrencyConfig.get(selectedCurrency).label)
             .font(.tidexBody)
             .foregroundColor(canChangeCurrency ? .tidexTextPrimary : .tidexTextMuted)
 
@@ -163,7 +165,7 @@ struct GlobalPaySettingsCard: View {
           }
         }
 
-        Text(currency)
+        Text(selectedCurrency)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
@@ -187,20 +189,20 @@ struct GlobalPaySettingsCard: View {
         .foregroundColor(.tidexTextSecondary)
 
       HStack {
-        Text(formatPayrollDay(payrollDay))
+        Text(formatPayrollDay(selectedPayrollDay))
           .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
 
-        Picker("", selection: $payrollDay) {
+        Picker("", selection: $selectedPayrollDay) {
           ForEach(1...31, id: \.self) { day in
             Text("\(day)").tag(day)
           }
         }
         .pickerStyle(.menu)
         .tint(.tidexBlue)
-        .onChange(of: payrollDay) { _, newValue in
+        .onChange(of: selectedPayrollDay) { _, newValue in
           UIImpactFeedbackGenerator(style: .light).impactOccurred()
           onUpdatePayrollDay(newValue)
         }
@@ -243,7 +245,7 @@ struct GlobalPaySettingsCard: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      Picker("", selection: $halfTaxMonth) {
+      Picker("", selection: $selectedHalfTaxMonth) {
         Text(.settingsPayGlobalHalfTaxMonthOff)
           .tag(nil as Int?)
         Text(.settingsPayGlobalHalfTaxMonthNovember)
@@ -257,7 +259,7 @@ struct GlobalPaySettingsCard: View {
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-      .onChange(of: halfTaxMonth) { _, newValue in
+      .onChange(of: selectedHalfTaxMonth) { _, newValue in
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         Task {
           await onUpdateHalfTaxMonth(newValue)
@@ -367,7 +369,11 @@ private struct CurrencyRow: View {
 #Preview {
   ScrollView {
     GlobalPaySettingsCard(
-      settings: UserSettings.defaults(for: "test"),
+      jobId: "test-job",
+      currency: "kr",
+      monthlyGoal: 20000,
+      payrollDay: 15,
+      halfTaxMonth: nil,
       canChangeCurrency: true,
       onUpdateMonthlyGoal: { _ in },
       onUpdatePayrollDay: { _ in },

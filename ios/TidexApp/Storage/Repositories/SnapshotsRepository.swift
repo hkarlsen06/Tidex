@@ -30,24 +30,84 @@ final class SnapshotsRepository: ObservableObject {
     }
   }
 
+  /// During compatibility rollout, legacy local rows can still have nil jobId.
+  /// Treat those rows as belonging to the active default job only.
+  private func shouldIncludeLegacyNilJobRows(for userId: String, selectedJobId: String) -> Bool {
+    let context = localStore.mainContext
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId
+          && job.deletedAt == nil
+          && job.archivedAt == nil
+          && job.isDefault == true
+      }
+    )
+
+    do {
+      guard let defaultJob = try context.fetch(descriptor).first else { return false }
+      return defaultJob.id == selectedJobId
+    } catch {
+      logger.error(
+        "Failed to determine default job for legacy fallback: \(error.localizedDescription)")
+      return false
+    }
+  }
+
   // MARK: - Read Operations (Local Only)
 
   /// Get all non-deleted wage snapshots for a user
   /// Ordered by from_date descending (most recent first), with baseline (nil date) last
   /// - Parameter userId: User ID
   /// - Returns: Array of WageSnapshot objects
-  func getSnapshots(for userId: String) -> [WageSnapshot] {
+  func getSnapshots(for userId: String, jobId: String? = nil) -> [WageSnapshot] {
     let context = localStore.mainContext
 
-    let descriptor = FetchDescriptor<LocalWageSnapshot>(
-      predicate: #Predicate { snapshot in
-        snapshot.userId == userId && snapshot.serverDeletedAt == nil
-      },
-      sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
-    )
-
     do {
-      let localSnapshots = try context.fetch(descriptor)
+      let localSnapshots: [LocalWageSnapshot]
+
+      if let jobId {
+        let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
+        let primaryDescriptor = FetchDescriptor<LocalWageSnapshot>(
+          predicate: #Predicate { snapshot in
+            snapshot.userId == userId && snapshot.serverDeletedAt == nil && snapshot.jobId == jobId
+          },
+          sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
+        )
+
+        if includeLegacyNil {
+          let legacyDescriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { snapshot in
+              snapshot.userId == userId && snapshot.serverDeletedAt == nil && snapshot.jobId == nil
+            },
+            sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
+          )
+          var combined = try context.fetch(primaryDescriptor)
+          combined.append(contentsOf: try context.fetch(legacyDescriptor))
+          localSnapshots = combined.sorted { lhs, rhs in
+            switch (lhs.fromDate, rhs.fromDate) {
+            case (let l?, let r?):
+              return l > r
+            case (_?, nil):
+              return true
+            case (nil, _?):
+              return false
+            case (nil, nil):
+              return lhs.localUpdatedAt > rhs.localUpdatedAt
+            }
+          }
+        } else {
+          localSnapshots = try context.fetch(primaryDescriptor)
+        }
+      } else {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+          predicate: #Predicate { snapshot in
+            snapshot.userId == userId && snapshot.serverDeletedAt == nil
+          },
+          sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
+        )
+        localSnapshots = try context.fetch(descriptor)
+      }
+
       return localSnapshots.map { $0.toWageSnapshot() }
     } catch {
       logger.error("Failed to fetch snapshots: \(error.localizedDescription)")
@@ -82,8 +142,8 @@ final class SnapshotsRepository: ObservableObject {
   ///   - date: ISO date string (YYYY-MM-DD)
   ///   - userId: User ID
   /// - Returns: Applicable WageSnapshot or nil
-  func snapshotForDate(_ date: String, userId: String) -> WageSnapshot? {
-    let snapshots = getSnapshots(for: userId)
+  func snapshotForDate(_ date: String, userId: String, jobId: String? = nil) -> WageSnapshot? {
+    let snapshots = getSnapshots(for: userId, jobId: jobId)
     return SnapshotsService.snapshotForDate(date, from: snapshots)
   }
 
@@ -92,8 +152,12 @@ final class SnapshotsRepository: ObservableObject {
   ///   - dates: Array of ISO date strings
   ///   - userId: User ID
   /// - Returns: Dictionary mapping dates to applicable snapshots
-  func snapshotsForDates(_ dates: [String], userId: String) -> [String: WageSnapshot] {
-    let snapshots = getSnapshots(for: userId)
+  func snapshotsForDates(
+    _ dates: [String],
+    userId: String,
+    jobId: String? = nil
+  ) -> [String: WageSnapshot] {
+    let snapshots = getSnapshots(for: userId, jobId: jobId)
     var map: [String: WageSnapshot] = [:]
     for date in dates {
       if let snapshot = SnapshotsService.snapshotForDate(date, from: snapshots) {
@@ -106,17 +170,33 @@ final class SnapshotsRepository: ObservableObject {
   /// Get the baseline (undated) snapshot for a user
   /// - Parameter userId: User ID
   /// - Returns: Baseline WageSnapshot if found
-  func getBaselineSnapshot(for userId: String) -> WageSnapshot? {
+  func getBaselineSnapshot(for userId: String, jobId: String? = nil) -> WageSnapshot? {
     let context = localStore.mainContext
 
-    let descriptor = FetchDescriptor<LocalWageSnapshot>(
-      predicate: #Predicate { snapshot in
-        snapshot.userId == userId && snapshot.fromDate == nil && snapshot.serverDeletedAt == nil
-      }
-    )
-
     do {
-      guard let localSnapshot = try context.fetch(descriptor).first else {
+      let baselineDescriptor = FetchDescriptor<LocalWageSnapshot>(
+        predicate: #Predicate { snapshot in
+          snapshot.userId == userId && snapshot.fromDate == nil && snapshot.serverDeletedAt == nil
+        }
+      )
+      let baselineRows = try context.fetch(baselineDescriptor)
+
+      if let jobId {
+        let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
+
+        if let localSnapshot = baselineRows.first(where: { $0.jobId == jobId }) {
+          return localSnapshot.toWageSnapshot()
+        }
+
+        guard includeLegacyNil else { return nil }
+
+        guard let localSnapshot = baselineRows.first(where: { $0.jobId == nil }) else {
+          return nil
+        }
+        return localSnapshot.toWageSnapshot()
+      }
+
+      guard let localSnapshot = baselineRows.first else {
         return nil
       }
       return localSnapshot.toWageSnapshot()
@@ -186,6 +266,7 @@ final class SnapshotsRepository: ObservableObject {
   /// - Returns: Created WageSnapshot
   func createSnapshot(
     userId: String,
+    jobId: String? = nil,
     fromDate: Date? = nil,
     hourlyWage: Double,
     wageLevel: Int? = nil,
@@ -200,6 +281,7 @@ final class SnapshotsRepository: ObservableObject {
   ) async throws -> WageSnapshot {
     let createdSnapshot = try await localStore.storeActor.createWageSnapshot(
       userId: userId,
+      jobId: jobId,
       fromDate: fromDate,
       hourlyWage: hourlyWage,
       wageLevel: wageLevel,
@@ -236,6 +318,7 @@ final class SnapshotsRepository: ObservableObject {
   /// - Returns: Updated WageSnapshot if successful
   func updateSnapshot(
     id: String,
+    jobId: String? = nil,
     hourlyWage: Double? = nil,
     wageLevel: Int? = nil,
     supplements: SupplementRulesSnapshot? = nil,
@@ -249,6 +332,7 @@ final class SnapshotsRepository: ObservableObject {
     do {
       let updatedSnapshot = try await localStore.storeActor.updateWageSnapshot(
         id: id,
+        jobId: jobId,
         hourlyWage: hourlyWage,
         wageLevel: wageLevel,
         supplements: supplements,

@@ -10,6 +10,14 @@ import Foundation
 /// - Monthly totals summarization
 struct PayrollEngine {
 
+  private struct ComputationContext {
+    let fallbackPayrollDay: Int
+    let jobsById: [String: Job]
+    let defaultJobId: String?
+    let snapshotsByJobId: [String?: [WageSnapshot]]
+    let legacyNilJobSnapshots: [WageSnapshot]
+  }
+
   // MARK: - Payout Date Calculation
 
   /// Calculate payout date for a shift (shift month + 1)
@@ -74,10 +82,19 @@ struct PayrollEngine {
     recurring: [RecurringShiftRow],
     snapshots: [WageSnapshot],
     settings: UserSettings?,
-    visibleRange: (start: Date, end: Date)? = nil
+    visibleRange: (start: Date, end: Date)? = nil,
+    jobs: [Job]
   ) -> [ShiftWithComputations] {
     var result: [ShiftWithComputations] = []
-    let payrollDay = settings?.effectivePayrollDay ?? 1
+    let fallbackPayrollDay = settings?.effectivePayrollDay ?? 1
+    let snapshotsByJobId = Dictionary(grouping: snapshots, by: { $0.job_id })
+    let context = ComputationContext(
+      fallbackPayrollDay: fallbackPayrollDay,
+      jobsById: Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) }),
+      defaultJobId: jobs.first(where: { $0.is_default })?.id,
+      snapshotsByJobId: snapshotsByJobId,
+      legacyNilJobSnapshots: snapshotsByJobId[nil] ?? []
+    )
 
     // Use visible range if provided, otherwise just the target month
     let startDate =
@@ -90,7 +107,7 @@ struct PayrollEngine {
       let computed = computeShiftWithTax(
         shift: shift,
         allSnapshots: snapshots,
-        payrollDay: payrollDay
+        context: context
       )
       result.append(computed)
     }
@@ -119,6 +136,7 @@ struct PayrollEngine {
           let virtualRow = ShiftRow(
             id: virtualId,
             user_id: recurringShift.user_id,
+            job_id: recurringShift.job_id,
             shift_date: virtual.date,
             start_time: recurringShift.cleanStartTime,
             end_time: recurringShift.cleanEndTime,
@@ -131,7 +149,7 @@ struct PayrollEngine {
           let computed = computeShiftWithTax(
             shift: virtualRow,
             allSnapshots: snapshots,
-            payrollDay: payrollDay
+            context: context
           )
           result.append(computed)
         }
@@ -181,8 +199,20 @@ struct PayrollEngine {
   private static func computeShiftWithTax(
     shift: ShiftRow,
     allSnapshots: [WageSnapshot],
-    payrollDay: Int
+    context: ComputationContext
   ) -> ShiftWithComputations {
+    let effectiveJobId = shift.job_id ?? context.defaultJobId
+    let payrollDay =
+      effectiveJobId.flatMap { context.jobsById[$0]?.payroll_day } ?? context.fallbackPayrollDay
+
+    let scopedSnapshots = snapshotsForJob(
+      jobId: effectiveJobId,
+      allSnapshots: allSnapshots,
+      snapshotsByJobId: context.snapshotsByJobId,
+      legacyNilJobSnapshots: context.legacyNilJobSnapshots,
+      defaultJobId: context.defaultJobId
+    )
+
     // 1. Calculate payout date for this specific shift
     let payoutDate = calculatePayoutDate(
       shiftDate: shift.shift_date,
@@ -190,10 +220,10 @@ struct PayrollEngine {
     )
 
     // 2. Look up wage/supplement snapshot for SHIFT date (determines wage rate & supplements)
-    let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: allSnapshots)
+    let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: scopedSnapshots)
 
     // 3. Look up tax snapshot for PAYOUT date (determines tax settings)
-    let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: allSnapshots)
+    let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: scopedSnapshots)
 
     // 4. Compute payroll with wage snapshot
     let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
@@ -205,6 +235,26 @@ struct PayrollEngine {
       taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
       taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
     )
+  }
+
+  /// Resolve snapshot scope for a shift's job.
+  /// During rollout, nil-job snapshots are treated as default-job snapshots only.
+  private static func snapshotsForJob(
+    jobId: String?,
+    allSnapshots: [WageSnapshot],
+    snapshotsByJobId: [String?: [WageSnapshot]],
+    legacyNilJobSnapshots: [WageSnapshot],
+    defaultJobId: String?
+  ) -> [WageSnapshot] {
+    guard let jobId else {
+      return legacyNilJobSnapshots.isEmpty ? allSnapshots : legacyNilJobSnapshots
+    }
+
+    if let scoped = snapshotsByJobId[jobId], !scoped.isEmpty {
+      return scoped
+    }
+
+    return legacyNilJobSnapshots.isEmpty ? allSnapshots : legacyNilJobSnapshots
   }
 
   // MARK: - Monthly Totals

@@ -5,6 +5,8 @@ import SwiftUI
 struct PayrollCard: View {
   let payrollDate: Date
   let label: String
+  var labelColorHex: String? = nil
+  var labelIsWorkplace: Bool = false
   let gross: Double
   let net: Double?
   let tax: Double?
@@ -18,6 +20,7 @@ struct PayrollCard: View {
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
+  @State private var hasInitializedProgress = false
 
   // MARK: - Computed Properties
 
@@ -48,9 +51,14 @@ struct PayrollCard: View {
   var body: some View {
     ShiftCardContentLayout(centerTrailing: !showBreakdown) {
       // Row 1: Label (leads with purpose, matches shift card title size)
-      Text(label)
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+      WorkplaceNameText(
+        name: label,
+        colorHex: labelColorHex,
+        font: labelIsWorkplace ? .tidexCaptionRegular : .tidexBodyMedium,
+        fallbackBadgeColor: labelIsWorkplace ? .tidexBlue : nil,
+        badgeHorizontalPadding: Spacing.xs,
+        badgeVerticalPadding: labelIsWorkplace ? 2 : Spacing.xxxs
+      )
     } leadingBottom: {
       // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
@@ -153,18 +161,18 @@ struct PayrollCard: View {
     .tidexCardShadow()
     .shimmer(isActive: isLoading)
     .onChange(of: progress) { _, newValue in
+      guard hasInitializedProgress else { return }
+
       // Animate to new progress value
       withAnimation(.linear(duration: 1.0)) {
         animatedProgress = newValue ?? 0
       }
     }
     .onAppear {
-      // Animate from 0 to current progress on appear (matches CSS animation)
-      if let progress = progress, progress >= 1, progress <= 100 {
-        withAnimation(.linear(duration: 1.0)) {
-          animatedProgress = progress
-        }
-      }
+      guard !hasInitializedProgress else { return }
+      hasInitializedProgress = true
+      // Set initial progress immediately so re-mounts during launch don't restart the bar.
+      animatedProgress = progress ?? 0
     }
   }
 

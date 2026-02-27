@@ -28,6 +28,14 @@ final class PaySettingsViewModel: ObservableObject {
   /// Error message to display
   @Published var errorMessage: String?
 
+  /// Active jobs for job-scoped timeline filtering.
+  @Published private(set) var activeJobs: [Job] = []
+
+  /// Selected job for this screen's wage timeline.
+  @Published private(set) var selectedJobId: String?
+  /// True when a previously selected entry job is no longer active and user must choose again.
+  @Published private(set) var requiresJobReselection = false
+
   // MARK: - Currency
 
   /// User's current currency
@@ -80,8 +88,10 @@ final class PaySettingsViewModel: ObservableObject {
   private let snapshotsRepository = SnapshotsRepository.shared
   private let settingsRepository = SettingsRepository.shared
   private let shiftsRepository = ShiftsRepository.shared
+  private let jobsRepository = JobsRepository.shared
 
   private var userId: String?
+  private var pendingInitialSelectedJobId: String?
 
   // MARK: - Debounce
 
@@ -90,7 +100,9 @@ final class PaySettingsViewModel: ObservableObject {
 
   // MARK: - Init
 
-  init() {}
+  init(initialSelectedJobId: String? = nil) {
+    pendingInitialSelectedJobId = initialSelectedJobId
+  }
 
   deinit {
     // Cancel any pending debounce tasks to prevent orphaned operations
@@ -112,8 +124,16 @@ final class PaySettingsViewModel: ObservableObject {
         throw PaySettingsError.notAuthenticated
       }
 
+      let jobs = jobsRepository.getActiveJobs(for: userId)
+      activeJobs = jobs
+      applySelection(from: jobs)
+
       // Load snapshots and settings
-      snapshots = snapshotsRepository.getSnapshots(for: userId)
+      if let selectedJobId {
+        snapshots = snapshotsRepository.getSnapshots(for: userId, jobId: selectedJobId)
+      } else {
+        snapshots = []
+      }
       globalSettings = settingsRepository.getSettings(for: userId)
 
       // Process timeline entries
@@ -132,9 +152,170 @@ final class PaySettingsViewModel: ObservableObject {
   func refreshData() {
     guard let userId = userId else { return }
 
-    snapshots = snapshotsRepository.getSnapshots(for: userId)
+    let jobs = jobsRepository.getActiveJobs(for: userId)
+    activeJobs = jobs
+    applySelection(from: jobs)
+
+    if let selectedJobId {
+      snapshots = snapshotsRepository.getSnapshots(for: userId, jobId: selectedJobId)
+    } else {
+      snapshots = []
+    }
     globalSettings = settingsRepository.getSettings(for: userId)
     processTimelineEntries()
+  }
+
+  private func applySelection(from jobs: [Job]) {
+    if let forcedJobId = pendingInitialSelectedJobId {
+      pendingInitialSelectedJobId = nil
+
+      if jobs.contains(where: { $0.id == forcedJobId }) {
+        selectedJobId = forcedJobId
+        requiresJobReselection = false
+        return
+      }
+
+      // Selected job was archived/deleted before load. Force user to pick again when multiple jobs exist.
+      if jobs.count > 1 {
+        selectedJobId = nil
+        requiresJobReselection = true
+        return
+      }
+    }
+
+    if let selectedJobId, jobs.contains(where: { $0.id == selectedJobId }) {
+      requiresJobReselection = false
+      return
+    }
+
+    selectedJobId =
+      jobs.first(where: { $0.is_default })?.id
+      ?? jobs.first?.id
+    requiresJobReselection = false
+  }
+
+  var shouldRequireJobReselectionSheet: Bool {
+    requiresJobReselection && activeJobs.count > 1 && selectedJobId == nil
+  }
+
+  var shouldShowJobPicker: Bool {
+    activeJobs.count > 1
+  }
+
+  var selectedJobName: String? {
+    guard let selectedJobId else { return nil }
+    return activeJobs.first(where: { $0.id == selectedJobId })?.name
+  }
+
+  var selectedJob: Job? {
+    guard let selectedJobId else { return nil }
+    return activeJobs.first(where: { $0.id == selectedJobId })
+  }
+
+  var jobNeedingSetupBeforeAddingSecond: Job? {
+    guard activeJobs.count == 1 else { return nil }
+    return activeJobs.first
+  }
+
+  var selectedJobPayrollDay: Int {
+    selectedJob?.payroll_day ?? 1
+  }
+
+  var selectedJobMonthlyGoal: Int? {
+    selectedJob?.monthly_goal
+  }
+
+  var selectedJobHalfTaxMonth: Int? {
+    selectedJob?.half_tax_month
+  }
+
+  func selectJob(_ jobId: String) {
+    guard selectedJobId != jobId else { return }
+    requiresJobReselection = false
+    selectedJobId = jobId
+    refreshData()
+  }
+
+  func resolveRequiredJobSelection(_ jobId: String) {
+    guard activeJobs.contains(where: { $0.id == jobId }) else { return }
+    requiresJobReselection = false
+    selectedJobId = jobId
+    refreshData()
+  }
+
+  func createJob(input: AddJobSetupInput) async -> Bool {
+    guard let userId = userId else {
+      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
+      return false
+    }
+
+    do {
+      if let existingJobSetup = input.existingJobSetup {
+        guard
+          try await jobsRepository.updateJob(
+            userId: userId,
+            jobId: existingJobSetup.id,
+            name: existingJobSetup.name,
+            color: existingJobSetup.color
+          ) != nil
+        else {
+          errorMessage = String(localized: .settingsPayErrorLoadFailed)
+          return false
+        }
+      }
+
+      let created = try await jobsRepository.createJobWithBaselineSnapshot(
+        userId: userId,
+        name: input.name,
+        color: input.color,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal,
+        baselineSnapshot: input.baselineSnapshot
+      )
+      requiresJobReselection = false
+      selectedJobId = created.id
+      refreshData()
+      Haptics.play(.success)
+      return true
+    } catch {
+      logger.error("Failed to create job from pay settings: \(error.localizedDescription)")
+      errorMessage = error.localizedDescription
+      return false
+    }
+  }
+
+  func updateSelectedJobMetadata(name: String, color: String?) async -> Bool {
+    guard let userId = userId else {
+      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
+      return false
+    }
+    guard let selectedJobId = selectedJobId else {
+      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+      return false
+    }
+
+    do {
+      guard
+        try await jobsRepository.updateJob(
+          userId: userId,
+          jobId: selectedJobId,
+          name: name,
+          color: color
+        ) != nil
+      else {
+        errorMessage = String(localized: .settingsPayErrorLoadFailed)
+        return false
+      }
+
+      refreshData()
+      Haptics.play(.success)
+      return true
+    } catch {
+      logger.error("Failed to update selected job metadata: \(error.localizedDescription)")
+      errorMessage = error.localizedDescription
+      return false
+    }
   }
 
   // MARK: - Timeline Processing
@@ -191,6 +372,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       _ = try await snapshotsRepository.createSnapshot(
         userId: userId,
+        jobId: selectedJobId,
         fromDate: fromDate,
         hourlyWage: input.hourlyWage,
         wageLevel: input.wageLevel,
@@ -236,6 +418,7 @@ final class PaySettingsViewModel: ObservableObject {
     do {
       _ = try await snapshotsRepository.updateSnapshot(
         id: id,
+        jobId: selectedJobId,
         hourlyWage: input.hourlyWage,
         wageLevel: input.wageLevel,
         supplements: input.supplements,
@@ -321,7 +504,8 @@ final class PaySettingsViewModel: ObservableObject {
     guard let userId = userId else { return 0 }
 
     // Get all shifts
-    let shifts = shiftsRepository.getAllShifts(for: userId)
+    let effectiveJobId = snapshot.job_id ?? selectedJobId
+    let shifts = shiftsRepository.getAllShifts(for: userId, jobId: effectiveJobId)
 
     // Sort snapshots by date
     let sortedSnapshots = snapshots.sorted { s1, s2 in
@@ -382,11 +566,18 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   private func saveMonthlyGoal(_ value: Int?) async {
-    guard let userId = userId else { return }
+    guard
+      let userId = userId,
+      let selectedJobId = selectedJobId,
+      let selectedJob = selectedJob
+    else { return }
 
     do {
-      _ = try await settingsRepository.updateSettings(
-        for: userId,
+      _ = try await jobsRepository.updateJobPaySettings(
+        userId: userId,
+        jobId: selectedJobId,
+        payrollDay: selectedJob.payroll_day ?? 1,
+        halfTaxMonth: selectedJob.half_tax_month,
         monthlyGoal: value
       )
 
@@ -415,12 +606,19 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   private func savePayrollDay(_ value: Int) async {
-    guard let userId = userId else { return }
+    guard
+      let userId = userId,
+      let selectedJobId = selectedJobId,
+      let selectedJob = selectedJob
+    else { return }
 
     do {
-      _ = try await settingsRepository.updateSettings(
-        for: userId,
-        payrollDay: value
+      _ = try await jobsRepository.updateJobPaySettings(
+        userId: userId,
+        jobId: selectedJobId,
+        payrollDay: value,
+        halfTaxMonth: selectedJob.half_tax_month,
+        monthlyGoal: selectedJob.monthly_goal
       )
 
       refreshData()
@@ -433,12 +631,19 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Update half tax month (immediate, no debounce needed for picker)
   func updateHalfTaxMonth(_ value: Int?) async {
-    guard let userId = userId else { return }
+    guard
+      let userId = userId,
+      let selectedJobId = selectedJobId,
+      let selectedJob = selectedJob
+    else { return }
 
     do {
-      _ = try await settingsRepository.updateSettings(
-        for: userId,
-        halfTaxMonth: value
+      _ = try await jobsRepository.updateJobPaySettings(
+        userId: userId,
+        jobId: selectedJobId,
+        payrollDay: selectedJob.payroll_day ?? 1,
+        halfTaxMonth: value,
+        monthlyGoal: selectedJob.monthly_goal
       )
 
       refreshData()

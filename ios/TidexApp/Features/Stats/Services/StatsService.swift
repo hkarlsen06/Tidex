@@ -18,6 +18,7 @@ final class StatsService: ObservableObject {
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
+  private let jobsRepository: JobsRepository
 
   // MARK: - Published State
 
@@ -35,12 +36,14 @@ final class StatsService: ObservableObject {
     shiftsRepository: ShiftsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
-    recurringShiftsRepository: RecurringShiftsRepository? = nil
+    recurringShiftsRepository: RecurringShiftsRepository? = nil,
+    jobsRepository: JobsRepository? = nil
   ) {
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
+    self.jobsRepository = jobsRepository ?? JobsRepository.shared
   }
 
   // MARK: - Public API
@@ -49,10 +52,12 @@ final class StatsService: ObservableObject {
   /// - Parameters:
   ///   - year: Year to compute stats for (defaults to current year)
   ///   - month: Month to compute stats for (defaults to current month)
+  ///   - jobId: Optional job filter. Nil aggregates all jobs.
   /// - Returns: Computed stats data
   func computeStats(
     year: Int? = nil,
-    month: Int? = nil
+    month: Int? = nil,
+    jobId: String? = nil
   ) async throws -> StatsData {
     let calendar = Calendar.current
     let now = Date()
@@ -79,8 +84,9 @@ final class StatsService: ObservableObject {
         throw StatsServiceError.noLocalData
       }
 
-      let snapshots = snapshotsRepository.getSnapshots(for: userId)
-      let recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
+      let snapshots = snapshotsRepository.getSnapshots(for: userId, jobId: jobId)
+      let recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId, jobId: jobId)
+      let jobs = jobsRepository.getNonDeletedJobs(for: userId)
 
       // Calculate date ranges
       let currentYM = (year: targetYear, month: targetMonth)
@@ -96,12 +102,14 @@ final class StatsService: ObservableObject {
       let currentMonthShiftsRaw = shiftsRepository.getShifts(
         for: userId,
         startDate: currentStartDate,
-        endDate: currentEndDate
+        endDate: currentEndDate,
+        jobId: jobId
       )
       let previousMonthShiftsRaw = shiftsRepository.getShifts(
         for: userId,
         startDate: previousStartDate,
-        endDate: previousEndDate
+        endDate: previousEndDate,
+        jobId: jobId
       )
 
       // Compute shifts with payroll using PayrollEngine
@@ -111,7 +119,8 @@ final class StatsService: ObservableObject {
         shifts: currentMonthShiftsRaw,
         recurring: recurringShifts,
         snapshots: snapshots,
-        settings: settings
+        settings: settings,
+        jobs: jobs
       )
 
       let previousMonthShifts = PayrollEngine.computeShiftsForMonth(
@@ -120,7 +129,8 @@ final class StatsService: ObservableObject {
         shifts: previousMonthShiftsRaw,
         recurring: recurringShifts,
         snapshots: snapshots,
-        settings: settings
+        settings: settings,
+        jobs: jobs
       )
 
       // Partition shifts once with centralized conflict exclusion
@@ -138,7 +148,8 @@ final class StatsService: ObservableObject {
         let monthShiftsRaw = shiftsRepository.getShifts(
           for: userId,
           startDate: monthStart,
-          endDate: monthEnd
+          endDate: monthEnd,
+          jobId: jobId
         )
         let computedShifts = PayrollEngine.computeShiftsForMonth(
           year: targetYear,
@@ -146,7 +157,8 @@ final class StatsService: ObservableObject {
           shifts: monthShiftsRaw,
           recurring: recurringShifts,
           snapshots: snapshots,
-          settings: settings
+          settings: settings,
+          jobs: jobs
         )
         fullYearShifts.append(contentsOf: computedShifts)
       }

@@ -38,6 +38,7 @@ struct DashboardView: View {
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
+  @State private var selectedPayrollVariantIndex = 0
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -137,6 +138,9 @@ struct DashboardView: View {
     }
     .onChange(of: viewModel.dashboardData) { _, newData in
       configureCountdown(with: newData)
+    }
+    .onChange(of: selectedPayrollVariantIndex) { _, _ in
+      configureCountdown(with: viewModel.dashboardData)
     }
     .onChange(of: showFeaturedShiftActions) { _, isPresented in
       if !isPresented {
@@ -411,8 +415,23 @@ struct DashboardView: View {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
-      payrollDate: data.payrollDate
+      payrollDate: selectedPayrollDate(for: data)
     )
+  }
+
+  private func selectedPayrollDate(for data: DashboardData) -> Date {
+    let payrollVariants = viewModel.payrollCardVariants(
+      fallback: data,
+      defaultTitle: String(localized: .dashboardPayroll)
+    )
+
+    guard !payrollVariants.isEmpty else {
+      return data.payrollDate
+    }
+
+    let safePayrollVariantIndex = max(
+      0, min(selectedPayrollVariantIndex, payrollVariants.count - 1))
+    return payrollVariants[safePayrollVariantIndex].payoutDate
   }
 
   // MARK: - Card Content
@@ -491,7 +510,7 @@ struct DashboardView: View {
 
     // Calculate progress through the month until payroll (matches Next.js behavior)
     // Only show for current month when payroll hasn't passed yet
-    let payrollProgress: Double? = {
+    let defaultPayrollProgress: Double? = {
       guard viewModel.isCurrentMonth && !effectivePayrollHasPassed else { return nil }
 
       // Get start of the current month
@@ -514,6 +533,41 @@ struct DashboardView: View {
       return max(1, min(100, progress))
     }()
 
+    let payrollVariants = viewModel.payrollCardVariants(
+      fallback: data,
+      defaultTitle: payrollLabel
+    )
+    let safePayrollVariantIndex = max(
+      0, min(selectedPayrollVariantIndex, payrollVariants.count - 1))
+    let selectedPayrollVariant = payrollVariants[safePayrollVariantIndex]
+    let showsMultiWorkplacePayroll = payrollVariants.count > 1
+    let selectedPayrollProgress: Double? = {
+      if !showsMultiWorkplacePayroll {
+        return defaultPayrollProgress
+      }
+
+      guard viewModel.isCurrentMonth else { return nil }
+
+      let selectedPayrollDayStart = calendar.startOfDay(for: selectedPayrollVariant.payoutDate)
+      let selectedPayrollDayEnd =
+        calendar.date(byAdding: .day, value: 1, to: selectedPayrollDayStart)
+        ?? selectedPayrollDayStart
+      guard now < selectedPayrollDayEnd else { return nil }
+
+      guard
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))
+      else {
+        return nil
+      }
+
+      let totalDuration = selectedPayrollDayStart.timeIntervalSince(monthStart)
+      let elapsed = now.timeIntervalSince(monthStart)
+      guard totalDuration > 0 else { return 100 }
+
+      let progress = (elapsed / totalDuration) * 100
+      return max(1, min(100, progress))
+    }()
+
     // Cards stay in place - only numbers animate on month change (like Next.js)
     VStack(spacing: Spacing.sm) {
       // Payroll countdown text - fixed height to prevent layout shift
@@ -524,58 +578,25 @@ struct DashboardView: View {
         .frame(height: 20)
 
       // Payroll Card (Previous Month relative to displayed month)
-      Group {
-        if canManuallySetPayrollStatus {
-          Menu {
-            Section(String(localized: .dashboardPayrollStatusTitle)) {
-              Button {
-                impactHaptic.impactOccurred()
-                viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
-              } label: {
-                Label(
-                  String(localized: .dashboardPayrollStatusReceived),
-                  systemImage: payrollMarkedReceived ? "checkmark.circle.fill" : "circle"
-                )
-              }
-              Button {
-                impactHaptic.impactOccurred()
-                viewModel.clearPayrollReceivedOverrideForDisplayedMonth(
-                  userId: payrollOverrideUserId)
-              } label: {
-                Label(
-                  String(localized: .dashboardPayrollStatusNotReceived),
-                  systemImage: payrollMarkedReceived ? "circle" : "checkmark.circle.fill"
-                )
-              }
-            }
-          } label: {
-            PayrollCard(
-              payrollDate: data.payrollDate,
-              label: payrollLabel,
-              gross: data.previousMonthGross,
-              net: data.previousMonthNet,
-              tax: data.previousMonthTax,
-              taxEnabled: data.previousMonthTaxEnabled,
-              progress: payrollProgress
-            )
-          }
-          .menuIndicator(.hidden)
-        } else {
-          PayrollCard(
-            payrollDate: data.payrollDate,
-            label: payrollLabel,
-            gross: data.previousMonthGross,
-            net: data.previousMonthNet,
-            tax: data.previousMonthTax,
-            taxEnabled: data.previousMonthTaxEnabled,
-            progress: payrollProgress
-          )
-        }
-      }
+      payrollCardSection(
+        selectedVariant: selectedPayrollVariant,
+        variantCount: payrollVariants.count,
+        canManuallySetPayrollStatus: canManuallySetPayrollStatus,
+        payrollMarkedReceived: payrollMarkedReceived,
+        payrollOverrideUserId: payrollOverrideUserId,
+        payrollProgress: selectedPayrollProgress
+      )
       .frame(
         minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
         alignment: .top
       )
+
+      if showsMultiWorkplacePayroll {
+        payrollCardPageIndicator(
+          count: payrollVariants.count,
+          selectedIndex: safePayrollVariantIndex
+        )
+      }
 
       // Total Card (Displayed Month) - THE ANCHOR
       // Numbers animate smoothly when values change
@@ -603,6 +624,9 @@ struct DashboardView: View {
       } else {
         featuredShiftSection(data: data)
       }
+    }
+    .onChange(of: payrollVariants.map(\.id)) { _, _ in
+      selectedPayrollVariantIndex = 0
     }
   }
 
@@ -634,6 +658,82 @@ struct DashboardView: View {
     )
   }
 
+  @ViewBuilder
+  private func payrollCardSection(
+    selectedVariant: PayrollCardVariant,
+    variantCount: Int,
+    canManuallySetPayrollStatus: Bool,
+    payrollMarkedReceived: Bool,
+    payrollOverrideUserId: String?,
+    payrollProgress: Double?
+  ) -> some View {
+    let showsWorkplaceVariants = variantCount > 1
+
+    let card = PayrollCard(
+      payrollDate: selectedVariant.payoutDate,
+      label: selectedVariant.title,
+      labelColorHex: selectedVariant.colorHex,
+      labelIsWorkplace: showsWorkplaceVariants,
+      gross: selectedVariant.gross,
+      net: selectedVariant.net,
+      tax: selectedVariant.tax,
+      taxEnabled: selectedVariant.taxEnabled,
+      progress: payrollProgress
+    )
+
+    if canManuallySetPayrollStatus && !showsWorkplaceVariants {
+      Menu {
+        Section(String(localized: .dashboardPayrollStatusTitle)) {
+          Button {
+            impactHaptic.impactOccurred()
+            viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
+          } label: {
+            Label(
+              String(localized: .dashboardPayrollStatusReceived),
+              systemImage: payrollMarkedReceived ? "checkmark.circle.fill" : "circle"
+            )
+          }
+          Button {
+            impactHaptic.impactOccurred()
+            viewModel.clearPayrollReceivedOverrideForDisplayedMonth(
+              userId: payrollOverrideUserId)
+          } label: {
+            Label(
+              String(localized: .dashboardPayrollStatusNotReceived),
+              systemImage: payrollMarkedReceived ? "circle" : "checkmark.circle.fill"
+            )
+          }
+        }
+      } label: {
+        card
+      }
+      .menuIndicator(.hidden)
+    } else if showsWorkplaceVariants {
+      card
+        .contentShape(Rectangle())
+        .onTapGesture {
+          guard variantCount > 1 else { return }
+          selectedPayrollVariantIndex = (selectedPayrollVariantIndex + 1) % variantCount
+          Haptics.play(.light)
+        }
+    } else {
+      card
+    }
+  }
+
+  @ViewBuilder
+  private func payrollCardPageIndicator(count: Int, selectedIndex: Int) -> some View {
+    HStack(spacing: Spacing.xxs) {
+      ForEach(0..<count, id: \.self) { index in
+        Circle()
+          .fill(index == selectedIndex ? Color.tidexBlue : Color.tidexTextMuted.opacity(0.35))
+          .frame(width: 6, height: 6)
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.top, Spacing.xxs)
+  }
+
   // MARK: - Featured Shift Section
 
   /// Featured shift card with fixed height to prevent layout jumps
@@ -646,11 +746,15 @@ struct DashboardView: View {
         // Only show progress bar for active shifts (matching Next.js behavior)
         let shiftProgress: Double? =
           countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
+        let shiftJob = viewModel.jobForShift(featuredShift)
         FeaturedShiftCard(
           shift: featuredShift,
           isToday: data.isFeaturedShiftToday,
           isBestShift: data.featuredShiftIsBestShift,
           countdownText: countdownManager.shiftCountdownText,
+          showJobIndicator: viewModel.shouldShowJobIndicators,
+          jobName: shiftJob?.name,
+          jobColorHex: shiftJob?.color,
           progress: shiftProgress,
           finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
         )

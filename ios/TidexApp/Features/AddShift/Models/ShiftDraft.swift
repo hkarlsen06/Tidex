@@ -12,6 +12,9 @@ struct ShiftDraft: Codable {
   /// End time as ISO string (HH:mm)
   var endTime: String?
 
+  /// Selected job id for shift creation context
+  var jobId: String?
+
   /// Selected dates for single mode (ISO format YYYY-MM-DD)
   var selectedDates: [String]
 
@@ -42,9 +45,9 @@ struct ShiftDraft: Codable {
   var hasContent: Bool {
     switch mode {
     case .single:
-      return !selectedDates.isEmpty || startTime != nil || endTime != nil
+      return !selectedDates.isEmpty || startTime != nil || endTime != nil || jobId != nil
     case .recurring:
-      return !selectedDays.isEmpty || startTime != nil || endTime != nil
+      return !selectedDays.isEmpty || startTime != nil || endTime != nil || jobId != nil
     }
   }
 }
