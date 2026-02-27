@@ -302,6 +302,8 @@ function ShiftItemWithConnector({
   nextShiftInView,
   onSwipeDelete,
   readOnly,
+  jobName,
+  jobColor,
 }: {
   shift: ShiftWithComputations;
   shiftIndex: number;
@@ -324,6 +326,8 @@ function ShiftItemWithConnector({
   nextShiftInView: boolean;
   onSwipeDelete?: (shift: ShiftWithComputations) => void;
   readOnly: boolean;
+  jobName?: string | null;
+  jobColor?: string | null;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const viewportMargin = "-120px 0px -100px 0px";
@@ -386,6 +390,8 @@ function ShiftItemWithConnector({
                 showEarnings={showEarnings}
                 hasConflict={conflictingShiftIds.has(shift.id)}
                 excludedFromTotal={excludedFromTotalIds.has(shift.id)}
+                jobName={jobName}
+                jobColor={jobColor}
               />
               {isNextUpcomingShift && countdown.text && (
                 <p className="text-xs text-text-muted text-center">{countdown.text}</p>
@@ -426,6 +432,8 @@ function ShiftGroupContent({
   setDetailsOpen,
   onSwipeDelete,
   readOnly,
+  jobsById,
+  showJobIndicator,
 }: {
   shifts: ShiftWithComputations[];
   conflictConnectorSet: Set<string>;
@@ -444,6 +452,8 @@ function ShiftGroupContent({
   setDetailsOpen: (open: boolean, editMode?: boolean) => void;
   onSwipeDelete?: (shift: ShiftWithComputations) => void;
   readOnly: boolean;
+  jobsById: Map<string, Job>;
+  showJobIndicator: boolean;
 }) {
   // Track visibility state for each shift - lifted to parent so siblings can access
   const [visibilityMap, setVisibilityMap] = useState<Map<string, boolean>>(() => new Map());
@@ -461,6 +471,7 @@ function ShiftGroupContent({
       {shifts.map((shift, shiftIndex) => {
         const nextShift = shifts[shiftIndex + 1];
         const nextShiftInView = nextShift ? (visibilityMap.get(nextShift.id) ?? false) : false;
+        const job = showJobIndicator && shift.job_id ? jobsById.get(shift.job_id) : undefined;
 
         return (
           <ShiftItemWithConnector
@@ -486,6 +497,8 @@ function ShiftGroupContent({
             nextShiftInView={nextShiftInView}
             onSwipeDelete={onSwipeDelete}
             readOnly={readOnly}
+            jobName={job?.name}
+            jobColor={job?.color}
           />
         );
       })}
@@ -1191,6 +1204,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     [_jobs]
   );
   const showJobFilter = !readOnly && activeJobs.length > 1;
+  // Show job indicator on shift cards when there are multiple active jobs
+  const showJobIndicator = activeJobs.length > 1;
+  const jobsById = useMemo(
+    () => new Map((_jobs ?? []).map((job) => [job.id, job])),
+    [_jobs]
+  );
   const selectedJobFilterValue = selectedJobId && activeJobs.some((entry) => entry.id === selectedJobId)
     ? selectedJobId
     : "all";
@@ -2955,6 +2974,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       setDetailsOpen={setDetailsOpen}
                       onSwipeDelete={readOnly ? undefined : handleSwipeOpenDelete}
                       readOnly={readOnly}
+                      jobsById={jobsById}
+                      showJobIndicator={showJobIndicator}
                     />
                     {isTodayAfterLastShift && (
                       <div ref={todayRef}>

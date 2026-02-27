@@ -219,6 +219,11 @@ export function HomeContent({
     [jobs]
   );
   const showJobFilter = activeJobs.length > 1;
+  const showJobIndicator = activeJobs.length > 1;
+  const jobsById = useMemo(
+    () => new Map(jobs.map((job) => [job.id, job])),
+    [jobs]
+  );
   const selectedJobFilterValue = selectedJobId && activeJobs.some((entry) => entry.id === selectedJobId)
     ? selectedJobId
     : "all";
@@ -791,6 +796,8 @@ export function HomeContent({
                   percentage: displayShift?.tax_percentage ?? 0,
                   halfTaxMonth: settings.half_tax_month ?? null,
                 }}
+                jobName={showJobIndicator && displayShift.job_id ? jobsById.get(displayShift.job_id)?.name : undefined}
+                jobColor={showJobIndicator && displayShift.job_id ? jobsById.get(displayShift.job_id)?.color : undefined}
               />
             ) : (
               <ShiftCardSkeleton />

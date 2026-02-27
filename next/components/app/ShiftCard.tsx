@@ -35,6 +35,10 @@ type ShiftCardProps = {
   hasConflict?: boolean;
   /** When true, this shift's earnings are excluded from totals (crossed out visually) */
   excludedFromTotal?: boolean;
+  /** Job name to display as a colored badge (only when multiple jobs exist) */
+  jobName?: string | null;
+  /** Job color hex (e.g. "#3B82F6") for the badge background */
+  jobColor?: string | null;
 };
 
 export function formatDateParts(date: string, locale: string, daysFull: readonly string[], monthsShort: readonly string[]) {
@@ -68,7 +72,28 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false, excludedFromTotal = false }: ShiftCardProps) {
+/**
+ * WCAG-compliant contrast check: returns "white" or "black" based on relative luminance.
+ * Matches the iOS WorkplaceNameText badgeForegroundColor logic.
+ */
+function getContrastTextColor(hexColor: string): "white" | "black" {
+  const hex = hexColor.replace(/^#/, "");
+  if (hex.length !== 6) return "white";
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const linearize = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+
+  const luminance = 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+  // White contrast ratio vs black contrast ratio
+  const whiteContrast = (1.05) / (luminance + 0.05);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  return whiteContrast >= blackContrast ? "white" : "black";
+}
+
+export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false, excludedFromTotal = false, jobName, jobColor }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
   const { computed } = shift;
@@ -94,10 +119,14 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
   // Show different breakdown based on tax settings
   const displayAmount = taxEnabled ? netAmount : gross;
 
+  // Job badge takes priority over earnings breakdown (matches iOS ShiftRowCard behavior)
+  const showJobBadge = !!jobName;
+
   // Determine if breakdown adds meaningful information
   // Hide breakdown when: no tax AND no supplements (breakdown would just repeat the main amount)
+  // Also hide when showing job badge (badge takes the right-column secondary slot)
   const hasSupplements = supplementPay > 0;
-  const showBreakdown = taxEnabled || hasSupplements;
+  const showBreakdown = !showJobBadge && (taxEnabled || hasSupplements);
 
   // Breakdown values for animated display
   const breakdownType: 'tax' | 'supplement' | 'none' =
@@ -133,7 +162,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
       )}
       <CardHeader className={cn(
         "flex flex-row justify-between gap-4 space-y-0 py-6 relative z-10",
-        showEarnings && !showBreakdown ? "items-center" : "items-start"
+        showEarnings && !showBreakdown && !showJobBadge ? "items-center" : "items-start"
       )}>
         <div className="space-y-1">
           <p className="text-lg font-medium text-text-primary">
@@ -219,6 +248,17 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                   >
                     {breakdownValues.second}
                   </SafeAnimateNumber>
+                </span>
+              )}
+              {showJobBadge && jobName && (
+                <span
+                  className="mt-1 inline-block max-w-36 truncate rounded-md px-1.5 py-0.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: jobColor ?? "#3B82F6",
+                    color: getContrastTextColor(jobColor ?? "#3B82F6"),
+                  }}
+                >
+                  {jobName}
                 </span>
               )}
             </>
