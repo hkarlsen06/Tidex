@@ -114,15 +114,13 @@ struct AddJobSheet: View {
             Spacer()
               .frame(height: 24)
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: Spacing.xxxs) {
+              Image(systemName: "building.2")
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexBlue)
               Text(String(localized: "settings.pay.add_job.title"))
                 .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-
-              Text(String(localized: "settings.pay.add_job.setup_subtitle"))
-                .font(.tidexBody)
-                .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
             }
             .padding(.horizontal, Spacing.xl)
@@ -445,7 +443,10 @@ struct AddJobSheet: View {
             Spacer()
               .frame(height: 24)
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: Spacing.xxxs) {
+              Image(systemName: "pencil.and.list.clipboard")
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexBlue)
               Text(String(localized: "settings.pay.add_job.one_last_thing_title"))
                 .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)

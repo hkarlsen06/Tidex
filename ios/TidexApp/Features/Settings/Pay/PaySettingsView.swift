@@ -143,10 +143,11 @@ struct PaySettingsView: View {
             .buttonStyle(.plain)
           }
         } header: {
-          VStack(alignment: .leading, spacing: Spacing.xxxs) {
-            Text(String(localized: "settings.pay.choose_job.title"))
-            Text(String(localized: "settings.pay.choose_job.subtitle"))
+          HStack(spacing: Spacing.xxxs) {
+            Image(systemName: "building.2")
               .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexBlue)
+            Text(String(localized: "settings.pay.choose_job.title"))
           }
           .textCase(nil)
         }

@@ -699,10 +699,15 @@ struct SettingsView: View {
                 ProgressView()
                   .controlSize(.small)
               } else {
-                Button(String(localized: "settings.pay.manage_jobs.archive")) {
+                Button {
                   Task {
                     await archivePayJob(job.id)
                   }
+                } label: {
+                  Label(
+                    String(localized: "settings.pay.manage_jobs.archive"),
+                    systemImage: "archivebox"
+                  )
                 }
                 .disabled(job.is_default || payChooserJobs.count <= 1)
               }
@@ -727,9 +732,14 @@ struct SettingsView: View {
         if showArchivedPayJobs {
           if payArchivedJobs.isEmpty {
             Section {
-              Text(String(localized: "settings.pay.manage_jobs.archived_empty"))
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexTextSecondary)
+              HStack(spacing: Spacing.xs) {
+                Image(systemName: "archivebox")
+                  .font(.tidexFootnote)
+                  .foregroundColor(.tidexTextMuted)
+                Text(String(localized: "settings.pay.manage_jobs.archived_empty"))
+                  .font(.tidexFootnote)
+                  .foregroundColor(.tidexTextSecondary)
+              }
             } header: {
               Text(String(localized: "settings.pay.manage_jobs.archived_title"))
             }
@@ -749,10 +759,15 @@ struct SettingsView: View {
                     ProgressView()
                       .controlSize(.small)
                   } else {
-                    Button(String(localized: "settings.pay.manage_jobs.restore")) {
+                    Button {
                       Task {
                         await restorePayJob(job.id)
                       }
+                    } label: {
+                      Label(
+                        String(localized: "settings.pay.manage_jobs.restore"),
+                        systemImage: "arrow.uturn.backward.circle"
+                      )
                     }
                   }
                 }

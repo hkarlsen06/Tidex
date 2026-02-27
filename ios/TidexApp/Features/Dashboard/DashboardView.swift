@@ -399,7 +399,7 @@ struct DashboardView: View {
     let startTime: String?
     let endTime: String?
 
-    if viewModel.isCurrentMonth, let shift = data.featuredShift, !data.featuredShiftIsBestShift {
+    if data.isViewingCurrentMonth, let shift = data.featuredShift, !data.featuredShiftIsBestShift {
       shiftDate = shift.shiftDate
       startTime = shift.startTime
       endTime = shift.endTime
@@ -478,18 +478,19 @@ struct DashboardView: View {
   private func animatedCardContent(data: DashboardData) -> some View {
     let now = Date()
     let calendar = Calendar.current
+    let isViewingCurrentMonth = data.isViewingCurrentMonth
     let payrollDayStart = calendar.startOfDay(for: data.payrollDate)
     let payrollDayEnd =
       calendar.date(byAdding: .day, value: 1, to: payrollDayStart) ?? payrollDayStart
     let isOnOrBeforePayrollDay = now < payrollDayEnd
-    let canManuallySetPayrollStatus = viewModel.isCurrentMonth && isOnOrBeforePayrollDay
+    let canManuallySetPayrollStatus = isViewingCurrentMonth && isOnOrBeforePayrollDay
 
     let payrollOverrideUserId = coordinator.getCurrentUserId()
     let payrollMarkedReceived = viewModel.isPayrollReceivedOverrideForDisplayedMonth(
       userId: payrollOverrideUserId
     )
     let effectivePayrollHasPassed: Bool = {
-      guard viewModel.isCurrentMonth else { return data.payrollHasPassed }
+      guard isViewingCurrentMonth else { return data.payrollHasPassed }
       if isOnOrBeforePayrollDay {
         return payrollMarkedReceived
       }
@@ -498,7 +499,7 @@ struct DashboardView: View {
 
     // Determine payroll label based on whether viewing current month
     let payrollLabel: String = {
-      if viewModel.isCurrentMonth {
+      if isViewingCurrentMonth {
         return effectivePayrollHasPassed
           ? String(localized: .dashboardPreviousPayout)
           : String(localized: .dashboardNextPayout)
@@ -511,7 +512,7 @@ struct DashboardView: View {
     // Calculate progress through the month until payroll (matches Next.js behavior)
     // Only show for current month when payroll hasn't passed yet
     let defaultPayrollProgress: Double? = {
-      guard viewModel.isCurrentMonth && !effectivePayrollHasPassed else { return nil }
+      guard isViewingCurrentMonth && !effectivePayrollHasPassed else { return nil }
 
       // Get start of the current month
       guard
@@ -546,7 +547,7 @@ struct DashboardView: View {
         return defaultPayrollProgress
       }
 
-      guard viewModel.isCurrentMonth else { return nil }
+      guard isViewingCurrentMonth else { return nil }
 
       let selectedPayrollDayStart = calendar.startOfDay(for: selectedPayrollVariant.payoutDate)
       let selectedPayrollDayEnd =

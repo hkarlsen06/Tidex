@@ -201,9 +201,14 @@ struct StatsView: View {
     let selectedJob = viewModel.activeJobs.first(where: { $0.id == viewModel.selectedJobId })
 
     HStack {
-      Text(.jobsFilterTitle)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+      HStack(spacing: Spacing.xxxs) {
+        Image(systemName: "line.3.horizontal.decrease.circle")
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+        Text(.jobsFilterTitle)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+      }
 
       Spacer()
 
