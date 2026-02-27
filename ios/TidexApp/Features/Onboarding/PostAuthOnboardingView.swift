@@ -13,14 +13,22 @@ struct PostAuthOnboardingView: View {
   @State private var onboardingData = OnboardingData()
   @StateObject private var saveManager = OnboardingSaveManager()
   @State private var showingMFAEnrollment = false
+  @State private var showAddJobSheet = false
+  @State private var isPreparingJobSheet = false
+  @State private var navigateToMFAAfterJobSheet = false
+  @State private var onboardingActiveJobs: [Job] = []
+  @State private var multiJobErrorMessage: String?
   @State private var isNavigatingBack = false
   @Environment(\.scenePhase) private var scenePhase
+  private let jobsRepository = JobsRepository.shared
+  private let syncCoordinator = SyncCoordinator.shared
 
   enum PostAuthScreen: String {
     case loading
     case wage
     case supplements
     case settingsAccordion
+    case multiJobPrompt
     case mfaSetup
     case success
   }
@@ -68,11 +76,30 @@ struct PostAuthOnboardingView: View {
           SettingsAccordionScreen(
             data: onboardingData,
             onContinue: {
-              navigateTo(.mfaSetup)
+              navigateTo(.multiJobPrompt)
             },
             onBack: {
               navigateBackFromSettings()
             }
+          )
+          .transition(screenTransition)
+
+        case .multiJobPrompt:
+          MultiJobPromptScreen(
+            isLoading: isPreparingJobSheet,
+            onAddNow: {
+              isPreparingJobSheet = true
+              Task {
+                await prepareJobsForOnboardingAdd()
+              }
+            },
+            onContinueLater: {
+              navigateTo(.mfaSetup)
+            },
+            onBack: {
+              navigateBack(to: .settingsAccordion)
+            },
+            errorMessage: multiJobErrorMessage
           )
           .transition(screenTransition)
 
@@ -85,7 +112,7 @@ struct PostAuthOnboardingView: View {
               startSaveAndNavigateToSuccess()
             },
             onBack: {
-              navigateBack(to: .settingsAccordion)
+              navigateBack(to: .multiJobPrompt)
             }
           )
           .transition(screenTransition)
@@ -125,6 +152,19 @@ struct PostAuthOnboardingView: View {
           showingMFAEnrollment = false
         }
       )
+    }
+    .sheet(isPresented: $showAddJobSheet, onDismiss: {
+      if navigateToMFAAfterJobSheet {
+        navigateToMFAAfterJobSheet = false
+        navigateTo(.mfaSetup)
+      }
+    }) {
+      AddJobSheet(
+        initialCurrency: onboardingData.currency,
+        existingJobNeedingSetup: onboardingActiveJobs.count == 1 ? onboardingActiveJobs.first : nil
+      ) { input in
+        await createOnboardingJob(input: input)
+      }
     }
     .onAppear {
       initializeOnboarding()
@@ -283,6 +323,75 @@ struct PostAuthOnboardingView: View {
     // Start saving in the background
     Task {
       await saveManager.saveOnboardingData(userId: userId, data: onboardingData)
+    }
+  }
+
+  private func prepareJobsForOnboardingAdd() async {
+    defer { isPreparingJobSheet = false }
+
+    guard !userId.isEmpty else {
+      multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      return
+    }
+
+    multiJobErrorMessage = nil
+    let activeJobs = jobsRepository.getActiveJobs(for: userId)
+
+    if activeJobs.isEmpty {
+      _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+      guard currentScreen == .multiJobPrompt else { return }
+      let jobsAfterSync = jobsRepository.getActiveJobs(for: userId)
+      guard !jobsAfterSync.isEmpty else {
+        multiJobErrorMessage = String(localized: .settingsPayErrorLoadFailed)
+        return
+      }
+      onboardingActiveJobs = jobsAfterSync
+      showAddJobSheet = true
+      return
+    }
+
+    onboardingActiveJobs = activeJobs
+    showAddJobSheet = true
+  }
+
+  private func createOnboardingJob(input: AddJobSetupInput) async -> Bool {
+    guard !userId.isEmpty else {
+      multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      return false
+    }
+
+    do {
+      if let existingJobSetup = input.existingJobSetup {
+        guard
+          try await jobsRepository.updateJob(
+            userId: userId,
+            jobId: existingJobSetup.id,
+            name: existingJobSetup.name,
+            color: existingJobSetup.color
+          ) != nil
+        else {
+          multiJobErrorMessage = String(localized: .settingsPayErrorLoadFailed)
+          return false
+        }
+      }
+
+      _ = try await jobsRepository.createJobWithBaselineSnapshot(
+        userId: userId,
+        name: input.name,
+        color: input.color,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal,
+        baselineSnapshot: input.baselineSnapshot
+      )
+
+      onboardingActiveJobs = jobsRepository.getActiveJobs(for: userId)
+      multiJobErrorMessage = nil
+      navigateToMFAAfterJobSheet = true
+      return true
+    } catch {
+      multiJobErrorMessage = error.localizedDescription
+      return false
     }
   }
 }
