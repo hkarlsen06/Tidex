@@ -1,5 +1,5 @@
 -- Function: handle_new_user
--- Description: Trigger function that creates a profile for new users
+-- Description: Trigger function that creates a profile + default job for new users
 -- Used by: AFTER INSERT trigger on auth.users
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -8,9 +8,15 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-begin
-  insert into public.profiles (id) values (new.id)
-  on conflict (id) do nothing;
-  return new;
-end;
+BEGIN
+  INSERT INTO public.profiles (id)
+  VALUES (NEW.id)
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.jobs (user_id, name, is_default)
+  VALUES (NEW.id, 'Jobb', true)
+  ON CONFLICT DO NOTHING;
+
+  RETURN NEW;
+END;
 $function$;
