@@ -1416,9 +1416,14 @@ struct ShiftsView: View {
   @ViewBuilder
   private var listJobFilterBar: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.jobsFilterTitle)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+      HStack(spacing: Spacing.xxxs) {
+        Image(systemName: "line.3.horizontal.decrease.circle")
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+        Text(.jobsFilterTitle)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+      }
 
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: Spacing.xs) {

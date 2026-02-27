@@ -18,6 +18,10 @@ extension Notification.Name {
 
 /// Computed dashboard data ready for display
 struct DashboardData: Equatable {
+  // Month Context
+  let displayedYear: Int
+  let displayedMonth: Int
+
   // Payroll Card (Previous Month)
   let payrollDate: Date
   let payrollHasPassed: Bool  // true = previous payout, false = next payout
@@ -55,6 +59,12 @@ struct DashboardData: Equatable {
   /// Whether there are future shifts (main display should be projected total)
   var hasFutureShifts: Bool {
     currentMonthPlannedCount > 0
+  }
+
+  /// Whether this dashboard payload represents the real current month.
+  var isViewingCurrentMonth: Bool {
+    let current = Date.currentYearMonth()
+    return displayedYear == current.year && displayedMonth == current.month
   }
 }
 
@@ -1362,6 +1372,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let previousMonthName = monthName(year: previousYM.year, month: previousYM.month)
 
     return DashboardData(
+      displayedYear: displayYM.year,
+      displayedMonth: displayYM.month,
       payrollDate: payrollDate,
       payrollHasPassed: payrollHasPassed,
       previousMonthGross: prevTotals.gross,
@@ -1463,6 +1475,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let previousMonthName = monthNameStatic(year: previousYM.year, month: previousYM.month)
 
     return DashboardData(
+      displayedYear: displayYM.year,
+      displayedMonth: displayYM.month,
       payrollDate: payrollDate,
       payrollHasPassed: payrollHasPassed,
       previousMonthGross: prevTotals.gross,

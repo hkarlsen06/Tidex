@@ -12,12 +12,13 @@ struct WorkplaceNameText: View {
   var badgeCornerRadius: CGFloat = CornerRadius.sm
   var badgeHorizontalPadding: CGFloat = Spacing.xs
   var badgeVerticalPadding: CGFloat = Spacing.xxxs
+  @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     if let badgeColor = resolvedBadgeColor {
       Text(name)
         .font(font)
-        .foregroundColor(badgeForegroundColor(for: badgeColor))
+        .foregroundColor(badgeForegroundColor)
         .lineLimit(lineLimit)
         .padding(.horizontal, badgeHorizontalPadding)
         .padding(.vertical, badgeVerticalPadding)
@@ -43,63 +44,8 @@ struct WorkplaceNameText: View {
     return nil
   }
 
-  private func badgeForegroundColor(for backgroundColor: UIColor) -> Color {
-    let whiteContrast = contrastRatio(between: .white, and: backgroundColor)
-    let blackContrast = contrastRatio(between: .black, and: backgroundColor)
-    return whiteContrast >= blackContrast ? Color.white : Color.black
-  }
-
-  private func contrastRatio(between lhs: UIColor, and rhs: UIColor) -> Double {
-    let lhsLuminance = relativeLuminance(for: lhs)
-    let rhsLuminance = relativeLuminance(for: rhs)
-    let lighter = max(lhsLuminance, rhsLuminance)
-    let darker = min(lhsLuminance, rhsLuminance)
-    return (lighter + 0.05) / (darker + 0.05)
-  }
-
-  private func relativeLuminance(for color: UIColor) -> Double {
-    guard let components = rgbComponents(from: color) else { return 0 }
-
-    func linearize(_ value: CGFloat) -> Double {
-      let normalized = Double(value)
-      if normalized <= 0.03928 {
-        return normalized / 12.92
-      }
-      return pow((normalized + 0.055) / 1.055, 2.4)
-    }
-
-    let red = linearize(components.red)
-    let green = linearize(components.green)
-    let blue = linearize(components.blue)
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
-  }
-
-  private func rgbComponents(from color: UIColor) -> (red: CGFloat, green: CGFloat, blue: CGFloat)?
-  {
-    var red: CGFloat = 0
-    var green: CGFloat = 0
-    var blue: CGFloat = 0
-    var alpha: CGFloat = 0
-    if color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
-      return (red, green, blue)
-    }
-
-    guard
-      let sRGBSpace = CGColorSpace(name: CGColorSpace.sRGB),
-      let converted = color.cgColor.converted(
-        to: sRGBSpace,
-        intent: .defaultIntent,
-        options: nil
-      ),
-      let channels = converted.components
-    else {
-      return nil
-    }
-
-    if channels.count >= 3 {
-      return (channels[0], channels[1], channels[2])
-    }
-    return nil
+  private var badgeForegroundColor: Color {
+    colorScheme == .dark ? .white : .black
   }
 }
 

@@ -217,7 +217,13 @@ struct ShiftsCalendarView: View {
     jobs.first(where: { $0.is_default })?.id
   }
 
+  private var hasMultipleActiveJobs: Bool {
+    jobs.count > 1
+  }
+
   private var dayJobTimeColorsByDate: [String: DayJobTimeColors] {
+    guard hasMultipleActiveJobs else { return [:] }
+
     var result: [String: DayJobTimeColors] = [:]
 
     for (dateISO, shiftsOnDay) in shiftsByDate where !shiftsOnDay.isEmpty {
@@ -334,7 +340,8 @@ struct ShiftsCalendarView: View {
       let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
       let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
       let shouldColorJobTimes =
-        !dayInfo.isOutsideMonth
+        hasMultipleActiveJobs
+        && !dayInfo.isOutsideMonth
         && !isSelected
         && !isInDragPreview
         && !isNewlyAdded
