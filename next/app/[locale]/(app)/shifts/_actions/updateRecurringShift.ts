@@ -10,6 +10,7 @@ import { ERRORS } from "@/lib/errors/messages";
 
 type UpdateRecurringInput = {
   id: string;
+  job_id?: string;
   start_time: string; // HH:mm
   end_time: string; // HH:mm
   repeat_interval_weeks: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -25,6 +26,7 @@ type UpdateRecurringInput = {
  */
 export async function updateRecurringShift({
   id,
+  job_id,
   start_time,
   end_time,
   repeat_interval_weeks,
@@ -41,6 +43,7 @@ export async function updateRecurringShift({
     .update({
       start_time,
       end_time,
+      ...(job_id ? { job_id } : {}),
       repeat_interval_weeks,
       selected_days,
       end_condition,

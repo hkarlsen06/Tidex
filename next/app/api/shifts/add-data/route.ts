@@ -8,6 +8,7 @@ import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
 import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
+import type { Job } from "@/lib/payroll";
 
 /**
  * GET /api/shifts/add-data
@@ -108,12 +109,24 @@ export async function GET(_request: NextRequest) {
     // Load wage snapshots
     const wageSnapshots = await getUserWageSnapshots();
 
+    // Load active jobs for optional selector
+    const { data: jobsRows } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .is("archived_at", null)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    const jobs = (jobsRows ?? []) as Job[];
+
     return NextResponse.json(
       {
         existingShifts: allExistingShifts,
         userSettings,
         presetRules: PRESET_RULES,
         wageSnapshots,
+        jobs,
       },
       {
         headers: {

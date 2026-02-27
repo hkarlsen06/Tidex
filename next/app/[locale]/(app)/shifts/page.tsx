@@ -1,5 +1,6 @@
 import { getComputedShifts, PRESET_RULES } from "@/data-access/shifts";
 import { verifySession } from "@/data-access/auth";
+import { getUserJobs } from "@/data-access/jobs";
 import { connection } from "next/server";
 import {
   getPreviousYearMonth,
@@ -18,6 +19,7 @@ interface ShiftsPageProps {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{
     dates?: string; // Deep link: comma-separated dates to highlight (from widget or push notification)
+    job?: string; // Optional job filter
   }>;
 }
 
@@ -33,7 +35,7 @@ export async function generateMetadata({ params }: ShiftsPageProps) {
 export default async function ShiftsPage({ params, searchParams }: ShiftsPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
-  const { dates } = await searchParams;
+  const { dates, job } = await searchParams;
   const dictionary = getAppDictionary(_locale as Locale, ['pages.shifts']);
 
   // Parse comma-separated dates into a Set for efficient lookup (from widget or push notification)
@@ -41,6 +43,9 @@ export default async function ShiftsPage({ params, searchParams }: ShiftsPagePro
 
   // Verify authentication and get user
   const { user } = await verifySession();
+  const jobsForFilter = await getUserJobs(user.id);
+  const activeJobs = jobsForFilter.filter((entry) => !entry.deleted_at && !entry.archived_at);
+  const effectiveJobId = job && activeJobs.some((entry) => entry.id === job) ? job : undefined;
 
   // Fetch 3 months of data (previous + current + next) for smooth navigation
   // This covers 90% of user navigation patterns without loading states
@@ -48,17 +53,18 @@ export default async function ShiftsPage({ params, searchParams }: ShiftsPagePro
   const nextMonth = getNextYearMonth();
   const current = getCurrentYearMonth();
 
-  const { shifts, defaultView, settings, payoutTaxSettings } = await getComputedShifts(user.id, {
+  const { shifts, defaultView, settings, jobs, payoutTaxSettings } = await getComputedShifts(user.id, {
     startDate: getMonthStart(prevMonth.year, prevMonth.month),
     endDate: getMonthEnd(nextMonth.year, nextMonth.month),
     limit: 150, // Accommodate up to ~50 shifts per month across 3 months
+    jobId: effectiveJobId,
     year: current.year,
     month: current.month,
   });
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.shifts']}>
-      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} highlightDates={highlightDates} />
+      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} jobs={jobs} selectedJobId={effectiveJobId ?? null} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} highlightDates={highlightDates} />
     </I18nProvider>
   );
 }

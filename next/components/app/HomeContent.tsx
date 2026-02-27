@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useTransition, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { ShiftCardSkeleton } from "@/components/app/skeletons";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
-import { ShiftWithComputations, UserSettings, WageSnapshot, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, WageSnapshot, computeShift, PRESET_SUPPLEMENT_RULES, Job } from "@/lib/payroll";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { usePayrollCountdown } from "@/lib/hooks/usePayrollCountdown";
 import { useMonth } from "./MonthContext";
@@ -25,6 +26,8 @@ import type { PayoutTaxSettings } from "@/data-access/shifts";
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
+  jobs?: Job[];
+  selectedJobId?: string | null;
   /** All wage snapshots for the user - used to calculate tax settings for any month */
   wageSnapshots: WageSnapshot[];
   /** User-specific cache key to ensure browser HTTP cache is per-user */
@@ -189,10 +192,19 @@ function isFutureMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, cacheKey, preloadedMonths }: HomeContentProps) {
+export function HomeContent({
+  shifts: initialShifts,
+  settings,
+  jobs = [],
+  selectedJobId = null,
+  wageSnapshots,
+  cacheKey,
+  preloadedMonths,
+}: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction, isHydrated } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
@@ -202,6 +214,16 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
   const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
   const selectedMonthIsCurrent = isCurrentMonth(month);
   const selectedMonthIsFuture = isFutureMonth(month);
+  const activeJobs = useMemo(
+    () => jobs.filter((entry) => !entry.deleted_at && !entry.archived_at),
+    [jobs]
+  );
+  const showJobFilter = activeJobs.length > 1;
+  const selectedJobFilterValue = selectedJobId && activeJobs.some((entry) => entry.id === selectedJobId)
+    ? selectedJobId
+    : "all";
+  const allJobsLabel = locale.startsWith("no") ? "Alle jobber" : "All jobs";
+  const jobLabel = locale.startsWith("no") ? "Jobb" : "Job";
 
   // Track which months have been loaded or are currently loading
   // Using refs to avoid recreating fetchMonth callback on every state change
@@ -310,7 +332,9 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
 
     try {
       // Include cacheKey to ensure browser HTTP cache is per-user
-      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_ck=${cacheKey}`);
+      const response = await fetch(
+        `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey}${selectedJobId ? `&job=${encodeURIComponent(selectedJobId)}` : ""}`
+      );
       const data = await response.json();
 
       if (data.shifts && Array.isArray(data.shifts)) {
@@ -330,7 +354,7 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
       // Remove from loading set
       loadingMonthsRef.current.delete(key);
     }
-  }, [getMonthKey, cacheKey]);
+  }, [getMonthKey, cacheKey, selectedJobId]);
 
   // Proactive prefetch: Load current and adjacent months when navigating outside the preloaded window
   // SSR preloads 3 months (prev, current, next), so this only triggers when user
@@ -663,6 +687,19 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
       ? (t.common.bestShift ?? "Beste vakt")
       : null;
 
+  const handleJobFilterChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "all") {
+        params.delete("job");
+      } else {
+        params.set("job", value);
+      }
+      router.push(`/${locale}/dashboard${params.toString() ? `?${params.toString()}` : ""}`);
+    },
+    [searchParams, router, locale]
+  );
+
   // Swipe gesture handling for month navigation
   const swipeContainerRef = useSwipe<HTMLDivElement>({
     onSwipeLeft: goToNextMonth,
@@ -674,6 +711,26 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
     <CenteredPageWrapper routeKey="home">
       <div ref={swipeContainerRef} className="flex items-center">
         <div className="flex flex-col gap-6 w-full">
+          {showJobFilter && (
+            <div className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+                {jobLabel}
+              </span>
+              <Select value={selectedJobFilterValue} onValueChange={handleJobFilterChange}>
+                <SelectTrigger className="h-10 rounded-2xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary shadow-app-inner">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-border-subtle bg-surface-primary shadow-app-lg">
+                  <SelectItem value="all">{allJobsLabel}</SelectItem>
+                  {activeJobs.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {payrollDay && (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-text-secondary text-center">{payrollCountdown.text}</p>

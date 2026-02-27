@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AddShiftFormWrapper } from "@/components/shifts/add/AddShiftFormWrapper";
 import { PRESET_RULES } from "@/data-access/shifts";
-import type { UserSettings } from "@/lib/payroll";
+import type { UserSettings, Job } from "@/lib/payroll";
 import { getTranslations } from "@/lib/i18n/server";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -13,6 +13,7 @@ import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
 import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
+import { getUserJobs } from "@/data-access/jobs";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 
 interface AddShiftsPageProps {
@@ -40,10 +41,12 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
   let userSettings: UserSettings = {};
   let allExistingShifts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
   let wageSnapshots: any[] = [];
+  let jobs: Job[] = [];
 
   try {
     // Load user settings via DAL
     userSettings = (await getUserSettings(user.id)) as UserSettings ?? {};
+    jobs = await getUserJobs(user.id);
 
     const supabase = await createSupabaseServerClient();
 
@@ -134,6 +137,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
           userSettings,
           presetRules: PRESET_RULES,
           wageSnapshots,
+          jobs,
         }}
         cacheKey={user.id.slice(0, 8)}
       />

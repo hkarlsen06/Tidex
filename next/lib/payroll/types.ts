@@ -3,6 +3,7 @@ export type HHMM = `${number}:${number}`;
 export type ShiftRow = {
   id: string;
   user_id: string;
+  job_id?: string | null;
   shift_date: string;           // ISO date
   start_time: string;           // "HH:mm"
   end_time: string;             // "HH:mm"
@@ -42,6 +43,22 @@ export type UserSettings = {
   payroll_day?: number | null;
   monthly_goal?: number | null;
   monthly_goals_by_month?: Record<string, number> | null; // YYYY-MM -> goal override
+};
+
+export type Job = {
+  id: string;
+  user_id: string;
+  name: string;
+  color?: string | null;
+  is_default: boolean;
+  sort_order: number;
+  payroll_day?: number | null;
+  half_tax_month?: number | null;
+  monthly_goal?: number | null;
+  archived_at?: string | null;
+  deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type SupplementRule = {
@@ -101,6 +118,7 @@ export type ShiftWithComputations = ShiftRow & {
 export type WageSnapshot = {
   id: string;
   user_id: string;
+  job_id?: string | null;
   from_date: string | null; // ISO date (YYYY-MM-DD) or NULL for baseline
   hourly_wage: number;
   wage_level: number | null; // NULL = custom wage, NUMBER (1-9) = tariff level

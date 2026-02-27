@@ -1,7 +1,7 @@
 import { buildWagePeriods } from "./periods";
 import { applyBreakDeduction } from "./breaks";
 import {
-  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod, WageSnapshot, CustomSupplementsData
+  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod, WageSnapshot, CustomSupplementsData, Job
 } from "./types";
 
 const WEEKDAYS = [7,1,2,3,4,5,6]; // JS getDay(): 0=Sun → 7, then 1..6 Mon..Sat
@@ -97,7 +97,8 @@ export function computeShift(
   shift: ShiftRow,
   _settings: UserSettings,
   presetRules: SupplementRule[],
-  snapshot: WageSnapshot | null = null
+  snapshot: WageSnapshot | null = null,
+  _job: Job | null = null
 ): ShiftComputed {
   const s = { ...shift };
   const st = s.start_time;

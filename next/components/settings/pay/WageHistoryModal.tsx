@@ -54,6 +54,7 @@ interface WageHistoryModalProps {
   mode: 'create' | 'edit' | 'view';
   t: Dictionary;
   locale?: string;
+  jobId?: string | null;
   /**
    * Initial tariff version to use when creating new snapshots.
    * If not provided, the modal will fetch the latest version when opened.
@@ -69,6 +70,7 @@ export function WageHistoryModal({
   mode,
   t,
   locale = 'no-NO',
+  jobId,
   initialTariffVersion,
 }: WageHistoryModalProps) {
   const router = useRouter();
@@ -267,6 +269,7 @@ export function WageHistoryModal({
           // In create mode: always use date
           // In edit mode: preserve baseline (null) or use date
           from_date: mode === 'create' ? fromDate : (isBaseline ? null : fromDate),
+          ...(jobId ? { job_id: jobId } : {}),
           hourly_wage: wage,
           wage_level: usePreset ? parseInt(wageLevel) : null,
           // Save tariff_type_id when using tariff-based wage

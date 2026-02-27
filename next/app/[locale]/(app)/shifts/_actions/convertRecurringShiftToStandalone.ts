@@ -32,7 +32,7 @@ export async function convertRecurringShiftToStandalone({
   // Load the recurring shift to get current exclusions
   const { data: recurring, error: recurringError } = await supabase
     .from("recurring_shifts")
-    .select("exclusions")
+    .select("exclusions, job_id")
     .eq("id", recurringId)
     .eq("user_id", user.id)
     .is("deleted_at", null) // Only find non-deleted recurring shifts
@@ -67,6 +67,7 @@ export async function convertRecurringShiftToStandalone({
     .from("user_shifts")
     .insert({
       user_id: user.id,
+      ...(recurring.job_id ? { job_id: recurring.job_id } : {}),
       shift_date: shiftDate,
       start_time: startTime,
       end_time: endTime,

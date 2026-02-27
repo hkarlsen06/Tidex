@@ -26,9 +26,10 @@ type RecurringFormProps = {
   existingShifts: ExistingShift[];
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  jobId?: string | null;
 };
 
-export default function RecurringForm({ existingShifts, userSettings, presetRules }: RecurringFormProps) {
+export default function RecurringForm({ existingShifts, userSettings, presetRules, jobId }: RecurringFormProps) {
   const { t } = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -159,7 +160,10 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
     startTransition(async () => {
       try {
-        const result = await createRecurringShift(draft);
+        const result = await createRecurringShift({
+          ...draft,
+          ...(jobId ? { job_id: jobId } : {}),
+        });
         // Clear sessionStorage immediately
         clearRecurringDraft();
         // Reset draft state to prevent useEffect from re-saving

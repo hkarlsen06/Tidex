@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AddShiftForm from './AddShiftForm';
-import type { UserSettings, SupplementRule, WageSnapshot } from '@/lib/payroll';
+import type { UserSettings, SupplementRule, WageSnapshot, Job } from '@/lib/payroll';
 import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
 
 type ExistingShift = {
@@ -16,6 +16,7 @@ type AddShiftData = {
   userSettings: UserSettings;
   presetRules: SupplementRule[];
   wageSnapshots: WageSnapshot[];
+  jobs?: Job[];
 };
 
 type Props = {
@@ -106,6 +107,7 @@ export function AddShiftFormWrapper({ initialData, cacheKey }: Props) {
         userSettings={data.userSettings}
         presetRules={data.presetRules}
         wageSnapshots={data.wageSnapshots}
+        jobs={data.jobs ?? []}
       />
     </ScrollablePageWrapper>
   );

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@/components/app/Card';
-import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Loader2, ShieldAlert, MessageSquare, Repeat } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Loader2, ShieldAlert, MessageSquare, Repeat, BriefcaseBusiness } from 'lucide-react';
 import { LegalLinks } from '@/components/settings/subscription/LegalLinks';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
@@ -61,6 +61,12 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     label: t.pages.settings.menu.recurring.label,
     description: t.pages.settings.menu.recurring.description,
     icon: Repeat,
+  },
+  {
+    href: '/settings/jobs',
+    label: t.pages.settings.menu.jobs.label,
+    description: t.pages.settings.menu.jobs.description,
+    icon: BriefcaseBusiness,
   },
   // Data & Support group
   {

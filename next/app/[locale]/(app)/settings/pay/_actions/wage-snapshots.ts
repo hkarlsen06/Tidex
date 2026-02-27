@@ -7,6 +7,7 @@ import {
   deleteWageSnapshot,
   checkExistingSnapshot,
 } from '@/data-access/wage-snapshots';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
   getTariffVersionForDate,
   getLatestTariffVersion,
@@ -21,6 +22,19 @@ import type { WageSnapshotInput } from '@/data-access/wage-snapshots';
 
 // Default tariff type for HK Retail agreement
 const DEFAULT_TARIFF_TYPE = 'hk_retail';
+
+async function getDefaultJobId(userId: string): Promise<string | undefined> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_default', true)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  return data?.id;
+}
 
 /**
  * Get the tariff version applicable for a specific date.
@@ -98,14 +112,18 @@ export async function createWageSnapshotAction(
     return { error: ERRORS.INVALID_DATE };
   }
 
+  const effectiveJobId = data.job_id ?? await getDefaultJobId(user.id);
+
   // 3. Check for date conflicts
-  const exists = await checkExistingSnapshot(data.from_date);
+  const exists = await checkExistingSnapshot(data.from_date, undefined, effectiveJobId);
   if (exists) {
     return { error: ERRORS.WAGE_SNAPSHOT_CONFLICT };
   }
 
   // 4. Create snapshot
-  const result = await createWageSnapshot(data);
+  const result = await createWageSnapshot(
+    effectiveJobId !== undefined ? { ...data, job_id: effectiveJobId } : data
+  );
 
   if ('error' in result) {
     return result;
@@ -143,14 +161,33 @@ export async function updateWageSnapshotAction(
     return { error: ERRORS.INVALID_DATE };
   }
 
+  const supabase = await createSupabaseServerClient();
+  const { data: existingSnapshot, error: existingSnapshotError } = await supabase
+    .from('wage_snapshots')
+    .select('id, job_id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (existingSnapshotError || !existingSnapshot) {
+    return { error: ERRORS.WAGE_SNAPSHOT_NOT_FOUND };
+  }
+
+  const fallbackJobId = existingSnapshot.job_id ?? await getDefaultJobId(user.id);
+  const effectiveJobId = data.job_id ?? fallbackJobId ?? undefined;
+
   // 3. Check for date conflicts (excluding current snapshot)
-  const exists = await checkExistingSnapshot(data.from_date, id);
+  const exists = await checkExistingSnapshot(data.from_date, id, effectiveJobId);
   if (exists) {
     return { error: ERRORS.WAGE_SNAPSHOT_CONFLICT };
   }
 
   // 4. Update snapshot
-  const result = await updateWageSnapshot(id, data);
+  const result = await updateWageSnapshot(
+    id,
+    effectiveJobId !== undefined ? { ...data, job_id: effectiveJobId } : data
+  );
 
   if ('error' in result) {
     return result;

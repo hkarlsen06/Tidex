@@ -18,6 +18,7 @@ import { logger } from "@/lib/logger";
 import {
   type ShiftWithComputations,
   type UserSettings,
+  type Job,
   PRESET_SUPPLEMENT_RULES,
 } from "@/lib/payroll";
 import { verifySession } from "@/data-access/auth";
@@ -31,6 +32,7 @@ export type ShiftLoadOptions = {
   startDate?: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
   limit?: number;
+  jobId?: string;
   /**
    * Year of the earnings month for payout tax calculation.
    * When both year and month are provided, the service will fetch
@@ -56,6 +58,7 @@ async function getComputedShiftsInternal(
   shifts: ShiftWithComputations[];
   defaultView: string;
   settings: UserSettings;
+  jobs: Job[];
   aggregates: ShiftsAggregates;
   payoutTaxSettings: PayoutTaxSettings;
   currentPayoutTaxSettings: PayoutTaxSettings;
@@ -73,6 +76,7 @@ async function getComputedShiftsInternal(
       startDate: options.startDate,
       endDate: options.endDate,
       limit: options.limit,
+      jobId: options.jobId,
       year: options.year,
       month: options.month,
     });
@@ -90,6 +94,7 @@ async function getComputedShiftsInternal(
       shifts: [...result.shifts],
       defaultView: result.defaultView,
       settings: result.settings,
+      jobs: [...result.jobs],
       aggregates: result.aggregates,
       payoutTaxSettings: result.payoutTaxSettings,
       currentPayoutTaxSettings: result.currentPayoutTaxSettings,
@@ -101,6 +106,7 @@ async function getComputedShiftsInternal(
       shifts: [],
       defaultView: "calendar",
       settings: {},
+      jobs: [],
       aggregates: { totalHours: 0, totalEarnings: 0 },
       payoutTaxSettings: null,
       currentPayoutTaxSettings: null,
@@ -126,6 +132,7 @@ export const getComputedShifts = cache(
     shifts: ShiftWithComputations[];
     defaultView: string;
     settings: UserSettings;
+    jobs: Job[];
     aggregates: ShiftsAggregates;
     payoutTaxSettings: PayoutTaxSettings;
     currentPayoutTaxSettings: PayoutTaxSettings;
@@ -157,6 +164,7 @@ export const getComputedShiftsForApi = cache(
     shifts: ShiftWithComputations[];
     defaultView: string;
     settings: UserSettings;
+    jobs: Job[];
     aggregates: ShiftsAggregates;
     payoutTaxSettings: PayoutTaxSettings;
     currentPayoutTaxSettings: PayoutTaxSettings;

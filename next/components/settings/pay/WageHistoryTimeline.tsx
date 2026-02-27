@@ -12,6 +12,7 @@ import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 interface WageHistoryTimelineProps {
   snapshots: WageSnapshot[];
   t: Dictionary;
+  jobId?: string | null;
   /**
    * Initial tariff version to use when creating new snapshots.
    * If not provided, the modal will fetch the latest version when opened.
@@ -255,6 +256,7 @@ function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale:
 export function WageHistoryTimeline({
   snapshots,
   t,
+  jobId,
   initialTariffVersion,
 }: WageHistoryTimelineProps) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -491,6 +493,7 @@ export function WageHistoryTimeline({
         mode={modalMode}
         t={t}
         locale={locale}
+        jobId={jobId}
         initialTariffVersion={initialTariffVersion}
       />
     </div>

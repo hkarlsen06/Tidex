@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   MessageSquare,
   Repeat,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
@@ -75,6 +76,12 @@ const getSettingsItems = (t: Dictionary, showAdmin: boolean): SettingsItem[] => 
       label: t.pages.settings.menu.recurring.label,
       description: t.pages.settings.menu.recurring.description,
       icon: Repeat,
+    },
+    {
+      href: "/settings/jobs",
+      label: t.pages.settings.menu.jobs.label,
+      description: t.pages.settings.menu.jobs.description,
+      icon: BriefcaseBusiness,
     },
     // Data & Support group
     {

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
 import { TimeInput } from "@/components/app/TimeInput";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/app/calendar-utils";
-import { computeShift, type UserSettings, type SupplementRule, type WageSnapshot } from "@/lib/payroll";
+import { computeShift, type UserSettings, type SupplementRule, type WageSnapshot, type Job } from "@/lib/payroll";
 import RecurringForm from "./RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { cn } from "@/lib/cn";
@@ -66,9 +67,10 @@ type Props = {
   userSettings: UserSettings;
   presetRules: SupplementRule[];
   wageSnapshots: WageSnapshot[];
+  jobs: Job[];
 };
 
-export default function AddShiftForm({ existingShifts, userSettings, presetRules, wageSnapshots }: Props) {
+export default function AddShiftForm({ existingShifts, userSettings, presetRules, wageSnapshots, jobs }: Props) {
   const { t } = useTranslations();
   const locale = useLocale();
   const _router = useRouter();
@@ -81,6 +83,13 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const activeJobs = useMemo(
+    () => jobs.filter((entry) => !entry.deleted_at && !entry.archived_at),
+    [jobs]
+  );
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const jobLabel = locale.startsWith("no") ? "Jobb" : "Job";
+  const selectJobPlaceholder = locale.startsWith("no") ? "Velg jobb" : "Select job";
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
   const startTimeId = useId();
@@ -93,7 +102,13 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   const isOffline = useOnlineStatus();
   const { registerForm, unregisterForm } = useAddShiftForm();
 
-  const canSubmit = !isOffline && dates.length > 0 && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
+  const requiresJobSelection = activeJobs.length > 1;
+  const canSubmit =
+    !isOffline &&
+    dates.length > 0 &&
+    /^\d{2}:\d{2}$/.test(start) &&
+    /^\d{2}:\d{2}$/.test(end) &&
+    (!requiresJobSelection || !!selectedJobId);
 
   const isoDates = useMemo(() => dates.map(toLocalISODate), [dates]);
 
@@ -156,9 +171,31 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     setIsSubmitting(false);
   }, []);
 
+  // Always keep selected job valid when jobs are loaded/changed.
+  useEffect(() => {
+    if (activeJobs.length === 0) {
+      setSelectedJobId(null);
+      return;
+    }
+
+    setSelectedJobId((previous) => {
+      if (previous && activeJobs.some((entry) => entry.id === previous)) {
+        return previous;
+      }
+
+      return activeJobs.find((entry) => entry.is_default)?.id ?? activeJobs[0].id;
+    });
+  }, [activeJobs]);
+
   // Prefill a date from query param `?date=YYYY-MM-DD`
   useEffect(() => {
     const dateParam = searchParams.get("date");
+    const jobParam = searchParams.get("job");
+
+    if (jobParam && activeJobs.some((entry) => entry.id === jobParam)) {
+      setSelectedJobId(jobParam);
+    }
+
     if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
       const [y, m, d] = dateParam.split("-").map((n) => parseInt(n, 10));
       const dt = new Date(y, m - 1, d);
@@ -284,6 +321,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       dates: isoDates,
       start,
       end,
+      ...(selectedJobId ? { jobId: selectedJobId } : {}),
       // Include metadata for the shifts page to handle the save
       _save: true,
       _targetMonth: targetMonth,
@@ -333,6 +371,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       dates: isoDates,
       start,
       end,
+      ...(selectedJobId ? { jobId: selectedJobId } : {}),
       _save: true,
       _checkLimit: false, // Already passed limit check
     }));
@@ -367,14 +406,17 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     const result: Record<ISODate, number> = {};
     for (const iso of isoDates) {
       try {
-        // Find the applicable wage snapshot for this shift date
+        // Find the applicable wage snapshot for this shift date + job context
         // Snapshots are ordered by from_date DESC (newest first)
-        const applicableSnapshot = wageSnapshots.find(
+        const relevantSnapshots = selectedJobId
+          ? wageSnapshots.filter((snapshot) => !snapshot.job_id || snapshot.job_id === selectedJobId)
+          : wageSnapshots;
+        const applicableSnapshot = relevantSnapshots.find(
           (snapshot) => snapshot.from_date !== null && snapshot.from_date <= iso
         );
 
         // Fall back to baseline snapshot (from_date = NULL) if no dated snapshot matches
-        const baselineSnapshot = wageSnapshots.find((snapshot) => snapshot.from_date === null);
+        const baselineSnapshot = relevantSnapshots.find((snapshot) => snapshot.from_date === null);
         const snapshot = applicableSnapshot || baselineSnapshot || null;
 
         const computed = computeShift(
@@ -396,7 +438,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       }
     }
     return result;
-  }, [start, end, isoDates, userSettings, presetRules, wageSnapshots]);
+  }, [start, end, isoDates, selectedJobId, userSettings, presetRules, wageSnapshots]);
 
   const openNativePicker = (input: HTMLInputElement | null) => {
     if (!input) return;
@@ -467,6 +509,25 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         )}
       </div>
       <div className="space-y-6">
+        {activeJobs.length > 1 && (
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-widest text-text-muted">
+              {jobLabel}
+            </label>
+            <Select value={selectedJobId ?? undefined} onValueChange={setSelectedJobId}>
+              <SelectTrigger className="h-11 rounded-2xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary shadow-app-inner">
+                <SelectValue placeholder={selectJobPlaceholder} />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border-subtle bg-surface-primary shadow-app-lg">
+                {activeJobs.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {mode === "single" ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -591,6 +652,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             existingShifts={existingShifts}
             userSettings={userSettings}
             presetRules={presetRules}
+            jobId={selectedJobId}
           />
         )}
       </div>

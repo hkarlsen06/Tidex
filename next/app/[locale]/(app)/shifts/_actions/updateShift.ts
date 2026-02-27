@@ -10,6 +10,7 @@ import { ERRORS } from "@/lib/errors/messages";
 
 export type UpdateShiftInput = {
   id: string;
+  job_id?: string;
   shift_date: string; // ISO YYYY-MM-DD
   start: string; // HH:mm
   end: string; // HH:mm
@@ -64,6 +65,7 @@ export async function updateShift(input: UpdateShiftInput) {
     .from("user_shifts")
     .update({
       shift_date: input.shift_date,
+      ...(input.job_id ? { job_id: input.job_id } : {}),
       start_time: input.start,
       end_time: input.end,
     })

@@ -849,6 +849,10 @@ export const en: Dictionary = {
           label: 'Recurring shifts',
           description: 'View and edit all recurring shift patterns',
         },
+        jobs: {
+          label: 'Jobs',
+          description: 'Manage workplaces and per-job payroll settings',
+        },
         security: {
           label: 'Login and security',
           description: 'Password, connections, and two-factor authentication',
@@ -884,6 +888,15 @@ export const en: Dictionary = {
         emptyTitle: 'No recurring shifts yet',
         emptyDescription: 'Create a recurring shift from Add Shift to manage it here.',
         excludedDates: '{count} excluded',
+      },
+      jobs: {
+        title: 'Jobs',
+        subtitle: 'Manage workplaces, payroll day, and monthly goals per job',
+        add: 'Add job',
+        createTitle: 'Create job',
+        editTitle: 'Edit job',
+        nameLabel: 'Job name',
+        colorLabel: 'Color',
       },
       profile: {
         title: 'Account',

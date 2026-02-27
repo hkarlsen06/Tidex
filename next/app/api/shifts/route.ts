@@ -18,6 +18,7 @@ import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
  * Query params:
  * - year: number (e.g., 2025)
  * - month: number (1-12)
+ * - job: optional job ID filter
  */
 export async function GET(request: NextRequest) {
   // Manual auth check for API routes (redirect() not supported)
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const year = parseInt(searchParams.get('year') || '', 10);
   const month = parseInt(searchParams.get('month') || '', 10);
+  const jobId = searchParams.get('job') || undefined;
 
   if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
     return NextResponse.json({ error: 'Invalid year/month' }, { status: 400 });
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
       startDate: getMonthStart(year, month),
       endDate: getMonthEnd(year, month),
       limit: 100,
+      jobId,
       year,
       month,
     });
@@ -73,7 +76,8 @@ export async function GET(request: NextRequest) {
  *   dates: string[], // Array of ISO dates (YYYY-MM-DD)
  *   start: string,   // Start time (HH:mm)
  *   end: string,     // End time (HH:mm)
- *   recurringId?: string // Optional recurring ID
+ *   recurringId?: string, // Optional recurring ID
+ *   jobId?: string // Optional job ID
  * }
  */
 export async function POST(request: NextRequest) {
@@ -115,6 +119,7 @@ export async function POST(request: NextRequest) {
       start: body.start,
       end: body.end,
       recurringId: body.recurringId,
+      jobId: body.jobId,
     });
 
     return NextResponse.json(result, { status: 201 });
