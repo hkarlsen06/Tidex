@@ -13,6 +13,7 @@ type CreateShiftsInput = {
   start: string; // HH:mm
   end: string; // HH:mm
   recurringId?: string;
+  jobId?: string;
 };
 
 export async function createShifts(input: CreateShiftsInput) {
@@ -50,6 +51,7 @@ export async function createShifts(input: CreateShiftsInput) {
 
   const rows = dates.map((shift_date) => ({
     user_id: user.id,
+    ...(input.jobId ? { job_id: input.jobId } : {}),
     shift_date,
     start_time: input.start,
     end_time: input.end,

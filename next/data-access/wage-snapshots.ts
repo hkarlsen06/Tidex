@@ -15,19 +15,25 @@ export type { WageSnapshot, SupplementRule };
  * - Returns snapshots ordered by from_date DESC (newest first)
  * - Automatically verifies user session
  */
-export const getUserWageSnapshots = cache(async (): Promise<WageSnapshot[]> => {
+export const getUserWageSnapshots = cache(async (jobId?: string): Promise<WageSnapshot[]> => {
   'use cache: private';
   try {
     const { user } = await verifySession();
     cacheTag(`user-${user.id}`, 'user-wages');
     const supabase = await createSupabaseServerClient();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('wage_snapshots')
       .select('*')
       .eq('user_id', user.id)
       .is('deleted_at', null) // Exclude soft-deleted snapshots
       .order('from_date', { ascending: false, nullsFirst: false });
+
+    if (jobId) {
+      query = query.eq('job_id', jobId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       logger.error('Failed to fetch wage snapshots:', error);
@@ -52,9 +58,10 @@ export const getUserWageSnapshots = cache(async (): Promise<WageSnapshot[]> => {
  * @returns The applicable WageSnapshot or null
  */
 export async function getSnapshotForDate(
-  shiftDate: string
+  shiftDate: string,
+  jobId?: string
 ): Promise<WageSnapshot | null> {
-  const snapshots = await getUserWageSnapshots();
+  const snapshots = await getUserWageSnapshots(jobId);
 
   // snapshots are already ordered by from_date DESC (newest first)
   // Find the first dated snapshot where from_date <= shiftDate
@@ -83,9 +90,10 @@ export async function getSnapshotForDate(
  * @returns Map of shift date to applicable WageSnapshot
  */
 export async function getSnapshotsForDates(
-  shiftDates: string[]
+  shiftDates: string[],
+  jobId?: string
 ): Promise<Map<string, WageSnapshot>> {
-  const snapshots = await getUserWageSnapshots();
+  const snapshots = await getUserWageSnapshots(jobId);
   const snapshotMap = new Map<string, WageSnapshot>();
 
   // Find baseline snapshot once for fallback
@@ -119,7 +127,8 @@ export async function getSnapshotsForDates(
  */
 export async function checkExistingSnapshot(
   fromDate: string | null,
-  excludeId?: string
+  excludeId?: string,
+  jobId?: string
 ): Promise<boolean> {
   try {
     const { user } = await verifySession();
@@ -130,6 +139,10 @@ export async function checkExistingSnapshot(
       .select('id')
       .eq('user_id', user.id)
       .is('deleted_at', null); // Exclude soft-deleted snapshots
+
+    if (jobId) {
+      query = query.eq('job_id', jobId);
+    }
 
     // Handle NULL from_date (baseline snapshot)
     if (fromDate === null) {
@@ -162,6 +175,7 @@ export async function checkExistingSnapshot(
  * Input type for creating/updating wage snapshots
  */
 export type WageSnapshotInput = {
+  job_id?: string | null;
   from_date: string | null;
   hourly_wage: number;
   wage_level: number | null;
@@ -195,22 +209,42 @@ export async function createWageSnapshot(
     const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
+    const insertPayload: {
+      user_id: string;
+      job_id?: string | null;
+      from_date: string | null;
+      hourly_wage: number;
+      wage_level: number | null;
+      tariff_type_id: string | null;
+      supplements: { rules: SupplementRule[] };
+      tax_enabled: boolean;
+      tax_percentage: number;
+      break_enabled: boolean;
+      break_method: BreakMethod;
+      break_threshold_hours: number;
+      break_deduction_minutes: number;
+    } = {
+      user_id: user.id,
+      from_date: data.from_date,
+      hourly_wage: data.hourly_wage,
+      wage_level: data.wage_level,
+      tariff_type_id: data.tariff_type_id ?? null,
+      supplements: data.supplements,
+      tax_enabled: data.tax_enabled,
+      tax_percentage: data.tax_percentage,
+      break_enabled: data.break_enabled,
+      break_method: data.break_method,
+      break_threshold_hours: data.break_threshold_hours,
+      break_deduction_minutes: data.break_deduction_minutes,
+    };
+
+    if (data.job_id !== undefined) {
+      insertPayload.job_id = data.job_id;
+    }
+
     const { data: snapshot, error } = await supabase
       .from('wage_snapshots')
-      .insert({
-        user_id: user.id,
-        from_date: data.from_date,
-        hourly_wage: data.hourly_wage,
-        wage_level: data.wage_level,
-        tariff_type_id: data.tariff_type_id ?? null,
-        supplements: data.supplements,
-        tax_enabled: data.tax_enabled,
-        tax_percentage: data.tax_percentage,
-        break_enabled: data.break_enabled,
-        break_method: data.break_method,
-        break_threshold_hours: data.break_threshold_hours,
-        break_deduction_minutes: data.break_deduction_minutes,
-      })
+      .insert(insertPayload)
       .select('id')
       .single();
 
@@ -241,21 +275,40 @@ export async function updateWageSnapshot(
     const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
+    const updatePayload: {
+      job_id?: string | null;
+      from_date: string | null;
+      hourly_wage: number;
+      wage_level: number | null;
+      tariff_type_id: string | null;
+      supplements: { rules: SupplementRule[] };
+      tax_enabled: boolean;
+      tax_percentage: number;
+      break_enabled: boolean;
+      break_method: BreakMethod;
+      break_threshold_hours: number;
+      break_deduction_minutes: number;
+    } = {
+      from_date: data.from_date,
+      hourly_wage: data.hourly_wage,
+      wage_level: data.wage_level,
+      tariff_type_id: data.tariff_type_id ?? null,
+      supplements: data.supplements,
+      tax_enabled: data.tax_enabled,
+      tax_percentage: data.tax_percentage,
+      break_enabled: data.break_enabled,
+      break_method: data.break_method,
+      break_threshold_hours: data.break_threshold_hours,
+      break_deduction_minutes: data.break_deduction_minutes,
+    };
+
+    if (data.job_id !== undefined) {
+      updatePayload.job_id = data.job_id;
+    }
+
     const { error } = await supabase
       .from('wage_snapshots')
-      .update({
-        from_date: data.from_date,
-        hourly_wage: data.hourly_wage,
-        wage_level: data.wage_level,
-        tariff_type_id: data.tariff_type_id ?? null,
-        supplements: data.supplements,
-        tax_enabled: data.tax_enabled,
-        tax_percentage: data.tax_percentage,
-        break_enabled: data.break_enabled,
-        break_method: data.break_method,
-        break_threshold_hours: data.break_threshold_hours,
-        break_deduction_minutes: data.break_deduction_minutes,
-      })
+      .update(updatePayload)
       .eq('id', id)
       .eq('user_id', user.id) // Security: ensure user owns this snapshot
       .is('deleted_at', null); // Only update non-deleted snapshots
@@ -289,7 +342,7 @@ export async function countAffectedShifts(
     // First, get the snapshot's from_date
     const { data: snapshot, error: snapshotError } = await supabase
       .from('wage_snapshots')
-      .select('from_date')
+      .select('from_date, job_id')
       .eq('id', snapshotId)
       .eq('user_id', user.id)
       .is('deleted_at', null) // Only find non-deleted snapshots
@@ -301,7 +354,7 @@ export async function countAffectedShifts(
     }
 
     // Get all snapshots to find the next one
-    const snapshots = await getUserWageSnapshots();
+    const snapshots = await getUserWageSnapshots(snapshot.job_id ?? undefined);
     const currentIndex = snapshots.findIndex((s) => s.id === snapshotId);
 
     if (currentIndex === -1) return 0;
@@ -316,6 +369,10 @@ export async function countAffectedShifts(
       .eq('user_id', user.id)
       .is('deleted_at', null) // Only count non-deleted shifts
       .gte('shift_date', snapshot.from_date);
+
+    if (snapshot.job_id) {
+      query = query.eq('job_id', snapshot.job_id);
+    }
 
     if (nextSnapshot) {
       query = query.lt('shift_date', nextSnapshot.from_date);
@@ -355,7 +412,7 @@ export async function deleteWageSnapshot(
     // First, get the snapshot to check if it's baseline
     const { data: snapshot, error: fetchError } = await supabase
       .from('wage_snapshots')
-      .select('from_date')
+      .select('from_date, job_id')
       .eq('id', id)
       .eq('user_id', user.id)
       .is('deleted_at', null) // Only find non-deleted snapshots
@@ -368,7 +425,7 @@ export async function deleteWageSnapshot(
 
     // If this is the baseline snapshot, check if other snapshots exist
     if (snapshot.from_date === null) {
-      const snapshots = await getUserWageSnapshots();
+      const snapshots = await getUserWageSnapshots(snapshot.job_id ?? undefined);
       const datedSnapshots = snapshots.filter(s => s.from_date !== null);
 
       if (datedSnapshots.length > 0) {

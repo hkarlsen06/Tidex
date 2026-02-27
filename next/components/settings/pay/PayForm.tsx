@@ -6,22 +6,26 @@ import { Label } from '@/components/app/Label';
 import { Input } from '@/components/app/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/app/Select';
 import { Separator } from '@/components/app/Separator';
-import { updatePaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
+import { updateJobPaySettingsAction } from '@/app/[locale]/(app)/settings/pay/_actions/job-settings';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n/client';
 
 interface PayFormProps {
-  initialData: any;
+  initialData: {
+    half_tax_month?: number | null;
+    monthly_goal?: number | null;
+    payroll_day?: number | null;
+  };
+  jobId?: string | null;
 }
 
 /**
- * PayForm - Global pay settings
+ * PayForm - Job pay settings
  *
- * NOTE: Tax and break deduction settings have been moved to wage snapshots.
- * Each wage history entry now includes its own tax and break settings.
- * This form only handles global calendar preferences that apply across all wage periods.
+ * NOTE: Tax and break deduction settings are handled in wage snapshots.
+ * This form handles monthly_goal, payroll_day and half_tax_month for the selected job.
  */
-export function PayForm({ initialData }: PayFormProps) {
+export function PayForm({ initialData, jobId = null }: PayFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
   const [_isPending, startTransition] = useTransition();
@@ -41,7 +45,7 @@ export function PayForm({ initialData }: PayFormProps) {
   const saveSettings = useCallback(async () => {
     startTransition(async () => {
       try {
-        await updatePaySettings({
+        await updateJobPaySettingsAction(jobId, {
           monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
           payroll_day: payrollDay ? parseInt(payrollDay) : null,
           half_tax_month: halfTaxMonth !== 'none' ? parseInt(halfTaxMonth) : null,
@@ -51,7 +55,7 @@ export function PayForm({ initialData }: PayFormProps) {
         console.error('Failed to save pay settings:', error);
       }
     });
-  }, [monthlyGoal, payrollDay, halfTaxMonth, router]);
+  }, [jobId, monthlyGoal, payrollDay, halfTaxMonth, router]);
 
   // Auto-save for immediate changes (selects)
   useEffect(() => {
@@ -75,7 +79,7 @@ export function PayForm({ initialData }: PayFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Global Settings */}
+      {/* Job-level settings */}
       <Card className="p-6">
         <div className="space-y-6">
           <div>

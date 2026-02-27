@@ -18,7 +18,8 @@ import {
 } from "@/components/app/Card";
 import { CalendarSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/app/Button";
-import { ShiftWithComputations, UserSettings, SupplementRule, WageSnapshot, computeShift } from "@/lib/payroll";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
+import { ShiftWithComputations, UserSettings, SupplementRule, WageSnapshot, computeShift, Job } from "@/lib/payroll";
 import ShiftDetails, { type OverlappingShiftInfo } from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { deleteShifts } from "@/app/[locale]/(app)/shifts/_actions/deleteShifts";
@@ -1060,6 +1061,8 @@ type ShiftsViewProps = {
   defaultView?: string;
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  jobs?: Job[];
+  selectedJobId?: string | null;
   /** When true, hides add button and disables edit/delete/copy/move actions (for shared shifts view) */
   readOnly?: boolean;
   /** Owner name displayed when viewing shared shifts */
@@ -1082,7 +1085,7 @@ type ShiftsViewProps = {
   highlightDates?: Set<string> | null;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, wageSnapshots, monthContext, cacheKey, highlightDates }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, jobs: _jobs, selectedJobId: _selectedJobId, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, wageSnapshots, monthContext, cacheKey, highlightDates }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const syncWidgetStorage = useCallback(() => {}, []);
@@ -1095,6 +1098,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const router = useRouter();
   const searchParams = useSearchParams();
   const { navigate } = useNavigationFeedback();
+  const selectedJobId = _selectedJobId ?? null;
   const [pending, startTransition] = useTransition();
   const [moving, startMoveTransition] = useTransition();
   // Use external month context if provided (for isolated sharing page state),
@@ -1164,13 +1168,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       loadedMonthsRef.current.add(key);
     }
   }
-  // Track payout tax settings per month (key: "YYYY-MM")
+  // Track payout tax settings per month and job (key: "{jobId|all}:YYYY-MM")
   const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
     // Initialize with SSR-provided payout tax settings for the current month
     const initial = new Map<string, PayoutTaxSettings>();
     if (payoutTaxSettings) {
       const now = new Date();
-      const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const key = `${selectedJobId ?? "all"}:${monthKey}`;
       initial.set(key, payoutTaxSettings);
     }
     return initial;
@@ -1181,6 +1186,16 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // In readOnly mode without sharedOwnerId, only use server-provided initialShifts
   // When sharedOwnerId is present, include additionalShifts for shared shifts navigation
   const includeAdditionalShifts = !readOnly || !!sharedOwnerId;
+  const activeJobs = useMemo(
+    () => (_jobs ?? []).filter((entry) => !entry.deleted_at && !entry.archived_at),
+    [_jobs]
+  );
+  const showJobFilter = !readOnly && activeJobs.length > 1;
+  const selectedJobFilterValue = selectedJobId && activeJobs.some((entry) => entry.id === selectedJobId)
+    ? selectedJobId
+    : "all";
+  const allJobsLabel = locale.startsWith("no") ? "Alle jobber" : "All jobs";
+  const jobFilterLabel = locale.startsWith("no") ? "Jobb" : "Job";
 
   // Combine all shift sources, deduplicate by ID, and apply overrides
   // This handles race conditions where the same shift may appear in multiple sources:
@@ -1269,6 +1284,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return `${year}-${String(month).padStart(2, '0')}`;
   }, []);
 
+  const getJobScopedMonthKey = useCallback(
+    (year: number, month: number): string => `${selectedJobId ?? "all"}:${getMonthKey(year, month)}`,
+    [getMonthKey, selectedJobId]
+  );
+
   // Helper to fetch a month's shifts and update state
   // ownerId parameter is explicit to avoid any closure/ref issues
   const fetchMonth = useCallback(async (year: number, month: number, ownerId: string | undefined) => {
@@ -1300,7 +1320,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       // Include cacheKey to ensure browser HTTP cache is per-user
       const url = readOnly
         ? `/api/sharing?ownerId=${ownerId}&year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`
-        : `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`;
+        : `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}${selectedJobId ? `&job=${encodeURIComponent(selectedJobId)}` : ''}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -1315,7 +1335,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
         // Store payout tax settings for this month
         if (data.payoutTaxSettings !== undefined) {
-          setPayoutTaxByMonth(prev => new Map(prev).set(key, data.payoutTaxSettings));
+          const taxKey = getJobScopedMonthKey(year, month);
+          setPayoutTaxByMonth(prev => new Map(prev).set(taxKey, data.payoutTaxSettings));
         }
 
         // Mark as successfully loaded
@@ -1331,7 +1352,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // Note: We intentionally exclude initialShifts from deps - it's only used for deduplication
   // and we don't want to recreate this callback on every SSR data change
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getMonthKey, cacheBuster, readOnly, cacheKey]);
+  }, [getMonthKey, getJobScopedMonthKey, cacheBuster, readOnly, cacheKey, selectedJobId]);
 
   // Fetch a single shift (by month) to refresh computed data after local updates
   const refreshShiftFromServer = useCallback(async (shiftId: string, shiftDate: string) => {
@@ -1345,7 +1366,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
     try {
       // Include cacheKey to ensure browser HTTP cache is per-user
-      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`);
+      const response = await fetch(
+        `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}${selectedJobId ? `&job=${encodeURIComponent(selectedJobId)}` : ''}`
+      );
       if (!response.ok) return;
 
       const data = await response.json();
@@ -1364,7 +1387,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     } catch (err) {
       console.error("Failed to refresh shift after custom supplements save", err);
     }
-  }, [cacheBuster, cacheKey]);
+  }, [cacheBuster, cacheKey, selectedJobId]);
 
   const shiftsByDate = useMemo(() => {
     const map = new Map<ISODate, ShiftWithComputations[]>();
@@ -1414,9 +1437,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
 
     // Fall back to cached or SSR-provided settings
-    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const key = getJobScopedMonthKey(year, month);
     return payoutTaxByMonth.get(key) ?? payoutTaxSettings ?? null;
-  }, [selectedMonth, payoutTaxByMonth, payoutTaxSettings, wageSnapshots, userSettings.payroll_day]);
+  }, [selectedMonth, payoutTaxByMonth, payoutTaxSettings, wageSnapshots, userSettings.payroll_day, getJobScopedMonthKey]);
 
   // Track in-flight tax settings requests to prevent duplicates
   const taxSettingsInflightRef = useRef<Set<string>>(new Set());
@@ -1433,7 +1456,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth() + 1;
-    const key = getMonthKey(year, month);
+    const key = getJobScopedMonthKey(year, month);
 
     // Skip if we already have tax settings for this month
     if (payoutTaxByMonth.has(key)) {
@@ -1457,7 +1480,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       try {
         const url = readOnly
           ? `/api/sharing?ownerId=${sharedOwnerId}&year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`
-          : `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`;
+          : `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}${selectedJobId ? `&job=${encodeURIComponent(selectedJobId)}` : ''}`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -1474,7 +1497,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     };
 
     fetchTaxSettings();
-  }, [selectedMonth, payoutTaxByMonth, getMonthKey, readOnly, sharedOwnerId, cacheKey, cacheBuster, wageSnapshots]);
+  }, [selectedMonth, payoutTaxByMonth, getJobScopedMonthKey, readOnly, sharedOwnerId, cacheKey, cacheBuster, wageSnapshots, selectedJobId]);
 
   // Reset all client-side state when new data arrives from server (after router.refresh())
   // This includes: optimistic updates, client-fetched shifts, and loaded months tracking
@@ -1694,6 +1717,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           dates: string[];
           start: string;
           end: string;
+          jobId?: string;
           _save?: boolean;
           _targetMonth?: string;
           _checkLimit?: boolean;
@@ -1705,6 +1729,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           const shiftForCompute = {
             id: `optimistic-${Date.now()}-${index}`,
             user_id: 'optimistic',
+            ...(data.jobId ? { job_id: data.jobId } : {}),
             shift_date: date,
             start_time: data.start,
             end_time: data.end,
@@ -1803,7 +1828,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
               }
 
               // Create the shifts
-              await createShifts({ dates: data.dates, start: data.start, end: data.end });
+              await createShifts({
+                dates: data.dates,
+                start: data.start,
+                end: data.end,
+                ...(data.jobId ? { jobId: data.jobId } : {}),
+              });
 
               // Clear the pending save ref after successful save
               pendingSaveRef.current = null;
@@ -1822,7 +1852,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                     type: 'CREATE',
                     endpoint: '/api/shifts',
                     method: 'POST',
-                    body: JSON.stringify({ dates: data.dates, start: data.start, end: data.end }),
+                    body: JSON.stringify({
+                      dates: data.dates,
+                      start: data.start,
+                      end: data.end,
+                      ...(data.jobId ? { jobId: data.jobId } : {}),
+                    }),
                   });
                   // Shift stays visible as optimistic, will sync when online
                   pendingSaveRef.current = null;
@@ -2013,6 +2048,19 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     [setSelectedMonth, triggerCalendarSelectionFeedback]
   );
 
+  const handleJobFilterChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "all") {
+        params.delete("job");
+      } else {
+        params.set("job", value);
+      }
+      navigate(`/${locale}/shifts${params.toString() ? `?${params.toString()}` : ""}`);
+    },
+    [searchParams, navigate, locale]
+  );
+
   const handleDayClick = useCallback(
     (iso: string, hasShifts: boolean) => {
       triggerCalendarSelectionFeedback();
@@ -2152,9 +2200,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return;
       }
 
-      navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
+      const params = new URLSearchParams({ date: iso });
+      if (selectedJobId) {
+        params.set("job", selectedJobId);
+      }
+      navigate(`/${locale}/shifts/add?${params.toString()}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionFeedback, syncWidgetStorage]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionFeedback, syncWidgetStorage, selectedJobId]
   );
 
   const handleSelectDateRange = useCallback(
@@ -2751,9 +2803,29 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       )}>
         <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120 mx-auto lg:mx-0">
           {/* Custom header slot (e.g., sharing dropdown) - constrained to calendar width */}
-          {headerSlot && (
-            <div className="pb-3">
-              {headerSlot}
+          {(headerSlot || showJobFilter) && (
+            <div className="pb-3 space-y-2">
+              {headerSlot && <div>{headerSlot}</div>}
+              {showJobFilter && (
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+                    {jobFilterLabel}
+                  </span>
+                  <Select value={selectedJobFilterValue} onValueChange={handleJobFilterChange}>
+                    <SelectTrigger className="h-10 rounded-2xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary shadow-app-inner">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border-subtle bg-surface-primary shadow-app-lg">
+                      <SelectItem value="all">{allJobsLabel}</SelectItem>
+                      {activeJobs.map((job) => (
+                        <SelectItem key={job.id} value={job.id}>
+                          {job.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
           <MonthlyEarningsCalendar

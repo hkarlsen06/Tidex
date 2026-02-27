@@ -219,6 +219,7 @@ export type StatsOptions = {
   readonly userId: string;
   readonly year?: number;
   readonly month?: number; // 1-12
+  readonly jobId?: string;
   readonly locale?: Locale;
 };
 
@@ -405,6 +406,7 @@ export const StatsServiceLive = Layer.effect(
           userId,
           ...dateRange,
           limit: 1000, // Reasonable limit for 1 year of data
+          jobId: options.jobId,
           year: focusYear,
           month: focusMonth,
         });

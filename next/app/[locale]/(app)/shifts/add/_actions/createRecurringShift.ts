@@ -21,7 +21,7 @@ import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
  * @returns Created recurring shift ID
  */
 export async function createRecurringShift(
-  draft: RecurringDraft,
+  draft: RecurringDraft & { job_id?: string },
   options?: {
     conflictResolution?: 'exclude_conflicts' | 'keep_existing';
   }
@@ -97,6 +97,7 @@ export async function createRecurringShift(
     .insert([
       {
         user_id: user.id,
+        ...(draft.job_id ? { job_id: draft.job_id } : {}),
         start_time: startTimeWithTz,
         end_time: endTimeWithTz,
         repeat_interval_weeks: draft.repeat_interval_weeks,

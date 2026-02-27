@@ -6,21 +6,6 @@
  * - Automatic snapshot resolution
  * - Type-safe error handling
  * - Caching for performance
- *
- * Usage:
- * ```typescript
- * const program = Effect.gen(function* () {
- *   const shifts = yield* ShiftsService
- *   const data = yield* shifts.getShiftsWithComputations({
- *     userId,
- *     startDate: "2025-01-01",
- *     endDate: "2025-01-31"
- *   })
- *   return data
- * }).pipe(
- *   Effect.provide(ShiftsServiceLive)
- * )
- * ```
  */
 
 import "server-only";
@@ -38,101 +23,126 @@ import {
   type CustomSupplementsData,
   PRESET_SUPPLEMENT_RULES,
   type WageSnapshot,
+  type Job,
 } from "../payroll";
 import { getCurrentYearMonth, getMonthStart, getMonthEnd } from "../date-utils";
 import { generateVirtualShiftsForMonth } from "../recurring/utils";
 import type { RecurringShiftRow } from "../recurring/types";
 import { cleanTime } from "../time-utils";
 
-/**
- * Shift load options for filtering and pagination
- */
 export type ShiftLoadOptions = {
   readonly userId: string;
-  readonly startDate?: string; // YYYY-MM-DD
-  readonly endDate?: string; // YYYY-MM-DD
+  readonly startDate?: string;
+  readonly endDate?: string;
   readonly limit?: number;
-  /**
-   * Skip user authentication check.
-   * ONLY use this when access has already been verified (e.g., shared shifts via RLS).
-   * @internal
-   */
+  readonly jobId?: string;
   readonly skipAuthCheck?: boolean;
-  /**
-   * Year of the earnings month for payout tax calculation.
-   * When both year and month are provided, the service will fetch
-   * the tax settings from the payout month's snapshot.
-   */
   readonly year?: number;
-  /**
-   * Month (1-12) of the earnings month for payout tax calculation.
-   * When both year and month are provided, the service will fetch
-   * the tax settings from the payout month's snapshot.
-   */
   readonly month?: number;
 };
 
-/**
- * Payout tax settings from the payout month's snapshot.
- * Used for calculating after-tax monthly totals.
- */
 export type PayoutTaxSettings = {
   readonly enabled: boolean;
   readonly percentage: number;
 } | null;
 
-/**
- * Aggregated shift statistics
- */
 export type ShiftsAggregates = {
   readonly totalHours: number;
   readonly totalEarnings: number;
 };
 
-/**
- * Complete shift data response
- */
 export type ShiftData = {
   readonly shifts: readonly ShiftWithComputations[];
   readonly defaultView: string;
   readonly settings: UserSettings;
+  readonly jobs: readonly Job[];
   readonly aggregates: ShiftsAggregates;
-  /**
-   * Tax settings for the requested month's payout (earnings month + 1).
-   * Used for calculating after-tax monthly totals for TotalCard.
-   * Only present when year and month are provided in options.
-   */
   readonly payoutTaxSettings: PayoutTaxSettings;
-  /**
-   * Tax settings for the current month's payout (previous month's earnings).
-   * Used for calculating NextPayrollCard values.
-   * Only present when year and month are provided in options.
-   */
   readonly currentPayoutTaxSettings: PayoutTaxSettings;
-  /**
-   * Whether break deduction is enabled for the user (from baseline snapshot).
-   * Used for employment percentage calculation (37.5h if enabled, 40h otherwise).
-   */
   readonly breakDeductionEnabled: boolean;
 };
 
-/**
- * Database recurring shift row
- */
 type DbRecurringShift = RecurringShiftRow & {
   user_id: string;
+  job_id?: string | null;
 };
 
-/**
- * Shifts Service Interface
- */
+type SnapshotBucket = {
+  readonly dated: readonly (WageSnapshot & { from_date: string })[];
+  readonly baseline: WageSnapshot | null;
+};
+
+const LEGACY_SNAPSHOT_KEY = "__legacy__";
+
+const snapshotKeyForJob = (jobId?: string | null): string => jobId ?? LEGACY_SNAPSHOT_KEY;
+
+const buildSnapshotBuckets = (
+  snapshots: readonly WageSnapshot[]
+): ReadonlyMap<string, SnapshotBucket> => {
+  const mutable = new Map<string, { dated: (WageSnapshot & { from_date: string })[]; baseline: WageSnapshot | null }>();
+
+  for (const snapshot of snapshots) {
+    const key = snapshotKeyForJob(snapshot.job_id ?? null);
+    const bucket = mutable.get(key) ?? { dated: [], baseline: null };
+
+    if (snapshot.from_date === null) {
+      bucket.baseline = snapshot;
+    } else {
+      bucket.dated.push(snapshot as WageSnapshot & { from_date: string });
+    }
+
+    mutable.set(key, bucket);
+  }
+
+  for (const bucket of mutable.values()) {
+    bucket.dated.sort((a, b) => b.from_date.localeCompare(a.from_date));
+  }
+
+  return mutable;
+};
+
+const resolveSnapshotForDate = (
+  buckets: ReadonlyMap<string, SnapshotBucket>,
+  snapshots: readonly WageSnapshot[],
+  date: string,
+  jobId?: string | null
+): WageSnapshot | null => {
+  const preferredKeys = [snapshotKeyForJob(jobId), LEGACY_SNAPSHOT_KEY];
+
+  for (const key of preferredKeys) {
+    const bucket = buckets.get(key);
+    if (!bucket) continue;
+
+    const dated = bucket.dated.find((s) => s.from_date <= date);
+    if (dated) return dated;
+  }
+
+  for (const key of preferredKeys) {
+    const baseline = buckets.get(key)?.baseline ?? null;
+    if (baseline) return baseline;
+  }
+
+  return snapshots.find((s) => s.from_date === null) ?? null;
+};
+
+const resolveBaselineSnapshot = (
+  buckets: ReadonlyMap<string, SnapshotBucket>,
+  snapshots: readonly WageSnapshot[],
+  jobId?: string | null
+): WageSnapshot | null => {
+  const preferredKeys = [snapshotKeyForJob(jobId), LEGACY_SNAPSHOT_KEY];
+
+  for (const key of preferredKeys) {
+    const baseline = buckets.get(key)?.baseline ?? null;
+    if (baseline) return baseline;
+  }
+
+  return snapshots.find((s) => s.from_date === null) ?? null;
+};
+
 export class ShiftsService extends Context.Tag("ShiftsService")<
   ShiftsService,
   {
-    /**
-     * Get shifts with computations, recurring virtual shifts, and aggregates
-     * Automatically verifies user authentication
-     */
     readonly getShiftsWithComputations: (
       options: ShiftLoadOptions
     ) => Effect.Effect<
@@ -141,10 +151,6 @@ export class ShiftsService extends Context.Tag("ShiftsService")<
       never
     >;
 
-    /**
-     * Get wage snapshots for multiple shift dates (batch lookup)
-     * Returns a Map of shift date to applicable WageSnapshot
-     */
     readonly getSnapshotsForDates: (
       userId: string,
       dates: readonly string[]
@@ -156,11 +162,6 @@ export class ShiftsService extends Context.Tag("ShiftsService")<
   }
 >() {}
 
-/**
- * Live implementation of ShiftsService
- *
- * Provides parallel query execution and efficient snapshot resolution
- */
 export const ShiftsServiceLive = Layer.effect(
   ShiftsService,
   Effect.gen(function* () {
@@ -168,32 +169,21 @@ export const ShiftsServiceLive = Layer.effect(
     const supabase = yield* SupabaseService;
     const settings = yield* SettingsService;
 
-    /**
-     * Get default start date (current month start)
-     */
     const getDefaultStartDate = (): string => {
       const { year, month } = getCurrentYearMonth();
       return getMonthStart(year, month);
     };
 
-    /**
-     * Get default end date (current month end)
-     */
     const getDefaultEndDate = (): string => {
       const { year, month } = getCurrentYearMonth();
       return getMonthEnd(year, month);
     };
 
-    /**
-     * Calculate the payout date for a given earnings month.
-     * Payout is in the month after earnings, on the user's payroll_day.
-     */
     const calculatePayoutDate = (
       earningsYear: number,
-      earningsMonth: number, // 1-12
+      earningsMonth: number,
       payrollDay: number
     ): string => {
-      // Payout month is earnings month + 1
       let payoutYear = earningsYear;
       let payoutMonth = earningsMonth + 1;
 
@@ -202,118 +192,59 @@ export const ShiftsServiceLive = Layer.effect(
         payoutYear += 1;
       }
 
-      // Handle edge case: payroll_day exceeds days in payout month
       const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
       const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
 
-      return `${payoutYear}-${String(payoutMonth).padStart(2, '0')}-${String(effectivePayrollDay).padStart(2, '0')}`;
+      return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${String(effectivePayrollDay).padStart(2, "0")}`;
     };
 
-    /**
-     * Get wage snapshots for user (all snapshots, ordered by from_date DESC)
-     * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
-     */
-    const getUserWageSnapshots = (userId: string, skipAuthCheck = false) =>
+    const getUserWageSnapshots = (
+      userId: string,
+      skipAuthCheck = false,
+      jobId?: string
+    ) =>
       Effect.gen(function* () {
         if (!skipAuthCheck) {
           yield* auth.verifyUserId(userId);
         }
 
         const snapshots = yield* supabase.query(
-          async (client) =>
-            await client
+          async (client) => {
+            let query = client
               .from("wage_snapshots")
               .select("*")
               .eq("user_id", userId)
-              .order("from_date", { ascending: false, nullsFirst: false }),
+              .is("deleted_at", null)
+              .order("from_date", { ascending: false, nullsFirst: false });
+
+            if (jobId) {
+              query = query.eq("job_id", jobId);
+            }
+
+            return await query;
+          },
           { retries: 2 }
         );
 
         return (snapshots ?? []) as WageSnapshot[];
       });
 
-    /**
-     * Get snapshots for multiple dates (batch lookup)
-     * Uses binary search for O(log n) lookup per date instead of O(n)
-     * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
-     */
-    const getSnapshotsForDates = (userId: string, dates: readonly string[], skipAuthCheck = false) =>
+    const getSnapshotsForDates = (userId: string, dates: readonly string[], skipAuthCheck = false, jobId?: string) =>
       Effect.gen(function* () {
-        const snapshots = yield* getUserWageSnapshots(userId, skipAuthCheck);
+        const snapshots = yield* getUserWageSnapshots(userId, skipAuthCheck, jobId);
+        const buckets = buildSnapshotBuckets(snapshots);
         const snapshotMap = new Map<string, WageSnapshot>();
 
-        // Find baseline snapshot once for fallback
-        const baselineSnapshot = snapshots.find((s) => s.from_date === null);
-
-        // Filter to only dated snapshots and sort ascending by from_date for binary search
-        // (DB returns DESC, so we reverse for ascending order)
-        const datedSnapshots = snapshots
-          .filter((s): s is WageSnapshot & { from_date: string } => s.from_date !== null)
-          .reverse(); // Now sorted ascending by from_date
-
-        // Binary search: find the latest snapshot where from_date <= targetDate
-        const findSnapshotForDate = (targetDate: string): WageSnapshot | null => {
-          if (datedSnapshots.length === 0) return null;
-
-          let left = 0;
-          let right = datedSnapshots.length - 1;
-          let result: WageSnapshot | null = null;
-
-          while (left <= right) {
-            const mid = Math.floor((left + right) / 2);
-            const midDate = datedSnapshots[mid].from_date;
-
-            if (midDate <= targetDate) {
-              // This snapshot is valid, but there might be a later one that's still valid
-              result = datedSnapshots[mid];
-              left = mid + 1;
-            } else {
-              // This snapshot starts after our target date, look earlier
-              right = mid - 1;
-            }
-          }
-
-          return result;
-        };
-
-        for (const shiftDate of dates) {
-          // Use binary search for O(log n) lookup
-          const applicableSnapshot = findSnapshotForDate(shiftDate);
-
-          // Use dated snapshot if found, otherwise fall back to baseline
-          const snapshotToUse = applicableSnapshot || baselineSnapshot;
-
-          if (snapshotToUse) {
-            snapshotMap.set(shiftDate, snapshotToUse);
+        for (const date of dates) {
+          const snapshot = resolveSnapshotForDate(buckets, snapshots, date, jobId ?? null);
+          if (snapshot) {
+            snapshotMap.set(date, snapshot);
           }
         }
 
         return snapshotMap as ReadonlyMap<string, WageSnapshot>;
       });
 
-    /**
-     * Get snapshot for a single date
-     * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
-     */
-    const getSnapshotForDate = (userId: string, date: string, skipAuthCheck = false) =>
-      Effect.gen(function* () {
-        const snapshots = yield* getUserWageSnapshots(userId, skipAuthCheck);
-
-        // Find baseline snapshot for fallback
-        const baselineSnapshot = snapshots.find((s) => s.from_date === null);
-
-        // Find the first dated snapshot where from_date <= date
-        const applicableSnapshot = snapshots.find(
-          (s) => s.from_date !== null && s.from_date <= date
-        );
-
-        // Use dated snapshot if found, otherwise fall back to baseline
-        return applicableSnapshot || baselineSnapshot || null;
-      });
-
-    /**
-     * Get shifts with computations
-     */
     const getShiftsWithComputations = (options: ShiftLoadOptions) =>
       Effect.gen(function* () {
         const {
@@ -321,22 +252,18 @@ export const ShiftsServiceLive = Layer.effect(
           startDate = getDefaultStartDate(),
           endDate = getDefaultEndDate(),
           limit = 50,
+          jobId,
           skipAuthCheck = false,
           year,
           month,
         } = options;
 
-        // Verify authentication (unless explicitly skipped for shared access)
         if (!skipAuthCheck) {
           yield* auth.verifyUserId(userId);
         }
 
-        // Fetch user settings
-        // When skipAuthCheck is true (shared access), query directly to bypass SettingsService auth
         let userSettings: DbUserSettings | null = null;
         if (skipAuthCheck) {
-          // Direct query for shared access (RLS handles authorization)
-          // Note: .maybeSingle() returns null when no rows found, which is valid
           const settingsResult = yield* supabase.query(
             async (client) =>
               await client
@@ -347,7 +274,6 @@ export const ShiftsServiceLive = Layer.effect(
             { retries: 2 }
           ).pipe(
             Effect.catchTag("DatabaseError", (error) => {
-              // NO_DATA is expected for users without settings
               if (error.code === "NO_DATA") {
                 return Effect.succeed(null);
               }
@@ -359,14 +285,17 @@ export const ShiftsServiceLive = Layer.effect(
           userSettings = yield* settings.getUserSettings(userId);
         }
 
-        // Build query with filters
         const shiftsQuery = async (client: SupabaseClient) => {
           let query = client
             .from("user_shifts")
             .select("*")
             .eq("user_id", userId)
-            .is("deleted_at", null) // Exclude soft-deleted shifts
+            .is("deleted_at", null)
             .order("shift_date", { ascending: false });
+
+          if (jobId) {
+            query = query.eq("job_id", jobId);
+          }
 
           if (startDate) {
             query = query.gte("shift_date", startDate);
@@ -381,188 +310,173 @@ export const ShiftsServiceLive = Layer.effect(
           return await query;
         };
 
-        // Fetch recurring shifts
-        const recurringQuery = async (client: SupabaseClient) =>
-          await client
+        const recurringQuery = async (client: SupabaseClient) => {
+          let query = client
             .from("recurring_shifts")
             .select("*")
             .eq("user_id", userId)
-            .is("deleted_at", null); // Exclude soft-deleted recurring shifts
+            .is("deleted_at", null);
 
-        // Execute queries in parallel
-        const [shifts, recurringShifts] = yield* Effect.all(
+          if (jobId) {
+            query = query.eq("job_id", jobId);
+          }
+
+          return await query;
+        };
+
+        const jobsQuery = async (client: SupabaseClient) =>
+          await client
+            .from("jobs")
+            .select("*")
+            .eq("user_id", userId)
+            .is("deleted_at", null)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true });
+
+        const [shifts, recurringShifts, jobs, allSnapshots] = yield* Effect.all(
           [
             supabase.query(shiftsQuery, { retries: 2 }),
             supabase.query(recurringQuery, { retries: 2 }),
+            supabase.query(jobsQuery, { retries: 2 }),
+            getUserWageSnapshots(userId, skipAuthCheck),
           ],
-          { concurrency: 2 }
+          { concurrency: 4 }
         );
 
-        // Collect all shift dates for batch snapshot lookup
-        const shiftDates = (shifts ?? []).map((s: ShiftRow) => s.shift_date);
+        const normalizedJobs = ((jobs ?? []) as Job[]).filter((j) => j.deleted_at == null);
+        const jobsById = new Map(normalizedJobs.map((j) => [j.id, j] as const));
+        const defaultJob =
+          normalizedJobs.find((j) => j.is_default && j.archived_at == null) ??
+          normalizedJobs.find((j) => j.is_default) ??
+          normalizedJobs[0] ??
+          null;
+        const defaultJobId = defaultJob?.id ?? null;
 
-        // Generate recurring virtual shifts ONCE and cache the results
-        // Previously this was done twice: once for dates, once for computation
+        const snapshots = (allSnapshots ?? []) as WageSnapshot[];
+        const snapshotBuckets = buildSnapshotBuckets(snapshots);
+
+        const fallbackPayrollDay = userSettings?.payroll_day ?? 1;
+        const payrollDayForJob = (targetJobId?: string | null): number =>
+          jobsById.get(targetJobId ?? "")?.payroll_day ?? defaultJob?.payroll_day ?? fallbackPayrollDay;
+
+        const payoutDateFor = (date: string, targetJobId?: string | null): string => {
+          const [yearPart, monthPart] = date.split("-").map(Number);
+          return calculatePayoutDate(yearPart, monthPart, payrollDayForJob(targetJobId));
+        };
+
         const startYear = new Date(startDate).getFullYear();
         const startMonth = new Date(startDate).getMonth() + 1;
         const endYear = new Date(endDate).getFullYear();
         const endMonth = new Date(endDate).getMonth() + 1;
 
-        // Structure: Map<recurringId, virtualShifts[]>
         const virtualShiftsByRecurring = new Map<string, Array<{ date: string; weekday: number }>>();
-        const virtualShiftDates: string[] = [];
 
         for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
           const recurringVirtuals: Array<{ date: string; weekday: number }> = [];
           let currentYear = startYear;
           let currentMonth = startMonth;
 
-          while (
-            currentYear < endYear ||
-            (currentYear === endYear && currentMonth <= endMonth)
-          ) {
+          while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
             const virtualShifts = generateVirtualShiftsForMonth(
               { year: currentYear, month: currentMonth },
               {
                 start_time: cleanTime(recurring.start_time),
                 end_time: cleanTime(recurring.end_time),
-                repeat_interval_weeks: recurring.repeat_interval_weeks as
-                  | 0
-                  | 1
-                  | 2
-                  | 3
-                  | 4
-                  | 5
-                  | 6
-                  | 7
-                  | 8,
+                repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
                 selected_days: recurring.selected_days,
                 end_condition: recurring.end_condition,
                 exclusions: recurring.exclusions || [],
               }
             );
 
-            // Filter to date range and collect
             for (const vs of virtualShifts) {
               if (vs.date >= startDate && vs.date <= endDate) {
                 recurringVirtuals.push(vs);
-                virtualShiftDates.push(vs.date);
               }
             }
 
-            // Move to next month
-            currentMonth++;
+            currentMonth += 1;
             if (currentMonth > 12) {
               currentMonth = 1;
-              currentYear++;
+              currentYear += 1;
             }
           }
 
           virtualShiftsByRecurring.set(recurring.id, recurringVirtuals);
         }
 
-        // Fetch snapshots for all dates (shifts + virtual shifts) in one batch
-        const allDates = [...shiftDates, ...virtualShiftDates];
-        const snapshotMap = yield* getSnapshotsForDates(userId, allDates, skipAuthCheck);
-
-        // Calculate payout dates for all shifts to fetch tax snapshots
-        // Tax is based on payout month, not shift date
-        const payrollDay = userSettings?.payroll_day ?? 1;
-        const getPayoutDateForShift = (shiftDate: string): string => {
-          const [year, month] = shiftDate.split('-').map(Number);
-          return calculatePayoutDate(year, month, payrollDay);
-        };
-
-        // Collect unique payout dates and fetch their snapshots
-        const allPayoutDates = new Set<string>();
-        for (const date of allDates) {
-          allPayoutDates.add(getPayoutDateForShift(date));
-        }
-        const payoutSnapshotMap = yield* getSnapshotsForDates(userId, [...allPayoutDates], skipAuthCheck);
-
-        // Compute regular shifts
         const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => {
-          // Wage/supplement snapshot based on shift date
-          const snapshot = snapshotMap.get(shift.shift_date) ?? null;
-          // Tax snapshot based on payout date (when the shift is paid out)
-          const payoutDate = getPayoutDateForShift(shift.shift_date);
-          const taxSnapshot = payoutSnapshotMap.get(payoutDate) ?? null;
-          // Attach supplement_rules_snapshot from wage snapshot for UI components
-          // This allows CustomSupplementsModal to show correct supplement rules
-          // Priority: existing shift snapshot > wage snapshot > null
+          const shiftJobId = shift.job_id ?? defaultJobId;
+          const snapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, shift.shift_date, shiftJobId);
+          const payoutDate = payoutDateFor(shift.shift_date, shiftJobId);
+          const taxSnapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, payoutDate, shiftJobId);
+
           const supplementRulesSnapshot = shift.supplement_rules_snapshot
             ?? (snapshot?.supplements ? snapshot.supplements : null);
+
           return {
             ...shift,
+            job_id: shiftJobId,
             supplement_rules_snapshot: supplementRulesSnapshot,
-            computed: computeShift(shift, userSettings ?? {}, PRESET_SUPPLEMENT_RULES, snapshot),
-            // Include tax settings from PAYOUT snapshot for after-tax calculations
-            // Tax is based on when you receive the money (payout month), not when you worked
+            computed: computeShift(
+              shift,
+              userSettings ?? {},
+              PRESET_SUPPLEMENT_RULES,
+              snapshot,
+              shiftJobId ? jobsById.get(shiftJobId) ?? null : null
+            ),
             tax_enabled: taxSnapshot?.tax_enabled ?? false,
             tax_percentage: taxSnapshot?.tax_percentage ?? 0,
           };
         });
 
-        // Compute recurring virtual shifts using cached generation results
         const recurringVirtualShifts: ShiftWithComputations[] = [];
         for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
+          const recurringJobId = recurring.job_id ?? defaultJobId;
           const cachedVirtuals = virtualShiftsByRecurring.get(recurring.id) ?? [];
 
           for (const virtualShift of cachedVirtuals) {
-            // Wage/supplement snapshot based on shift date
-            const snapshot = snapshotMap.get(virtualShift.date) ?? null;
-            // Tax snapshot based on payout date (when the shift is paid out)
-            const payoutDate = getPayoutDateForShift(virtualShift.date);
-            const taxSnapshot = payoutSnapshotMap.get(payoutDate) ?? null;
+            const snapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, virtualShift.date, recurringJobId);
+            const payoutDate = payoutDateFor(virtualShift.date, recurringJobId);
+            const taxSnapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, payoutDate, recurringJobId);
 
-            // Check if recurring shift has date-specific custom supplements for this virtual shift date
-            const customSupplements: CustomSupplementsData | null = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
+            const customSupplements: CustomSupplementsData | null =
+              recurring.date_specific_supplements?.[virtualShift.date] ?? null;
 
-            const computed = computeShift(
-              {
-                id: `virtual-${recurring.id}-${virtualShift.date}`,
-                user_id: userId,
-                shift_date: virtualShift.date,
-                start_time: cleanTime(recurring.start_time),
-                end_time: cleanTime(recurring.end_time),
-                custom_supplements: customSupplements,
-                recurring_id: recurring.id,
-                recurring_anchor_weekday: virtualShift.weekday,
-              },
-              userSettings ?? {},
-              PRESET_SUPPLEMENT_RULES,
-              snapshot
-            );
-
-            // Attach supplement_rules_snapshot from wage snapshot for UI components
-            const supplementRulesSnapshot = snapshot?.supplements ? snapshot.supplements : null;
-
-            recurringVirtualShifts.push({
+            const syntheticShift: ShiftRow = {
               id: `virtual-${recurring.id}-${virtualShift.date}`,
               user_id: userId,
+              job_id: recurringJobId,
               shift_date: virtualShift.date,
               start_time: cleanTime(recurring.start_time),
               end_time: cleanTime(recurring.end_time),
               custom_supplements: customSupplements,
-              supplement_rules_snapshot: supplementRulesSnapshot,
               recurring_id: recurring.id,
               recurring_anchor_weekday: virtualShift.weekday,
+            };
+
+            const computed = computeShift(
+              syntheticShift,
+              userSettings ?? {},
+              PRESET_SUPPLEMENT_RULES,
+              snapshot,
+              recurringJobId ? jobsById.get(recurringJobId) ?? null : null
+            );
+
+            recurringVirtualShifts.push({
+              ...syntheticShift,
+              supplement_rules_snapshot: snapshot?.supplements ? snapshot.supplements : null,
               computed,
-              // Include tax settings from PAYOUT snapshot for after-tax calculations
-              // Tax is based on when you receive the money (payout month), not when you worked
               tax_enabled: taxSnapshot?.tax_enabled ?? false,
               tax_percentage: taxSnapshot?.tax_percentage ?? 0,
             });
           }
         }
 
-        // Merge shifts and recurring virtual shifts, then sort by date ascending
-        // (Virtual shifts were appended unsorted, so we need to sort the merged array)
-        const allShifts = [...computedShifts, ...recurringVirtualShifts].sort(
-          (a, b) => a.shift_date.localeCompare(b.shift_date)
+        const allShifts = [...computedShifts, ...recurringVirtualShifts].sort((a, b) =>
+          a.shift_date.localeCompare(b.shift_date)
         );
 
-        // Compute aggregates
         const aggregates: ShiftsAggregates = allShifts.reduce(
           (acc, shift) => ({
             totalHours: acc.totalHours + shift.computed.paidHours,
@@ -571,18 +485,14 @@ export const ShiftsServiceLive = Layer.effect(
           { totalHours: 0, totalEarnings: 0 }
         );
 
-        // Fetch payout month tax settings if year and month are provided
         let payoutTaxSettings: PayoutTaxSettings = null;
         let currentPayoutTaxSettings: PayoutTaxSettings = null;
 
-        if (year && month) {
-          // Get payroll day from user settings (default to 1 if not set)
-          const payrollDay = userSettings?.payroll_day ?? 1;
+        const summaryJobId = jobId ?? defaultJobId;
 
-          // 1. Tax settings for requested month's payout (earnings month + 1)
-          //    Used for TotalCard showing the requested month's earnings
-          const payoutDate = calculatePayoutDate(year, month, payrollDay);
-          const payoutSnapshot = yield* getSnapshotForDate(userId, payoutDate, skipAuthCheck);
+        if (year && month) {
+          const payoutDate = calculatePayoutDate(year, month, payrollDayForJob(summaryJobId));
+          const payoutSnapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, payoutDate, summaryJobId);
 
           if (payoutSnapshot) {
             payoutTaxSettings = {
@@ -591,12 +501,15 @@ export const ShiftsServiceLive = Layer.effect(
             };
           }
 
-          // 2. Tax settings for current month's payout (previous month's earnings)
-          //    Used for NextPayrollCard showing what gets paid this month
           const prevMonth = month === 1 ? 12 : month - 1;
           const prevYear = month === 1 ? year - 1 : year;
-          const currentPayoutDate = calculatePayoutDate(prevYear, prevMonth, payrollDay);
-          const currentPayoutSnapshot = yield* getSnapshotForDate(userId, currentPayoutDate, skipAuthCheck);
+          const currentPayoutDate = calculatePayoutDate(prevYear, prevMonth, payrollDayForJob(summaryJobId));
+          const currentPayoutSnapshot = resolveSnapshotForDate(
+            snapshotBuckets,
+            snapshots,
+            currentPayoutDate,
+            summaryJobId
+          );
 
           if (currentPayoutSnapshot) {
             currentPayoutTaxSettings = {
@@ -606,15 +519,14 @@ export const ShiftsServiceLive = Layer.effect(
           }
         }
 
-        // Get baseline snapshot's break_enabled for employment percentage calculation
-        const allSnapshots = yield* getUserWageSnapshots(userId, skipAuthCheck);
-        const baselineSnapshot = allSnapshots.find((s) => s.from_date === null);
+        const baselineSnapshot = resolveBaselineSnapshot(snapshotBuckets, snapshots, summaryJobId);
         const breakDeductionEnabled = baselineSnapshot?.break_enabled ?? true;
 
         return {
           shifts: allShifts as readonly ShiftWithComputations[],
           defaultView: userSettings?.default_shifts_view ?? "calendar",
           settings: userSettings ?? {},
+          jobs: normalizedJobs,
           aggregates,
           payoutTaxSettings,
           currentPayoutTaxSettings,
@@ -629,9 +541,6 @@ export const ShiftsServiceLive = Layer.effect(
   })
 );
 
-/**
- * Convenience function to provide ShiftsServiceLive with dependencies
- */
 export const withShifts = <A, E, R>(
   effect: Effect.Effect<A, E, R | ShiftsService>
 ): Effect.Effect<

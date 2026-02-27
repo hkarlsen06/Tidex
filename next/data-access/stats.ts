@@ -51,6 +51,7 @@ export type {
 export type StatsOptions = {
   year?: number;
   month?: number; // 1-12
+  jobId?: string;
   locale?: Locale;
 };
 
@@ -124,6 +125,7 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
       userId,
       year: options.year,
       month: options.month,
+      jobId: options.jobId,
       locale: options.locale || "no",
     });
     return data;
@@ -264,6 +266,7 @@ export const getCriticalStatsData = cache(async (userId: string, options: StatsO
       userId,
       year: options.year,
       month: options.month,
+      jobId: options.jobId,
       locale: options.locale || "no",
     });
     return data;

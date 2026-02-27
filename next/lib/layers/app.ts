@@ -34,6 +34,7 @@ import { AuthServiceLive } from "../services/auth";
 import { SettingsServiceLive } from "../services/settings";
 import { SnapshotsServiceLive } from "../services/snapshots";
 import { ShiftsServiceLive } from "../services/shifts";
+import { JobsServiceLive } from "../services/jobs";
 import { StatsServiceLive } from "../services/stats";
 import { SubscriptionServiceLive } from "../services/subscription";
 import { ClaudeServiceLive } from "../services/claude";
@@ -81,6 +82,15 @@ export const AuthSettingsLive = Layer.provideMerge(
  */
 export const AuthSnapshotsLive = Layer.provideMerge(
   SnapshotsServiceLive,
+  SupabaseAuthLive
+);
+
+/**
+ * Layer for jobs operations
+ * Use this when you need multi-job CRUD/read operations
+ */
+export const JobsLive = Layer.provideMerge(
+  JobsServiceLive,
   SupabaseAuthLive
 );
 
@@ -171,6 +181,7 @@ export const SharingLive = Layer.provideMerge(
 export const AppLive = Layer.mergeAll(
   AuthSettingsLive,
   AuthSnapshotsLive,
+  JobsLive,
   ShiftsLive,
   StatsLive,
   SubscriptionLive,

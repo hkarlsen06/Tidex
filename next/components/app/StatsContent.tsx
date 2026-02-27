@@ -14,10 +14,12 @@ import { MonthPicker } from "@/components/app/MonthPicker";
 import { YearPicker } from "@/components/app/YearPicker";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { formatNumber } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
+import type { Job } from "@/lib/payroll";
 
 // Scroll-triggered animation variants (slide in from left, out when leaving)
 const scrollCardVariants = {
@@ -137,6 +139,8 @@ const EmploymentChart = dynamic(
 
 type StatsContentProps = {
   data: StatsData;
+  jobs?: Job[];
+  selectedJobId?: string | null;
   /** User-specific cache key to ensure browser HTTP cache is per-user */
   cacheKey: string;
 };
@@ -206,9 +210,11 @@ function StatCard({ label, value, suffix, trend, icon, secondaryValue, secondary
   );
 }
 
-export function StatsContent({ data, cacheKey }: StatsContentProps) {
+export function StatsContent({ data, jobs = [], selectedJobId = null, cacheKey }: StatsContentProps) {
   const { t } = useTranslations();
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = (params?.locale as string) || 'no';
   const formatCurrency = useFormatCurrency();
   // Format currency with full symbol (handles prefix/suffix positioning)
@@ -258,6 +264,17 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const activeJobs = useMemo(
+    () => jobs.filter((entry) => !entry.deleted_at && !entry.archived_at),
+    [jobs]
+  );
+  const showJobFilter = activeJobs.length > 1;
+  const selectedJobFilterValue = selectedJobId && activeJobs.some((entry) => entry.id === selectedJobId)
+    ? selectedJobId
+    : "all";
+  const allJobsLabel = locale.startsWith("no") ? "Alle jobber" : "All jobs";
+  const jobFilterLabel = locale.startsWith("no") ? "Jobb" : "Job";
+  const jobFilterCacheKey = selectedJobId ?? "all";
 
   // Prefetch cache: Map<"YYYY-MM", StatsData>
   const loadedMonthsData = useRef<Map<string, StatsData>>(new Map());
@@ -282,7 +299,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
   // Fetch stats data for a given month
   const fetchStatsData = useCallback(
     async (year: number, month: number): Promise<StatsData | null> => {
-      const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+      const monthKey = `${jobFilterCacheKey}:${year}-${String(month).padStart(2, "0")}`;
 
       // Check cache first
       if (loadedMonthsData.current.has(monthKey)) {
@@ -297,6 +314,9 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
           // Include cacheKey to ensure browser HTTP cache is per-user
           _ck: cacheKey,
         });
+        if (selectedJobId) {
+          query.set("job", selectedJobId);
+        }
 
         const response = await fetch(`/api/stats?${query.toString()}`, {
           method: "GET",
@@ -324,7 +344,41 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
         return null;
       }
     },
-    [locale, cacheKey]
+    [locale, cacheKey, selectedJobId, jobFilterCacheKey]
+  );
+
+  useEffect(() => {
+    setActiveData(data);
+    setChartData({
+      yearlyMonths: data.yearlyMonths,
+      thisWeek: data.thisWeek,
+      bestWeek: data.bestWeek,
+      thisMonthCumulative: data.thisMonthCumulative,
+      yearlyCumulative: data.yearlyCumulative,
+      currentMonthBreakdown: data.currentMonthBreakdown,
+      yearToDate: data.yearToDate,
+      fullYear: data.fullYear,
+      employmentLast6Months: data.employmentLast6Months,
+      employmentYearlyAverage: data.employmentYearlyAverage,
+    });
+    loadedMonthsData.current.clear();
+    loadedMonthsData.current.set(
+      `${jobFilterCacheKey}:${data.focusMonth.year}-${String(data.focusMonth.month).padStart(2, "0")}`,
+      data
+    );
+  }, [data, selectedJobId, jobFilterCacheKey]);
+
+  const handleJobFilterChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "all") {
+        params.delete("job");
+      } else {
+        params.set("job", value);
+      }
+      router.push(`/${locale}/stats${params.toString() ? `?${params.toString()}` : ""}`);
+    },
+    [searchParams, router, locale]
   );
 
   // Handle month changes - load full stats data
@@ -334,7 +388,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
     }
 
     const controller = new AbortController();
-    const monthKey = `${selectedYear}-${String(selectedMonthNumber).padStart(2, "0")}`;
+    const monthKey = `${jobFilterCacheKey}:${selectedYear}-${String(selectedMonthNumber).padStart(2, "0")}`;
 
     // Check if data is already cached - if so, load immediately without showing loading state
     const cachedData = loadedMonthsData.current.get(monthKey);
@@ -399,7 +453,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
     return () => {
       controller.abort();
     };
-  }, [focusMonth, focusYear, selectedMonthNumber, selectedYear, fetchStatsData, couldNotUpdateError]);
+  }, [focusMonth, focusYear, selectedMonthNumber, selectedYear, fetchStatsData, couldNotUpdateError, jobFilterCacheKey]);
 
   // Prefetch adjacent months for smooth swipe navigation (background only, no loading state)
   useEffect(() => {
@@ -576,6 +630,29 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
           suffix={yearPickerSuffix}
         />
       </div>
+
+      {showJobFilter && (
+        <div className="md:col-span-2">
+          <div className="max-w-xs space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+              {jobFilterLabel}
+            </span>
+            <Select value={selectedJobFilterValue} onValueChange={handleJobFilterChange}>
+              <SelectTrigger className="h-10 rounded-2xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary shadow-app-inner">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border-subtle bg-surface-primary shadow-app-lg">
+                <SelectItem value="all">{allJobsLabel}</SelectItem>
+                {activeJobs.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
 
       {fetchError && (
         <p className="text-sm text-error md:col-span-2">

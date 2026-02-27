@@ -29,6 +29,7 @@ export async function copyShifts(input: CopyShiftsInput) {
   const sourceShifts: Array<{
     start_time: string;
     end_time: string;
+    job_id?: string | null;
     recurring_id?: string;
   }> = [];
 
@@ -65,8 +66,8 @@ export async function copyShifts(input: CopyShiftsInput) {
 
     if (virtualByRecurringId.size > 0) {
       const { data: recurringShifts, error: recurringError } = await supabase
-        .from("recurring_shifts")
-        .select("id, start_time, end_time")
+      .from("recurring_shifts")
+      .select("id, start_time, end_time, job_id")
         .eq("user_id", user.id)
         .is("deleted_at", null) // Exclude soft-deleted recurring shifts
         .in("id", Array.from(virtualByRecurringId.keys()));
@@ -81,6 +82,7 @@ export async function copyShifts(input: CopyShiftsInput) {
             sourceShifts.push({
               start_time: recurring.start_time,
               end_time: recurring.end_time,
+              job_id: recurring.job_id ?? null,
               recurring_id: undefined, // Don't link copied shifts to the recurring shift
             });
           }
@@ -107,6 +109,7 @@ export async function copyShifts(input: CopyShiftsInput) {
   // Create new shifts based on source shifts but with the target date
   const rows = sourceShifts.map((shift) => ({
     user_id: user.id,
+    ...(shift.job_id ? { job_id: shift.job_id } : {}),
     shift_date: input.targetDate,
     start_time: cleanTime(shift.start_time),
     end_time: cleanTime(shift.end_time),

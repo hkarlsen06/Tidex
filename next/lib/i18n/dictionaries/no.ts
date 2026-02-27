@@ -848,6 +848,10 @@ export const no = {
           label: 'Faste vakter',
           description: 'Se og rediger alle faste vaktmønstre',
         },
+        jobs: {
+          label: 'Jobber',
+          description: 'Administrer arbeidssteder og lønnsinnstillinger per jobb',
+        },
         security: {
           label: 'Innlogging og sikkerhet',
           description: 'Passord, tilkoblinger og tofaktorautentisering',
@@ -883,6 +887,15 @@ export const no = {
         emptyTitle: 'Ingen faste vakter ennå',
         emptyDescription: 'Opprett en fast vakt fra Legg til vakt for å administrere den her.',
         excludedDates: '{count} ekskludert',
+      },
+      jobs: {
+        title: 'Jobber',
+        subtitle: 'Administrer arbeidssteder, utbetalingsdag og manedsmal per jobb',
+        add: 'Legg til jobb',
+        createTitle: 'Opprett jobb',
+        editTitle: 'Rediger jobb',
+        nameLabel: 'Jobbnavn',
+        colorLabel: 'Farge',
       },
       profile: {
         title: 'Konto',

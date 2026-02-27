@@ -1,11 +1,13 @@
 "use client";
 
 import { HomeContent } from "./HomeContent";
-import type { ShiftWithComputations, UserSettings, WageSnapshot } from "@/lib/payroll";
+import type { ShiftWithComputations, UserSettings, WageSnapshot, Job } from "@/lib/payroll";
 
 type HomeContentWrapperProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
+  jobs?: Job[];
+  selectedJobId?: string | null;
   wageSnapshots: WageSnapshot[];
   cacheKey: string;
   preloadedMonths?: string[];

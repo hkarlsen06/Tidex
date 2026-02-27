@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const yearParam = searchParams.get("year");
   const monthParam = searchParams.get("month");
+  const jobId = searchParams.get("job") || undefined;
   const localeParam = searchParams.get("locale") || 'no';
 
   let year: number | undefined;
@@ -36,7 +37,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getStatsDataForApi(session.user.id, { year, month, locale: localeParam as Locale });
+    const data = await getStatsDataForApi(session.user.id, {
+      year,
+      month,
+      locale: localeParam as Locale,
+      jobId,
+    });
     return NextResponse.json(data, {
       headers: {
         // Cache for 5 minutes (300 seconds) with stale-while-revalidate
