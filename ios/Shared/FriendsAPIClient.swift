@@ -62,6 +62,38 @@ struct SharingRPCUserSettings: Codable, Sendable {
   }
 }
 
+struct SharingRPCJobRow: Codable, Equatable, Sendable {
+  let id: String
+  let userId: String
+  let name: String
+  let color: String?
+  let isDefault: Bool
+  let sortOrder: Int?
+  let payrollDay: Int?
+  let halfTaxMonth: Int?
+  let monthlyGoal: Double?
+  let archivedAt: String?
+  let deletedAt: String?
+  let createdAt: String?
+  let updatedAt: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case userId = "user_id"
+    case name
+    case color
+    case isDefault = "is_default"
+    case sortOrder = "sort_order"
+    case payrollDay = "payroll_day"
+    case halfTaxMonth = "half_tax_month"
+    case monthlyGoal = "monthly_goal"
+    case archivedAt = "archived_at"
+    case deletedAt = "deleted_at"
+    case createdAt = "created_at"
+    case updatedAt = "updated_at"
+  }
+}
+
 struct SharingRPCSupplementRule: Codable, Equatable, Sendable {
   let days: [Int]
   let from: String
@@ -155,6 +187,7 @@ enum SharingRPCEndCondition: Codable, Equatable, Sendable {
 struct SharingRPCShiftRow: Codable, Sendable {
   let id: String
   let userId: String
+  let jobId: String?
   let shiftDate: String
   let startTime: String
   let endTime: String
@@ -165,6 +198,7 @@ struct SharingRPCShiftRow: Codable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case id
     case userId = "user_id"
+    case jobId = "job_id"
     case shiftDate = "shift_date"
     case startTime = "start_time"
     case endTime = "end_time"
@@ -177,6 +211,7 @@ struct SharingRPCShiftRow: Codable, Sendable {
 struct SharingRPCRecurringShiftRow: Codable, Sendable {
   let id: String
   let userId: String
+  let jobId: String?
   let startTime: String
   let endTime: String
   let repeatIntervalWeeks: Int
@@ -212,6 +247,7 @@ struct SharingRPCRecurringShiftRow: Codable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case id
     case userId = "user_id"
+    case jobId = "job_id"
     case startTime = "start_time"
     case endTime = "end_time"
     case repeatIntervalWeeks = "repeat_interval_weeks"
@@ -225,6 +261,7 @@ struct SharingRPCRecurringShiftRow: Codable, Sendable {
 struct SharingRPCWageSnapshot: Codable, Sendable {
   let id: String
   let userId: String
+  let jobId: String?
   let fromDate: String?
   let hourlyWage: Double
   let wageLevel: Int?
@@ -265,6 +302,7 @@ struct SharingRPCWageSnapshot: Codable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case id
     case userId = "user_id"
+    case jobId = "job_id"
     case fromDate = "from_date"
     case hourlyWage = "hourly_wage"
     case wageLevel = "wage_level"
@@ -286,6 +324,7 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
   let shifts: [SharingRPCShiftRow]
   let recurringShifts: [SharingRPCRecurringShiftRow]
   let snapshots: [SharingRPCWageSnapshot]
+  let jobs: [SharingRPCJobRow]
 
   var payloadInput: SharingRPCPayloadInput {
     SharingRPCPayloadInput(
@@ -294,7 +333,8 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
       settings: settings,
       shifts: shifts,
       recurringShifts: recurringShifts,
-      snapshots: snapshots
+      snapshots: snapshots,
+      jobs: jobs
     )
   }
 
@@ -305,6 +345,7 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
     case shifts
     case recurringShifts = "recurring_shifts"
     case snapshots
+    case jobs
   }
 
   init(from decoder: Decoder) throws {
@@ -332,6 +373,7 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
     snapshots =
       try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
       ?? []
+    jobs = try container.decodeIfPresent([SharingRPCJobRow].self, forKey: .jobs) ?? []
   }
 }
 
@@ -342,6 +384,7 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
   let shifts: [SharingRPCShiftRow]
   let recurringShifts: [SharingRPCRecurringShiftRow]
   let snapshots: [SharingRPCWageSnapshot]
+  let jobs: [SharingRPCJobRow]
 
   var payloadInput: SharingRPCPayloadInput {
     SharingRPCPayloadInput(
@@ -350,7 +393,8 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
       settings: settings,
       shifts: shifts,
       recurringShifts: recurringShifts,
-      snapshots: snapshots
+      snapshots: snapshots,
+      jobs: jobs
     )
   }
 
@@ -361,6 +405,7 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
     case shifts
     case recurringShifts = "recurring_shifts"
     case snapshots
+    case jobs
   }
 
   init(from decoder: Decoder) throws {
@@ -388,6 +433,7 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
     snapshots =
       try container.decodeIfPresent([SharingRPCWageSnapshot].self, forKey: .snapshots)
       ?? []
+    jobs = try container.decodeIfPresent([SharingRPCJobRow].self, forKey: .jobs) ?? []
   }
 }
 
@@ -398,6 +444,7 @@ struct SharingRPCPayloadInput: Sendable {
   let shifts: [SharingRPCShiftRow]
   let recurringShifts: [SharingRPCRecurringShiftRow]
   let snapshots: [SharingRPCWageSnapshot]
+  let jobs: [SharingRPCJobRow]
 }
 
 struct SharingRPCPayoutTaxSettings: Equatable, Sendable {
@@ -418,6 +465,9 @@ struct SharingComputedShiftComputed: Equatable, Sendable {
 struct SharingComputedShift: Identifiable, Equatable, Sendable {
   let id: String
   let userId: String
+  let jobId: String?
+  let jobName: String?
+  let jobColor: String?
   let shiftDate: String
   let startTime: String
   let endTime: String
@@ -476,6 +526,15 @@ private struct SharingRecurringVirtualShift: Equatable, Sendable {
   let weekday: Int
 }
 
+private struct SharingPayrollContext {
+  let fallbackPayrollDay: Int
+  let jobsById: [String: SharingRPCJobRow]
+  let defaultJobId: String?
+  let snapshotsByJobId: [String?: [SharingRPCWageSnapshot]]
+  let legacyNilJobSnapshots: [SharingRPCWageSnapshot]
+  let allSnapshots: [SharingRPCWageSnapshot]
+}
+
 // MARK: - Shared Compute Core (Foundation-only)
 
 enum SharingComputeCore {
@@ -526,6 +585,11 @@ enum SharingComputeCore {
     mode: SharingRPCMode
   ) -> [SharingComputedShift] {
     var computed: [SharingComputedShift] = []
+    let context = makePayrollContext(
+      settings: payload.settings,
+      snapshots: payload.snapshots,
+      jobs: payload.jobs
+    )
 
     let regularShifts = payload.shifts.filter { shift in
       shift.shiftDate >= startDate && shift.shiftDate <= endDate
@@ -535,8 +599,7 @@ enum SharingComputeCore {
       computed.append(
         computeShiftWithTax(
           shift: shift,
-          settings: payload.settings,
-          snapshots: payload.snapshots,
+          context: context,
           mode: mode
         ))
     }
@@ -562,6 +625,7 @@ enum SharingComputeCore {
           let virtualShift = SharingRPCShiftRow(
             id: virtualId,
             userId: recurring.userId,
+            jobId: recurring.jobId,
             shiftDate: virtual.date,
             startTime: recurring.cleanStartTime,
             endTime: recurring.cleanEndTime,
@@ -573,8 +637,7 @@ enum SharingComputeCore {
           computed.append(
             computeShiftWithTax(
               shift: virtualShift,
-              settings: payload.settings,
-              snapshots: payload.snapshots,
+              context: context,
               mode: mode
             ))
         }
@@ -614,16 +677,26 @@ enum SharingComputeCore {
     month: Int,
     settings: SharingRPCUserSettings,
     snapshots: [SharingRPCWageSnapshot],
+    jobs: [SharingRPCJobRow],
     mode: SharingRPCMode
   ) -> SharingRPCPayoutTaxSettings? {
     guard mode == .visible else { return nil }
+    let context = makePayrollContext(
+      settings: settings,
+      snapshots: snapshots,
+      jobs: jobs
+    )
+    let summaryJobId = context.defaultJobId
+    let payrollDay =
+      summaryJobId.flatMap { context.jobsById[$0]?.payrollDay } ?? settings.effectivePayrollDay
+    let scopedSnapshots = snapshotsForJob(jobId: summaryJobId, context: context)
 
     let payoutDate = calculatePayoutDate(
       shiftDate: monthStart(year: year, month: month),
-      payrollDay: settings.effectivePayrollDay
+      payrollDay: payrollDay
     )
 
-    guard let snapshot = snapshotForDate(payoutDate, from: snapshots) else {
+    guard let snapshot = snapshotForDate(payoutDate, from: scopedSnapshots) else {
       return nil
     }
 
@@ -638,6 +711,9 @@ enum SharingComputeCore {
       SharingComputedShift(
         id: shift.id,
         userId: shift.userId,
+        jobId: shift.jobId,
+        jobName: shift.jobName,
+        jobColor: shift.jobColor,
         shiftDate: shift.shiftDate,
         startTime: shift.startTime,
         endTime: shift.endTime,
@@ -752,22 +828,27 @@ enum SharingComputeCore {
 
   private static func computeShiftWithTax(
     shift: SharingRPCShiftRow,
-    settings: SharingRPCUserSettings,
-    snapshots: [SharingRPCWageSnapshot],
+    context: SharingPayrollContext,
     mode: SharingRPCMode
   ) -> SharingComputedShift {
+    let effectiveJobId = shift.jobId ?? context.defaultJobId
+    let payrollDay =
+      effectiveJobId.flatMap { context.jobsById[$0]?.payrollDay } ?? context.fallbackPayrollDay
+    let scopedSnapshots = snapshotsForJob(jobId: effectiveJobId, context: context)
+
     let payoutDate = calculatePayoutDate(
       shiftDate: shift.shiftDate,
-      payrollDay: settings.effectivePayrollDay
+      payrollDay: payrollDay
     )
 
-    let wageSnapshot = snapshotForDate(shift.shiftDate, from: snapshots)
-    let taxSnapshot = snapshotForDate(payoutDate, from: snapshots)
+    let wageSnapshot = snapshotForDate(shift.shiftDate, from: scopedSnapshots)
+    let taxSnapshot = snapshotForDate(payoutDate, from: scopedSnapshots)
 
     var computed = computeShift(shift: shift, snapshot: wageSnapshot, mode: mode)
 
     let taxEnabled = mode == .hidden ? false : (taxSnapshot?.effectiveTaxEnabled ?? false)
     let taxPercentage = mode == .hidden ? 0 : (taxSnapshot?.effectiveTaxPercentage ?? 0)
+    let job = effectiveJobId.flatMap { context.jobsById[$0] }
 
     if mode == .hidden {
       computed = SharingComputedShiftComputed(
@@ -782,6 +863,9 @@ enum SharingComputeCore {
     return SharingComputedShift(
       id: shift.id,
       userId: shift.userId,
+      jobId: effectiveJobId,
+      jobName: job?.name,
+      jobColor: job?.color,
       shiftDate: shift.shiftDate,
       startTime: shift.startTime,
       endTime: shift.endTime,
@@ -792,6 +876,55 @@ enum SharingComputeCore {
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage
     )
+  }
+
+  private static func makePayrollContext(
+    settings: SharingRPCUserSettings,
+    snapshots: [SharingRPCWageSnapshot],
+    jobs: [SharingRPCJobRow]
+  ) -> SharingPayrollContext {
+    let activeJobs = jobs.filter { $0.deletedAt == nil }
+    let jobsById = Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+    let defaultJobId =
+      activeJobs.first(where: { $0.isDefault && $0.archivedAt == nil })?.id
+      ?? activeJobs.first(where: { $0.isDefault })?.id
+      ?? activeJobs.first?.id
+      ?? jobs.first(where: { $0.isDefault && $0.archivedAt == nil })?.id
+      ?? jobs.first(where: { $0.isDefault })?.id
+      ?? jobs.first?.id
+    let snapshotsByJobId = Dictionary(grouping: snapshots, by: { $0.jobId })
+    let legacyNilJobSnapshots = snapshotsByJobId[nil] ?? []
+
+    return SharingPayrollContext(
+      fallbackPayrollDay: settings.effectivePayrollDay,
+      jobsById: jobsById,
+      defaultJobId: defaultJobId,
+      snapshotsByJobId: snapshotsByJobId,
+      legacyNilJobSnapshots: legacyNilJobSnapshots,
+      allSnapshots: snapshots
+    )
+  }
+
+  private static func snapshotsForJob(
+    jobId: String?,
+    context: SharingPayrollContext
+  ) -> [SharingRPCWageSnapshot] {
+    if let jobId, let scoped = context.snapshotsByJobId[jobId], !scoped.isEmpty {
+      return scoped
+    }
+
+    if !context.legacyNilJobSnapshots.isEmpty {
+      return context.legacyNilJobSnapshots
+    }
+
+    if let defaultJobId = context.defaultJobId,
+      let defaultScoped = context.snapshotsByJobId[defaultJobId],
+      !defaultScoped.isEmpty
+    {
+      return defaultScoped
+    }
+
+    return context.allSnapshots
   }
 
   private static func computeShift(

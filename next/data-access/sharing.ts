@@ -21,13 +21,11 @@ import {
 
 // Re-export NotificationFrequency type
 export type { NotificationFrequency };
-import { SharingLive, ShiftsLive } from "@/lib/layers/app";
-import { ShiftsService } from "@/lib/services/shifts";
+import { SharingLive } from "@/lib/layers/app";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
-import type { ShiftWithComputations, UserSettings, WageSnapshot, ShiftRow } from "@/lib/payroll";
+import type { ShiftWithComputations, UserSettings, WageSnapshot, ShiftRow, Job } from "@/lib/payroll";
 import type { PayoutTaxSettings } from "@/lib/services/shifts";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Re-export types for backward compatibility
 export type { SharedUser, ShareRecipient };
@@ -299,6 +297,72 @@ export type SharedShiftsAggregates = {
   totalEarnings: number | null; // null when showEarnings is false
 };
 
+export type SharedUserShiftsResult = {
+  shifts: ShiftWithComputations[];
+  defaultView: string;
+  settings: UserSettings;
+  jobs: Job[];
+  aggregates: SharedShiftsAggregates;
+  showEarnings: boolean;
+  payoutTaxSettings: PayoutTaxSettings;
+  wageSnapshots: WageSnapshot[];
+};
+
+type SnapshotBucket = {
+  dated: Array<WageSnapshot & { from_date: string }>;
+  baseline: WageSnapshot | null;
+};
+
+const LEGACY_SNAPSHOT_KEY = "__legacy__";
+
+const snapshotKeyForJob = (jobId?: string | null): string => jobId ?? LEGACY_SNAPSHOT_KEY;
+
+const buildSnapshotBuckets = (snapshots: WageSnapshot[]): Map<string, SnapshotBucket> => {
+  const buckets = new Map<string, SnapshotBucket>();
+
+  for (const snapshot of snapshots) {
+    const key = snapshotKeyForJob(snapshot.job_id ?? null);
+    const existing = buckets.get(key) ?? { dated: [], baseline: null };
+
+    if (snapshot.from_date === null) {
+      existing.baseline = snapshot;
+    } else {
+      existing.dated.push(snapshot as WageSnapshot & { from_date: string });
+    }
+
+    buckets.set(key, existing);
+  }
+
+  for (const bucket of buckets.values()) {
+    bucket.dated.sort((a, b) => b.from_date.localeCompare(a.from_date));
+  }
+
+  return buckets;
+};
+
+const resolveSnapshotForDate = (
+  buckets: Map<string, SnapshotBucket>,
+  snapshots: WageSnapshot[],
+  date: string,
+  jobId?: string | null
+): WageSnapshot | null => {
+  const preferredKeys = [snapshotKeyForJob(jobId), LEGACY_SNAPSHOT_KEY];
+
+  for (const key of preferredKeys) {
+    const bucket = buckets.get(key);
+    if (!bucket) continue;
+    const dated = bucket.dated.find((entry) => entry.from_date <= date);
+    if (dated) return dated;
+  }
+
+  for (const key of preferredKeys) {
+    const baseline = buckets.get(key)?.baseline ?? null;
+    if (baseline) return baseline;
+  }
+
+  return snapshots.find((entry) => entry.from_date === null) ?? null;
+};
+
 /**
  * Internal implementation of getSharedUserShifts
  * @internal - Do not call directly, use getSharedUserShifts()
@@ -307,117 +371,12 @@ async function getSharedUserShiftsInternal(
   viewerId: string,
   ownerId: string,
   options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
-): Promise<{
-  shifts: ShiftWithComputations[];
-  defaultView: string;
-  settings: UserSettings;
-  aggregates: SharedShiftsAggregates;
-  showEarnings: boolean;
-  payoutTaxSettings: PayoutTaxSettings;
-  wageSnapshots: WageSnapshot[];
-}> {
+): Promise<SharedUserShiftsResult> {
   "use cache: private";
   cacheTag(`user-${ownerId}`, "shared-shifts");
 
   await cookies();
-
-  // First verify the viewer has access and get share settings
-  const shareSettingsProgram = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    return yield* sharing.getShareSettings(viewerId, ownerId);
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
-
-  const shareSettings = await Effect.runPromise(shareSettingsProgram);
-
-  if (!shareSettings) {
-    logger.warn(`User ${viewerId} attempted to access shifts of ${ownerId} without permission`);
-    return {
-      shifts: [],
-      defaultView: "calendar",
-      settings: {},
-      aggregates: { totalHours: 0, totalEarnings: null },
-      showEarnings: false,
-      payoutTaxSettings: null,
-      wageSnapshots: [],
-    };
-  }
-
-  const showEarnings = shareSettings.showEarnings;
-
-  // Now fetch the shifts using the owner's ID (since RLS allows it through shift_shares)
-  // We skip auth check because we've already verified share access above
-  const program = Effect.gen(function* () {
-    const shifts = yield* ShiftsService;
-    const data = yield* shifts.getShiftsWithComputations({
-      userId: ownerId,
-      startDate: options.startDate,
-      endDate: options.endDate,
-      limit: options.limit,
-      year: options.year,
-      month: options.month,
-      skipAuthCheck: true, // Access already verified via getShareSettings
-    });
-    return data;
-  }).pipe(Effect.provide(ShiftsLive), Effect.scoped);
-
-  try {
-    const result = await Effect.runPromise(program);
-
-    // Fetch owner's wage snapshots for client-side tax calculation
-    // This allows computing payoutTaxSettings for any month without additional API calls
-    let wageSnapshots: WageSnapshot[] = [];
-    if (showEarnings) {
-      const supabase = await createSupabaseServerClient();
-      const { data: snapshots } = await supabase
-        .from("wage_snapshots")
-        .select("*")
-        .eq("user_id", ownerId)
-        .is("deleted_at", null) // Exclude soft-deleted snapshots
-        .order("from_date", { ascending: false, nullsFirst: false });
-      wageSnapshots = (snapshots ?? []) as WageSnapshot[];
-    }
-
-    // SECURITY: If showEarnings is false, strip all earnings data server-side
-    // This is the security enforcement point - data is filtered before reaching the client
-    if (!showEarnings) {
-      return {
-        shifts: result.shifts.map(stripEarningsFromShift),
-        defaultView: result.defaultView,
-        settings: {
-          ...result.settings,
-          // Optionally hide wage-related settings too
-        },
-        aggregates: {
-          totalHours: result.aggregates.totalHours,
-          totalEarnings: null, // Hide total earnings
-        },
-        showEarnings: false,
-        payoutTaxSettings: null, // Hide tax settings when earnings hidden
-        wageSnapshots: [], // Hide snapshots when earnings hidden
-      };
-    }
-
-    return {
-      shifts: [...result.shifts],
-      defaultView: result.defaultView,
-      settings: result.settings,
-      aggregates: result.aggregates,
-      showEarnings: true,
-      payoutTaxSettings: result.payoutTaxSettings,
-      wageSnapshots,
-    };
-  } catch (error: any) {
-    logger.error("Failed to fetch shared user shifts:", error);
-    return {
-      shifts: [],
-      defaultView: "calendar",
-      settings: {},
-      aggregates: { totalHours: 0, totalEarnings: null },
-      showEarnings: false,
-      payoutTaxSettings: null,
-      wageSnapshots: [],
-    };
-  }
+  return getSharedUserShiftsWithViewerId(viewerId, ownerId, options);
 }
 
 /**
@@ -432,15 +391,7 @@ export const getSharedUserShifts = cache(
   async (
     ownerId: string,
     options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
-  ): Promise<{
-    shifts: ShiftWithComputations[];
-    defaultView: string;
-    settings: UserSettings;
-    aggregates: SharedShiftsAggregates;
-    showEarnings: boolean;
-    payoutTaxSettings: PayoutTaxSettings;
-    wageSnapshots: WageSnapshot[];
-  }> => {
+  ): Promise<SharedUserShiftsResult> => {
     const { user } = await verifySession();
 
     return getSharedUserShiftsInternal(user.id, ownerId, options);
@@ -461,15 +412,7 @@ export async function getSharedUserShiftsWithViewerId(
   viewerId: string,
   ownerId: string,
   options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
-): Promise<{
-  shifts: ShiftWithComputations[];
-  defaultView: string;
-  settings: UserSettings;
-  aggregates: SharedShiftsAggregates;
-  showEarnings: boolean;
-  payoutTaxSettings: PayoutTaxSettings;
-  wageSnapshots: WageSnapshot[];
-}> {
+): Promise<SharedUserShiftsResult> {
   const { createClient } = await import("@supabase/supabase-js");
   const { computeShift, PRESET_SUPPLEMENT_RULES } = await import("@/lib/payroll");
   const { generateVirtualShiftsForMonth } = await import("@/lib/recurring/utils");
@@ -505,6 +448,7 @@ export async function getSharedUserShiftsWithViewerId(
       shifts: [],
       defaultView: "calendar",
       settings: {},
+      jobs: [],
       aggregates: { totalHours: 0, totalEarnings: null },
       showEarnings: false,
       payoutTaxSettings: null,
@@ -531,6 +475,7 @@ export async function getSharedUserShiftsWithViewerId(
         shifts: [],
         defaultView: "calendar",
         settings: {},
+        jobs: [],
         aggregates: { totalHours: 0, totalEarnings: null },
         showEarnings: false,
         payoutTaxSettings: null,
@@ -543,8 +488,8 @@ export async function getSharedUserShiftsWithViewerId(
     // Step 2: Calculate date range
     const { startDate, endDate, limit = 100, year, month } = options;
 
-    // Step 3: Fetch user settings, shifts, recurring shifts, and snapshots in parallel
-    const [settingsResult, shiftsResult, recurringResult, snapshotsResult] = await Promise.all([
+    // Step 3: Fetch user settings, shifts, recurring shifts, jobs, and snapshots in parallel
+    const [settingsResult, shiftsResult, recurringResult, jobsResult, snapshotsResult] = await Promise.all([
       adminClient
         .from("user_settings")
         .select("*")
@@ -565,6 +510,12 @@ export async function getSharedUserShiftsWithViewerId(
         .eq("user_id", ownerId)
         .is("deleted_at", null),
       adminClient
+        .from("jobs")
+        .select("*")
+        .eq("user_id", ownerId)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true }),
+      adminClient
         .from("wage_snapshots")
         .select("*")
         .eq("user_id", ownerId)
@@ -575,16 +526,22 @@ export async function getSharedUserShiftsWithViewerId(
     const userSettings = settingsResult.data ?? {};
     const shifts = (shiftsResult.data ?? []) as ShiftRow[];
     const recurringShifts = recurringResult.data ?? [];
+    const allJobs = (jobsResult.data ?? []) as Job[];
+    const jobs = allJobs.filter((job) => job.deleted_at == null);
     const snapshots = (snapshotsResult.data ?? []) as WageSnapshot[];
+    const snapshotsByJob = buildSnapshotBuckets(snapshots);
 
-    // Step 4: Build snapshot map for date lookup
-    const baselineSnapshot = snapshots.find((s) => s.from_date === null) ?? null;
-    const getSnapshotForDate = (date: string): WageSnapshot | null => {
-      const applicableSnapshot = snapshots.find(
-        (s) => s.from_date !== null && s.from_date <= date
-      );
-      return applicableSnapshot || baselineSnapshot || null;
-    };
+    const jobsById = new Map(allJobs.map((job) => [job.id, job] as const));
+    const defaultJob =
+      jobs.find((job) => job.is_default && job.archived_at == null) ??
+      jobs.find((job) => job.is_default) ??
+      jobs[0] ??
+      null;
+    const defaultJobId = defaultJob?.id ?? null;
+
+    const fallbackPayrollDay = userSettings.payroll_day ?? 1;
+    const payrollDayForJob = (targetJobId?: string | null): number =>
+      jobsById.get(targetJobId ?? "")?.payroll_day ?? defaultJob?.payroll_day ?? fallbackPayrollDay;
 
     // Step 5: Generate virtual shifts from recurring patterns
     type VirtualShift = { date: string; weekday: number };
@@ -635,24 +592,31 @@ export async function getSharedUserShiftsWithViewerId(
     }
 
     // Step 6: Compute payroll for all shifts
-    const payrollDay = userSettings.payroll_day ?? 1;
-    const getPayoutDateForShift = (shiftDate: string): string => {
+    const getPayoutDateForShift = (shiftDate: string, jobId?: string | null): string => {
       const [y, m] = shiftDate.split("-").map(Number);
-      return calculatePayoutDate(y, m, payrollDay);
+      return calculatePayoutDate(y, m, payrollDayForJob(jobId));
     };
 
     const computedShifts: ShiftWithComputations[] = shifts.map((shift) => {
-      const snapshot = getSnapshotForDate(shift.shift_date);
-      const payoutDate = getPayoutDateForShift(shift.shift_date);
-      const taxSnapshot = getSnapshotForDate(payoutDate);
+      const shiftJobId = shift.job_id ?? defaultJobId;
+      const snapshot = resolveSnapshotForDate(snapshotsByJob, snapshots, shift.shift_date, shiftJobId);
+      const payoutDate = getPayoutDateForShift(shift.shift_date, shiftJobId);
+      const taxSnapshot = resolveSnapshotForDate(snapshotsByJob, snapshots, payoutDate, shiftJobId);
       const supplementRulesSnapshot =
         shift.supplement_rules_snapshot ??
         (snapshot?.supplements ? snapshot.supplements : null);
 
       return {
         ...shift,
+        job_id: shiftJobId,
         supplement_rules_snapshot: supplementRulesSnapshot,
-        computed: computeShift(shift, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
+        computed: computeShift(
+          shift,
+          userSettings,
+          PRESET_SUPPLEMENT_RULES,
+          snapshot,
+          shiftJobId ? jobsById.get(shiftJobId) ?? null : null
+        ),
         tax_enabled: taxSnapshot?.tax_enabled ?? false,
         tax_percentage: taxSnapshot?.tax_percentage ?? 0,
       };
@@ -661,17 +625,29 @@ export async function getSharedUserShiftsWithViewerId(
     // Step 7: Compute recurring virtual shifts
     const recurringVirtualShifts: ShiftWithComputations[] = [];
     for (const recurring of recurringShifts) {
+      const recurringJobId = recurring.job_id ?? defaultJobId;
       const cachedVirtuals = virtualShiftsByRecurring.get(recurring.id) ?? [];
 
       for (const virtualShift of cachedVirtuals) {
-        const snapshot = getSnapshotForDate(virtualShift.date);
-        const payoutDate = getPayoutDateForShift(virtualShift.date);
-        const taxSnapshot = getSnapshotForDate(payoutDate);
+        const snapshot = resolveSnapshotForDate(
+          snapshotsByJob,
+          snapshots,
+          virtualShift.date,
+          recurringJobId
+        );
+        const payoutDate = getPayoutDateForShift(virtualShift.date, recurringJobId);
+        const taxSnapshot = resolveSnapshotForDate(
+          snapshotsByJob,
+          snapshots,
+          payoutDate,
+          recurringJobId
+        );
         const customSupplements = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
 
         const shiftRow: ShiftRow = {
           id: `virtual-${recurring.id}-${virtualShift.date}`,
           user_id: ownerId,
+          job_id: recurringJobId,
           shift_date: virtualShift.date,
           start_time: cleanTime(recurring.start_time),
           end_time: cleanTime(recurring.end_time),
@@ -683,7 +659,13 @@ export async function getSharedUserShiftsWithViewerId(
         recurringVirtualShifts.push({
           ...shiftRow,
           supplement_rules_snapshot: snapshot?.supplements ?? null,
-          computed: computeShift(shiftRow, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
+          computed: computeShift(
+            shiftRow,
+            userSettings,
+            PRESET_SUPPLEMENT_RULES,
+            snapshot,
+            recurringJobId ? jobsById.get(recurringJobId) ?? null : null
+          ),
           tax_enabled: taxSnapshot?.tax_enabled ?? false,
           tax_percentage: taxSnapshot?.tax_percentage ?? 0,
         });
@@ -707,8 +689,14 @@ export async function getSharedUserShiftsWithViewerId(
     // Step 10: Get payout tax settings for the requested month
     let payoutTaxSettings: PayoutTaxSettings = null;
     if (year && month) {
-      const payoutDate = calculatePayoutDate(year, month, payrollDay);
-      const payoutSnapshot = getSnapshotForDate(payoutDate);
+      const summaryJobId = defaultJobId;
+      const payoutDate = calculatePayoutDate(year, month, payrollDayForJob(summaryJobId));
+      const payoutSnapshot = resolveSnapshotForDate(
+        snapshotsByJob,
+        snapshots,
+        payoutDate,
+        summaryJobId
+      );
       if (payoutSnapshot) {
         payoutTaxSettings = {
           enabled: payoutSnapshot.tax_enabled ?? false,
@@ -723,6 +711,7 @@ export async function getSharedUserShiftsWithViewerId(
         shifts: allShifts.map(stripEarningsFromShift),
         defaultView: userSettings.default_shifts_view ?? "calendar",
         settings: userSettings,
+        jobs,
         aggregates: { totalHours: aggregates.totalHours, totalEarnings: null },
         showEarnings: false,
         payoutTaxSettings: null,
@@ -734,6 +723,7 @@ export async function getSharedUserShiftsWithViewerId(
       shifts: allShifts,
       defaultView: userSettings.default_shifts_view ?? "calendar",
       settings: userSettings,
+      jobs,
       aggregates,
       showEarnings: true,
       payoutTaxSettings,
@@ -745,6 +735,7 @@ export async function getSharedUserShiftsWithViewerId(
       shifts: [],
       defaultView: "calendar",
       settings: {},
+      jobs: [],
       aggregates: { totalHours: 0, totalEarnings: null },
       showEarnings: false,
       payoutTaxSettings: null,

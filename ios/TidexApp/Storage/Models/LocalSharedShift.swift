@@ -25,6 +25,9 @@ final class LocalSharedShift {
   /// User viewing the shared shift (current user)
   var viewerId: String
 
+  /// Job ID for multi-job context (optional for legacy cached rows)
+  var jobId: String?
+
   // MARK: - Shift Data
 
   /// Date of the shift
@@ -120,6 +123,7 @@ final class LocalSharedShift {
     shiftId: String,
     ownerId: String,
     viewerId: String,
+    jobId: String? = nil,
     shiftDate: Date,
     startTime: String,
     endTime: String,
@@ -139,6 +143,7 @@ final class LocalSharedShift {
     self.shiftId = shiftId
     self.ownerId = ownerId
     self.viewerId = viewerId
+    self.jobId = jobId
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
@@ -179,6 +184,7 @@ final class LocalSharedShift {
       shiftId: apiShift.id,
       ownerId: ownerId,
       viewerId: viewerId,
+      jobId: apiShift.job_id,
       shiftDate: shiftDate,
       startTime: apiShift.start_time,
       endTime: apiShift.end_time,
@@ -204,6 +210,7 @@ extension LocalSharedShift {
     let shiftRow = ShiftRow(
       id: shiftId,
       user_id: ownerId,
+      job_id: jobId,
       shift_date: shiftDateString,
       start_time: startTime,
       end_time: endTime,
@@ -520,6 +527,9 @@ final class LocalShiftPreview {
     return SharedShiftData(
       id: shiftId,
       user_id: sharerId,
+      job_id: nil,
+      job_name: nil,
+      job_color: nil,
       shift_date: shiftDate,
       start_time: startTime,
       end_time: endTime,

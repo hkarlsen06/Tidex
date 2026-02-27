@@ -187,7 +187,6 @@ AS $function$
         )
         FROM public.jobs j
         WHERE j.user_id = a.sharer_id
-          AND j.deleted_at IS NULL
       ),
       '[]'::jsonb
     ) AS jobs

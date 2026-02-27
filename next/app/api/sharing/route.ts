@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   try {
     // getSharedUserShiftsWithViewerId verifies share access internally
     // Pass year and month to get correct payoutTaxSettings for this month
-    const { shifts, settings, payoutTaxSettings } = await getSharedUserShiftsWithViewerId(
+    const { shifts, settings, jobs, payoutTaxSettings } = await getSharedUserShiftsWithViewerId(
       viewerId,
       ownerId,
       {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json(
-      { shifts, settings, payoutTaxSettings },
+      { shifts, settings, jobs, payoutTaxSettings },
       {
         headers: {
           // No caching - shifts can change anytime (new shifts trigger notifications)

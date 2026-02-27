@@ -6,6 +6,7 @@ import Foundation
 struct SharedShiftsResponse: Codable {
   let shifts: [SharedShiftData]
   let settings: SharedUserSettings
+  let jobs: [SharedJob]
   let payoutTaxSettings: SharedPayoutTaxSettings?
 }
 
@@ -13,6 +14,9 @@ struct SharedShiftsResponse: Codable {
 struct SharedShiftData: Codable, Identifiable, Equatable {
   let id: String
   let user_id: String
+  let job_id: String?
+  let job_name: String?
+  let job_color: String?
   let shift_date: String
   let start_time: String
   let end_time: String
@@ -56,6 +60,19 @@ struct SharedPayoutTaxSettings: Codable, Equatable {
   let percentage: Double
 }
 
+/// Shared job metadata from sharing payload
+struct SharedJob: Codable, Identifiable, Equatable {
+  let id: String
+  let user_id: String
+  let name: String
+  let color: String?
+  let is_default: Bool?
+  let sort_order: Int?
+  let payroll_day: Int?
+  let half_tax_month: Int?
+  let monthly_goal: Double?
+}
+
 // MARK: - SharedShiftData to ShiftWithComputations Conversion
 
 extension SharedShiftData {
@@ -64,6 +81,7 @@ extension SharedShiftData {
     let shiftRow = ShiftRow(
       id: id,
       user_id: user_id,
+      job_id: job_id,
       shift_date: shift_date,
       start_time: start_time,
       end_time: end_time,

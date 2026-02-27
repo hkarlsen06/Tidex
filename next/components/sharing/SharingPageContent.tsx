@@ -18,6 +18,7 @@ import type {
   UserSettings,
   SupplementRule,
   WageSnapshot,
+  Job,
 } from "@/lib/payroll";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
 
@@ -43,6 +44,8 @@ type SharingPageContentProps = {
   presetRules: SupplementRule[];
   /** Whether the owner allows this viewer to see earnings data */
   showEarnings: boolean;
+  /** Owner jobs used to render job badges/context in shared shifts */
+  jobs: Job[];
   /** Payout month tax settings for calculating after-tax monthly totals */
   payoutTaxSettings?: PayoutTaxSettings;
   /** Owner's wage snapshots for computing payoutTaxSettings per month */
@@ -74,6 +77,7 @@ export function SharingPageContent({
   sharedSettings,
   presetRules,
   showEarnings,
+  jobs,
   payoutTaxSettings,
   wageSnapshots,
   highlightDates,
@@ -108,6 +112,7 @@ export function SharingPageContent({
         defaultView="calendar"
         userSettings={sharedSettings}
         presetRules={presetRules}
+        jobs={jobs}
         readOnly={true}
         sharedOwnerId={selectedOwnerId}
         ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}

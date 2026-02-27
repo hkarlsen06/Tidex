@@ -155,6 +155,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
         sharedSettings={sharedData.settings ?? {}}
         presetRules={PRESET_RULES}
         showEarnings={sharedData.showEarnings}
+        jobs={sharedData.jobs}
         payoutTaxSettings={sharedData.payoutTaxSettings}
         wageSnapshots={sharedData.wageSnapshots}
         highlightDates={highlightDates}
