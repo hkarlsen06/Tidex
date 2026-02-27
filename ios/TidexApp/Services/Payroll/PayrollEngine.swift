@@ -254,6 +254,11 @@ struct PayrollEngine {
       return scoped
     }
 
+    if let defaultJobId, let defaultScoped = snapshotsByJobId[defaultJobId], !defaultScoped.isEmpty
+    {
+      return defaultScoped
+    }
+
     return legacyNilJobSnapshots.isEmpty ? allSnapshots : legacyNilJobSnapshots
   }
 

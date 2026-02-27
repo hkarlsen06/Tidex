@@ -7,6 +7,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsL
 struct SharedShiftsListView: View {
   let sharer: SharedUser
   let shifts: [ShiftWithComputations]
+  let jobs: [SharedJob]
   let year: Int
   let month: Int
   let phase: MonthTransitionPhase?
@@ -39,6 +40,14 @@ struct SharedShiftsListView: View {
   @State private var showScreenshotBubble = false
   @State private var showNotifiedIcon = false
   @State private var bellShakeTrigger = false
+
+  private var jobsById: [String: SharedJob] {
+    Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+  }
+
+  private var showJobIndicator: Bool {
+    jobs.count > 1
+  }
 
   private var isIPhone: Bool {
     UIDevice.current.userInterfaceIdiom == .phone
@@ -173,9 +182,13 @@ struct SharedShiftsListView: View {
         ForEach(weekGroups, id: \.weekKey) { weekGroup in
           Section {
             ForEach(weekGroup.shifts) { shift in
+              let shiftJob = shift.shift.job_id.flatMap { jobsById[$0] }
               ShiftRowCard(
                 shift: shift,
                 isToday: shift.shiftDate == todayISO(),
+                showJobIndicator: showJobIndicator,
+                jobName: shiftJob?.name,
+                jobColorHex: shiftJob?.color,
                 onTap: { selectedShift = shift }
               )
               .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
@@ -323,6 +336,7 @@ private struct BellShake {
       blocked: false
     ),
     shifts: [],
+    jobs: [],
     year: 2025,
     month: 1,
     phase: nil,

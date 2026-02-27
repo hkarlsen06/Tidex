@@ -225,6 +225,7 @@ final class SharingService: ObservableObject {
           month: month,
           settings: payloadRow.settings,
           snapshots: payloadRow.snapshots,
+          jobs: payloadRow.jobs,
           mode: mode
         )
         .map { SharedPayoutTaxSettings(enabled: $0.enabled, percentage: $0.percentage) }
@@ -237,6 +238,19 @@ final class SharingService: ObservableObject {
             monthly_goal: payloadRow.settings.monthlyGoal,
             monthly_goals_by_month: payloadRow.settings.monthlyGoalsByMonth
           ),
+          jobs: payloadRow.jobs.filter { $0.deletedAt == nil }.map {
+            SharedJob(
+              id: $0.id,
+              user_id: $0.userId,
+              name: $0.name,
+              color: $0.color,
+              is_default: $0.isDefault,
+              sort_order: $0.sortOrder,
+              payroll_day: $0.payrollDay,
+              half_tax_month: $0.halfTaxMonth,
+              monthly_goal: $0.monthlyGoal
+            )
+          },
           payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil
         )
 
@@ -440,6 +454,9 @@ final class SharingService: ObservableObject {
     SharedShiftData(
       id: shift.id,
       user_id: shift.userId,
+      job_id: shift.jobId,
+      job_name: shift.jobName,
+      job_color: shift.jobColor,
       shift_date: shift.shiftDate,
       start_time: shift.startTime,
       end_time: shift.endTime,

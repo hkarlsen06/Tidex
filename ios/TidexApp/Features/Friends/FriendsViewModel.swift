@@ -47,6 +47,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Shifts from the selected sharer for the current month
   @Published private(set) var sharedShifts: [ShiftWithComputations] = []
 
+  /// Job metadata for currently selected sharer
+  @Published private(set) var sharedJobs: [SharedJob] = []
+
   /// Whether sharers are being loaded
   @Published private(set) var isLoadingSharers = false
 
@@ -437,6 +440,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   func selectSharer(_ sharer: SharedUser) {
     selectedSharer = sharer
     sharedShifts = []
+    sharedJobs = []
     startSelectedSharerLoadTask()
   }
 
@@ -447,6 +451,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     inFlightRequestKey = nil
     selectedSharer = nil
     sharedShifts = []
+    sharedJobs = []
     userShiftsForMonth = []
     userEarningsByDate = [:]
     lastCacheTime = nil
@@ -536,6 +541,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         // ATOMIC UPDATE: Set shifts and committed state together
         // This ensures the calendar structure and data update in the same render pass
         sharedShifts = freshShifts
+        sharedJobs = response.jobs
         committedYear = year
         committedMonth = month
         lastCacheTime = Date()

@@ -225,11 +225,11 @@ private struct SteppingCountUpText: View {
   @State private var currentValue: Double
   @State private var animationTask: Task<Void, Never>?
 
-  /// Formatter without thousands separator for cleaner rolling digit display
   private static let compactFormatter: NumberFormatter = {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
-    formatter.usesGroupingSeparator = false
+    formatter.usesGroupingSeparator = true
+    formatter.locale = Locale.appLocale
     formatter.maximumFractionDigits = 0
     formatter.minimumFractionDigits = 0
     return formatter
@@ -245,7 +245,6 @@ private struct SteppingCountUpText: View {
     _currentValue = State(initialValue: startValue)
   }
 
-  /// Format amount without thousands separator, with currency suffix
   private func formatCompact(_ amount: Double) -> String {
     let formatted = Self.compactFormatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
     return "\(formatted) \(currency)"
