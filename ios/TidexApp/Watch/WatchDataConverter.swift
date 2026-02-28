@@ -185,8 +185,12 @@ enum WatchDataConverter {
       }
     }
 
-    let regularDates = Set(regularShifts.map { $0.shift_date })
-    let dedupedVirtualShifts = virtualShifts.filter { !regularDates.contains($0.shift_date) }
+    // Deduplicate using (shift_date, job_id) pair so users with multiple jobs don't lose
+    // virtual shifts on a date where they have a real shift for a different job
+    let regularKeys = Set(regularShifts.map { "\($0.shift_date)-\($0.job_id ?? "")" })
+    let dedupedVirtualShifts = virtualShifts.filter {
+      !regularKeys.contains("\($0.shift_date)-\($0.job_id ?? "")")
+    }
 
     return regularShifts + dedupedVirtualShifts
   }

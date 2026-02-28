@@ -243,12 +243,7 @@ struct ShiftsCalendarView: View {
   }
 
   private var multiDeleteConfirmTitle: String {
-    let count = selectedDates.count
-    if Locale.appLocale.isNorwegian {
-      return "Slette \(count) vakter?"
-    } else {
-      return "Delete \(count) shifts?"
-    }
+    String(localized: .shiftsMultiDeleteConfirmTitle(selectedDates.count))
   }
 
   private var multiDeleteConfirmMessage: String {
@@ -691,7 +686,7 @@ struct ShiftsCalendarView: View {
       warningHaptic.prepare()
     }
     .confirmationDialog(
-      "Handlinger",
+      String(localized: .shiftsActionsMenuTitle),
       isPresented: $showSingleSelectionOverflowMenu,
       titleVisibility: .visible
     ) {
@@ -873,7 +868,7 @@ struct ShiftsCalendarView: View {
           )
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(String(localized: "Flere handlinger")))
+      .accessibilityLabel(Text(.shiftsMoreActionsLabel))
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))

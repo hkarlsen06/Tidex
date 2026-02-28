@@ -229,6 +229,7 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "get_wage_info",
   "manage_wage_snapshots",
   "calculate_earnings",
+  "list_workplaces",
 ];
 
 function normalizeToolName(toolName: string): ToolName | null {
