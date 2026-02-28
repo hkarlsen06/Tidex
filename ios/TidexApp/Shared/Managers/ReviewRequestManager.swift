@@ -20,13 +20,13 @@ final class ReviewRequestManager {
     let shiftCount = ShiftsRepository.shared.getAllShifts(for: userId).count
     guard shiftCount >= Self.minShiftCount else { return }
 
-    if let createdAt = SettingsRepository.shared.getSettings(for: userId)?.created_at,
+    guard let createdAt = SettingsRepository.shared.getSettings(for: userId)?.created_at,
       let createdDate = Self.parseISO8601Date(createdAt)
-    {
-      let accountAgeDays =
-        Calendar.current.dateComponents([.day], from: createdDate, to: Date()).day ?? 0
-      guard accountAgeDays >= Self.minAccountAgeDays else { return }
-    }
+    else { return }
+
+    let accountAgeDays =
+      Calendar.current.dateComponents([.day], from: createdDate, to: Date()).day ?? 0
+    guard accountAgeDays >= Self.minAccountAgeDays else { return }
 
     requestReview()
     UserDefaults.standard.set(Date(), forKey: reviewRequestedKey(for: userId))

@@ -253,7 +253,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
       if shouldEnd {
         print("[LiveActivity] Ending activity for shift \(shiftId): \(reason)")
-        Task {
+        Task { @MainActor in
           await activity.end(nil, dismissalPolicy: .immediate)
         }
       }
@@ -270,7 +270,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     for activity in matchingActivities {
       print("[LiveActivity] Force ending activity for shift \(shiftId) from user action")
-      Task {
+      Task { @MainActor in
         await activity.end(nil, dismissalPolicy: .immediate)
       }
     }
@@ -294,7 +294,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       }
     }
 
-    let isoDate = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: startedAt)
+    let isoDate = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(
+      from: startedAt)
     let timeFormatter = DateFormatter()
     timeFormatter.calendar = Calendar(identifier: .gregorian)
     timeFormatter.locale = Locale(identifier: "en_US_POSIX")
@@ -330,7 +331,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       )
       print("[LiveActivity] Started temporary clock activity \(shiftId)")
     } catch {
-      print("[LiveActivity] Failed to start temporary clock activity: \(error.localizedDescription)")
+      print(
+        "[LiveActivity] Failed to start temporary clock activity: \(error.localizedDescription)")
     }
   }
 

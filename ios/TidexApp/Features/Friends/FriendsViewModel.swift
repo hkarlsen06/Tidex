@@ -504,7 +504,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         sharedShifts = cachedShifts
         committedYear = year
         committedMonth = month
-        loadUserShifts(for: userId, year: year, month: month)
         lastCacheTime = sharedShiftsRepository.getLastCacheTime(
           ownerId: sharer.id,
           viewerId: userId,
@@ -522,7 +521,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         sharedShifts = []
         committedYear = year
         committedMonth = month
-        loadUserShifts(for: userId, year: year, month: month)
       } else {
         // Never fetched - DON'T clear shifts or update committed state
         // Keep showing previous month until new data is ready

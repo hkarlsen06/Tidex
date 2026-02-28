@@ -207,12 +207,13 @@ final class StoreKitManager: ObservableObject {
 
     switch result {
     case .success(let verification):
-      let jwsRepresentation = verification.jwsRepresentation
-
       guard case .verified(let transaction) = verification else {
         logger.error("Consumable transaction verification failed for \(product.id)")
         throw PurchaseError.verificationFailed
       }
+
+      // jwsRepresentation is on VerificationResult, not Transaction — access after verified guard
+      let jwsRepresentation = verification.jwsRepresentation
 
       await transaction.finish()
       logger.info("Consumable transaction finished: \(transaction.productID)")
