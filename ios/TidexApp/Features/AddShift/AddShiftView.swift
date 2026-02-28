@@ -181,6 +181,7 @@ struct AddShiftView: View {
         }
       }
       .iPadToolbarTransaction()
+      .userCurrency(viewModel.currency)
     }
     .task {
       await viewModel.loadData()

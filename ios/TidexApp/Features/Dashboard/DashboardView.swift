@@ -595,13 +595,6 @@ struct DashboardView: View {
         alignment: .top
       )
 
-      if showsMultiWorkplacePayroll {
-        payrollCardPageIndicator(
-          count: payrollVariants.count,
-          selectedIndex: safePayrollVariantIndex
-        )
-      }
-
       // Total Card (Displayed Month) - THE ANCHOR
       // Numbers animate smoothly when values change
       TotalCard(
@@ -672,12 +665,15 @@ struct DashboardView: View {
     payrollProgress: Double?
   ) -> some View {
     let showsWorkplaceVariants = variantCount > 1
+    let safeSelectedVariantIndex = max(0, min(selectedPayrollVariantIndex, variantCount - 1))
 
     let card = PayrollCard(
       payrollDate: selectedVariant.payoutDate,
       label: selectedVariant.title,
       labelColorHex: selectedVariant.colorHex,
       labelIsWorkplace: showsWorkplaceVariants,
+      pageIndicatorCount: variantCount,
+      pageIndicatorSelectedIndex: safeSelectedVariantIndex,
       gross: selectedVariant.gross,
       net: selectedVariant.net,
       tax: selectedVariant.tax,
@@ -723,19 +719,6 @@ struct DashboardView: View {
     } else {
       card
     }
-  }
-
-  @ViewBuilder
-  private func payrollCardPageIndicator(count: Int, selectedIndex: Int) -> some View {
-    HStack(spacing: Spacing.xxs) {
-      ForEach(0..<count, id: \.self) { index in
-        Circle()
-          .fill(index == selectedIndex ? Color.tidexBlue : Color.tidexTextMuted.opacity(0.35))
-          .frame(width: 6, height: 6)
-      }
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.top, Spacing.xxs)
   }
 
   // MARK: - Featured Shift Section

@@ -1,6 +1,14 @@
 import Combine
 import SwiftUI
 
+enum AddShiftSubmitBlocker: Hashable {
+  case noAvailableJob
+  case noSelectedJob
+  case noSingleDates
+  case noRecurringDays
+  case missingTimes
+}
+
 /// Coordinates state between AddShiftView/ViewModel and the tab bar
 /// Used to:
 /// - Communicate whether a shift can be submitted (for tab icon color)
@@ -24,6 +32,9 @@ final class AddShiftCoordinator: ObservableObject {
 
   /// Currently selected job for add-shift context.
   @Published private(set) var selectedJobId: String?
+
+  /// Reasons the Add action is currently blocked.
+  @Published private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
 
   /// Publisher for triggering the add action from outside (tab bar tap)
   let triggerAddAction = PassthroughSubject<Void, Never>()
@@ -49,6 +60,41 @@ final class AddShiftCoordinator: ObservableObject {
   func updateJobSelection(selectedJobId: String?, requiresJobSelection: Bool) {
     self.selectedJobId = selectedJobId
     self.requiresJobSelection = requiresJobSelection
+  }
+
+  /// Update blockers that explain why submit is unavailable.
+  func updateSubmitBlockers(
+    mode: AddShiftMode,
+    hasSelectedDates: Bool,
+    hasSelectedDays: Bool,
+    hasValidTimes: Bool,
+    hasAvailableJobs: Bool,
+    hasSelectedJob: Bool
+  ) {
+    var blockers: [AddShiftSubmitBlocker] = []
+
+    if !hasAvailableJobs {
+      blockers.append(.noAvailableJob)
+    } else if !hasSelectedJob {
+      blockers.append(.noSelectedJob)
+    }
+
+    switch mode {
+    case .single:
+      if !hasSelectedDates {
+        blockers.append(.noSingleDates)
+      }
+    case .recurring:
+      if !hasSelectedDays {
+        blockers.append(.noRecurringDays)
+      }
+    }
+
+    if !hasValidTimes {
+      blockers.append(.missingTimes)
+    }
+
+    submitBlockers = blockers
   }
 
   /// Trigger the add action (called from MainTabView when Add tab is tapped)

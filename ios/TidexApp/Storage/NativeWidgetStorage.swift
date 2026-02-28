@@ -297,9 +297,16 @@ enum NativeWidgetStorage {
     // Determine if tax is enabled (from first shift or default to false)
     let taxEnabled = computedCurrentShifts.first?.taxEnabled ?? false
 
-    // Count planned (future) shifts
-    let todayISO = now.toISODateString()
-    let plannedCount = computedCurrentShifts.filter { $0.shiftDate > todayISO }.count
+    // Count remaining (not-yet-completed) shifts.
+    // Using end-time logic ensures same-day upcoming shifts are not counted as done.
+    let plannedCount = computedCurrentShifts.filter { shift in
+      !Date.hasShiftEnded(
+        shiftDate: shift.shiftDate,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        referenceDate: now
+      )
+    }.count
 
     // Calculate total hours worked this month
     let totalHours = computedCurrentShifts.map(\.paidHours).reduce(0.0, +)

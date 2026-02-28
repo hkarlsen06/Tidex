@@ -931,6 +931,9 @@ final class AppCoordinator: ObservableObject {
     NativeWidgetStorage.clearWidgetStorage()
     NativeWidgetStorage.clearFriendWidgetStorage()
 
+    // Clear paired Watch payload so stale shifts are not shown after sign-out.
+    WatchConnectivityManager.shared.sendClearedData()
+
     // Clear shared keychain (widget/watch access token)
     AuthSessionManager.shared.clearSharedKeychain()
 

@@ -10,6 +10,16 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WatchConnecti
 final class WatchConnectivityManager: NSObject, ObservableObject {
   static let shared = WatchConnectivityManager()
 
+  private let shiftDataKey = "shiftData"
+  private let sentAtKey = "sentAt"
+  private let maxContextPayloadBytes = 65_000
+  private let maxReplyPayloadBytes = 45_000
+
+  private var transferInFlight = false
+  private var pendingUserIdForSync: String?
+  private var pendingClearPayload = false
+  private var pendingRetryTask: Task<Void, Never>?
+
   @Published private(set) var isWatchPaired = false
   @Published private(set) var isWatchAppInstalled = false
 
@@ -36,40 +46,15 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
   /// Send updated shift data to Watch
   /// Gracefully handles cases where Watch is not available
   func sendUpdatedData(userId: String) {
-    guard WCSession.isSupported() else {
-      return
+    Task { @MainActor in
+      _ = await sendUpdatedDataNow(userId: userId, reason: "scheduled_update")
     }
+  }
 
-    let session = WCSession.default
-
-    guard session.activationState == .activated else {
-      logger.info("WCSession not activated - skipping Watch update")
-      return
-    }
-
-    guard session.isPaired else {
-      logger.info("No paired Watch - skipping update")
-      return
-    }
-
-    guard session.isWatchAppInstalled else {
-      logger.info("Watch app not installed - skipping update")
-      return
-    }
-
-    // Build and send payload in background
-    Task {
-      do {
-        let payload = await WatchDataConverter.buildPayload(for: userId)
-        let data = try JSONEncoder().encode(payload)
-        let context: [String: Any] = ["shiftData": data]
-        try session.updateApplicationContext(context)
-        logger.info(
-          "Sent Watch update: user=\(payload.userShift != nil), friends=\(payload.friendShifts.count)"
-        )
-      } catch {
-        logger.error("Failed to send Watch update: \(error.localizedDescription)")
-      }
+  /// Send an explicit empty payload to clear stale Watch state (for sign-out/user switch).
+  func sendClearedData() {
+    Task { @MainActor in
+      _ = sendClearedDataNow(reason: "scheduled_clear")
     }
   }
 }
@@ -88,6 +73,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
       } else {
         logger.info("WCSession activated: \(activationState.rawValue)")
         self?.updatePairingState(session)
+        await self?.flushPendingTransferIfPossible()
       }
     }
   }
@@ -109,6 +95,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
   nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
     Task { @MainActor [weak self] in
       self?.updatePairingState(session)
+      await self?.flushPendingTransferIfPossible()
     }
   }
 
@@ -122,8 +109,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
       if message["action"] as? String == "refresh" {
         logger.info("Watch requested refresh")
 
+        guard let self else {
+          replyHandler(["success": false, "error": "Connectivity manager unavailable"])
+          return
+        }
+
         guard let userId = AppCoordinator.shared.userId else {
-          replyHandler(["error": "Not authenticated"])
+          replyHandler(["success": false, "error": "Not authenticated"])
           return
         }
 
@@ -140,13 +132,28 @@ extension WatchConnectivityManager: WCSessionDelegate {
         _ = await SyncCoordinator.shared.sync(reason: .watchRefresh, userId: userId)
 
         // Also fetch friend data so it's available for the Watch
-        await self?.refreshFriendData(userId: userId)
+        await self.refreshFriendData(userId: userId)
 
-        // Send updated data to Watch
-        self?.sendUpdatedData(userId: userId)
+        // Build payload once and send it through both channels:
+        // - reply payload (strict immediate acknowledgement)
+        // - applicationContext + transferUserInfo (background reliability)
+        let payload = await WatchDataConverter.buildPayload(for: userId)
+        guard let replyData = encodedPayloadData(payload, maxBytes: maxReplyPayloadBytes) else {
+          replyHandler(["success": false, "error": "Failed to encode refresh payload"])
+          return
+        }
 
-        // Reply with success and token info
-        var response: [String: Any] = ["success": true]
+        let transferSucceeded = self.sendPayloadToWatch(
+          payload, reason: "watch_refresh", maxPayloadBytes: maxContextPayloadBytes)
+
+        var response: [String: Any] = [
+          "success": true,
+          "shiftData": replyData,
+          "backgroundTransferQueued": transferSucceeded,
+        ]
+        if !transferSucceeded {
+          response["warning"] = "Failed to queue payload transfer"
+        }
         if !tokenInfo.isEmpty {
           response["token"] = tokenInfo
         }
@@ -198,5 +205,239 @@ extension WatchConnectivityManager: WCSessionDelegate {
     isWatchPaired = session.isPaired
     isWatchAppInstalled = session.isWatchAppInstalled
     logger.info("Watch state: paired=\(session.isPaired), installed=\(session.isWatchAppInstalled)")
+  }
+
+  private func isSessionReadyForTransfer(_ session: WCSession) -> Bool {
+    session.activationState == .activated && session.isPaired && session.isWatchAppInstalled
+  }
+
+  private func queueSync(for userId: String) {
+    pendingClearPayload = false
+    pendingUserIdForSync = userId
+    schedulePendingRetry()
+  }
+
+  @discardableResult
+  private func sendUpdatedDataNow(userId: String, reason: String) async -> Bool {
+    guard WCSession.isSupported() else {
+      return false
+    }
+
+    if transferInFlight {
+      queueSync(for: userId)
+      return false
+    }
+
+    let session = WCSession.default
+    guard isSessionReadyForTransfer(session) else {
+      queueSync(for: userId)
+      logger.info("Watch transfer not ready - queued update for retry")
+      return false
+    }
+
+    transferInFlight = true
+    defer { transferInFlight = false }
+
+    let payload = await WatchDataConverter.buildPayload(for: userId)
+    let didSend = sendPayloadToWatch(
+      payload, reason: reason, maxPayloadBytes: maxContextPayloadBytes)
+    if didSend {
+      if pendingUserIdForSync == userId {
+        pendingUserIdForSync = nil
+      }
+      pendingClearPayload = false
+      pendingRetryTask?.cancel()
+      pendingRetryTask = nil
+    } else {
+      queueSync(for: userId)
+    }
+    return didSend
+  }
+
+  @discardableResult
+  private func sendClearedDataNow(reason: String) -> Bool {
+    guard WCSession.isSupported() else {
+      return false
+    }
+
+    if transferInFlight {
+      pendingClearPayload = true
+      pendingUserIdForSync = nil
+      schedulePendingRetry()
+      return false
+    }
+
+    let session = WCSession.default
+    guard isSessionReadyForTransfer(session) else {
+      pendingClearPayload = true
+      pendingUserIdForSync = nil
+      logger.info("Watch transfer not ready - queued clear payload for retry")
+      schedulePendingRetry()
+      return false
+    }
+
+    transferInFlight = true
+    defer { transferInFlight = false }
+
+    let clearPayload = WatchDataPayload(
+      timestamp: Date(),
+      lastSyncTimestamp: nil,
+      userShift: nil,
+      friendShifts: [],
+      currencySymbol: "kr"
+    )
+
+    let didSend = sendPayloadToWatch(
+      clearPayload, reason: reason, maxPayloadBytes: maxContextPayloadBytes)
+    if didSend {
+      pendingClearPayload = false
+      pendingUserIdForSync = nil
+      pendingRetryTask?.cancel()
+      pendingRetryTask = nil
+    } else {
+      pendingClearPayload = true
+      pendingUserIdForSync = nil
+      schedulePendingRetry()
+    }
+    return didSend
+  }
+
+  @discardableResult
+  private func sendPayloadToWatch(
+    _ payload: WatchDataPayload,
+    reason: String,
+    maxPayloadBytes: Int
+  ) -> Bool {
+    let session = WCSession.default
+    guard isSessionReadyForTransfer(session) else {
+      return false
+    }
+
+    guard let data = encodedPayloadData(payload, maxBytes: maxPayloadBytes) else {
+      logger.error("Failed to encode Watch payload within size limit")
+      return false
+    }
+
+    let envelope: [String: Any] = [
+      shiftDataKey: data,
+      sentAtKey: Date().timeIntervalSince1970,
+    ]
+
+    do {
+      try session.updateApplicationContext(envelope)
+      session.transferUserInfo(envelope)
+      logger.info(
+        "Sent Watch update (\(reason, privacy: .public)): user=\(payload.userShift != nil), friends=\(payload.friendShifts.count), bytes=\(data.count)"
+      )
+      return true
+    } catch {
+      logger.error("Failed to send Watch payload (\(reason, privacy: .public)): \(error.localizedDescription)")
+      return false
+    }
+  }
+
+  private func encodedPayloadData(_ payload: WatchDataPayload, maxBytes: Int) -> Data? {
+    // Always send compact transport payload and rely on URL fallback for avatars on watch.
+    var candidate = compactPayload(payload)
+
+    guard var encoded = try? JSONEncoder().encode(candidate) else {
+      return nil
+    }
+
+    if encoded.count <= maxBytes {
+      return encoded
+    }
+
+    // If still too large (many friends), trim low-priority tail entries until it fits.
+    while !candidate.friendShifts.isEmpty && encoded.count > maxBytes {
+      candidate = WatchDataPayload(
+        timestamp: candidate.timestamp,
+        lastSyncTimestamp: candidate.lastSyncTimestamp,
+        userShift: candidate.userShift,
+        friendShifts: Array(candidate.friendShifts.dropLast()),
+        currencySymbol: candidate.currencySymbol
+      )
+
+      guard let trimmedData = try? JSONEncoder().encode(candidate) else {
+        continue
+      }
+      encoded = trimmedData
+    }
+
+    if encoded.count <= maxBytes {
+      logger.warning("Trimmed friend shifts to fit Watch payload budget (\(encoded.count) bytes)")
+      return encoded
+    }
+
+    // Final fallback: send only the current user shift.
+    let fallback = WatchDataPayload(
+      timestamp: candidate.timestamp,
+      lastSyncTimestamp: candidate.lastSyncTimestamp,
+      userShift: candidate.userShift,
+      friendShifts: [],
+      currencySymbol: candidate.currencySymbol
+    )
+
+    guard let fallbackData = try? JSONEncoder().encode(fallback),
+      fallbackData.count <= maxBytes
+    else {
+      return nil
+    }
+    logger.warning("Using fallback Watch payload (user shift only) to stay within size budget")
+    return fallbackData
+  }
+
+  private func compactPayload(_ payload: WatchDataPayload) -> WatchDataPayload {
+    WatchDataPayload(
+      timestamp: payload.timestamp,
+      lastSyncTimestamp: payload.lastSyncTimestamp,
+      userShift: stripAvatar(payload.userShift),
+      friendShifts: payload.friendShifts.map(stripAvatar),
+      currencySymbol: payload.currencySymbol
+    )
+  }
+
+  private func stripAvatar(_ shift: WatchShiftDTO?) -> WatchShiftDTO? {
+    guard let shift else { return nil }
+    return stripAvatar(shift)
+  }
+
+  private func stripAvatar(_ shift: WatchShiftDTO) -> WatchShiftDTO {
+    WatchShiftDTO(
+      id: shift.id,
+      personId: shift.personId,
+      personName: shift.personName,
+      personProfilePictureUrl: shift.personProfilePictureUrl,
+      personOauthAvatarUrl: shift.personOauthAvatarUrl,
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      status: shift.status,
+      avatarImageData: nil
+    )
+  }
+
+  private func flushPendingTransferIfPossible() async {
+    guard WCSession.isSupported() else { return }
+    let session = WCSession.default
+    guard isSessionReadyForTransfer(session) else { return }
+
+    if pendingClearPayload {
+      _ = sendClearedDataNow(reason: "retry_clear")
+      return
+    }
+
+    if let pendingUserIdForSync {
+      _ = await sendUpdatedDataNow(userId: pendingUserIdForSync, reason: "retry_update")
+    }
+  }
+
+  private func schedulePendingRetry() {
+    pendingRetryTask?.cancel()
+    pendingRetryTask = Task { @MainActor [weak self] in
+      try? await Task.sleep(for: .seconds(5))
+      guard let self, !Task.isCancelled else { return }
+      await self.flushPendingTransferIfPossible()
+    }
   }
 }
