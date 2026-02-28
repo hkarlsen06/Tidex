@@ -39,6 +39,10 @@ final class LocalUserSettings {
   /// Optional to support migration from older versions without this field
   var calendarAnimationStyle: String?
 
+  /// Whether dashboard clock in/out buttons are visible
+  /// Optional to support migration from older versions without this field
+  var showDashboardClockButtons: Bool?
+
   /// Month number (11=November, 12=December) for half tax deduction
   var halfTaxMonth: Int?
 
@@ -126,6 +130,11 @@ final class LocalUserSettings {
     calendarAnimationStyle ?? "horizontal"
   }
 
+  /// Effective dashboard clock button visibility
+  var effectiveShowDashboardClockButtons: Bool {
+    showDashboardClockButtons ?? true
+  }
+
   var monthlyGoalsByMonth: [String: Int] {
     get {
       guard let monthlyGoalsByMonthData, !monthlyGoalsByMonthData.isEmpty else {
@@ -162,6 +171,7 @@ final class LocalUserSettings {
     payrollDay: Int? = nil,
     theme: String = "system",
     calendarAnimationStyle: String? = "horizontal",
+    showDashboardClockButtons: Bool? = true,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
     lastActive: Date? = nil,
@@ -182,6 +192,7 @@ final class LocalUserSettings {
     self.payrollDay = payrollDay
     self.theme = theme
     self.calendarAnimationStyle = calendarAnimationStyle
+    self.showDashboardClockButtons = showDashboardClockButtons
     self.halfTaxMonth = halfTaxMonth
     self.currency = currency
     self.lastActive = lastActive
@@ -212,6 +223,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   let payrollDay: Int?
   let theme: String
   let calendarAnimationStyle: String
+  let showDashboardClockButtons: Bool
   let halfTaxMonth: Int?
   let currency: String?
   let lastActive: Date?
@@ -226,6 +238,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     case payrollDay
     case theme
     case calendarAnimationStyle
+    case showDashboardClockButtons
     case halfTaxMonth
     case currency
     case lastActive
@@ -249,6 +262,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
       payrollDay: row.payroll_day,
       theme: row.theme,
       calendarAnimationStyle: row.calendar_animation_style,
+      showDashboardClockButtons: row.effectiveShowDashboardClockButtons,
       halfTaxMonth: row.half_tax_month,
       currency: row.currency,
       lastActive: row.last_active.flatMap { dateFormatter.date(from: $0) },
@@ -299,6 +313,9 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     if calendarAnimationStyle != other.calendarAnimationStyle {
       changed.insert(.calendarAnimationStyle)
     }
+    if showDashboardClockButtons != other.showDashboardClockButtons {
+      changed.insert(.showDashboardClockButtons)
+    }
     if halfTaxMonth != other.halfTaxMonth {
       changed.insert(.halfTaxMonth)
     }
@@ -326,6 +343,8 @@ extension UserSettingsServerSnapshot {
     payrollDay = try container.decodeIfPresent(Int.self, forKey: .payrollDay)
     theme = try container.decode(String.self, forKey: .theme)
     calendarAnimationStyle = try container.decode(String.self, forKey: .calendarAnimationStyle)
+    showDashboardClockButtons =
+      try container.decodeIfPresent(Bool.self, forKey: .showDashboardClockButtons) ?? true
     halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
     currency = try container.decodeIfPresent(String.self, forKey: .currency)
     lastActive = try container.decodeIfPresent(Date.self, forKey: .lastActive)
@@ -353,6 +372,7 @@ extension LocalUserSettings {
       payroll_day: payrollDay,
       theme: theme,
       calendar_animation_style: effectiveCalendarAnimationStyle,
+      show_dashboard_clock_buttons: effectiveShowDashboardClockButtons,
       half_tax_month: halfTaxMonth,
       currency: currency
     )
@@ -387,6 +407,7 @@ extension LocalUserSettings {
       payrollDay: serverRow.payroll_day,
       theme: serverRow.theme,
       calendarAnimationStyle: serverRow.calendar_animation_style,
+      showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       lastActive: lastActive,

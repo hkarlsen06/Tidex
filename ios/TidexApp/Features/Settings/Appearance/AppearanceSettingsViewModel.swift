@@ -27,6 +27,15 @@ final class AppearanceSettingsViewModel: ObservableObject {
     }
   }
 
+  /// Whether dashboard clock buttons are visible
+  @Published var showDashboardClockButtons: Bool = true {
+    didSet {
+      if oldValue != showDashboardClockButtons && !isInitialLoad {
+        updateShowDashboardClockButtons()
+      }
+    }
+  }
+
   /// Loading state
   @Published var isLoading: Bool = false
 
@@ -89,6 +98,8 @@ final class AppearanceSettingsViewModel: ObservableObject {
       selectedCalendarAnimationStyle = .horizontal
     }
 
+    showDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+
     isInitialLoad = false
 
     isLoading = false
@@ -145,6 +156,32 @@ final class AppearanceSettingsViewModel: ObservableObject {
       } catch {
         logger.error("Failed to save calendar animation style: \(error.localizedDescription)")
         errorMessage = "Failed to save animation preference"
+      }
+    }
+  }
+
+  /// Update dashboard clock button visibility in repository
+  private func updateShowDashboardClockButtons() {
+    guard !isInitialLoad, let userId = userId else { return }
+
+    Task {
+      do {
+        _ = try await settingsRepository.updateSettings(
+          for: userId,
+          showDashboardClockButtons: showDashboardClockButtons
+        )
+
+        NotificationCenter.default.post(
+          name: .dashboardClockButtonsVisibilityDidChange,
+          object: nil,
+          userInfo: ["isVisible": self.showDashboardClockButtons]
+        )
+
+        logger.info(
+          "Updated dashboard clock button visibility to: \(self.showDashboardClockButtons)")
+      } catch {
+        logger.error("Failed to save dashboard clock button visibility: \(error.localizedDescription)")
+        errorMessage = "Failed to save dashboard preference"
       }
     }
   }

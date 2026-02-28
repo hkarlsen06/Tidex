@@ -1710,6 +1710,7 @@ final class SyncCoordinator: ObservableObject {
       payrollDay: serverRow.payroll_day,
       theme: serverRow.theme,
       calendarAnimationStyle: serverRow.calendar_animation_style,
+      showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       lastActive: lastActive,
@@ -3676,6 +3677,9 @@ final class SyncCoordinator: ObservableObject {
     if dirtyFields.contains(.calendarAnimationStyle) {
       updateData["calendar_animation_style"] = .string(settings.effectiveCalendarAnimationStyle)
     }
+    if dirtyFields.contains(.showDashboardClockButtons) {
+      updateData["show_dashboard_clock_buttons"] = .bool(settings.effectiveShowDashboardClockButtons)
+    }
     if dirtyFields.contains(.halfTaxMonth) {
       if let month = settings.halfTaxMonth {
         updateData["half_tax_month"] = .integer(month)
@@ -3765,6 +3769,7 @@ final class SyncCoordinator: ObservableObject {
       "user_id": .string(userId),
       "theme": .string(settings.theme),
       "calendar_animation_style": .string(settings.effectiveCalendarAnimationStyle),
+      "show_dashboard_clock_buttons": .bool(settings.effectiveShowDashboardClockButtons),
     ]
 
     let monthlyGoalsByMonthEncoded = try requireEncode(

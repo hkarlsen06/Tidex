@@ -125,6 +125,7 @@ final class SettingsRepository: ObservableObject {
   ///   - payrollDay: New payroll day (optional)
   ///   - theme: New theme (optional)
   ///   - calendarAnimationStyle: New calendar animation style (optional)
+  ///   - showDashboardClockButtons: Whether dashboard clock buttons are visible (optional)
   ///   - halfTaxMonth: New half tax month (optional)
   ///   - currency: New currency (optional)
   /// - Returns: Updated UserSettings if successful
@@ -137,6 +138,7 @@ final class SettingsRepository: ObservableObject {
     payrollDay: Int? = nil,
     theme: String? = nil,
     calendarAnimationStyle: String? = nil,
+    showDashboardClockButtons: Bool? = nil,
     halfTaxMonth: Int? = nil,
     currency: String? = nil
   ) async throws -> UserSettings? {
@@ -150,6 +152,7 @@ final class SettingsRepository: ObservableObject {
         payrollDay: payrollDay,
         theme: theme,
         calendarAnimationStyle: calendarAnimationStyle,
+        showDashboardClockButtons: showDashboardClockButtons,
         halfTaxMonth: halfTaxMonth,
         currency: currency
       )
@@ -206,6 +209,7 @@ final class SettingsRepository: ObservableObject {
       payrollDay: nil,
       theme: nil,
       calendarAnimationStyle: nil,
+      showDashboardClockButtons: nil,
       halfTaxMonth: nil,
       currency: nil
     )

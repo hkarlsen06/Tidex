@@ -738,6 +738,7 @@ actor LocalStoreActor {
   // MARK: - Local User Shift Write Operations
 
   func createUserShift(
+    id: String? = nil,
     userId: String,
     jobId: String? = nil,
     shiftDate: Date,
@@ -745,7 +746,14 @@ actor LocalStoreActor {
     endTime: String,
     customSupplements: CustomSupplementsData?
   ) throws -> ShiftRow {
-    let id = UUID().lowercasedString
+    let resolvedId = id ?? UUID().lowercasedString
+
+    // Idempotent create path: when a deterministic shift ID is provided and already exists,
+    // return the existing local row instead of creating a duplicate.
+    if let existing = try getUserShift(id: resolvedId), existing.userId == userId {
+      return existing.toShiftRow()
+    }
+
     let now = Date()
 
     let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
@@ -768,7 +776,7 @@ actor LocalStoreActor {
     let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localShift = LocalUserShift(
-      id: id,
+      id: resolvedId,
       userId: userId,
       jobId: jobId,
       shiftDate: shiftDate,
@@ -1598,6 +1606,8 @@ actor LocalStoreActor {
       existing.profilePictureUrl = settings.profilePictureUrl
       existing.payrollDay = settings.payrollDay
       existing.theme = settings.theme
+      existing.calendarAnimationStyle = settings.calendarAnimationStyle
+      existing.showDashboardClockButtons = settings.showDashboardClockButtons
       existing.halfTaxMonth = settings.halfTaxMonth
       existing.currency = settings.currency
       existing.lastActive = settings.lastActive
@@ -1647,6 +1657,7 @@ actor LocalStoreActor {
     currency: String? = nil,
     theme: String = "system",
     calendarAnimationStyle: String = "horizontal",
+    showDashboardClockButtons: Bool = true,
     monthlyGoal: Int? = nil,
     monthlyGoalsByMonth: [String: Int] = [:],
     defaultShiftsView: String? = nil,
@@ -1663,6 +1674,7 @@ actor LocalStoreActor {
       payrollDay: payrollDay,
       theme: theme,
       calendarAnimationStyle: calendarAnimationStyle,
+      showDashboardClockButtons: showDashboardClockButtons,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       lastActive: now,
@@ -1671,7 +1683,9 @@ actor LocalStoreActor {
     )
 
     // Track all non-nil fields as dirty so they get pushed to server
-    var dirtyFields: [UserSettingsField] = [.theme, .calendarAnimationStyle, .lastActive]
+    var dirtyFields: [UserSettingsField] = [
+      .theme, .calendarAnimationStyle, .showDashboardClockButtons, .lastActive,
+    ]
     if payrollDay != nil { dirtyFields.append(.payrollDay) }
     if currency != nil { dirtyFields.append(.currency) }
     if monthlyGoal != nil { dirtyFields.append(.monthlyGoal) }
@@ -1692,6 +1706,7 @@ actor LocalStoreActor {
       payrollDay: payrollDay,
       theme: theme,
       calendarAnimationStyle: calendarAnimationStyle,
+      showDashboardClockButtons: showDashboardClockButtons,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       lastActive: now,
@@ -1743,6 +1758,7 @@ actor LocalStoreActor {
     payrollDay: Int?,
     theme: String?,
     calendarAnimationStyle: String?,
+    showDashboardClockButtons: Bool? = nil,
     halfTaxMonth: Int?,
     currency: String?
   ) throws -> UserSettings {
@@ -1796,6 +1812,11 @@ actor LocalStoreActor {
     if let newStyle = calendarAnimationStyle {
       localSettings.calendarAnimationStyle = newStyle
       newDirtyFields.insert(.calendarAnimationStyle)
+    }
+
+    if let newShowDashboardClockButtons = showDashboardClockButtons {
+      localSettings.showDashboardClockButtons = newShowDashboardClockButtons
+      newDirtyFields.insert(.showDashboardClockButtons)
     }
 
     if let newHalfTax = halfTaxMonth, newHalfTax != localSettings.halfTaxMonth {
@@ -1915,6 +1936,8 @@ actor LocalStoreActor {
     localSettings.profilePictureUrl = serverSnapshot.profilePictureUrl
     localSettings.payrollDay = serverSnapshot.payrollDay
     localSettings.theme = serverSnapshot.theme
+    localSettings.calendarAnimationStyle = serverSnapshot.calendarAnimationStyle
+    localSettings.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
     localSettings.currency = serverSnapshot.currency
     localSettings.lastActive = serverSnapshot.lastActive
@@ -2471,6 +2494,7 @@ actor LocalStoreActor {
     existing.payrollDay = serverRow.payroll_day
     existing.theme = serverRow.theme
     existing.calendarAnimationStyle = serverRow.calendar_animation_style
+    existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
@@ -2540,6 +2564,9 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.calendarAnimationStyle) {
       existing.calendarAnimationStyle = serverRow.calendar_animation_style
+    }
+    if !localDirtyFields.contains(.showDashboardClockButtons) {
+      existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     }
     if !localDirtyFields.contains(.halfTaxMonth) {
       existing.halfTaxMonth = serverRow.half_tax_month
@@ -3099,6 +3126,8 @@ actor LocalStoreActor {
     existing.profilePictureUrl = serverRow.profile_picture_url
     existing.payrollDay = serverRow.payroll_day
     existing.theme = serverRow.theme
+    existing.calendarAnimationStyle = serverRow.calendar_animation_style
+    existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
@@ -3157,6 +3186,8 @@ actor LocalStoreActor {
     existing.profilePictureUrl = serverSnapshot.profilePictureUrl
     existing.payrollDay = serverSnapshot.payrollDay
     existing.theme = serverSnapshot.theme
+    existing.calendarAnimationStyle = serverSnapshot.calendarAnimationStyle
+    existing.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth
     existing.currency = serverSnapshot.currency
     existing.lastActive = serverSnapshot.lastActive

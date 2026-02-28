@@ -21,6 +21,9 @@ struct AppearanceSettingsView: View {
 
       // Calendar animation selection
       calendarAnimationSection
+
+      // Dashboard controls
+      dashboardControlsSection
     }
     .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
@@ -278,6 +281,28 @@ struct AppearanceSettingsView: View {
       return String(localized: .appearanceInfoLightActive)
     case .dark:
       return String(localized: .appearanceInfoDarkActive)
+    }
+  }
+
+  // MARK: - Dashboard Controls
+
+  private var dashboardControlsSection: some View {
+    Section {
+      Toggle(isOn: $viewModel.showDashboardClockButtons) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
+          Text(String(localized: .appearanceDashboardClockButtonsTitle))
+            .font(.body)
+            .foregroundColor(.tidexTextPrimary)
+
+          Text(String(localized: .appearanceDashboardClockButtonsDescription))
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+      }
+      .tint(.tidexBlue)
+      .listRowBackground(Color.tidexSurfacePrimary)
+    } header: {
+      Text(String(localized: .appearanceDashboardSectionTitle))
     }
   }
 }

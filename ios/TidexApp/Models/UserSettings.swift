@@ -27,6 +27,8 @@ struct UserSettings: Codable, Equatable {
   let theme: String
   /// Calendar animation style preference (NOT NULL in DB, defaults to "horizontal")
   let calendar_animation_style: String
+  /// Whether dashboard clock in/out buttons are visible
+  let show_dashboard_clock_buttons: Bool?
   /// Month number (11=November, 12=December) for half tax deduction
   let half_tax_month: Int?
   /// Currency code
@@ -40,6 +42,11 @@ struct UserSettings: Codable, Equatable {
   /// Effective default view
   var effectiveDefaultView: String {
     default_shifts_view ?? "calendar"
+  }
+
+  /// Effective dashboard clock button visibility
+  var effectiveShowDashboardClockButtons: Bool {
+    show_dashboard_clock_buttons ?? true
   }
 
   /// Resolve goal for a specific month with override-first fallback to baseline.
@@ -70,6 +77,7 @@ struct UserSettings: Codable, Equatable {
       payroll_day: 1,
       theme: "system",
       calendar_animation_style: "horizontal",
+      show_dashboard_clock_buttons: true,
       half_tax_month: nil,
       currency: nil
     )
