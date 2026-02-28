@@ -16,6 +16,8 @@ struct FeaturedShiftCard: View {
   var progress: Double?
   /// Remaining seconds in the final countdown window for active shifts.
   var finalCountdownSeconds: Int? = nil
+  /// When true, the end time is rendered as a skeleton placeholder.
+  var showTimeRangeEndSkeleton: Bool = false
   /// When true, shows a "+" prefix and uses blue color for the amount (used in celebration overlay)
   var showIncreaseHighlight: Bool = false
   /// Whether footer text/badge under the card should be shown.
@@ -31,6 +33,7 @@ struct FeaturedShiftCard: View {
     jobColorHex: String? = nil,
     progress: Double? = nil,
     finalCountdownSeconds: Int? = nil,
+    showTimeRangeEndSkeleton: Bool = false,
     showIncreaseHighlight: Bool = false,
     showFooter: Bool = true
   ) {
@@ -43,6 +46,7 @@ struct FeaturedShiftCard: View {
     self.jobColorHex = jobColorHex
     self.progress = progress
     self.finalCountdownSeconds = finalCountdownSeconds
+    self.showTimeRangeEndSkeleton = showTimeRangeEndSkeleton
     self.showIncreaseHighlight = showIncreaseHighlight
     self.showFooter = showFooter
   }
@@ -108,11 +112,15 @@ struct FeaturedShiftCard: View {
   }
 
   private var timeRangeText: String {
-    return ShiftCardFormatter.localizedTimeRange(
+    ShiftCardFormatter.localizedTimeRange(
       start: shift.startTime,
       end: shift.endTime,
       locale: Locale.appLocale
     )
+  }
+
+  private var startTimeText: String {
+    ShiftCardFormatter.localizedTime(shift.startTime, locale: Locale.appLocale)
   }
 
   // MARK: - Body
@@ -268,12 +276,21 @@ struct FeaturedShiftCard: View {
   private var timeRangeLabel: some View {
     HStack(spacing: Spacing.xxs) {
       if isRTL {
-        timeRangeTextLabel
+        timeRangeContent
         clockIcon
       } else {
         clockIcon
-        timeRangeTextLabel
+        timeRangeContent
       }
+    }
+  }
+
+  @ViewBuilder
+  private var timeRangeContent: some View {
+    if showTimeRangeEndSkeleton {
+      timeRangeSkeletonLabel
+    } else {
+      timeRangeTextLabel
     }
   }
 
@@ -284,6 +301,23 @@ struct FeaturedShiftCard: View {
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
       .environment(\.layoutDirection, .leftToRight)
+  }
+
+  private var timeRangeSkeletonLabel: some View {
+    HStack(spacing: Spacing.xxxs) {
+      Text(startTimeText)
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextPrimary)
+      Text("-")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextMuted)
+      RoundedRectangle(cornerRadius: CornerRadius.xxs)
+        .fill(Color.tidexTextMuted.opacity(0.22))
+        .frame(width: 38, height: 12)
+    }
+    .lineLimit(1)
+    .fixedSize(horizontal: true, vertical: false)
+    .environment(\.layoutDirection, .leftToRight)
   }
 
   private var clockIcon: some View {

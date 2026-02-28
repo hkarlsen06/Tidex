@@ -1,6 +1,6 @@
 # Feature TODO: Clock Flow, Payslip Analysis, Workplaces
 
-Last updated: 2026-02-26
+Last updated: 2026-02-28
 Owner: Product + iOS
 Status: Draft, validated against current code contracts
 
@@ -33,6 +33,21 @@ This document is intentionally implementation-aware for the current local-first 
 
 ## Feature 1: Clock in / Clock out flow
 
+### Plan update (2026-02-28): normal ongoing shift rule
+
+Accepted update: clock buttons now handle two distinct active sources:
+
+1. Temporary clock session exists (new feature flow).
+2. Persisted normal shift is currently ongoing (`now` between stored `start_time` and `end_time`).
+
+Updated behavior matrix:
+
+| State | `Clock in` | `Clock out` |
+|-------|------------|-------------|
+| No active shift | Enabled | Disabled |
+| Temporary clock session active | Disabled | Enabled, opens clock-out review sheet, then saves new shift |
+| Persisted normal shift ongoing | Disabled | Enabled, immediately ends that shift at `now` (no review sheet) |
+
 ### Product intent
 
 - Add two buttons under `TotalCard`: `Clock in` and `Clock out`.
@@ -62,12 +77,13 @@ This document is intentionally implementation-aware for the current local-first 
    - Live Activity starts if enabled
    - widget timeline updates
 4. User taps `Clock out`.
-5. App opens `Clock-out review sheet`:
+5. If active state is temporary, app opens `Clock-out review sheet`:
    - prefilled start and end
    - allow edit for accuracy
    - final `Save shift` action
 6. On save, app converts temporary record into normal persisted shift and triggers sync.
 7. Temporary active shift is cleared.
+8. If active state is persisted-normal-shift, app skips review and directly sets end time to `now` via existing `endShiftNow` path.
 
 ### Data and architecture TODO
 
@@ -79,11 +95,21 @@ This document is intentionally implementation-aware for the current local-first 
 - [ ] Keep temporary active shift out of `user_shifts` until commit (current schema/UI assumes `end_time` exists)
 - [ ] Commit through existing persisted path (`ShiftsRepository.createShift(...)` + normal sync)
 - [ ] Ensure only one active shift per user at a time
+- [ ] Add explicit active-state enum in `DashboardViewModel`:
+  - `.none`
+  - `.temporary(activeSession)`
+  - `.persisted(ongoingShift)`
+- [ ] Derive button enablement and action routing from active-state enum
+- [ ] Route `Clock out` by active state:
+  - `.temporary` -> clock-out review sheet flow
+  - `.persisted` -> `endShiftNow` immediate end flow
 - [ ] Disable `Clock in` when:
   - a temporary active shift already exists
   - another currently active persisted shift exists
 - [ ] Add crash-safe recovery on app launch
 - [ ] Add deep-link and tab state handling while active shift exists
+- [ ] Keep repository/API impact minimal:
+  - no new public API beyond previously planned idempotent create path with optional `shiftId`
 - [ ] If unknown-end active shifts are required across surfaces, first migrate shared model contracts:
   - `StoredShift`
   - `ShiftActivityAttributes`
@@ -103,7 +129,10 @@ This document is intentionally implementation-aware for the current local-first 
 ### Surface integration TODO
 
 - [ ] Dashboard featured shift card supports active temp shift
-- [ ] Live Activity supports unknown end time and elapsed timer (after shared-model migration)
+- [ ] Live Activity behavior split by active state:
+  - temporary: open-ended count-up activity
+  - persisted: keep current countdown-to-end behavior
+- [ ] When persisted ongoing shift is ended from `Clock out`, existing `endShiftNow` + Live Activity end path stays authoritative
 - [ ] Widget storage supports active temp shift with no end time (after app-group model migration)
 - [ ] `Shifts` tab can display temporary active shift state if needed
 - [ ] Notification scheduling behavior defined for active temporary shift
@@ -123,6 +152,10 @@ This document is intentionally implementation-aware for the current local-first 
 - [ ] Clock-out review allows corrections before save
 - [ ] Final saved shift appears in Shifts and payroll calculations
 - [ ] No duplicate shifts from repeated clock-out taps or retries
+- [ ] When persisted ongoing shift exists, `Clock in` is disabled
+- [ ] When persisted ongoing shift exists, tapping `Clock out` immediately ends that shift at current time
+- [ ] Temporary active session still uses review-sheet flow without regression
+- [ ] Persisted and temporary states never drive conflicting clock button actions
 
 ### Decisions confirmed (2026-02-24)
 
@@ -135,6 +168,14 @@ This document is intentionally implementation-aware for the current local-first 
 - `Clock in` is disabled while temporary active shift exists or another active shift exists.
 - Temporary shift is lost on logout.
 - No separate overlap flow at clock-in; gating is via active-shift button state.
+
+### Decisions confirmed (2026-02-28 update)
+
+- Clock action handling is state-routed with explicit precedence:
+  - temporary session state
+  - persisted ongoing shift state
+  - none
+- Persisted ongoing shift clock-out is immediate (no review sheet), using `endShiftNow`.
 
 ### Open questions
 

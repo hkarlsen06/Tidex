@@ -38,7 +38,11 @@ struct DashboardView: View {
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
+  @State private var temporaryClockReviewSession: TemporaryClockSession?
+  @State private var clockInJobOptions: [Job] = []
+  @State private var showClockInJobChooser = false
   @State private var selectedPayrollVariantIndex = 0
+  @State private var temporarySessionReferenceDate = Date()
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -51,6 +55,10 @@ struct DashboardView: View {
 
   private let payrollSectionMinHeight: CGFloat = 89
   private let featuredSectionMinHeight: CGFloat = 118
+  private let clockStateRefreshTicker = Timer.publish(every: 30, on: .main, in: .common)
+    .autoconnect()
+  private let temporarySessionTicker = Timer.publish(every: 1, on: .main, in: .common)
+    .autoconnect()
 
   var body: some View {
     NavigationStack {
@@ -150,6 +158,11 @@ struct DashboardView: View {
     .onAppear {
       // Reconfigure timers when returning to the dashboard after a disappear cycle.
       configureCountdown(with: viewModel.dashboardData)
+      Task {
+        await viewModel.refreshAppearanceSettingsFromLocal()
+        await viewModel.refreshClockState()
+        await viewModel.preloadClockSelectableJobs()
+      }
     }
     .onDisappear {
       countdownManager.stop()
@@ -158,6 +171,26 @@ struct DashboardView: View {
       // Reload dashboard when shifts change (e.g., after adding a shift)
       Task {
         await viewModel.reloadFromLocal()
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .dashboardClockButtonsVisibilityDidChange))
+    { notification in
+      if let isVisible = notification.userInfo?["isVisible"] as? Bool {
+        viewModel.applyDashboardClockButtonsVisibility(isVisible)
+      }
+    }
+    .onReceive(clockStateRefreshTicker) { _ in
+      Task {
+        await viewModel.refreshClockState()
+      }
+    }
+    .onReceive(temporarySessionTicker) { now in
+      guard case .temporary = viewModel.activeClockState else { return }
+      temporarySessionReferenceDate = now
+    }
+    .onChange(of: viewModel.activeClockState) { _, state in
+      if case .temporary = state {
+        temporarySessionReferenceDate = Date()
       }
     }
     .onChange(of: pushManager.shouldShowAlert) { _, shouldShow in
@@ -227,6 +260,42 @@ struct DashboardView: View {
       }
       .presentationDetents([.fraction(0.35), .medium])
       .presentationDragIndicator(.visible)
+    }
+    .sheet(item: $temporaryClockReviewSession) { session in
+      let clockJobs = viewModel.clockSelectableJobsSnapshot()
+      ClockOutReviewSheet(
+        session: session,
+        initialAvailableJobs: clockJobs,
+        loadJobs: {
+          await viewModel.clockSelectableJobs()
+        },
+        initialSelectedJobId: viewModel.preferredClockJobId(for: session),
+        onSave: { start, end, jobId in
+          try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
+        },
+        onDiscard: {
+          await viewModel.discardTemporaryClockSession()
+        }
+      )
+      .presentationDetents([.medium])
+      .presentationDragIndicator(.visible)
+    }
+    .sheet(isPresented: $showClockInJobChooser) {
+      DashboardClockJobChooserSheet(
+        initialJobs: clockInJobOptions,
+        loadJobs: {
+          await viewModel.clockSelectableJobs()
+        },
+        onSelect: { jobId in
+          showClockInJobChooser = false
+          Task {
+            await viewModel.clockIn(jobId: jobId)
+          }
+        },
+        onCancel: {
+          showClockInJobChooser = false
+        }
+      )
     }
     // Shift details sheet with full edit/delete capabilities
     .sheet(item: $selectedShift) { shift in
@@ -613,6 +682,10 @@ struct DashboardView: View {
         openMonthlyGoalEditor()
       }
 
+      if viewModel.shouldShowDashboardClockButtons {
+        clockButtonsSection()
+      }
+
       // Featured Shift Card - exact height on regular Dynamic Type to avoid
       // skeleton/content vertical recentering during the loading transition.
       if usesFixedCardHeights {
@@ -653,6 +726,103 @@ struct DashboardView: View {
       baselineGoal: baseline,
       initialGoal: initialGoal
     )
+  }
+
+  @ViewBuilder
+  private func clockButtonsSection() -> some View {
+    HStack(spacing: Spacing.sm) {
+      clockButton(
+        title: .dashboardClockIn,
+        systemImage: "play.fill",
+        isEnabled: viewModel.isClockInEnabled
+      ) {
+        guard viewModel.isClockInEnabled else { return }
+        impactHaptic.impactOccurred()
+        Task {
+          let cachedJobs = viewModel.clockSelectableJobsSnapshot()
+          if cachedJobs.count > 1 {
+            clockInJobOptions = cachedJobs
+            showClockInJobChooser = true
+            return
+          }
+          if cachedJobs.count == 1 {
+            await viewModel.clockIn(jobId: cachedJobs.first?.id)
+            return
+          }
+          clockInJobOptions = []
+          showClockInJobChooser = true
+        }
+      }
+
+      clockButton(
+        title: .dashboardClockOut,
+        systemImage: "stop.fill",
+        isEnabled: viewModel.isClockOutEnabled
+      ) {
+        guard viewModel.isClockOutEnabled else { return }
+        impactHaptic.impactOccurred()
+        Task {
+          let route = await viewModel.routeClockOut()
+          if case .temporaryReview(let session) = route {
+            await presentTemporaryClockReview(session)
+          }
+        }
+      }
+    }
+    .padding(.horizontal, Spacing.mlg)
+  }
+
+  private func clockButton(
+    title: LocalizedStringResource,
+    systemImage: String,
+    isEnabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Label {
+        Text(title)
+          .font(.tidexLabel)
+      } icon: {
+        Image(systemName: systemImage)
+          .font(.tidexCaption)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, Spacing.xs)
+      .foregroundColor(
+        isEnabled
+          ? .tidexTextPrimary
+          : .tidexTextMuted
+      )
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.card)
+          .fill(
+            isEnabled
+              ? Color.tidexSurfacePrimary
+              : Color.tidexSurfacePrimary.opacity(0.72)
+          )
+      )
+      .tidexCardShadow(cornerRadius: CornerRadius.card)
+    }
+    .buttonStyle(.plain)
+    .disabled(!isEnabled)
+  }
+
+  @ViewBuilder
+  private func clockButtonsSkeletonSection() -> some View {
+    HStack(spacing: Spacing.sm) {
+      RoundedRectangle(cornerRadius: CornerRadius.card)
+        .fill(Color.tidexSurfacePrimary)
+        .frame(height: 34)
+        .tidexCardShadow(cornerRadius: CornerRadius.card)
+        .shimmer(isActive: true)
+
+      RoundedRectangle(cornerRadius: CornerRadius.card)
+        .fill(Color.tidexSurfacePrimary)
+        .frame(height: 34)
+        .tidexCardShadow(cornerRadius: CornerRadius.card)
+        .shimmer(isActive: true)
+    }
+    .padding(.horizontal, Spacing.mlg)
   }
 
   @ViewBuilder
@@ -729,13 +899,45 @@ struct DashboardView: View {
     // Use a fixed height container so the layout doesn't shift
     // when switching between FeaturedShiftCard and EmptyShiftCard
     Group {
-      if let featuredShift = data.featuredShift {
+      if case .temporary(let session) = viewModel.activeClockState {
+        let temporaryShift = viewModel.temporaryFeaturedShift(
+          from: session,
+          at: temporarySessionReferenceDate
+        )
+        let shiftJob = viewModel.jobForTemporarySession(session)
+        FeaturedShiftCard(
+          shift: temporaryShift,
+          isToday: true,
+          isBestShift: false,
+          countdownText: temporarySessionCountdownText(
+            startedAt: session.startedAt,
+            now: temporarySessionReferenceDate
+          ),
+          showJobIndicator: viewModel.shouldShowJobIndicators,
+          jobName: shiftJob?.name,
+          jobColorHex: shiftJob?.color,
+          progress: 0,
+          finalCountdownSeconds: nil,
+          showTimeRangeEndSkeleton: true
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+          impactHaptic.impactOccurred()
+          Task {
+            await presentTemporaryClockReview(session)
+          }
+        }
+      } else if let featuredShift = data.featuredShift {
         // Only show progress bar for active shifts (matching Next.js behavior)
         let shiftProgress: Double? =
           countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
+        let displayedFeaturedShift: ShiftWithComputations =
+          countdownManager.isShiftActive
+          ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: Date())
+          : featuredShift
         let shiftJob = viewModel.jobForShift(featuredShift)
         FeaturedShiftCard(
-          shift: featuredShift,
+          shift: displayedFeaturedShift,
           isToday: data.isFeaturedShiftToday,
           isBestShift: data.featuredShiftIsBestShift,
           countdownText: countdownManager.shiftCountdownText,
@@ -761,6 +963,24 @@ struct DashboardView: View {
         })
       }
     }
+  }
+
+  private func temporarySessionCountdownText(startedAt: Date, now: Date) -> String {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = Date.localTimeZone
+    let alignedStart = calendar.dateInterval(of: .minute, for: startedAt)?.start ?? startedAt
+    return CountdownFormatter.formatRelativeCountdown(
+      referenceDate: alignedStart,
+      dayBoundaryReferenceDate: alignedStart,
+      now: now
+    )
+  }
+
+  private func presentTemporaryClockReview(_ session: TemporaryClockSession) async {
+    if viewModel.clockSelectableJobsSnapshot().isEmpty {
+      _ = await viewModel.clockSelectableJobs()
+    }
+    temporaryClockReviewSession = session
   }
 
   // MARK: - Loading Skeleton View
@@ -809,6 +1029,10 @@ struct DashboardView: View {
               monthlyGoal: nil,
               isLoading: true
             )
+
+            if viewModel.shouldShowDashboardClockButtons {
+              clockButtonsSkeletonSection()
+            }
 
             // Featured Shift Card skeleton
             if usesFixedCardHeights {
@@ -867,6 +1091,370 @@ struct DashboardView: View {
     .padding(.horizontal, Spacing.xxl)
   }
 
+}
+
+private struct ClockOutReviewSheet: View {
+  let loadJobs: () async -> [Job]
+  let onSave: (Date, Date, String?) async throws -> Void
+  let onDiscard: () async -> Void
+
+  @Environment(\.dismiss) private var dismiss
+  @State private var availableJobs: [Job]
+  @State private var startTime: Date?
+  @State private var endTime: Date?
+  @State private var selectedJobId: String?
+  @State private var focusedTimeField: TimeInputField?
+  @State private var showJobChooser = false
+  @State private var isSaving = false
+  @State private var isDiscarding = false
+  @State private var errorMessage: String?
+
+  init(
+    session: TemporaryClockSession,
+    initialAvailableJobs: [Job],
+    loadJobs: @escaping () async -> [Job],
+    initialSelectedJobId: String?,
+    onSave: @escaping (Date, Date, String?) async throws -> Void,
+    onDiscard: @escaping () async -> Void
+  ) {
+    self.loadJobs = loadJobs
+    self.onSave = onSave
+    self.onDiscard = onDiscard
+
+    let initialStart = session.startedAt
+    let initialEnd = max(Date(), initialStart.addingTimeInterval(60))
+    let fallbackJobId =
+      initialSelectedJobId
+      ?? initialAvailableJobs.first(where: { $0.is_default })?.id
+      ?? initialAvailableJobs.first?.id
+    _availableJobs = State(initialValue: initialAvailableJobs)
+    _startTime = State(initialValue: initialStart)
+    _endTime = State(initialValue: initialEnd)
+    _selectedJobId = State(initialValue: fallbackJobId)
+  }
+
+  private var selectedJob: Job? {
+    guard let selectedJobId else { return availableJobs.first }
+    return availableJobs.first(where: { $0.id == selectedJobId }) ?? availableJobs.first
+  }
+
+  private var resolvedEndTime: Date? {
+    guard let startTime, let endTime else { return nil }
+    guard endTime <= startTime else { return endTime }
+    return Calendar.current.date(byAdding: .day, value: 1, to: endTime) ?? endTime
+  }
+
+  private var isValidRange: Bool {
+    guard let startTime, let resolvedEndTime else { return false }
+    return resolvedEndTime > startTime
+  }
+
+  private var showsCrossMidnightHint: Bool {
+    guard let startTime, let resolvedEndTime else { return false }
+    return !Calendar.current.isDate(startTime, inSameDayAs: resolvedEndTime)
+  }
+
+  private var isWorking: Bool {
+    isSaving || isDiscarding
+  }
+
+  var body: some View {
+    NavigationStack {
+      VStack(alignment: .leading, spacing: Spacing.md) {
+        HStack {
+          Text(.shiftsDate)
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+          Spacer()
+          if let startTime {
+            Text(startTime, format: .dateTime.day().month().year())
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
+          } else {
+            Text("--")
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextMuted)
+          }
+        }
+        .padding(.horizontal, Spacing.md)
+
+        if availableJobs.count > 1 {
+          Button {
+            showJobChooser = true
+          } label: {
+            HStack(spacing: Spacing.sm) {
+              Text(String(localized: "settings.pay.choose_workplace.title"))
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextSecondary)
+
+              Spacer(minLength: Spacing.sm)
+
+              if let selectedJob {
+                WorkplaceNameText(
+                  name: selectedJob.name,
+                  colorHex: selectedJob.color,
+                  font: .tidexMonoCaption,
+                  fallbackBadgeColor: .tidexBlue,
+                  badgeHorizontalPadding: Spacing.xs,
+                  badgeVerticalPadding: 2
+                )
+                .lineLimit(1)
+                .truncationMode(.tail)
+              }
+
+              Image(systemName: "chevron.down")
+                .font(.tidexMicro)
+                .foregroundColor(.tidexTextMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(
+              RoundedRectangle(cornerRadius: CornerRadius.xxl)
+                .fill(Color.tidexSurfacePrimary)
+            )
+          }
+          .buttonStyle(.plain)
+        }
+
+        VStack(spacing: Spacing.md) {
+          TimeRangePicker(
+            startTime: $startTime,
+            endTime: $endTime,
+            focusedFieldBinding: $focusedTimeField
+          )
+        }
+        .padding(Spacing.md)
+        .background(
+          RoundedRectangle(cornerRadius: CornerRadius.xxl)
+            .fill(Color.tidexSurfacePrimary)
+        )
+
+        if showsCrossMidnightHint {
+          HStack(spacing: Spacing.xs) {
+            Image(systemName: "moon.fill")
+              .font(.tidexCaption)
+              .foregroundColor(.tidexBlue)
+            Text(.shiftsCrossMidnightInfo)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+          }
+          .padding(.horizontal, Spacing.md)
+        }
+
+        if let errorMessage {
+          Text(errorMessage)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexError)
+            .padding(.horizontal, Spacing.md)
+        }
+
+        Spacer()
+      }
+      .padding(.top, Spacing.md)
+      .background(Color.tidexBackground.ignoresSafeArea())
+      .navigationTitle(.dashboardClockOutReviewTitle)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: .commonCancel)) {
+            dismiss()
+          }
+          .disabled(isWorking)
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button(String(localized: .commonSave)) {
+            Task {
+              await save()
+            }
+          }
+          .disabled(isWorking || !isValidRange)
+        }
+      }
+      .safeAreaInset(edge: .bottom) {
+        Button(role: .destructive) {
+          Task {
+            await discard()
+          }
+        } label: {
+          Text(.dashboardClockOutDiscardShift)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexError)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.sm)
+            .background(
+              RoundedRectangle(cornerRadius: CornerRadius.card)
+                .fill(Color.tidexSurfacePrimary)
+            )
+            .tidexCardShadow(cornerRadius: CornerRadius.card)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.xs)
+        .background(Color.tidexBackground)
+        .disabled(isWorking)
+      }
+      .task {
+        await ensureJobsLoaded()
+      }
+      .sheet(isPresented: $showJobChooser) {
+        DashboardClockJobChooserSheet(
+          initialJobs: availableJobs,
+          onSelect: { jobId in
+            selectedJobId = jobId
+            showJobChooser = false
+          },
+          onCancel: {
+            showJobChooser = false
+          }
+        )
+      }
+    }
+  }
+
+  private func save() async {
+    guard !isSaving else { return }
+    guard isValidRange else { return }
+    guard let startTime, let resolvedEndTime else { return }
+
+    isSaving = true
+    errorMessage = nil
+
+    do {
+      try await onSave(startTime, resolvedEndTime, selectedJobId)
+      dismiss()
+    } catch {
+      errorMessage = ErrorTranslations.translate(error)
+    }
+
+    isSaving = false
+  }
+
+  private func discard() async {
+    guard !isWorking else { return }
+
+    isDiscarding = true
+    await onDiscard()
+    isDiscarding = false
+    dismiss()
+  }
+
+  private func ensureJobsLoaded() async {
+    guard availableJobs.isEmpty else { return }
+    let loadedJobs = await loadJobs()
+    guard !loadedJobs.isEmpty else { return }
+    availableJobs = loadedJobs
+    if selectedJobId == nil {
+      selectedJobId = loadedJobs.first(where: { $0.is_default })?.id ?? loadedJobs.first?.id
+    }
+  }
+}
+
+private struct DashboardClockJobChooserSheet: View {
+  let loadJobs: (() async -> [Job])?
+  let onSelect: (String) -> Void
+  let onCancel: () -> Void
+
+  @State private var jobs: [Job]
+  @State private var isLoading: Bool
+
+  init(
+    initialJobs: [Job],
+    loadJobs: (() async -> [Job])? = nil,
+    onSelect: @escaping (String) -> Void,
+    onCancel: @escaping () -> Void
+  ) {
+    self.loadJobs = loadJobs
+    self.onSelect = onSelect
+    self.onCancel = onCancel
+    _jobs = State(initialValue: initialJobs)
+    _isLoading = State(initialValue: initialJobs.isEmpty && loadJobs != nil)
+  }
+
+  private var detentHeight: CGFloat {
+    let visibleRows = max(1, min(jobs.count, 4))
+    return CGFloat(visibleRows) * 70 + 120
+  }
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        Group {
+          if isLoading {
+            VStack(spacing: Spacing.sm) {
+              ProgressView()
+              Text(.commonLoading)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexTextSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.lg)
+          } else {
+            VStack(spacing: Spacing.sm) {
+              ForEach(jobs, id: \.id) { job in
+                Button {
+                  onSelect(job.id)
+                } label: {
+                  HStack(spacing: Spacing.sm) {
+                    WorkplaceNameText(
+                      name: job.name,
+                      colorHex: job.color,
+                      font: .tidexBodyMedium,
+                      fallbackBadgeColor: .tidexBlue
+                    )
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                      .font(.tidexCaptionRegular)
+                      .foregroundColor(.tidexTextMuted)
+                  }
+                  .padding(.horizontal, Spacing.md)
+                  .padding(.vertical, Spacing.md)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .background(Color.tidexSurfaceSecondary)
+                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+                  .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+              }
+            }
+          }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.md)
+      }
+      .scrollIndicators(.hidden)
+      .background(Color.tidexBackground)
+      .navigationTitle(String(localized: "settings.pay.choose_workplace.title"))
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: .commonCancel)) {
+            onCancel()
+          }
+        }
+      }
+    }
+    .task {
+      await ensureJobsLoaded()
+    }
+    .presentationDetents([.height(detentHeight)])
+    .presentationDragIndicator(.visible)
+  }
+
+  private func ensureJobsLoaded() async {
+    guard jobs.isEmpty, let loadJobs else { return }
+    let loadedJobs = await loadJobs()
+    jobs = loadedJobs
+    isLoading = false
+
+    if loadedJobs.count == 1, let onlyJobId = loadedJobs.first?.id {
+      onSelect(onlyJobId)
+    }
+  }
 }
 
 #Preview {

@@ -26,6 +26,8 @@ export const manageShiftSchema = z.object({
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  // Optional workplace/job for create (full UUID from list_workplaces)
+  jobId: z.string().uuid().optional(),
   // Update/delete action - accepts short IDs (5 chars) or full UUIDs
   shiftId: shortOrFullId.optional(),
   shiftIds: z.array(shortOrFullId).min(1).optional(),
@@ -45,6 +47,8 @@ export const queryShiftsSchema = z.object({
   maxTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   sortBy: z.enum(["date", "earnings", "hours"]).optional().default("date"),
+  // Optional workplace/job filter (full UUID from list_workplaces)
+  jobId: z.string().uuid().optional(),
 });
 
 export type QueryShiftsInput = z.infer<typeof queryShiftsSchema>;
@@ -55,6 +59,8 @@ export type QueryShiftsInput = z.infer<typeof queryShiftsSchema>;
 export const calculateWagesSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // Optional workplace/job filter (full UUID from list_workplaces)
+  jobId: z.string().uuid().optional(),
 });
 
 export type CalculateWagesInput = z.infer<typeof calculateWagesSchema>;
@@ -142,6 +148,8 @@ export const getStatisticsSchema = z.object({
   ]),
   year: z.number().int().min(2020).max(2100).optional(),
   month: z.number().int().min(1).max(12).optional(),
+  // Optional workplace/job filter (full UUID from list_workplaces)
+  jobId: z.string().uuid().optional(),
 });
 
 export type GetStatisticsInput = z.infer<typeof getStatisticsSchema>;
@@ -266,7 +274,8 @@ Actions:
 Edge cases:
 - Cross-midnight shifts: If end time is before start time (e.g., 22:00-06:00), the shift spans to the next day
 - Multiple dates: Use dates array to create identical shifts on multiple days at once
-- Update requires ID: Always query_shifts first to get the shift ID before updating/deleting`,
+- Update requires ID: Always query_shifts first to get the shift ID before updating/deleting
+- Multiple workplaces: Use jobId (from list_workplaces) to assign a shift to a specific workplace. Omit for the user's default workplace.`,
     input_schema: {
       type: "object",
       properties: {
@@ -287,6 +296,10 @@ Edge cases:
         end: {
           type: "string",
           description: "End time (HH:mm format, 24-hour)",
+        },
+        jobId: {
+          type: "string",
+          description: "Workplace/job UUID from list_workplaces. Only for create. Omit to use the default workplace.",
         },
         shiftId: {
           type: "string",
@@ -346,7 +359,7 @@ Edge cases:
 Default behavior: Without parameters, returns shifts for the current week.
 
 Response includes:
-- data: Array of shifts with id, date, day, start, end, hours, gross, and net (net only if tax deduction is enabled)
+- data: Array of shifts with id, date, day, start, end, hours, gross, net (if tax enabled), and workplace (name of the job/workplace)
 - summary: Aggregated statistics (shiftCount, totalHours, totalGross, totalNet, avgHoursPerShift, avgGrossPerShift)
 - currency: User's selected currency
 
@@ -354,13 +367,15 @@ Filters:
 - Date range: startDate and endDate (YYYY-MM-DD)
 - Time of day: minTime/maxTime filter by shift start time
 - Weekdays: array of day numbers (0=Sunday through 6=Saturday)
+- Workplace: jobId (UUID from list_workplaces) to filter to one workplace
 - Sorting: by date (default), earnings, or hours
 
 Use cases:
 - Before update/delete: Query to get shift IDs
 - Finding specific shifts: Use filters to narrow down results
 - Analytics: Sort by earnings to find highest-paying shifts
-- Period overview: Use summary for quick totals without separate calculate_wages call`,
+- Period overview: Use summary for quick totals without separate calculate_wages call
+- Workplace breakdown: Omit jobId to see all shifts with their workplace labels`,
     input_schema: {
       type: "object",
       properties: {
@@ -393,6 +408,10 @@ Use cases:
           type: "string",
           enum: ["date", "earnings", "hours"],
           description: "Sort order (default: date)",
+        },
+        jobId: {
+          type: "string",
+          description: "Filter to a specific workplace/job (UUID from list_workplaces)",
         },
       },
     },
@@ -439,6 +458,8 @@ Returns:
 - Tax deducted
 - Number of shifts in the period
 
+Optional: Use jobId (UUID from list_workplaces) to calculate wages for a specific workplace only.
+
 Note: For quick monthly/yearly totals, prefer get_statistics which is optimized for common time periods.`,
     input_schema: {
       type: "object",
@@ -450,6 +471,10 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
         endDate: {
           type: "string",
           description: "End date (YYYY-MM-DD)",
+        },
+        jobId: {
+          type: "string",
+          description: "Filter to a specific workplace/job (UUID from list_workplaces)",
         },
       },
       required: ["startDate", "endDate"],
@@ -867,7 +892,8 @@ When to use year_to_date vs full_year:
 - "How much had I earned by this point last year?" → year_to_date with year parameter
 - "How much did I earn in total last year?" → full_year with year parameter
 
-Optional: year and month parameters to query specific periods (defaults to current).`,
+Optional: year and month parameters to query specific periods (defaults to current).
+Optional: jobId (UUID from list_workplaces) to get statistics for a specific workplace only.`,
     input_schema: {
       type: "object",
       properties: {
@@ -892,6 +918,10 @@ Optional: year and month parameters to query specific periods (defaults to curre
         month: {
           type: "integer",
           description: "Optional: specific month 1-12 (default: current)",
+        },
+        jobId: {
+          type: "string",
+          description: "Filter to a specific workplace/job (UUID from list_workplaces)",
         },
       },
       required: ["metric"],
@@ -1262,6 +1292,32 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
       },
     ],
   },
+
+  // ---------------------------------------------------------------------------
+  // WORKPLACES
+  // ---------------------------------------------------------------------------
+  {
+    name: "list_workplaces",
+    description: `List all workplaces (jobs) configured by the user.
+
+Returns each workplace with its id (UUID), name, color, and whether it is the default.
+
+Use this tool when:
+- The user asks about their workplaces or jobs
+- You need a jobId to filter shifts/wages by workplace
+- You need to know which workplace is the default
+- Before creating a shift for a specific workplace
+
+Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_statistics, and manage_shift.`,
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+    input_examples: [
+      // List all workplaces
+      {},
+    ],
+  },
 ];
 
 /**
@@ -1279,7 +1335,8 @@ export type ToolName =
   | "manage_settings"
   | "get_wage_info"
   | "manage_wage_snapshots"
-  | "calculate_earnings";
+  | "calculate_earnings"
+  | "list_workplaces";
 
 /**
  * Tool result type

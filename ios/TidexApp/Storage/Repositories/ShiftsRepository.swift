@@ -216,6 +216,7 @@ final class ShiftsRepository: ObservableObject {
   /// Create a new shift locally
   /// The shift will be marked as dirty and pushed to server during next sync
   /// - Parameters:
+  ///   - shiftId: Optional deterministic shift ID for idempotent create flows
   ///   - userId: User ID
   ///   - jobId: Job ID (optional for compatibility; server assigns default when omitted)
   ///   - shiftDate: Date of the shift
@@ -224,6 +225,7 @@ final class ShiftsRepository: ObservableObject {
   ///   - customSupplements: Optional custom supplements
   /// - Returns: The created ShiftRow
   func createShift(
+    shiftId: String? = nil,
     userId: String,
     jobId: String? = nil,
     shiftDate: Date,
@@ -232,6 +234,7 @@ final class ShiftsRepository: ObservableObject {
     customSupplements: CustomSupplementsData? = nil
   ) async throws -> ShiftRow {
     let createdShift = try await localStore.storeActor.createUserShift(
+      id: shiftId,
       userId: userId,
       jobId: jobId,
       shiftDate: shiftDate,

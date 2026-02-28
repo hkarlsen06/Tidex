@@ -8,6 +8,7 @@ import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { getComputedShiftsForApi } from "@/data-access/shifts";
+import { getUserJobs } from "@/data-access/jobs";
 import { draftRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/draftRecurringShift";
 import { createRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/createRecurringShift";
 import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updateRecurringShift";
@@ -346,6 +347,9 @@ async function executeToolOnce(
     case "calculate_earnings":
       return await executeCalculateEarnings(args, userId, tr);
 
+    case "list_workplaces":
+      return await executeListWorkplaces(userId, tr);
+
     default:
       return {
         success: false,
@@ -386,6 +390,7 @@ async function executeManageShift(
           dates: input.dates,
           start: input.start,
           end: input.end,
+          ...(input.jobId ? { jobId: input.jobId } : {}),
         });
 
         return {
@@ -604,7 +609,11 @@ async function executeQueryShifts(
       startDate: input.startDate ?? weekRange.startDate,
       endDate: input.endDate ?? weekRange.endDate,
       limit: 1000, // Fetch more to allow client-side filtering
+      jobId: input.jobId,
     });
+
+    // Build a job id → name lookup for enriching shift results
+    const jobMap = new Map(result.jobs.map((j) => [j.id, j.name]));
 
     let filteredShifts = result.shifts;
 
@@ -667,6 +676,7 @@ async function executeQueryShifts(
         end: shift.end_time,
         hours: Number(shift.computed.paidHours.toFixed(2)),
         gross,
+        workplace: shift.job_id ? (jobMap.get(shift.job_id) ?? null) : null,
       };
 
       // Only include net if tax deduction is enabled (tax settings are per-shift from snapshots)
@@ -777,11 +787,12 @@ async function executeCalculateWages(
   const input: CalculateWagesInput = parsed.data;
 
   try {
-    // Fetch shifts by date range
+    // Fetch shifts by date range (optionally filtered to a single workplace)
     const result = await getComputedShiftsForApi(userId, {
       startDate: input.startDate,
       endDate: input.endDate,
       limit: 1000,
+      jobId: input.jobId,
     });
 
     const shifts = result.shifts;
@@ -845,6 +856,36 @@ async function executeCalculateWages(
   } catch (error) {
     throw new Error(
       error instanceof Error ? error.message : "Failed to calculate wages"
+    );
+  }
+}
+
+/**
+ * Execute list_workplaces tool
+ */
+async function executeListWorkplaces(
+  userId: string,
+  _tr: ToolResultTranslations
+): Promise<ToolResult> {
+  try {
+    const jobs = await getUserJobs(userId);
+    const activeJobs = jobs.filter((j) => !j.deleted_at && !j.archived_at);
+
+    const data = activeJobs.map((j) => ({
+      id: j.id,
+      name: j.name,
+      color: j.color ?? null,
+      isDefault: j.is_default,
+    }));
+
+    return {
+      success: true,
+      message: `Found ${data.length} workplace${data.length === 1 ? "" : "s"}.`,
+      data,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to fetch workplaces"
     );
   }
 }
@@ -1415,6 +1456,7 @@ async function executeGetStatistics(
         year: input.year,
         month: input.month,
         locale: "en",
+        jobId: input.jobId,
       }),
     ]);
 

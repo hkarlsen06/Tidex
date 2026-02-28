@@ -212,7 +212,6 @@ extension WatchConnectivityManager: WCSessionDelegate {
   }
 
   private func queueSync(for userId: String) {
-    pendingClearPayload = false
     pendingUserIdForSync = userId
     schedulePendingRetry()
   }
@@ -245,9 +244,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
       if pendingUserIdForSync == userId {
         pendingUserIdForSync = nil
       }
-      pendingClearPayload = false
-      pendingRetryTask?.cancel()
-      pendingRetryTask = nil
+      if pendingClearPayload || pendingUserIdForSync != nil {
+        schedulePendingRetry()
+      } else {
+        pendingRetryTask?.cancel()
+        pendingRetryTask = nil
+      }
     } else {
       queueSync(for: userId)
     }
@@ -291,12 +293,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
       clearPayload, reason: reason, maxPayloadBytes: maxContextPayloadBytes)
     if didSend {
       pendingClearPayload = false
-      pendingUserIdForSync = nil
-      pendingRetryTask?.cancel()
-      pendingRetryTask = nil
+      if pendingUserIdForSync != nil {
+        schedulePendingRetry()
+      } else {
+        pendingRetryTask?.cancel()
+        pendingRetryTask = nil
+      }
     } else {
       pendingClearPayload = true
-      pendingUserIdForSync = nil
       schedulePendingRetry()
     }
     return didSend

@@ -21,7 +21,10 @@ final class AppLifecycleHandler {
     scheduleLoadingRecoveryIfNeeded()
     BiometricAuthService.shared.handleAppForeground()
     AppCoordinator.shared.handleAppForeground()
-    runForegroundLiveActivityMaintenance()
+    Task { @MainActor [weak self] in
+      await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
+      self?.runForegroundLiveActivityMaintenance()
+    }
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
     // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
     // objectWillChange on the root ObservableObject does.

@@ -46,6 +46,33 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return endMinutes < startMinutes
   }
 
+  private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> Bool {
+    attributes.endTime == "00:00"
+      && attributes.totalGrossEstimate == 0
+      && attributes.hourlyWage == 0
+      && attributes.supplementRatePerHour == 0
+  }
+
+  private func hasTemporaryClockSession(shiftId: String) -> Bool {
+    let defaults = UserDefaults.standard
+    let sessionKeyPrefix = "dashboard.clock.temporary-session."
+
+    for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(sessionKeyPrefix) {
+      guard
+        let data = defaults.data(forKey: key),
+        let session = try? JSONDecoder().decode(TemporaryClockSession.self, from: data)
+      else {
+        continue
+      }
+
+      if session.id == shiftId {
+        return true
+      }
+    }
+
+    return false
+  }
+
   private func sharedUserDefaults() -> UserDefaults? {
     guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
     else {
@@ -202,9 +229,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       var reason = ""
 
       if matchingShift == nil {
-        // Shift was deleted
-        shouldEnd = true
-        reason = "shift was deleted"
+        if isTemporaryClockActivity(activity.attributes) {
+          if hasTemporaryClockSession(shiftId: shiftId) {
+            // Temporary clock sessions are local-only and not part of upcoming_shifts.
+            // Keep the activity alive until explicit cancel/commit/handoff logic ends it.
+            continue
+          }
+          // Temporary activity has no backing local session anymore (e.g., after sign-out/reset).
+          shouldEnd = true
+          reason = "temporary session no longer exists"
+        } else {
+          // Shift was deleted
+          shouldEnd = true
+          reason = "shift was deleted"
+        }
       } else if let shift = matchingShift {
         // Shift exists - check if it's still ongoing
         if !isShiftOngoing(shift, at: now) {
@@ -235,6 +273,64 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       Task {
         await activity.end(nil, dismissalPolicy: .immediate)
       }
+    }
+  }
+
+  /// Start a temporary open-ended clock Live Activity.
+  /// Uses `startDate` as both start and timer anchor so the Live Activity timer counts up.
+  func startTemporaryLiveActivity(
+    shiftId: String,
+    startedAt: Date,
+    currencySymbol: String? = "kr"
+  ) async {
+    let authInfo = ActivityAuthorizationInfo()
+    guard authInfo.areActivitiesEnabled else { return }
+
+    // Ensure stale/previous activities do not block starting a fresh temporary clock activity.
+    let existingActivities = Activity<ShiftActivityAttributes>.activities
+    if !existingActivities.isEmpty {
+      for activity in existingActivities {
+        await activity.end(nil, dismissalPolicy: .immediate)
+      }
+    }
+
+    let isoDate = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: startedAt)
+    let timeFormatter = DateFormatter()
+    timeFormatter.calendar = Calendar(identifier: .gregorian)
+    timeFormatter.locale = Locale(identifier: "en_US_POSIX")
+    timeFormatter.timeZone = Date.localTimeZone
+    timeFormatter.dateFormat = "HH:mm"
+    let startTime = timeFormatter.string(from: startedAt)
+
+    let attributes = ShiftActivityAttributes(
+      shiftId: shiftId,
+      shiftDate: isoDate,
+      startTime: startTime,
+      endTime: "00:00",
+      hourlyWage: 0,
+      supplementRatePerHour: 0,
+      totalGrossEstimate: 0,
+      totalNetEstimate: nil,
+      currencySymbol: currencySymbol ?? "kr",
+      startDate: startedAt,
+      endDate: startedAt
+    )
+
+    let initialState = ShiftActivityAttributes.ContentState(
+      currentEarnings: 0,
+      remainingMinutes: 0,
+      progressPercent: 0
+    )
+
+    do {
+      _ = try Activity.request(
+        attributes: attributes,
+        content: .init(state: initialState, staleDate: nil),
+        pushType: nil
+      )
+      print("[LiveActivity] Started temporary clock activity \(shiftId)")
+    } catch {
+      print("[LiveActivity] Failed to start temporary clock activity: \(error.localizedDescription)")
     }
   }
 
