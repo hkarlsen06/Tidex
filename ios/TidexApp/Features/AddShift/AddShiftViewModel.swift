@@ -169,6 +169,9 @@ final class AddShiftViewModel: ObservableObject {
   /// Computed month name for display
   var displayMonthName: String { monthContext.displayMonthName }
 
+  /// User-selected currency for display formatting in Add tab UI.
+  @Published private(set) var currency: String = "kr"
+
   // MARK: - Single Mode State
 
   @Published var selectedDates: Set<String> = [] {  // ISO dates (YYYY-MM-DD)
@@ -353,6 +356,14 @@ final class AddShiftViewModel: ObservableObject {
     addShiftCoordinator.updateJobSelection(
       selectedJobId: effectiveSelectedJobId,
       requiresJobSelection: requiresExplicitJobSelection
+    )
+    addShiftCoordinator.updateSubmitBlockers(
+      mode: mode,
+      hasSelectedDates: !selectedDates.isEmpty,
+      hasSelectedDays: !selectedDays.isEmpty,
+      hasValidTimes: hasValidTimes,
+      hasAvailableJobs: !activeJobs.isEmpty,
+      hasSelectedJob: effectiveSelectedJobId != nil
     )
   }
 
@@ -590,6 +601,7 @@ final class AddShiftViewModel: ObservableObject {
 
     // Load settings
     cachedSettings = settingsRepository.getSettings(for: userId)
+    currency = cachedSettings?.currency ?? "kr"
 
     // Load active jobs before snapshots/preview computations.
     activeJobs = jobsRepository.getActiveJobs(for: userId)
@@ -629,6 +641,7 @@ final class AddShiftViewModel: ObservableObject {
 
     // Reload cache sources without touching draft-driven UI state.
     cachedSettings = settingsRepository.getSettings(for: userId)
+    currency = cachedSettings?.currency ?? "kr"
     activeJobs = jobsRepository.getActiveJobs(for: userId)
     reconcileSelectedJob()
     cachedSnapshots = snapshotsRepository.getSnapshots(for: userId)

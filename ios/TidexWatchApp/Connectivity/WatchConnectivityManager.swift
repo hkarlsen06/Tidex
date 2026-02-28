@@ -15,6 +15,9 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WatchConnecti
 final class WatchConnectivityManager: NSObject {
   static let shared = WatchConnectivityManager()
 
+  private let shiftDataKey = "shiftData"
+  private let refreshAction = "refresh"
+
   private(set) var isReachable = false
   private(set) var isRefreshing = false
   private(set) var lastRefreshFailed = false
@@ -177,11 +180,16 @@ final class WatchConnectivityManager: NSObject {
 
     return await withCheckedContinuation { continuation in
       WCSession.default.sendMessage(
-        ["action": "refresh"],
+        ["action": refreshAction],
         replyHandler: { [weak self] response in
           Task { @MainActor in
             self?.isRefreshing = false
             logger.info("iPhone refresh response received: \(response)")
+
+            guard let self else {
+              continuation.resume(returning: false)
+              return
+            }
 
             // Store token locally if iPhone sent it
             // This enables direct API access on subsequent refreshes
@@ -197,7 +205,21 @@ final class WatchConnectivityManager: NSObject {
               }
             }
 
-            continuation.resume(returning: true)
+            guard response["success"] as? Bool == true else {
+              let errorMessage = response["error"] as? String ?? "Unknown iPhone refresh error"
+              logger.warning("iPhone refresh rejected: \(errorMessage)")
+              continuation.resume(returning: false)
+              return
+            }
+
+            guard let data = response[self.shiftDataKey] as? Data else {
+              logger.warning("iPhone refresh response missing payload")
+              continuation.resume(returning: false)
+              return
+            }
+
+            let processed = self.processReceivedData(data, source: "reply")
+            continuation.resume(returning: processed)
           }
         },
         errorHandler: { [weak self] error in
@@ -228,8 +250,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
         self?.isReachable = session.isReachable
 
         // Check for any existing application context
-        if let data = session.receivedApplicationContext["shiftData"] as? Data {
-          self?.processReceivedData(data)
+        if let data = session.receivedApplicationContext[self?.shiftDataKey ?? "shiftData"] as? Data {
+          _ = self?.processReceivedData(data, source: "activation_context")
         }
       }
     }
@@ -240,11 +262,25 @@ extension WatchConnectivityManager: WCSessionDelegate {
     didReceiveApplicationContext applicationContext: [String: Any]
   ) {
     Task { @MainActor [weak self] in
-      guard let data = applicationContext["shiftData"] as? Data else {
+      guard let key = self?.shiftDataKey,
+        let data = applicationContext[key] as? Data
+      else {
         logger.warning("No shiftData in applicationContext")
         return
       }
-      self?.processReceivedData(data)
+      _ = self?.processReceivedData(data, source: "application_context")
+    }
+  }
+
+  nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+    Task { @MainActor [weak self] in
+      guard let key = self?.shiftDataKey,
+        let data = userInfo[key] as? Data
+      else {
+        logger.warning("No shiftData in userInfo transfer")
+        return
+      }
+      _ = self?.processReceivedData(data, source: "user_info")
     }
   }
 
@@ -257,14 +293,19 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
   // MARK: - Private
 
-  private func processReceivedData(_ data: Data) {
+  @discardableResult
+  private func processReceivedData(_ data: Data, source: String) -> Bool {
     do {
       let payload = try JSONDecoder().decode(WatchDataPayload.self, from: data)
       WatchDataStore.shared.update(from: payload)
       logger.info(
-        "Received data: user=\(payload.userShift != nil), friends=\(payload.friendShifts.count)")
+        "Received data (\(source, privacy: .public)): user=\(payload.userShift != nil), friends=\(payload.friendShifts.count), bytes=\(data.count)"
+      )
+      return true
     } catch {
-      logger.error("Failed to decode payload: \(error.localizedDescription)")
+      logger.error(
+        "Failed to decode payload (\(source, privacy: .public)): \(error.localizedDescription)")
+      return false
     }
   }
 }

@@ -43,6 +43,9 @@ struct MainTabView: View {
   // Screenshot share prompt state (presented as overlay to keep content visible)
   @State private var showScreenshotPrompt = false
 
+  // Add tab disabled-submit guidance
+  @State private var showAddSubmitRequirementsAlert = false
+
   // View mode toggle (calendar vs list) - persisted across app launches
   // Shared with ShiftsView via @AppStorage
   @AppStorage("shiftsViewMode") private var showListView = false
@@ -268,6 +271,14 @@ struct MainTabView: View {
     .sheet(isPresented: $showWageySheet) {
       WageyView()
     }
+    .alert(
+      String(localized: .addShiftSubmitRequirementsTitle),
+      isPresented: $showAddSubmitRequirementsAlert
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {}
+    } message: {
+      Text(addSubmitRequirementsMessage)
+    }
   }
 
   // MARK: - Month Picker Visibility
@@ -374,8 +385,7 @@ struct MainTabView: View {
         // Add button - only on Add tab
         if selectedTab == .add {
           Button {
-            selectionHaptic.selectionChanged()
-            addShiftCoordinator.triggerAdd()
+            handleAddButtonTap()
           } label: {
             Group {
               if addShiftCoordinator.isLoading {
@@ -392,7 +402,7 @@ struct MainTabView: View {
             .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
-          .disabled(!addShiftCoordinator.canSubmit || addShiftCoordinator.isLoading)
+          .disabled(addShiftCoordinator.isLoading)
           .tidexGlass(
             shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
             tint: addShiftCoordinator.canSubmit ? Color.tidexBlue.opacity(0.2) : nil,
@@ -435,6 +445,47 @@ struct MainTabView: View {
       month: monthContext.displayMonth,
       direction: monthContext.navigationDirection
     )
+  }
+
+  private func handleAddButtonTap() {
+    guard !addShiftCoordinator.isLoading else { return }
+
+    if addShiftCoordinator.canSubmit {
+      selectionHaptic.selectionChanged()
+      addShiftCoordinator.triggerAdd()
+      return
+    }
+
+    Haptics.play(.warning)
+    showAddSubmitRequirementsAlert = true
+  }
+
+  private var addSubmitRequirementsMessage: String {
+    let blockers = addShiftCoordinator.submitBlockers
+    guard !blockers.isEmpty else {
+      return String(localized: .addShiftSubmitRequirementsGeneric)
+    }
+
+    return blockers
+      .map { "- \(String(localized: submitRequirementMessageKey(for: $0)))" }
+      .joined(separator: "\n")
+  }
+
+  private func submitRequirementMessageKey(
+    for blocker: AddShiftSubmitBlocker
+  ) -> LocalizedStringResource {
+    switch blocker {
+    case .noAvailableJob:
+      return .addShiftSubmitRequirementsAddJobFirst
+    case .noSelectedJob:
+      return .addShiftSubmitRequirementsSelectJob
+    case .noSingleDates:
+      return .addShiftSubmitRequirementsSelectDate
+    case .noRecurringDays:
+      return .addShiftSubmitRequirementsSelectRecurringDay
+    case .missingTimes:
+      return .addShiftSubmitRequirementsSetTimes
+    }
   }
 
   // MARK: - Deep Link Handling

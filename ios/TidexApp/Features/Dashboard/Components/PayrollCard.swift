@@ -7,6 +7,8 @@ struct PayrollCard: View {
   let label: String
   var labelColorHex: String? = nil
   var labelIsWorkplace: Bool = false
+  var pageIndicatorCount: Int = 1
+  var pageIndicatorSelectedIndex: Int = 0
   let gross: Double
   let net: Double?
   let tax: Double?
@@ -40,6 +42,10 @@ struct PayrollCard: View {
     !isLoading && hasPayoutData
   }
 
+  private var showsPageIndicator: Bool {
+    pageIndicatorCount > 1
+  }
+
   // MARK: - Body
 
   /// Whether to show the progress bar (valid progress between 1-100)
@@ -51,14 +57,21 @@ struct PayrollCard: View {
   var body: some View {
     ShiftCardContentLayout(centerTrailing: !showBreakdown) {
       // Row 1: Label (leads with purpose, matches shift card title size)
-      WorkplaceNameText(
-        name: label,
-        colorHex: labelColorHex,
-        font: labelIsWorkplace ? .tidexCaptionRegular : .tidexBodyMedium,
-        fallbackBadgeColor: labelIsWorkplace ? .tidexBlue : nil,
-        badgeHorizontalPadding: Spacing.xs,
-        badgeVerticalPadding: labelIsWorkplace ? 2 : Spacing.xxxs
-      )
+      HStack(spacing: Spacing.xs) {
+        WorkplaceNameText(
+          name: label,
+          colorHex: labelColorHex,
+          font: labelIsWorkplace ? .tidexCaptionRegular : .tidexBodyMedium,
+          fallbackBadgeColor: labelIsWorkplace ? .tidexBlue : nil,
+          badgeHorizontalPadding: Spacing.xs,
+          badgeVerticalPadding: labelIsWorkplace ? 2 : Spacing.xxxs
+        )
+
+        if showsPageIndicator {
+          payrollCardPageIndicator
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
     } leadingBottom: {
       // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
@@ -189,6 +202,21 @@ struct PayrollCard: View {
   /// Format amount without currency symbol (for breakdown display)
   private func formatPlainAmount(_ amount: Double) -> String {
     CurrencyConfig.formatPlain(amount)
+  }
+
+  @ViewBuilder
+  private var payrollCardPageIndicator: some View {
+    HStack(spacing: Spacing.xxxs) {
+      ForEach(0..<pageIndicatorCount, id: \.self) { index in
+        Circle()
+          .fill(
+            index == pageIndicatorSelectedIndex
+              ? Color.tidexBlue
+              : Color.tidexTextMuted.opacity(0.35)
+          )
+          .frame(width: 5, height: 5)
+      }
+    }
   }
 }
 
