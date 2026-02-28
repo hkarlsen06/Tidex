@@ -1,9 +1,4 @@
-- Tilføjet Wagey-bonuspakker — køb 20 ekstra beskeder, der aldrig udløber
-- Tilføjet mulighed for at afslutte aktive vagter direkte fra dashboardet
-- Tilføjet venneprofil med kontrolelementer til notifikationer og indtægtsvisning
-- Tilføjet skift mellem timer og indtægt i delte vagter
-- Tilføjet bekræftelse ved sletning af vagtinformation
-- Tilføjet redigerbar lønseddel-status på dashboardet
-- Forbedret Wagey med smartere handlingsetiketter og bedre tabelvisning
-- Hurtigere opstart og mere jævn indlæsning af dashboardet
+- Rettet en kritisk fejl, der kunne gøre appen helt uresponsiv, mens en vagt var i gang
+- Tilføjet understøttelse af flere arbejdspladser — følg vagter og løn på tværs af forskellige job
+- Tilføjet ind- og udstempling — start og afslut vagter nemt uden at angive sluttid på forhånd
 - Fejlrettelser og andre forbedringer

@@ -1,9 +1,4 @@
-- Ajout des packs de messages bonus Wagey — achetez 20 messages supplémentaires qui n'expirent jamais
-- Ajout de la possibilité de terminer les shifts actifs directement depuis le tableau de bord
-- Ajout du profil d'ami avec contrôles de visibilité des notifications et des gains
-- Ajout du basculement de la vue des gains dans les shifts partagés
-- Ajout d'une confirmation lors de l'effacement des données de shift
-- Ajout du statut de fiche de paie modifiable sur le tableau de bord
-- Amélioration de Wagey avec des libellés d'action plus intelligents et un meilleur rendu des tableaux
-- Lancement de l'app plus rapide et chargement du tableau de bord plus fluide
+- Correction d'un problème critique qui pouvait rendre l'application complètement non réactive pendant qu'un shift était en cours
+- Ajout de la prise en charge de plusieurs lieux de travail — suivez les shifts et salaires de différents emplois
+- Ajout du pointage entrée/sortie — démarrez et terminez facilement vos shifts sans définir d'heure de fin à l'avance
 - Corrections de bugs et autres améliorations

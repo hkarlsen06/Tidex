@@ -1,9 +1,4 @@
-- Adăugate pachetele bonus Wagey — cumpără 20 de mesaje suplimentare care nu expiră niciodată
-- Adăugată posibilitatea de a încheia schimburile active direct din tabloul de bord
-- Adăugat profil de prieten cu controale pentru notificări și vizibilitatea veniturilor
-- Adăugată comutare între ore și venituri în schimburile partajate
-- Adăugată confirmare la ștergerea informațiilor despre schimburi
-- Adăugat status editabil al statului de plată pe tabloul de bord
-- Îmbunătățit Wagey cu etichete de acțiune mai inteligente și redare mai bună a tabelelor
-- Lansare mai rapidă a aplicației și încărcare mai fluidă a tabloului de bord
+- Rezolvată o problemă critică care putea face aplicația complet neresponsivă în timpul desfășurării unui schimb
+- Adăugat suport pentru mai multe locuri de muncă — urmărește schimburile și salariile din joburi diferite
+- Adăugată pontare intrare/ieșire — începe și termină schimburile ușor fără a seta ora de sfârșit dinainte
 - Remedieri de erori și alte îmbunătățiri

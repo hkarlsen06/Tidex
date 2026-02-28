@@ -1,9 +1,4 @@
-- Afegits paquets de missatges bonus de Wagey — compra 20 missatges extra que no caduquen mai
-- Afegida la possibilitat de finalitzar torns actius directament des del tauler
-- Afegit perfil d'amic amb controls de visibilitat de notificacions i ingressos
-- Afegit commutador de vista d'ingressos en torns compartits
-- Afegida confirmació en esborrar dades de torns
-- Afegit estat de rebut de nòmina editable al tauler
-- Millorat Wagey amb etiquetes d'acció més intel·ligents i millor visualització de taules
-- Inici d'aplicació més ràpid i càrrega més fluida del tauler
+- S'ha corregit un error crític que podia fer que l'aplicació deixés de respondre completament mentre un torn estava en curs
+- S'ha afegit suport per a diversos llocs de treball — fes un seguiment dels torns i salaris de diferents feines
+- S'ha afegit fitxatge d'entrada/sortida — inicia i finalitza torns fàcilment sense establir una hora de finalització per endavant
 - Correccions d'errors i altres millores

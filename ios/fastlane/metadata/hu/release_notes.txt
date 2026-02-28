@@ -1,9 +1,4 @@
-- Hozzáadva Wagey bónusz üzenetcsomagok — vásárolj 20 extra üzenetet, amelyek soha nem járnak le
-- Hozzáadva az aktív műszakok befejezésének lehetősége közvetlenül a vezérlőpultról
-- Hozzáadva barátprofil értesítési és kereseti láthatósági beállításokkal
-- Hozzáadva a keresetmegjelenítés váltása a megosztott műszakokban
-- Hozzáadva megerősítés a műszakadatok törlésekor
-- Hozzáadva szerkeszthető bérjegyzék-állapot a vezérlőpulton
-- Továbbfejlesztett Wagey okosabb műveleti címkékkel és jobb táblázatmegjelenítéssel
-- Gyorsabb alkalmazásindítás és gördülékenyebb vezérlőpult betöltés
+- Javítva egy kritikus hiba, amely teljesen lefagyaszthatta az alkalmazást műszak közben
+- Több munkahely támogatása — kövesd nyomon a műszakokat és a béreket különböző munkák között
+- Be- és kilépés funkció hozzáadva — könnyedén kezdj és fejezz be műszakokat anélkül, hogy előre beállítanád a befejezési időt
 - Hibajavítások és egyéb fejlesztések

@@ -1,9 +1,4 @@
-- Wagey-Bonusnachrichtenpakete hinzugefügt — kaufe 20 zusätzliche Nachrichten, die nie ablaufen
-- Möglichkeit hinzugefügt, aktive Schichten direkt vom Dashboard zu beenden
-- Freundesprofil mit Benachrichtigungs- und Einkommensanzeige-Einstellungen hinzugefügt
-- Umschaltung zwischen Stunden und Einkommen in geteilten Schichten hinzugefügt
-- Bestätigung beim Löschen von Schichtinformationen hinzugefügt
-- Bearbeitbarer Lohnzettel-Status im Dashboard hinzugefügt
-- Wagey mit intelligenteren Aktionsbeschriftungen und besserer Tabellendarstellung verbessert
-- Schnellerer App-Start und flüssigeres Laden des Dashboards
+- Einen kritischen Fehler behoben, der die App während einer laufenden Schicht komplett unresponsiv machen konnte
+- Unterstützung für mehrere Arbeitsstätten hinzugefügt — verfolge Schichten und Löhne über verschiedene Jobs hinweg
+- Ein- und Ausstempeln hinzugefügt — starte und beende Schichten einfach, ohne vorab eine Endzeit festzulegen
 - Fehlerbehebungen und weitere Verbesserungen

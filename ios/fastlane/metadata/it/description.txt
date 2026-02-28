@@ -1,11 +1,11 @@
 Tieni traccia dei tuoi turni di lavoro e calcola il tuo stipendio con Tidex.
 
 Funzionalità:
-• Registrazione facile dei turni con orari di inizio e fine
+• Registrazione semplice dei turni con orari di inizio e fine
 • Calcolo automatico dello stipendio
 • Vista calendario di tutti i turni
-• Panoramica delle entrate e statistiche
+• Panoramica guadagni e statistiche
 • Widget per accesso rapido
 • Sincronizzazione su tutti i dispositivi
 
-Perfetto per i dipendenti che vogliono tenere traccia delle ore di lavoro e delle entrate.
+Perfetto per dipendenti che vogliono tenere traccia delle ore di lavoro e dei guadagni.

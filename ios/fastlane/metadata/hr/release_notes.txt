@@ -1,9 +1,4 @@
-- Dodani Wagey bonus paketi poruka — kupite 20 dodatnih poruka koje nikad ne istječu
-- Dodana mogućnost završetka aktivnih smjena izravno s nadzorne ploče
-- Dodan profil prijatelja s kontrolama za obavijesti i vidljivost zarade
-- Dodano prebacivanje prikaza zarade u podijeljenim smjenama
-- Dodana potvrda pri brisanju podataka o smjeni
-- Dodan status obračunske liste plaće koji se može uređivati na nadzornoj ploči
-- Poboljšan Wagey s pametnijim oznakama akcija i boljim prikazom tablica
-- Brže pokretanje aplikacije i glatko učitavanje nadzorne ploče
+- Ispravljena kritična greška koja je mogla učiniti aplikaciju potpuno neodzivnom dok je smjena u tijeku
+- Dodana podrška za više radnih mjesta — pratite smjene i plaću za različite poslove
+- Dodano dolazak/odlazak — jednostavno započnite i završite smjene bez postavljanja završnog vremena unaprijed
 - Ispravke grešaka i druga poboljšanja

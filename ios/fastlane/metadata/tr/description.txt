@@ -1,4 +1,4 @@
-Tidex ile çalışma vardiyalarınızı takip edin ve ücretlerinizi hesaplayın.
+Tidex ile vardiyalarınızı takip edin ve ücretlerinizi hesaplayın.
 
 Özellikler:
 • Başlangıç/bitiş saatleriyle kolay vardiya kaydı

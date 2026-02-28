@@ -1,9 +1,4 @@
-- Pridané bonusové balíčky správ Wagey — kúpte si 20 extra správ, ktoré nikdy nevyprší
-- Pridaná možnosť ukončiť aktívne zmeny priamo z prehľadu
-- Pridaný profil priateľa s nastaveniami viditeľnosti upozornení a zárobkov
-- Pridané prepínanie zobrazenia zárobkov v zdieľaných zmenách
-- Pridané potvrdenie pri mazaní údajov zmeny
-- Pridaný upraviteľný stav výplatnej pásky na prehľade
-- Vylepšený Wagey s inteligentnejšími popiskami akcií a lepším vykresľovaním tabuliek
-- Rýchlejšie spustenie aplikácie a plynulejšie načítanie prehľadu
+- Opravená kritická chyba, ktorá mohla spôsobiť úplnú nereaktivitu aplikácie počas prebiehajúcej zmeny
+- Pridaná podpora pre viacero pracovísk — sledujte zmeny a mzdy naprieč rôznymi prácami
+- Pridané prihlásenie/odhlásenie — jednoducho začnite a ukončite zmeny bez potreby nastavovať čas ukončenia vopred
 - Opravy chýb a ďalšie vylepšenia

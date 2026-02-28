@@ -1,9 +1,4 @@
-- Přidány bonusové balíčky zpráv Wagey — kupte si 20 extra zpráv, které nikdy nevyprší
-- Přidána možnost ukončit aktivní směny přímo z hlavního panelu
-- Přidán profil přítele s nastavením viditelnosti upozornění a výdělků
-- Přidáno přepínání zobrazení výdělků ve sdílených směnách
-- Přidáno potvrzení při mazání údajů o směně
-- Přidán upravitelný stav výplatní pásky na hlavním panelu
-- Vylepšen Wagey s chytřejšími popisky akcí a lepším vykreslováním tabulek
-- Rychlejší spuštění aplikace a plynulejší načítání hlavního panelu
+- Opravena kritická chyba, která mohla způsobit úplné zamrznutí aplikace během probíhající směny
+- Přidána podpora pro více pracovišť — sledujte směny a mzdy napříč různými zaměstnáními
+- Přidáno přihlášení/odhlášení — jednoduše začněte a ukončete směny bez předchozího nastavení času konce
 - Opravy chyb a další vylepšení

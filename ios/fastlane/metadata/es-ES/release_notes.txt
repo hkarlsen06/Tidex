@@ -1,9 +1,4 @@
-- Añadidos paquetes de mensajes bonus de Wagey — compra 20 mensajes extra que nunca caducan
-- Añadida la posibilidad de finalizar turnos activos directamente desde el panel
-- Añadido perfil de amigo con controles de notificaciones y visibilidad de ingresos
-- Añadida alternancia de vista de ingresos en turnos compartidos
-- Añadida confirmación al borrar datos de turnos
-- Añadido estado de nómina editable en el panel
-- Mejorado Wagey con etiquetas de acciones más inteligentes y mejor renderizado de tablas
-- Inicio de app más rápido y carga del panel más fluida
+- Solucionado un problema crítico que podía hacer que la app dejara de responder completamente mientras un turno estaba en curso
+- Añadido soporte para múltiples lugares de trabajo — registra turnos y salarios en diferentes empleos
+- Añadido fichaje de entrada/salida — inicia y finaliza turnos fácilmente sin establecer una hora de fin por adelantado
 - Corrección de errores y otras mejoras

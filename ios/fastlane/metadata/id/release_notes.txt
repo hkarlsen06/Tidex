@@ -1,9 +1,4 @@
-- Ditambahkan paket pesan bonus Wagey — beli 20 pesan ekstra yang tidak pernah kedaluwarsa
-- Ditambahkan kemampuan untuk mengakhiri shift aktif langsung dari dasbor
-- Ditambahkan profil teman dengan kontrol notifikasi dan visibilitas pendapatan
-- Ditambahkan toggle tampilan pendapatan di shift yang dibagikan
-- Ditambahkan konfirmasi saat menghapus input shift
-- Ditambahkan status slip gaji yang dapat diedit di dasbor
-- Peningkatan Wagey dengan label tindakan yang lebih pintar dan rendering tabel yang lebih baik
-- Peluncuran aplikasi lebih cepat dan pemuatan dasbor lebih lancar
+- Memperbaiki masalah kritis yang dapat membuat aplikasi tidak responsif saat shift sedang berlangsung
+- Menambahkan dukungan untuk beberapa tempat kerja — lacak shift dan upah di berbagai pekerjaan
+- Menambahkan clock in/out — mulai dan akhiri shift dengan mudah tanpa perlu mengatur waktu selesai di awal
 - Perbaikan bug dan peningkatan lainnya

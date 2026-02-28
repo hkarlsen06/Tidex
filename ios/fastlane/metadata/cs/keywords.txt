@@ -1,1 +1,1 @@
-směna,mzda,plat,práce,hodiny,čas,výdělek,rozvrh,úvazek,zaměstnání
+směna,mzda,plat,práce,hodiny,čas,rozvrh,výdělek,калькулátor,zaměstnání

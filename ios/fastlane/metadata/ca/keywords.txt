@@ -1,1 +1,1 @@
-torn,seguiment,sou,salari,treball,hores,temps,rellotge,horari,ingressos
+torn,seguiment,salari,sou,treball,hores,temps,fitxar,horari,ingressos
