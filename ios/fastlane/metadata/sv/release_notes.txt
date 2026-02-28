@@ -1,9 +1,4 @@
-- Lagt till Wagey-bonuspaket — köp 20 extra meddelanden som aldrig går ut
-- Lagt till möjlighet att avsluta aktiva pass direkt från instrumentpanelen
-- Lagt till vänprofil med kontroller för aviseringar och inkomstvisning
-- Lagt till växling mellan timmar och inkomst i delade pass
-- Lagt till bekräftelse vid rensning av passinformation
-- Lagt till redigerbar lönespecifikationsstatus på instrumentpanelen
-- Förbättrad Wagey med smartare åtgärdsetiketter och bättre tabellrendering
-- Snabbare appstart och smidigare laddning av instrumentpanelen
+- Åtgärdat ett kritiskt fel som kunde göra appen helt oresponsiv medan ett pass pågick
+- Lagt till stöd för flera arbetsplatser — följ pass och lön över olika jobb
+- Lagt till in- och utstämpling — starta och avsluta pass enkelt utan att ange sluttid i förväg
 - Buggfixar och andra förbättringar

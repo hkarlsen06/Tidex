@@ -1,1 +1,1 @@
-turno,orario,stipendio,salario,lavoro,ore,tempo,calendario,entrate,guadagni
+turno,orario,stipendio,salario,lavoro,ore,tempo,timbratura,calendario,guadagni

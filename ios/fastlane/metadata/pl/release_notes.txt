@@ -1,9 +1,4 @@
-- Dodano pakiety bonusowe Wagey — kup 20 dodatkowych wiadomości, które nigdy nie wygasają
-- Dodano możliwość zakończenia aktywnych zmian bezpośrednio z panelu
-- Dodano profil znajomego z kontrolą powiadomień i widoczności zarobków
-- Dodano przełączanie widoku zarobków w udostępnionych zmianach
-- Dodano potwierdzenie przy usuwaniu danych zmiany
-- Dodano edytowalny status paska wypłaty na panelu
-- Ulepszono Wagey dzięki inteligentniejszym etykietom działań i lepszemu renderowaniu tabel
-- Szybsze uruchamianie aplikacji i płynniejsze ładowanie panelu
+- Naprawiono krytyczny błąd, który mógł spowodować całkowitą nieresponsywność aplikacji podczas trwania zmiany
+- Dodano obsługę wielu miejsc pracy — śledź zmiany i wynagrodzenia w różnych pracach
+- Dodano wejście/wyjście — łatwo rozpoczynaj i kończ zmiany bez ustawiania godziny zakończenia z góry
 - Poprawki błędów i inne ulepszenia

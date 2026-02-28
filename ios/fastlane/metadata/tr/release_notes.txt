@@ -1,9 +1,4 @@
-- Wagey bonus mesaj paketleri eklendi — süresi dolmayan 20 ekstra mesaj satın alın
-- Aktif vardiyaları doğrudan kontrol panelinden sonlandırma özelliği eklendi
-- Bildirim ve kazanç görünürlüğü kontrolleriyle arkadaş profili eklendi
-- Paylaşılan vardiyalarda kazanç görünümü geçişi eklendi
-- Vardiya bilgilerini temizlerken onay eklendi
-- Kontrol panelinde düzenlenebilir bordro durumu eklendi
-- Wagey daha akıllı eylem etiketleri ve daha iyi tablo görünümüyle iyileştirildi
-- Daha hızlı uygulama başlatma ve daha akıcı kontrol paneli yükleme
+- Vardiya devam ederken uygulamanın tamamen yanıt vermemesine neden olabilecek kritik bir sorun düzeltildi
+- Birden fazla işyeri desteği eklendi — farklı işlerdeki vardiyaları ve ücretleri takip edin
+- Giriş/çıkış özelliği eklendi — önceden bitiş saati belirlemeden vardiyaları kolayca başlatın ve bitirin
 - Hata düzeltmeleri ve diğer iyileştirmeler

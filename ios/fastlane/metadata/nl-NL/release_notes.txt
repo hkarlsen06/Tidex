@@ -1,9 +1,4 @@
-- Wagey-bonuspakketten toegevoegd — koop 20 extra berichten die nooit verlopen
-- Mogelijkheid toegevoegd om actieve diensten direct vanuit het dashboard te beëindigen
-- Vriendenprofiel toegevoegd met instellingen voor meldingen en inkomstenzichtbaarheid
-- Weergavewisseling tussen uren en inkomsten toegevoegd in gedeelde diensten
-- Bevestiging toegevoegd bij het wissen van dienstgegevens
-- Bewerkbare loonstrookstatus toegevoegd op het dashboard
-- Wagey verbeterd met slimmere actielabels en betere tabelweergave
-- Snellere app-start en soepelere laadtijd van het dashboard
+- Een kritieke fout opgelost waardoor de app volledig kon blokkeren tijdens een lopende dienst
+- Ondersteuning toegevoegd voor meerdere werkplekken — houd diensten en loon bij voor verschillende banen
+- In- en uitklokken toegevoegd — start en beëindig diensten eenvoudig zonder vooraf een eindtijd in te stellen
 - Bugfixes en andere verbeteringen

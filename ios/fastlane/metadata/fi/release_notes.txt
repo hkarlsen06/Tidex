@@ -1,9 +1,4 @@
-- Lisätty Wagey-bonusviestipaketteja — osta 20 ylimääräistä viestiä, jotka eivät vanhene koskaan
-- Lisätty mahdollisuus lopettaa aktiiviset vuorot suoraan hallintapaneelista
-- Lisätty ystäväprofiili ilmoitusten ja ansioiden näkyvyyden hallinnalla
-- Lisätty ansionäkymän vaihto jaetuissa vuoroissa
-- Lisätty vahvistus vuorotietojen tyhjentämiseen
-- Lisätty muokattava palkkalaskelmatila hallintapaneeliin
-- Parannettu Wageyä älykkäämmillä toimintotunnisteilla ja paremmalla taulukonäytöllä
-- Nopeampi sovelluksen käynnistys ja sujuvampi hallintapaneelin lataus
-- Virheiden korjauksia ja muita parannuksia
+- Korjattu kriittinen ongelma, joka saattoi tehdä sovelluksesta täysin reagoimattoman vuoron ollessa käynnissä
+- Lisätty tuki useille työpaikoille — seuraa vuoroja ja palkkoja eri töissä
+- Lisätty sisään- ja ulosleimaus — aloita ja lopeta vuorot helposti asettamatta lopetusaikaa etukäteen
+- Virhekorjauksia ja muita parannuksia

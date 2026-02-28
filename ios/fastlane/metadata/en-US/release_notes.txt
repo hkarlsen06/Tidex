@@ -1,9 +1,4 @@
-- Added Wagey bonus message packs — buy 20 extra messages that never expire
-- Added ability to end active shifts directly from the dashboard
-- Added friend profile with notification and earnings visibility controls
-- Added earnings view toggle in shared shifts
-- Added confirmation when clearing shift inputs
-- Added editable payroll receipt status on the dashboard
-- Improved Wagey with smarter action labels and better table rendering
-- Faster app launch and smoother dashboard loading
+- Fixed a critical issue that could make the app completely unresponsive while a shift was in progress
+- Added support for multiple workplaces — track shifts and wages across different jobs
+- Added clock in/out — easily start and end shifts without setting an end time upfront
 - Bug fixes and other improvements

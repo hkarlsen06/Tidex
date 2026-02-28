@@ -1,9 +1,4 @@
-- Aggiunti pacchetti bonus di messaggi Wagey — acquista 20 messaggi extra che non scadono mai
-- Aggiunta possibilità di terminare i turni attivi direttamente dalla dashboard
-- Aggiunto profilo amico con controlli per notifiche e visibilità delle entrate
-- Aggiunta visualizzazione delle entrate nei turni condivisi
-- Aggiunta conferma quando si cancellano i dati dei turni
-- Aggiunto stato modificabile della busta paga nella dashboard
-- Migliorato Wagey con etichette delle azioni più intelligenti e migliore rendering delle tabelle
-- Avvio dell'app più veloce e caricamento della dashboard più fluido
+- Risolto un problema critico che poteva rendere l'app completamente non responsiva durante un turno in corso
+- Aggiunto supporto per più luoghi di lavoro — tieni traccia di turni e stipendi per diversi lavori
+- Aggiunta timbratura entrata/uscita — inizia e termina i turni facilmente senza impostare un orario di fine in anticipo
 - Correzioni di bug e altri miglioramenti

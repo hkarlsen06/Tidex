@@ -1,9 +1,4 @@
-- Thêm gói tin nhắn thưởng Wagey — mua 20 tin nhắn bổ sung không bao giờ hết hạn
-- Thêm khả năng kết thúc ca làm đang hoạt động trực tiếp từ bảng điều khiển
-- Thêm hồ sơ bạn bè với các tùy chọn hiển thị thông báo và thu nhập
-- Thêm chế độ chuyển đổi xem thu nhập trong ca làm được chia sẻ
-- Thêm xác nhận khi xóa thông tin ca làm
-- Thêm trạng thái phiếu lương có thể chỉnh sửa trên bảng điều khiển
-- Cải thiện Wagey với nhãn hành động thông minh hơn và hiển thị bảng tốt hơn
-- Khởi động ứng dụng nhanh hơn và tải bảng điều khiển mượt mà hơn
+- Sửa lỗi nghiêm trọng có thể khiến ứng dụng hoàn toàn không phản hồi trong khi ca làm việc đang diễn ra
+- Thêm hỗ trợ nhiều nơi làm việc — theo dõi ca làm và lương của nhiều công việc khác nhau
+- Thêm tính năng chấm công vào/ra — dễ dàng bắt đầu và kết thúc ca làm mà không cần đặt giờ kết thúc trước
 - Sửa lỗi và các cải tiến khác
