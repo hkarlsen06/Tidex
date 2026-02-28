@@ -66,6 +66,7 @@ struct SharedShiftsListView: View {
             Spacer()
             SharedShiftsCalendarView(
               shifts: shifts,
+              jobs: jobs,
               year: year,
               month: month,
               phase: phase,
@@ -112,10 +113,16 @@ struct SharedShiftsListView: View {
     .animation(.none, value: showListView)
     // Using .sheet(item:) guarantees data availability when sheet presents
     .sheet(item: $selectedShift) { shift in
-      ShiftDetailsSheet(shift: shift, onDelete: nil)
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled()
+      let shiftJob = showJobIndicator ? shift.shift.job_id.flatMap { jobsById[$0] } : nil
+      ShiftDetailsSheet(
+        shift: shift,
+        jobName: shiftJob?.name,
+        jobColorHex: shiftJob?.color,
+        onDelete: nil
+      )
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
+      .interactiveDismissDisabled()
     }
     // Detect screenshots and notify the sharer
     .onReceive(

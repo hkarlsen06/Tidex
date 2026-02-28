@@ -223,8 +223,11 @@ struct ShiftsView: View {
       bodyWithLifecycle
         // Shift details sheet (item-based to guarantee data availability)
         .sheet(item: $selectedShift) { shift in
+          let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
           ShiftDetailsSheet(
             shift: shift,
+            jobName: shiftJob?.name,
+            jobColorHex: shiftJob?.color,
             onDelete: {
               selectedShift = nil
               // Small delay before showing delete confirmation
@@ -255,8 +258,11 @@ struct ShiftsView: View {
         }
         // Sheet for editing directly (opens in edit mode from swipe action)
         .sheet(item: $shiftToEditDirectly) { shift in
+          let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
           ShiftDetailsSheet(
             shift: shift,
+            jobName: shiftJob?.name,
+            jobColorHex: shiftJob?.color,
             onDelete: {
               shiftToEditDirectly = nil
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
