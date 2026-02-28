@@ -50,6 +50,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Job metadata for currently selected sharer
   @Published private(set) var sharedJobs: [SharedJob] = []
 
+  /// Currency for currently selected sharer (from shared settings payload)
+  @Published private(set) var sharedCurrency: String?
+
   /// Whether sharers are being loaded
   @Published private(set) var isLoadingSharers = false
 
@@ -441,6 +444,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     selectedSharer = sharer
     sharedShifts = []
     sharedJobs = []
+    sharedCurrency = nil
     startSelectedSharerLoadTask()
   }
 
@@ -452,6 +456,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     selectedSharer = nil
     sharedShifts = []
     sharedJobs = []
+    sharedCurrency = nil
     userShiftsForMonth = []
     userEarningsByDate = [:]
     lastCacheTime = nil
@@ -542,6 +547,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         // This ensures the calendar structure and data update in the same render pass
         sharedShifts = freshShifts
         sharedJobs = response.jobs
+        sharedCurrency = response.settings.currency
         committedYear = year
         committedMonth = month
         lastCacheTime = Date()

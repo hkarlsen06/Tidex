@@ -39,12 +39,18 @@ struct AddJobSheet: View {
   @State private var existingJobName = ""
   @State private var existingJobColor = Color(red: 59 / 255, green: 130 / 255, blue: 246 / 255)
   @State private var payrollDay = 15
+  @State private var showingPaydayInput = false
+  @State private var paydayInputText = ""
+  @FocusState private var isPaydayInputFocused: Bool
   @State private var halfTaxMonth: Int?
   @State private var monthlyGoal = "20000"
 
   @State private var isSaving = false
   @State private var validationError: String?
   @State private var showSaveError = false
+
+  private let payrollDayOptions = [1, 10, 15, 20, 25, 28]
+  private let monthlyGoalPresets = [15000, 20000, 25000]
 
   init(
     initialCurrency: String,
@@ -261,14 +267,111 @@ struct AddJobSheet: View {
   }
 
   private var payDetailsCard: some View {
-    VStack(spacing: 0) {
-      payDetailsRow(
-        title: String(localized: "settings.pay.add_job.payroll_day"),
-        value: "\(payrollDay)",
-        options: (1...31).map { day in
-          (label: "\(day)", action: { payrollDay = day })
+    VStack(alignment: .leading, spacing: Spacing.md) {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        Text(String(localized: "settings.pay.add_job.payroll_day"))
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+
+        ZStack(alignment: .trailing) {
+          ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.xs) {
+              ForEach(payrollDayOptions, id: \.self) { day in
+                AddJobPaydayButton(
+                  day: day,
+                  isLast: day == 28,
+                  isSelected: payrollDay == day && !showingPaydayInput,
+                  action: {
+                    showingPaydayInput = false
+                    payrollDay = day
+                  }
+                )
+              }
+
+              if showingPaydayInput {
+                TextField("", text: $paydayInputText)
+                  .font(.tidexButton)
+                  .foregroundColor(.tidexBlue)
+                  .keyboardType(.numberPad)
+                  .multilineTextAlignment(.center)
+                  .focused($isPaydayInputFocused)
+                  .frame(width: 44)
+                  .frame(minHeight: 44)
+                  .background(Color.tidexBlue.opacity(0.15))
+                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+                  .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+                      .stroke(Color.tidexBlue, lineWidth: 2)
+                  )
+                  .onChange(of: isPaydayInputFocused) { _, focused in
+                    if !focused {
+                      applyPaydayInput()
+                    }
+                  }
+                  .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                      Spacer()
+                      Button(String(localized: .commonDone)) {
+                        applyPaydayInput()
+                      }
+                      .fontWeight(.semibold)
+                    }
+                  }
+              } else {
+                Button(action: {
+                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  paydayInputText = !payrollDayOptions.contains(payrollDay) ? "\(payrollDay)" : ""
+                  showingPaydayInput = true
+                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isPaydayInputFocused = true
+                  }
+                }) {
+                  HStack(spacing: Spacing.xxs) {
+                    Image(systemName: "pencil")
+                      .font(.tidexCaptionRegular)
+                    Text(.onboardingSettingsPaydayOther)
+                  }
+                  .font(!payrollDayOptions.contains(payrollDay) ? .tidexLabelStrong : .tidexLabel)
+                  .foregroundColor(
+                    !payrollDayOptions.contains(payrollDay) ? .white : .tidexTextSecondary
+                  )
+                  .frame(minWidth: 56, minHeight: 44)
+                  .padding(.horizontal, Spacing.xs)
+                  .background(
+                    !payrollDayOptions.contains(payrollDay)
+                      ? Color.tidexBrandPrimary : Color.tidexBackground
+                  )
+                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+                  .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+                      .stroke(
+                        !payrollDayOptions.contains(payrollDay)
+                          ? Color.clear : Color.tidexBorder,
+                        lineWidth: 1
+                      )
+                  )
+                }
+                .buttonStyle(.plain)
+              }
+            }
+            .padding(.trailing, Spacing.lg)
+          }
+
+          LinearGradient(
+            colors: [Color.tidexSurfaceSecondary.opacity(0), Color.tidexSurfaceSecondary],
+            startPoint: .leading,
+            endPoint: .trailing
+          )
+          .frame(width: 32)
+          .allowsHitTesting(false)
         }
-      )
+
+        if !payrollDayOptions.contains(payrollDay) && !showingPaydayInput {
+          Text(String(localized: .onboardingSettingsPaydayCustomValue(payrollDay)))
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexBlue)
+        }
+      }
 
       Divider()
         .background(Color.tidexBorder)
@@ -295,26 +398,51 @@ struct AddJobSheet: View {
       Divider()
         .background(Color.tidexBorder)
 
-      VStack(alignment: .leading, spacing: Spacing.xs) {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
         Text(String(localized: "settings.pay.add_job.monthly_goal"))
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
-        TextField("", text: $monthlyGoal)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-          .keyboardType(.numberPad)
-          .onChange(of: monthlyGoal) { _, newValue in
-            let filtered = newValue.filter { $0.isNumber }
-            if filtered != newValue {
-              monthlyGoal = filtered
+        HStack(spacing: Spacing.xs) {
+          TextField("", text: $monthlyGoal)
+            .font(.tidexBody)
+            .foregroundColor(.tidexTextPrimary)
+            .keyboardType(.numberPad)
+            .onChange(of: monthlyGoal) { _, newValue in
+              let filtered = newValue.filter { $0.isNumber }
+              if filtered != newValue {
+                monthlyGoal = filtered
+              }
+            }
+          if !onboardingData.currency.isEmpty {
+            Text(onboardingData.currency)
+              .font(.tidexSubheadline)
+              .foregroundColor(.tidexTextMuted)
+          }
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(Color.tidexBackground)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: Spacing.xs) {
+            ForEach(monthlyGoalPresets, id: \.self) { goalPreset in
+              MonthlyGoalPresetButton(
+                value: goalPreset,
+                isSelected: Int(monthlyGoal) == goalPreset,
+                action: {
+                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  monthlyGoal = "\(goalPreset)"
+                }
+              )
             }
           }
+        }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.vertical, Spacing.sm)
     }
-    .padding(.horizontal, Spacing.md)
+    .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .overlay(
@@ -533,6 +661,10 @@ struct AddJobSheet: View {
   private func goToWageSetup() {
     validationError = nil
 
+    if showingPaydayInput {
+      applyPaydayInput()
+    }
+
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
       validationError = String(localized: "settings.pay.add_job.error_name")
@@ -553,6 +685,14 @@ struct AddJobSheet: View {
 
   private func backFromExistingJobSetup() {
     step = onboardingData.wageType == .custom ? .supplements : .wage
+  }
+
+  private func applyPaydayInput() {
+    if let parsed = Int(paydayInputText) {
+      payrollDay = min(max(parsed, 1), 28)
+    }
+    showingPaydayInput = false
+    isPaydayInputFocused = false
   }
 
   private func submit() async {
@@ -653,5 +793,54 @@ struct AddJobSheet: View {
     let green = Double((intValue >> 8) & 0xFF) / 255.0
     let blue = Double(intValue & 0xFF) / 255.0
     return Color(red: red, green: green, blue: blue)
+  }
+}
+
+private struct AddJobPaydayButton: View {
+  let day: Int
+  let isLast: Bool
+  let isSelected: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      action()
+    }) {
+      Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
+        .font(isSelected ? .tidexButton : .tidexBodyMedium)
+        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .frame(minWidth: 56, minHeight: 44)
+        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+        .overlay(
+          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
+        )
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+private struct MonthlyGoalPresetButton: View {
+  let value: Int
+  let isSelected: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text("\(value)")
+        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
+        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
+        .clipShape(Capsule())
+        .overlay(
+          Capsule()
+            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
+        )
+    }
+    .buttonStyle(.plain)
   }
 }

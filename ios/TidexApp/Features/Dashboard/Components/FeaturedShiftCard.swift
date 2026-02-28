@@ -30,6 +30,7 @@ struct FeaturedShiftCard: View {
     jobName: String? = nil,
     jobColorHex: String? = nil,
     progress: Double? = nil,
+    finalCountdownSeconds: Int? = nil,
     showIncreaseHighlight: Bool = false,
     showFooter: Bool = true
   ) {
@@ -41,6 +42,7 @@ struct FeaturedShiftCard: View {
     self.jobName = jobName
     self.jobColorHex = jobColorHex
     self.progress = progress
+    self.finalCountdownSeconds = finalCountdownSeconds
     self.showIncreaseHighlight = showIncreaseHighlight
     self.showFooter = showFooter
   }

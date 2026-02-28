@@ -278,6 +278,7 @@ private struct SharedShiftsDetailView: View {
   @Binding var highlightShiftIds: Set<String>
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.userCurrency) private var fallbackCurrency
   @Environment(\.layoutDirection) private var layoutDirection
   @AppStorage("shiftsViewMode") private var showListView = false
   @State private var showProfile = false
@@ -291,6 +292,10 @@ private struct SharedShiftsDetailView: View {
   private let verticalLimit: CGFloat = 50
   private let edgeExclusion: CGFloat = 24
   private let monthSwipeHaptic = UIImpactFeedbackGenerator(style: .medium)
+
+  private var effectiveCurrency: String {
+    viewModel.sharedCurrency ?? fallbackCurrency
+  }
 
   var body: some View {
     GeometryReader { geometry in
@@ -314,6 +319,7 @@ private struct SharedShiftsDetailView: View {
         )
         .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity)
+        .environment(\.userCurrency, effectiveCurrency)
       }
       .contentShape(Rectangle())
       .simultaneousGesture(monthSwipeDragGesture(containerWidth: geometry.size.width))

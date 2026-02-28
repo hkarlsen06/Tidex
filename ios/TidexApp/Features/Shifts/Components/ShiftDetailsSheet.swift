@@ -18,6 +18,10 @@ struct ShiftEditResult {
 
 struct ShiftDetailsSheet: View {
   let shift: ShiftWithComputations
+  /// Job name to display in the header badge (only set when user has multiple jobs)
+  let jobName: String?
+  /// Job color hex for the badge (e.g. "#3B82F6")
+  let jobColorHex: String?
   let onDelete: (() -> Void)?
   let onUpdate: ((ShiftEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
@@ -90,6 +94,8 @@ struct ShiftDetailsSheet: View {
   /// Initialize the edit mode from the passed parameter
   init(
     shift: ShiftWithComputations,
+    jobName: String? = nil,
+    jobColorHex: String? = nil,
     onDelete: (() -> Void)? = nil,
     onUpdate: ((ShiftEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
@@ -97,6 +103,8 @@ struct ShiftDetailsSheet: View {
     tariffRules: [SupplementRule] = []
   ) {
     self.shift = shift
+    self.jobName = jobName
+    self.jobColorHex = jobColorHex
     self.onDelete = onDelete
     self.onUpdate = onUpdate
     self.onEditRecurring = onEditRecurring
@@ -543,6 +551,18 @@ struct ShiftDetailsSheet: View {
         .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+
+      // Job badge (only shown when user has multiple jobs)
+      if let jobName, !jobName.isEmpty {
+        WorkplaceNameText(
+          name: jobName,
+          colorHex: jobColorHex,
+          font: .tidexSubheadline,
+          fallbackBadgeColor: .tidexBlue,
+          badgeHorizontalPadding: Spacing.sm,
+          badgeVerticalPadding: Spacing.xxxs
+        )
+      }
     }
     .frame(maxWidth: .infinity)
     .padding(.vertical, Spacing.xs)

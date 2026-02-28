@@ -59,11 +59,15 @@ struct MultiJobPromptScreen: View {
             .font(.tidexBody)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
 
           Text(String(localized: "onboarding.multi_job.later_hint", table: "Localizable"))
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.top, Spacing.xs)
         }
         .padding(.horizontal, Spacing.xl)

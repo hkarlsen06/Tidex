@@ -339,7 +339,7 @@ struct ShiftsCalendarView: View {
       let isToday = dayInfo.dateISO == todayISO()
       let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
       let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
-      let shouldColorJobTimes =
+      let shouldColorJobMetrics =
         hasMultipleActiveJobs
         && !dayInfo.isOutsideMonth
         && !isSelected
@@ -362,7 +362,7 @@ struct ShiftsCalendarView: View {
         content: cellContent(
           for: dayInfo,
           dayJobTimeColors: dayJobTimeColors,
-          shouldColorJobTimes: shouldColorJobTimes
+          shouldColorJobMetrics: shouldColorJobMetrics
         )
       )
     }
@@ -462,16 +462,23 @@ struct ShiftsCalendarView: View {
   private func cellContent(
     for dayInfo: CalendarDayInfo,
     dayJobTimeColors: DayJobTimeColors?,
-    shouldColorJobTimes: Bool
+    shouldColorJobMetrics: Bool
   ) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
 
     let effectiveViewMode = showEarnings ? viewMode : .hours
 
     if effectiveViewMode == .money, let earnings = earningsByDate[dateISO] {
+      if shouldColorJobMetrics, let dayJobTimeColors {
+        return .earningsBreakdown(
+          earnings,
+          color: dayJobTimeColors.topColor,
+          beforeTaxColor: dayJobTimeColors.bottomColor.opacity(0.75)
+        )
+      }
       return .earningsBreakdown(earnings)
     } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
-      if shouldColorJobTimes, let dayJobTimeColors {
+      if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(
           hoursData,
           color: dayJobTimeColors.topColor,
@@ -826,6 +833,31 @@ struct ShiftsCalendarView: View {
           )
       }
       .buttonStyle(.plain)
+
+      Button {
+        toggleHaptic.impactOccurred()
+        showSingleSelectionDeleteConfirm = true
+      } label: {
+        Group {
+          if isDeleting {
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexError))
+              .scaleEffect(0.7)
+          } else {
+            Image(systemName: "trash")
+              .font(.tidexLabel)
+          }
+        }
+        .foregroundColor(.tidexError)
+        .frame(width: 44, height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
+        )
+      }
+      .buttonStyle(.plain)
+      .disabled(isDeleting)
+      .accessibilityLabel(Text(.shiftsActionsDelete))
 
       Button {
         toggleHaptic.impactOccurred()

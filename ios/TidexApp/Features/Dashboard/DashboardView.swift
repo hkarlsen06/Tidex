@@ -230,8 +230,11 @@ struct DashboardView: View {
     }
     // Shift details sheet with full edit/delete capabilities
     .sheet(item: $selectedShift) { shift in
+      let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
       ShiftDetailsSheet(
         shift: shift,
+        jobName: shiftJob?.name,
+        jobColorHex: shiftJob?.color,
         onDelete: {
           selectedShift = nil
           // Small delay before showing delete confirmation

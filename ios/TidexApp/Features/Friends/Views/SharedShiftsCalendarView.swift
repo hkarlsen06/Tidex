@@ -4,6 +4,7 @@ import SwiftUI
 /// Matches the visual style of ShiftsCalendarView but without selection/editing features
 struct SharedShiftsCalendarView: View {
   let shifts: [ShiftWithComputations]
+  let jobs: [SharedJob]
   let year: Int
   let month: Int  // 1-12
   var phase: MonthTransitionPhase? = nil
@@ -33,6 +34,11 @@ struct SharedShiftsCalendarView: View {
 
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
   private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
+
+  private struct DayJobTimeColors {
+    let topColor: Color
+    let bottomColor: Color
+  }
 
   // MARK: - Computed Data
 
@@ -80,6 +86,38 @@ struct SharedShiftsCalendarView: View {
     for shift in shifts {
       result[shift.shiftDate, default: []].append(shift)
     }
+    return result
+  }
+
+  private var jobsById: [String: SharedJob] {
+    Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+  }
+
+  private var defaultJobId: String? {
+    jobs.first(where: { $0.is_default == true })?.id
+  }
+
+  private var hasMultipleActiveJobs: Bool {
+    jobs.count > 1
+  }
+
+  private var dayJobTimeColorsByDate: [String: DayJobTimeColors] {
+    guard hasMultipleActiveJobs else { return [:] }
+
+    var result: [String: DayJobTimeColors] = [:]
+
+    for (dateISO, shiftsOnDay) in shiftsByDate where !shiftsOnDay.isEmpty {
+      let sortedShifts = shiftsOnDay.sorted { lhs, rhs in
+        CalendarGridHelper.timeToMinutes(lhs.startTime)
+          < CalendarGridHelper.timeToMinutes(rhs.startTime)
+      }
+
+      guard let earliestShift = sortedShifts.first else { continue }
+      guard let topColor = resolvedJobColor(for: earliestShift) else { continue }
+
+      result[dateISO] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
+    }
+
     return result
   }
 
@@ -268,6 +306,12 @@ struct SharedShiftsCalendarView: View {
   @ViewBuilder
   private func calendarDayView(for dayInfo: CalendarDayInfo) -> some View {
     let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
+    let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
+    let shouldColorJobMetrics =
+      hasMultipleActiveJobs
+      && !dayInfo.isOutsideMonth
+      && !shiftsOnDay.isEmpty
+      && dayJobTimeColors != nil
     let isToday = dayInfo.dateISO == todayISO()
     let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
 
@@ -297,7 +341,11 @@ struct SharedShiftsCalendarView: View {
         CalendarDayCell(
           dayInfo: dayInfo,
           style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
-          content: cellContent(for: dayInfo),
+          content: cellContent(
+            for: dayInfo,
+            dayJobTimeColors: dayJobTimeColors,
+            shouldColorJobMetrics: shouldColorJobMetrics
+          ),
           showOverlapIndicator: showOverlap,
           showSingleUserIndicator: showSingleUserIndicator,
           singleUserIndicatorColor: singleUserIndicatorColor
@@ -353,7 +401,11 @@ struct SharedShiftsCalendarView: View {
 
   // MARK: - Cell Content
 
-  private func cellContent(for dayInfo: CalendarDayInfo) -> CalendarCellContent {
+  private func cellContent(
+    for dayInfo: CalendarDayInfo,
+    dayJobTimeColors: DayJobTimeColors?,
+    shouldColorJobMetrics: Bool
+  ) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
     let effectiveViewMode = showEarnings ? viewMode : .hours
 
@@ -370,12 +422,34 @@ struct SharedShiftsCalendarView: View {
 
     // Otherwise show friend's shifts (normal behavior)
     if effectiveViewMode == .money, let amount = earningsByDate[dateISO] {
+      if shouldColorJobMetrics, let dayJobTimeColors {
+        return .earnings(amount, color: dayJobTimeColors.topColor)
+      }
       return .earnings(amount)
     } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
+      if shouldColorJobMetrics, let dayJobTimeColors {
+        return .hours(
+          hoursData,
+          color: dayJobTimeColors.topColor,
+          secondaryColor: dayJobTimeColors.bottomColor
+        )
+      }
       return .hours(hoursData)
     }
 
     return .empty
+  }
+
+  private func resolvedJobColor(for shift: ShiftWithComputations) -> Color? {
+    let effectiveJobId = shift.shift.job_id ?? defaultJobId
+    guard
+      let effectiveJobId,
+      let job = jobsById[effectiveJobId],
+      let uiColor = WorkplaceColor.hexToUIColor(job.color)
+    else {
+      return nil
+    }
+    return Color(uiColor: uiColor)
   }
 
   private var hiddenFriendMetricsPlaceholder: some View {
@@ -403,6 +477,7 @@ struct SharedShiftsCalendarView: View {
 #Preview {
   SharedShiftsCalendarView(
     shifts: [],
+    jobs: [],
     year: 2025,
     month: 1,
     currency: "kr",
