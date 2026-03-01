@@ -33,6 +33,8 @@ struct UserSettings: Codable, Equatable {
   let half_tax_month: Int?
   /// Currency code
   let currency: String?
+  /// Default tab to open when launching the app
+  let default_startup_tab: String?
 
   /// Effective payroll day (defaults to 1 if not set)
   var effectivePayrollDay: Int {
@@ -47,6 +49,17 @@ struct UserSettings: Codable, Equatable {
   /// Effective dashboard clock button visibility
   var effectiveShowDashboardClockButtons: Bool {
     show_dashboard_clock_buttons ?? true
+  }
+
+  /// Effective startup tab (defaults to home)
+  var effectiveDefaultStartupTab: String {
+    guard let tab = default_startup_tab else { return "home" }
+    switch tab {
+    case "home", "shifts", "add", "stats", "sharing":
+      return tab
+    default:
+      return "home"
+    }
   }
 
   /// Resolve goal for a specific month with override-first fallback to baseline.
@@ -79,7 +92,8 @@ struct UserSettings: Codable, Equatable {
       calendar_animation_style: "horizontal",
       show_dashboard_clock_buttons: true,
       half_tax_month: nil,
-      currency: nil
+      currency: nil,
+      default_startup_tab: "home"
     )
   }
 }

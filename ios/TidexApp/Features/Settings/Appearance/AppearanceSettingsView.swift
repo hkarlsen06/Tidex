@@ -22,6 +22,9 @@ struct AppearanceSettingsView: View {
       // Calendar animation selection
       calendarAnimationSection
 
+      // Startup tab selection
+      startupTabSection
+
       // Dashboard controls
       dashboardControlsSection
     }
@@ -281,6 +284,81 @@ struct AppearanceSettingsView: View {
       return String(localized: .appearanceInfoLightActive)
     case .dark:
       return String(localized: .appearanceInfoDarkActive)
+    }
+  }
+
+  // MARK: - Startup Tab
+
+  private var startupTabSection: some View {
+    Section {
+      ForEach(StartupTabOption.allCases, id: \.self) { tab in
+        startupTabRow(tab)
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    } header: {
+      Text(String(localized: .appearanceStartupTabSectionTitle))
+    } footer: {
+      Text(String(localized: .appearanceStartupTabSectionDescription))
+    }
+  }
+
+  private func startupTabRow(_ tab: StartupTabOption) -> some View {
+    let isSelected = viewModel.selectedStartupTab == tab
+
+    return Button {
+      viewModel.selectedStartupTab = tab
+    } label: {
+      HStack(spacing: Spacing.md) {
+        ZStack {
+          RoundedRectangle(cornerRadius: CornerRadius.sm)
+            .fill(Color.tidexBlue.opacity(0.1))
+            .frame(width: 40, height: 40)
+
+          Image(systemName: startupTabIcon(tab))
+            .font(.tidexBody)
+            .foregroundColor(.tidexBlue)
+        }
+
+        Text(startupTabTitle(tab))
+          .font(.body)
+          .foregroundColor(.tidexTextPrimary)
+
+        Spacer()
+
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+          .font(.system(size: 24))
+          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+      }
+    }
+  }
+
+  private func startupTabTitle(_ tab: StartupTabOption) -> String {
+    switch tab {
+    case .home:
+      return String(localized: .tabsHome)
+    case .shifts:
+      return String(localized: .tabsShifts)
+    case .add:
+      return String(localized: .tabsAdd)
+    case .stats:
+      return String(localized: .tabsStats)
+    case .sharing:
+      return String(localized: .tabsSharing)
+    }
+  }
+
+  private func startupTabIcon(_ tab: StartupTabOption) -> String {
+    switch tab {
+    case .home:
+      return "speedometer"
+    case .shifts:
+      return "calendar"
+    case .add:
+      return "plus.circle.fill"
+    case .stats:
+      return "chart.bar.xaxis"
+    case .sharing:
+      return "person.2.fill"
     }
   }
 

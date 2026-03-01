@@ -49,6 +49,9 @@ final class LocalUserSettings {
   /// Currency code
   var currency: String?
 
+  /// Default tab to open when launching the app
+  var defaultStartupTab: String?
+
   /// When the user was last active
   var lastActive: Date?
 
@@ -135,6 +138,17 @@ final class LocalUserSettings {
     showDashboardClockButtons ?? true
   }
 
+  /// Effective startup tab (defaults to home)
+  var effectiveDefaultStartupTab: String {
+    guard let tab = defaultStartupTab else { return "home" }
+    switch tab {
+    case "home", "shifts", "add", "stats", "sharing":
+      return tab
+    default:
+      return "home"
+    }
+  }
+
   var monthlyGoalsByMonth: [String: Int] {
     get {
       guard let monthlyGoalsByMonthData, !monthlyGoalsByMonthData.isEmpty else {
@@ -174,6 +188,7 @@ final class LocalUserSettings {
     showDashboardClockButtons: Bool? = true,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
+    defaultStartupTab: String? = nil,
     lastActive: Date? = nil,
     createdAt: Date? = nil,
     serverUpdatedAt: Date,
@@ -195,6 +210,7 @@ final class LocalUserSettings {
     self.showDashboardClockButtons = showDashboardClockButtons
     self.halfTaxMonth = halfTaxMonth
     self.currency = currency
+    self.defaultStartupTab = defaultStartupTab
     self.lastActive = lastActive
     self.createdAt = createdAt
     self.serverUpdatedAt = serverUpdatedAt
@@ -226,6 +242,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   let showDashboardClockButtons: Bool
   let halfTaxMonth: Int?
   let currency: String?
+  let defaultStartupTab: String?
   let lastActive: Date?
   let updatedAt: Date
   let revision: Int64
@@ -241,6 +258,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     case showDashboardClockButtons
     case halfTaxMonth
     case currency
+    case defaultStartupTab
     case lastActive
     case updatedAt
     case revision
@@ -265,6 +283,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
       showDashboardClockButtons: row.effectiveShowDashboardClockButtons,
       halfTaxMonth: row.half_tax_month,
       currency: row.currency,
+      defaultStartupTab: row.default_startup_tab,
       lastActive: row.last_active.flatMap { dateFormatter.date(from: $0) },
       updatedAt: updatedAt,
       revision: revision
@@ -322,6 +341,9 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     if currency != other.currency {
       changed.insert(.currency)
     }
+    if defaultStartupTab != other.defaultStartupTab {
+      changed.insert(.defaultStartupTab)
+    }
     if lastActive != other.lastActive {
       changed.insert(.lastActive)
     }
@@ -347,6 +369,7 @@ extension UserSettingsServerSnapshot {
       try container.decodeIfPresent(Bool.self, forKey: .showDashboardClockButtons) ?? true
     halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
     currency = try container.decodeIfPresent(String.self, forKey: .currency)
+    defaultStartupTab = try container.decodeIfPresent(String.self, forKey: .defaultStartupTab)
     lastActive = try container.decodeIfPresent(Date.self, forKey: .lastActive)
     updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     revision = try container.decode(Int64.self, forKey: .revision)
@@ -374,7 +397,8 @@ extension LocalUserSettings {
       calendar_animation_style: effectiveCalendarAnimationStyle,
       show_dashboard_clock_buttons: effectiveShowDashboardClockButtons,
       half_tax_month: halfTaxMonth,
-      currency: currency
+      currency: currency,
+      default_startup_tab: defaultStartupTab
     )
   }
 
@@ -410,6 +434,7 @@ extension LocalUserSettings {
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
+      defaultStartupTab: serverRow.default_startup_tab,
       lastActive: lastActive,
       createdAt: createdAt,
       serverUpdatedAt: serverUpdatedAt,

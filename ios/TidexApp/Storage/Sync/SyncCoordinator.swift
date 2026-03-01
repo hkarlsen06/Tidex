@@ -1713,6 +1713,7 @@ final class SyncCoordinator: ObservableObject {
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
+      defaultStartupTab: serverRow.default_startup_tab,
       lastActive: lastActive,
       createdAt: createdAt,
       serverUpdatedAt: serverUpdatedAt,
@@ -3678,7 +3679,8 @@ final class SyncCoordinator: ObservableObject {
       updateData["calendar_animation_style"] = .string(settings.effectiveCalendarAnimationStyle)
     }
     if dirtyFields.contains(.showDashboardClockButtons) {
-      updateData["show_dashboard_clock_buttons"] = .bool(settings.effectiveShowDashboardClockButtons)
+      updateData["show_dashboard_clock_buttons"] = .bool(
+        settings.effectiveShowDashboardClockButtons)
     }
     if dirtyFields.contains(.halfTaxMonth) {
       if let month = settings.halfTaxMonth {
@@ -3693,6 +3695,9 @@ final class SyncCoordinator: ObservableObject {
       } else {
         updateData["currency"] = .null
       }
+    }
+    if dirtyFields.contains(.defaultStartupTab) {
+      updateData["default_startup_tab"] = .string(settings.effectiveDefaultStartupTab)
     }
     if dirtyFields.contains(.lastActive) {
       if let lastActive = settings.lastActive {
@@ -3803,6 +3808,7 @@ final class SyncCoordinator: ObservableObject {
     if let currency = settings.currency {
       insertData["currency"] = .string(currency)
     }
+    insertData["default_startup_tab"] = .string(settings.effectiveDefaultStartupTab)
     if let lastActive = settings.lastActive {
       insertData["last_active"] = .string(ISO8601DateFormatter().string(from: lastActive))
     }

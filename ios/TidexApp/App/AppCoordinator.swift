@@ -18,6 +18,7 @@ private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 @MainActor
 final class AppCoordinator: ObservableObject {
   static let shared = AppCoordinator()
+  private static let startupTabCacheKey = "defaultStartupTab"
 
   // MARK: - Navigation State
 
@@ -651,6 +652,10 @@ final class AppCoordinator: ObservableObject {
         AppearanceManager.shared.loadFromSettings(settings.theme)
         AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(
           settings.calendar_animation_style)
+        UserDefaults.standard.set(
+          settings.effectiveDefaultStartupTab,
+          forKey: Self.startupTabCacheKey
+        )
       }
 
     } catch {
@@ -716,6 +721,10 @@ final class AppCoordinator: ObservableObject {
           AppearanceManager.shared.loadFromSettings(settings.theme)
           AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(
             settings.calendar_animation_style)
+          UserDefaults.standard.set(
+            settings.effectiveDefaultStartupTab,
+            forKey: Self.startupTabCacheKey
+          )
         }
       }
 
@@ -1126,6 +1135,10 @@ final class AppCoordinator: ObservableObject {
         AppearanceManager.shared.loadFromSettings(settings.theme)
         AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(
           settings.calendar_animation_style)
+        UserDefaults.standard.set(
+          settings.effectiveDefaultStartupTab,
+          forKey: Self.startupTabCacheKey
+        )
       }
 
       // Register APNs token if available
@@ -1148,6 +1161,10 @@ final class AppCoordinator: ObservableObject {
         AppearanceManager.shared.loadFromSettings(settings.theme)
         AppearanceManager.shared.loadCalendarAnimationStyleFromSettings(
           settings.calendar_animation_style)
+        UserDefaults.standard.set(
+          settings.effectiveDefaultStartupTab,
+          forKey: Self.startupTabCacheKey
+        )
       }
 
       // Update Apple Watch

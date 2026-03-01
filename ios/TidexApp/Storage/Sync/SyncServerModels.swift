@@ -168,6 +168,7 @@ struct SyncUserSettingsRow: Codable {
   let show_dashboard_clock_buttons: Bool?
   let half_tax_month: Int?
   let currency: String?
+  let default_startup_tab: String?
   let revision: Int64
 
   /// Convert to regular UserSettings
@@ -186,7 +187,8 @@ struct SyncUserSettingsRow: Codable {
       calendar_animation_style: calendar_animation_style,
       show_dashboard_clock_buttons: show_dashboard_clock_buttons,
       half_tax_month: half_tax_month,
-      currency: currency
+      currency: currency,
+      default_startup_tab: default_startup_tab
     )
   }
 }
