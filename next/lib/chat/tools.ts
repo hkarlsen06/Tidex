@@ -953,13 +953,20 @@ Actions:
 - VIEW: No parameters or action="view" - Returns display, goals, preferences, and tax (halfTaxMonth only)
 - UPDATE: action="update", category, settings object with key-value pairs
 
-Categories: display, tax, goals, preferences
-- display: theme, defaultShiftsView, currency (e.g., "kr", "$", "€", "£")
-- See settings_reference section in system prompt for detailed descriptions.
-- Payroll/tax deduction settings now live in wage snapshots (use get_wage_info).
-- For wage information, use the get_wage_info tool instead.
+Categories and keys:
+- display: theme, defaultShiftsView, currency (e.g., "kr", "$", "€", "£"), showDashboardClockButtons (boolean)
+- tax: halfTaxMonth (1-12, global half-tax month override)
+- goals: monthlyGoal (baseline for all months), payrollDay (1-31), monthlyGoalsByMonth (per-month overrides, see below)
+- preferences: directTimeInput, fullMinuteRange, defaultStartupTab ("home"|"shifts"|"add"|"stats"|"sharing")
 
-Note: Only include settings you want to change in the settings object.`,
+Per-month goal overrides (monthlyGoalsByMonth):
+- Provide a map of { "YYYY-MM": amount } to set overrides for specific months
+- Use null as the value to remove an override and fall back to monthlyGoal baseline
+- Example: { "2026-03": 45000 } sets only March; other months keep the baseline
+- The view response shows monthlyGoalsByMonth (all overrides) and the effective monthlyGoal for this month
+
+Note: Only include settings you want to change in the settings object.
+Note: Tax deduction enabled/percentage are per-snapshot — use get_wage_info instead.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1012,6 +1019,30 @@ Note: Only include settings you want to change in the settings object.`,
         category: "tax",
         settings: { halfTaxMonth: 12 },
       },
+      // Set a per-month goal override for March 2026
+      {
+        action: "update",
+        category: "goals",
+        settings: { monthlyGoalsByMonth: { "2026-03": 45000 } },
+      },
+      // Remove a per-month override (fall back to baseline)
+      {
+        action: "update",
+        category: "goals",
+        settings: { monthlyGoalsByMonth: { "2026-03": null } },
+      },
+      // Hide dashboard clock buttons
+      {
+        action: "update",
+        category: "display",
+        settings: { showDashboardClockButtons: false },
+      },
+      // Change startup tab to stats
+      {
+        action: "update",
+        category: "preferences",
+        settings: { defaultStartupTab: "stats" },
+      },
     ],
   },
 
@@ -1020,19 +1051,21 @@ Note: Only include settings you want to change in the settings object.`,
   // ---------------------------------------------------------------------------
   {
     name: "get_wage_info",
-    description: `Get user's wage configuration including current, upcoming, and historical wage entries.
+    description: `Get user's complete wage configuration: snapshot history plus global pay settings.
 
 Returns:
+- globalPaySettings: Global pay configuration (halfTaxMonth, payrollDay, monthlyGoal)
 - current: The wage that applies today (id, fromDate, usingTariff, wageLevel, hourlyWage, supplements, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
 - history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
 
 Tax settings (taxEnabled, taxPercentage) are per-snapshot, not global. Each wage period can have different tax settings.
-The half-tax month setting remains global (use manage_settings to view/update).
+halfTaxMonth and payrollDay are global and shown in globalPaySettings.
 
-Use this when the user asks about their wage, hourly rate, supplements, tax settings, or wage history.
-For general settings (display, goals, preferences, halfTaxMonth), use manage_settings instead.
-To modify wage entries, use manage_wage_snapshots with the id from get_wage_info.`,
+Use this when the user asks about their wage, hourly rate, tax settings, payroll day, or wage history.
+For display/preference settings (theme, defaultStartupTab, etc.), use manage_settings instead.
+To modify wage entries, use manage_wage_snapshots with the id from get_wage_info.
+To modify halfTaxMonth or payrollDay, use manage_settings with category="tax" or category="goals".`,
     input_schema: {
       type: "object",
       properties: {},

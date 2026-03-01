@@ -51,6 +51,8 @@ export type DbUserSettings = {
   payroll_day?: number | null;
   monthly_goal?: number | null;
   monthly_goals_by_month?: Record<string, number> | null;
+  show_dashboard_clock_buttons?: boolean | null;
+  default_startup_tab?: string | null;
   profile_picture_url?: string | null;
   created_at?: string;
   updated_at?: string;

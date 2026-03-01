@@ -1557,10 +1557,11 @@ async function executeManageSettings(
 
       switch (input.category) {
         case "display": {
-          const displayData: { theme?: string; default_shifts_view?: string; currency?: string } = {};
+          const displayData: { theme?: string; default_shifts_view?: string; currency?: string; show_dashboard_clock_buttons?: boolean } = {};
           if (input.settings.theme) displayData.theme = input.settings.theme;
           if (input.settings.defaultShiftsView) displayData.default_shifts_view = input.settings.defaultShiftsView;
           if (input.settings.currency) displayData.currency = input.settings.currency;
+          if (input.settings.showDashboardClockButtons !== undefined) displayData.show_dashboard_clock_buttons = input.settings.showDashboardClockButtons;
 
           result = await updateDisplaySettings(displayData);
           break;
@@ -1593,6 +1594,7 @@ async function executeManageSettings(
           const goalsData: {
             monthly_goal?: number | null;
             payroll_day?: number | null;
+            monthly_goals_by_month?: Record<string, number | null>;
           } = {};
 
           if (input.settings.monthlyGoal !== undefined) {
@@ -1600,6 +1602,9 @@ async function executeManageSettings(
           }
           if (input.settings.payrollDay !== undefined) {
             goalsData.payroll_day = input.settings.payrollDay;
+          }
+          if (input.settings.monthlyGoalsByMonth !== undefined) {
+            goalsData.monthly_goals_by_month = input.settings.monthlyGoalsByMonth;
           }
 
           result = await updatePaySettings(goalsData);
@@ -1610,6 +1615,7 @@ async function executeManageSettings(
           const preferencesData: {
             direct_time_input?: boolean;
             full_minute_range?: boolean;
+            default_startup_tab?: string;
           } = {};
 
           if (input.settings.directTimeInput !== undefined) {
@@ -1617,6 +1623,9 @@ async function executeManageSettings(
           }
           if (input.settings.fullMinuteRange !== undefined) {
             preferencesData.full_minute_range = input.settings.fullMinuteRange;
+          }
+          if (input.settings.defaultStartupTab !== undefined) {
+            preferencesData.default_startup_tab = input.settings.defaultStartupTab;
           }
 
           result = await updatePreferencesSettings(preferencesData);
@@ -1687,6 +1696,7 @@ async function executeManageSettings(
           theme: settings.theme || "system",
           defaultShiftsView: settings.default_shifts_view || "calendar",
           currency: settings.currency || "kr",
+          showDashboardClockButtons: settings.show_dashboard_clock_buttons ?? true,
         },
         tax: {
           // Only half_tax_month remains as a global setting
@@ -1703,6 +1713,7 @@ async function executeManageSettings(
         preferences: {
           directTimeInput: settings.direct_time_input ?? false,
           fullMinuteRange: settings.full_minute_range ?? false,
+          defaultStartupTab: settings.default_startup_tab ?? "home",
         },
       };
 
@@ -1739,26 +1750,41 @@ async function executeGetWageInfo(
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    // Fetch all wage snapshots
-    const snapshotsProgram = Effect.gen(function* () {
-      const service = yield* SnapshotsService;
-      const snapshots = yield* service.getUserWageSnapshots(userId);
-      return snapshots;
-    }).pipe(
-      Effect.provide(AuthSnapshotsLive),
-      Effect.catchAll(() => {
-        return Effect.succeed([] as const);
-      }),
-      Effect.scoped
-    );
+    // Fetch snapshots and global pay settings in parallel
+    const [snapshots, userSettings] = await Promise.all([
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* SnapshotsService;
+          return yield* service.getUserWageSnapshots(userId);
+        }).pipe(
+          Effect.provide(AuthSnapshotsLive),
+          Effect.catchAll(() => Effect.succeed([] as const)),
+          Effect.scoped
+        )
+      ),
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const settingsService = yield* SettingsService;
+          return yield* settingsService.getUserSettings(userId);
+        }).pipe(
+          Effect.provide(AuthSettingsLive),
+          Effect.catchAll(() => Effect.succeed(null)),
+          Effect.scoped
+        )
+      ),
+    ]);
 
-    const snapshots = await Effect.runPromise(snapshotsProgram);
+    const globalPaySettings = {
+      halfTaxMonth: userSettings?.half_tax_month ?? null,
+      payrollDay: userSettings?.payroll_day ?? null,
+      monthlyGoal: userSettings?.monthly_goal ?? null,
+    };
 
     if (snapshots.length === 0) {
       return {
         success: true,
         message: tr.noWageConfigured ?? "No wage configuration found",
-        data: { current: null },
+        data: { globalPaySettings, current: null },
       };
     }
 
@@ -1829,6 +1855,11 @@ async function executeGetWageInfo(
 
     // Build response
     const data: {
+      globalPaySettings: {
+        halfTaxMonth: number | null;
+        payrollDay: number | null;
+        monthlyGoal: number | null;
+      };
       current: {
         id: string;  // Short ID for referencing in manage_wage_snapshots
         fromDate: string | null;
@@ -1842,6 +1873,7 @@ async function executeGetWageInfo(
       upcoming?: CompactEntry[];
       history?: CompactEntry[];
     } = {
+      globalPaySettings,
       current: currentSnapshot ? {
         id: toShortId(currentSnapshot.id),  // Include short ID for referencing
         fromDate: currentSnapshot.from_date,

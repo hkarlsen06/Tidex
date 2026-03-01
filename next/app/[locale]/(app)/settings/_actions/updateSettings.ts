@@ -72,13 +72,42 @@ export async function updatePaySettings(data: {
   monthly_goal?: number | null;
   payroll_day?: number | null;
   half_tax_month?: number | null;
+  /** Merge patch: provide { "YYYY-MM": amount } to set, { "YYYY-MM": null } to remove an override */
+  monthly_goals_by_month?: Record<string, number | null>;
 }) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
+  const { monthly_goals_by_month: overridePatch, ...scalarData } = data;
+  const updateData: Record<string, unknown> = { ...scalarData };
+
+  if (overridePatch !== undefined) {
+    const { data: current, error: fetchError } = await supabase
+      .from('user_settings')
+      .select('monthly_goals_by_month')
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError) {
+      logger.error('Failed to fetch settings for monthly goals merge:', fetchError);
+      throw fetchError;
+    }
+
+    const existing = ((current?.monthly_goals_by_month ?? {}) as Record<string, number>);
+    const merged: Record<string, number> = { ...existing };
+    for (const [month, value] of Object.entries(overridePatch)) {
+      if (value === null) {
+        delete merged[month];
+      } else {
+        merged[month] = value;
+      }
+    }
+    updateData.monthly_goals_by_month = merged;
+  }
+
   const { error } = await supabase
     .from('user_settings')
-    .update(data)
+    .update(updateData)
     .eq('user_id', user.id);
 
   if (error) {
@@ -95,6 +124,7 @@ export async function updateDisplaySettings(data: {
   theme?: string;
   default_shifts_view?: string;
   currency?: string;
+  show_dashboard_clock_buttons?: boolean;
 }) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
@@ -116,6 +146,7 @@ export async function updateDisplaySettings(data: {
 export async function updatePreferencesSettings(data: {
   direct_time_input?: boolean;
   full_minute_range?: boolean;
+  default_startup_tab?: string;
 }) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient(); // Still needed for DB operations
