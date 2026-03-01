@@ -1,7 +1,6 @@
-import AuthenticationServices
+import Combine
 import Foundation
 import Supabase
-import SwiftUI
 import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "SecuritySettings")

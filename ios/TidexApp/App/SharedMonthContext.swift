@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import SwiftUI
 
 /// Shared month context that synchronizes the displayed month across multiple tabs
 /// Used by Dashboard, Shifts, and AddShift views to maintain consistent month navigation

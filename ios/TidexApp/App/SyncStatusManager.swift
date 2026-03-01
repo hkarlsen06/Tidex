@@ -1,5 +1,5 @@
+import Combine
 import Foundation
-import SwiftUI
 
 /// Sync indicator status states for UI display
 /// Named to avoid collision with SyncStatus in SyncTypes.swift (used for record sync state)

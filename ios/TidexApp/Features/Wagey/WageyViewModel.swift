@@ -1,7 +1,7 @@
 import Combine
 import Foundation
+import Observation
 import Supabase
-import SwiftUI
 import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyViewModel")

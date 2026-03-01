@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Screen 2: Sample Paycheck (THE AHA MOMENT)
 /// Demonstrates core value with dynamic data based on hourly rate

@@ -1,5 +1,5 @@
+import Combine
 import Foundation
-import SwiftUI
 import UIKit
 
 /// Manages push notification registration state and failure alerts.

@@ -1,5 +1,5 @@
 import Foundation
-import SwiftUI
+import Observation
 
 /// Observable data model collecting all onboarding inputs
 /// Used to gather wage, supplement, break, tax, and payroll settings during onboarding

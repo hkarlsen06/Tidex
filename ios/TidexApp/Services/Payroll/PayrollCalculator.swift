@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import os.log
 
 /// Pure payroll calculation logic
 /// Port of lib/payroll/calc.ts

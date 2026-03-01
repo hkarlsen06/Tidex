@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - Job
 
 /// Job row from the jobs table

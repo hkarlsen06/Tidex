@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Utility for formatting countdown text for shifts and payroll
 /// Matches the behavior of useCountdown and usePayrollCountdown hooks in Next.js

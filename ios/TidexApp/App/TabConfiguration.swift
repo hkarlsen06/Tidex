@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 /// Centralized tab configuration for the app
 /// Each tab represents a main section of the app, making it easy to add new tabs

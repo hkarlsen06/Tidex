@@ -52,6 +52,11 @@ opt_in_rules:
   - toggle_bool
   - self_binding
 
+analyzer_rules:
+  # Semantic rules that require compiler context (`swiftlint analyze`)
+  - capture_variable
+  - typesafe_array_init
+
 disabled_rules:
   # Metrics - too strict for existing codebase
   - line_length

@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - Stats API Response
 
 /// Stats data from the /api/stats endpoint

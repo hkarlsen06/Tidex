@@ -1,5 +1,5 @@
+import Combine
 import Foundation
-import SwiftUI
 import UIKit
 
 /// Local-only Add tab simulator for pre-auth onboarding.

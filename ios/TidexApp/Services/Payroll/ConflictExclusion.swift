@@ -1,5 +1,3 @@
-import Foundation
-
 /// Detects overlapping shifts and returns IDs to exclude from totals
 /// Port of lib/shifts/conflictExclusion.ts
 ///

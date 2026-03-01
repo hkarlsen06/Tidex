@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import StoreKit
-import SwiftUI
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SubscriptionSettingsViewModel")

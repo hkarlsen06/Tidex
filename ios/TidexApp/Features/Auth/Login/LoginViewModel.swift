@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import SwiftUI
 
 /// View model for the login screen
 /// Handles all authentication methods: email/password, phone/OTP, Google, Apple

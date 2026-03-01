@@ -1,8 +1,6 @@
 import ActivityKit
 import Sentry
-import Supabase
 import UIKit
-import WatchConnectivity
 import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
