@@ -123,6 +123,10 @@ struct FeaturedShiftCard: View {
     ShiftCardFormatter.localizedTime(shift.startTime, locale: Locale.appLocale)
   }
 
+  private var shouldShowLiveEndTimeIndicator: Bool {
+    hasProgress(progress) && !showTimeRangeEndSkeleton
+  }
+
   // MARK: - Body
 
   var body: some View {
@@ -295,12 +299,18 @@ struct FeaturedShiftCard: View {
   }
 
   private var timeRangeTextLabel: some View {
-    Text(timeRangeText)
-      .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextPrimary)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-      .environment(\.layoutDirection, .leftToRight)
+    HStack(alignment: .firstTextBaseline, spacing: 0) {
+      Text(timeRangeText)
+      if shouldShowLiveEndTimeIndicator {
+        LiveEndTimeTypingDots()
+          .padding(.leading, 1)
+      }
+    }
+    .font(.tidexSubheadline)
+    .foregroundColor(.tidexTextPrimary)
+    .lineLimit(1)
+    .fixedSize(horizontal: true, vertical: false)
+    .environment(\.layoutDirection, .leftToRight)
   }
 
   private var timeRangeSkeletonLabel: some View {
@@ -324,6 +334,36 @@ struct FeaturedShiftCard: View {
     Image(systemName: "clock")
       .font(.tidexSubheadline)
       .foregroundColor(.tidexTextMuted)
+  }
+}
+
+private struct LiveEndTimeTypingDots: View {
+  @State private var activeDotIndex: Int? = nil
+
+  var body: some View {
+    HStack(spacing: 2) {
+      ForEach(0..<3, id: \.self) { index in
+        let isActive = activeDotIndex == index
+        Circle()
+          .fill(Color.tidexTextMuted)
+          .frame(width: 3, height: 3)
+          .scaleEffect(isActive ? 1.0 : 0.55)
+          .opacity(isActive ? 1.0 : 0.35)
+          .animation(.easeInOut(duration: 0.2), value: activeDotIndex)
+      }
+    }
+    .frame(width: 14, alignment: .leading)
+    .task {
+      while !Task.isCancelled {
+        for index in 0..<3 {
+          activeDotIndex = index
+          try? await Task.sleep(for: .milliseconds(170))
+        }
+        activeDotIndex = nil
+        // Deliberate gap after each full wave to make the indicator feel less frantic.
+        try? await Task.sleep(for: .milliseconds(520))
+      }
+    }
   }
 }
 

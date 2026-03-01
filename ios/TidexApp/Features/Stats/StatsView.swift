@@ -17,6 +17,7 @@ struct StatsView: View {
 
   @StateObject private var viewModel = StatsViewModel()
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
+  @State private var isJobFilterDialogPresented = false
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -25,6 +26,11 @@ struct StatsView: View {
   private func refreshStatsContent() async {
     AppearanceTracker.shared.reset()
     await viewModel.refresh()
+  }
+
+  private var displayedStats: StatsData {
+    viewModel.stats
+      ?? StatsData.empty(year: viewModel.displayYear, month: viewModel.displayMonth)
   }
 
   var body: some View {
@@ -36,15 +42,10 @@ struct StatsView: View {
 
         // Main content - month picker is now in shared overlay
         Group {
-          if let error = viewModel.error {
+          if let error = viewModel.error, viewModel.stats == nil {
             errorView(error: error)
-          } else if let stats = viewModel.stats {
-            statsContent(stats: stats)
-          } else if viewModel.isLoading {
-            loadingView
           } else {
-            // Initial state - show loading
-            loadingView
+            statsContent(stats: displayedStats)
           }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -128,38 +129,49 @@ struct StatsView: View {
           }
 
           // Monthly Goal Card
-          if stats.monthlyGoal.enabled {
-            MonthlyGoalCard(
-              goal: stats.monthlyGoal,
-              onTap: { openMonthlyGoalEditor() }
-            )
-          } else {
-            MonthlyGoalEmptyCard(onTap: { openMonthlyGoalEditor() })
+          Group {
+            if stats.monthlyGoal.enabled {
+              MonthlyGoalCard(
+                goal: stats.monthlyGoal,
+                onTap: { openMonthlyGoalEditor() }
+              )
+            } else {
+              MonthlyGoalEmptyCard(onTap: { openMonthlyGoalEditor() })
+            }
           }
+          .frame(minHeight: 140, alignment: .top)
 
           sectionHeader(.statsSectionCharts)
 
           // Weekly Chart (This Week or Best Week)
           weeklyChartSection(stats: stats)
+            .frame(minHeight: 260, alignment: .top)
 
           // Monthly Progress Chart
-          if !stats.thisMonthCumulative.isEmpty {
-            MonthlyProgressChart(data: stats.thisMonthCumulative)
-          } else {
-            MonthlyProgressChartEmpty()
+          Group {
+            if !stats.thisMonthCumulative.isEmpty {
+              MonthlyProgressChart(data: stats.thisMonthCumulative)
+            } else {
+              MonthlyProgressChartEmpty()
+            }
           }
+          .frame(minHeight: 280, alignment: .top)
 
           // Yearly Income Chart
           yearlyIncomeChartSection(stats: stats)
+            .frame(minHeight: 280, alignment: .top)
 
           // Employment Percentage Chart
-          if let employment = stats.employment,
-            employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
-          {
-            EmploymentPercentageChart(data: employment)
-          } else {
-            EmploymentPercentageChartEmpty()
+          Group {
+            if let employment = stats.employment,
+              employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
+            {
+              EmploymentPercentageChart(data: employment)
+            } else {
+              EmploymentPercentageChartEmpty()
+            }
           }
+          .frame(minHeight: 280, alignment: .top)
 
           // Bottom spacing for floating month picker
           Spacer()
@@ -212,7 +224,18 @@ struct StatsView: View {
 
       Spacer()
 
-      Menu {
+      Button {
+        selectionHaptic.selectionChanged()
+        isJobFilterDialogPresented = true
+      } label: {
+        statsJobFilterMenuLabel(selectedJob: selectedJob)
+      }
+      .buttonStyle(.plain)
+      .confirmationDialog(
+        String(localized: .jobsFilterTitle),
+        isPresented: $isJobFilterDialogPresented,
+        titleVisibility: .visible
+      ) {
         Button {
           selectionHaptic.selectionChanged()
           viewModel.selectJobFilter(nil)
@@ -230,52 +253,53 @@ struct StatsView: View {
             viewModel.selectJobFilter(job.id)
           } label: {
             if viewModel.selectedJobId == job.id {
-              Label {
-                WorkplaceNameText(
-                  name: job.name,
-                  colorHex: job.color,
-                  fallbackBadgeColor: .tidexBlue
-                )
-              } icon: {
-                Image(systemName: "checkmark")
-              }
+              Label(job.name, systemImage: "checkmark")
             } else {
-              WorkplaceNameText(
-                name: job.name,
-                colorHex: job.color,
-                fallbackBadgeColor: .tidexBlue
-              )
+              Text(job.name)
             }
           }
         }
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          if let selectedJob {
-            WorkplaceNameText(
-              name: selectedJob.name,
-              colorHex: selectedJob.color,
-              font: .tidexBody,
-              fallbackBadgeColor: .tidexBlue
-            )
-          } else {
-            Text(viewModel.selectedJobName ?? String(localized: .jobsFilterAll))
-              .font(.tidexBody)
-              .foregroundColor(.tidexTextPrimary)
-          }
-          Image(systemName: "chevron.down")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-        }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+
+        Button(String(localized: .commonCancel), role: .cancel) {}
       }
-      .menuStyle(.button)
+    }
+    // Keep filter control styling stable while stats cards animate numeric transitions.
+    .transaction { transaction in
+      transaction.disablesAnimations = true
+      transaction.animation = nil
     }
   }
 
+  @ViewBuilder
+  private func statsJobFilterMenuLabel(selectedJob: Job?) -> some View {
+    let shape = RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+
+    HStack(spacing: Spacing.xs) {
+      if let selectedJob {
+        WorkplaceNameText(
+          name: selectedJob.name,
+          colorHex: selectedJob.color,
+          font: .tidexBody,
+          fallbackBadgeColor: .tidexBlue
+        )
+      } else {
+        Text(viewModel.selectedJobName ?? String(localized: .jobsFilterAll))
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextPrimary)
+      }
+      Image(systemName: "chevron.down")
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
+    .background(shape.fill(Color.tidexSurfaceSecondary))
+    .overlay(shape.stroke(Color.tidexBorderSubtle, lineWidth: 1))
+    .contentShape(shape)
+  }
+
   private func openMonthlyGoalEditor() {
+    guard viewModel.stats != nil else { return }
     selectionHaptic.selectionChanged()
     let baseline = viewModel.baselineMonthlyGoal
     let override = viewModel.displayedMonthOverrideGoal
@@ -364,65 +388,6 @@ struct StatsView: View {
     } else {
       YearlyIncomeChartEmpty(focusYear: stats.focusMonth.year)
     }
-  }
-
-  // MARK: - Loading View
-
-  @ViewBuilder
-  private var loadingView: some View {
-    ScrollView {
-      VStack(spacing: Spacing.md) {
-        // Skeleton for Monthly Earnings Card
-        skeletonCard(height: 200)
-
-        // Skeleton for Hours and Shifts cards
-        HStack(spacing: Spacing.sm) {
-          skeletonCard(height: 100)
-          skeletonCard(height: 100)
-        }
-
-        // Skeleton for Monthly Goal Card
-        skeletonCard(height: 140)
-
-        // Skeleton for Weekly Chart
-        skeletonCard(height: 260)
-
-        // Skeleton for Monthly Progress Chart
-        skeletonCard(height: 280)
-
-        // Skeleton for Yearly Income Chart
-        skeletonCard(height: 280)
-
-        // Bottom spacing for floating month picker
-        Spacer()
-          .frame(height: MonthPickerLayout.totalBottomInset + Spacing.lg)
-      }
-      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, Spacing.md)
-      .padding(.top, Spacing.md)
-      .frame(maxWidth: .infinity)
-      .contentShape(Rectangle())
-      .monthSwipeGesture(
-        onSwipeLeft: { viewModel.goToNextMonth() },
-        onSwipeRight: { viewModel.goToPreviousMonth() },
-        isEnabled: true
-      )
-    }
-    .refreshable {
-      await refreshStatsContent()
-    }
-  }
-
-  @ViewBuilder
-  private func skeletonCard(height: CGFloat) -> some View {
-    RoundedRectangle(cornerRadius: CornerRadius.xxl)
-      .fill(Color.tidexSurfacePrimary)
-      .frame(height: height)
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-      )
-      .shimmer(isActive: true)
   }
 
   // MARK: - Error View

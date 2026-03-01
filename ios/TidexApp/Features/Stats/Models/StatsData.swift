@@ -116,6 +116,39 @@ struct MonthlyIncomeData: Codable, Equatable, Identifiable {
 // MARK: - Preview Data
 
 extension StatsData {
+  /// Empty placeholder data for a specific focus month.
+  static func empty(year: Int, month: Int) -> StatsData {
+    StatsData(
+      focusMonth: FocusMonth(year: year, month: month),
+      tax: TaxSettings(enabled: false, percentage: 0),
+      currentMonth: MonthStats(
+        totalEarnings: 0,
+        totalEarningsNet: 0,
+        totalHours: 0,
+        shiftCount: 0
+      ),
+      lastMonth: MonthStats(
+        totalEarnings: 0,
+        totalEarningsNet: 0,
+        totalHours: 0,
+        shiftCount: 0
+      ),
+      percentageChange: nil,
+      monthlyGoal: MonthlyGoal(
+        enabled: false,
+        target: 0,
+        progress: 0,
+        percentage: 0,
+        remaining: 0
+      ),
+      thisMonthCumulative: [],
+      thisWeek: nil,
+      bestWeek: nil,
+      employment: nil,
+      yearlyIncome: nil
+    )
+  }
+
   /// Sample data for previews and testing
   static let preview = StatsData(
     focusMonth: FocusMonth(year: 2025, month: 1),

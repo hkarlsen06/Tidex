@@ -108,8 +108,6 @@ struct ShiftsView: View {
   private var mainContentLayer: some View {
     if let error = viewModel.error {
       errorView(error: error)
-    } else if viewModel.isLoading && viewModel.shifts.isEmpty {
-      loadingView
     } else {
       // Unified content view - handles both empty and populated states
       // This ensures StaggeredCardsContainer persists across month changes
@@ -1542,22 +1540,6 @@ struct ShiftsView: View {
     components.month = viewModel.committedMonth
     components.day = 1
     return Calendar.current.date(from: components) ?? Date()
-  }
-
-  // MARK: - Loading View
-
-  private var loadingView: some View {
-    VStack(spacing: Spacing.md) {
-      ProgressView()
-        .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-        .scaleEffect(1.2)
-
-      Text(.commonLoading)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   // MARK: - Error View

@@ -4,6 +4,16 @@ import SwiftUI
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "StatsViewModel")
+private let startupStatsCacheKey = "statsStartupCacheV1"
+
+private struct StartupStatsCache: Codable {
+  let userId: String
+  let year: Int
+  let month: Int
+  let stats: StatsData
+  let currency: String
+  let cachedAt: Date
+}
 
 // MARK: - Stats View Model
 
@@ -76,6 +86,8 @@ final class StatsViewModel: ObservableObject {
     self.displayMonth = self.monthContext.displayMonth
     self.displayMonthName = self.monthContext.displayMonthName
 
+    preloadInitialStateFromLocalCache()
+
     // Subscribe to month changes
     setupMonthSubscription()
   }
@@ -107,6 +119,76 @@ final class StatsViewModel: ObservableObject {
         }
       }
       .store(in: &cancellables)
+  }
+
+  // MARK: - Startup Cache
+
+  /// Preload local metadata and last known stats snapshot so the first Stats frame is fully composed.
+  private func preloadInitialStateFromLocalCache() {
+    guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
+
+    let jobs = jobsRepository.getNonDeletedJobs(for: userId)
+    activeJobs = jobs
+    if jobs.count <= 1 {
+      selectedJobId = nil
+    }
+
+    if let loadedSettings = settingsRepository.getSettings(for: userId) {
+      settings = loadedSettings
+      currency = loadedSettings.currency ?? "kr"
+    } else {
+      settings = nil
+    }
+
+    if let inMemoryStats = statsService.stats,
+      inMemoryStats.focusMonth.year == displayYear,
+      inMemoryStats.focusMonth.month == displayMonth
+    {
+      stats = inMemoryStats
+      logger.info("Preloaded stats from in-memory cache")
+      return
+    }
+
+    guard let cached = loadStartupStatsCache(for: userId) else { return }
+    stats = cached.stats
+    currency = cached.currency
+    logger.info("Preloaded stats from persisted startup cache")
+  }
+
+  private func loadStartupStatsCache(for userId: String) -> StartupStatsCache? {
+    guard let data = UserDefaults.standard.data(forKey: startupStatsCacheKey) else {
+      return nil
+    }
+
+    do {
+      let cached = try JSONDecoder().decode(StartupStatsCache.self, from: data)
+      guard cached.userId == userId else { return nil }
+      guard cached.year == displayYear, cached.month == displayMonth else { return nil }
+      // Keep cache fresh; stale snapshots feel wrong on startup.
+      guard Date().timeIntervalSince(cached.cachedAt) < 60 * 60 * 24 else { return nil }
+      return cached
+    } catch {
+      logger.warning("Failed to decode startup stats cache: \(error.localizedDescription)")
+      return nil
+    }
+  }
+
+  private func persistStartupStatsCache(stats: StatsData, userId: String) {
+    let payload = StartupStatsCache(
+      userId: userId,
+      year: displayYear,
+      month: displayMonth,
+      stats: stats,
+      currency: currency,
+      cachedAt: Date()
+    )
+
+    do {
+      let encoded = try JSONEncoder().encode(payload)
+      UserDefaults.standard.set(encoded, forKey: startupStatsCacheKey)
+    } catch {
+      logger.warning("Failed to persist startup stats cache: \(error.localizedDescription)")
+    }
   }
 
   // MARK: - Navigation Methods
@@ -171,11 +253,15 @@ final class StatsViewModel: ObservableObject {
         settings = nil
       }
 
-      stats = try await statsService.computeStats(
+      let computedStats = try await statsService.computeStats(
         year: displayYear,
         month: displayMonth,
         jobId: selectedJobId
       )
+      stats = computedStats
+      if selectedJobId == nil {
+        persistStartupStatsCache(stats: computedStats, userId: userId)
+      }
       logger.info(
         "Loaded stats for \(self.displayYear)-\(self.displayMonth): \(self.stats?.currentMonth.shiftCount ?? 0) shifts"
       )
