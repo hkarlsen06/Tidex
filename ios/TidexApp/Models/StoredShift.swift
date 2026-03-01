@@ -1,5 +1,3 @@
-import Foundation
-
 /// Represents a shift stored in shared UserDefaults for background task access
 /// Used by AppDelegate to check for ongoing shifts and start Live Activities
 /// Also used by ShiftHomeWidget to display the next shift

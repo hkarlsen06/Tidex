@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - API Response Types for Sharing
 
 /// Response from /api/sharing endpoint

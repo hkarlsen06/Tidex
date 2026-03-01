@@ -1,5 +1,3 @@
-import Foundation
-
 /// Result of break deduction including adjusted periods and audit trail
 struct BreakDeductionResult {
   let periods: [WagePeriod]

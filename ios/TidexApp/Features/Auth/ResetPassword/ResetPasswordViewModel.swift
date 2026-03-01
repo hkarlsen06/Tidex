@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import SwiftUI
 
 /// View model for the reset password screen
 /// Handles three-step flow: Input -> OTP verification -> New password

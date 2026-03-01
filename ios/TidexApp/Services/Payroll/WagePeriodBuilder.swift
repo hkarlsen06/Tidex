@@ -1,5 +1,3 @@
-import Foundation
-
 /// Builds wage periods by splitting shift time according to supplement rule boundaries
 /// Port of lib/payroll/periods.ts
 struct WagePeriodBuilder {

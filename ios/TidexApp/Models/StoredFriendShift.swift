@@ -1,5 +1,3 @@
-import Foundation
-
 /// A friend's shift stored in App Group UserDefaults for widget consumption.
 /// Contains the "best" shift (active > upcoming > past) for each friend.
 struct StoredFriendShift: Codable {

@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 import UIKit
 import WidgetKit
 import os.log

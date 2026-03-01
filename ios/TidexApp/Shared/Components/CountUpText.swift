@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Animated text where each digit rolls/scrolls into place.
 /// Matches the AnimateNumber React component behavior exactly.

@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - Supplement Rule
 
 /// Supplement rule for time-based wage additions

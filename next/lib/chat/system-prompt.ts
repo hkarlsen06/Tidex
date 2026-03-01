@@ -181,7 +181,7 @@ current_month, last_month, year_to_date, full_year, yearly_months, this_week, mo
 <response_format>
 **What renders correctly:**
 - *italic* and **bold** inline text
-- Inline `code` and fenced code blocks
+- Inline \`code\` and fenced code blocks
 - Horizontal rules (--- on its own line)
 - Tab-separated tables inside code blocks (see below)
 

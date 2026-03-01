@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Minimal contract needed by AddShiftCalendarView.
 /// Lets us reuse the exact calendar UI in onboarding without coupling to AddShiftViewModel.

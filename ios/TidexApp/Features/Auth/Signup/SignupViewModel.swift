@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import SwiftUI
 
 /// View model for the signup screen
 /// Handles email/password, phone/OTP, and OAuth registration

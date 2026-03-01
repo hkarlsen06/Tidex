@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import Supabase
 import SwiftUI
 import os.log
 

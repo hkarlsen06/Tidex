@@ -1,8 +1,6 @@
 import ActivityKit
 import Combine
 import Foundation
-import Supabase
-import SwiftUI
 import UIKit
 import os.log
 

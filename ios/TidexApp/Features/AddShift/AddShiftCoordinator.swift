@@ -1,5 +1,4 @@
 import Combine
-import SwiftUI
 
 enum AddShiftSubmitBlocker: Hashable {
   case noAvailableJob

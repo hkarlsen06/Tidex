@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import Supabase
-import SwiftData
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinator")

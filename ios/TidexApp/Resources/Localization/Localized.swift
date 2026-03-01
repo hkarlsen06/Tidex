@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 extension Locale {
   /// App locale derived from the app's preferred localization (falls back to system locale)

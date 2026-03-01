@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - Wage Snapshot
 
 /// Wage snapshot from the wage_snapshots table

@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - Selected Days
 
 /// Anchor dates by weekday key

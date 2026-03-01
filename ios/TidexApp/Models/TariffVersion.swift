@@ -1,5 +1,3 @@
-import Foundation
-
 // MARK: - Tariff Type
 
 /// A tariff type representing a specific collective agreement (e.g., "HK Detaljhandel")

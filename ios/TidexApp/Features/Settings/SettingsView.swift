@@ -1,4 +1,3 @@
-import Supabase
 import SwiftUI
 import os.log
 
