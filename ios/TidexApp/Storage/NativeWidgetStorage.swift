@@ -257,23 +257,27 @@ enum NativeWidgetStorage {
 
     // Compute shifts with payroll using PayrollEngine
     let computedCurrentShifts = PayrollEngine.computeShiftsForMonth(
-      year: currentYear,
-      month: currentMonth,
-      shifts: currentMonthShifts,
-      recurring: recurringPatterns,
-      snapshots: snapshots,
-      settings: settings,
-      jobs: jobs
+      .init(
+        year: currentYear,
+        month: currentMonth,
+        shifts: currentMonthShifts,
+        recurring: recurringPatterns,
+        snapshots: snapshots,
+        settings: settings,
+        jobs: jobs
+      )
     )
 
     let computedPreviousShifts = PayrollEngine.computeShiftsForMonth(
-      year: previousYM.year,
-      month: previousYM.month,
-      shifts: previousMonthShifts,
-      recurring: recurringPatterns,
-      snapshots: snapshots,
-      settings: settings,
-      jobs: jobs
+      .init(
+        year: previousYM.year,
+        month: previousYM.month,
+        shifts: previousMonthShifts,
+        recurring: recurringPatterns,
+        snapshots: snapshots,
+        settings: settings,
+        jobs: jobs
+      )
     )
 
     // Get half-tax month from settings

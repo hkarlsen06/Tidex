@@ -211,7 +211,8 @@ final class ClockSessionReconciler {
     )
   }
 
-  private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async -> ShiftRow?
+  private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async
+    -> ShiftRow?
   {
     let calendar = Calendar.current
     let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate
@@ -222,7 +223,8 @@ final class ClockSessionReconciler {
       endDate: endDate
     )
 
-    return shifts
+    return
+      shifts
       .sorted { lhs, rhs in
         if lhs.shift_date == rhs.shift_date {
           return lhs.start_time < rhs.start_time
@@ -244,7 +246,8 @@ final class ClockSessionReconciler {
     }
 
     if endDate <= startDate {
-      endDate = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: endDate) ?? endDate
+      endDate =
+        Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: endDate) ?? endDate
     }
 
     return date >= startDate && date < endDate
@@ -259,7 +262,9 @@ final class ClockSessionReconciler {
     return formatter.string(from: date)
   }
 
-  private static func hasExceededEndOfDayLimit(_ session: TemporaryClockSession, at referenceDate: Date)
+  private static func hasExceededEndOfDayLimit(
+    _ session: TemporaryClockSession, at referenceDate: Date
+  )
     -> Bool
   {
     let calendar = Calendar.current
@@ -1164,23 +1169,27 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
-          year: displayYM.year,
-          month: displayYM.month,
-          shifts: displayShifts,
-          recurring: capturedRecurring,
-          snapshots: capturedSnapshots,
-          settings: currentSettings,
-          jobs: capturedJobs
+          .init(
+            year: displayYM.year,
+            month: displayYM.month,
+            shifts: displayShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs
+          )
         )
 
         let previousComputed = PayrollEngine.computeShiftsForMonth(
-          year: previousYM.year,
-          month: previousYM.month,
-          shifts: fetchedPreviousShifts,
-          recurring: capturedRecurring,
-          snapshots: capturedSnapshots,
-          settings: currentSettings,
-          jobs: capturedJobs
+          .init(
+            year: previousYM.year,
+            month: previousYM.month,
+            shifts: fetchedPreviousShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs
+          )
         )
 
         let dashboardData = Self.buildDashboardDataOffMain(
@@ -1317,23 +1326,27 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
-          year: displayYM.year,
-          month: displayYM.month,
-          shifts: displayShifts,
-          recurring: capturedRecurring,
-          snapshots: capturedSnapshots,
-          settings: currentSettings,
-          jobs: capturedJobs
+          .init(
+            year: displayYM.year,
+            month: displayYM.month,
+            shifts: displayShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs
+          )
         )
 
         let previousComputed = PayrollEngine.computeShiftsForMonth(
-          year: previousYM.year,
-          month: previousYM.month,
-          shifts: fetchedPreviousShifts,
-          recurring: capturedRecurring,
-          snapshots: capturedSnapshots,
-          settings: currentSettings,
-          jobs: capturedJobs
+          .init(
+            year: previousYM.year,
+            month: previousYM.month,
+            shifts: fetchedPreviousShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs
+          )
         )
 
         let dashboardData = Self.buildDashboardDataOffMain(
@@ -1452,13 +1465,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       let computedShifts = await Task.detached(priority: .utility) {
         PayrollEngine.computeShiftsForMonth(
-          year: year,
-          month: month,
-          shifts: fetchedShifts,
-          recurring: capturedRecurring,
-          snapshots: capturedSnapshots,
-          settings: settings,
-          jobs: capturedJobs
+          .init(
+            year: year,
+            month: month,
+            shifts: fetchedShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: settings,
+            jobs: capturedJobs
+          )
         )
       }.value
 
@@ -2211,7 +2226,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     clockSessionStore.clear(for: session.userId)
   }
 
-  private func hasExceededEndOfDayLimit(_ session: TemporaryClockSession, at referenceDate: Date) -> Bool {
+  private func hasExceededEndOfDayLimit(_ session: TemporaryClockSession, at referenceDate: Date)
+    -> Bool
+  {
     let calendar = Calendar.current
     let startOfDay = calendar.startOfDay(for: session.startedAt)
     guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)
@@ -2221,7 +2238,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     return referenceDate > cutoff
   }
 
-  private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async -> ShiftRow?
+  private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async
+    -> ShiftRow?
   {
     let calendar = Calendar.current
     let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate
@@ -2232,7 +2250,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       endDate: endDate
     )
 
-    return shifts
+    return
+      shifts
       .sorted { lhs, rhs in
         if lhs.shift_date == rhs.shift_date {
           return lhs.start_time < rhs.start_time
