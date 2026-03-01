@@ -10,6 +10,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
       -> Void
   let onSkip: () -> Void
   let onBaselineReady: (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void
+  let isPreloaded: Bool
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -28,13 +29,16 @@ struct PreAuthAddShiftSimulatorScreen: View {
         _ fromTotals: CalendarHeaderTotals?, _ toTotals: CalendarHeaderTotals?, _ currency: String
       ) -> Void,
     onSkip: @escaping () -> Void,
-    onBaselineReady: @escaping (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void
+    onBaselineReady:
+      @escaping (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void,
+    isPreloaded: Bool = false
   ) {
     self.initialCurrency = initialCurrency
     self.onCurrencyChanged = onCurrencyChanged
     self.onContinue = onContinue
     self.onSkip = onSkip
     self.onBaselineReady = onBaselineReady
+    self.isPreloaded = isPreloaded
     _viewModel = StateObject(
       wrappedValue: PreAuthAddShiftSimulatorViewModel(initialCurrency: initialCurrency))
   }
@@ -156,6 +160,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
       hideKeyboard()
     }
     .onAppear {
+      guard !isPreloaded else { return }
       onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
       scheduleFocusRelaxIfNeeded()
@@ -164,6 +169,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
       }
     }
     .onChange(of: focusStage) { _, _ in
+      guard !isPreloaded else { return }
       scheduleFocusRelaxIfNeeded()
       triggerHintShimmer()
     }

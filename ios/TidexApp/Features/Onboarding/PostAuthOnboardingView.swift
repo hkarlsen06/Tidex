@@ -19,6 +19,7 @@ struct PostAuthOnboardingView: View {
   @State private var onboardingActiveJobs: [Job] = []
   @State private var multiJobErrorMessage: String?
   @State private var isNavigatingBack = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.scenePhase) private var scenePhase
   private let jobsRepository = JobsRepository.shared
   private let syncCoordinator = SyncCoordinator.shared
@@ -133,15 +134,18 @@ struct PostAuthOnboardingView: View {
               }
             }
           )
+          // Success keeps a softer exit to avoid the destination screen sliding out with it.
           .transition(
             .asymmetric(
-              insertion: .move(edge: .trailing).combined(with: .opacity),
+              insertion: reduceMotion
+                ? .opacity
+                : .move(edge: .trailing).combined(with: .opacity),
               removal: .opacity
             ))
         }
       }
     }
-    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentScreen)
+    .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
     .sheet(isPresented: $showingMFAEnrollment) {
       MFAEnrollmentSheet(
         onComplete: {
@@ -153,12 +157,15 @@ struct PostAuthOnboardingView: View {
         }
       )
     }
-    .sheet(isPresented: $showAddJobSheet, onDismiss: {
-      if navigateToMFAAfterJobSheet {
-        navigateToMFAAfterJobSheet = false
-        navigateTo(.mfaSetup)
+    .sheet(
+      isPresented: $showAddJobSheet,
+      onDismiss: {
+        if navigateToMFAAfterJobSheet {
+          navigateToMFAAfterJobSheet = false
+          navigateTo(.mfaSetup)
+        }
       }
-    }) {
+    ) {
       AddJobSheet(
         initialCurrency: onboardingData.currency,
         existingJobNeedingSetup: onboardingActiveJobs.count == 1 ? onboardingActiveJobs.first : nil
@@ -267,19 +274,10 @@ struct PostAuthOnboardingView: View {
   // MARK: - Navigation
 
   private var screenTransition: AnyTransition {
-    if isNavigatingBack {
-      // Back: new screen slides in from left, old screen slides out to right
-      return .asymmetric(
-        insertion: .move(edge: .leading).combined(with: .opacity),
-        removal: .move(edge: .trailing).combined(with: .opacity)
-      )
-    } else {
-      // Forward: new screen slides in from right, old screen slides out to left
-      return .asymmetric(
-        insertion: .move(edge: .trailing).combined(with: .opacity),
-        removal: .move(edge: .leading).combined(with: .opacity)
-      )
-    }
+    MotionTokens.navigationTransition(
+      direction: isNavigatingBack ? .pop : .push,
+      reduceMotion: reduceMotion
+    )
   }
 
   private func navigateFromWage() {
@@ -294,14 +292,14 @@ struct PostAuthOnboardingView: View {
 
   private func navigateTo(_ screen: PostAuthScreen) {
     isNavigatingBack = false
-    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+    MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
       currentScreen = screen
     }
   }
 
   private func navigateBack(to screen: PostAuthScreen) {
     isNavigatingBack = true
-    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+    MotionTokens.animate(.navigationPop, reduceMotion: reduceMotion) {
       currentScreen = screen
     }
   }

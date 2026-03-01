@@ -41,6 +41,7 @@ private struct RootContent: View {
   // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
   @ObservedObject private var coordinator = AppCoordinator.shared
   @ObservedObject private var biometricService = BiometricAuthService.shared
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
   // Onboarding state - explicit naming for two-phase onboarding
@@ -130,9 +131,13 @@ private struct RootContent: View {
         }
       }
     }
-    .animation(.easeInOut(duration: 0.3), value: hasCompletedPreAuthOnboarding)
-    .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
-    .animation(.easeInOut(duration: 0.25), value: biometricService.isLocked)
+    .motionAnimation(
+      .pageTransition, value: hasCompletedPreAuthOnboarding, reduceMotion: reduceMotion
+    )
+    .motionAnimation(
+      .pageTransition, value: hasCompletedPostAuthOnboarding, reduceMotion: reduceMotion
+    )
+    .motionAnimation(.subtle, value: biometricService.isLocked, reduceMotion: reduceMotion)
     .environmentObject(coordinator)
     // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
     // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle

@@ -5,6 +5,7 @@ import UIKit
 /// Supports both single shifts and recurring shift patterns
 struct AddShiftView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var viewModel = AddShiftViewModel()
   @Binding var selectedTab: MainTabView.Tab
   @Binding var isKeyboardVisible: Bool
@@ -70,7 +71,8 @@ struct AddShiftView: View {
                   isEnabled: true
                 )
                 .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
-                .animation(.easeInOut(duration: 0.25), value: focusedTimeField != nil)
+                .motionAnimation(
+                  .subtle, value: focusedTimeField != nil, reduceMotion: reduceMotion)
               }
               .ignoresSafeArea(.keyboard)
               .onTapGesture {
@@ -203,7 +205,7 @@ struct AddShiftView: View {
       guard newTab == .add, oldTab == .shifts else { return }
       tabTransitionOffset = 28
       tabTransitionOpacity = 0.92
-      withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+      MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
         tabTransitionOffset = 0
         tabTransitionOpacity = 1
       }
@@ -258,13 +260,13 @@ struct AddShiftView: View {
       {
         keyboardHeight = keyboardFrame.height
       }
-      withAnimation(.easeInOut(duration: 0.25)) {
+      MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         isKeyboardVisible = true
       }
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
     { _ in
-      withAnimation(.easeInOut(duration: 0.25)) {
+      MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         isKeyboardVisible = false
         keyboardHeight = 0
       }
@@ -519,6 +521,7 @@ private struct AddShiftJobChooserSheet: View {
 /// Shows the combined monthly total (existing shifts + preview earnings).
 private struct AddShiftToolbarTotals: View {
   let totals: CalendarHeaderTotals?
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   @State private var lastDisplayedPrimary: Double = 0
   @State private var lastDisplayedSecondary: Double = 0
@@ -555,8 +558,8 @@ private struct AddShiftToolbarTotals: View {
         .transition(.offset(x: 6).combined(with: .opacity))
       }
     }
-    .animation(.spring(response: 0.26, dampingFraction: 0.86), value: totals?.primary)
-    .animation(.spring(response: 0.26, dampingFraction: 0.86), value: totals?.secondary)
+    .motionAnimation(.emphasis, value: totals?.primary, reduceMotion: reduceMotion)
+    .motionAnimation(.emphasis, value: totals?.secondary, reduceMotion: reduceMotion)
   }
 
   @ViewBuilder
