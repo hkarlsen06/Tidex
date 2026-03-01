@@ -1217,14 +1217,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Compute shifts with payroll using PayrollEngine (include visible range for virtual shifts)
       let computedShifts = PayrollEngine.computeShiftsForMonth(
-        year: displayYM.year,
-        month: displayYM.month,
-        shifts: displayShifts,
-        recurring: recurringShifts,
-        snapshots: snapshots,
-        settings: currentSettings,
-        visibleRange: visibleRange,
-        jobs: activeJobs
+        .init(
+          year: displayYM.year,
+          month: displayYM.month,
+          shifts: displayShifts,
+          recurring: recurringShifts,
+          snapshots: snapshots,
+          settings: currentSettings,
+          visibleRange: visibleRange,
+          jobs: activeJobs
+        )
       )
 
       // Cache the computed results
@@ -1338,14 +1340,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Compute shifts with payroll (include visible range for virtual shifts)
       let computedShifts = PayrollEngine.computeShiftsForMonth(
-        year: displayYM.year,
-        month: displayYM.month,
-        shifts: displayShifts,
-        recurring: recurringShifts,
-        snapshots: snapshots,
-        settings: currentSettings,
-        visibleRange: visibleRange,
-        jobs: activeJobs
+        .init(
+          year: displayYM.year,
+          month: displayYM.month,
+          shifts: displayShifts,
+          recurring: recurringShifts,
+          snapshots: snapshots,
+          settings: currentSettings,
+          visibleRange: visibleRange,
+          jobs: activeJobs
+        )
       )
 
       // Cache the computed results
@@ -1527,14 +1531,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Compute payroll upfront for instant navigation (include visible range for virtual shifts)
       let computedShifts = PayrollEngine.computeShiftsForMonth(
-        year: year,
-        month: month,
-        shifts: fetchedShifts,
-        recurring: self.recurringShifts,
-        snapshots: self.snapshots,
-        settings: currentSettings,
-        visibleRange: visibleRange,
-        jobs: self.activeJobs
+        .init(
+          year: year,
+          month: month,
+          shifts: fetchedShifts,
+          recurring: self.recurringShifts,
+          snapshots: self.snapshots,
+          settings: currentSettings,
+          visibleRange: visibleRange,
+          jobs: self.activeJobs
+        )
       )
 
       // Store in full computed cache

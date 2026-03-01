@@ -114,23 +114,27 @@ final class StatsService: ObservableObject {
 
       // Compute shifts with payroll using PayrollEngine
       let currentMonthShifts = PayrollEngine.computeShiftsForMonth(
-        year: currentYM.year,
-        month: currentYM.month,
-        shifts: currentMonthShiftsRaw,
-        recurring: recurringShifts,
-        snapshots: snapshots,
-        settings: settings,
-        jobs: jobs
+        .init(
+          year: currentYM.year,
+          month: currentYM.month,
+          shifts: currentMonthShiftsRaw,
+          recurring: recurringShifts,
+          snapshots: snapshots,
+          settings: settings,
+          jobs: jobs
+        )
       )
 
       let previousMonthShifts = PayrollEngine.computeShiftsForMonth(
-        year: previousYM.year,
-        month: previousYM.month,
-        shifts: previousMonthShiftsRaw,
-        recurring: recurringShifts,
-        snapshots: snapshots,
-        settings: settings,
-        jobs: jobs
+        .init(
+          year: previousYM.year,
+          month: previousYM.month,
+          shifts: previousMonthShiftsRaw,
+          recurring: recurringShifts,
+          snapshots: snapshots,
+          settings: settings,
+          jobs: jobs
+        )
       )
 
       // Partition shifts once with centralized conflict exclusion
@@ -152,13 +156,15 @@ final class StatsService: ObservableObject {
           jobId: jobId
         )
         let computedShifts = PayrollEngine.computeShiftsForMonth(
-          year: targetYear,
-          month: month,
-          shifts: monthShiftsRaw,
-          recurring: recurringShifts,
-          snapshots: snapshots,
-          settings: settings,
-          jobs: jobs
+          .init(
+            year: targetYear,
+            month: month,
+            shifts: monthShiftsRaw,
+            recurring: recurringShifts,
+            snapshots: snapshots,
+            settings: settings,
+            jobs: jobs
+          )
         )
         fullYearShifts.append(contentsOf: computedShifts)
       }

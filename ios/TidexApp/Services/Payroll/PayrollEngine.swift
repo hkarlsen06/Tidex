@@ -9,6 +9,36 @@ import Foundation
 /// - Conflict exclusion for overlapping shifts
 /// - Monthly totals summarization
 struct PayrollEngine {
+  struct MonthComputationRequest {
+    let year: Int
+    let month: Int
+    let shifts: [ShiftRow]
+    let recurring: [RecurringShiftRow]
+    let snapshots: [WageSnapshot]
+    let settings: UserSettings?
+    let visibleRange: (start: Date, end: Date)?
+    let jobs: [Job]
+
+    init(
+      year: Int,
+      month: Int,
+      shifts: [ShiftRow],
+      recurring: [RecurringShiftRow],
+      snapshots: [WageSnapshot],
+      settings: UserSettings?,
+      visibleRange: (start: Date, end: Date)? = nil,
+      jobs: [Job]
+    ) {
+      self.year = year
+      self.month = month
+      self.shifts = shifts
+      self.recurring = recurring
+      self.snapshots = snapshots
+      self.settings = settings
+      self.visibleRange = visibleRange
+      self.jobs = jobs
+    }
+  }
 
   private struct ComputationContext {
     let fallbackPayrollDay: Int
@@ -75,38 +105,31 @@ struct PayrollEngine {
   ///   - settings: User settings (for payroll_day)
   ///   - visibleRange: Optional visible date range for generating virtual shifts (includes out-of-month padding)
   /// - Returns: Array of computed shifts with correct tax settings
-  static func computeShiftsForMonth(
-    year: Int,
-    month: Int,
-    shifts: [ShiftRow],
-    recurring: [RecurringShiftRow],
-    snapshots: [WageSnapshot],
-    settings: UserSettings?,
-    visibleRange: (start: Date, end: Date)? = nil,
-    jobs: [Job]
-  ) -> [ShiftWithComputations] {
+  static func computeShiftsForMonth(_ request: MonthComputationRequest) -> [ShiftWithComputations] {
     var result: [ShiftWithComputations] = []
-    let fallbackPayrollDay = settings?.effectivePayrollDay ?? 1
-    let snapshotsByJobId = Dictionary(grouping: snapshots, by: { $0.job_id })
+    let fallbackPayrollDay = request.settings?.effectivePayrollDay ?? 1
+    let snapshotsByJobId = Dictionary(grouping: request.snapshots, by: { $0.job_id })
     let context = ComputationContext(
       fallbackPayrollDay: fallbackPayrollDay,
-      jobsById: Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) }),
-      defaultJobId: jobs.first(where: { $0.is_default })?.id,
+      jobsById: Dictionary(uniqueKeysWithValues: request.jobs.map { ($0.id, $0) }),
+      defaultJobId: request.jobs.first(where: { $0.is_default })?.id,
       snapshotsByJobId: snapshotsByJobId,
       legacyNilJobSnapshots: snapshotsByJobId[nil] ?? []
     )
 
     // Use visible range if provided, otherwise just the target month
     let startDate =
-      visibleRange?.start.toISODateString() ?? Date.firstDayOfMonth(year: year, month: month)
+      request.visibleRange?.start.toISODateString()
+      ?? Date.firstDayOfMonth(year: request.year, month: request.month)
     let endDate =
-      visibleRange?.end.toISODateString() ?? Date.lastDayOfMonth(year: year, month: month)
+      request.visibleRange?.end.toISODateString()
+      ?? Date.lastDayOfMonth(year: request.year, month: request.month)
 
     // Process regular shifts
-    for shift in shifts {
+    for shift in request.shifts {
       let computed = computeShiftWithTax(
         shift: shift,
-        allSnapshots: snapshots,
+        allSnapshots: request.snapshots,
         context: context
       )
       result.append(computed)
@@ -116,7 +139,7 @@ struct PayrollEngine {
     // Need to generate for all months that might have visible dates
     let monthsToGenerate = getMonthsInRange(startDate: startDate, endDate: endDate)
 
-    for recurringShift in recurring {
+    for recurringShift in request.recurring {
       for (genYear, genMonth) in monthsToGenerate {
         let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
           year: genYear,
@@ -148,7 +171,7 @@ struct PayrollEngine {
 
           let computed = computeShiftWithTax(
             shift: virtualRow,
-            allSnapshots: snapshots,
+            allSnapshots: request.snapshots,
             context: context
           )
           result.append(computed)

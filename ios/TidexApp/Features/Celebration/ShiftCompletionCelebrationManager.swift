@@ -215,13 +215,15 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
       guard let data else { return }
 
       let computedShifts = PayrollEngine.computeShiftsForMonth(
-        year: current.year,
-        month: current.month,
-        shifts: data.rawShifts,
-        recurring: data.recurring,
-        snapshots: data.snapshots,
-        settings: data.settings,
-        jobs: data.jobs
+        .init(
+          year: current.year,
+          month: current.month,
+          shifts: data.rawShifts,
+          recurring: data.recurring,
+          snapshots: data.snapshots,
+          settings: data.settings,
+          jobs: data.jobs
+        )
       )
 
       let totals = PayrollEngine.summarizeShiftTotals(
