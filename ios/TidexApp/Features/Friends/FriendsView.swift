@@ -244,6 +244,7 @@ struct SharingView: View {
           shiftPreviews: viewModel.shiftPreviews,
           isLoading: viewModel.isLoadingSharers,
           isLoadingPreviews: viewModel.isLoadingPreviews,
+          hasFinishedInitialLoad: viewModel.hasFinishedInitialSharersLoad,
           isRefreshing: viewModel.isRefreshing,
           onSelectSharer: { sharer in
             viewModel.selectSharer(sharer)

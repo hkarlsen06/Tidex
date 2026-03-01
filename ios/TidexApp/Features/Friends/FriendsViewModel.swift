@@ -56,6 +56,10 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Whether sharers are being loaded
   @Published private(set) var isLoadingSharers = false
 
+  /// Whether the initial sharers state has been resolved (cache or first fetch attempt).
+  /// Prevents an empty-state flash on first frame before cache/network hydration starts.
+  @Published private(set) var hasFinishedInitialSharersLoad = false
+
   /// Whether shifts are being loaded
   @Published private(set) var isLoadingShifts = false
 
@@ -164,6 +168,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     self.lastObservedYear = self.monthContext.displayYear
     self.lastObservedMonth = self.monthContext.displayMonth
 
+    preloadSharersFromCacheIfAvailable()
+
     // Subscribe to month context changes
     setupMonthContextSubscription()
   }
@@ -200,6 +206,24 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     selectedSharerLoadTask = Task { [weak self] in
       await self?.loadShiftsForSelectedSharer()
     }
+  }
+
+  /// Preload sharers/previews synchronously before first render when user ID is already known.
+  /// This avoids a one-frame empty-state flash when Sharing is the startup tab.
+  private func preloadSharersFromCacheIfAvailable() {
+    guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
+    cachedUserId = userId
+
+    let cachedSharers = sharedShiftsRepository.getSharers(for: userId)
+    guard !cachedSharers.isEmpty else { return }
+
+    sharers = cachedSharers
+    shiftPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
+    hasFinishedInitialSharersLoad = true
+
+    logger.info(
+      "Preloaded \(cachedSharers.count) sharers and \(self.shiftPreviews.count) previews from cache at init"
+    )
   }
 
   // MARK: - Month Navigation
@@ -261,6 +285,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             shiftPreviews = cachedPreviews
           }
           loadedFromCache = true
+          hasFinishedInitialSharersLoad = true
           logger.info(
             "Loaded \(cachedSharers.count) sharers and \(cachedPreviews.count) previews from cache together"
           )
@@ -280,6 +305,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       // Update UI with fresh data
       sharers = freshSharers
+      hasFinishedInitialSharersLoad = true
       logger.info("Updated sharers property, now has \(self.sharers.count) items")
 
       // Save to cache
@@ -306,6 +332,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       logger.error("Failed to load sharers: \(error.localizedDescription)")
       self.error = SharingError.loadFailed(underlying: error)
+      if sharers.isEmpty {
+        hasFinishedInitialSharersLoad = true
+      }
       isLoadingSharers = false
     }
   }

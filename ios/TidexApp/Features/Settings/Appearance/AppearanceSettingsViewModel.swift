@@ -3,9 +3,18 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AppearanceSettingsViewModel")
 
+enum StartupTabOption: String, CaseIterable {
+  case home
+  case shifts
+  case add
+  case stats
+  case sharing
+}
+
 /// ViewModel for appearance settings
 @MainActor
 final class AppearanceSettingsViewModel: ObservableObject {
+  private static let startupTabCacheKey = "defaultStartupTab"
 
   // MARK: - Published State
 
@@ -32,6 +41,15 @@ final class AppearanceSettingsViewModel: ObservableObject {
     didSet {
       if oldValue != showDashboardClockButtons && !isInitialLoad {
         updateShowDashboardClockButtons()
+      }
+    }
+  }
+
+  /// The default tab to open when launching the app
+  @Published var selectedStartupTab: StartupTabOption = .home {
+    didSet {
+      if oldValue != selectedStartupTab && !isInitialLoad {
+        updateDefaultStartupTab()
       }
     }
   }
@@ -99,6 +117,16 @@ final class AppearanceSettingsViewModel: ObservableObject {
     }
 
     showDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+
+    let resolvedStartupTabRawValue: String
+    if let settings {
+      resolvedStartupTabRawValue = settings.effectiveDefaultStartupTab
+    } else {
+      resolvedStartupTabRawValue =
+        UserDefaults.standard.string(forKey: Self.startupTabCacheKey) ?? "home"
+    }
+    selectedStartupTab = StartupTabOption(rawValue: resolvedStartupTabRawValue) ?? .home
+    UserDefaults.standard.set(selectedStartupTab.rawValue, forKey: Self.startupTabCacheKey)
 
     isInitialLoad = false
 
@@ -180,8 +208,29 @@ final class AppearanceSettingsViewModel: ObservableObject {
         logger.info(
           "Updated dashboard clock button visibility to: \(self.showDashboardClockButtons)")
       } catch {
-        logger.error("Failed to save dashboard clock button visibility: \(error.localizedDescription)")
+        logger.error(
+          "Failed to save dashboard clock button visibility: \(error.localizedDescription)")
         errorMessage = "Failed to save dashboard preference"
+      }
+    }
+  }
+
+  /// Update default startup tab in repository
+  private func updateDefaultStartupTab() {
+    guard !isInitialLoad, let userId = userId else { return }
+
+    Task {
+      do {
+        _ = try await settingsRepository.updateSettings(
+          for: userId,
+          defaultStartupTab: selectedStartupTab.rawValue
+        )
+        UserDefaults.standard.set(selectedStartupTab.rawValue, forKey: Self.startupTabCacheKey)
+
+        logger.info("Updated default startup tab to: \(self.selectedStartupTab.rawValue)")
+      } catch {
+        logger.error("Failed to save default startup tab: \(error.localizedDescription)")
+        errorMessage = "Failed to save startup tab preference"
       }
     }
   }

@@ -128,6 +128,7 @@ final class SettingsRepository: ObservableObject {
   ///   - showDashboardClockButtons: Whether dashboard clock buttons are visible (optional)
   ///   - halfTaxMonth: New half tax month (optional)
   ///   - currency: New currency (optional)
+  ///   - defaultStartupTab: New default startup tab (optional)
   /// - Returns: Updated UserSettings if successful
   func updateSettings(
     for userId: String,
@@ -140,7 +141,8 @@ final class SettingsRepository: ObservableObject {
     calendarAnimationStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
     halfTaxMonth: Int? = nil,
-    currency: String? = nil
+    currency: String? = nil,
+    defaultStartupTab: String? = nil
   ) async throws -> UserSettings? {
     do {
       let updatedSettings = try await localStore.storeActor.updateUserSettings(
@@ -154,7 +156,8 @@ final class SettingsRepository: ObservableObject {
         calendarAnimationStyle: calendarAnimationStyle,
         showDashboardClockButtons: showDashboardClockButtons,
         halfTaxMonth: halfTaxMonth,
-        currency: currency
+        currency: currency,
+        defaultStartupTab: defaultStartupTab
       )
 
       logger.info("Updated local settings for user: \(userId)")
@@ -211,7 +214,8 @@ final class SettingsRepository: ObservableObject {
       calendarAnimationStyle: nil,
       showDashboardClockButtons: nil,
       halfTaxMonth: nil,
-      currency: nil
+      currency: nil,
+      defaultStartupTab: nil
     )
 
     triggerSync(userId: userId)

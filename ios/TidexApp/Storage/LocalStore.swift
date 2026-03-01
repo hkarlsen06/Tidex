@@ -1610,6 +1610,7 @@ actor LocalStoreActor {
       existing.showDashboardClockButtons = settings.showDashboardClockButtons
       existing.halfTaxMonth = settings.halfTaxMonth
       existing.currency = settings.currency
+      existing.defaultStartupTab = settings.defaultStartupTab
       existing.lastActive = settings.lastActive
       existing.createdAt = settings.createdAt
       existing.serverUpdatedAt = settings.serverUpdatedAt
@@ -1661,7 +1662,8 @@ actor LocalStoreActor {
     monthlyGoal: Int? = nil,
     monthlyGoalsByMonth: [String: Int] = [:],
     defaultShiftsView: String? = nil,
-    halfTaxMonth: Int? = nil
+    halfTaxMonth: Int? = nil,
+    defaultStartupTab: String? = nil
   ) throws -> UserSettings {
     let now = Date()
 
@@ -1677,6 +1679,7 @@ actor LocalStoreActor {
       showDashboardClockButtons: showDashboardClockButtons,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
+      defaultStartupTab: defaultStartupTab,
       lastActive: now,
       updatedAt: now,
       revision: 0
@@ -1692,6 +1695,7 @@ actor LocalStoreActor {
     if !monthlyGoalsByMonth.isEmpty { dirtyFields.append(.monthlyGoalsByMonth) }
     if defaultShiftsView != nil { dirtyFields.append(.defaultShiftsView) }
     if halfTaxMonth != nil { dirtyFields.append(.halfTaxMonth) }
+    if defaultStartupTab != nil { dirtyFields.append(.defaultStartupTab) }
 
     let dirtyFieldsData =
       (try? canonicalJSONEncoder.encode(dirtyFields.map { $0.rawValue })) ?? Data()
@@ -1709,6 +1713,7 @@ actor LocalStoreActor {
       showDashboardClockButtons: showDashboardClockButtons,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
+      defaultStartupTab: defaultStartupTab,
       lastActive: now,
       createdAt: now,
       serverUpdatedAt: now,
@@ -1760,7 +1765,8 @@ actor LocalStoreActor {
     calendarAnimationStyle: String?,
     showDashboardClockButtons: Bool? = nil,
     halfTaxMonth: Int?,
-    currency: String?
+    currency: String?,
+    defaultStartupTab: String?
   ) throws -> UserSettings {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
@@ -1827,6 +1833,13 @@ actor LocalStoreActor {
     if let newCurrency = currency, newCurrency != localSettings.currency {
       localSettings.currency = newCurrency
       newDirtyFields.insert(.currency)
+    }
+
+    if let newDefaultStartupTab = defaultStartupTab,
+      newDefaultStartupTab != localSettings.defaultStartupTab
+    {
+      localSettings.defaultStartupTab = newDefaultStartupTab
+      newDirtyFields.insert(.defaultStartupTab)
     }
 
     localSettings.dirtyFieldKeys = newDirtyFields
@@ -1940,6 +1953,7 @@ actor LocalStoreActor {
     localSettings.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
     localSettings.currency = serverSnapshot.currency
+    localSettings.defaultStartupTab = serverSnapshot.defaultStartupTab
     localSettings.lastActive = serverSnapshot.lastActive
     localSettings.serverRevision = serverSnapshot.revision
     localSettings.serverUpdatedAt = serverSnapshot.updatedAt
@@ -2497,6 +2511,7 @@ actor LocalStoreActor {
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
+    existing.defaultStartupTab = serverRow.default_startup_tab
     existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
     existing.createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }
     existing.serverUpdatedAt = serverUpdatedAt
@@ -2573,6 +2588,9 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.currency) {
       existing.currency = serverRow.currency
+    }
+    if !localDirtyFields.contains(.defaultStartupTab) {
+      existing.defaultStartupTab = serverRow.default_startup_tab
     }
     if !localDirtyFields.contains(.lastActive) {
       existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
@@ -3130,6 +3148,7 @@ actor LocalStoreActor {
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
+    existing.defaultStartupTab = serverRow.default_startup_tab
     existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
     existing.createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }
     existing.serverUpdatedAt = serverUpdatedAt
@@ -3190,6 +3209,7 @@ actor LocalStoreActor {
     existing.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth
     existing.currency = serverSnapshot.currency
+    existing.defaultStartupTab = serverSnapshot.defaultStartupTab
     existing.lastActive = serverSnapshot.lastActive
     existing.serverUpdatedAt = serverSnapshot.updatedAt
     existing.serverRevision = serverSnapshot.revision

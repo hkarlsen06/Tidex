@@ -12,6 +12,7 @@ struct SharerListView: View {
   let shiftPreviews: [String: SharerShiftPreview]
   let isLoading: Bool
   let isLoadingPreviews: Bool
+  let hasFinishedInitialLoad: Bool
   let isRefreshing: Bool
   let onSelectSharer: (SharedUser) -> Void
   var onAddFriend: (() -> Void)?
@@ -98,7 +99,7 @@ struct SharerListView: View {
 
   var body: some View {
     Group {
-      if isLoading && sharers.isEmpty {
+      if (!hasFinishedInitialLoad && sharers.isEmpty) || (isLoading && sharers.isEmpty) {
         loadingState
       } else if sharers.isEmpty {
         FriendsListEmptyState(onAddFriend: onAddFriend)
@@ -173,6 +174,7 @@ struct SharerListView: View {
     shiftPreviews: [:],
     isLoading: false,
     isLoadingPreviews: false,
+    hasFinishedInitialLoad: true,
     isRefreshing: false,
     onSelectSharer: { _ in }
   )

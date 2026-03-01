@@ -15,6 +15,8 @@ extension Notification.Name {
 /// This is the home screen after successful login
 /// Currently a placeholder - will be expanded with full dashboard functionality
 struct MainTabView: View {
+  private static let startupTabCacheKey = "defaultStartupTab"
+
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.requestReview) private var requestReview
@@ -90,6 +92,11 @@ struct MainTabView: View {
       case .sharing: return .tabsSharing
       }
     }
+  }
+
+  init() {
+    let cachedStartupTabRawValue = UserDefaults.standard.string(forKey: Self.startupTabCacheKey)
+    _selectedTab = State(initialValue: Tab(rawValue: cachedStartupTabRawValue ?? "home") ?? .home)
   }
 
   /// Custom binding that detects tab reselection
@@ -254,6 +261,9 @@ struct MainTabView: View {
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
       handlePendingDeepLink(deepLink)
+    }
+    .onChange(of: coordinator.userId) { _, _ in
+      handlePendingDeepLink(coordinator.pendingDeepLink)
     }
     .onAppear {
       // Handle any pending deep link on initial appearance
@@ -466,7 +476,8 @@ struct MainTabView: View {
       return String(localized: .addShiftSubmitRequirementsGeneric)
     }
 
-    return blockers
+    return
+      blockers
       .map { "- \(String(localized: submitRequirementMessageKey(for: $0)))" }
       .joined(separator: "\n")
   }
