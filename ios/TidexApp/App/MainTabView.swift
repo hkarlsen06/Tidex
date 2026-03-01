@@ -203,22 +203,15 @@ struct MainTabView: View {
               .transition(monthPickerTransition)
           }
         }
-        .animation(
-          shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
-          value: selectedTab
+        .motionAnimation(.navigationPush, value: selectedTab, reduceMotion: shouldReduceEffects)
+        .motionAnimation(
+          .pageTransition, value: shouldShowMonthPicker, reduceMotion: shouldReduceEffects
         )
-        .animation(
-          shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
-          value: shouldShowMonthPicker
-        )
-        .animation(
-          shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
-          value: showListView
-        )
+        .motionAnimation(.pageTransition, value: showListView, reduceMotion: shouldReduceEffects)
       }
-      .animation(
-        shouldReduceEffects ? nil : .spring(response: 0.35, dampingFraction: 0.85),
-        value: impersonationManager.isImpersonating)
+      .motionAnimation(
+        .pageTransition, value: impersonationManager.isImpersonating,
+        reduceMotion: shouldReduceEffects)
 
       // Celebration overlay - above everything including tab bar and month picker
       if celebrationManager.shouldShowCelebration,
@@ -357,10 +350,8 @@ struct MainTabView: View {
             disabled: disableHeavyCompositingForHangInvestigation
           )
           .transition(.opacity)
-          .animation(
-            shouldReduceEffects ? nil : .easeInOut(duration: 0.2),
-            value: monthContext.hasConflictsInMonth
-          )
+          .motionAnimation(
+            .feedback, value: monthContext.hasConflictsInMonth, reduceMotion: shouldReduceEffects)
         }
 
         // Month picker
@@ -436,7 +427,7 @@ struct MainTabView: View {
   }
 
   private var monthPickerTransition: AnyTransition {
-    shouldReduceEffects ? .opacity : .move(edge: .bottom).combined(with: .opacity)
+    MotionTokens.transition(.pageTransition, reduceMotion: shouldReduceEffects)
   }
 
   /// Whether this tab has scrollable list content that should scroll-to-top before navigating to current month

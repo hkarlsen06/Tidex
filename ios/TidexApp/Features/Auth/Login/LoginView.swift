@@ -4,6 +4,7 @@ import SwiftUI
 /// Supports email/password, phone/OTP, Google, and Apple sign-in
 struct LoginView: View {
   @StateObject private var viewModel = LoginViewModel()
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   // Navigation callbacks
   var onNavigateToSignup: (() -> Void)?
@@ -195,7 +196,7 @@ struct LoginView: View {
 
   private var revealEmailButton: some View {
     Button {
-      withAnimation(.easeInOut(duration: 0.2)) {
+      MotionTokens.animate(.feedback, reduceMotion: reduceMotion) {
         viewModel.showEmailForm = true
       }
     } label: {
@@ -347,11 +348,13 @@ struct NativeSecureField: View {
 
 /// Button style with immediate press feedback
 struct SnappyButtonStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
       .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+      .motionAnimation(.affordance, value: configuration.isPressed, reduceMotion: reduceMotion)
   }
 }
 

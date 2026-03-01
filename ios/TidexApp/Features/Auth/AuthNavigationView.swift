@@ -5,6 +5,7 @@ import SwiftUI
 struct AuthNavigationView: View {
   let initialScreen: AuthScreen
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentScreen: AuthScreen
 
   enum AuthScreen {
@@ -33,34 +34,25 @@ struct AuthNavigationView: View {
             onNavigateToResetPassword: { navigateTo(.resetPassword) }
           )
           .transition(
-            .asymmetric(
-              insertion: .move(edge: .leading).combined(with: .opacity),
-              removal: .move(edge: .leading).combined(with: .opacity)
-            ))
+            MotionTokens.mirroredMoveTransition(edge: .leading, reduceMotion: reduceMotion))
 
         case .signup:
           SignupView(
             onNavigateToLogin: { navigateTo(.login) }
           )
           .transition(
-            .asymmetric(
-              insertion: .move(edge: .trailing).combined(with: .opacity),
-              removal: .move(edge: .trailing).combined(with: .opacity)
-            ))
+            MotionTokens.mirroredMoveTransition(edge: .trailing, reduceMotion: reduceMotion))
 
         case .resetPassword:
           ResetPasswordView(
             onNavigateToLogin: { navigateTo(.login) }
           )
           .transition(
-            .asymmetric(
-              insertion: .move(edge: .trailing).combined(with: .opacity),
-              removal: .move(edge: .trailing).combined(with: .opacity)
-            ))
+            MotionTokens.mirroredMoveTransition(edge: .trailing, reduceMotion: reduceMotion))
         }
       }
     }
-    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentScreen)
+    .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
   }
 
   private func navigateTo(_ screen: AuthScreen) {

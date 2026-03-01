@@ -39,6 +39,7 @@ private enum ShiftListItem: Identifiable {
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
 struct ShiftsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// Binding to the selected tab for navigation (to switch to Add tab)
   @Binding var selectedTab: MainTabView.Tab
@@ -206,7 +207,7 @@ struct ShiftsView: View {
           guard newTab == .shifts, oldTab == .add else { return }
           tabTransitionOffset = -28
           tabTransitionOpacity = 0.92
-          withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+          MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
             tabTransitionOffset = 0
             tabTransitionOpacity = 1
           }
@@ -676,12 +677,12 @@ struct ShiftsView: View {
       // When action is .highlight (from widgets), show visual highlight instead
       if action == .highlight {
         logger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
-        withAnimation(.easeInOut(duration: 0.3)) {
+        MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
           deepLinkHighlightDate = dateISO
         }
         // Auto-clear highlight after 3 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-          withAnimation(.easeOut(duration: 0.5)) {
+          MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
             deepLinkHighlightDate = nil
           }
         }
@@ -758,7 +759,7 @@ struct ShiftsView: View {
   private var selectionModeToggleButton: some View {
     Button {
       selectionHaptic.selectionChanged()
-      withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+      MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
         viewModel.isSelectionModeEnabled.toggle()
       }
     } label: {

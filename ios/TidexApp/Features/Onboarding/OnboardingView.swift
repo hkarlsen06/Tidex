@@ -21,6 +21,8 @@ struct OnboardingView: View {
   @State private var howItWorksShouldAnimateFromPrevious = false
   @State private var howItWorksTotalCardSeed = 0
   @State private var isAdvancingFromSimulatorAdd = false
+  @State private var shouldPreloadSimulatorScreen = false
+  @State private var shouldPreloadHowItWorksScreen = false
 
   private let totalPages = 4
   private let simulatorPage = 1
@@ -53,6 +55,14 @@ struct OnboardingView: View {
       Color.tidexBackground
         .ignoresSafeArea()
 
+      if shouldPreloadSimulatorScreen {
+        preloadedSimulatorScreen
+      }
+
+      if shouldPreloadHowItWorksScreen {
+        preloadedHowItWorksScreen
+      }
+
       VStack(spacing: 0) {
         // Page content - takes full height, skip button overlaid
         TabView(selection: $currentPage) {
@@ -77,7 +87,8 @@ struct OnboardingView: View {
             onBaselineReady: { baselineTotals, currency in
               simulatorBaselineTotals = baselineTotals
               preAuthCurrency = currency
-            }
+            },
+            isPreloaded: false
           )
           .tag(1)
 
@@ -105,11 +116,10 @@ struct OnboardingView: View {
           .tag(3)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .animation(
-          reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentPage
-        )
+        .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
         .onChange(of: currentPage) { oldPage, newPage in
           handlePageTransition(from: oldPage, to: newPage)
+          preloadUpcomingScreen(after: newPage)
         }
 
         // Bottom controls area - constrained for iPad
@@ -121,7 +131,7 @@ struct OnboardingView: View {
               OnboardingButton(
                 title: String(localized: .commonContinue),
                 action: {
-                  withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                  MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
                     currentPage += 1
                   }
                 }
@@ -131,8 +141,7 @@ struct OnboardingView: View {
           .padding(.horizontal, Spacing.lg)
           .adaptiveContentWidth()
           .padding(.bottom, Spacing.xl)
-          .animation(
-            reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
+          .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
         }
       }
     }
@@ -143,13 +152,14 @@ struct OnboardingView: View {
     }
     .onAppear {
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
+      preloadUpcomingScreen(after: currentPage)
     }
     .task(id: currentPage) {
       if isSkipButtonVisible {
         if reduceMotion {
           isSkipButtonVisible = false
         } else {
-          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
             isSkipButtonVisible = false
           }
         }
@@ -163,11 +173,45 @@ struct OnboardingView: View {
       if reduceMotion {
         isSkipButtonVisible = true
       } else {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+        MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
           isSkipButtonVisible = true
         }
       }
     }
+  }
+
+  private var preloadedSimulatorScreen: some View {
+    PreAuthAddShiftSimulatorScreen(
+      initialCurrency: preAuthCurrency,
+      onCurrencyChanged: { _ in },
+      onContinue: { _, _, _ in },
+      onSkip: {},
+      onBaselineReady: { _, _ in },
+      isPreloaded: true
+    )
+    .frame(width: 1, height: 1)
+    .clipped()
+    .opacity(0.001)
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  private var preloadedHowItWorksScreen: some View {
+    HowItWorksScreen(
+      totalFrom: howItWorksFromTotals ?? simulatorBaselineTotals ?? fallbackHowItWorksTotals,
+      totalTo: howItWorksToTotals ?? howItWorksFromTotals ?? simulatorBaselineTotals
+        ?? fallbackHowItWorksTotals,
+      currency: preAuthCurrency,
+      isActive: false,
+      shouldShowConfetti: false,
+      shouldAnimateTotalFromPrevious: false,
+      totalCardSeed: howItWorksTotalCardSeed
+    )
+    .frame(width: 1, height: 1)
+    .clipped()
+    .opacity(0.001)
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
   }
 
   @ViewBuilder
@@ -176,7 +220,7 @@ struct OnboardingView: View {
       HStack(spacing: Spacing.sm) {
         if isSkipButtonVisible {
           Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
               currentPage = totalPages - 1
             }
           } label: {
@@ -216,10 +260,7 @@ struct OnboardingView: View {
     .padding(.top, Spacing.xxxs)
     .padding(.bottom, Spacing.sm)
     .background(Color.tidexBackground)
-    .animation(
-      reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8),
-      value: isSkipButtonVisible
-    )
+    .motionAnimation(.emphasis, value: isSkipButtonVisible, reduceMotion: reduceMotion)
   }
 
   private func completeSimulatorAndAdvance(
@@ -235,13 +276,13 @@ struct OnboardingView: View {
     howItWorksShouldAnimateFromPrevious = true
     howItWorksTotalCardSeed += 1
 
-    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
       currentPage = min(currentPage + 1, totalPages - 1)
     }
   }
 
   private func skipFromSimulator() {
-    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
       currentPage = totalPages - 1
     }
   }
@@ -273,6 +314,20 @@ struct OnboardingView: View {
     if oldPage == simulatorPage + 1, newPage != simulatorPage + 1 {
       howItWorksShouldShowConfetti = false
       howItWorksShouldAnimateFromPrevious = false
+    }
+  }
+
+  private func preloadUpcomingScreen(after page: Int) {
+    if page < simulatorPage {
+      shouldPreloadSimulatorScreen = true
+    } else {
+      shouldPreloadSimulatorScreen = false
+    }
+
+    if page == simulatorPage {
+      shouldPreloadHowItWorksScreen = true
+    } else if page >= howItWorksPage {
+      shouldPreloadHowItWorksScreen = false
     }
   }
 }
