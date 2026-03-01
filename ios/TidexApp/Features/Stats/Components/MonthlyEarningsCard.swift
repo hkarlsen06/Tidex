@@ -44,11 +44,14 @@ struct MonthlyEarningsCard: View {
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
-        CurrencyCountUpText(amount: mainDisplayValue)
-          .font(.tidexStat)
-          .foregroundColor(.tidexTextPrimary)
-          .minimumScaleFactor(0.5)
-          .lineLimit(1)
+        CurrencyCountUpText(
+          amount: mainDisplayValue,
+          animateChanges: false
+        )
+        .font(.tidexStat)
+        .foregroundColor(.tidexTextPrimary)
+        .minimumScaleFactor(0.5)
+        .lineLimit(1)
 
         if taxEnabled {
           Text(String(localized: .statsAfterTax).lowercased())

@@ -66,9 +66,11 @@ struct PayrollCard: View {
           badgeHorizontalPadding: Spacing.xs,
           badgeVerticalPadding: labelIsWorkplace ? 2 : Spacing.xxxs
         )
-
-        if showsPageIndicator {
-          payrollCardPageIndicator
+        .overlay(alignment: .topLeading) {
+          if showsPageIndicator {
+            payrollCardPageIndicator
+              .offset(x: Spacing.xxs, y: -Spacing.xsm)
+          }
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

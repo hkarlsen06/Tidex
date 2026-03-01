@@ -49,6 +49,23 @@ final class TimeInputFocusController {
     }
   }
 
+  @discardableResult
+  func focusAndInsert(_ text: String, into field: TimeInputField) -> Bool {
+    guard !text.isEmpty, let textField = textField(for: field) else { return false }
+    focus(field)
+    textField.insertText(text)
+    return true
+  }
+
+  private func textField(for field: TimeInputField) -> UITextField? {
+    switch field {
+    case .start:
+      return startField
+    case .end:
+      return endField
+    }
+  }
+
   private func setCursorToEnd(_ textField: UITextField) {
     let length = textField.text?.count ?? 0
     guard let start = textField.position(from: textField.beginningOfDocument, offset: length) else {
@@ -86,6 +103,7 @@ private struct TimeTextField: UIViewRepresentable {
     let formatted: String
     let digits: String
     let priorDigits: String
+    let insertedDigits: String
     let didInsert: Bool
     let didDelete: Bool
     let caretAtEnd: Bool
@@ -189,6 +207,7 @@ private struct TimeTextField: UIViewRepresentable {
       setCursor(textField, position: caretPosition)
 
       let didInsert = string.rangeOfCharacter(from: .decimalDigits) != nil
+      let insertedDigits = string.filter { $0.isNumber }
       let didDelete = string.isEmpty && adjustedRange.length > 0
       let caretAtEnd = caretPosition == formatted.count
       let caretAtStart = caretPosition == 0
@@ -198,6 +217,7 @@ private struct TimeTextField: UIViewRepresentable {
           formatted: formatted,
           digits: limitedDigits,
           priorDigits: currentDigits,
+          insertedDigits: insertedDigits,
           didInsert: didInsert,
           didDelete: didDelete,
           caretAtEnd: caretAtEnd,
@@ -225,6 +245,7 @@ private struct TimeTextField: UIViewRepresentable {
           formatted: "",
           digits: "",
           priorDigits: currentDigits,
+          insertedDigits: "",
           didInsert: false,
           didDelete: true,
           caretAtEnd: true,
@@ -403,6 +424,17 @@ struct NumericTimeInput: View {
   }
 
   private func handleTextChange(_ change: TimeTextField.Change) {
+    if let next = nextField,
+      change.didInsert,
+      !change.insertedDigits.isEmpty,
+      change.priorDigits.count == 4,
+      change.digits == change.priorDigits,
+      change.caretAtEnd,
+      focusController.focusAndInsert(change.insertedDigits, into: next)
+    {
+      return
+    }
+
     if change.digits.isEmpty {
       time = nil
       if change.didDelete, previousField != nil {
