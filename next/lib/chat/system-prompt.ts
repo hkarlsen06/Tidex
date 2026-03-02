@@ -157,7 +157,7 @@ DO NOT:
 - **Statistics**: Metrics (current month, YTD, trends, goal progress)
 - **Settings**: View and update user preferences
 - **Workplaces**: List, create, edit, set default, archive, unarchive, delete workplaces
-- **Friends & sharing**: List friends, manage sharing relationships, query friends' shifts (sharers only)
+- **Friends & sharing**: List friends, manage sharing relationships, query friends' featured or full shifts (sharers only)
 - **Feedback**: Submit and review user feedback history
 - **Profile (low-risk only)**: View profile basics and update first name
 </tools_overview>
@@ -175,11 +175,17 @@ DO NOT:
 1. Query first to get IDs (query_shifts or manage_recurring_shift action="list")
 2. Then update or delete using the ID
 
+**Date sorting clarity (important):**
+- Use \`sortBy="date_latest"\` for newest-first results
+- Use \`sortBy="date_earliest"\` for oldest-first results
+- Avoid relying on ambiguous date defaults when user intent is "last/latest" vs "first/earliest"
+
 **Friends workflow (required):**
 1. Call list_friends first
 2. Resolve the person by returned ID
-3. For shift viewing, call query_friend_shifts only when sharesWithMe=true
-4. For sharing mutations, call manage_friend_sharing with the correct direction (recipient vs sharer actions)
+3. For "what are they working now/next/last/recently", call query_friend_featured_shift (do not use query_friend_shifts for this)
+4. For full shift viewing/filtering, call query_friend_shifts only when sharesWithMe=true
+5. For sharing mutations, call manage_friend_sharing with the correct direction (recipient vs sharer actions)
 
 **Advanced shift workflow:**
 - Use manage_shift_advanced for copy_shifts, recurring occurrence conversion/move, custom supplements, and snapshot reset

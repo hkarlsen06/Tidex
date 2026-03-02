@@ -28,7 +28,7 @@ import {
   toggleSharerMuted,
   removeSharer,
 } from "@/app/[locale]/(app)/sharing/_actions/sharing";
-import { getAllFriends, getSharedUserShifts } from "@/data-access/sharing";
+import { getAllFriends, getSharedUserShifts, getSharerShiftPreviews } from "@/data-access/sharing";
 import { submitFeedback } from "@/app/[locale]/(app)/settings/feedback/_actions/submitFeedback";
 import { getUserFeedback } from "@/app/[locale]/(app)/settings/feedback/_actions/getUserFeedback";
 import { updateProfileSettings } from "@/app/[locale]/(app)/settings/_actions/updateSettings";
@@ -52,6 +52,7 @@ import type {
   ListFriendsInput,
   ManageFriendSharingInput,
   QueryFriendShiftsInput,
+  QueryFriendFeaturedShiftInput,
   ManageShiftAdvancedInput,
   ManageFeedbackInput,
   ManageProfileInput,
@@ -73,6 +74,7 @@ import {
   listFriendsSchema,
   manageFriendSharingSchema,
   queryFriendShiftsSchema,
+  queryFriendFeaturedShiftSchema,
   manageShiftAdvancedSchema,
   manageFeedbackSchema,
   manageProfileSchema,
@@ -285,6 +287,7 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "list_friends",
   "manage_friend_sharing",
   "query_friend_shifts",
+  "query_friend_featured_shift",
   "manage_shift_advanced",
   "manage_feedback",
   "manage_profile",
@@ -417,6 +420,9 @@ async function executeToolOnce(
 
     case "query_friend_shifts":
       return await executeQueryFriendShifts(args, userId, tr);
+
+    case "query_friend_featured_shift":
+      return await executeQueryFriendFeaturedShift(args, userId, tr);
 
     case "manage_friend_sharing":
       return await executeManageFriendSharing(args, userId, tr);
@@ -662,6 +668,14 @@ function getCurrentWeekRange(): { startDate: string; endDate: string } {
   };
 }
 
+function sortShiftsByDateDesc<T extends { shift_date: string; start_time: string }>(shifts: T[]): T[] {
+  return shifts.sort((a, b) => {
+    const dateDiff = b.shift_date.localeCompare(a.shift_date);
+    if (dateDiff !== 0) return dateDiff;
+    return b.start_time.localeCompare(a.start_time);
+  });
+}
+
 /**
  * Execute query_shifts tool (enhanced with filters)
  */
@@ -716,8 +730,16 @@ async function executeQueryShifts(
       filteredShifts = filteredShifts.sort((a, b) => b.computed.gross - a.computed.gross);
     } else if (input.sortBy === "hours") {
       filteredShifts = filteredShifts.sort((a, b) => b.computed.paidHours - a.computed.paidHours);
+    } else if (input.sortBy === "date_earliest") {
+      filteredShifts = filteredShifts.sort((a, b) => {
+        const dateDiff = a.shift_date.localeCompare(b.shift_date);
+        if (dateDiff !== 0) return dateDiff;
+        return a.start_time.localeCompare(b.start_time);
+      });
+    } else {
+      // date_latest and legacy date alias return newest-first.
+      filteredShifts = sortShiftsByDateDesc(filteredShifts);
     }
-    // Default sort by date is already handled by DAL
 
     // Apply limit after filtering
     const limitedShifts = filteredShifts.slice(0, input.limit || 30);
@@ -1477,6 +1499,15 @@ async function executeQueryFriendShifts(
       filteredShifts = filteredShifts.sort((a, b) => b.computed.gross - a.computed.gross);
     } else if (input.sortBy === "hours") {
       filteredShifts = filteredShifts.sort((a, b) => b.computed.paidHours - a.computed.paidHours);
+    } else if (input.sortBy === "date_earliest") {
+      filteredShifts = filteredShifts.sort((a, b) => {
+        const dateDiff = a.shift_date.localeCompare(b.shift_date);
+        if (dateDiff !== 0) return dateDiff;
+        return a.start_time.localeCompare(b.start_time);
+      });
+    } else {
+      // date_latest and legacy date alias return newest-first.
+      filteredShifts = sortShiftsByDateDesc(filteredShifts);
     }
 
     const limitedShifts = filteredShifts.slice(0, input.limit || 30);
@@ -1541,6 +1572,107 @@ async function executeQueryFriendShifts(
     };
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : tr.failedToQueryFriendShifts);
+  }
+}
+
+/**
+ * Execute query_friend_featured_shift tool
+ * Uses the same DAL preview selection as the friends page.
+ */
+async function executeQueryFriendFeaturedShift(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = queryFriendFeaturedShiftSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: QueryFriendFeaturedShiftInput = parsed.data;
+
+  try {
+    const friends = await getAllFriends(userId);
+    const friend = friends.find((entry) => entry.id === input.friendId);
+
+    if (!friend || !friend.sharesWithMe) {
+      return {
+        success: true,
+        message: tr.friendNoAccess,
+        data: {
+          access: "no_access",
+          friendId: input.friendId,
+        },
+      };
+    }
+
+    if (friend.sharesWithMe.blocked) {
+      return {
+        success: true,
+        message: tr.friendBlocked,
+        data: {
+          access: "blocked",
+          friendId: input.friendId,
+        },
+      };
+    }
+
+    const [preview] = await getSharerShiftPreviews([input.friendId]);
+    const canShowEarnings = Boolean(preview?.showEarnings && friend.sharesWithMe.showEarningsToMe);
+
+    if (!preview?.shift) {
+      return {
+        success: true,
+        message: tr.noFeaturedFriendShift,
+        data: {
+          access: "ok",
+          friend: {
+            id: friend.id,
+            name: getFriendDisplayName(friend),
+          },
+          status: preview?.status ?? null,
+          showEarningsToMe: canShowEarnings,
+          featuredShift: null,
+        },
+      };
+    }
+
+    const shift = preview.shift;
+    const featuredBase = {
+      id: toDisplayShiftId(shift.id),
+      date: shift.shift_date,
+      day: getWeekdayAbbr(shift.shift_date, tr),
+      start: shift.start_time,
+      end: shift.end_time,
+      hours: Number(shift.computed.paidHours.toFixed(2)),
+    };
+
+    const featuredShift = canShowEarnings
+      ? {
+          ...featuredBase,
+          gross: Number(shift.computed.gross.toFixed(2)),
+        }
+      : featuredBase;
+
+    return {
+      success: true,
+      message: t(tr.foundFeaturedFriendShift, { status: preview.status ?? "none" }),
+      data: {
+        access: "ok",
+        friend: {
+          id: friend.id,
+          name: getFriendDisplayName(friend),
+        },
+        status: preview.status,
+        showEarningsToMe: canShowEarnings,
+        featuredShift,
+      },
+    };
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToQueryFriendFeaturedShift);
   }
 }
 

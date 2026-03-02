@@ -166,6 +166,7 @@ struct ToolStatusView: View {
       "list_friends": String(localized: .wageyToolListFriends),
       "manage_friend_sharing": String(localized: .wageyToolManageFriendSharing),
       "query_friend_shifts": String(localized: .wageyToolQueryFriendShifts),
+      "query_friend_featured_shift": String(localized: .wageyToolQueryFriendFeaturedShift),
 
       // Advanced shifts
       "manage_shift_advanced": String(localized: .wageyToolManageShiftAdvanced),

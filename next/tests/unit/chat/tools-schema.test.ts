@@ -6,7 +6,9 @@ import {
   manageProfileSchema,
   manageShiftAdvancedSchema,
   manageWorkplaceSchema,
+  queryFriendFeaturedShiftSchema,
   queryFriendShiftsSchema,
+  queryShiftsSchema,
 } from "@/lib/chat/tools";
 
 const friendId = "11111111-1111-4111-8111-111111111111";
@@ -29,7 +31,7 @@ describe("chat tool schemas", () => {
 
     expect(setDefault.success).toBe(true);
     expect(remove.success).toBe(true);
-    expect(reorder.success).toBe(false);
+    expect(reorder.success).toBe(true);
   });
 
   it("applies list_friends defaults", () => {
@@ -54,6 +56,29 @@ describe("chat tool schemas", () => {
       sortBy: "hours",
       weekdays: [1, 5],
     });
+    const latest = queryFriendShiftsSchema.safeParse({
+      friendId,
+      sortBy: "date_latest",
+    });
+    const earliest = queryFriendShiftsSchema.safeParse({
+      friendId,
+      sortBy: "date_earliest",
+    });
+
+    expect(missingFriend.success).toBe(false);
+    expect(valid.success).toBe(true);
+    expect(latest.success).toBe(true);
+    expect(earliest.success).toBe(true);
+  });
+
+  it("supports explicit date sort modes for query_shifts", () => {
+    expect(queryShiftsSchema.safeParse({ sortBy: "date_latest" }).success).toBe(true);
+    expect(queryShiftsSchema.safeParse({ sortBy: "date_earliest" }).success).toBe(true);
+  });
+
+  it("requires friendId in query_friend_featured_shift", () => {
+    const missingFriend = queryFriendFeaturedShiftSchema.safeParse({});
+    const valid = queryFriendFeaturedShiftSchema.safeParse({ friendId });
 
     expect(missingFriend.success).toBe(false);
     expect(valid.success).toBe(true);
