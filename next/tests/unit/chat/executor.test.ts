@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   deleteJob: vi.fn(),
   getAllFriends: vi.fn(),
   getSharedUserShifts: vi.fn(),
+  getSharerShiftPreviews: vi.fn(),
   createShare: vi.fn(),
   removeShare: vi.fn(),
   toggleShareEarnings: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@/data-access/jobs", () => ({
 vi.mock("@/data-access/sharing", () => ({
   getAllFriends: mocks.getAllFriends,
   getSharedUserShifts: mocks.getSharedUserShifts,
+  getSharerShiftPreviews: mocks.getSharerShiftPreviews,
 }));
 
 vi.mock("@/app/[locale]/(app)/sharing/_actions/sharing", () => ({
@@ -113,6 +115,7 @@ describe("chat executor guardrails", () => {
       wageSnapshots: [],
       defaultView: "calendar",
     });
+    mocks.getSharerShiftPreviews.mockResolvedValue([]);
     mocks.verifySession.mockResolvedValue({
       user: {
         id: userId,
@@ -159,7 +162,12 @@ describe("chat executor guardrails", () => {
     expect(mocks.deleteJob).not.toHaveBeenCalled();
   });
 
-  it("treats workplace reorder as unsupported chat input", async () => {
+  it("reorders workplaces among active entries", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "First", sort_order: 0 }),
+      makeJob({ id: jobB, name: "Second", sort_order: 1 }),
+    ]);
+
     const result = await executeTool(
       "manage_workplace",
       JSON.stringify({ action: "reorder", jobId: jobA, direction: "down" }),
@@ -167,9 +175,8 @@ describe("chat executor guardrails", () => {
       "en"
     );
 
-    expect(result.success).toBe(false);
-    expect(result.message).toContain("Invalid option");
-    expect(mocks.updateJob).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(mocks.updateJob).toHaveBeenCalledTimes(2);
   });
 
   it("enforces recipient-direction protections", async () => {
@@ -337,6 +344,166 @@ describe("chat executor guardrails", () => {
     expect(result.currency).toBe("USD");
   });
 
+  it("returns newest shift when sorting by date with limit 1", async () => {
+    mocks.getAllFriends.mockResolvedValue([
+      {
+        id: friendId,
+        firstName: "Robin",
+        email: "robin@example.com",
+        phone: null,
+        sharesWithMe: {
+          blocked: false,
+          showEarningsToMe: true,
+          sharedAt: "2026-03-01",
+          notificationFrequency: "instant",
+        },
+        iShareWith: null,
+      },
+    ]);
+
+    mocks.getSharedUserShifts.mockResolvedValue({
+      shifts: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          shift_date: "2025-01-02",
+          start_time: "08:00",
+          end_time: "16:00",
+          job_id: null,
+          computed: {
+            paidHours: 7.5,
+            gross: 974.33,
+            basePay: 900,
+            supplementPay: 74.33,
+            wagePeriods: [],
+            originalWagePeriods: [],
+          },
+          tax_enabled: true,
+          tax_percentage: 20,
+        },
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          shift_date: "2025-02-27",
+          start_time: "08:00",
+          end_time: "16:00",
+          job_id: null,
+          computed: {
+            paidHours: 7.5,
+            gross: 1500,
+            basePay: 1400,
+            supplementPay: 100,
+            wagePeriods: [],
+            originalWagePeriods: [],
+          },
+          tax_enabled: true,
+          tax_percentage: 20,
+        },
+      ],
+      settings: { currency: "NOK", half_tax_month: null },
+      jobs: [],
+      aggregates: { totalHours: 15, totalEarnings: 2474.33 },
+      showEarnings: true,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
+      defaultView: "calendar",
+    });
+
+    const result = await executeTool(
+      "query_friend_shifts",
+      JSON.stringify({
+        friendId,
+        startDate: "2025-01-01",
+        endDate: "2026-03-01",
+        sortBy: "date",
+        limit: 1,
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect((result.data as any).shifts[0].date).toBe("2025-02-27");
+  });
+
+  it("returns earliest shift when sorting by date_earliest with limit 1", async () => {
+    mocks.getAllFriends.mockResolvedValue([
+      {
+        id: friendId,
+        firstName: "Robin",
+        email: "robin@example.com",
+        phone: null,
+        sharesWithMe: {
+          blocked: false,
+          showEarningsToMe: true,
+          sharedAt: "2026-03-01",
+          notificationFrequency: "instant",
+        },
+        iShareWith: null,
+      },
+    ]);
+
+    mocks.getSharedUserShifts.mockResolvedValue({
+      shifts: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          shift_date: "2025-01-02",
+          start_time: "08:00",
+          end_time: "16:00",
+          job_id: null,
+          computed: {
+            paidHours: 7.5,
+            gross: 974.33,
+            basePay: 900,
+            supplementPay: 74.33,
+            wagePeriods: [],
+            originalWagePeriods: [],
+          },
+          tax_enabled: true,
+          tax_percentage: 20,
+        },
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          shift_date: "2025-02-27",
+          start_time: "08:00",
+          end_time: "16:00",
+          job_id: null,
+          computed: {
+            paidHours: 7.5,
+            gross: 1500,
+            basePay: 1400,
+            supplementPay: 100,
+            wagePeriods: [],
+            originalWagePeriods: [],
+          },
+          tax_enabled: true,
+          tax_percentage: 20,
+        },
+      ],
+      settings: { currency: "NOK", half_tax_month: null },
+      jobs: [],
+      aggregates: { totalHours: 15, totalEarnings: 2474.33 },
+      showEarnings: true,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
+      defaultView: "calendar",
+    });
+
+    const result = await executeTool(
+      "query_friend_shifts",
+      JSON.stringify({
+        friendId,
+        startDate: "2025-01-01",
+        endDate: "2026-03-01",
+        sortBy: "date_earliest",
+        limit: 1,
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect((result.data as any).shifts[0].date).toBe("2025-01-02");
+  });
+
   it("rejects empty profile names", async () => {
     const result = await executeTool(
       "manage_profile",
@@ -348,5 +515,49 @@ describe("chat executor guardrails", () => {
     expect(result.success).toBe(false);
     expect(result.message).toContain("cannot be empty");
     expect(mocks.updateProfileSettings).not.toHaveBeenCalled();
+  });
+
+  it("uses featured friend shift preview selection from sharing DAL", async () => {
+    mocks.getAllFriends.mockResolvedValue([
+      {
+        id: friendId,
+        firstName: "Robin",
+        email: "robin@example.com",
+        phone: null,
+        sharesWithMe: {
+          blocked: false,
+          showEarningsToMe: true,
+          sharedAt: "2026-03-01",
+          notificationFrequency: "instant",
+        },
+        iShareWith: null,
+      },
+    ]);
+    mocks.getSharerShiftPreviews.mockResolvedValue([
+      {
+        sharerId: friendId,
+        status: "upcoming",
+        showEarnings: true,
+        shift: {
+          id: "44444444-4444-4444-8444-444444444444",
+          shift_date: "2026-03-03",
+          start_time: "10:00",
+          end_time: "18:00",
+          computed: { paidHours: 8, gross: 2300 },
+        },
+      },
+    ]);
+
+    const result = await executeTool(
+      "query_friend_featured_shift",
+      JSON.stringify({ friendId }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(mocks.getSharerShiftPreviews).toHaveBeenCalledWith([friendId]);
+    expect((result.data as any).status).toBe("upcoming");
+    expect((result.data as any).featuredShift.gross).toBe(2300);
   });
 });

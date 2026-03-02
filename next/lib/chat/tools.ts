@@ -46,7 +46,10 @@ export const queryShiftsSchema = z.object({
   minTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   maxTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
-  sortBy: z.enum(["date", "earnings", "hours"]).optional().default("date"),
+  sortBy: z
+    .enum(["date_latest", "date_earliest", "date", "earnings", "hours"])
+    .optional()
+    .default("date_latest"),
   // Optional workplace/job filter (full UUID from list_workplaces)
   jobId: z.string().uuid().optional(),
 });
@@ -243,11 +246,24 @@ export const queryFriendShiftsSchema = z.object({
   minTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   maxTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
-  sortBy: z.enum(["date", "earnings", "hours"]).optional().default("date"),
+  sortBy: z
+    .enum(["date_latest", "date_earliest", "date", "earnings", "hours"])
+    .optional()
+    .default("date_latest"),
   jobId: z.string().uuid().optional(),
 });
 
 export type QueryFriendShiftsInput = z.infer<typeof queryFriendShiftsSchema>;
+
+/**
+ * Query Friend Featured Shift Tool Schema
+ * Reuses the same featured-shift preview logic as sharing UI.
+ */
+export const queryFriendFeaturedShiftSchema = z.object({
+  friendId: z.string().uuid(),
+});
+
+export type QueryFriendFeaturedShiftInput = z.infer<typeof queryFriendFeaturedShiftSchema>;
 
 /**
  * Manage Shift Advanced Tool Schema
@@ -496,7 +512,12 @@ Filters:
 - Time of day: minTime/maxTime filter by shift start time
 - Weekdays: array of day numbers (0=Sunday through 6=Saturday)
 - Workplace: jobId (UUID from list_workplaces) to filter to one workplace
-- Sorting: by date (default), earnings, or hours
+- Sorting:
+  - date_latest (default): newest first
+  - date_earliest: oldest first
+  - earnings: highest first
+  - hours: highest first
+  - date: legacy alias for date_latest
 
 Use cases:
 - Before update/delete: Query to get shift IDs
@@ -534,8 +555,8 @@ Use cases:
         },
         sortBy: {
           type: "string",
-          enum: ["date", "earnings", "hours"],
-          description: "Sort order (default: date)",
+          enum: ["date_latest", "date_earliest", "date", "earnings", "hours"],
+          description: "Sort order (default: date_latest; date is a legacy alias for date_latest)",
         },
         jobId: {
           type: "string",
@@ -1677,7 +1698,12 @@ Filters match query_shifts:
 - startDate/endDate (default current week)
 - minTime/maxTime
 - weekdays (0=Sun..6=Sat)
-- sortBy (date|earnings|hours)
+- sortBy:
+  - date_latest (default): newest first
+  - date_earliest: oldest first
+  - earnings: highest first
+  - hours: highest first
+  - date: legacy alias for date_latest
 - jobId (friend workplace UUID)
 - limit (default 30, max 100)`,
     input_schema: {
@@ -1714,8 +1740,8 @@ Filters match query_shifts:
         },
         sortBy: {
           type: "string",
-          enum: ["date", "earnings", "hours"],
-          description: "Sort order (default: date)",
+          enum: ["date_latest", "date_earliest", "date", "earnings", "hours"],
+          description: "Sort order (default: date_latest; date is a legacy alias for date_latest)",
         },
         jobId: {
           type: "string",
@@ -1733,6 +1759,34 @@ Filters match query_shifts:
   // ---------------------------------------------------------------------------
   // ADVANCED SHIFT OPERATIONS
   // ---------------------------------------------------------------------------
+  {
+    name: "query_friend_featured_shift",
+    description: `Get the featured shift preview for a friend (active > upcoming > past), using the same logic as the friends page.
+
+Access rules:
+- Friend must have sharesWithMe=true from list_friends
+- If blocked or no access, returns explicit no-access/blocked result
+
+Returns:
+- friend info
+- status: active, upcoming, past, or null
+- showEarningsToMe
+- featuredShift (or null)`,
+    input_schema: {
+      type: "object",
+      properties: {
+        friendId: {
+          type: "string",
+          description: "Friend user ID (UUID) that shares shifts with me",
+        },
+      },
+      required: ["friendId"],
+    },
+    input_examples: [
+      { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
+    ],
+  },
+
   {
     name: "manage_shift_advanced",
     description: `Advanced shift mutations.
@@ -1878,6 +1932,7 @@ export type ToolName =
   | "list_friends"
   | "manage_friend_sharing"
   | "query_friend_shifts"
+  | "query_friend_featured_shift"
   | "manage_shift_advanced"
   | "manage_feedback"
   | "manage_profile";

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getAllFriends: vi.fn(),
   getSharedUserShifts: vi.fn(),
+  getSharerShiftPreviews: vi.fn(),
   createShare: vi.fn(),
   toggleSharerMuted: vi.fn(),
   copyShifts: vi.fn(),
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/data-access/sharing", () => ({
   getAllFriends: mocks.getAllFriends,
   getSharedUserShifts: mocks.getSharedUserShifts,
+  getSharerShiftPreviews: mocks.getSharerShiftPreviews,
 }));
 
 vi.mock("@/app/[locale]/(app)/sharing/_actions/sharing", () => ({
@@ -257,5 +259,49 @@ describe("chat tool integration paths", () => {
     expect(list.success).toBe(true);
     expect((list.data as any)).toHaveLength(1);
     expect(mocks.getUserFeedback).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps query_friend_featured_shift to sharing preview DAL", async () => {
+    mocks.getAllFriends.mockResolvedValue([
+      {
+        id: friendId,
+        firstName: "Robin",
+        email: "robin@example.com",
+        phone: null,
+        sharesWithMe: {
+          blocked: false,
+          showEarningsToMe: true,
+          sharedAt: "2026-03-01",
+          notificationFrequency: "instant",
+        },
+        iShareWith: null,
+      },
+    ]);
+    mocks.getSharerShiftPreviews.mockResolvedValue([
+      {
+        sharerId: friendId,
+        status: "active",
+        showEarnings: true,
+        shift: {
+          id: "44444444-4444-4444-8444-444444444444",
+          shift_date: "2026-03-02",
+          start_time: "08:00",
+          end_time: "16:00",
+          computed: { paidHours: 8, gross: 2200 },
+        },
+      },
+    ]);
+
+    const result = await executeTool(
+      "query_friend_featured_shift",
+      JSON.stringify({ friendId }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(mocks.getSharerShiftPreviews).toHaveBeenCalledWith([friendId]);
+    expect((result.data as any).status).toBe("active");
+    expect((result.data as any).featuredShift.gross).toBe(2200);
   });
 });
