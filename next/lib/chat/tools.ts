@@ -184,6 +184,7 @@ export const manageWorkplaceSchema = z.object({
     "archive",
     "unarchive",
     "set_default",
+    "reorder",
     "delete",
   ]),
   // Required for update/archive/unarchive/set_default/delete
@@ -194,6 +195,8 @@ export const manageWorkplaceSchema = z.object({
   payrollDay: z.number().int().min(1).max(31).optional(),
   halfTaxMonth: z.union([z.literal(11), z.literal(12), z.null()]).optional(),
   monthlyGoal: z.number().int().min(0).optional(),
+  // Required for reorder
+  direction: z.enum(["up", "down"]).optional(),
 });
 
 export type ManageWorkplaceInput = z.infer<typeof manageWorkplaceSchema>;
