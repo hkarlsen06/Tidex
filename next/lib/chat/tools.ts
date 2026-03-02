@@ -172,7 +172,7 @@ export type ManageSettingsInput = z.infer<typeof manageSettingsSchema>;
  * List Workplaces Tool Schema
  */
 export const listWorkplacesSchema = z.object({
-  includeArchived: z.boolean().optional().default(false),
+  includeArchived: z.boolean().optional().default(true),
 });
 
 export type ListWorkplacesInput = z.infer<typeof listWorkplacesSchema>;
@@ -197,7 +197,7 @@ export const manageWorkplaceSchema = z.object({
   color: z.union([z.string().regex(/^#[0-9a-fA-F]{6}$/), z.null()]).optional(),
   payrollDay: z.number().int().min(1).max(31).optional(),
   halfTaxMonth: z.union([z.literal(11), z.literal(12), z.null()]).optional(),
-  monthlyGoal: z.number().int().min(0).optional(),
+  monthlyGoal: z.number().int().min(0).nullable().optional(),
   // Required for reorder
   direction: z.enum(["up", "down"]).optional(),
 });
@@ -313,7 +313,10 @@ export type ManageProfileInput = z.infer<typeof manageProfileSchema>;
  * Get Wage Info Tool Schema
  * Returns user's complete wage configuration with temporal context
  */
-export const getWageInfoSchema = z.object({});
+export const getWageInfoSchema = z.object({
+  // Optional workplace/job context (full UUID from list_workplaces)
+  jobId: z.string().uuid().optional(),
+});
 
 export type GetWageInfoInput = z.infer<typeof getWageInfoSchema>;
 
@@ -334,6 +337,8 @@ const supplementRuleSchema = z.object({
  */
 export const manageWageSnapshotsSchema = z.object({
   action: z.enum(["create", "update", "delete"]),
+  // Optional workplace/job context for create (full UUID from list_workplaces)
+  jobId: z.string().uuid().optional(),
   // For update/delete - accepts short IDs (4-8 hex chars) or full UUIDs
   snapshot_id: shortOrFullId.optional(),
   // For create - required date when the new rates take effect
@@ -1200,16 +1205,18 @@ Note: Tax deduction enabled/percentage are per-snapshot — use get_wage_info in
   // ---------------------------------------------------------------------------
   {
     name: "get_wage_info",
-    description: `Get user's complete wage configuration: snapshot history plus global pay settings.
+    description: `Get wage configuration for a workplace (job): snapshot history plus pay settings.
 
 Returns:
-- globalPaySettings: Global pay configuration (halfTaxMonth, payrollDay, monthlyGoal)
+- workplace: Selected workplace context (id, name, isDefault) when available
+- globalPaySettings: Pay configuration for the selected workplace when available (falls back to legacy/global settings)
 - current: The wage that applies today (id, fromDate, usingTariff, wageLevel, hourlyWage, supplements, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
 - history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
 
-Tax settings (taxEnabled, taxPercentage) are per-snapshot, not global. Each wage period can have different tax settings.
-halfTaxMonth and payrollDay are global and shown in globalPaySettings.
+Input:
+- Optional jobId (UUID from list_workplaces)
+- If omitted, defaults to the user's default workplace
 
 Use this when the user asks about their wage, hourly rate, tax settings, payroll day, or wage history.
 For display/preference settings (theme, defaultStartupTab, etc.), use manage_settings instead.
@@ -1217,9 +1224,17 @@ To modify wage entries, use manage_wage_snapshots with the id from get_wage_info
 To modify halfTaxMonth or payrollDay, use manage_settings with category="tax" or category="goals".`,
     input_schema: {
       type: "object",
-      properties: {},
+      properties: {
+        jobId: {
+          type: "string",
+          description: "Optional workplace/job UUID from list_workplaces. Defaults to the default workplace.",
+        },
+      },
     },
-    input_examples: [{}],
+    input_examples: [
+      {},
+      { jobId: "5f5e8f67-8d36-4e47-bdb0-9ad6f2367d28" },
+    ],
   },
 
   {
@@ -1241,6 +1256,7 @@ IMPORTANT - Dichotomy between tariff and custom rates:
 - You do NOT need to explicitly set wage_level to null when setting a custom hourly_wage
 
 Other notes:
+- Optional jobId for CREATE targets a specific workplace (UUID from list_workplaces). If omitted, default workplace is used.
 - Always call get_wage_info first to see current configuration and get snapshot IDs
 - For CREATE: only specify fields the user wants to change - all others are copied automatically
 - For UPDATE: only specify fields to change
@@ -1252,6 +1268,10 @@ Other notes:
           type: "string",
           enum: ["create", "update", "delete"],
           description: "The operation to perform",
+        },
+        jobId: {
+          type: "string",
+          description: "Optional workplace/job UUID from list_workplaces (CREATE only). Defaults to the default workplace.",
         },
         snapshot_id: {
           type: "string",
@@ -1482,8 +1502,8 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
     name: "list_workplaces",
     description: `List workplaces (jobs) configured by the user.
 
-By default, returns active workplaces only.
-Set includeArchived=true to also include archived workplaces.
+By default, returns both active and archived workplaces.
+Set includeArchived=false to return active workplaces only.
 
 Returns each workplace with:
 - id (UUID)
@@ -1506,15 +1526,15 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
       properties: {
         includeArchived: {
           type: "boolean",
-          description: "Include archived workplaces in the result. Default: false",
+          description: "Include archived workplaces in the result. Default: true",
         },
       },
     },
     input_examples: [
-      // List active workplaces
+      // List active + archived workplaces (default)
       {},
-      // List active + archived workplaces
-      { includeArchived: true },
+      // List active workplaces only
+      { includeArchived: false },
     ],
   },
 
@@ -1523,7 +1543,7 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
     description: `Create, update, set default, archive, unarchive, or delete workplaces (jobs).
 
 Actions:
-- CREATE: action="create", name (required), optional color/payrollDay/halfTaxMonth/monthlyGoal
+- CREATE: action="create", name/payrollDay/monthlyGoal are required; optional color/halfTaxMonth
 - UPDATE: action="update", jobId (required), plus one or more fields to change
 - SET DEFAULT: action="set_default", jobId (required)
 - ARCHIVE: action="archive", jobId (required)
@@ -1534,7 +1554,8 @@ Important:
 - To target an existing workplace, first call list_workplaces to get the jobId (UUID)
 - Archived workplaces cannot be used for new shifts until unarchived
 - Default workplaces cannot be archived or deleted
-- Last active workplace cannot be archived or deleted`,
+- Last active workplace cannot be archived or deleted
+- After CREATE, offer to set up an initial wage snapshot for the new workplace (manage_wage_snapshots with action="create", jobId, from_date=null)`,
     input_schema: {
       type: "object",
       properties: {
@@ -1557,15 +1578,15 @@ Important:
         },
         payrollDay: {
           type: "integer",
-          description: "Payroll day of month (1-31)",
+          description: "Payroll day of month (1-31). Required for create.",
         },
         halfTaxMonth: {
           type: ["integer", "null"],
           description: "Half-tax month (11 or 12), or null to disable",
         },
         monthlyGoal: {
-          type: "integer",
-          description: "Monthly goal amount (integer)",
+          type: ["integer", "null"],
+          description: "Monthly goal amount (integer) or null. Required for create.",
         },
       },
       required: ["action"],
@@ -1575,6 +1596,8 @@ Important:
         action: "create",
         name: "Cafe Nord",
         color: "#22C55E",
+        payrollDay: 15,
+        monthlyGoal: null,
       },
       {
         action: "update",

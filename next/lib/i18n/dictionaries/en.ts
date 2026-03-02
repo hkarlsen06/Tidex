@@ -517,6 +517,7 @@ export const en: Dictionary = {
         foundWorkplaces: 'Found {count} workplaces',
         foundWorkplacesIncludingArchived: 'Found {count} workplaces ({archived} archived)',
         createdWorkplace: 'Created workplace "{name}"',
+        createdWorkplaceNeedsWageSetup: 'Created workplace "{name}". This workplace has no wage setup yet. Do you want me to create an initial wage entry now?',
         updatedWorkplace: 'Updated workplace "{name}"',
         archivedWorkplace: 'Archived workplace "{name}"',
         unarchivedWorkplace: 'Unarchived workplace "{name}"',

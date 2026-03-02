@@ -57,6 +57,7 @@ import type {
   ManageFeedbackInput,
   ManageProfileInput,
   CalculateEarningsInput,
+  GetWageInfoInput,
   ManageWageSnapshotsInput,
 } from "./tools";
 import {
@@ -1024,6 +1025,20 @@ async function executeManageWorkplace(
           };
         }
 
+        const missingCreateFields: string[] = [];
+        if (input.payrollDay === undefined) {
+          missingCreateFields.push("payrollDay");
+        }
+        if (input.monthlyGoal === undefined) {
+          missingCreateFields.push("monthlyGoal");
+        }
+        if (missingCreateFields.length > 0) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: missingCreateFields.join(", ") }),
+          };
+        }
+
         const jobs = await getUserJobs(userId, { includeArchived: true });
         const activeJobs = jobs.filter((job) => !job.deleted_at && !job.archived_at);
         const nextSortOrder =
@@ -1043,13 +1058,24 @@ async function executeManageWorkplace(
 
         return {
           success: true,
-          message: t(tr.createdWorkplace, { name: created.name }),
+          message: t(tr.createdWorkplaceNeedsWageSetup, { name: created.name }),
           data: {
             id: created.id,
             name: created.name,
             color: created.color ?? null,
             isDefault: created.is_default,
             isArchived: Boolean(created.archived_at),
+            wageSetup: {
+              needed: true,
+              suggestedAction: {
+                tool: "manage_wage_snapshots",
+                arguments: {
+                  action: "create",
+                  jobId: created.id,
+                  from_date: null,
+                },
+              },
+            },
           },
         };
       }
@@ -1372,6 +1398,41 @@ async function executeManageWorkplace(
 
 function getFriendDisplayName(friend: FriendEntry): string {
   return friend.firstName?.trim() || friend.email || friend.phone || friend.id;
+}
+
+type WorkplaceEntry = Awaited<ReturnType<typeof getUserJobs>>[number];
+
+async function resolveWageWorkplaceContext(
+  userId: string,
+  requestedJobId?: string
+): Promise<{
+  jobs: WorkplaceEntry[];
+  selectedJob: WorkplaceEntry | null;
+  requestedJobMissing: boolean;
+}> {
+  const jobs = (await getUserJobs(userId, { includeArchived: true })).filter((job) => !job.deleted_at);
+
+  if (requestedJobId) {
+    const selectedJob = jobs.find((job) => job.id === requestedJobId) ?? null;
+    return {
+      jobs,
+      selectedJob,
+      requestedJobMissing: selectedJob === null,
+    };
+  }
+
+  const selectedJob =
+    jobs.find((job) => job.is_default && !job.archived_at) ??
+    jobs.find((job) => job.is_default) ??
+    jobs.find((job) => !job.archived_at) ??
+    jobs[0] ??
+    null;
+
+  return {
+    jobs,
+    selectedJob,
+    requestedJobMissing: false,
+  };
 }
 
 /**
@@ -3113,12 +3174,13 @@ async function executeGetWageInfo(
       message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
     };
   }
+  const input: GetWageInfoInput = parsed.data;
 
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    // Fetch snapshots and global pay settings in parallel
-    const [snapshots, userSettings] = await Promise.all([
+    // Fetch snapshots, settings, and workplace context in parallel.
+    const [snapshots, userSettings, workplaceContext] = await Promise.all([
       Effect.runPromise(
         Effect.gen(function* () {
           const service = yield* SnapshotsService;
@@ -3139,24 +3201,49 @@ async function executeGetWageInfo(
           Effect.scoped
         )
       ),
+      resolveWageWorkplaceContext(userId, input.jobId),
     ]);
 
+    if (workplaceContext.requestedJobMissing) {
+      return {
+        success: false,
+        message: t(tr.workplaceNotFound, { id: input.jobId ?? "" }),
+      };
+    }
+
+    const selectedJob = workplaceContext.selectedJob;
+    const selectedJobId = selectedJob?.id ?? null;
+    let scopedSnapshots = selectedJobId
+      ? snapshots.filter((snapshot) => snapshot.job_id === selectedJobId)
+      : snapshots;
+
+    // Rollout fallback: if a selected workplace has no scoped snapshots, use legacy unscoped snapshots.
+    if (selectedJobId && scopedSnapshots.length === 0) {
+      scopedSnapshots = snapshots.filter((snapshot) => snapshot.job_id === null);
+    }
+
     const globalPaySettings = {
-      halfTaxMonth: userSettings?.half_tax_month ?? null,
-      payrollDay: userSettings?.payroll_day ?? null,
-      monthlyGoal: userSettings?.monthly_goal ?? null,
+      halfTaxMonth: selectedJob?.half_tax_month ?? userSettings?.half_tax_month ?? null,
+      payrollDay: selectedJob?.payroll_day ?? userSettings?.payroll_day ?? null,
+      monthlyGoal: selectedJob?.monthly_goal ?? userSettings?.monthly_goal ?? null,
     };
 
-    if (snapshots.length === 0) {
+    if (scopedSnapshots.length === 0) {
       return {
         success: true,
         message: tr.noWageConfigured ?? "No wage configuration found",
-        data: { globalPaySettings, current: null },
+        data: {
+          workplace: selectedJob
+            ? { id: selectedJob.id, name: selectedJob.name, isDefault: selectedJob.is_default }
+            : null,
+          globalPaySettings,
+          current: null,
+        },
       };
     }
 
     // Sort by from_date ASC (baseline/null first, then chronological)
-    const sorted = [...snapshots].sort((a, b) => {
+    const sorted = [...scopedSnapshots].sort((a, b) => {
       if (a.from_date === null) return -1;
       if (b.from_date === null) return 1;
       return a.from_date.localeCompare(b.from_date);
@@ -3222,6 +3309,11 @@ async function executeGetWageInfo(
 
     // Build response
     const data: {
+      workplace: {
+        id: string;
+        name: string;
+        isDefault: boolean;
+      } | null;
       globalPaySettings: {
         halfTaxMonth: number | null;
         payrollDay: number | null;
@@ -3240,6 +3332,9 @@ async function executeGetWageInfo(
       upcoming?: CompactEntry[];
       history?: CompactEntry[];
     } = {
+      workplace: selectedJob
+        ? { id: selectedJob.id, name: selectedJob.name, isDefault: selectedJob.is_default }
+        : null,
       globalPaySettings,
       current: currentSnapshot ? {
         id: toShortId(currentSnapshot.id),  // Include short ID for referencing
@@ -3350,19 +3445,41 @@ async function executeManageWageSnapshots(
           };
         }
 
-        // Fetch current snapshot to copy values from
-        const currentProgram = Effect.gen(function* () {
+        const workplaceContext = await resolveWageWorkplaceContext(userId, input.jobId);
+        if (workplaceContext.requestedJobMissing) {
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId ?? "" }),
+          };
+        }
+
+        const selectedJobId = workplaceContext.selectedJob?.id;
+
+        // Fetch snapshots and scope to selected/default workplace before copying defaults.
+        const snapshotsProgram = Effect.gen(function* () {
           const service = yield* SnapshotsService;
-          const today = new Date().toISOString().split("T")[0];
-          const snapshot = yield* service.getSnapshotForDate(userId, today);
-          return snapshot;
+          return yield* service.getUserWageSnapshots(userId);
         }).pipe(
           Effect.provide(AuthSnapshotsLive),
-          Effect.catchAll(() => Effect.succeed(null)),
+          Effect.catchAll(() => Effect.succeed([] as const)),
           Effect.scoped
         );
 
-        const currentSnapshot = await Effect.runPromise(currentProgram);
+        const allSnapshots = await Effect.runPromise(snapshotsProgram);
+        let scopedSnapshots = selectedJobId
+          ? allSnapshots.filter((snapshot) => snapshot.job_id === selectedJobId)
+          : [...allSnapshots];
+
+        // Rollout fallback: if selected workplace has no scoped snapshots, use legacy unscoped snapshots.
+        if (selectedJobId && scopedSnapshots.length === 0) {
+          scopedSnapshots = allSnapshots.filter((snapshot) => snapshot.job_id === null);
+        }
+
+        const today = new Date().toISOString().split("T")[0];
+        const currentSnapshot =
+          scopedSnapshots.find((snapshot) => snapshot.from_date !== null && snapshot.from_date <= today)
+          ?? scopedSnapshots.find((snapshot) => snapshot.from_date === null)
+          ?? null;
 
         // Build the new snapshot data, copying from current and applying user changes
         // Cast supplements to the expected type (WageSnapshotInput uses SupplementRule with template literal types)
@@ -3406,6 +3523,7 @@ async function executeManageWageSnapshots(
         }
 
         const snapshotData = {
+          job_id: selectedJobId ?? undefined,
           from_date: input.from_date,
           hourly_wage: hourlyWage,
           wage_level: wageLevel,
