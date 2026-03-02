@@ -1570,6 +1570,7 @@ actor LocalStoreActor {
     localSnapshot.jobId = serverSnapshot.jobId
     localSnapshot.hourlyWage = serverSnapshot.hourlyWage
     localSnapshot.wageLevel = serverSnapshot.wageLevel
+    localSnapshot.tariffTypeId = serverSnapshot.tariffTypeId
     localSnapshot.supplements = serverSnapshot.supplements
     localSnapshot.taxEnabled = serverSnapshot.taxEnabled
     localSnapshot.taxPercentage = serverSnapshot.taxPercentage
@@ -2391,6 +2392,7 @@ actor LocalStoreActor {
     existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
     existing.hourlyWage = serverRow.hourly_wage
     existing.wageLevel = serverRow.wage_level
+    existing.tariffTypeId = serverRow.tariff_type_id
     existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
     existing.taxEnabled = serverRow.tax_enabled
     existing.taxPercentage = serverRow.tax_percentage
@@ -2455,6 +2457,9 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.wageLevel) {
       existing.wageLevel = serverRow.wage_level
+    }
+    if !localDirtyFields.contains(.tariffTypeId) {
+      existing.tariffTypeId = serverRow.tariff_type_id
     }
     if !localDirtyFields.contains(.supplements) {
       existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
@@ -3009,6 +3014,7 @@ actor LocalStoreActor {
     existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
     existing.hourlyWage = serverRow.hourly_wage
     existing.wageLevel = serverRow.wage_level
+    existing.tariffTypeId = serverRow.tariff_type_id
     existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
     existing.taxEnabled = serverRow.tax_enabled
     existing.taxPercentage = serverRow.tax_percentage
@@ -3092,6 +3098,7 @@ actor LocalStoreActor {
     existing.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
     existing.hourlyWage = serverSnapshot.hourlyWage
     existing.wageLevel = serverSnapshot.wageLevel
+    existing.tariffTypeId = serverSnapshot.tariffTypeId
     existing.supplements = serverSnapshot.supplements
     existing.taxEnabled = serverSnapshot.taxEnabled
     existing.taxPercentage = serverSnapshot.taxPercentage

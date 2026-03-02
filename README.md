@@ -91,8 +91,8 @@ CLAUDE_MODEL=your_claude_model
 
 ## Documentation
 
-- See `next/CLAUDE.md` for web development guidelines
-- See `ios/CLAUDE.md` for iOS development guidelines
+- See `next/AGENTS.md` for web development guidelines
+- See `ios/AGENTS.md` for iOS development guidelines
 - See `docs/` for shared documentation (database, notifications, payroll spec)
 
 ## License

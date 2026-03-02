@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to coding agents when working with code in this repository.
 
@@ -14,10 +14,10 @@ Both apps share a common Supabase backend (edge functions, migrations, database 
 
 ```
 tidex/
-├── next/           # Next.js web application (see next/CLAUDE.md)
+├── next/           # Next.js web application (see next/AGENTS.md)
 ├── marketing/      # Marketing static site (tidex.no)
 ├── dev-site/       # Developer portfolio static site (kkarlsen.dev)
-├── ios/            # Native iOS application (see ios/CLAUDE.md)
+├── ios/            # Native iOS application (see ios/AGENTS.md)
 ├── supabase/       # Shared backend (edge functions, migrations)
 └── docs/           # Shared documentation
 ```

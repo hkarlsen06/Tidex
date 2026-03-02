@@ -211,7 +211,7 @@ To use different Turnstile sites for different routes:
 - [Cloudflare Turnstile Documentation](https://developers.cloudflare.com/turnstile/)
 - [Supabase Captcha Protection](https://supabase.com/docs/guides/auth/auth-captcha)
 - [@marsidev/react-turnstile Package](https://github.com/marsidev/react-turnstile)
-- [Project CLAUDE.md](../CLAUDE.md) - Architecture overview
+- [Project AGENTS.md](../AGENTS.md) - Architecture overview
 
 ## Support
 

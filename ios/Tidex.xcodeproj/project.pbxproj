@@ -26,8 +26,20 @@
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		11F0A0043011111100A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry */; };
+		188D65FF4E96734657711265 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */; };
+		28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */; };
+		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
+		34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */; };
+		614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */; };
+		804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */; };
+		91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */; };
+		9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */; };
+		A4460F5A061D70E12FA26564 /* SyncServerSnapshotDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */; };
+		B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
+		DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */; };
 		E61778127607441CA2BF1FBF /* Resources/Localization/Watch/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */; };
+		FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,6 +56,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = 11A5CD2D2F101283002BAC91;
 			remoteInfo = TidexShiftWidgetExtension;
+		};
+		73C92BFDD02B4ABC9B4957C9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 504EC3031FED79650016851F;
+			remoteInfo = TidexApp;
+		};
+		FEF500599A80FDC2692DE54C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 504EC3031FED79650016851F;
+			remoteInfo = TidexApp;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -84,18 +110,32 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotsServiceSelectionTests.swift; sourceTree = "<group>"; };
+		0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineDateLogicTests.swift; sourceTree = "<group>"; };
 		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WatchShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConflictExclusionTests.swift; sourceTree = "<group>"; };
+		17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalStoreDirtyTrackingTests.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6BCA863EB86543B1471C227F /* TidexAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TemporaryClockSessionStoreTests.swift; sourceTree = "<group>"; };
 		855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/App/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
+		86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollTotalsTests.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC732DB07C7200EA8C5F /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC742DB07C7200EA8C5F /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
+		A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/Watch/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
+		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
+		BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TestFixtures.swift; path = TestSupport/TestFixtures.swift; sourceTree = "<group>"; };
+		E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncErrorTests.swift; sourceTree = "<group>"; };
+		E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TidexAppUITests.swift; sourceTree = "<group>"; };
+		F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncServerSnapshotDiffTests.swift; sourceTree = "<group>"; };
+		F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollCalculatorBehaviorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -195,6 +235,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1AC8D86AACFE6830D8425FC1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -211,6 +258,13 @@
 				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
 				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
 				11F0A0043011111100A1B2C3 /* Sentry in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CD2124EAB75771313E351310 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,6 +290,32 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		141C1CD8A0A066C3D06F647B /* TidexAppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */,
+			);
+			path = TidexAppUITests;
+			sourceTree = "<group>";
+		};
+		490F8B0AF0BA025DA4C44BCF /* TidexAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */,
+				F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */,
+				0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */,
+				86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */,
+				00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */,
+				BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */,
+				B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */,
+				E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */,
+				F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */,
+				6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */,
+				17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */,
+			);
+			path = TidexAppTests;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
@@ -251,6 +331,8 @@
 				1152D0C92F01E2A7002FD5ED /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
 				11264B892F301BB900233D63 /* Recovered References */,
+				490F8B0AF0BA025DA4C44BCF /* TidexAppTests */,
+				141C1CD8A0A066C3D06F647B /* TidexAppUITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -261,6 +343,8 @@
 				11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */,
 				114F0F422F2150EA00B587F0 /* TidexWatchApp.app */,
 				11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */,
+				A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */,
+				6BCA863EB86543B1471C227F /* TidexAppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -287,8 +371,6 @@
 				11828EAF2F2AE096008A1A80 /* Shared */,
 			);
 			name = TidexWatchApp;
-			packageProductDependencies = (
-			);
 			productName = "TidexWatchApp Watch App";
 			productReference = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */;
 			productType = "com.apple.product-type.application";
@@ -309,8 +391,6 @@
 				11546CED2F3E989700FC832F /* WatchShiftWidget */,
 			);
 			name = WatchShiftWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = WatchShiftWidgetExtension;
 			productReference = 11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -331,11 +411,27 @@
 				11A5CD332F101283002BAC91 /* TidexShiftWidget */,
 			);
 			name = TidexShiftWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = TidexShiftWidgetExtension;
 			productReference = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		15E19F36EFB14A527CF41BEB /* TidexAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4383DBE864F1EB34B00FBDD /* Build configuration list for PBXNativeTarget "TidexAppTests" */;
+			buildPhases = (
+				C5396A8E35F22AEB6C49E5AF /* Sources */,
+				1AC8D86AACFE6830D8425FC1 /* Frameworks */,
+				3E7B50ECFB1BD185BDF946E7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7F938A296190A6C2DC111B80 /* PBXTargetDependency */,
+			);
+			name = TidexAppTests;
+			productName = TidexAppTests;
+			productReference = A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		504EC3031FED79650016851F /* TidexApp */ = {
 			isa = PBXNativeTarget;
@@ -374,6 +470,24 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
 			productType = "com.apple.product-type.application";
+		};
+		8BA2D8E28A988E2E920ACBE5 /* TidexAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1629D0282BDBAF780D3B871D /* Build configuration list for PBXNativeTarget "TidexAppUITests" */;
+			buildPhases = (
+				663BB16168D836E54DDA7F33 /* Sources */,
+				CD2124EAB75771313E351310 /* Frameworks */,
+				1CA2925CAB7E6266BB40076B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0DE11AA7F5D110333AB7EEA8 /* PBXTargetDependency */,
+			);
+			name = TidexAppUITests;
+			productName = TidexAppUITests;
+			productReference = 6BCA863EB86543B1471C227F /* TidexAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -469,6 +583,8 @@
 				11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */,
 				114F0F412F2150EA00B587F0 /* TidexWatchApp */,
 				11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */,
+				15E19F36EFB14A527CF41BEB /* TidexAppTests */,
+				8BA2D8E28A988E2E920ACBE5 /* TidexAppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -490,6 +606,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		11A5CD2C2F101283002BAC91 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1CA2925CAB7E6266BB40076B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3E7B50ECFB1BD185BDF946E7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -558,9 +688,41 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		663BB16168D836E54DDA7F33 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C5396A8E35F22AEB6C49E5AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */,
+				DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */,
+				614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */,
+				91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */,
+				804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */,
+				188D65FF4E96734657711265 /* TestFixtures.swift in Sources */,
+				FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */,
+				B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */,
+				A4460F5A061D70E12FA26564 /* SyncServerSnapshotDiffTests.swift in Sources */,
+				9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */,
+				28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0DE11AA7F5D110333AB7EEA8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TidexApp;
+			target = 504EC3031FED79650016851F /* TidexApp */;
+			targetProxy = FEF500599A80FDC2692DE54C /* PBXContainerItemProxy */;
+		};
 		11546CF82F3E989800FC832F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
@@ -570,6 +732,12 @@
 			isa = PBXTargetDependency;
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
 			targetProxy = 11A5CD3F2F101284002BAC91 /* PBXContainerItemProxy */;
+		};
+		7F938A296190A6C2DC111B80 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TidexApp;
+			target = 504EC3031FED79650016851F /* TidexApp */;
+			targetProxy = 73C92BFDD02B4ABC9B4957C9 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -806,6 +974,26 @@
 			};
 			name = Release;
 		};
+		30DA8E04B73F93AF559DF7D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 48ZSLD4RMP;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TidexApp;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -947,6 +1135,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 2.3.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -976,6 +1165,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 2.3.0;
 				"OTHER_SWIFT_FLAGS[arch=*]" = "-suppress-warnings";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -986,6 +1176,68 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		B117D1A5249F02DB5819D69F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 48ZSLD4RMP;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tidex.app/Tidex";
+				TEST_TARGET_NAME = TidexApp;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E1D1CFBBB91C778CCC33DD30 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 48ZSLD4RMP;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TidexApp;
+			};
+			name = Debug;
+		};
+		E909EDFB42831EF7F1EC6958 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 48ZSLD4RMP;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tidex.app/Tidex";
+				TEST_TARGET_NAME = TidexApp;
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -1017,6 +1269,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		1629D0282BDBAF780D3B871D /* Build configuration list for PBXNativeTarget "TidexAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30DA8E04B73F93AF559DF7D8 /* Release */,
+				E1D1CFBBB91C778CCC33DD30 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "Tidex" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1031,6 +1292,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4383DBE864F1EB34B00FBDD /* Build configuration list for PBXNativeTarget "TidexAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B117D1A5249F02DB5819D69F /* Release */,
+				E909EDFB42831EF7F1EC6958 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
