@@ -46,7 +46,7 @@ describe("chat tool schemas", () => {
 
   it("applies list_friends defaults", () => {
     const parsed = listFriendsSchema.parse({});
-    expect(parsed.includeBlocked).toBe(false);
+    expect(parsed.includeBlocked).toBe(true);
   });
 
   it("applies list_workplaces defaults", () => {

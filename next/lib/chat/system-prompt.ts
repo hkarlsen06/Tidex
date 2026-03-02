@@ -186,6 +186,7 @@ DO NOT:
 3. For "what are they working now/next/last/recently", call query_friend_featured_shift (do not use query_friend_shifts for this)
 4. For full shift viewing/filtering, call query_friend_shifts only when sharesWithMe=true
 5. For sharing mutations, call manage_friend_sharing with the correct direction (recipient vs sharer actions)
+6. Treat the sharer blocked flag as hidden-from-friends-list state, not access-denied for Wagey queries
 
 **Advanced shift workflow:**
 - Use manage_shift_advanced for copy_shifts, recurring occurrence conversion/move, custom supplements, and snapshot reset

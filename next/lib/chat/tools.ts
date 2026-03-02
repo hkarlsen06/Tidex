@@ -208,7 +208,7 @@ export type ManageWorkplaceInput = z.infer<typeof manageWorkplaceSchema>;
  * List Friends Tool Schema
  */
 export const listFriendsSchema = z.object({
-  includeBlocked: z.boolean().optional().default(false),
+  includeBlocked: z.boolean().optional().default(true),
 });
 
 export type ListFriendsInput = z.infer<typeof listFriendsSchema>;
@@ -1651,18 +1651,19 @@ Each friend includes:
 - sharesWithMe: if they share shifts with me
 - blocked/showEarningsToMe: fields from sharer relation (or null)
 - iShareWith: if I share shifts with them
+- Note: blocked=true is treated as hidden-from-list state, not access denial for Wagey queries
 
-Use includeBlocked=true to include blocked sharers.`,
+Use includeBlocked=false to show only non-hidden sharers.`,
     input_schema: {
       type: "object",
       properties: {
         includeBlocked: {
           type: "boolean",
-          description: "Include blocked sharers in results. Default: false",
+          description: "Include blocked/hidden sharers in results. Default: true",
         },
       },
     },
-    input_examples: [{}, { includeBlocked: true }],
+    input_examples: [{}, { includeBlocked: false }],
   },
 
   {

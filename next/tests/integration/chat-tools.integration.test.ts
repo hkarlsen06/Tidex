@@ -206,6 +206,15 @@ describe("chat tool integration paths", () => {
     );
     expect(muteSharer.success).toBe(true);
     expect(mocks.toggleSharerMuted).toHaveBeenCalledWith(friendId, true);
+
+    const shareByPhone = await executeTool(
+      "manage_friend_sharing",
+      JSON.stringify({ action: "share_by_identifier", identifier: "+47 123 45 678", showEarnings: false }),
+      userId,
+      "en"
+    );
+    expect(shareByPhone.success).toBe(true);
+    expect(mocks.createShare).toHaveBeenCalledWith("12345678", { showEarnings: false });
   });
 
   it("maps manage_shift_advanced actions", async () => {
