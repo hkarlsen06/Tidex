@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
+import { Typewriter } from 'motion-plus/react';
 import { SafeAnimateNumber } from '@/components/app/SafeAnimateNumber';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
@@ -250,9 +251,21 @@ export const TotalCard: React.FC<TotalCardProps> = ({
             {/* Subtitle row - typewriter animation */}
             <div className="text-lg text-text-secondary min-h-7 relative flex items-baseline justify-center">
               {subtitlePlaceholder ? (
-                <span>{subtitlePlaceholder}</span>
+                <Typewriter
+                  speed="normal"
+                  variance={0.5}
+                  cursorStyle={{ display: 'none' }}
+                >
+                  {subtitlePlaceholder}
+                </Typewriter>
               ) : subtitleText ? (
-                <span>{subtitleText}</span>
+                <Typewriter
+                  speed="normal"
+                  variance={0.5}
+                  cursorStyle={{ display: 'none' }}
+                >
+                  {subtitleText}
+                </Typewriter>
               ) : null}
             </div>
           </div>
