@@ -43,6 +43,7 @@ export type UserSettings = {
   payroll_day?: number | null;
   monthly_goal?: number | null;
   monthly_goals_by_month?: Record<string, number> | null; // YYYY-MM -> goal override
+  currency?: string | null;
 };
 
 export type Job = {

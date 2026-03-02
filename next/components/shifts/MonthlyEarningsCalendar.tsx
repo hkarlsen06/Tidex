@@ -3,7 +3,6 @@
 import { useMemo, useState, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X, RotateCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { AnimateActivity } from "motion-plus/animate-activity";
 import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
 import { ShiftsCalendar, type GestureConfig, type GestureMetric } from "@/components/app/ShiftsCalendar";
@@ -691,10 +690,8 @@ export function MonthlyEarningsCalendar({
           <div className="flex items-center gap-1 w-full">
             <div className="inline-flex h-11 flex-1 min-w-0 items-center rounded-xl border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner overflow-hidden">
               {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
-              <AnimateActivity
-                mode={selectedDates && selectedDates.size > 0 ? "visible" : "hidden"}
-                layoutMode="pop"
-              >
+              <AnimatePresence mode="popLayout">
+                {selectedDates && selectedDates.size > 0 && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -753,13 +750,12 @@ export function MonthlyEarningsCalendar({
                       : (selectedDates?.size ?? 0) >= 2 ? t.common.close : t.pages.shifts.actions.clearSelection}
                   </Button>
                 </motion.div>
-              </AnimateActivity>
+                )}
+              </AnimatePresence>
 
               {/* Single date selected mode: show delete/copy/details/move buttons */}
-              <AnimateActivity
-                mode={selectedDate && !(selectedDates && selectedDates.size > 0) ? "visible" : "hidden"}
-                layoutMode="pop"
-              >
+              <AnimatePresence mode="popLayout">
+                {selectedDate && !(selectedDates && selectedDates.size > 0) && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -881,13 +877,12 @@ export function MonthlyEarningsCalendar({
                     </Button>
                   )}
                 </motion.div>
-              </AnimateActivity>
+                )}
+              </AnimatePresence>
 
               {/* Default view mode toggle: hours/money with animated indicator */}
-              <AnimateActivity
-                mode={!selectedDate && !(selectedDates && selectedDates.size > 0) ? "visible" : "hidden"}
-                layoutMode="pop"
-              >
+              <AnimatePresence mode="popLayout">
+                {!selectedDate && !(selectedDates && selectedDates.size > 0) && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -940,7 +935,8 @@ export function MonthlyEarningsCalendar({
                     </Button>
                   )}
                 </motion.div>
-              </AnimateActivity>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           {/* Refresh button - below toggle, only visible on desktop (mobile uses pull-to-refresh) */}

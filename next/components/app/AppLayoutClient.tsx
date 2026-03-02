@@ -3,8 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { spring, useReducedMotion } from "motion/react";
-import { AnimateView } from "motion-plus/animate-view";
+import { motion, spring, useReducedMotion } from "motion/react";
 
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
@@ -88,12 +87,15 @@ function LayoutContent({
       <TopHeader userName={userName} />
       <main className="flex-1 min-h-0 overflow-hidden">
         {isTabRoute ? (
-          <AnimateView
+          <motion.div
             key={normalizedPath}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={shouldReduceMotion ? { duration: 0 } : { type: spring, visualDuration: 0.34, bounce: 0.16 }}
+            style={{ height: "100%" }}
           >
             {children}
-          </AnimateView>
+          </motion.div>
         ) : (
           children
         )}
