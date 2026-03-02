@@ -5,7 +5,6 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WorkPatternAn
 
 /// Analyzes recent shift history to detect typical work days
 /// For each weekday, checks if the user has worked that day regularly over the analysis window
-@MainActor
 struct WorkPatternAnalyzer {
   struct WorkPattern {
     let typicalWorkDays: [Int: DayPattern]  // weekday -> pattern (0=Sun)
@@ -34,8 +33,20 @@ struct WorkPatternAnalyzer {
   /// Analyze shift history for typical work patterns
   /// - Parameter userId: User ID
   /// - Returns: WorkPattern if sufficient data exists, otherwise nil
+  @MainActor
   static func analyze(for userId: String) -> WorkPattern? {
     switch analyzeDetailed(for: userId) {
+    case .success(let pattern):
+      return pattern
+    default:
+      return nil
+    }
+  }
+
+  /// Async variant that runs heavy analysis work off the main actor.
+  @MainActor
+  static func analyzeAsync(for userId: String) async -> WorkPattern? {
+    switch await analyzeDetailedAsync(for: userId) {
     case .success(let pattern):
       return pattern
     default:
@@ -47,6 +58,7 @@ struct WorkPatternAnalyzer {
   /// For each weekday (Mon-Sun), computes how often the user works that day
   /// across the analysis window. Any weekday above the frequency threshold
   /// is considered a typical work day.
+  @MainActor
   static func analyzeDetailed(for userId: String) -> AnalysisResult {
     let calendar = Calendar.current
     let now = Date()
@@ -62,60 +74,41 @@ struct WorkPatternAnalyzer {
       return .noShifts
     }
 
-    // Count weeks with any shift data
-    var weeksWithData = Set<String>()
-    for shift in shifts {
-      guard let date = Date.fromISODateString(shift.dateISO) else { continue }
-      let weekOfYear = calendar.component(.weekOfYear, from: date)
-      let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
-      weeksWithData.insert("\(yearForWeek)-\(weekOfYear)")
+    return analyzeShiftTimes(shifts, now: now)
+  }
+
+  /// Async variant that keeps repository reads on main actor but runs loop-heavy analysis off-main.
+  @MainActor
+  static func analyzeDetailedAsync(for userId: String) async -> AnalysisResult {
+    let calendar = Calendar.current
+    let now = Date()
+    let endDate = calendar.startOfDay(for: now)
+    guard let startDate = calendar.date(byAdding: .weekOfYear, value: -analysisWeeks, to: endDate)
+    else {
+      return .noShifts
     }
 
-    let weeksCount = weeksWithData.count
-    guard weeksCount >= WorkPattern.minimumWeeksRequired else {
-      logger.info("Insufficient weeks for pattern analysis: \(weeksCount)")
-      return .insufficientData(weeksFound: weeksCount)
+    let realShifts = ShiftsRepository.shared.getShifts(
+      for: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
+    let recurringPatterns = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
+
+    let shifts = await combinedShiftsOffMain(
+      realShifts: realShifts,
+      recurringPatterns: recurringPatterns,
+      startDate: startDate,
+      endDate: endDate
+    )
+    guard !shifts.isEmpty else {
+      logger.info("No shifts available for pattern analysis")
+      return .noShifts
     }
 
-    // Group shifts by weekday
-    var byWeekday: [Int: [ShiftTime]] = [:]
-    for shift in shifts {
-      guard let date = Date.fromISODateString(shift.dateISO) else { continue }
-      let weekday = calendar.component(.weekday, from: date) - 1  // 0=Sun
-      byWeekday[weekday, default: []].append(shift)
-    }
-
-    // For each weekday, check if user works that day regularly
-    var typicalWorkDays: [Int: DayPattern] = [:]
-    for (weekday, dayShifts) in byWeekday {
-      let frequency = Double(dayShifts.count) / Double(weeksCount)
-      guard frequency >= frequencyThreshold else { continue }
-
-      let startMinutes = dayShifts.map { $0.startMinutes }.sorted()
-      let endMinutes = dayShifts.map { $0.endMinutes }.sorted()
-
-      guard let medianStart = median(of: startMinutes),
-        let medianEnd = median(of: endMinutes)
-      else {
-        continue
-      }
-
-      typicalWorkDays[weekday] = DayPattern(
-        weekday: weekday,
-        frequency: frequency,
-        medianStartMinutes: medianStart,
-        medianEndMinutes: medianEnd
-      )
-    }
-
-    if typicalWorkDays.isEmpty {
-      logger.info("No typical work days detected")
-      return .noPatternDetected
-    }
-
-    logger.info(
-      "Detected \(typicalWorkDays.count) typical work days (threshold: \(self.frequencyThreshold))")
-    return .success(WorkPattern(typicalWorkDays: typicalWorkDays, computedAt: now))
+    return await Task.detached(priority: .utility) {
+      analyzeShiftTimes(shifts, now: now)
+    }.value
   }
 
   // MARK: - Combined Shifts
@@ -126,18 +119,46 @@ struct WorkPatternAnalyzer {
     let endMinutes: Int
   }
 
+  @MainActor
   private static func combinedShifts(
     for userId: String,
     startDate: Date,
     endDate: Date
   ) -> [ShiftTime] {
-    let shiftsRepository = ShiftsRepository.shared
-    let recurringRepository = RecurringShiftsRepository.shared
+    let realShifts = ShiftsRepository.shared.getShifts(
+      for: userId, startDate: startDate, endDate: endDate)
+    let recurringPatterns = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
+    return combinedShifts(
+      realShifts: realShifts,
+      recurringPatterns: recurringPatterns,
+      startDate: startDate,
+      endDate: endDate
+    )
+  }
 
-    let realShifts = shiftsRepository.getShifts(for: userId, startDate: startDate, endDate: endDate)
+  private nonisolated static func combinedShiftsOffMain(
+    realShifts: [ShiftRow],
+    recurringPatterns: [RecurringShiftRow],
+    startDate: Date,
+    endDate: Date
+  ) async -> [ShiftTime] {
+    await Task.detached(priority: .utility) {
+      combinedShifts(
+        realShifts: realShifts,
+        recurringPatterns: recurringPatterns,
+        startDate: startDate,
+        endDate: endDate
+      )
+    }.value
+  }
+
+  private nonisolated static func combinedShifts(
+    realShifts: [ShiftRow],
+    recurringPatterns: [RecurringShiftRow],
+    startDate: Date,
+    endDate: Date
+  ) -> [ShiftTime] {
     let realDates = Set(realShifts.map { $0.shift_date })
-
-    let recurringPatterns = recurringRepository.getRecurringShifts(for: userId)
     let monthsInRange = getMonthsInRange(startDate: startDate, endDate: endDate)
 
     var virtualShifts: [ShiftRow] = []
@@ -192,6 +213,65 @@ struct WorkPatternAnalyzer {
     }
 
     return results
+  }
+
+  private nonisolated static func analyzeShiftTimes(
+    _ shifts: [ShiftTime],
+    now: Date
+  ) -> AnalysisResult {
+    let calendar = Calendar.current
+
+    var weeksWithData = Set<String>()
+    for shift in shifts {
+      guard let date = Date.fromISODateString(shift.dateISO) else { continue }
+      let weekOfYear = calendar.component(.weekOfYear, from: date)
+      let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
+      weeksWithData.insert("\(yearForWeek)-\(weekOfYear)")
+    }
+
+    let weeksCount = weeksWithData.count
+    guard weeksCount >= WorkPattern.minimumWeeksRequired else {
+      logger.info("Insufficient weeks for pattern analysis: \(weeksCount)")
+      return .insufficientData(weeksFound: weeksCount)
+    }
+
+    var byWeekday: [Int: [ShiftTime]] = [:]
+    for shift in shifts {
+      guard let date = Date.fromISODateString(shift.dateISO) else { continue }
+      let weekday = calendar.component(.weekday, from: date) - 1
+      byWeekday[weekday, default: []].append(shift)
+    }
+
+    var typicalWorkDays: [Int: DayPattern] = [:]
+    for (weekday, dayShifts) in byWeekday {
+      let frequency = Double(dayShifts.count) / Double(weeksCount)
+      guard frequency >= frequencyThreshold else { continue }
+
+      let startMinutes = dayShifts.map { $0.startMinutes }.sorted()
+      let endMinutes = dayShifts.map { $0.endMinutes }.sorted()
+
+      guard let medianStart = median(of: startMinutes),
+        let medianEnd = median(of: endMinutes)
+      else {
+        continue
+      }
+
+      typicalWorkDays[weekday] = DayPattern(
+        weekday: weekday,
+        frequency: frequency,
+        medianStartMinutes: medianStart,
+        medianEndMinutes: medianEnd
+      )
+    }
+
+    if typicalWorkDays.isEmpty {
+      logger.info("No typical work days detected")
+      return .noPatternDetected
+    }
+
+    logger.info(
+      "Detected \(typicalWorkDays.count) typical work days (threshold: \(self.frequencyThreshold))")
+    return .success(WorkPattern(typicalWorkDays: typicalWorkDays, computedAt: now))
   }
 
   private static func parseMinutes(_ time: String) -> Int? {

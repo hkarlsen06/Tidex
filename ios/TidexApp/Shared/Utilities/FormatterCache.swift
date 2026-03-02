@@ -101,6 +101,27 @@ enum FormatterCache {
     }
   }
 
+  static func shortWeekdayFormatter(locale: Locale = .current) -> DateFormatter {
+    cached("tidex.shortWeekdayFormatter.\(locale.identifier)") {
+      let formatter = DateFormatter()
+      formatter.locale = locale
+      formatter.calendar = Calendar.autoupdatingCurrent
+      formatter.dateFormat = "EEE"
+      return formatter
+    }
+  }
+
+  static func hourMinuteFormatter(timeZone: TimeZone = Date.localTimeZone) -> DateFormatter {
+    cached("tidex.hourMinuteFormatter.\(timeZone.identifier)") {
+      let formatter = DateFormatter()
+      formatter.calendar = Calendar(identifier: .gregorian)
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      formatter.timeZone = timeZone
+      formatter.dateFormat = "HH:mm"
+      return formatter
+    }
+  }
+
   static func shortMonthFormatter(locale: Locale = .current) -> DateFormatter {
     cached("tidex.shortMonthFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()

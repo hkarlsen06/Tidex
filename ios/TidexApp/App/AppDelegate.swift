@@ -18,12 +18,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   /// Prevents duplicate APNs registration calls while one is in flight
   private var apnsRegistrationInFlight = false
-  /// Serial queue for Live Activity maintenance to avoid stacked foreground/sync triggers.
-  private let liveActivityQueue = DispatchQueue(
-    label: "no.tidex.app.live-activity-maintenance",
-    qos: .utility
-  )
+  /// Collapses rapid foreground/sync/auth triggers into one serialized maintenance run.
   private var liveActivityMaintenanceInFlight = false
+  private var liveActivityMaintenancePending = false
 
   private func shiftDateTimeFormatter() -> DateFormatter {
     FormatterCache.shiftDateTimeFormatter(timeZone: .current)
@@ -49,6 +46,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       && attributes.totalGrossEstimate == 0
       && attributes.hourlyWage == 0
       && attributes.supplementRatePerHour == 0
+  }
+
+  private func doublesMatch(_ lhs: Double, _ rhs: Double, tolerance: Double = 0.01) -> Bool {
+    abs(lhs - rhs) <= tolerance
+  }
+
+  private func optionalDoublesMatch(_ lhs: Double?, _ rhs: Double?, tolerance: Double = 0.01)
+    -> Bool
+  {
+    switch (lhs, rhs) {
+    case (nil, nil):
+      return true
+    case (let lhsValue?, let rhsValue?):
+      return doublesMatch(lhsValue, rhsValue, tolerance: tolerance)
+    default:
+      return false
+    }
   }
 
   private func hasTemporaryClockSession(shiftId: String) -> Bool {
@@ -142,17 +156,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   ///
   /// This ensures the Live Activity starts whenever the app is active and data is refreshed.
   func checkAndStartLiveActivityIfNeeded() {
-    liveActivityQueue.async { [weak self] in
+    Task { @MainActor [weak self] in
       guard let self else { return }
-      guard !self.liveActivityMaintenanceInFlight else { return }
+      if self.liveActivityMaintenanceInFlight {
+        self.liveActivityMaintenancePending = true
+        return
+      }
 
       self.liveActivityMaintenanceInFlight = true
-      defer { self.liveActivityMaintenanceInFlight = false }
-      self.performLiveActivityMaintenance()
+      repeat {
+        self.liveActivityMaintenancePending = false
+        await self.performLiveActivityMaintenance()
+      } while self.liveActivityMaintenancePending
+      self.liveActivityMaintenanceInFlight = false
     }
   }
 
-  private func performLiveActivityMaintenance() {
+  @MainActor
+  private func performLiveActivityMaintenance() async {
     // Check if Live Activities are enabled
     let authInfo = ActivityAuthorizationInfo()
     guard authInfo.areActivitiesEnabled else {
@@ -161,10 +182,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // First, end any Live Activities for shifts that are no longer ongoing
-    endStaleActivities()
+    let endedAnyStaleActivities = await endStaleActivities()
 
     // Check if there's already an active activity
-    guard Activity<ShiftActivityAttributes>.activities.isEmpty else {
+    let remainingActivities = Activity<ShiftActivityAttributes>.activities
+    guard remainingActivities.isEmpty else {
+      // Some ended activities can persist briefly in ActivityKit's in-memory list.
+      // Queue one more pass so we can start the replacement activity once the list clears.
+      if endedAnyStaleActivities {
+        liveActivityMaintenancePending = true
+        Task { [weak self] in
+          try? await Task.sleep(nanoseconds: 300_000_000)
+          self?.checkAndStartLiveActivityIfNeeded()
+        }
+      }
       return
     }
 
@@ -199,9 +230,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// - A shift was edited to change its time so it's no longer current
   /// - A shift was deleted
   /// - The shift has ended naturally
-  private func endStaleActivities() {
+  @MainActor
+  private func endStaleActivities() async -> Bool {
     let activities = Activity<ShiftActivityAttributes>.activities
-    guard !activities.isEmpty else { return }
+    guard !activities.isEmpty else { return false }
 
     // Read current shifts from storage
     let currentShifts: [StoredShift]
@@ -216,6 +248,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     let now = Date()
+    var endedAny = false
 
     for activity in activities {
       let shiftId = activity.attributes.shiftId
@@ -246,32 +279,58 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         if !isShiftOngoing(shift, at: now) {
           shouldEnd = true
           reason = "shift is no longer ongoing (edited or ended)"
+        } else if shouldReplaceActivity(activity, with: shift) {
+          shouldEnd = true
+          reason = "shift details changed while ongoing"
         }
       }
 
       if shouldEnd {
+        endedAny = true
         print("[LiveActivity] Ending activity for shift \(shiftId): \(reason)")
-        Task { @MainActor in
-          await activity.end(nil, dismissalPolicy: .immediate)
-        }
+        await activity.end(nil, dismissalPolicy: .immediate)
       }
     }
+
+    return endedAny
   }
 
   /// Immediately end any active Live Activity for the specified shift.
   /// Used when a shift is manually ended from the UI.
   func endLiveActivity(for shiftId: String) {
-    let matchingActivities = Activity<ShiftActivityAttributes>.activities.filter {
-      $0.attributes.shiftId == shiftId
-    }
-    guard !matchingActivities.isEmpty else { return }
+    Task { @MainActor [weak self] in
+      let matchingActivities = Activity<ShiftActivityAttributes>.activities.filter {
+        $0.attributes.shiftId == shiftId
+      }
+      guard !matchingActivities.isEmpty else { return }
 
-    for activity in matchingActivities {
-      print("[LiveActivity] Force ending activity for shift \(shiftId) from user action")
-      Task { @MainActor in
+      for activity in matchingActivities {
+        print("[LiveActivity] Force ending activity for shift \(shiftId) from user action")
         await activity.end(nil, dismissalPolicy: .immediate)
       }
+
+      // Re-check immediately so replacement activities can start without waiting
+      // for another foreground/sync trigger.
+      self?.checkAndStartLiveActivityIfNeeded()
+      Task { [weak self] in
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        self?.checkAndStartLiveActivityIfNeeded()
+      }
     }
+  }
+
+  @MainActor
+  func endAllLiveActivities(reason: String = "user context changed") async {
+    let activities = Activity<ShiftActivityAttributes>.activities
+    guard !activities.isEmpty else { return }
+
+    for activity in activities {
+      print(
+        "[LiveActivity] Ending activity for shift \(activity.attributes.shiftId): \(reason)")
+      await activity.end(nil, dismissalPolicy: .immediate)
+    }
+
+    liveActivityMaintenancePending = false
   }
 
   /// Start a temporary open-ended clock Live Activity.
@@ -285,12 +344,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     guard authInfo.areActivitiesEnabled else { return }
 
     // Ensure stale/previous activities do not block starting a fresh temporary clock activity.
-    let existingActivities = Activity<ShiftActivityAttributes>.activities
-    if !existingActivities.isEmpty {
-      for activity in existingActivities {
-        await activity.end(nil, dismissalPolicy: .immediate)
-      }
-    }
+    await endAllLiveActivities(reason: "starting temporary clock activity")
 
     let isoDate = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(
       from: startedAt)
@@ -335,34 +389,62 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   private func isShiftOngoing(_ shift: StoredShift, at date: Date) -> Bool {
+    guard let range = shiftDateRange(for: shift) else { return false }
+    return date >= range.startDate && date < range.endDate
+  }
+
+  private func shiftDateRange(for shift: StoredShift) -> (startDate: Date, endDate: Date)? {
     let formatter = shiftDateTimeFormatter()
 
     guard let startDate = formatter.date(from: "\(shift.shiftDate) \(shift.startTime)") else {
-      return false
+      return nil
     }
 
     var endDate = formatter.date(from: "\(shift.shiftDate) \(shift.endTime)") ?? startDate
-
-    // Handle cross-midnight shifts
     if isCrossMidnight(startTime: shift.startTime, endTime: shift.endTime) {
       endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
     }
 
-    return date >= startDate && date < endDate
+    return (startDate: startDate, endDate: endDate)
+  }
+
+  private func shiftTotalNetEstimate(_ shift: StoredShift) -> Double? {
+    shift.taxRate.map { taxRate in
+      shift.totalGrossEstimate * (1.0 - taxRate)
+    }
+  }
+
+  private func shouldReplaceActivity(
+    _ activity: Activity<ShiftActivityAttributes>,
+    with shift: StoredShift
+  ) -> Bool {
+    guard let range = shiftDateRange(for: shift) else { return false }
+
+    let attributes = activity.attributes
+    let expectedNetEstimate = shiftTotalNetEstimate(shift)
+    let expectedCurrency = shift.currencySymbol ?? "kr"
+    let currentCurrency = attributes.currencySymbol ?? "kr"
+
+    return attributes.shiftDate != shift.shiftDate
+      || attributes.startTime != shift.startTime
+      || attributes.endTime != shift.endTime
+      || !doublesMatch(attributes.hourlyWage, shift.hourlyWage)
+      || !doublesMatch(attributes.supplementRatePerHour, shift.supplementRatePerHour)
+      || !doublesMatch(attributes.totalGrossEstimate, shift.totalGrossEstimate)
+      || !optionalDoublesMatch(attributes.totalNetEstimate, expectedNetEstimate)
+      || currentCurrency != expectedCurrency
+      || abs(attributes.startDate.timeIntervalSince(range.startDate)) > 1
+      || abs(attributes.endDate.timeIntervalSince(range.endDate)) > 1
   }
 
   private func startLiveActivityForShift(_ shift: StoredShift) {
     let now = Date()
-    let formatter = shiftDateTimeFormatter()
-
-    guard let startDate = formatter.date(from: "\(shift.shiftDate) \(shift.startTime)") else {
+    guard let range = shiftDateRange(for: shift) else {
       return
     }
 
-    var endDate = formatter.date(from: "\(shift.shiftDate) \(shift.endTime)") ?? startDate
-    if isCrossMidnight(startTime: shift.startTime, endTime: shift.endTime) {
-      endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
-    }
+    let startDate = range.startDate
+    let endDate = range.endDate
 
     let elapsed = now.timeIntervalSince(startDate)
     let total = endDate.timeIntervalSince(startDate)
@@ -373,9 +455,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let remainingMinutes = max(0, Int((total - elapsed) / 60))
 
     // Calculate net amount if tax rate is configured
-    let totalNetEstimate: Double? = shift.taxRate.map { taxRate in
-      shift.totalGrossEstimate * (1.0 - taxRate)
-    }
+    let totalNetEstimate = shiftTotalNetEstimate(shift)
 
     // Include startDate and endDate for real-time SwiftUI timer updates
     let attributes = ShiftActivityAttributes(

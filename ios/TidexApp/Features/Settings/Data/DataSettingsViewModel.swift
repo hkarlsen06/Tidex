@@ -65,13 +65,13 @@ enum ExportFormat {
 }
 
 /// Response from the export API
-struct ExportResponse: Codable {
+struct ExportResponse: Codable, Sendable {
   let generatedAt: String
   let shifts: [ExportedShift]
 }
 
 /// A shift in the export response
-struct ExportedShift: Codable {
+struct ExportedShift: Codable, Sendable {
   let id: String
   let date: String
   let startTime: String
@@ -80,7 +80,7 @@ struct ExportedShift: Codable {
   let recurringId: String?
   let calc: ShiftCalculation
 
-  struct ShiftCalculation: Codable {
+  struct ShiftCalculation: Codable, Sendable {
     let hours: Double
     let baseWage: Double
     let supplement: Double
@@ -216,11 +216,19 @@ final class DataSettingsViewModel: ObservableObject {
       // Handle export based on format
       switch format {
       case .pdf:
-        let fileURL = try generatePDF(from: exportData, range: range, locale: locale)
+        let fileURL = try await Self.generatePDFOffMain(
+          from: exportData,
+          range: range,
+          localeIdentifier: locale.identifier
+        )
         shareURL = fileURL
 
       case .csv:
-        let fileURL = try generateCSV(from: exportData, range: range, locale: locale)
+        let fileURL = try await Self.generateCSVOffMain(
+          from: exportData,
+          range: range,
+          localeIdentifier: locale.identifier
+        )
         shareURL = fileURL
 
       case .calendar:
@@ -426,17 +434,42 @@ final class DataSettingsViewModel: ObservableObject {
       throw ExportError.serverError(code: httpResponse.statusCode, message: message)
     }
 
-    // Decode response
-    let decoder = JSONDecoder()
-    return try decoder.decode(ExportResponse.self, from: data)
+    // Decode response off main actor to avoid blocking UI with large payloads.
+    return try await Task.detached(priority: .userInitiated) {
+      let decoder = JSONDecoder()
+      return try decoder.decode(ExportResponse.self, from: data)
+    }.value
+  }
+
+  /// Generate PDF from export data in a detached task.
+  private static func generatePDFOffMain(
+    from data: ExportResponse,
+    range: (from: String, to: String),
+    localeIdentifier: String
+  ) async throws -> URL {
+    try await Task.detached(priority: .userInitiated) {
+      try generatePDF(from: data, range: range, localeIdentifier: localeIdentifier)
+    }.value
+  }
+
+  /// Generate CSV from export data in a detached task.
+  private static func generateCSVOffMain(
+    from data: ExportResponse,
+    range: (from: String, to: String),
+    localeIdentifier: String
+  ) async throws -> URL {
+    try await Task.detached(priority: .utility) {
+      try generateCSV(from: data, range: range, localeIdentifier: localeIdentifier)
+    }.value
   }
 
   /// Generate PDF from export data
-  private func generatePDF(
+  private nonisolated static func generatePDF(
     from data: ExportResponse,
     range: (from: String, to: String),
-    locale: Locale
+    localeIdentifier: String
   ) throws -> URL {
+    let locale = Locale(identifier: localeIdentifier)
     let pdfMetaData = [
       kCGPDFContextCreator: "Tidex",
       kCGPDFContextAuthor: "Tidex",
@@ -530,13 +563,13 @@ final class DataSettingsViewModel: ObservableObject {
       let summaryLines = [
         String(localized: .dataExportPdfTotalShifts) + " \(data.shifts.count)",
         String(localized: .dataExportPdfTotalHours)
-          + " \(formatNumber(totalHours, decimals: 2, locale: locale)) \(hoursUnit)",
+          + " \(Self.formatNumber(totalHours, decimals: 2, locale: locale)) \(hoursUnit)",
         String(localized: .dataExportPdfTotalBasePay)
-          + " \(formatNumber(totalBaseWage, decimals: 0, locale: locale)) \(currencySymbol)",
+          + " \(Self.formatNumber(totalBaseWage, decimals: 0, locale: locale)) \(currencySymbol)",
         String(localized: .dataExportPdfTotalSupplements)
-          + " \(formatNumber(totalSupplement, decimals: 0, locale: locale)) \(currencySymbol)",
+          + " \(Self.formatNumber(totalSupplement, decimals: 0, locale: locale)) \(currencySymbol)",
         String(localized: .dataExportPdfTotalPay)
-          + " \(formatNumber(totalWage, decimals: 0, locale: locale)) \(currencySymbol)",
+          + " \(Self.formatNumber(totalWage, decimals: 0, locale: locale)) \(currencySymbol)",
         "",
         String(localized: .dataExportPdfShiftsByType),
         "  " + String(localized: .dataExportPdfWeekdays) + " \(weekdayCount)",
@@ -616,10 +649,10 @@ final class DataSettingsViewModel: ObservableObject {
           dayStr,
           shift.startTime,
           shift.endTime,
-          formatNumber(shift.calc.hours, decimals: 2, locale: locale),
-          formatNumber(shift.calc.baseWage, decimals: 0, locale: locale),
-          formatNumber(shift.calc.supplement, decimals: 0, locale: locale),
-          formatNumber(shift.calc.total, decimals: 0, locale: locale),
+          Self.formatNumber(shift.calc.hours, decimals: 2, locale: locale),
+          Self.formatNumber(shift.calc.baseWage, decimals: 0, locale: locale),
+          Self.formatNumber(shift.calc.supplement, decimals: 0, locale: locale),
+          Self.formatNumber(shift.calc.total, decimals: 0, locale: locale),
         ]
 
         xPosition = margin
@@ -652,21 +685,21 @@ final class DataSettingsViewModel: ObservableObject {
       sumLabel.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: totalAttributes)
 
       xPosition = margin + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3]
-      formatNumber(totalHours, decimals: 2, locale: locale).draw(
+      Self.formatNumber(totalHours, decimals: 2, locale: locale).draw(
         at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
       xPosition += columnWidths[4]
-      formatNumber(totalBaseWage, decimals: 0, locale: locale).draw(
+      Self.formatNumber(totalBaseWage, decimals: 0, locale: locale).draw(
         at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
       xPosition += columnWidths[5]
-      formatNumber(totalSupplement, decimals: 0, locale: locale).draw(
+      Self.formatNumber(totalSupplement, decimals: 0, locale: locale).draw(
         at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
       xPosition += columnWidths[6]
-      formatNumber(totalWage, decimals: 0, locale: locale).draw(
+      Self.formatNumber(totalWage, decimals: 0, locale: locale).draw(
         at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
     }
 
     // Save to temp file
-    let filename = buildFilename(range: range, format: .pdf, locale: locale)
+    let filename = Self.buildFilename(range: range, format: .pdf, locale: locale)
     let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
     try pdfData.write(to: tempURL)
 
@@ -674,11 +707,12 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   /// Generate CSV from export data
-  private func generateCSV(
+  private nonisolated static func generateCSV(
     from data: ExportResponse,
     range: (from: String, to: String),
-    locale: Locale
+    localeIdentifier: String
   ) throws -> URL {
+    let locale = Locale(identifier: localeIdentifier)
     var csvContent = ""
 
     // Headers
@@ -721,7 +755,7 @@ final class DataSettingsViewModel: ObservableObject {
         String(format: "%.2f", shift.calc.total),
       ]
 
-      csvContent += row.map { escapeCSV($0) }.joined(separator: ";") + "\n"
+      csvContent += row.map { Self.escapeCSV($0) }.joined(separator: ";") + "\n"
     }
 
     // Totals row
@@ -744,7 +778,7 @@ final class DataSettingsViewModel: ObservableObject {
     csvContent += totalsRow.joined(separator: ";") + "\n"
 
     // Save to temp file
-    let filename = buildFilename(range: range, format: .csv, locale: locale)
+    let filename = Self.buildFilename(range: range, format: .csv, locale: locale)
     let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
     try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
 
@@ -752,7 +786,7 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   /// Build filename for export
-  private func buildFilename(
+  private nonisolated static func buildFilename(
     range: (from: String, to: String),
     format: ExportFormat,
     locale: Locale
@@ -801,7 +835,7 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   /// Escape a value for CSV
-  private func escapeCSV(_ value: String) -> String {
+  private nonisolated static func escapeCSV(_ value: String) -> String {
     if value.contains(";") || value.contains("\"") || value.contains("\n") {
       return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
     }
@@ -809,7 +843,9 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   /// Format a number with locale-appropriate separators
-  private func formatNumber(_ value: Double, decimals: Int, locale: Locale) -> String {
+  private nonisolated static func formatNumber(_ value: Double, decimals: Int, locale: Locale)
+    -> String
+  {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
     formatter.minimumFractionDigits = decimals

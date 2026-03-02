@@ -92,7 +92,7 @@ final class AddShiftViewModel: ObservableObject {
       guard oldValue != selectedJobId else { return }
       publishStateToCoordinator()
       scheduleDraftSave()
-      updateConflictsAndPreviews()
+      scheduleConflictsAndPreviewsRecompute()
     }
   }
 
@@ -101,11 +101,63 @@ final class AddShiftViewModel: ObservableObject {
   /// Debounce timer for time input changes
   private var previewUpdateTask: Task<Void, Never>?
 
+  /// Guards against applying stale async preview/conflict computations.
+  private var previewComputationVersion: UInt64 = 0
+
+  /// Guards against applying stale async calendar display computations.
+  private var displayComputationVersion: UInt64 = 0
+
   /// Debounce delay when user is actively typing (partial input)
   private static let activeTypingDelay: UInt64 = 150_000_000  // 150ms
 
   /// Minimal delay when form is complete (instant feedback)
   private static let completedFormDelay: UInt64 = 50_000_000  // 50ms
+
+  private struct CalendarDisplayComputationInput {
+    let year: Int
+    let month: Int
+    let shifts: [ShiftRow]
+    let recurringShifts: [RecurringShiftRow]
+    let snapshots: [WageSnapshot]
+    let jobs: [Job]
+    let settings: UserSettings?
+  }
+
+  private struct ConflictsAndPreviewsComputationInput {
+    let mode: AddShiftMode
+    let selectedDates: [String]
+    let selectedDays: [String: String]
+    let repeatInterval: Int
+    let displayMonth: Date
+    let endCondition: EndCondition?
+    let hasValidTimes: Bool
+    let startTime: String
+    let endTime: String
+    let requiresExplicitJobSelection: Bool
+    let selectedJobId: String?
+    let effectiveJobId: String?
+    let existingShifts: [ShiftRow]
+    let existingRecurringShifts: [RecurringShiftRow]
+    let snapshots: [WageSnapshot]
+    let jobs: [Job]
+    let settings: UserSettings?
+  }
+
+  private struct ConflictsAndPreviewsComputationResult {
+    let projectedRecurringDates: [String]?
+    let anchorEarnings: [String: CalendarEarningsData]?
+    let conflictDates: Set<String>
+    let previewEarnings: [String: CalendarEarningsData]
+  }
+
+  private struct EarningsComputationContext {
+    let requiresExplicitJobSelection: Bool
+    let selectedJobId: String?
+    let effectiveJobId: String?
+    let snapshots: [WageSnapshot]
+    let jobs: [Job]
+    let settings: UserSettings?
+  }
 
   // MARK: - Draft Persistence
 
@@ -617,7 +669,8 @@ final class AddShiftViewModel: ObservableObject {
     cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
 
     // Build cached display data for the current month
-    rebuildCalendarDisplayData()
+    scheduleCalendarDisplayRebuild()
+    scheduleConflictsAndPreviewsRecompute()
 
     // Check for pre-selected date from SharedMonthContext (e.g., tapping empty day in Shifts tab)
     applyPreselectedDate()
@@ -701,11 +754,9 @@ final class AddShiftViewModel: ObservableObject {
 
     cachedShifts = shiftsRepository.getShifts(for: userId, startDate: startDate, endDate: endDate)
 
-    // Rebuild display data for the new month
-    rebuildCalendarDisplayData()
-
-    // Update conflicts and preview earnings
-    updateConflictsAndPreviews()
+    // Rebuild display data and previews asynchronously to avoid blocking UI
+    scheduleCalendarDisplayRebuild()
+    scheduleConflictsAndPreviewsRecompute()
 
     // Trigger view update for new month's shift indicators
     cacheVersion += 1
@@ -729,6 +780,10 @@ final class AddShiftViewModel: ObservableObject {
       // Update conflicts after adding date
       updateConflictsIncrementally(addedDate: dateISO)
     }
+
+    // Recompute from full current state so any in-flight async result with stale inputs
+    // is invalidated and cannot overwrite the latest incremental updates.
+    scheduleConflictsAndPreviewsRecompute()
 
     // Haptic feedback
     let generator = UIImpactFeedbackGenerator(style: .light)
@@ -1122,6 +1177,375 @@ final class AddShiftViewModel: ObservableObject {
     return CalendarEarningsData(net: net, gross: gross, hasTaxEnabled: taxEnabled)
   }
 
+  private nonisolated static func computeCalendarDisplayDataOffMain(
+    _ input: CalendarDisplayComputationInput
+  ) async -> CalendarDisplayData {
+    await Task.detached(priority: .userInitiated) {
+      Self.buildCalendarDisplayData(input)
+    }.value
+  }
+
+  private nonisolated static func buildCalendarDisplayData(
+    _ input: CalendarDisplayComputationInput
+  ) -> CalendarDisplayData {
+    var existingDates = Set<String>()
+    var existingNetEarnings: [String: Double] = [:]
+    var existingGrossEarnings: [String: Double] = [:]
+    var existingHasTax: [String: Bool] = [:]
+    var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
+
+    for shift in input.shifts {
+      existingDates.insert(shift.shift_date)
+
+      let wageSnapshot = Self.snapshotForDate(
+        shift.shift_date,
+        jobId: shift.job_id,
+        snapshots: input.snapshots,
+        jobs: input.jobs
+      )
+      let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+
+      let payrollDay = Self.payrollDay(
+        for: shift.job_id, jobs: input.jobs, settings: input.settings)
+      let payoutDate = PayrollEngine.calculatePayoutDate(
+        shiftDate: shift.shift_date,
+        payrollDay: payrollDay
+      )
+      let taxSnapshot = Self.snapshotForDate(
+        payoutDate,
+        jobId: shift.job_id,
+        snapshots: input.snapshots,
+        jobs: input.jobs
+      )
+
+      let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+      existingNetEarnings[shift.shift_date, default: 0] += computed.netPay(
+        taxEnabled: taxEnabled,
+        taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+      )
+      existingGrossEarnings[shift.shift_date, default: 0] += computed.gross
+      existingHasTax[shift.shift_date, default: false] =
+        existingHasTax[shift.shift_date, default: false] || taxEnabled
+      shiftTimesByDate[shift.shift_date, default: []].append(
+        (start: shift.start_time, end: shift.end_time)
+      )
+    }
+
+    var virtualShiftsWithEarnings: [CalendarDisplayData.VirtualShiftWithEarnings] = []
+
+    for recurring in input.recurringShifts {
+      let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+        year: input.year,
+        month: input.month,
+        recurring: recurring
+      )
+
+      for virtualShift in virtualShifts {
+        existingDates.insert(virtualShift.date)
+
+        let shift = ShiftRow(
+          id: "virtual-\(virtualShift.date)",
+          user_id: nil,
+          job_id: recurring.job_id,
+          shift_date: virtualShift.date,
+          start_time: recurring.start_time,
+          end_time: recurring.end_time,
+          custom_supplements: nil
+        )
+
+        let wageSnapshot = Self.snapshotForDate(
+          virtualShift.date,
+          jobId: recurring.job_id,
+          snapshots: input.snapshots,
+          jobs: input.jobs
+        )
+        let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+
+        let payrollDay = Self.payrollDay(
+          for: recurring.job_id,
+          jobs: input.jobs,
+          settings: input.settings
+        )
+        let payoutDate = PayrollEngine.calculatePayoutDate(
+          shiftDate: virtualShift.date,
+          payrollDay: payrollDay
+        )
+        let taxSnapshot = Self.snapshotForDate(
+          payoutDate,
+          jobId: recurring.job_id,
+          snapshots: input.snapshots,
+          jobs: input.jobs
+        )
+
+        let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+        let netEarnings = computed.netPay(
+          taxEnabled: taxEnabled,
+          taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+        )
+        let earnings = CalendarEarningsData(
+          net: netEarnings,
+          gross: computed.gross,
+          hasTaxEnabled: taxEnabled
+        )
+
+        virtualShiftsWithEarnings.append(
+          CalendarDisplayData.VirtualShiftWithEarnings(date: virtualShift.date, earnings: earnings)
+        )
+
+        existingNetEarnings[virtualShift.date, default: 0] += netEarnings
+        existingGrossEarnings[virtualShift.date, default: 0] += computed.gross
+        existingHasTax[virtualShift.date, default: false] =
+          existingHasTax[virtualShift.date, default: false] || taxEnabled
+        shiftTimesByDate[virtualShift.date, default: []].append(
+          (start: recurring.cleanStartTime, end: recurring.cleanEndTime)
+        )
+      }
+    }
+
+    var existingEarnings: [String: CalendarEarningsData] = [:]
+    for (date, net) in existingNetEarnings {
+      existingEarnings[date] = CalendarEarningsData(
+        net: net,
+        gross: existingGrossEarnings[date] ?? net,
+        hasTaxEnabled: existingHasTax[date] ?? false
+      )
+    }
+
+    var existingHours: [String: HoursData] = [:]
+    for (date, shiftsOnDate) in shiftTimesByDate {
+      guard !shiftsOnDate.isEmpty else { continue }
+
+      let sortedByStart = shiftsOnDate.sorted {
+        CalendarGridHelper.timeToMinutes($0.start) < CalendarGridHelper.timeToMinutes($1.start)
+      }
+      let earliestStart = sortedByStart.first?.start ?? ""
+      let latestEnd =
+        shiftsOnDate.max(by: { lhs, rhs in
+          let lhsStart = CalendarGridHelper.timeToMinutes(lhs.start)
+          let lhsEnd = CalendarGridHelper.timeToMinutes(lhs.end)
+          let lhsAdjustedEnd = lhsEnd <= lhsStart ? lhsEnd + 24 * 60 : lhsEnd
+
+          let rhsStart = CalendarGridHelper.timeToMinutes(rhs.start)
+          let rhsEnd = CalendarGridHelper.timeToMinutes(rhs.end)
+          let rhsAdjustedEnd = rhsEnd <= rhsStart ? rhsEnd + 24 * 60 : rhsEnd
+
+          return lhsAdjustedEnd < rhsAdjustedEnd
+        })?.end ?? ""
+      let crossesMidnight = shiftsOnDate.contains {
+        CalendarGridHelper.timeToMinutes($0.end) <= CalendarGridHelper.timeToMinutes($0.start)
+      }
+
+      existingHours[date] = HoursData(
+        start: CalendarGridHelper.formatTime(earliestStart),
+        end: CalendarGridHelper.formatTime(latestEnd),
+        crossesMidnight: crossesMidnight
+      )
+    }
+
+    return CalendarDisplayData(
+      existingShiftDates: existingDates,
+      existingShiftEarnings: existingEarnings,
+      existingShiftHours: existingHours,
+      virtualShifts: virtualShiftsWithEarnings,
+      year: input.year,
+      month: input.month,
+      timestamp: Date()
+    )
+  }
+
+  private nonisolated static func computeConflictsAndPreviewsOffMain(
+    _ input: ConflictsAndPreviewsComputationInput
+  ) async -> ConflictsAndPreviewsComputationResult {
+    await Task.detached(priority: .userInitiated) {
+      Self.buildConflictsAndPreviews(input)
+    }.value
+  }
+
+  private nonisolated static func buildConflictsAndPreviews(
+    _ input: ConflictsAndPreviewsComputationInput
+  ) -> ConflictsAndPreviewsComputationResult {
+    let earningsContext = EarningsComputationContext(
+      requiresExplicitJobSelection: input.requiresExplicitJobSelection,
+      selectedJobId: input.selectedJobId,
+      effectiveJobId: input.effectiveJobId,
+      snapshots: input.snapshots,
+      jobs: input.jobs,
+      settings: input.settings
+    )
+
+    let projectedRecurringDates: [String]?
+    let anchorEarnings: [String: CalendarEarningsData]?
+    let datesToCheck: [String]
+
+    switch input.mode {
+    case .single:
+      projectedRecurringDates = nil
+      anchorEarnings = nil
+      datesToCheck = input.selectedDates
+    case .recurring:
+      if !input.selectedDays.isEmpty {
+        let generated = RecurringShiftProjector.generateDatesForCalendarDisplay(
+          selectedDays: input.selectedDays,
+          repeatInterval: input.repeatInterval,
+          displayMonth: input.displayMonth,
+          endCondition: input.endCondition
+        )
+        projectedRecurringDates = generated
+        datesToCheck = generated
+
+        if input.hasValidTimes {
+          var computedByAnchor: [String: CalendarEarningsData] = [:]
+          for (weekday, anchorISO) in input.selectedDays {
+            if let earnings = Self.computeEarningsForDate(
+              anchorISO,
+              startTime: input.startTime,
+              endTime: input.endTime,
+              context: earningsContext
+            ) {
+              computedByAnchor[weekday] = earnings
+            }
+          }
+          anchorEarnings = computedByAnchor
+        } else {
+          anchorEarnings = nil
+        }
+      } else {
+        projectedRecurringDates = []
+        anchorEarnings = [:]
+        datesToCheck = []
+      }
+    }
+
+    guard input.hasValidTimes, !datesToCheck.isEmpty else {
+      return ConflictsAndPreviewsComputationResult(
+        projectedRecurringDates: projectedRecurringDates,
+        anchorEarnings: anchorEarnings,
+        conflictDates: [],
+        previewEarnings: [:]
+      )
+    }
+
+    let conflicts = ShiftConflictDetector.detectConflicts(
+      dates: datesToCheck,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      existingShifts: input.existingShifts,
+      existingRecurringShifts: input.existingRecurringShifts
+    )
+
+    var previewEarnings: [String: CalendarEarningsData] = [:]
+    if input.mode == .single {
+      for dateISO in input.selectedDates {
+        if let earnings = Self.computeEarningsForDate(
+          dateISO,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          context: earningsContext
+        ) {
+          previewEarnings[dateISO] = earnings
+        }
+      }
+    }
+
+    return ConflictsAndPreviewsComputationResult(
+      projectedRecurringDates: projectedRecurringDates,
+      anchorEarnings: anchorEarnings,
+      conflictDates: conflicts,
+      previewEarnings: previewEarnings
+    )
+  }
+
+  private nonisolated static func computeEarningsForDate(
+    _ dateISO: String,
+    startTime: String,
+    endTime: String,
+    context: EarningsComputationContext
+  ) -> CalendarEarningsData? {
+    if context.requiresExplicitJobSelection && context.selectedJobId == nil {
+      return nil
+    }
+
+    let wageSnapshot = Self.snapshotForDate(
+      dateISO,
+      jobId: context.effectiveJobId,
+      snapshots: context.snapshots,
+      jobs: context.jobs
+    )
+
+    let payrollDay = Self.payrollDay(
+      for: context.effectiveJobId,
+      jobs: context.jobs,
+      settings: context.settings
+    )
+    let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: dateISO, payrollDay: payrollDay)
+    let taxSnapshot = Self.snapshotForDate(
+      payoutDate,
+      jobId: context.effectiveJobId,
+      snapshots: context.snapshots,
+      jobs: context.jobs
+    )
+
+    let shift = ShiftRow(
+      id: "preview-\(dateISO)",
+      user_id: nil,
+      job_id: context.effectiveJobId,
+      shift_date: dateISO,
+      start_time: startTime,
+      end_time: endTime,
+      custom_supplements: nil
+    )
+
+    let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+    let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+    let net = computed.netPay(
+      taxEnabled: taxEnabled,
+      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+    )
+
+    return CalendarEarningsData(net: net, gross: computed.gross, hasTaxEnabled: taxEnabled)
+  }
+
+  private nonisolated static func snapshotsForJob(
+    _ jobId: String?,
+    snapshots: [WageSnapshot],
+    jobs: [Job]
+  ) -> [WageSnapshot] {
+    guard let jobId else { return snapshots }
+
+    let jobSnapshots = snapshots.filter { $0.job_id == jobId }
+    if !jobSnapshots.isEmpty {
+      return jobSnapshots
+    }
+
+    let defaultJobId = jobs.first(where: { $0.is_default })?.id
+    if defaultJobId == jobId {
+      return snapshots.filter { $0.job_id == nil }
+    }
+
+    return []
+  }
+
+  private nonisolated static func snapshotForDate(
+    _ dateISO: String,
+    jobId: String?,
+    snapshots: [WageSnapshot],
+    jobs: [Job]
+  ) -> WageSnapshot? {
+    SnapshotsService.snapshotForDate(
+      dateISO, from: snapshotsForJob(jobId, snapshots: snapshots, jobs: jobs))
+  }
+
+  private nonisolated static func payrollDay(
+    for jobId: String?,
+    jobs: [Job],
+    settings: UserSettings?
+  ) -> Int {
+    if let jobId, let jobPayrollDay = jobs.first(where: { $0.id == jobId })?.payroll_day {
+      return jobPayrollDay
+    }
+    return settings?.effectivePayrollDay ?? 1
+  }
+
   /// Virtual shift with computed earnings
   struct VirtualShiftWithEarnings {
     let date: String
@@ -1396,234 +1820,86 @@ final class AddShiftViewModel: ObservableObject {
         // Check if cancelled during sleep
         guard !Task.isCancelled else { return }
 
-        await MainActor.run {
-          self?.updateConflictsAndPreviews()
-        }
+        self?.scheduleConflictsAndPreviewsRecompute()
       } catch {
         // Task was cancelled - this is expected
       }
     }
   }
 
-  /// Rebuild the calendar display data from cached shifts (called once per month change)
-  /// Uses wage snapshot from shift date, tax snapshot from payout date (shift month + 1)
-  private func rebuildCalendarDisplayData() {
-    let year = displayYear
-    let month = displayMonthNumber
-
-    // Build set of existing shift dates
-    var existingDates = Set<String>()
-    var existingNetEarnings: [String: Double] = [:]
-    var existingGrossEarnings: [String: Double] = [:]
-    var existingHasTax: [String: Bool] = [:]
-    var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
-
-    // Add regular shifts
-    for shift in cachedShifts {
-      existingDates.insert(shift.shift_date)
-
-      // Wage/supplements from shift date
-      let wageSnapshot = snapshotForDate(shift.shift_date, jobId: shift.job_id)
-      let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-
-      // Tax settings from payout date (shift month + 1)
-      let payrollDay = payrollDay(for: shift.job_id)
-      let payoutDate = PayrollEngine.calculatePayoutDate(
-        shiftDate: shift.shift_date, payrollDay: payrollDay)
-      let taxSnapshot = snapshotForDate(payoutDate, jobId: shift.job_id)
-
-      let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-      existingNetEarnings[shift.shift_date, default: 0] += computed.netPay(
-        taxEnabled: taxEnabled,
-        taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-      )
-      existingGrossEarnings[shift.shift_date, default: 0] += computed.gross
-      existingHasTax[shift.shift_date, default: false] =
-        existingHasTax[shift.shift_date, default: false] || taxEnabled
-      shiftTimesByDate[shift.shift_date, default: []].append(
-        (start: shift.start_time, end: shift.end_time))
-    }
-
-    // Generate virtual shifts with computed earnings
-    var virtualShiftsWithEarnings: [CalendarDisplayData.VirtualShiftWithEarnings] = []
-
-    for recurring in cachedRecurringShifts {
-      let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-        year: year,
-        month: month,
-        recurring: recurring
-      )
-
-      for virtualShift in virtualShifts {
-        existingDates.insert(virtualShift.date)
-
-        // Create a temporary shift to compute earnings
-        let shift = ShiftRow(
-          id: "virtual-\(virtualShift.date)",
-          user_id: nil,
-          job_id: recurring.job_id,
-          shift_date: virtualShift.date,
-          start_time: recurring.start_time,
-          end_time: recurring.end_time,
-          custom_supplements: nil
-        )
-
-        // Wage/supplements from shift date
-        let wageSnapshot = snapshotForDate(virtualShift.date, jobId: recurring.job_id)
-        let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-
-        // Tax settings from payout date (shift month + 1)
-        let payrollDay = payrollDay(for: recurring.job_id)
-        let payoutDate = PayrollEngine.calculatePayoutDate(
-          shiftDate: virtualShift.date, payrollDay: payrollDay)
-        let taxSnapshot = snapshotForDate(payoutDate, jobId: recurring.job_id)
-
-        let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-        let netEarnings = computed.netPay(
-          taxEnabled: taxEnabled,
-          taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-        )
-        let earnings = CalendarEarningsData(
-          net: netEarnings,
-          gross: computed.gross,
-          hasTaxEnabled: taxEnabled
-        )
-
-        virtualShiftsWithEarnings.append(
-          CalendarDisplayData.VirtualShiftWithEarnings(
-            date: virtualShift.date,
-            earnings: earnings
-          ))
-
-        // Also add to existing earnings map
-        existingNetEarnings[virtualShift.date, default: 0] += netEarnings
-        existingGrossEarnings[virtualShift.date, default: 0] += computed.gross
-        existingHasTax[virtualShift.date, default: false] =
-          existingHasTax[virtualShift.date, default: false] || taxEnabled
-        shiftTimesByDate[virtualShift.date, default: []].append(
-          (
-            start: recurring.cleanStartTime,
-            end: recurring.cleanEndTime
-          ))
-      }
-    }
-
-    var existingEarnings: [String: CalendarEarningsData] = [:]
-    for (date, net) in existingNetEarnings {
-      existingEarnings[date] = CalendarEarningsData(
-        net: net,
-        gross: existingGrossEarnings[date] ?? net,
-        hasTaxEnabled: existingHasTax[date] ?? false
-      )
-    }
-
-    var existingHours: [String: HoursData] = [:]
-    for (date, shiftsOnDate) in shiftTimesByDate {
-      guard !shiftsOnDate.isEmpty else { continue }
-
-      let sortedByStart = shiftsOnDate.sorted {
-        CalendarGridHelper.timeToMinutes($0.start) < CalendarGridHelper.timeToMinutes($1.start)
-      }
-      let earliestStart = sortedByStart.first?.start ?? ""
-      let latestEnd =
-        shiftsOnDate.max(by: { lhs, rhs in
-          let lhsStart = CalendarGridHelper.timeToMinutes(lhs.start)
-          let lhsEnd = CalendarGridHelper.timeToMinutes(lhs.end)
-          let lhsAdjustedEnd = lhsEnd <= lhsStart ? lhsEnd + 24 * 60 : lhsEnd
-
-          let rhsStart = CalendarGridHelper.timeToMinutes(rhs.start)
-          let rhsEnd = CalendarGridHelper.timeToMinutes(rhs.end)
-          let rhsAdjustedEnd = rhsEnd <= rhsStart ? rhsEnd + 24 * 60 : rhsEnd
-
-          return lhsAdjustedEnd < rhsAdjustedEnd
-        })?.end ?? ""
-      let crossesMidnight = shiftsOnDate.contains {
-        CalendarGridHelper.timeToMinutes($0.end) <= CalendarGridHelper.timeToMinutes($0.start)
-      }
-
-      existingHours[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
-    }
-
-    // Store the cached display data
-    cachedDisplayData = CalendarDisplayData(
-      existingShiftDates: existingDates,
-      existingShiftEarnings: existingEarnings,
-      existingShiftHours: existingHours,
-      virtualShifts: virtualShiftsWithEarnings,
-      year: year,
-      month: month,
-      timestamp: Date()
+  private func scheduleCalendarDisplayRebuild() {
+    displayComputationVersion &+= 1
+    let computationVersion = displayComputationVersion
+    let input = CalendarDisplayComputationInput(
+      year: displayYear,
+      month: displayMonthNumber,
+      shifts: cachedShifts,
+      recurringShifts: cachedRecurringShifts,
+      snapshots: cachedSnapshots,
+      jobs: activeJobs,
+      settings: cachedSettings
     )
 
-    logger.info(
-      "Rebuilt calendar display data: \(existingDates.count) dates, \(virtualShiftsWithEarnings.count) virtual shifts"
-    )
+    Task { [weak self] in
+      guard let self else { return }
+      let displayData = await Self.computeCalendarDisplayDataOffMain(input)
+      guard !Task.isCancelled else { return }
+      guard self.displayComputationVersion == computationVersion else { return }
+
+      self.cachedDisplayData = displayData
+      logger.info(
+        "Rebuilt calendar display data: \(displayData.existingShiftDates.count) dates, \(displayData.virtualShifts.count) virtual shifts"
+      )
+    }
+  }
+
+  private func scheduleConflictsAndPreviewsRecompute() {
+    previewComputationVersion &+= 1
+    let computationVersion = previewComputationVersion
+
+    Task { [weak self] in
+      await self?.computeConflictsAndPreviews(computationVersion: computationVersion)
+    }
   }
 
   /// Update conflicts and preview earnings (called after time changes or initial load)
   private func updateConflictsAndPreviews() {
-    // Update conflicts based on current mode
-    let datesToCheck: [String]
-    switch mode {
-    case .single:
-      datesToCheck = Array(selectedDates)
-    case .recurring:
-      // Regenerate projected dates for calendar display only (current month)
-      if !selectedDays.isEmpty {
-        cachedProjectedRecurringDates = RecurringShiftProjector.generateDatesForCalendarDisplay(
-          selectedDays: selectedDays,
-          repeatInterval: repeatInterval,
-          displayMonth: displayMonth,
-          endCondition: endCondition
-        )
+    scheduleConflictsAndPreviewsRecompute()
+  }
 
-        // Compute earnings once per anchor (all dates on same weekday share earnings)
-        if hasValidTimes {
-          var anchorEarnings: [String: CalendarEarningsData] = [:]
-          for (weekday, anchorISO) in selectedDays {
-            if let earnings = computeEarningsForDate(anchorISO) {
-              anchorEarnings[weekday] = earnings
-            }
-          }
-          cachedAnchorEarnings = anchorEarnings
-        }
-      } else {
-        cachedProjectedRecurringDates = []
-        cachedAnchorEarnings = [:]
-      }
-      datesToCheck = cachedProjectedRecurringDates
-    }
-
-    // Only check conflicts if we have valid times and dates
-    guard hasValidTimes, !datesToCheck.isEmpty else {
-      cachedConflictDatesForCalendar = []
-      cachedPreviewEarnings = [:]
-      return
-    }
-
-    // Compute conflicts
-    cachedConflictDatesForCalendar = ShiftConflictDetector.detectConflicts(
-      dates: datesToCheck,
+  private func computeConflictsAndPreviews(computationVersion: UInt64) async {
+    let input = ConflictsAndPreviewsComputationInput(
+      mode: mode,
+      selectedDates: Array(selectedDates),
+      selectedDays: selectedDays,
+      repeatInterval: repeatInterval,
+      displayMonth: displayMonth,
+      endCondition: endCondition,
+      hasValidTimes: hasValidTimes,
       startTime: startTimeString,
       endTime: endTimeString,
+      requiresExplicitJobSelection: requiresExplicitJobSelection,
+      selectedJobId: selectedJobId,
+      effectiveJobId: effectiveSelectedJobId,
       existingShifts: cachedShifts,
-      existingRecurringShifts: cachedRecurringShifts
+      existingRecurringShifts: cachedRecurringShifts,
+      snapshots: cachedSnapshots,
+      jobs: activeJobs,
+      settings: cachedSettings
     )
 
-    // Compute preview earnings for all selected dates
-    if mode == .single {
-      var newPreviewEarnings: [String: CalendarEarningsData] = [:]
-      for dateISO in selectedDates {
-        if let earnings = computeEarningsForDate(dateISO) {
-          newPreviewEarnings[dateISO] = earnings
-        }
-      }
-      cachedPreviewEarnings = newPreviewEarnings
+    let result = await Self.computeConflictsAndPreviewsOffMain(input)
+    guard !Task.isCancelled else { return }
+    guard previewComputationVersion == computationVersion else { return }
+
+    if let projectedDates = result.projectedRecurringDates {
+      cachedProjectedRecurringDates = projectedDates
     }
+    if let anchorEarnings = result.anchorEarnings {
+      cachedAnchorEarnings = anchorEarnings
+    }
+    cachedConflictDatesForCalendar = result.conflictDates
+    cachedPreviewEarnings = result.previewEarnings
   }
 
   /// Incrementally update preview earnings when a single date is added

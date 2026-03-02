@@ -48,7 +48,7 @@ final class SmartNotificationScheduler {
       return .disabled
     }
 
-    let analysisResult = WorkPatternAnalyzer.analyzeDetailed(for: userId)
+    let analysisResult = await WorkPatternAnalyzer.analyzeDetailedAsync(for: userId)
 
     switch analysisResult {
     case .noShifts:
@@ -94,7 +94,7 @@ final class SmartNotificationScheduler {
       return
     }
 
-    guard let pattern = WorkPatternAnalyzer.analyze(for: userId) else {
+    guard let pattern = await WorkPatternAnalyzer.analyzeAsync(for: userId) else {
       logger.info("No work pattern detected, cancelling smart notifications")
       await cancelAllSmartNotifications()
       return
@@ -120,7 +120,7 @@ final class SmartNotificationScheduler {
     let calendar = Calendar.current
     let now = Date()
     let startOfToday = calendar.startOfDay(for: now)
-    let existingShiftDates = getUpcomingShiftDates(for: userId, from: startOfToday)
+    let existingShiftDates = await getUpcomingShiftDates(for: userId, from: startOfToday)
 
     var scheduledCount = 0
     for dayOffset in 0..<Self.scheduleDaysAhead {
@@ -280,7 +280,8 @@ final class SmartNotificationScheduler {
     return text.prefix(1).uppercased() + text.dropFirst()
   }
 
-  private func getUpcomingShiftDates(for userId: String, from startDate: Date) -> Set<String> {
+  private func getUpcomingShiftDates(for userId: String, from startDate: Date) async -> Set<String>
+  {
     let calendar = Calendar.current
     guard
       let endDate = calendar.date(byAdding: .day, value: Self.scheduleDaysAhead - 1, to: startDate)
@@ -288,13 +289,44 @@ final class SmartNotificationScheduler {
       return []
     }
 
-    let shiftsRepository = ShiftsRepository.shared
-    let recurringRepository = RecurringShiftsRepository.shared
+    let realShifts = ShiftsRepository.shared.getShifts(
+      for: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
+    let recurringPatterns = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
 
-    let realShifts = shiftsRepository.getShifts(for: userId, startDate: startDate, endDate: endDate)
+    return await Self.computeUpcomingShiftDatesOffMain(
+      realShifts: realShifts,
+      recurringPatterns: recurringPatterns,
+      startDate: startDate,
+      endDate: endDate
+    )
+  }
+
+  private nonisolated static func computeUpcomingShiftDatesOffMain(
+    realShifts: [ShiftRow],
+    recurringPatterns: [RecurringShiftRow],
+    startDate: Date,
+    endDate: Date
+  ) async -> Set<String> {
+    await Task.detached(priority: .utility) {
+      Self.computeUpcomingShiftDates(
+        realShifts: realShifts,
+        recurringPatterns: recurringPatterns,
+        startDate: startDate,
+        endDate: endDate
+      )
+    }.value
+  }
+
+  private nonisolated static func computeUpcomingShiftDates(
+    realShifts: [ShiftRow],
+    recurringPatterns: [RecurringShiftRow],
+    startDate: Date,
+    endDate: Date
+  ) -> Set<String> {
     let realDates = Set(realShifts.map { $0.shift_date })
-
-    let recurringPatterns = recurringRepository.getRecurringShifts(for: userId)
     let monthsInRange = getMonthsInRange(startDate: startDate, endDate: endDate)
 
     var virtualDates: [String] = []
@@ -322,7 +354,7 @@ final class SmartNotificationScheduler {
     return realDates.union(dedupedVirtuals)
   }
 
-  private func getMonthsInRange(startDate: Date, endDate: Date) -> [(Int, Int)] {
+  private nonisolated static func getMonthsInRange(startDate: Date, endDate: Date) -> [(Int, Int)] {
     var months: [(Int, Int)] = []
     let calendar = Calendar.current
 

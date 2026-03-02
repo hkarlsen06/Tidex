@@ -32,6 +32,8 @@ struct SharingView: View {
 
   /// Shift IDs to highlight in the calendar (from changes array in notification)
   @State private var highlightShiftIds: Set<String> = []
+  @State private var deepLinkNavigationTask: Task<Void, Never>?
+  @State private var highlightClearTask: Task<Void, Never>?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
@@ -127,6 +129,12 @@ struct SharingView: View {
         viewModel.deselectSharer()
       }
     }
+    .onDisappear {
+      deepLinkNavigationTask?.cancel()
+      deepLinkNavigationTask = nil
+      highlightClearTask?.cancel()
+      highlightClearTask = nil
+    }
   }
 
   // MARK: - Deep Link Handling
@@ -140,9 +148,11 @@ struct SharingView: View {
     case .sharing(let sharerId, let dates, let changes):
       if let sharerId = sharerId {
         // Wait for sharers to load, then select the sharer
-        Task {
+        deepLinkNavigationTask?.cancel()
+        deepLinkNavigationTask = Task { @MainActor in
           // Wait for sharers to be loaded if still loading
           await viewModel.waitForSharersLoaded()
+          guard !Task.isCancelled else { return }
 
           // Find and select the sharer
           if let sharer = viewModel.sharers.first(where: { $0.id == sharerId }) {
@@ -169,15 +179,10 @@ struct SharingView: View {
 
               // Set highlight dates for the calendar (fallback for older payloads without shift IDs)
               highlightDates = Set(dates)
+            }
 
-              // Clear highlights after a delay
-              Task {
-                try? await Task.sleep(nanoseconds: UInt64(Self.highlightDuration * 1_000_000_000))
-                withAnimation(.easeOut(duration: 0.3)) {
-                  highlightDates = []
-                  highlightShiftIds = []
-                }
-              }
+            if !highlightDates.isEmpty || !highlightShiftIds.isEmpty {
+              scheduleHighlightAutoClear()
             }
           }
         }
@@ -201,6 +206,23 @@ struct SharingView: View {
     case .feedback, .adminFeedback:
       // Not handled here - MainTabView handles these
       break
+    }
+  }
+
+  private func scheduleHighlightAutoClear() {
+    highlightClearTask?.cancel()
+    highlightClearTask = Task { @MainActor in
+      do {
+        try await Task.sleep(nanoseconds: UInt64(Self.highlightDuration * 1_000_000_000))
+      } catch {
+        return
+      }
+      guard !Task.isCancelled else { return }
+      withAnimation(.easeOut(duration: 0.3)) {
+        highlightDates = []
+        highlightShiftIds = []
+      }
+      highlightClearTask = nil
     }
   }
 

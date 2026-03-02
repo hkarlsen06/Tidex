@@ -933,6 +933,10 @@ final class AppCoordinator: ObservableObject {
     // Cancel all tracked background tasks to prevent stale state updates
     cancelAllBackgroundTasks()
 
+    if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+      await appDelegate.endAllLiveActivities(reason: "auth/session context reset")
+    }
+
     // Reset in-memory Wagey state so consent/chat state cannot leak across users
     WageyViewModel.shared.resetForUserChange()
 

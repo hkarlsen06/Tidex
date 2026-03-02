@@ -1,5 +1,7 @@
+import CoreGraphics
 import Foundation
-import UIKit
+import ImageIO
+import UniformTypeIdentifiers
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataConverter")
@@ -10,10 +12,10 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataConv
 enum WatchDataConverter {
 
   /// Avatar image size for Watch (small to minimize data transfer)
-  private static let avatarSize: CGFloat = 48
+  nonisolated private static let avatarSize: CGFloat = 48
 
   /// JPEG compression quality (0.0-1.0)
-  private static let jpegQuality: CGFloat = 0.7
+  nonisolated private static let jpegQuality: CGFloat = 0.7
 
   /// Build a complete payload for the Watch from current app state
   /// Downloads and converts avatar images to JPEG for Watch compatibility
@@ -295,7 +297,7 @@ enum WatchDataConverter {
   /// Download an avatar image and convert to JPEG data for Watch compatibility
   /// - Parameter urlString: The URL string of the avatar image
   /// - Returns: JPEG data or nil if download/conversion fails
-  private static func downloadAvatar(from urlString: String?) async -> Data? {
+  private nonisolated static func downloadAvatar(from urlString: String?) async -> Data? {
     guard let urlString = urlString,
       !urlString.isEmpty,
       let url = URL(string: urlString)
@@ -314,15 +316,8 @@ enum WatchDataConverter {
         return nil
       }
 
-      // Convert to UIImage
-      guard let image = UIImage(data: data) else {
-        logger.warning("Avatar conversion failed for \(urlString): invalid image data")
-        return nil
-      }
-
-      // Resize and convert to JPEG
-      let resizedImage = resizeImage(image, to: avatarSize)
-      guard let jpegData = resizedImage.jpegData(compressionQuality: jpegQuality) else {
+      // Decode, thumbnail, and JPEG encode off the main actor.
+      guard let jpegData = await transcodeAvatarForWatch(data) else {
         logger.warning("Avatar JPEG conversion failed for \(urlString)")
         return nil
       }
@@ -336,14 +331,61 @@ enum WatchDataConverter {
     }
   }
 
-  /// Resize an image to fit within a square of the given size
-  private static func resizeImage(_ image: UIImage, to size: CGFloat) -> UIImage {
-    let targetSize = CGSize(width: size, height: size)
+  /// Perform decode/resize/compression work in a detached task to avoid main-thread stalls.
+  private nonisolated static func transcodeAvatarForWatch(_ data: Data) async -> Data? {
+    await Task.detached(priority: .utility) {
+      jpegThumbnailData(data, targetPixelSize: Int(avatarSize), quality: jpegQuality)
+    }.value
+  }
 
-    let renderer = UIGraphicsImageRenderer(size: targetSize)
-    return renderer.image { _ in
-      image.draw(in: CGRect(origin: .zero, size: targetSize))
+  /// Build a square JPEG thumbnail using ImageIO/CoreGraphics (safe for off-main execution).
+  private nonisolated static func jpegThumbnailData(
+    _ data: Data,
+    targetPixelSize: Int,
+    quality: CGFloat
+  ) -> Data? {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+      return nil
     }
+
+    let decodeOptions: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceThumbnailMaxPixelSize: targetPixelSize,
+    ]
+
+    guard
+      let thumbnail = CGImageSourceCreateThumbnailAtIndex(
+        source,
+        0,
+        decodeOptions as CFDictionary
+      )
+    else {
+      return nil
+    }
+
+    let output = NSMutableData()
+    guard
+      let destination = CGImageDestinationCreateWithData(
+        output,
+        UTType.jpeg.identifier as CFString,
+        1,
+        nil
+      )
+    else {
+      return nil
+    }
+
+    let encodeOptions: [CFString: Any] = [
+      kCGImageDestinationLossyCompressionQuality: quality
+    ]
+    CGImageDestinationAddImage(destination, thumbnail, encodeOptions as CFDictionary)
+
+    guard CGImageDestinationFinalize(destination) else {
+      return nil
+    }
+
+    return output as Data
   }
 
   // MARK: - Helpers

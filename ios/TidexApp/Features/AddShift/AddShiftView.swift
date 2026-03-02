@@ -202,13 +202,25 @@ struct AddShiftView: View {
       handleDeepLink(deepLink)
     }
     .onChange(of: selectedTab) { oldTab, newTab in
-      guard newTab == .add, oldTab == .shifts else { return }
-      tabTransitionOffset = 28
-      tabTransitionOpacity = 0.92
-      MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
-        tabTransitionOffset = 0
-        tabTransitionOpacity = 1
+      if newTab == .add, oldTab == .shifts {
+        tabTransitionOffset = 28
+        tabTransitionOpacity = 0.92
+        MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
+          tabTransitionOffset = 0
+          tabTransitionOpacity = 1
+        }
       }
+
+      if oldTab == .add, newTab != .add {
+        focusedTimeField = nil
+        isKeyboardVisible = false
+        keyboardHeight = 0
+      }
+    }
+    .onDisappear {
+      focusedTimeField = nil
+      isKeyboardVisible = false
+      keyboardHeight = 0
     }
     .sheet(isPresented: $viewModel.showPreviewSheet) {
       RecurringPreviewSheet(viewModel: viewModel)
@@ -255,6 +267,7 @@ struct AddShiftView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
     { notification in
+      guard selectedTab == .add else { return }
       if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
         as? CGRect
       {
@@ -266,6 +279,7 @@ struct AddShiftView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
     { _ in
+      guard selectedTab == .add else { return }
       MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         isKeyboardVisible = false
         keyboardHeight = 0
