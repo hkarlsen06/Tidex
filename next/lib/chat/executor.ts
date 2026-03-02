@@ -1400,6 +1400,29 @@ function getFriendDisplayName(friend: FriendEntry): string {
   return friend.firstName?.trim() || friend.email || friend.phone || friend.id;
 }
 
+function normalizeShareIdentifier(identifier: string): string {
+  const trimmed = identifier.trim();
+  if (trimmed.includes("@")) {
+    return trimmed.toLowerCase();
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) {
+    return trimmed;
+  }
+
+  let local = digits;
+  if (digits.length === 12 && digits.startsWith("0047")) {
+    local = digits.slice(4);
+  } else if (digits.length === 10 && digits.startsWith("47")) {
+    local = digits.slice(2);
+  } else if (digits.length === 9 && digits.startsWith("0")) {
+    local = digits.slice(1);
+  }
+
+  return local.length === 8 ? local : trimmed;
+}
+
 type WorkplaceEntry = Awaited<ReturnType<typeof getUserJobs>>[number];
 
 async function resolveWageWorkplaceContext(
@@ -1510,17 +1533,6 @@ async function executeQueryFriendShifts(
         message: tr.friendNoAccess,
         data: {
           access: "no_access",
-          friendId: input.friendId,
-        },
-      };
-    }
-
-    if (friend.sharesWithMe.blocked) {
-      return {
-        success: true,
-        message: tr.friendBlocked,
-        data: {
-          access: "blocked",
           friendId: input.friendId,
         },
       };
@@ -1670,17 +1682,6 @@ async function executeQueryFriendFeaturedShift(
       };
     }
 
-    if (friend.sharesWithMe.blocked) {
-      return {
-        success: true,
-        message: tr.friendBlocked,
-        data: {
-          access: "blocked",
-          friendId: input.friendId,
-        },
-      };
-    }
-
     const [preview] = await getSharerShiftPreviews([input.friendId]);
     const canShowEarnings = Boolean(preview?.showEarnings && friend.sharesWithMe.showEarningsToMe);
 
@@ -1776,7 +1777,9 @@ async function executeManageFriendSharing(
           };
         }
 
-        const result = await createShare(identifier, {
+        const normalizedIdentifier = normalizeShareIdentifier(identifier);
+
+        const result = await createShare(normalizedIdentifier, {
           showEarnings: input.showEarnings ?? false,
         });
 

@@ -264,6 +264,30 @@ describe("chat executor guardrails", () => {
     expect(mocks.createJob).not.toHaveBeenCalled();
   });
 
+  it("includes hidden sharers in list_friends by default", async () => {
+    mocks.getAllFriends.mockResolvedValue([
+      {
+        id: friendId,
+        firstName: "Robin",
+        email: "robin@example.com",
+        phone: null,
+        sharesWithMe: {
+          blocked: true,
+          showEarningsToMe: true,
+          sharedAt: "2026-03-01",
+          notificationFrequency: "instant",
+        },
+        iShareWith: null,
+      },
+    ]);
+
+    const result = await executeTool("list_friends", "{}", userId, "en");
+
+    expect(result.success).toBe(true);
+    expect((result.data as any)).toHaveLength(1);
+    expect((result.data as any)[0].blocked).toBe(true);
+  });
+
   it("enforces recipient-direction protections", async () => {
     mocks.getAllFriends.mockResolvedValue([
       {
@@ -293,7 +317,7 @@ describe("chat executor guardrails", () => {
     expect(mocks.removeShare).not.toHaveBeenCalled();
   });
 
-  it("returns explicit no-access and blocked friend states", async () => {
+  it("returns no_access only for non-sharers and still queries hidden sharers", async () => {
     const noAccess = await executeTool(
       "query_friend_shifts",
       JSON.stringify({ friendId }),
@@ -320,15 +344,45 @@ describe("chat executor guardrails", () => {
       },
     ]);
 
-    const blocked = await executeTool(
+    mocks.getSharedUserShifts.mockResolvedValue({
+      shifts: [
+        {
+          id: "44444444-4444-4444-8444-444444444444",
+          shift_date: "2026-03-02",
+          start_time: "08:00",
+          end_time: "16:00",
+          job_id: null,
+          computed: {
+            paidHours: 8,
+            gross: 2000,
+            basePay: 1800,
+            supplementPay: 200,
+            wagePeriods: [],
+            originalWagePeriods: [],
+          },
+          tax_enabled: false,
+          tax_percentage: 0,
+        },
+      ],
+      settings: {},
+      jobs: [],
+      aggregates: { totalHours: 8, totalEarnings: 2000 },
+      showEarnings: false,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
+      defaultView: "calendar",
+    });
+
+    const hidden = await executeTool(
       "query_friend_shifts",
       JSON.stringify({ friendId }),
       userId,
       "en"
     );
 
-    expect(blocked.success).toBe(true);
-    expect((blocked.data as any).access).toBe("blocked");
+    expect(hidden.success).toBe(true);
+    expect((hidden.data as any).access).toBeUndefined();
+    expect((hidden.data as any).shifts).toHaveLength(1);
   });
 
   it("never returns earnings when friend hides earnings", async () => {
