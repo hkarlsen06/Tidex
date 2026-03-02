@@ -331,6 +331,18 @@ const supplementRuleSchema = z.object({
   percent: z.number().positive().optional(),
 });
 
+// Backward-compatible alias shape used by some tool generations:
+// { startTime, endTime, amount } => { from, to, rate }
+const supplementRuleAliasSchema = z.object({
+  days: z.array(z.number().int().min(1).max(7)),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  amount: z.number().positive().optional(),
+  rate: z.number().positive().optional(),
+  percent: z.number().positive().optional(),
+  type: z.string().optional(),
+});
+
 /**
  * Manage Wage Snapshots Tool Schema
  * Allows CRUD operations on wage snapshots (wage history entries)
@@ -355,7 +367,10 @@ export const manageWageSnapshotsSchema = z.object({
   break_threshold_hours: z.number().positive().optional(),
   break_deduction_minutes: z.number().int().min(0).optional(),
   // Supplements - "copy_current" copies from current snapshot, or provide array of rules
-  supplements: z.union([z.literal("copy_current"), z.array(supplementRuleSchema)]).optional(),
+  supplements: z.union([
+    z.literal("copy_current"),
+    z.array(z.union([supplementRuleSchema, supplementRuleAliasSchema])),
+  ]).optional(),
 });
 
 export type ManageWageSnapshotsInput = z.infer<typeof manageWageSnapshotsSchema>;
@@ -1245,7 +1260,7 @@ Wage snapshots define the user's hourly wage, tax settings, break deduction, and
 Each snapshot has a from_date (when it takes effect) - the baseline snapshot has from_date=null.
 
 Actions:
-- CREATE: Creates a new wage entry. Requires from_date. All other fields are COPIED from current snapshot by default - only include fields you want to CHANGE.
+- CREATE: Creates a new wage entry. Requires from_date and tax_enabled. If tax_enabled=true, tax_percentage is required. Other fields are COPIED from current snapshot by default - only include fields you want to CHANGE.
 - UPDATE: Updates an existing wage entry. Requires snapshot_id (use short ID from get_wage_info). Only include fields to change.
 - DELETE: Deletes a wage entry. Requires snapshot_id.
 
@@ -1258,9 +1273,10 @@ IMPORTANT - Dichotomy between tariff and custom rates:
 Other notes:
 - Optional jobId for CREATE targets a specific workplace (UUID from list_workplaces). If omitted, default workplace is used.
 - Always call get_wage_info first to see current configuration and get snapshot IDs
-- For CREATE: only specify fields the user wants to change - all others are copied automatically
+- For CREATE: ask for tax handling explicitly (tax_enabled and optionally tax_percentage) before calling
 - For UPDATE: only specify fields to change
-- Use supplements: "copy_current" to explicitly copy current supplements, or provide a new array of rules`,
+- Use supplements: "copy_current" to explicitly copy current supplements, or provide a new array of rules
+- For end-of-day supplement windows, use 24:00 (preferred over 23:59)`,
     input_schema: {
       type: "object",
       properties: {
@@ -1291,11 +1307,11 @@ Other notes:
         },
         tax_enabled: {
           type: "boolean",
-          description: "Whether tax deduction is enabled for this period.",
+          description: "Whether tax deduction is enabled for this period. Required for create.",
         },
         tax_percentage: {
           type: "number",
-          description: "Tax percentage (0-100) for this period.",
+          description: "Tax percentage (0-100) for this period. Required for create when tax_enabled=true.",
         },
         break_enabled: {
           type: "boolean",
@@ -1316,7 +1332,7 @@ Other notes:
         },
         supplements: {
           type: ["string", "array"],
-          description: '"copy_current" to copy from current snapshot, or array of supplement rules.',
+          description: '"copy_current" to copy from current snapshot, or array of supplement rules. Rule keys can be canonical (from/to/rate) or alias (startTime/endTime/amount).',
         },
       },
       required: ["action"],

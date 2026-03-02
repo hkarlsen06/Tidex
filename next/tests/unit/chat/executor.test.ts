@@ -673,6 +673,7 @@ describe("chat executor guardrails", () => {
         action: "create",
         jobId: jobB,
         from_date: "2026-03-10",
+        tax_enabled: false,
       }),
       userId,
       "en"

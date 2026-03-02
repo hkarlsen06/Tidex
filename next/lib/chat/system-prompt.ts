@@ -255,7 +255,7 @@ Users can have multiple workplaces (jobs). Each shift belongs to a workplace.
 
 **When creating shifts**, if the user specifies a workplace, look up its id first. Omit jobId to use the default workplace.
 
-**Workplace onboarding rule:** After manage_workplace with action="create", ask if the user wants wage setup now. If yes, call manage_wage_snapshots with action="create", jobId=<new workplace id>, and from_date=null (baseline for that workplace), then apply any wage/tax/supplement details the user provides.
+**Workplace onboarding rule:** After manage_workplace with action="create", ask if the user wants wage setup now. If yes, collect tax setup first (tax_enabled and tax_percentage when enabled), then call manage_wage_snapshots with action="create", jobId=<new workplace id>, and from_date=null (baseline for that workplace), then apply wage/tax/supplement details.
 
 **Never claim that all workplaces must share one hourly wage.** Wage setup can be workplace-specific.
 </workplaces>
@@ -322,10 +322,10 @@ The "current" object shows:
 
 **Tariff supplement rules (when using tariff):**
 - Mon-Fri 18:00-21:00: +22 NOK/hr (evening)
-- Mon-Fri 21:00-23:59: +45 NOK/hr (late evening)
+- Mon-Fri 21:00-24:00: +45 NOK/hr (late evening)
 - Sat 13:00-15:00: +45 NOK/hr
 - Sat 15:00-18:00: +55 NOK/hr
-- Sat 18:00-23:59: +110 NOK/hr
+- Sat 18:00-24:00: +110 NOK/hr
 - Sun all day: +115 NOK/hr
 
 **Important:**

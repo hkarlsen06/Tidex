@@ -132,4 +132,24 @@ describe("chat tool schemas", () => {
       from_date: "2026-03-10",
     }).success).toBe(true);
   });
+
+  it("accepts wage snapshot supplements in alias format", () => {
+    const parsed = manageWageSnapshotsSchema.safeParse({
+      action: "create",
+      jobId,
+      from_date: null,
+      hourly_wage: 174.65,
+      supplements: [
+        {
+          days: [1, 2, 3, 4],
+          startTime: "16:00",
+          endTime: "20:00",
+          amount: 45,
+          type: "time_of_day",
+        },
+      ],
+    });
+
+    expect(parsed.success).toBe(true);
+  });
 });
