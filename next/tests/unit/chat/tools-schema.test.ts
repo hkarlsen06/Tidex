@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  getWageInfoSchema,
+  listWorkplacesSchema,
   listFriendsSchema,
   manageFeedbackSchema,
   manageFriendSharingSchema,
   manageProfileSchema,
   manageShiftAdvancedSchema,
+  manageWageSnapshotsSchema,
   manageWorkplaceSchema,
   queryFriendFeaturedShiftSchema,
   queryFriendShiftsSchema,
@@ -28,15 +31,27 @@ describe("chat tool schemas", () => {
       action: "reorder",
       jobId,
     });
+    const createWithNullableGoal = manageWorkplaceSchema.safeParse({
+      action: "create",
+      name: "Telenor",
+      payrollDay: 15,
+      monthlyGoal: null,
+    });
 
     expect(setDefault.success).toBe(true);
     expect(remove.success).toBe(true);
     expect(reorder.success).toBe(true);
+    expect(createWithNullableGoal.success).toBe(true);
   });
 
   it("applies list_friends defaults", () => {
     const parsed = listFriendsSchema.parse({});
     expect(parsed.includeBlocked).toBe(false);
+  });
+
+  it("applies list_workplaces defaults", () => {
+    const parsed = listWorkplacesSchema.parse({});
+    expect(parsed.includeArchived).toBe(true);
   });
 
   it("validates manage_friend_sharing actions", () => {
@@ -107,5 +122,14 @@ describe("chat tool schemas", () => {
   it("validates manage_profile actions", () => {
     expect(manageProfileSchema.safeParse({ action: "view" }).success).toBe(true);
     expect(manageProfileSchema.safeParse({ action: "update_name", firstName: "Alex" }).success).toBe(true);
+  });
+
+  it("supports workplace-scoped wage tools", () => {
+    expect(getWageInfoSchema.safeParse({ jobId }).success).toBe(true);
+    expect(manageWageSnapshotsSchema.safeParse({
+      action: "create",
+      jobId,
+      from_date: "2026-03-10",
+    }).success).toBe(true);
   });
 });

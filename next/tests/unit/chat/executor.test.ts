@@ -179,6 +179,91 @@ describe("chat executor guardrails", () => {
     expect(mocks.updateJob).toHaveBeenCalledTimes(2);
   });
 
+  it("includes archived workplaces by default when listing workplaces", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Active", archived_at: null }),
+      makeJob({ id: jobB, name: "Archived", archived_at: "2026-03-01T00:00:00.000Z" }),
+    ]);
+
+    const result = await executeTool(
+      "list_workplaces",
+      JSON.stringify({}),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect((result.data as any)).toHaveLength(2);
+    expect(result.message).toContain("archived");
+  });
+
+  it("can list only active workplaces when includeArchived is false", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Active", archived_at: null }),
+      makeJob({ id: jobB, name: "Archived", archived_at: "2026-03-01T00:00:00.000Z" }),
+    ]);
+
+    const result = await executeTool(
+      "list_workplaces",
+      JSON.stringify({ includeArchived: false }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect((result.data as any)).toHaveLength(1);
+    expect((result.data as any)[0].name).toBe("Active");
+  });
+
+  it("prompts wage setup after creating a workplace", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Default", is_default: true }),
+    ]);
+    mocks.createJob.mockResolvedValue({
+      id: jobB,
+      name: "Telenor",
+      color: "#3B82F6",
+      is_default: false,
+      archived_at: null,
+    });
+
+    const result = await executeTool(
+      "manage_workplace",
+      JSON.stringify({
+        action: "create",
+        name: "Telenor",
+        color: "#3B82F6",
+        payrollDay: 15,
+        monthlyGoal: null,
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.message).toContain("no wage setup yet");
+    expect((result.data as any).wageSetup.needed).toBe(true);
+    expect((result.data as any).wageSetup.suggestedAction.arguments).toEqual({
+      action: "create",
+      jobId: jobB,
+      from_date: null,
+    });
+  });
+
+  it("requires payrollDay and monthlyGoal when creating workplace", async () => {
+    const result = await executeTool(
+      "manage_workplace",
+      JSON.stringify({ action: "create", name: "Telenor" }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("payrollDay");
+    expect(result.message).toContain("monthlyGoal");
+    expect(mocks.createJob).not.toHaveBeenCalled();
+  });
+
   it("enforces recipient-direction protections", async () => {
     mocks.getAllFriends.mockResolvedValue([
       {
@@ -559,5 +644,41 @@ describe("chat executor guardrails", () => {
     expect(mocks.getSharerShiftPreviews).toHaveBeenCalledWith([friendId]);
     expect((result.data as any).status).toBe("upcoming");
     expect((result.data as any).featuredShift.gross).toBe(2300);
+  });
+
+  it("rejects unknown workplace for get_wage_info job scoping", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Default", is_default: true }),
+    ]);
+
+    const result = await executeTool(
+      "get_wage_info",
+      JSON.stringify({ jobId: jobB }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain(jobB);
+  });
+
+  it("rejects unknown workplace for manage_wage_snapshots create job scoping", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Default", is_default: true }),
+    ]);
+
+    const result = await executeTool(
+      "manage_wage_snapshots",
+      JSON.stringify({
+        action: "create",
+        jobId: jobB,
+        from_date: "2026-03-10",
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain(jobB);
   });
 });

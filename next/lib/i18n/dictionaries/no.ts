@@ -516,6 +516,7 @@ export const no = {
         foundWorkplaces: 'Fant {count} arbeidssteder',
         foundWorkplacesIncludingArchived: 'Fant {count} arbeidssteder ({archived} arkiverte)',
         createdWorkplace: 'Opprettet arbeidssted "{name}"',
+        createdWorkplaceNeedsWageSetup: 'Opprettet arbeidssted "{name}". Dette arbeidsstedet mangler lønnsoppsett. Vil du at jeg oppretter en første lønnsoppføring nå?',
         updatedWorkplace: 'Oppdaterte arbeidssted "{name}"',
         archivedWorkplace: 'Arkiverte arbeidssted "{name}"',
         unarchivedWorkplace: 'Gjenopprettet arbeidssted "{name}"',
