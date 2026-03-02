@@ -3408,6 +3408,54 @@ async function resolveSnapshotId(
   return null;
 }
 
+type SnapshotSupplementRuleInput = {
+  days: number[];
+  from?: string;
+  to?: string;
+  startTime?: string;
+  endTime?: string;
+  rate?: number;
+  percent?: number;
+  amount?: number;
+};
+
+function normalizeSnapshotSupplementRules(
+  rules: SnapshotSupplementRuleInput[]
+): Array<{
+  days: number[];
+  from: string;
+  to: string;
+  rate?: number;
+  percent?: number;
+}> {
+  return rules.map((rule) => {
+    const resolvedToRaw = rule.to ?? rule.endTime ?? "24:00";
+    // Payroll engine supports 24:00; normalize end-of-day values accordingly.
+    const resolvedTo = resolvedToRaw === "23:59" ? "24:00" : resolvedToRaw;
+
+    const normalized: {
+      days: number[];
+      from: string;
+      to: string;
+      rate?: number;
+      percent?: number;
+    } = {
+      days: rule.days,
+      from: rule.from ?? rule.startTime ?? "00:00",
+      to: resolvedTo,
+    };
+
+    const resolvedRate = rule.rate ?? rule.amount;
+    if (resolvedRate !== undefined) {
+      normalized.rate = resolvedRate;
+    }
+    if (rule.percent !== undefined) {
+      normalized.percent = rule.percent;
+    }
+    return normalized;
+  });
+}
+
 /**
  * Execute manage_wage_snapshots tool
  * Allows CRUD operations on wage snapshots (wage history entries)
@@ -3481,11 +3529,25 @@ async function executeManageWageSnapshots(
           ?? scopedSnapshots.find((snapshot) => snapshot.from_date === null)
           ?? null;
 
+        if (input.tax_enabled === undefined) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: "tax_enabled" }),
+          };
+        }
+
+        if (input.tax_enabled && input.tax_percentage === undefined) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: "tax_percentage" }),
+          };
+        }
+
         // Build the new snapshot data, copying from current and applying user changes
-        // Cast supplements to the expected type (WageSnapshotInput uses SupplementRule with template literal types)
+        // Normalize supplements to canonical rule shape before sending to server actions.
         const supplements = input.supplements === "copy_current" || input.supplements === undefined
           ? (currentSnapshot?.supplements ?? { rules: [] })
-          : { rules: input.supplements as any[] };
+          : { rules: normalizeSnapshotSupplementRules(input.supplements as SnapshotSupplementRuleInput[]) as any[] };
 
         // IMPORTANT: Ensure snapshots are dichotomous (either tariff OR custom, not both)
         // - If hourly_wage is provided → custom rate mode → wage_level must be null
@@ -3529,8 +3591,10 @@ async function executeManageWageSnapshots(
           wage_level: wageLevel,
           tariff_type_id: tariffTypeId,
           supplements: supplements as { rules: any[] },
-          tax_enabled: input.tax_enabled ?? currentSnapshot?.tax_enabled ?? false,
-          tax_percentage: input.tax_percentage ?? currentSnapshot?.tax_percentage ?? 0,
+          tax_enabled: input.tax_enabled,
+          tax_percentage: input.tax_enabled
+            ? (input.tax_percentage ?? currentSnapshot?.tax_percentage ?? 0)
+            : (input.tax_percentage ?? 0),
           break_enabled: input.break_enabled ?? currentSnapshot?.break_enabled ?? false,
           break_method: input.break_method ?? currentSnapshot?.break_method ?? "none" as const,
           break_threshold_hours: input.break_threshold_hours ?? currentSnapshot?.break_threshold_hours ?? 5.5,
@@ -3600,11 +3664,11 @@ async function executeManageWageSnapshots(
         }
 
         // Build the updated snapshot data
-        // Cast supplements to the expected type (WageSnapshotInput uses SupplementRule with template literal types)
+        // Normalize supplements to canonical rule shape before sending to server actions.
         const supplements = input.supplements === "copy_current"
           ? (targetSnapshot.supplements ?? { rules: [] })
           : input.supplements !== undefined
-            ? { rules: input.supplements as any[] }
+            ? { rules: normalizeSnapshotSupplementRules(input.supplements as SnapshotSupplementRuleInput[]) as any[] }
             : (targetSnapshot.supplements ?? { rules: [] });
 
         // IMPORTANT: Ensure snapshots are dichotomous (either tariff OR custom, not both)

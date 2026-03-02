@@ -4,12 +4,14 @@ const mocks = vi.hoisted(() => ({
   getAllFriends: vi.fn(),
   getSharedUserShifts: vi.fn(),
   getSharerShiftPreviews: vi.fn(),
+  getUserJobs: vi.fn(),
   createShare: vi.fn(),
   toggleSharerMuted: vi.fn(),
   copyShifts: vi.fn(),
   clearShiftSnapshots: vi.fn(),
   submitFeedback: vi.fn(),
   getUserFeedback: vi.fn(),
+  createWageSnapshotAction: vi.fn(),
   getComputedShiftsForApi: vi.fn(),
   verifySession: vi.fn(),
 }));
@@ -56,11 +58,17 @@ vi.mock("@/data-access/auth", () => ({
 }));
 
 vi.mock("@/data-access/jobs", () => ({
-  getUserJobs: vi.fn(),
+  getUserJobs: mocks.getUserJobs,
   updateJob: vi.fn(),
   createJob: vi.fn(),
   archiveJob: vi.fn(),
   deleteJob: vi.fn(),
+}));
+
+vi.mock("@/app/[locale]/(app)/settings/pay/_actions/wage-snapshots", () => ({
+  createWageSnapshotAction: mocks.createWageSnapshotAction,
+  updateWageSnapshotAction: vi.fn(),
+  deleteWageSnapshotAction: vi.fn(),
 }));
 
 vi.mock("@/app/[locale]/(app)/shifts/add/actions", () => ({ createShifts: vi.fn() }));
@@ -89,6 +97,7 @@ const friendId = "33333333-3333-4333-8333-333333333333";
 describe("chat tool integration paths", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getUserJobs.mockResolvedValue([]);
     mocks.verifySession.mockResolvedValue({
       user: {
         id: userId,
@@ -303,5 +312,123 @@ describe("chat tool integration paths", () => {
     expect(mocks.getSharerShiftPreviews).toHaveBeenCalledWith([friendId]);
     expect((result.data as any).status).toBe("active");
     expect((result.data as any).featuredShift.gross).toBe(2200);
+  });
+
+  it("normalizes wage supplement alias keys before creating snapshots", async () => {
+    const jobId = "8702776f-48c3-49ff-81d7-bfd38bedd296";
+
+    mocks.getUserJobs.mockResolvedValue([
+      {
+        id: jobId,
+        name: "Telenor",
+        is_default: false,
+        archived_at: null,
+        deleted_at: null,
+      },
+    ]);
+    mocks.createWageSnapshotAction.mockResolvedValue({
+      success: true,
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+
+    const result = await executeTool(
+      "manage_wage_snapshots",
+      JSON.stringify({
+        action: "create",
+        from_date: null,
+        hourly_wage: 174.65,
+        tax_enabled: true,
+        tax_percentage: 25,
+        jobId,
+        supplements: [
+          {
+            days: [1, 2, 3, 4],
+            startTime: "16:00",
+            endTime: "23:59",
+            amount: 45,
+            type: "time_of_day",
+          },
+        ],
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(mocks.createWageSnapshotAction).toHaveBeenCalledTimes(1);
+    expect(mocks.createWageSnapshotAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        job_id: jobId,
+        tax_enabled: true,
+        tax_percentage: 25,
+        supplements: {
+          rules: [
+            {
+              days: [1, 2, 3, 4],
+              from: "16:00",
+              to: "24:00",
+              rate: 45,
+            },
+          ],
+        },
+      })
+    );
+  });
+
+  it("requires tax_enabled when creating wage snapshots", async () => {
+    const jobId = "8702776f-48c3-49ff-81d7-bfd38bedd296";
+    mocks.getUserJobs.mockResolvedValue([
+      {
+        id: jobId,
+        name: "Telenor",
+        is_default: false,
+        archived_at: null,
+        deleted_at: null,
+      },
+    ]);
+
+    const result = await executeTool(
+      "manage_wage_snapshots",
+      JSON.stringify({
+        action: "create",
+        from_date: null,
+        jobId,
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("tax_enabled");
+    expect(mocks.createWageSnapshotAction).not.toHaveBeenCalled();
+  });
+
+  it("requires tax_percentage when tax_enabled is true", async () => {
+    const jobId = "8702776f-48c3-49ff-81d7-bfd38bedd296";
+    mocks.getUserJobs.mockResolvedValue([
+      {
+        id: jobId,
+        name: "Telenor",
+        is_default: false,
+        archived_at: null,
+        deleted_at: null,
+      },
+    ]);
+
+    const result = await executeTool(
+      "manage_wage_snapshots",
+      JSON.stringify({
+        action: "create",
+        from_date: null,
+        tax_enabled: true,
+        jobId,
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("tax_percentage");
+    expect(mocks.createWageSnapshotAction).not.toHaveBeenCalled();
   });
 });
