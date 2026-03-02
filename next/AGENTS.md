@@ -1,4 +1,4 @@
-# Next.js CLAUDE.md
+# Next.js AGENTS.md
 
 Next.js-specific development guidance for the Tidex web application.
 

@@ -204,6 +204,6 @@ XCTAssertEqual(computed.gross, expectedGross)
 
 ## Related Documentation
 
-- [../CLAUDE.md](../CLAUDE.md) - Project instructions for Claude Code
+- [../AGENTS.md](../AGENTS.md) - Project instructions for coding agents
 - [../docs/](../docs/) - Shared documentation (payroll spec, notifications, DB schema)
 - [../next/docs/](../next/docs/) - Web app documentation

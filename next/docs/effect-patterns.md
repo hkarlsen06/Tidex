@@ -1,6 +1,6 @@
 # Effect-TS Patterns & Examples
 
-This document contains detailed Effect-TS patterns and examples for the Tidex codebase. For a summary, see the Effect-TS Integration section in `CLAUDE.md`.
+This document contains detailed Effect-TS patterns and examples for the Tidex codebase. For a summary, see the Effect-TS Integration section in `AGENTS.md`.
 
 ## Service Usage Examples
 

@@ -91,6 +91,68 @@ struct TemporaryClockSession: Codable, Equatable, Identifiable {
   let createdAt: Date
 }
 
+enum ClockSessionRules {
+  private static func isValidClockTime(_ value: String) -> Bool {
+    let parts = value.split(separator: ":")
+    guard
+      parts.count == 2,
+      parts[1].count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      (0...24).contains(hours),
+      (0...59).contains(minutes),
+      !(hours == 24 && minutes != 0)
+    else {
+      return false
+    }
+
+    return true
+  }
+
+  static func timeString(from date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = Date.localTimeZone
+    formatter.dateFormat = "HH:mm"
+    return formatter.string(from: date)
+  }
+
+  static func hasExceededEndOfDayLimit(
+    _ session: TemporaryClockSession,
+    at referenceDate: Date
+  ) -> Bool {
+    let calendar = Calendar.current
+    let startOfDay = calendar.startOfDay(for: session.startedAt)
+    guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)
+    else {
+      return false
+    }
+    return referenceDate > cutoff
+  }
+
+  static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {
+    let calendar = Calendar(identifier: .gregorian)
+    let startTime = String(shift.start_time.prefix(5))
+    let endTime = String(shift.end_time.prefix(5))
+
+    guard
+      isValidClockTime(startTime),
+      isValidClockTime(endTime),
+      let startDate = Date.fromDateAndTime(shift.shift_date, time: startTime),
+      var endDate = Date.fromDateAndTime(shift.shift_date, time: endTime)
+    else {
+      return false
+    }
+
+    if endDate <= startDate {
+      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+    }
+
+    return date >= startDate && date < endDate
+  }
+}
+
 @MainActor
 final class TemporaryClockSessionStore {
   static let shared = TemporaryClockSessionStore()
@@ -233,31 +295,11 @@ final class ClockSessionReconciler {
   }
 
   private static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {
-    let startTime = String(shift.start_time.prefix(5))
-    let endTime = String(shift.end_time.prefix(5))
-
-    guard
-      let startDate = Date.fromDateAndTime(shift.shift_date, time: startTime),
-      var endDate = Date.fromDateAndTime(shift.shift_date, time: endTime)
-    else {
-      return false
-    }
-
-    if endDate <= startDate {
-      endDate =
-        Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: endDate) ?? endDate
-    }
-
-    return date >= startDate && date < endDate
+    ClockSessionRules.isShiftOngoing(shift, at: date)
   }
 
   private static func timeString(from date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = Date.localTimeZone
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    ClockSessionRules.timeString(from: date)
   }
 
   private static func hasExceededEndOfDayLimit(
@@ -265,13 +307,7 @@ final class ClockSessionReconciler {
   )
     -> Bool
   {
-    let calendar = Calendar.current
-    let startOfDay = calendar.startOfDay(for: session.startedAt)
-    guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)
-    else {
-      return false
-    }
-    return referenceDate > cutoff
+    ClockSessionRules.hasExceededEndOfDayLimit(session, at: referenceDate)
   }
 }
 
@@ -2227,13 +2263,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private func hasExceededEndOfDayLimit(_ session: TemporaryClockSession, at referenceDate: Date)
     -> Bool
   {
-    let calendar = Calendar.current
-    let startOfDay = calendar.startOfDay(for: session.startedAt)
-    guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)
-    else {
-      return false
-    }
-    return referenceDate > cutoff
+    ClockSessionRules.hasExceededEndOfDayLimit(session, at: referenceDate)
   }
 
   private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async
@@ -2274,12 +2304,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   // MARK: - Helper Methods
 
   private static func timeString(from date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = Date.localTimeZone
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    ClockSessionRules.timeString(from: date)
   }
 
   private static func minuteAligned(_ date: Date) -> Date {
@@ -2290,21 +2315,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   }
 
   private static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {
-    let startTime = String(shift.start_time.prefix(5))
-    let endTime = String(shift.end_time.prefix(5))
-
-    guard
-      let startDate = Date.fromDateAndTime(shift.shift_date, time: startTime),
-      var endDate = Date.fromDateAndTime(shift.shift_date, time: endTime)
-    else {
-      return false
-    }
-
-    if endDate <= startDate {
-      endDate = gregorianCalendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
-    }
-
-    return date >= startDate && date < endDate
+    ClockSessionRules.isShiftOngoing(shift, at: date)
   }
 
   private static func zeroShiftComputed(id: String) -> ShiftComputed {
