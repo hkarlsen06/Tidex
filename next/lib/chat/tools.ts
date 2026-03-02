@@ -166,6 +166,131 @@ export const manageSettingsSchema = z.object({
 export type ManageSettingsInput = z.infer<typeof manageSettingsSchema>;
 
 /**
+ * List Workplaces Tool Schema
+ */
+export const listWorkplacesSchema = z.object({
+  includeArchived: z.boolean().optional().default(false),
+});
+
+export type ListWorkplacesInput = z.infer<typeof listWorkplacesSchema>;
+
+/**
+ * Manage Workplace Tool Schema
+ */
+export const manageWorkplaceSchema = z.object({
+  action: z.enum([
+    "create",
+    "update",
+    "archive",
+    "unarchive",
+    "set_default",
+    "delete",
+  ]),
+  // Required for update/archive/unarchive/set_default/delete
+  jobId: z.string().uuid().optional(),
+  // Create/update fields
+  name: z.string().min(1).max(100).optional(),
+  color: z.union([z.string().regex(/^#[0-9a-fA-F]{6}$/), z.null()]).optional(),
+  payrollDay: z.number().int().min(1).max(31).optional(),
+  halfTaxMonth: z.union([z.literal(11), z.literal(12), z.null()]).optional(),
+  monthlyGoal: z.number().int().min(0).optional(),
+});
+
+export type ManageWorkplaceInput = z.infer<typeof manageWorkplaceSchema>;
+
+/**
+ * List Friends Tool Schema
+ */
+export const listFriendsSchema = z.object({
+  includeBlocked: z.boolean().optional().default(false),
+});
+
+export type ListFriendsInput = z.infer<typeof listFriendsSchema>;
+
+/**
+ * Manage Friend Sharing Tool Schema
+ */
+export const manageFriendSharingSchema = z.object({
+  action: z.enum([
+    "share_by_identifier",
+    "share_back",
+    "remove_recipient",
+    "toggle_recipient_earnings",
+    "block_sharer",
+    "unblock_sharer",
+    "set_sharer_muted",
+    "remove_sharer",
+  ]),
+  identifier: z.string().optional(),
+  friendId: z.string().uuid().optional(),
+  showEarnings: z.boolean().optional(),
+  muted: z.boolean().optional(),
+});
+
+export type ManageFriendSharingInput = z.infer<typeof manageFriendSharingSchema>;
+
+/**
+ * Query Friend Shifts Tool Schema
+ */
+export const queryFriendShiftsSchema = z.object({
+  friendId: z.string().uuid(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  limit: z.number().int().min(1).max(100).optional().default(30),
+  minTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  maxTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  weekdays: z.array(z.number().int().min(0).max(6)).optional(),
+  sortBy: z.enum(["date", "earnings", "hours"]).optional().default("date"),
+  jobId: z.string().uuid().optional(),
+});
+
+export type QueryFriendShiftsInput = z.infer<typeof queryFriendShiftsSchema>;
+
+/**
+ * Manage Shift Advanced Tool Schema
+ */
+export const manageShiftAdvancedSchema = z.object({
+  action: z.enum([
+    "copy_shifts",
+    "update_custom_supplements",
+    "convert_recurring_to_standalone",
+    "move_recurring_occurrence",
+    "clear_shift_snapshots",
+  ]),
+  shiftIds: z.array(z.string().min(1)).min(1).optional(),
+  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  shiftId: z.string().min(1).optional(),
+  customSupplements: z.any().optional(),
+  recurringId: shortOrFullId.optional(),
+  shiftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  sourceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+
+export type ManageShiftAdvancedInput = z.infer<typeof manageShiftAdvancedSchema>;
+
+/**
+ * Manage Feedback Tool Schema
+ */
+export const manageFeedbackSchema = z.object({
+  action: z.enum(["submit", "list"]),
+  message: z.string().optional(),
+});
+
+export type ManageFeedbackInput = z.infer<typeof manageFeedbackSchema>;
+
+/**
+ * Manage Profile Tool Schema
+ */
+export const manageProfileSchema = z.object({
+  action: z.enum(["view", "update_name"]),
+  firstName: z.string().max(100).optional(),
+});
+
+export type ManageProfileInput = z.infer<typeof manageProfileSchema>;
+
+/**
  * Get Wage Info Tool Schema
  * Returns user's complete wage configuration with temporal context
  */
@@ -1331,25 +1456,401 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
   // ---------------------------------------------------------------------------
   {
     name: "list_workplaces",
-    description: `List all workplaces (jobs) configured by the user.
+    description: `List workplaces (jobs) configured by the user.
 
-Returns each workplace with its id (UUID), name, color, and whether it is the default.
+By default, returns active workplaces only.
+Set includeArchived=true to also include archived workplaces.
+
+Returns each workplace with:
+- id (UUID)
+- name
+- color
+- isDefault
+- isArchived
+- archivedAt
 
 Use this tool when:
 - The user asks about their workplaces or jobs
 - You need a jobId to filter shifts/wages by workplace
 - You need to know which workplace is the default
+- You need to find archived workplaces before restoring them
 - Before creating a shift for a specific workplace
 
 Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_statistics, and manage_shift.`,
     input_schema: {
       type: "object",
-      properties: {},
+      properties: {
+        includeArchived: {
+          type: "boolean",
+          description: "Include archived workplaces in the result. Default: false",
+        },
+      },
     },
     input_examples: [
-      // List all workplaces
+      // List active workplaces
       {},
+      // List active + archived workplaces
+      { includeArchived: true },
     ],
+  },
+
+  {
+    name: "manage_workplace",
+    description: `Create, update, set default, archive, unarchive, or delete workplaces (jobs).
+
+Actions:
+- CREATE: action="create", name (required), optional color/payrollDay/halfTaxMonth/monthlyGoal
+- UPDATE: action="update", jobId (required), plus one or more fields to change
+- SET DEFAULT: action="set_default", jobId (required)
+- ARCHIVE: action="archive", jobId (required)
+- UNARCHIVE: action="unarchive", jobId (required)
+- DELETE: action="delete", jobId (required)
+
+Important:
+- To target an existing workplace, first call list_workplaces to get the jobId (UUID)
+- Archived workplaces cannot be used for new shifts until unarchived
+- Default workplaces cannot be archived or deleted
+- Last active workplace cannot be archived or deleted`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["create", "update", "set_default", "archive", "unarchive", "delete"],
+          description: "The operation to perform",
+        },
+        jobId: {
+          type: "string",
+          description: "Workplace/job UUID. Required for update, set_default, archive, unarchive, and delete",
+        },
+        name: {
+          type: "string",
+          description: "Workplace name (1-100 chars). Required for create",
+        },
+        color: {
+          type: ["string", "null"],
+          description: "Hex color like #22C55E, or null to clear",
+        },
+        payrollDay: {
+          type: "integer",
+          description: "Payroll day of month (1-31)",
+        },
+        halfTaxMonth: {
+          type: ["integer", "null"],
+          description: "Half-tax month (11 or 12), or null to disable",
+        },
+        monthlyGoal: {
+          type: "integer",
+          description: "Monthly goal amount (integer)",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [
+      {
+        action: "create",
+        name: "Cafe Nord",
+        color: "#22C55E",
+      },
+      {
+        action: "update",
+        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+        name: "Cafe Nord AS",
+      },
+      {
+        action: "set_default",
+        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+      },
+      {
+        action: "archive",
+        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+      },
+      {
+        action: "unarchive",
+        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+      },
+      {
+        action: "delete",
+        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+      },
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // FRIENDS & SHARING
+  // ---------------------------------------------------------------------------
+  {
+    name: "list_friends",
+    description: `List friends and sharing relationship status in both directions.
+
+Each friend includes:
+- id, name, email, phone
+- sharesWithMe: if they share shifts with me
+- blocked/showEarningsToMe: fields from sharer relation (or null)
+- iShareWith: if I share shifts with them
+
+Use includeBlocked=true to include blocked sharers.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        includeBlocked: {
+          type: "boolean",
+          description: "Include blocked sharers in results. Default: false",
+        },
+      },
+    },
+    input_examples: [{}, { includeBlocked: true }],
+  },
+
+  {
+    name: "manage_friend_sharing",
+    description: `Manage sharing relationships with friends.
+
+Actions:
+- share_by_identifier: identifier (email/phone), optional showEarnings
+- share_back: friendId
+- remove_recipient: friendId
+- toggle_recipient_earnings: friendId, showEarnings
+- block_sharer: friendId
+- unblock_sharer: friendId
+- set_sharer_muted: friendId, muted
+- remove_sharer: friendId
+
+Direction guardrails:
+- Recipient actions require iShareWith=true
+- Sharer actions require sharesWithMe=true`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: [
+            "share_by_identifier",
+            "share_back",
+            "remove_recipient",
+            "toggle_recipient_earnings",
+            "block_sharer",
+            "unblock_sharer",
+            "set_sharer_muted",
+            "remove_sharer",
+          ],
+          description: "The operation to perform",
+        },
+        identifier: {
+          type: "string",
+          description: "Email or phone number for share_by_identifier",
+        },
+        friendId: {
+          type: "string",
+          description: "Friend user ID (UUID)",
+        },
+        showEarnings: {
+          type: "boolean",
+          description: "Whether earnings are visible to recipient",
+        },
+        muted: {
+          type: "boolean",
+          description: "Mute notifications from this sharer",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [
+      { action: "share_by_identifier", identifier: "friend@example.com", showEarnings: false },
+      { action: "share_back", friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
+      { action: "toggle_recipient_earnings", friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809", showEarnings: true },
+    ],
+  },
+
+  {
+    name: "query_friend_shifts",
+    description: `Query shifts from a friend who shares with me.
+
+Access rules:
+- Friend must have sharesWithMe=true from list_friends
+- If blocked or no access, returns explicit no-access result
+
+Filters match query_shifts:
+- startDate/endDate (default current week)
+- minTime/maxTime
+- weekdays (0=Sun..6=Sat)
+- sortBy (date|earnings|hours)
+- jobId (friend workplace UUID)
+- limit (default 30, max 100)`,
+    input_schema: {
+      type: "object",
+      properties: {
+        friendId: {
+          type: "string",
+          description: "Friend user ID (UUID) that shares shifts with me",
+        },
+        startDate: {
+          type: "string",
+          description: "Start date (YYYY-MM-DD)",
+        },
+        endDate: {
+          type: "string",
+          description: "End date (YYYY-MM-DD)",
+        },
+        limit: {
+          type: "integer",
+          description: "Max shifts to return (default 30, max 100)",
+        },
+        minTime: {
+          type: "string",
+          description: "Only shifts starting at or after this time (HH:mm)",
+        },
+        maxTime: {
+          type: "string",
+          description: "Only shifts starting at or before this time (HH:mm)",
+        },
+        weekdays: {
+          type: "array",
+          items: { type: "integer" },
+          description: "Filter by weekday (0=Sun..6=Sat)",
+        },
+        sortBy: {
+          type: "string",
+          enum: ["date", "earnings", "hours"],
+          description: "Sort order (default: date)",
+        },
+        jobId: {
+          type: "string",
+          description: "Filter to a specific workplace/job of the friend",
+        },
+      },
+      required: ["friendId"],
+    },
+    input_examples: [
+      { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
+      { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809", startDate: "2026-03-01", endDate: "2026-03-31", sortBy: "hours" },
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // ADVANCED SHIFT OPERATIONS
+  // ---------------------------------------------------------------------------
+  {
+    name: "manage_shift_advanced",
+    description: `Advanced shift mutations.
+
+Actions:
+- copy_shifts: shiftIds[], targetDate
+- update_custom_supplements: shiftId, customSupplements, optional recurringId+shiftDate
+- convert_recurring_to_standalone: recurringId, shiftDate, startTime, endTime
+- move_recurring_occurrence: recurringId, sourceDate, targetDate, startTime, endTime
+- clear_shift_snapshots: shiftId`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: [
+            "copy_shifts",
+            "update_custom_supplements",
+            "convert_recurring_to_standalone",
+            "move_recurring_occurrence",
+            "clear_shift_snapshots",
+          ],
+          description: "The operation to perform",
+        },
+        shiftIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Shift IDs for copy_shifts",
+        },
+        targetDate: {
+          type: "string",
+          description: "Target date (YYYY-MM-DD) for copy/move",
+        },
+        shiftId: {
+          type: "string",
+          description: "Shift ID for update_custom_supplements or clear_shift_snapshots",
+        },
+        customSupplements: {
+          type: ["object", "null"],
+          description: "Custom supplements payload or null to clear",
+        },
+        recurringId: {
+          type: "string",
+          description: "Recurring shift ID for recurring actions",
+        },
+        shiftDate: {
+          type: "string",
+          description: "Shift date (YYYY-MM-DD) for recurring conversion",
+        },
+        sourceDate: {
+          type: "string",
+          description: "Source date (YYYY-MM-DD) for move_recurring_occurrence",
+        },
+        startTime: {
+          type: "string",
+          description: "Start time HH:mm",
+        },
+        endTime: {
+          type: "string",
+          description: "End time HH:mm",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [
+      { action: "copy_shifts", shiftIds: ["a1b2c"], targetDate: "2026-03-10" },
+      { action: "clear_shift_snapshots", shiftId: "a1b2c" },
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // FEEDBACK & PROFILE
+  // ---------------------------------------------------------------------------
+  {
+    name: "manage_feedback",
+    description: `Submit new feedback or list your previous feedback.
+
+Actions:
+- submit: message
+- list: no additional parameters`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["submit", "list"],
+          description: "The operation to perform",
+        },
+        message: {
+          type: "string",
+          description: "Feedback message for submit action",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [{ action: "submit", message: "Would love better weekend filters in stats." }, { action: "list" }],
+  },
+
+  {
+    name: "manage_profile",
+    description: `View profile basics or update first name.
+
+Actions:
+- view: returns low-risk profile fields (id, name, email, phone)
+- update_name: firstName`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["view", "update_name"],
+          description: "The operation to perform",
+        },
+        firstName: {
+          type: "string",
+          description: "New first name for update_name",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [{ action: "view" }, { action: "update_name", firstName: "Hjalmar" }],
   },
 ];
 
@@ -1366,10 +1867,17 @@ export type ToolName =
   | "manage_recurring_exclusion"
   | "get_statistics"
   | "manage_settings"
+  | "manage_workplace"
   | "get_wage_info"
   | "manage_wage_snapshots"
   | "calculate_earnings"
-  | "list_workplaces";
+  | "list_workplaces"
+  | "list_friends"
+  | "manage_friend_sharing"
+  | "query_friend_shifts"
+  | "manage_shift_advanced"
+  | "manage_feedback"
+  | "manage_profile";
 
 /**
  * Tool result type
