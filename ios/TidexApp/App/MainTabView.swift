@@ -248,7 +248,13 @@ struct MainTabView: View {
       NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
     ) { _ in
       // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
-      if selectedTab == .shifts && !showListView {
+      if selectedTab == .shifts
+        && !showListView
+        && !showScreenshotPrompt
+        && !showFeedbackSheet
+        && !showAdminFeedbackSheet
+        && !showWageySheet
+      {
         showScreenshotPrompt = true
       }
     }

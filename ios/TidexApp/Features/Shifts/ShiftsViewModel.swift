@@ -4,6 +4,9 @@ import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsViewModel")
+private let monthNameFormatter = FormatterCache.monthNameFormatter()
+private let isoDateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
+private let hourMinuteFormatter = FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone)
 
 // MARK: - Week Group
 
@@ -90,6 +93,17 @@ private struct SelectionSummary {
   let hasTaxEnabled: Bool
 }
 
+private struct MonthComputationInput {
+  let year: Int
+  let month: Int
+  let shifts: [ShiftRow]
+  let recurringShifts: [RecurringShiftRow]
+  let snapshots: [WageSnapshot]
+  let settings: UserSettings
+  let visibleRange: (start: Date, end: Date)
+  let jobs: [Job]
+}
+
 // MARK: - Shifts View Model
 
 @MainActor
@@ -149,14 +163,12 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   /// Computed month name for immediate display (uses committed state for stability)
   var displayMonthName: String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "MMMM"
     var components = DateComponents()
     components.year = committedYear
     components.month = committedMonth
     components.day = 1
     if let date = Calendar.current.date(from: components) {
-      return formatter.string(from: date)
+      return monthNameFormatter.string(from: date)
     }
     return ""
   }
@@ -462,9 +474,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     logger.info("Deep linking to shift date: \(shiftDateString)")
 
     // Parse the shift date (format: "yyyy-MM-dd")
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    guard let shiftDate = formatter.date(from: shiftDateString) else {
+    guard let shiftDate = isoDateFormatter.date(from: shiftDateString) else {
       logger.warning("Failed to parse shift date: \(shiftDateString)")
       return
     }
@@ -586,15 +596,20 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isDeleting = true
 
     do {
-      for shift in shiftsToDelete {
-        if shift.isVirtual, let recurringId = shift.shift.recurring_id {
+      let virtualShifts = shiftsToDelete.filter(\.isVirtual)
+      let regularShiftIds = shiftsToDelete.filter { !$0.isVirtual }.map(\.id)
+
+      for shift in virtualShifts {
+        if let recurringId = shift.shift.recurring_id {
           try await RecurringShiftsRepository.shared.addExclusion(
             id: recurringId,
             date: shift.shiftDate
           )
-        } else {
-          try await ShiftsRepository.shared.deleteShift(id: shift.id)
         }
+      }
+
+      if !regularShiftIds.isEmpty {
+        try await shiftsRepository.deleteShifts(ids: regularShiftIds)
       }
 
       clearSelection()
@@ -1198,7 +1213,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
       // Load shifts for the full visible calendar range (so out-of-month days show shift data)
-      let displayShifts = shiftsRepository.getShifts(
+      let displayShifts = await shiftsRepository.getShiftsOffMain(
         for: userId,
         startDate: visibleRange.start,
         endDate: visibleRange.end
@@ -1213,19 +1228,22 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         return
       }
 
-      // Compute shifts with payroll using PayrollEngine (include visible range for virtual shifts)
-      let computedShifts = PayrollEngine.computeShiftsForMonth(
-        .init(
+      let recurringSnapshot = recurringShifts
+      let snapshotsSnapshot = snapshots
+      let activeJobsSnapshot = activeJobs
+      let computedShifts = try await Self.computeShiftsForMonthOffMain(
+        MonthComputationInput(
           year: displayYM.year,
           month: displayYM.month,
           shifts: displayShifts,
-          recurring: recurringShifts,
-          snapshots: snapshots,
+          recurringShifts: recurringSnapshot,
+          snapshots: snapshotsSnapshot,
           settings: currentSettings,
           visibleRange: visibleRange,
-          jobs: activeJobs
+          jobs: activeJobsSnapshot
         )
       )
+      try Task.checkCancellation()
 
       // Cache the computed results
       let displayKey = "\(displayYM.year)-\(displayYM.month)"
@@ -1323,7 +1341,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
       // Load shifts for the full visible calendar range (so out-of-month days show shift data)
-      let displayShifts = shiftsRepository.getShifts(
+      let displayShifts = await shiftsRepository.getShiftsOffMain(
         for: userId,
         startDate: visibleRange.start,
         endDate: visibleRange.end
@@ -1336,19 +1354,22 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         return
       }
 
-      // Compute shifts with payroll (include visible range for virtual shifts)
-      let computedShifts = PayrollEngine.computeShiftsForMonth(
-        .init(
+      let recurringSnapshot = recurringShifts
+      let snapshotsSnapshot = snapshots
+      let activeJobsSnapshot = activeJobs
+      let computedShifts = try await Self.computeShiftsForMonthOffMain(
+        MonthComputationInput(
           year: displayYM.year,
           month: displayYM.month,
           shifts: displayShifts,
-          recurring: recurringShifts,
-          snapshots: snapshots,
+          recurringShifts: recurringSnapshot,
+          snapshots: snapshotsSnapshot,
           settings: currentSettings,
           visibleRange: visibleRange,
-          jobs: activeJobs
+          jobs: activeJobsSnapshot
         )
       )
+      try Task.checkCancellation()
 
       // Cache the computed results
       let displayKey = "\(displayYM.year)-\(displayYM.month)"
@@ -1449,9 +1470,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   }
 
   private func parseTime(_ time: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.date(from: String(time.prefix(5)))
+    hourMinuteFormatter.date(from: String(time.prefix(5)))
   }
 
   // MARK: - Conflict Detection
@@ -1510,10 +1529,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.insert(key)
 
     Task {
+      defer { prefetchTasks.remove(key) }
+
       guard let userId = cachedUserId,
         let currentSettings = self.settings
       else {
-        prefetchTasks.remove(key)
         return
       }
 
@@ -1521,39 +1541,81 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       let visibleRange = Date.visibleCalendarRange(year: year, month: month)
 
       // Read shifts for the full visible calendar range
-      let fetchedShifts = shiftsRepository.getShifts(
+      let fetchedShifts = await shiftsRepository.getShiftsOffMain(
         for: userId,
         startDate: visibleRange.start,
         endDate: visibleRange.end
       )
 
-      // Compute payroll upfront for instant navigation (include visible range for virtual shifts)
-      let computedShifts = PayrollEngine.computeShiftsForMonth(
-        .init(
+      let recurringSnapshot = self.recurringShifts
+      let snapshotsSnapshot = self.snapshots
+      let activeJobsSnapshot = self.activeJobs
+
+      do {
+        let computedShifts = try await Self.computeShiftsForMonthOffMain(
+          MonthComputationInput(
+            year: year,
+            month: month,
+            shifts: fetchedShifts,
+            recurringShifts: recurringSnapshot,
+            snapshots: snapshotsSnapshot,
+            settings: currentSettings,
+            visibleRange: visibleRange,
+            jobs: activeJobsSnapshot
+          )
+        )
+
+        guard !Task.isCancelled else {
+          logger.info("⏭️ Prefetch cancelled for \(key)")
+          return
+        }
+
+        // Store in full computed cache
+        self.monthCache[key] = MonthCacheEntry(
           year: year,
           month: month,
-          shifts: fetchedShifts,
-          recurring: self.recurringShifts,
-          snapshots: self.snapshots,
-          settings: currentSettings,
-          visibleRange: visibleRange,
-          jobs: self.activeJobs
+          shifts: computedShifts,
+          timestamp: Date()
+        )
+
+        // Evict old entries if needed
+        self.evictCacheIfNeeded()
+
+        logger.info("📦 Prefetched \(key): \(computedShifts.count) shifts (with payroll)")
+      } catch is CancellationError {
+        logger.info("⏭️ Prefetch cancelled for \(key)")
+      } catch {
+        logger.error("❌ Prefetch failed for \(key): \(error.localizedDescription)")
+      }
+    }
+  }
+
+  private nonisolated static func computeShiftsForMonthOffMain(
+    _ input: MonthComputationInput
+  ) async throws -> [ShiftWithComputations] {
+    try Task.checkCancellation()
+
+    let computeTask = Task.detached(priority: .userInitiated) {
+      try Task.checkCancellation()
+      return PayrollEngine.computeShiftsForMonth(
+        .init(
+          year: input.year,
+          month: input.month,
+          shifts: input.shifts,
+          recurring: input.recurringShifts,
+          snapshots: input.snapshots,
+          settings: input.settings,
+          visibleRange: input.visibleRange,
+          jobs: input.jobs
         )
       )
+    }
 
-      // Store in full computed cache
-      self.monthCache[key] = MonthCacheEntry(
-        year: year,
-        month: month,
-        shifts: computedShifts,
-        timestamp: Date()
-      )
-      self.prefetchTasks.remove(key)
-
-      // Evict old entries if needed
-      self.evictCacheIfNeeded()
-
-      logger.info("📦 Prefetched \(key): \(computedShifts.count) shifts (with payroll)")
+    do {
+      return try await computeTask.value
+    } catch {
+      computeTask.cancel()
+      throw error
     }
   }
 

@@ -245,6 +245,13 @@ final class ProfileSettingsViewModel: ObservableObject {
   // MARK: - Avatar Upload
 
   private let storageBucket = "profile-pictures"
+  nonisolated private static let avatarCompressionQuality: CGFloat = 0.8
+
+  private struct PreparedAvatarUpload: Sendable {
+    let data: Data
+    let contentType: String
+    let fileExtension: String
+  }
 
   /// Extract storage path from a public URL
   /// e.g. "https://xxx.supabase.co/storage/v1/object/public/profile-pictures/user-id/file.jpg"
@@ -270,7 +277,10 @@ final class ProfileSettingsViewModel: ObservableObject {
   /// Convert image data to WebP format for smaller file sizes
   /// - Parameter imageData: Source image data (JPEG, PNG, etc.)
   /// - Returns: WebP data or nil if conversion fails
-  private func convertToWebP(_ imageData: Data, quality: CGFloat = 0.8) -> Data? {
+  private nonisolated static func convertToWebP(
+    _ imageData: Data,
+    quality: CGFloat = avatarCompressionQuality
+  ) -> Data? {
     guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
       let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
     else {
@@ -314,7 +324,10 @@ final class ProfileSettingsViewModel: ObservableObject {
 
   /// Convert image data to HEIC format (fallback when WebP unavailable)
   /// HEIC offers ~50% smaller files than JPEG with similar quality
-  private func convertToHEIC(_ imageData: Data, quality: CGFloat = 0.8) -> Data? {
+  private nonisolated static func convertToHEIC(
+    _ imageData: Data,
+    quality: CGFloat = avatarCompressionQuality
+  ) -> Data? {
     guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
       let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
     else {
@@ -348,6 +361,36 @@ final class ProfileSettingsViewModel: ObservableObject {
     return heicData as Data
   }
 
+  /// Prepare image bytes for upload off the main actor.
+  /// Keeps UI responsive while running expensive image encoding.
+  private nonisolated static func prepareAvatarUpload(_ imageData: Data) async
+    -> PreparedAvatarUpload
+  {
+    await Task.detached(priority: .userInitiated) {
+      if let webpData = convertToWebP(imageData, quality: avatarCompressionQuality) {
+        return PreparedAvatarUpload(
+          data: webpData,
+          contentType: "image/webp",
+          fileExtension: "webp"
+        )
+      } else if let heicData = convertToHEIC(imageData, quality: avatarCompressionQuality) {
+        // HEIC fallback - ~50% smaller than JPEG, supported since iOS 11
+        return PreparedAvatarUpload(
+          data: heicData,
+          contentType: "image/heic",
+          fileExtension: "heic"
+        )
+      } else {
+        // Final fallback to JPEG
+        return PreparedAvatarUpload(
+          data: imageData,
+          contentType: "image/jpeg",
+          fileExtension: "jpg"
+        )
+      }
+    }.value
+  }
+
   /// Upload a new profile picture directly to Supabase Storage
   /// - Parameter imageData: The image data to upload (will be converted to WebP)
   func uploadProfilePicture(_ imageData: Data) async {
@@ -368,40 +411,22 @@ final class ProfileSettingsViewModel: ObservableObject {
         }
       }
 
-      // Convert to modern format for smaller file size
-      // Priority: WebP > HEIC > JPEG
-      let uploadData: Data
-      let contentType: String
-      let fileExtension: String
-
-      if let webpData = convertToWebP(imageData, quality: 0.8) {
-        uploadData = webpData
-        contentType = "image/webp"
-        fileExtension = "webp"
-      } else if let heicData = convertToHEIC(imageData, quality: 0.8) {
-        // HEIC fallback - ~50% smaller than JPEG, supported since iOS 11
-        uploadData = heicData
-        contentType = "image/heic"
-        fileExtension = "heic"
-      } else {
-        // Final fallback to JPEG
-        uploadData = imageData
-        contentType = "image/jpeg"
-        fileExtension = "jpg"
-      }
+      // Convert to modern format for smaller file size off-main.
+      // Priority: WebP > HEIC > JPEG.
+      let preparedUpload = await Self.prepareAvatarUpload(imageData)
 
       // Generate unique filename
-      let filename = "\(currentUserId)/\(UUID().uuidString).\(fileExtension)"
+      let filename = "\(currentUserId)/\(UUID().uuidString).\(preparedUpload.fileExtension)"
 
       // Upload directly to Supabase Storage
       try await supabase.storage
         .from(storageBucket)
         .upload(
           filename,
-          data: uploadData,
+          data: preparedUpload.data,
           options: FileOptions(
             cacheControl: "3600",
-            contentType: contentType,
+            contentType: preparedUpload.contentType,
             upsert: true
           )
         )

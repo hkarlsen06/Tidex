@@ -146,6 +146,23 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   private var lastObservedMonth: Int = 0
   private var selectedSharerLoadTask: Task<Void, Never>?
   private var inFlightRequestKey: String?
+  private var userShiftsComputationGeneration: UInt64 = 0
+
+  private struct UserShiftComputationInput {
+    let userId: String
+    let year: Int
+    let month: Int
+    let shifts: [ShiftRow]
+    let recurringShifts: [RecurringShiftRow]
+    let settings: UserSettings
+    let snapshots: [WageSnapshot]
+    let jobs: [Job]
+  }
+
+  private struct UserShiftComputationResult {
+    let shifts: [ShiftRow]
+    let earningsByDate: [String: CalendarEarningsData]
+  }
 
   // MARK: - Initialization
 
@@ -567,7 +584,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         logger.info("Discarding stale shared shift result for \(year)-\(month)")
       } else {
         // Convert to ShiftWithComputations
-        let freshShifts = response.shifts.map { $0.toShiftWithComputations() }
+        let freshShifts = await Self.convertSharedShiftsOffMain(response.shifts)
 
         // ATOMIC UPDATE: Set shifts and committed state together
         // This ensures the calendar structure and data update in the same render pass
@@ -603,7 +620,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     if let userId = cachedUserId {
-      loadUserShifts(for: userId, year: committedYear, month: committedMonth)
+      await loadUserShifts(for: userId, year: committedYear, month: committedMonth)
     } else {
       await loadUserShiftsForMonth()
     }
@@ -624,11 +641,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       return
     }
 
-    loadUserShifts(for: userId, year: committedYear, month: committedMonth)
+    await loadUserShifts(for: userId, year: committedYear, month: committedMonth)
   }
 
   /// Load user's own shifts for a specific month from local repositories.
-  private func loadUserShifts(for userId: String, year: Int, month: Int) {
+  private func loadUserShifts(for userId: String, year: Int, month: Int) async {
 
     // Calculate date range for the month
     var components = DateComponents()
@@ -645,55 +662,47 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       return
     }
 
-    // Fetch user's real shifts from local repository
-    var allShifts = ShiftsRepository.shared.getShifts(
+    // Fetch user's real shifts from local repositories
+    let shifts = ShiftsRepository.shared.getShifts(
       for: userId,
       startDate: startDate,
       endDate: endDate
     )
-
-    // Get recurring shifts and generate virtual shifts
     let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
-    // Track real shifts by date+time to detect duplicates from materialized recurring shifts
-    let realShiftKeys = Set(allShifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" })
 
-    for recurring in recurringShifts {
-      let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-        year: year,
-        month: month,
-        recurring: recurring
-      )
-
-      for virtual in virtualShifts {
-        // Skip if a real shift with matching times exists (materialized recurring shift)
-        let key = "\(virtual.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
-        if realShiftKeys.contains(key) { continue }
-
-        // Create virtual shift row with times from recurring pattern
-        let virtualRow = ShiftRow(
-          id: "virtual-\(recurring.id)-\(virtual.date)",
-          user_id: recurring.user_id,
-          shift_date: virtual.date,
-          start_time: recurring.cleanStartTime,
-          end_time: recurring.cleanEndTime,
-          custom_supplements: recurring.date_specific_supplements?[virtual.date],
-          created_at: nil,
-          recurring_id: recurring.id,
-          recurring_anchor_weekday: virtual.weekday
-        )
-        allShifts.append(virtualRow)
-      }
+    guard
+      let settings = SettingsRepository.shared.getSettings(for: userId)
+    else {
+      userShiftsForMonth = shifts
+      userEarningsByDate = [:]
+      return
     }
 
-    userShiftsForMonth = allShifts
-    userEarningsByDate = calculateUserEarningsByDate(
-      userId: userId,
-      shifts: allShifts,
-      year: year,
-      month: month
+    let snapshots = SnapshotsRepository.shared.getSnapshots(for: userId)
+    let jobs = JobsRepository.shared.getNonDeletedJobs(for: userId)
+
+    userShiftsComputationGeneration &+= 1
+    let generation = userShiftsComputationGeneration
+
+    let result = await Self.computeUserShiftsForMonthOffMain(
+      .init(
+        userId: userId,
+        year: year,
+        month: month,
+        shifts: shifts,
+        recurringShifts: recurringShifts,
+        settings: settings,
+        snapshots: snapshots,
+        jobs: jobs
+      )
     )
+
+    guard generation == userShiftsComputationGeneration else { return }
+
+    userShiftsForMonth = result.shifts
+    userEarningsByDate = result.earningsByDate
     logger.info(
-      "Loaded \(allShifts.count) user shifts for superimpose (\(year)-\(month)) - includes virtual shifts"
+      "Loaded \(result.shifts.count) user shifts for superimpose (\(year)-\(month)) - includes virtual shifts"
     )
   }
 
@@ -784,17 +793,72 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Private Methods
 
-  private func calculateUserEarningsByDate(
-    userId: String,
+  private nonisolated static func convertSharedShiftsOffMain(_ shifts: [SharedShiftData]) async
+    -> [ShiftWithComputations]
+  {
+    await Task.detached(priority: .userInitiated) {
+      shifts.map { $0.toShiftWithComputations() }
+    }.value
+  }
+
+  private nonisolated static func computeUserShiftsForMonthOffMain(
+    _ input: UserShiftComputationInput
+  ) async -> UserShiftComputationResult {
+    await Task.detached(priority: .userInitiated) {
+      var allShifts = input.shifts
+      let realShiftKeys = Set(
+        input.shifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" }
+      )
+
+      for recurring in input.recurringShifts {
+        let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+          year: input.year,
+          month: input.month,
+          recurring: recurring
+        )
+
+        for virtual in virtualShifts {
+          let key = "\(virtual.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
+          if realShiftKeys.contains(key) { continue }
+
+          allShifts.append(
+            ShiftRow(
+              id: "virtual-\(recurring.id)-\(virtual.date)",
+              user_id: recurring.user_id,
+              shift_date: virtual.date,
+              start_time: recurring.cleanStartTime,
+              end_time: recurring.cleanEndTime,
+              custom_supplements: recurring.date_specific_supplements?[virtual.date],
+              created_at: nil,
+              recurring_id: recurring.id,
+              recurring_anchor_weekday: virtual.weekday
+            )
+          )
+        }
+      }
+
+      let earningsByDate = Self.calculateUserEarningsByDate(
+        shifts: allShifts,
+        year: input.year,
+        month: input.month,
+        settings: input.settings,
+        snapshots: input.snapshots,
+        jobs: input.jobs
+      )
+
+      return UserShiftComputationResult(shifts: allShifts, earningsByDate: earningsByDate)
+    }.value
+  }
+
+  private nonisolated static func calculateUserEarningsByDate(
     shifts: [ShiftRow],
     year: Int,
-    month: Int
+    month: Int,
+    settings: UserSettings,
+    snapshots: [WageSnapshot],
+    jobs: [Job]
   ) -> [String: CalendarEarningsData] {
     guard !shifts.isEmpty else { return [:] }
-
-    let settings = SettingsRepository.shared.getSettings(for: userId)
-    let snapshots = SnapshotsRepository.shared.getSnapshots(for: userId)
-    let jobs = JobsRepository.shared.getNonDeletedJobs(for: userId)
 
     let computedShifts = PayrollEngine.computeShiftsForMonth(
       .init(

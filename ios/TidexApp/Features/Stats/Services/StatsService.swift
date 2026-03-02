@@ -4,6 +4,31 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "StatsService")
 
+private struct FullYearCacheKey: Hashable {
+  let userId: String
+  let year: Int
+  let jobId: String
+  let settingsFingerprint: Int
+  let snapshotsFingerprint: Int
+  let recurringFingerprint: Int
+  let jobsFingerprint: Int
+  let shiftsFingerprint: Int
+}
+
+private struct FullYearComputedData {
+  let shifts: [ShiftWithComputations]
+  let includedShifts: [ShiftWithComputations]
+}
+
+private struct StatsComputationResult {
+  let statsData: StatsData
+  let currentShiftCount: Int
+  let excludedShiftCount: Int
+  let currentHours: Double
+  let currentGross: Double
+  let fullYearCacheData: FullYearComputedData?
+}
+
 // MARK: - Stats Service
 
 /// Service for computing stats locally from on-device data
@@ -29,6 +54,7 @@ final class StatsService: ObservableObject {
   // MARK: - Private State
 
   private var cachedUserId: String?
+  private var fullYearCache: [FullYearCacheKey: FullYearComputedData] = [:]
 
   // MARK: - Initialization
 
@@ -98,6 +124,9 @@ final class StatsService: ObservableObject {
         year: previousYM.year, month: previousYM.month)
       let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
 
+      let yearStartDate = Date.firstDayOfMonthDate(year: targetYear, month: 1)
+      let yearEndDate = Date.lastDayOfMonthDate(year: targetYear, month: 12)
+
       // Load shifts from local repositories
       let currentMonthShiftsRaw = shiftsRepository.getShifts(
         for: userId,
@@ -111,210 +140,266 @@ final class StatsService: ObservableObject {
         endDate: previousEndDate,
         jobId: jobId
       )
-
-      // Compute shifts with payroll using PayrollEngine
-      let currentMonthShifts = PayrollEngine.computeShiftsForMonth(
-        .init(
-          year: currentYM.year,
-          month: currentYM.month,
-          shifts: currentMonthShiftsRaw,
-          recurring: recurringShifts,
-          snapshots: snapshots,
-          settings: settings,
-          jobs: jobs
-        )
+      let yearShiftsRaw = shiftsRepository.getShifts(
+        for: userId,
+        startDate: yearStartDate,
+        endDate: yearEndDate,
+        jobId: jobId
       )
 
-      let previousMonthShifts = PayrollEngine.computeShiftsForMonth(
-        .init(
-          year: previousYM.year,
-          month: previousYM.month,
-          shifts: previousMonthShiftsRaw,
-          recurring: recurringShifts,
-          snapshots: snapshots,
-          settings: settings,
-          jobs: jobs
-        )
+      // Build a deterministic fingerprint so we only recompute full-year data when inputs changed.
+      let cacheKey = FullYearCacheKey(
+        userId: userId,
+        year: targetYear,
+        jobId: jobId ?? "__all__",
+        settingsFingerprint: Self.fingerprintSettingsForCaching(settings),
+        snapshotsFingerprint: Self.fingerprintSnapshotsForCaching(snapshots),
+        recurringFingerprint: Self.fingerprintRecurringShiftsForCaching(recurringShifts),
+        jobsFingerprint: Self.fingerprintJobsForCaching(jobs),
+        shiftsFingerprint: Self.fingerprintShiftsForCaching(yearShiftsRaw)
       )
+      let cachedFullYearData = fullYearCache[cacheKey]
 
-      // Partition shifts once with centralized conflict exclusion
-      let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)
-      let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)
-      let currentMonthIncluded = currentMonthPartition.includedShifts
-      let previousMonthIncluded = previousMonthPartition.includedShifts
+      try Task.checkCancellation()
 
-      // Compute all shifts for the year (for employment calculation)
-      // We need paidHours for each shift, so we compute them month by month
-      var fullYearShifts: [ShiftWithComputations] = []
-      for month in 1...12 {
-        let monthStart = Date.firstDayOfMonthDate(year: targetYear, month: month)
-        let monthEnd = Date.lastDayOfMonthDate(year: targetYear, month: month)
-        let monthShiftsRaw = shiftsRepository.getShifts(
-          for: userId,
-          startDate: monthStart,
-          endDate: monthEnd,
-          jobId: jobId
-        )
-        let computedShifts = PayrollEngine.computeShiftsForMonth(
+      let computeTask = Task.detached(priority: .userInitiated) {
+        try Task.checkCancellation()
+
+        let currentMonthShifts = PayrollEngine.computeShiftsForMonth(
           .init(
-            year: targetYear,
-            month: month,
-            shifts: monthShiftsRaw,
+            year: currentYM.year,
+            month: currentYM.month,
+            shifts: currentMonthShiftsRaw,
             recurring: recurringShifts,
             snapshots: snapshots,
             settings: settings,
             jobs: jobs
           )
         )
-        fullYearShifts.append(contentsOf: computedShifts)
-      }
 
-      // Get totals using PayrollEngine with centralized exclusion IDs
-      let halfTaxMonth = settings.half_tax_month
-      let currentTotals = PayrollEngine.summarizeShiftTotals(
-        shifts: currentMonthShifts,
-        excludedShiftIds: currentMonthPartition.analysis.excludedIds,
-        halfTaxMonth: halfTaxMonth,
-        earningsMonth: currentYM.month,
-        now: now
-      )
-      let previousTotals = PayrollEngine.summarizeShiftTotals(
-        shifts: previousMonthShifts,
-        excludedShiftIds: previousMonthPartition.analysis.excludedIds,
-        halfTaxMonth: halfTaxMonth,
-        earningsMonth: previousYM.month,
-        now: now
-      )
-
-      // Calculate total hours (using filtered shifts that exclude conflicts)
-      let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }
-      let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }
-
-      // Get tax settings from first shift or snapshots
-      let taxEnabled = currentMonthShifts.first?.taxEnabled ?? false
-      let taxPercentage = currentMonthShifts.first?.taxPercentage ?? 0
-
-      // Calculate percentage change
-      let percentageChange: Double?
-      if previousTotals.gross > 0 {
-        percentageChange =
-          ((currentTotals.gross - previousTotals.gross) / previousTotals.gross) * 100
-      } else if currentTotals.gross > 0 {
-        percentageChange = nil  // Can't compute meaningful change from zero
-      } else {
-        percentageChange = nil
-      }
-
-      // Build monthly goal
-      let monthlyGoal: MonthlyGoal
-      if let goalTarget = settings.effectiveMonthlyGoal(year: targetYear, month: targetMonth),
-        goalTarget > 0
-      {
-        let progress = currentTotals.net
-        let percentage = (progress / Double(goalTarget)) * 100
-        let remaining = max(Double(goalTarget) - progress, 0)
-        monthlyGoal = MonthlyGoal(
-          enabled: true,
-          target: Double(goalTarget),
-          progress: progress,
-          percentage: percentage,
-          remaining: remaining
+        let previousMonthShifts = PayrollEngine.computeShiftsForMonth(
+          .init(
+            year: previousYM.year,
+            month: previousYM.month,
+            shifts: previousMonthShiftsRaw,
+            recurring: recurringShifts,
+            snapshots: snapshots,
+            settings: settings,
+            jobs: jobs
+          )
         )
-      } else {
-        monthlyGoal = MonthlyGoal(
-          enabled: false,
-          target: 0,
-          progress: 0,
-          percentage: 0,
-          remaining: 0
-        )
-      }
 
-      // Build cumulative data for progress chart (using filtered shifts for earnings)
-      let cumulativeData = buildCumulativeData(
-        currentMonthShifts: currentMonthIncluded,
-        previousMonthShifts: previousMonthIncluded,
-        targetYear: targetYear,
-        targetMonth: targetMonth,
-        previousYear: previousYM.year,
-        previousMonth: previousYM.month,
-        now: now
-      )
+        let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)
+        let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)
+        let currentMonthIncluded = currentMonthPartition.includedShifts
+        let previousMonthIncluded = previousMonthPartition.includedShifts
 
-      // Determine if viewing current month
-      let isCurrentMonth =
-        targetYear == calendar.component(.year, from: now)
-        && targetMonth == calendar.component(.month, from: now)
+        let fullYearData: FullYearComputedData
+        let newFullYearCacheData: FullYearComputedData?
+        if let cachedFullYearData {
+          fullYearData = cachedFullYearData
+          newFullYearCacheData = nil
+        } else {
+          let shiftsByMonth = Dictionary(grouping: yearShiftsRaw) { shift in
+            Self.monthNumber(fromISODate: shift.shift_date)
+          }
 
-      // Build weekly data (using filtered shifts for earnings)
-      let thisWeek: [DailyData]?
-      let bestWeek: BestWeekData?
+          var fullYearShifts: [ShiftWithComputations] = []
+          fullYearShifts.reserveCapacity(max(yearShiftsRaw.count, 64))
 
-      if isCurrentMonth {
-        // Current month: show this week (Mon-Sun)
-        thisWeek = buildThisWeekData(
-          shifts: currentMonthIncluded,
+          for month in 1...12 {
+            try Task.checkCancellation()
+            let monthShiftsRaw = shiftsByMonth[month] ?? []
+            let computedShifts = PayrollEngine.computeShiftsForMonth(
+              .init(
+                year: targetYear,
+                month: month,
+                shifts: monthShiftsRaw,
+                recurring: recurringShifts,
+                snapshots: snapshots,
+                settings: settings,
+                jobs: jobs
+              )
+            )
+            fullYearShifts.append(contentsOf: computedShifts)
+          }
+
+          let fullYearIncluded = ConflictExclusion.partition(shifts: fullYearShifts).includedShifts
+          let computedData = FullYearComputedData(
+            shifts: fullYearShifts,
+            includedShifts: fullYearIncluded
+          )
+          fullYearData = computedData
+          newFullYearCacheData = computedData
+        }
+
+        // Get totals using PayrollEngine with centralized exclusion IDs
+        let halfTaxMonth = settings.half_tax_month
+        let currentTotals = PayrollEngine.summarizeShiftTotals(
+          shifts: currentMonthShifts,
+          excludedShiftIds: currentMonthPartition.analysis.excludedIds,
+          halfTaxMonth: halfTaxMonth,
+          earningsMonth: currentYM.month,
           now: now
         )
-        bestWeek = nil
-      } else {
-        // Past month: show best week
-        thisWeek = nil
-        bestWeek = buildBestWeekData(
-          shifts: currentMonthIncluded,
+        let previousTotals = PayrollEngine.summarizeShiftTotals(
+          shifts: previousMonthShifts,
+          excludedShiftIds: previousMonthPartition.analysis.excludedIds,
+          halfTaxMonth: halfTaxMonth,
+          earningsMonth: previousYM.month,
+          now: now
+        )
+
+        // Calculate total hours (using filtered shifts that exclude conflicts)
+        let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }
+        let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }
+
+        // Get tax settings from first shift or snapshots
+        let taxEnabled = currentMonthShifts.first?.taxEnabled ?? false
+        let taxPercentage = currentMonthShifts.first?.taxPercentage ?? 0
+
+        // Calculate percentage change
+        let percentageChange: Double?
+        if previousTotals.gross > 0 {
+          percentageChange =
+            ((currentTotals.gross - previousTotals.gross) / previousTotals.gross) * 100
+        } else if currentTotals.gross > 0 {
+          percentageChange = nil  // Can't compute meaningful change from zero
+        } else {
+          percentageChange = nil
+        }
+
+        // Build monthly goal
+        let monthlyGoal: MonthlyGoal
+        if let goalTarget = settings.effectiveMonthlyGoal(year: targetYear, month: targetMonth),
+          goalTarget > 0
+        {
+          let progress = currentTotals.net
+          let percentage = (progress / Double(goalTarget)) * 100
+          let remaining = max(Double(goalTarget) - progress, 0)
+          monthlyGoal = MonthlyGoal(
+            enabled: true,
+            target: Double(goalTarget),
+            progress: progress,
+            percentage: percentage,
+            remaining: remaining
+          )
+        } else {
+          monthlyGoal = MonthlyGoal(
+            enabled: false,
+            target: 0,
+            progress: 0,
+            percentage: 0,
+            remaining: 0
+          )
+        }
+
+        // Build cumulative data for progress chart (using filtered shifts for earnings)
+        let cumulativeData = Self.buildCumulativeData(
+          currentMonthShifts: currentMonthIncluded,
+          previousMonthShifts: previousMonthIncluded,
+          targetYear: targetYear,
+          targetMonth: targetMonth,
+          previousYear: previousYM.year,
+          previousMonth: previousYM.month,
+          now: now
+        )
+
+        // Determine if viewing current month
+        let isCurrentMonth =
+          targetYear == calendar.component(.year, from: now)
+          && targetMonth == calendar.component(.month, from: now)
+
+        // Build weekly data (using filtered shifts for earnings)
+        let thisWeek: [DailyData]?
+        let bestWeek: BestWeekData?
+
+        if isCurrentMonth {
+          thisWeek = Self.buildThisWeekData(
+            shifts: currentMonthIncluded,
+            now: now
+          )
+          bestWeek = nil
+        } else {
+          thisWeek = nil
+          bestWeek = Self.buildBestWeekData(
+            shifts: currentMonthIncluded,
+            focusYear: targetYear,
+            focusMonth: targetMonth
+          )
+        }
+
+        // Build employment data for the focus year (uses all shifts for hours worked)
+        let employmentData = Self.buildEmploymentData(
           focusYear: targetYear,
-          focusMonth: targetMonth
+          shifts: fullYearData.shifts,
+          snapshots: snapshots
+        )
+
+        let yearlyIncomeData = Self.buildYearlyIncomeData(
+          focusYear: targetYear,
+          shifts: fullYearData.includedShifts
+        )
+
+        let statsData = StatsData(
+          focusMonth: FocusMonth(year: targetYear, month: targetMonth),
+          tax: TaxSettings(enabled: taxEnabled, percentage: taxPercentage),
+          currentMonth: MonthStats(
+            totalEarnings: currentTotals.gross,
+            totalEarningsNet: currentTotals.net,
+            totalHours: currentHours,
+            shiftCount: currentMonthShifts.count
+          ),
+          lastMonth: MonthStats(
+            totalEarnings: previousTotals.gross,
+            totalEarningsNet: previousTotals.net,
+            totalHours: previousHours,
+            shiftCount: previousMonthShifts.count
+          ),
+          percentageChange: percentageChange,
+          monthlyGoal: monthlyGoal,
+          thisMonthCumulative: cumulativeData,
+          thisWeek: thisWeek,
+          bestWeek: bestWeek,
+          employment: employmentData,
+          yearlyIncome: yearlyIncomeData
+        )
+
+        return StatsComputationResult(
+          statsData: statsData,
+          currentShiftCount: currentMonthShifts.count,
+          excludedShiftCount: currentMonthPartition.analysis.excludedIds.count,
+          currentHours: currentHours,
+          currentGross: currentTotals.gross,
+          fullYearCacheData: newFullYearCacheData
         )
       }
 
-      // Build employment data for the focus year (uses all shifts for hours worked)
-      let employmentData = buildEmploymentData(
-        focusYear: targetYear,
-        shifts: fullYearShifts,
-        snapshots: snapshots
-      )
+      let result: StatsComputationResult
+      do {
+        result = try await computeTask.value
+      } catch {
+        computeTask.cancel()
+        throw error
+      }
 
-      // Filter full year shifts through centralized conflict exclusion
-      let fullYearIncluded = ConflictExclusion.partition(shifts: fullYearShifts).includedShifts
+      try Task.checkCancellation()
 
-      // Build yearly income data (monthly breakdown for the focus year, excluding conflicts)
-      let yearlyIncomeData = buildYearlyIncomeData(
-        focusYear: targetYear,
-        shifts: fullYearIncluded
-      )
+      if let fullYearCacheData = result.fullYearCacheData {
+        fullYearCache[cacheKey] = fullYearCacheData
+        if fullYearCache.count > 8 {
+          fullYearCache.removeAll(keepingCapacity: true)
+        }
+      }
 
-      // Build stats data
-      let statsData = StatsData(
-        focusMonth: FocusMonth(year: targetYear, month: targetMonth),
-        tax: TaxSettings(enabled: taxEnabled, percentage: taxPercentage),
-        currentMonth: MonthStats(
-          totalEarnings: currentTotals.gross,
-          totalEarningsNet: currentTotals.net,
-          totalHours: currentHours,
-          shiftCount: currentMonthShifts.count
-        ),
-        lastMonth: MonthStats(
-          totalEarnings: previousTotals.gross,
-          totalEarningsNet: previousTotals.net,
-          totalHours: previousHours,
-          shiftCount: previousMonthShifts.count
-        ),
-        percentageChange: percentageChange,
-        monthlyGoal: monthlyGoal,
-        thisMonthCumulative: cumulativeData,
-        thisWeek: thisWeek,
-        bestWeek: bestWeek,
-        employment: employmentData,
-        yearlyIncome: yearlyIncomeData
-      )
-
-      stats = statsData
+      stats = result.statsData
       logger.info(
-        "Computed stats: \(currentMonthShifts.count) shifts (\(currentMonthPartition.analysis.excludedIds.count) excluded), \(Int(currentHours))h, \(Int(currentTotals.gross)) gross"
+        "Computed stats: \(result.currentShiftCount) shifts (\(result.excludedShiftCount) excluded), \(Int(result.currentHours))h, \(Int(result.currentGross)) gross"
       )
 
-      return statsData
-
+      return result.statsData
+    } catch is CancellationError {
+      throw CancellationError()
     } catch let error as StatsServiceError {
       self.error = error
       throw error
@@ -329,6 +414,107 @@ final class StatsService: ObservableObject {
   func clearCache() {
     stats = nil
     cachedUserId = nil
+    fullYearCache.removeAll(keepingCapacity: true)
+  }
+
+  nonisolated static func fingerprintSettingsForCaching(_ settings: UserSettings) -> Int {
+    var hasher = Hasher()
+    hasher.combine(settings.updated_at ?? "")
+    hasher.combine(settings.monthly_goal ?? -1)
+    hasher.combine(settings.half_tax_month ?? -1)
+    hasher.combine(settings.currency ?? "")
+
+    let monthlyGoals = (settings.monthly_goals_by_month ?? [:]).sorted(by: { $0.key < $1.key })
+    for entry in monthlyGoals {
+      hasher.combine(entry.key)
+      hasher.combine(entry.value)
+    }
+    return hasher.finalize()
+  }
+
+  nonisolated static func fingerprintSnapshotsForCaching(_ snapshots: [WageSnapshot]) -> Int {
+    var hasher = Hasher()
+    for snapshot in snapshots.sorted(by: { $0.id < $1.id }) {
+      hasher.combine(snapshot.id)
+      hasher.combine(snapshot.job_id ?? "")
+      hasher.combine(snapshot.from_date ?? "")
+      hasher.combine(snapshot.hourly_wage)
+      hasher.combine(snapshot.wage_level ?? -1)
+      hasher.combine(snapshot.tariff_type_id ?? "")
+      hasher.combine(snapshot.tax_enabled ?? false)
+      hasher.combine(snapshot.tax_percentage ?? 0)
+      hasher.combine(snapshot.break_enabled ?? true)
+      hasher.combine(snapshot.break_method ?? "")
+      hasher.combine(snapshot.break_threshold_hours ?? 0)
+      hasher.combine(snapshot.break_deduction_minutes ?? 0)
+      hasher.combine(String(describing: snapshot.supplements.rules))
+    }
+    return hasher.finalize()
+  }
+
+  nonisolated static func fingerprintRecurringShiftsForCaching(
+    _ recurringShifts: [RecurringShiftRow]
+  ) -> Int {
+    var hasher = Hasher()
+    for shift in recurringShifts.sorted(by: { $0.id < $1.id }) {
+      hasher.combine(shift.id)
+      hasher.combine(shift.job_id ?? "")
+      hasher.combine(shift.start_time)
+      hasher.combine(shift.end_time)
+      hasher.combine(shift.repeat_interval_weeks)
+      for entry in shift.selected_days.sorted(by: { $0.key < $1.key }) {
+        hasher.combine(entry.key)
+        hasher.combine(entry.value)
+      }
+      hasher.combine(String(describing: shift.end_condition))
+      for exclusion in (shift.exclusions ?? []).sorted() {
+        hasher.combine(exclusion)
+      }
+      for entry in (shift.date_specific_supplements ?? [:]).sorted(by: { $0.key < $1.key }) {
+        hasher.combine(entry.key)
+        hasher.combine(String(describing: entry.value))
+      }
+    }
+    return hasher.finalize()
+  }
+
+  nonisolated static func fingerprintJobsForCaching(_ jobs: [Job]) -> Int {
+    var hasher = Hasher()
+    for job in jobs.sorted(by: { $0.id < $1.id }) {
+      hasher.combine(job.id)
+      hasher.combine(job.name)
+      hasher.combine(job.color ?? "")
+      hasher.combine(job.is_default)
+      hasher.combine(job.sort_order)
+      hasher.combine(job.payroll_day ?? -1)
+      hasher.combine(job.half_tax_month ?? -1)
+      hasher.combine(job.monthly_goal ?? -1)
+      hasher.combine(job.archived_at ?? "")
+      hasher.combine(job.deleted_at ?? "")
+      hasher.combine(job.updated_at ?? "")
+    }
+    return hasher.finalize()
+  }
+
+  nonisolated static func fingerprintShiftsForCaching(_ shifts: [ShiftRow]) -> Int {
+    var hasher = Hasher()
+    for shift in shifts.sorted(by: { $0.id < $1.id }) {
+      hasher.combine(shift.id)
+      hasher.combine(shift.job_id ?? "")
+      hasher.combine(shift.shift_date)
+      hasher.combine(shift.start_time)
+      hasher.combine(shift.end_time)
+      hasher.combine(shift.updated_at?.timeIntervalSince1970 ?? -1)
+      hasher.combine(String(describing: shift.custom_supplements))
+    }
+    return hasher.finalize()
+  }
+
+  nonisolated private static func monthNumber(fromISODate date: String) -> Int {
+    guard date.count >= 7 else { return -1 }
+    let monthStart = date.index(date.startIndex, offsetBy: 5)
+    let monthEnd = date.index(monthStart, offsetBy: 2)
+    return Int(date[monthStart..<monthEnd]) ?? -1
   }
 
   // MARK: - Private Helpers
@@ -343,7 +529,7 @@ final class StatsService: ObservableObject {
   ///   - previousMonth: Month number (1-12) of previous month
   ///   - now: Current date for determining today/future
   /// - Returns: Array of cumulative data for each day of the month
-  private func buildCumulativeData(  // swiftlint:disable:this function_parameter_count
+  nonisolated private static func buildCumulativeData(  // swiftlint:disable:this function_parameter_count
     currentMonthShifts: [ShiftWithComputations],
     previousMonthShifts: [ShiftWithComputations],
     targetYear: Int,
@@ -435,7 +621,7 @@ final class StatsService: ObservableObject {
   ///   - shifts: Computed shifts for the current month
   ///   - now: Current date
   /// - Returns: Array of daily data for Mon-Sun of current week
-  private func buildThisWeekData(
+  nonisolated private static func buildThisWeekData(
     shifts: [ShiftWithComputations],
     now: Date
   ) -> [DailyData] {
@@ -476,8 +662,8 @@ final class StatsService: ObservableObject {
       let data = earningsMap[isoDate] ?? (0, 0, 0)
 
       // Get localized day names
-      let shortName = shortWeekdayName(for: date, calendar: calendar)
-      let fullName = fullWeekdayName(for: date, calendar: calendar)
+      let shortName = Self.shortWeekdayName(for: date, calendar: calendar)
+      let fullName = Self.fullWeekdayName(for: date, calendar: calendar)
 
       weekData.append(
         DailyData(
@@ -499,7 +685,7 @@ final class StatsService: ObservableObject {
   ///   - focusYear: Year of focus month
   ///   - focusMonth: Month number (1-12) of focus month
   /// - Returns: Best week data or nil if no shifts
-  private func buildBestWeekData(
+  nonisolated private static func buildBestWeekData(
     shifts: [ShiftWithComputations],
     focusYear: Int,
     focusMonth: Int
@@ -588,7 +774,7 @@ final class StatsService: ObservableObject {
 
       // Show date number instead of day name for best week (e.g., "15.")
       let dateLabel = "\(dayNumber)."
-      let fullName = fullWeekdayName(for: date, calendar: calendar)
+      let fullName = Self.fullWeekdayName(for: date, calendar: calendar)
 
       weekData.append(
         DailyData(
@@ -610,20 +796,16 @@ final class StatsService: ObservableObject {
   }
 
   /// Get short weekday name (e.g., "Man", "Tir")
-  private func shortWeekdayName(for date: Date, calendar: Calendar) -> String {
-    let formatter = DateFormatter()
+  nonisolated private static func shortWeekdayName(for date: Date, calendar: Calendar) -> String {
+    let formatter = FormatterCache.shortWeekdayFormatter(locale: Locale(identifier: "nb_NO"))
     formatter.calendar = calendar
-    formatter.locale = Locale(identifier: "nb_NO")  // Norwegian for consistency
-    formatter.dateFormat = "EEE"
     return formatter.string(from: date).sentenceCased()
   }
 
   /// Get full weekday name (e.g., "Mandag", "Tirsdag")
-  private func fullWeekdayName(for date: Date, calendar: Calendar) -> String {
-    let formatter = DateFormatter()
+  nonisolated private static func fullWeekdayName(for date: Date, calendar: Calendar) -> String {
+    let formatter = FormatterCache.weekdayFormatter(locale: Locale(identifier: "nb_NO"))
     formatter.calendar = calendar
-    formatter.locale = Locale(identifier: "nb_NO")  // Norwegian for consistency
-    formatter.dateFormat = "EEEE"
     return formatter.string(from: date).sentenceCased()
   }
 
@@ -637,7 +819,7 @@ final class StatsService: ObservableObject {
   ///   - shifts: All computed shifts for the year
   ///   - snapshots: Wage snapshots to determine break deduction settings
   /// - Returns: Employment data with monthly breakdown and yearly average
-  private func buildEmploymentData(
+  nonisolated private static func buildEmploymentData(
     focusYear: Int,
     shifts: [ShiftWithComputations],
     snapshots: [WageSnapshot]
@@ -816,7 +998,7 @@ final class StatsService: ObservableObject {
   ///   - focusYear: The year to calculate income data for
   ///   - shifts: All computed shifts for the year
   /// - Returns: Array of monthly income data for all 12 months
-  private func buildYearlyIncomeData(
+  nonisolated private static func buildYearlyIncomeData(
     focusYear: Int,
     shifts: [ShiftWithComputations]
   ) -> [MonthlyIncomeData] {

@@ -285,8 +285,11 @@ actor LocalStoreActor {
 
   /// Upsert a job from server data
   func upsertJob(_ job: LocalJob) throws {
-    let descriptor = FetchDescriptor<LocalJob>()
-    let existing = try modelContext.fetch(descriptor).first { $0.id == job.id }
+    let jobId = job.id
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == jobId }
+    )
+    let existing = try modelContext.fetch(descriptor).first
 
     if let existing {
       existing.userId = job.userId
@@ -870,6 +873,37 @@ actor LocalStoreActor {
 
     try modelContext.save()
     return localShift.userId
+  }
+
+  /// Mark multiple shifts for deletion in one transaction.
+  /// Returns affected user IDs so callers can trigger side effects once per user.
+  func markShiftsPendingDelete(ids: [String]) throws -> Set<String> {
+    guard !ids.isEmpty else { return [] }
+
+    var affectedUserIds: Set<String> = []
+    var didMutate = false
+    let now = Date()
+
+    for id in Set(ids) {
+      let descriptor = FetchDescriptor<LocalUserShift>(
+        predicate: #Predicate { $0.id == id }
+      )
+
+      guard let localShift = try modelContext.fetch(descriptor).first else {
+        continue
+      }
+
+      localShift.syncStatus = .pendingDelete
+      localShift.localUpdatedAt = now
+      affectedUserIds.insert(localShift.userId)
+      didMutate = true
+    }
+
+    if didMutate {
+      try modelContext.save()
+    }
+
+    return affectedUserIds
   }
 
   func resolveStoredShiftConflictKeepLocal(id: String) throws {

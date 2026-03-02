@@ -35,6 +35,16 @@ private enum ShiftListItem: Identifiable {
   }
 }
 
+private struct ListWeekGroup: Identifiable {
+  let weekKey: String
+  let weekNumber: Int
+  let totalGross: Double
+  let items: [ShiftListItem]
+  let isOutsideMonth: Bool
+
+  var id: String { weekKey }
+}
+
 /// Shifts tab view - displays list of user's shifts grouped by week
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
 struct ShiftsView: View {
@@ -84,6 +94,9 @@ struct ShiftsView: View {
   @State private var tabTransitionOffset: CGFloat = 0
   @State private var tabTransitionOpacity: Double = 1
   @State private var selectedListJobId: String?
+  @State private var filteredListShiftsCache: [ShiftWithComputations] = []
+  @State private var shiftListItemsCache: [ShiftListItem] = []
+  @State private var weekGroupsWithPlaceholderCache: [ListWeekGroup] = []
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -211,6 +224,27 @@ struct ShiftsView: View {
             tabTransitionOffset = 0
             tabTransitionOpacity = 1
           }
+        }
+        .onAppear {
+          recomputeListDerivedDataIfNeeded(force: true)
+        }
+        .onChange(of: selectedListJobId) { _, _ in
+          recomputeListDerivedDataIfNeeded()
+        }
+        .onChange(of: viewModel.shifts) { _, _ in
+          recomputeListDerivedDataIfNeeded()
+        }
+        .onChange(of: viewModel.excludedFromTotalIds) { _, _ in
+          recomputeListDerivedDataIfNeeded()
+        }
+        .onChange(of: viewModel.committedYear) { _, _ in
+          recomputeListDerivedDataIfNeeded()
+        }
+        .onChange(of: viewModel.committedMonth) { _, _ in
+          recomputeListDerivedDataIfNeeded()
+        }
+        .onChange(of: viewModel.activeJobs) { _, _ in
+          recomputeListDerivedDataIfNeeded()
         }
         // Pass user's currency to all child views
         .userCurrency(viewModel.currency)
@@ -348,6 +382,12 @@ struct ShiftsView: View {
         .onChange(of: showListView) { _, isListView in
           if isListView {
             viewModel.isSelectionModeEnabled = false
+            recomputeListDerivedDataIfNeeded(force: true)
+          }
+        }
+        .onChange(of: orientationTracker.isLandscape) { _, isLandscape in
+          if isLandscape {
+            recomputeListDerivedDataIfNeeded(force: true)
           }
         }
         .onChange(of: viewModel.activeJobs) { _, jobs in
@@ -718,9 +758,6 @@ struct ShiftsView: View {
         // Regular shift: mark for deletion
         try await ShiftsRepository.shared.deleteShift(id: shift.id)
       }
-
-      // Reload to reflect changes
-      await viewModel.reloadFromLocal()
 
       // Post notification for other views
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
@@ -1224,46 +1261,65 @@ struct ShiftsView: View {
     viewModel.activeJobs.count > 1
   }
 
+  private var shouldMaintainListDerivedData: Bool {
+    showListView || isIPadLandscape
+  }
+
   private var defaultActiveJobId: String? {
     viewModel.activeJobs.first(where: { $0.is_default })?.id
   }
 
   private var filteredListShifts: [ShiftWithComputations] {
-    guard let selectedListJobId else { return viewModel.shifts }
-    let defaultJobId = defaultActiveJobId
-    return viewModel.shifts.filter { shift in
-      if shift.shift.job_id == selectedListJobId {
-        return true
-      }
-      // Compatibility fallback for legacy rows that can still have nil job_id.
-      return shift.shift.job_id == nil && selectedListJobId == defaultJobId
-    }
+    filteredListShiftsCache
   }
 
-  /// Build flat list of items (shifts + placeholder) sorted by date
   private var shiftListItems: [ShiftListItem] {
-    var items: [ShiftListItem] = filteredListShifts.map { .shift($0) }
+    shiftListItemsCache
+  }
 
-    // Add today's placeholder if current month and no shift today
+  private var weekGroupsWithPlaceholder: [ListWeekGroup] {
+    weekGroupsWithPlaceholderCache
+  }
+
+  /// Recompute list-derived collections when upstream inputs change.
+  private func recomputeListDerivedDataIfNeeded(force: Bool = false) {
+    guard force || shouldMaintainListDerivedData else { return }
+    recomputeListDerivedData()
+  }
+
+  /// Recompute list-derived collections when upstream inputs change.
+  private func recomputeListDerivedData() {
+    let validJobIds = Set(viewModel.activeJobs.map(\.id))
+    if let selectedListJobId, !validJobIds.contains(selectedListJobId) {
+      self.selectedListJobId = nil
+    }
+
+    let filtered: [ShiftWithComputations]
+    if let selectedListJobId {
+      let defaultJobId = defaultActiveJobId
+      filtered = viewModel.shifts.filter { shift in
+        if shift.shift.job_id == selectedListJobId {
+          return true
+        }
+        // Compatibility fallback for legacy rows that can still have nil job_id.
+        return shift.shift.job_id == nil && selectedListJobId == defaultJobId
+      }
+    } else {
+      filtered = viewModel.shifts
+    }
+    filteredListShiftsCache = filtered
+
+    var items: [ShiftListItem] = filtered.map { .shift($0) }
     if viewModel.isCurrentMonth {
       let today = todayISO()
-      let hasShiftToday = filteredListShifts.contains { $0.shiftDate == today }
+      let hasShiftToday = filtered.contains { $0.shiftDate == today }
       if !hasShiftToday {
         items.append(.todayPlaceholder)
       }
     }
+    items.sort { $0.sortDate < $1.sortDate }
+    shiftListItemsCache = items
 
-    // Sort by date
-    return items.sorted { $0.sortDate < $1.sortDate }
-  }
-
-  /// Group list items by ISO week (preserves placeholder in correct position)
-  private var weekGroupsWithPlaceholder:
-    [(
-      weekKey: String, weekNumber: Int, totalGross: Double, items: [ShiftListItem],
-      isOutsideMonth: Bool
-    )]
-  {
     var calendar = Calendar(identifier: .iso8601)
     calendar.firstWeekday = 2  // Monday
     calendar.minimumDaysInFirstWeek = 4
@@ -1271,7 +1327,7 @@ struct ShiftsView: View {
     var weekMap:
       [String: (weekNumber: Int, year: Int, totalGross: Double, items: [ShiftListItem])] = [:]
 
-    for item in shiftListItems {
+    for item in items {
       guard let date = Date.fromISODateString(item.sortDate) else { continue }
 
       let weekOfYear = calendar.component(.weekOfYear, from: date)
@@ -1301,11 +1357,12 @@ struct ShiftsView: View {
     // Convert to array and sort
     let committedPrefix = String(
       format: "%04d-%02d", viewModel.committedYear, viewModel.committedMonth)
-    return weekMap.map { entry in
+    weekGroupsWithPlaceholderCache = weekMap.map { entry in
       let isOutside = !entry.value.items.contains { $0.sortDate.hasPrefix(committedPrefix) }
-      return (
+      return ListWeekGroup(
         weekKey: entry.key, weekNumber: entry.value.weekNumber, totalGross: entry.value.totalGross,
-        items: entry.value.items, isOutsideMonth: isOutside
+        items: entry.value.items,
+        isOutsideMonth: isOutside
       )
     }
     .sorted { $0.weekKey < $1.weekKey }

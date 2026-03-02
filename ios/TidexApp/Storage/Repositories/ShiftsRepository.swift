@@ -114,6 +114,31 @@ final class ShiftsRepository: ObservableObject {
     }
   }
 
+  /// Get all non-deleted shifts for a user within a date range via `LocalStoreActor`.
+  /// This avoids blocking the main actor during larger reads.
+  func getShiftsOffMain(
+    for userId: String,
+    startDate: Date,
+    endDate: Date,
+    jobId: String? = nil
+  ) async -> [ShiftRow] {
+    let fetchedShifts = await localStore.storeActor.fetchShifts(
+      userId: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
+
+    guard let jobId else {
+      return fetchedShifts
+    }
+
+    let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
+    if includeLegacyNil {
+      return fetchedShifts.filter { $0.job_id == jobId || $0.job_id == nil }
+    }
+    return fetchedShifts.filter { $0.job_id == jobId }
+  }
+
   /// Get all non-deleted shifts for a user (no date filter)
   /// - Parameter userId: User ID
   /// - Returns: Array of ShiftRow objects
@@ -327,6 +352,27 @@ final class ShiftsRepository: ObservableObject {
     }
   }
 
+  /// Mark multiple shifts for deletion in one write transaction.
+  /// Side effects (widget/watch/sync) are dispatched once per affected user.
+  func deleteShifts(ids: [String]) async throws {
+    let uniqueIds = Array(Set(ids))
+    guard !uniqueIds.isEmpty else { return }
+
+    let userIds = try await localStore.storeActor.markShiftsPendingDelete(ids: uniqueIds)
+    guard !userIds.isEmpty else {
+      logger.warning("No shifts found for batch deletion (\(uniqueIds.count) IDs)")
+      return
+    }
+
+    for userId in userIds {
+      NativeWidgetStorage.updateWidgetStorage(for: userId)
+      WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+      triggerSync(userId: userId)
+    }
+
+    logger.info("Marked \(uniqueIds.count) shifts for batch deletion")
+  }
+
   /// Delete all shifts that are NOT in the target month
   /// Used when free tier users choose to delete other months to add shifts to a new month
   /// - Parameters:
@@ -365,31 +411,24 @@ final class ShiftsRepository: ObservableObject {
       return 0
     }
 
-    // Mark each shift for deletion
-    var deletedCount = 0
-    for shift in shiftsToDelete {
-      do {
-        _ = try await localStore.storeActor.markShiftPendingDelete(id: shift.id)
-        deletedCount += 1
-      } catch LocalStoreWriteError.notFound {
-        logger.warning("Shift not found during batch delete: \(shift.id)")
-      } catch {
-        logger.error(
-          "Failed to mark shift for deletion: \(shift.id), error: \(error.localizedDescription)")
-        // Continue with other shifts even if one fails
-      }
-    }
+    let deletedIds = shiftsToDelete.map(\.id)
+    let affectedUserIds = try await localStore.storeActor.markShiftsPendingDelete(ids: deletedIds)
+    let deletedCount = deletedIds.count
 
     logger.info(
       "Marked \(deletedCount) shifts for deletion in other months (target: \(targetMonth.year ?? 0)-\(targetMonth.month ?? 0))"
     )
 
     // Update widget storage
-    NativeWidgetStorage.updateWidgetStorage(for: userId)
+    for affectedUserId in affectedUserIds {
+      NativeWidgetStorage.updateWidgetStorage(for: affectedUserId)
+    }
 
     // Trigger sync to upload immediately (only if we actually deleted something)
     if deletedCount > 0 {
-      triggerSync(userId: userId)
+      for affectedUserId in affectedUserIds {
+        triggerSync(userId: affectedUserId)
+      }
     }
 
     return deletedCount

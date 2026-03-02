@@ -64,6 +64,8 @@ final class StatsViewModel: ObservableObject {
   private let syncCoordinator: SyncCoordinator
   private var cancellables = Set<AnyCancellable>()
   private var settings: UserSettings?
+  private var activeLoadTask: Task<Void, Never>?
+  private var loadGeneration: Int = 0
 
   // MARK: - Initialization
 
@@ -96,6 +98,7 @@ final class StatsViewModel: ObservableObject {
     // While [weak self] prevents retain cycles, the subscriptions
     // themselves remain active without explicit cancellation
     cancellables.removeAll()
+    activeLoadTask?.cancel()
   }
 
   // MARK: - Month Subscription
@@ -113,9 +116,7 @@ final class StatsViewModel: ObservableObject {
         self.navigationDirection = self.monthContext.navigationDirection
 
         // Reload stats for new month
-        Task {
-          await self.loadStats()
-        }
+        self.scheduleLoadStats()
       }
       .store(in: &cancellables)
   }
@@ -219,15 +220,33 @@ final class StatsViewModel: ObservableObject {
   func selectJobFilter(_ jobId: String?) {
     guard selectedJobId != jobId else { return }
     selectedJobId = jobId
-    Task {
-      await loadStats()
-    }
+    scheduleLoadStats()
   }
 
   // MARK: - Public Methods
 
   /// Load stats for the displayed month from local data
   func loadStats() async {
+    activeLoadTask?.cancel()
+    activeLoadTask = nil
+    let generation = nextLoadGeneration()
+    await performLoadStats(generation: generation)
+  }
+
+  private func scheduleLoadStats() {
+    let generation = nextLoadGeneration()
+    activeLoadTask?.cancel()
+    activeLoadTask = Task { @MainActor [weak self] in
+      await self?.performLoadStats(generation: generation)
+    }
+  }
+
+  private func nextLoadGeneration() -> Int {
+    loadGeneration += 1
+    return loadGeneration
+  }
+
+  private func performLoadStats(generation: Int) async {
     isLoading = true
     error = nil
 
@@ -257,6 +276,10 @@ final class StatsViewModel: ObservableObject {
         month: displayMonth,
         jobId: selectedJobId
       )
+      guard !Task.isCancelled, generation == loadGeneration else {
+        logger.info("Ignoring stale stats load (generation \(generation))")
+        return
+      }
       stats = computedStats
       if selectedJobId == nil {
         persistStartupStatsCache(stats: computedStats, userId: userId)
@@ -266,11 +289,14 @@ final class StatsViewModel: ObservableObject {
       )
     } catch is CancellationError {
       logger.info("Stats load cancelled")
+      guard generation == loadGeneration else { return }
     } catch {
+      guard generation == loadGeneration else { return }
       logger.error("Failed to load stats: \(error.localizedDescription)")
       self.error = error
     }
 
+    guard generation == loadGeneration else { return }
     isLoading = false
   }
 

@@ -206,53 +206,10 @@ final class SharingService: ObservableObject {
         // Check for cancellation after RPC
         try Task.checkCancellation()
 
-        let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
-        var computedShifts = SharingComputeCore.computeMonthShifts(
-          payload: payloadRow.payloadInput,
+        let response = await Self.computeSharedShiftsResponseOffMain(
+          payloadRow: payloadRow,
           year: year,
-          month: month,
-          mode: mode
-        )
-
-        // Defense-in-depth: never cache/render monetary outputs for hidden-earnings shares.
-        if !payloadRow.showEarnings {
-          computedShifts = SharingComputeCore.enforceHiddenEarnings(on: computedShifts)
-        }
-
-        let shifts = computedShifts.map(mapComputedShiftToSharedShiftData)
-        let payoutTaxSettings = SharingComputeCore.payoutTaxSettings(
-          year: year,
-          month: month,
-          settings: payloadRow.settings,
-          snapshots: payloadRow.snapshots,
-          jobs: payloadRow.jobs,
-          mode: mode
-        )
-        .map { SharedPayoutTaxSettings(enabled: $0.enabled, percentage: $0.percentage) }
-
-        let response = SharedShiftsResponse(
-          shifts: shifts,
-          settings: SharedUserSettings(
-            payroll_day: payloadRow.settings.payrollDay,
-            half_tax_month: payloadRow.settings.halfTaxMonth,
-            monthly_goal: payloadRow.settings.monthlyGoal,
-            monthly_goals_by_month: payloadRow.settings.monthlyGoalsByMonth,
-            currency: payloadRow.settings.currency
-          ),
-          jobs: payloadRow.jobs.filter { $0.deletedAt == nil }.map {
-            SharedJob(
-              id: $0.id,
-              user_id: $0.userId,
-              name: $0.name,
-              color: $0.color,
-              is_default: $0.isDefault,
-              sort_order: $0.sortOrder,
-              payroll_day: $0.payrollDay,
-              half_tax_month: $0.halfTaxMonth,
-              monthly_goal: $0.monthlyGoal
-            )
-          },
-          payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil
+          month: month
         )
 
         logger.info("Loaded \(response.shifts.count) shared shifts for month \(year)-\(month)")
@@ -344,43 +301,13 @@ final class SharingService: ObservableObject {
         payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last }
       )
 
-      let freshPreviews: [SharerShiftPreview] = uncachedIds.map { sharerId in
-        guard let payloadRow = payloadBySharerId[sharerId] else {
-          return SharerShiftPreview(
-            sharerId: sharerId,
-            shift: nil,
-            status: nil,
-            showEarnings: false
-          )
-        }
-
-        let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
-        var shifts = SharingComputeCore.computeShiftsInRange(
-          payload: payloadRow.payloadInput,
-          startDate: startDate,
-          endDate: endDate,
-          mode: mode
-        )
-
-        // Defense-in-depth redaction before caching/rendering.
-        if !payloadRow.showEarnings {
-          shifts = SharingComputeCore.enforceHiddenEarnings(on: shifts)
-        }
-
-        let preview = SharingComputeCore.selectPreview(
-          sharerId: sharerId,
-          shifts: shifts,
-          showEarnings: payloadRow.showEarnings,
-          now: now
-        )
-
-        return SharerShiftPreview(
-          sharerId: sharerId,
-          shift: preview.shift.map(mapComputedShiftToSharedShiftData),
-          status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0.rawValue) },
-          showEarnings: preview.showEarnings
-        )
-      }
+      let freshPreviews = await Self.computeShiftPreviewsOffMain(
+        uncachedIds: uncachedIds,
+        payloadBySharerId: payloadBySharerId,
+        startDate: startDate,
+        endDate: endDate,
+        now: now
+      )
 
       // Cache the fresh previews
       for preview in freshPreviews {
@@ -451,7 +378,9 @@ final class SharingService: ObservableObject {
     return .networkError(underlying: error)
   }
 
-  private func mapComputedShiftToSharedShiftData(_ shift: SharingComputedShift) -> SharedShiftData {
+  private nonisolated static func mapComputedShiftToSharedShiftData(
+    _ shift: SharingComputedShift
+  ) -> SharedShiftData {
     SharedShiftData(
       id: shift.id,
       user_id: shift.userId,
@@ -477,7 +406,7 @@ final class SharingService: ObservableObject {
     )
   }
 
-  private func mapCustomSupplements(_ supplements: SharingRPCCustomSupplements)
+  private nonisolated static func mapCustomSupplements(_ supplements: SharingRPCCustomSupplements)
     -> CustomSupplementsData
   {
     CustomSupplementsData(
@@ -491,6 +420,109 @@ final class SharingService: ObservableObject {
         )
       }
     )
+  }
+
+  private nonisolated static func computeSharedShiftsResponseOffMain(
+    payloadRow: SharingRPCMonthPayloadRow,
+    year: Int,
+    month: Int
+  ) async -> SharedShiftsResponse {
+    await Task.detached(priority: .userInitiated) {
+      let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
+      var computedShifts = SharingComputeCore.computeMonthShifts(
+        payload: payloadRow.payloadInput,
+        year: year,
+        month: month,
+        mode: mode
+      )
+
+      if !payloadRow.showEarnings {
+        computedShifts = SharingComputeCore.enforceHiddenEarnings(on: computedShifts)
+      }
+
+      let shifts = computedShifts.map(Self.mapComputedShiftToSharedShiftData)
+      let payoutTaxSettings = SharingComputeCore.payoutTaxSettings(
+        year: year,
+        month: month,
+        settings: payloadRow.settings,
+        snapshots: payloadRow.snapshots,
+        jobs: payloadRow.jobs,
+        mode: mode
+      )
+      .map { SharedPayoutTaxSettings(enabled: $0.enabled, percentage: $0.percentage) }
+
+      return SharedShiftsResponse(
+        shifts: shifts,
+        settings: SharedUserSettings(
+          payroll_day: payloadRow.settings.payrollDay,
+          half_tax_month: payloadRow.settings.halfTaxMonth,
+          monthly_goal: payloadRow.settings.monthlyGoal,
+          monthly_goals_by_month: payloadRow.settings.monthlyGoalsByMonth,
+          currency: payloadRow.settings.currency
+        ),
+        jobs: payloadRow.jobs.filter { $0.deletedAt == nil }.map {
+          SharedJob(
+            id: $0.id,
+            user_id: $0.userId,
+            name: $0.name,
+            color: $0.color,
+            is_default: $0.isDefault,
+            sort_order: $0.sortOrder,
+            payroll_day: $0.payrollDay,
+            half_tax_month: $0.halfTaxMonth,
+            monthly_goal: $0.monthlyGoal
+          )
+        },
+        payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil
+      )
+    }.value
+  }
+
+  private nonisolated static func computeShiftPreviewsOffMain(
+    uncachedIds: [String],
+    payloadBySharerId: [String: SharingRPCPreviewPayloadRow],
+    startDate: String,
+    endDate: String,
+    now: Date
+  ) async -> [SharerShiftPreview] {
+    await Task.detached(priority: .userInitiated) {
+      uncachedIds.map { sharerId in
+        guard let payloadRow = payloadBySharerId[sharerId] else {
+          return SharerShiftPreview(
+            sharerId: sharerId,
+            shift: nil,
+            status: nil,
+            showEarnings: false
+          )
+        }
+
+        let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
+        var shifts = SharingComputeCore.computeShiftsInRange(
+          payload: payloadRow.payloadInput,
+          startDate: startDate,
+          endDate: endDate,
+          mode: mode
+        )
+
+        if !payloadRow.showEarnings {
+          shifts = SharingComputeCore.enforceHiddenEarnings(on: shifts)
+        }
+
+        let preview = SharingComputeCore.selectPreview(
+          sharerId: sharerId,
+          shifts: shifts,
+          showEarnings: payloadRow.showEarnings,
+          now: now
+        )
+
+        return SharerShiftPreview(
+          sharerId: sharerId,
+          shift: preview.shift.map(Self.mapComputedShiftToSharedShiftData),
+          status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0.rawValue) },
+          showEarnings: preview.showEarnings
+        )
+      }
+    }.value
   }
 
   // MARK: - Friends Management (via Next.js API)

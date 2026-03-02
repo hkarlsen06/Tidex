@@ -180,11 +180,13 @@ struct DashboardView: View {
       }
     }
     .onReceive(clockStateRefreshTicker) { _ in
+      guard selectedTab == .home else { return }
       Task {
         await viewModel.refreshClockState()
       }
     }
     .onReceive(temporarySessionTicker) { now in
+      guard selectedTab == .home else { return }
       guard case .temporary = viewModel.activeClockState else { return }
       temporarySessionReferenceDate = now
     }
@@ -405,9 +407,6 @@ struct DashboardView: View {
         try await ShiftsRepository.shared.deleteShift(id: shift.id)
       }
 
-      // Reload to reflect changes
-      await viewModel.reloadFromLocal()
-
       // Post notification for other views
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
@@ -431,9 +430,6 @@ struct DashboardView: View {
         exclusions: editResult.exclusions
       )
 
-      // Reload to reflect changes
-      await viewModel.reloadFromLocal()
-
       // Post notification for other views
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
@@ -446,9 +442,6 @@ struct DashboardView: View {
   private func deleteRecurringShift(_ recurringId: String) async {
     do {
       try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
-
-      // Reload to reflect changes
-      await viewModel.reloadFromLocal()
 
       // Post notification for other views
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
