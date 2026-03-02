@@ -27,6 +27,7 @@ export default defineConfig({
       '@ui': path.resolve(__dirname, './components/ui'),
       '@appui': path.resolve(__dirname, './components/app'),
       '@dal': path.resolve(__dirname, './data-access'),
+      'server-only': path.resolve(__dirname, './tests/mocks/server-only.ts'),
     },
   },
 });

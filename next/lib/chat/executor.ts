@@ -8,12 +8,32 @@ import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { getComputedShiftsForApi } from "@/data-access/shifts";
-import { getUserJobs } from "@/data-access/jobs";
+import { archiveJob, createJob, deleteJob, getUserJobs, updateJob } from "@/data-access/jobs";
 import { draftRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/draftRecurringShift";
 import { createRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/createRecurringShift";
 import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updateRecurringShift";
 import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
+import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
+import { updateCustomSupplements } from "@/app/[locale]/(app)/shifts/_actions/updateCustomSupplements";
+import { convertRecurringShiftToStandalone } from "@/app/[locale]/(app)/shifts/_actions/convertRecurringShiftToStandalone";
+import { moveRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/moveRecurringShift";
+import { clearShiftSnapshots } from "@/app/[locale]/(app)/shifts/_actions/clearShiftSnapshots";
+import {
+  createShare,
+  removeShare,
+  toggleShareEarnings,
+  blockSharer as blockSharerAction,
+  unblockSharer as unblockSharerAction,
+  shareBack,
+  toggleSharerMuted,
+  removeSharer,
+} from "@/app/[locale]/(app)/sharing/_actions/sharing";
+import { getAllFriends, getSharedUserShifts } from "@/data-access/sharing";
+import { submitFeedback } from "@/app/[locale]/(app)/settings/feedback/_actions/submitFeedback";
+import { getUserFeedback } from "@/app/[locale]/(app)/settings/feedback/_actions/getUserFeedback";
+import { updateProfileSettings } from "@/app/[locale]/(app)/settings/_actions/updateSettings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { verifySession } from "@/data-access/auth";
 import type { EndCondition } from "@/lib/recurring/types";
 import type {
   ToolName,
@@ -27,6 +47,14 @@ import type {
   ManageRecurringExclusionInput,
   GetStatisticsInput,
   ManageSettingsInput,
+  ManageWorkplaceInput,
+  ListWorkplacesInput,
+  ListFriendsInput,
+  ManageFriendSharingInput,
+  QueryFriendShiftsInput,
+  ManageShiftAdvancedInput,
+  ManageFeedbackInput,
+  ManageProfileInput,
   CalculateEarningsInput,
   ManageWageSnapshotsInput,
 } from "./tools";
@@ -40,6 +68,14 @@ import {
   manageRecurringExclusionSchema,
   getStatisticsSchema,
   manageSettingsSchema,
+  manageWorkplaceSchema,
+  listWorkplacesSchema,
+  listFriendsSchema,
+  manageFriendSharingSchema,
+  queryFriendShiftsSchema,
+  manageShiftAdvancedSchema,
+  manageFeedbackSchema,
+  manageProfileSchema,
   calculateEarningsSchema,
   getWageInfoSchema,
   manageWageSnapshotsSchema,
@@ -59,6 +95,7 @@ import { defaultLocale, type Locale } from "@/lib/i18n/config";
 
 // Type for tool result translations
 type ToolResultTranslations = ReturnType<typeof getDictionary>['pages']['wagey']['toolResults'];
+type FriendEntry = Awaited<ReturnType<typeof getAllFriends>>[number];
 
 // Helper to interpolate translation strings
 function t(template: string, params: Record<string, string | number> = {}): string {
@@ -96,6 +133,20 @@ async function getUserCurrency(userId: string): Promise<string> {
  */
 function toShortId(uuid: string): string {
   return uuid.slice(0, 5);
+}
+
+function toDisplayShiftId(shiftId: string): string {
+  if (shiftId.startsWith("virtual-")) {
+    const parts = shiftId.split("-");
+    if (parts.length >= 9) {
+      const recurringId = parts.slice(1, 6).join("-");
+      const date = parts.slice(6).join("-");
+      return `virtual-${toShortId(recurringId)}-${date}`;
+    }
+    return shiftId;
+  }
+
+  return toShortId(shiftId);
 }
 
 /**
@@ -226,10 +277,17 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "manage_recurring_exclusion",
   "get_statistics",
   "manage_settings",
+  "manage_workplace",
   "get_wage_info",
   "manage_wage_snapshots",
   "calculate_earnings",
   "list_workplaces",
+  "list_friends",
+  "manage_friend_sharing",
+  "query_friend_shifts",
+  "manage_shift_advanced",
+  "manage_feedback",
+  "manage_profile",
 ];
 
 function normalizeToolName(toolName: string): ToolName | null {
@@ -339,6 +397,9 @@ async function executeToolOnce(
     case "manage_settings":
       return await executeManageSettings(args, userId, tr);
 
+    case "manage_workplace":
+      return await executeManageWorkplace(args, userId, tr);
+
     case "get_wage_info":
       return await executeGetWageInfo(args, userId, tr);
 
@@ -349,7 +410,25 @@ async function executeToolOnce(
       return await executeCalculateEarnings(args, userId, tr);
 
     case "list_workplaces":
-      return await executeListWorkplaces(userId, tr);
+      return await executeListWorkplaces(args, userId, tr);
+
+    case "list_friends":
+      return await executeListFriends(args, userId, tr);
+
+    case "query_friend_shifts":
+      return await executeQueryFriendShifts(args, userId, tr);
+
+    case "manage_friend_sharing":
+      return await executeManageFriendSharing(args, userId, tr);
+
+    case "manage_shift_advanced":
+      return await executeManageShiftAdvanced(args, userId, tr);
+
+    case "manage_feedback":
+      return await executeManageFeedback(args, tr);
+
+    case "manage_profile":
+      return await executeManageProfile(args, tr);
 
     default:
       return {
@@ -563,6 +642,26 @@ function formatRecurringDescription(
   return `${daysStr} ${parseTime(recurring.start_time)}-${parseTime(recurring.end_time)}`;
 }
 
+function getCurrentWeekRange(): { startDate: string; endDate: string } {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day; // Monday = 1, Sunday = 0
+
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(now.getDate() + diffToMonday);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const toLocalIsoDate = (d: Date) => d.toLocaleDateString("sv-SE");
+
+  return {
+    startDate: toLocalIsoDate(start),
+    endDate: toLocalIsoDate(end),
+  };
+}
+
 /**
  * Execute query_shifts tool (enhanced with filters)
  */
@@ -580,29 +679,6 @@ async function executeQueryShifts(
   }
 
   const input: QueryShiftsInput = parsed.data;
-
-  const getCurrentWeekRange = () => {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = day === 0 ? -6 : 1 - day; // Monday = 1, Sunday = 0
-
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    start.setDate(now.getDate() + diffToMonday);
-
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-
-    // Use local date to avoid UTC offset shifting the day (e.g., 17. becomes 16. UTC)
-    const toLocalIsoDate = (d: Date) =>
-      d.toLocaleDateString("sv-SE"); // sv-SE gives YYYY-MM-DD in local time
-
-    return {
-      startDate: toLocalIsoDate(start),
-      endDate: toLocalIsoDate(end),
-    };
-  };
-
   const weekRange = getCurrentWeekRange();
 
   try {
@@ -655,22 +731,8 @@ async function executeQueryShifts(
     // Format shifts for AI - compact format to reduce tokens
     const shiftsFormatted = limitedShifts.map((shift) => {
       const gross = Number(shift.computed.gross.toFixed(2));
-      // For virtual shifts, use compact format: virtual-{short_recurring_id}-{date}
-      // For regular shifts, use short 5-char ID for token efficiency
-      let shiftId: string;
-      if (shift.id.startsWith("virtual-")) {
-        // Extract recurring_id from virtual-{recurring_id}-{date} and truncate it
-        const parts = shift.id.split("-");
-        // parts: ["virtual", ...uuid_parts..., "YYYY", "MM", "DD"]
-        // UUID is parts[1] through parts[5], date is parts[6], parts[7], parts[8]
-        const recurringId = parts.slice(1, 6).join("-"); // Full UUID
-        const date = parts.slice(6).join("-"); // YYYY-MM-DD
-        shiftId = `virtual-${toShortId(recurringId)}-${date}`;
-      } else {
-        shiftId = toShortId(shift.id);
-      }
       const base = {
-        id: shiftId,
+        id: toDisplayShiftId(shift.id),
         date: shift.shift_date,
         day: getWeekdayAbbr(shift.shift_date, tr),
         start: shift.start_time,
@@ -865,29 +927,1202 @@ async function executeCalculateWages(
  * Execute list_workplaces tool
  */
 async function executeListWorkplaces(
+  args: unknown,
   userId: string,
-  _tr: ToolResultTranslations
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
-  try {
-    const jobs = await getUserJobs(userId);
-    const activeJobs = jobs.filter((j) => !j.deleted_at && !j.archived_at);
+  const parsed = listWorkplacesSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
 
-    const data = activeJobs.map((j) => ({
+  const input: ListWorkplacesInput = parsed.data;
+
+  try {
+    const jobs = await getUserJobs(userId, { includeArchived: input.includeArchived });
+    const visibleJobs = jobs.filter((j) => !j.deleted_at && (input.includeArchived || !j.archived_at));
+    const archivedCount = visibleJobs.filter((j) => j.archived_at).length;
+
+    const data = visibleJobs.map((j) => ({
       id: j.id,
       name: j.name,
       color: j.color ?? null,
       isDefault: j.is_default,
+      isArchived: Boolean(j.archived_at),
+      archivedAt: j.archived_at ?? null,
     }));
+
+    const message = input.includeArchived
+      ? t(tr.foundWorkplacesIncludingArchived, { count: data.length, archived: archivedCount })
+      : data.length === 1
+        ? t(tr.foundWorkplace, { count: data.length })
+        : t(tr.foundWorkplaces, { count: data.length });
 
     return {
       success: true,
-      message: `Found ${data.length} workplace${data.length === 1 ? "" : "s"}.`,
+      message,
       data,
     };
   } catch (error) {
     throw new Error(
       error instanceof Error ? error.message : "Failed to fetch workplaces"
     );
+  }
+}
+
+/**
+ * Execute manage_workplace tool (create/update/set_default/reorder/archive/unarchive/delete)
+ */
+async function executeManageWorkplace(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = manageWorkplaceSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ManageWorkplaceInput = parsed.data;
+
+  try {
+    switch (input.action) {
+      case "create": {
+        const name = input.name?.trim();
+        if (!name) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceName,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const activeJobs = jobs.filter((job) => !job.deleted_at && !job.archived_at);
+        const nextSortOrder =
+          activeJobs.length === 0
+            ? 0
+            : Math.max(...activeJobs.map((job) => job.sort_order ?? 0)) + 1;
+
+        const created = await createJob(userId, {
+          name,
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.payrollDay !== undefined ? { payroll_day: input.payrollDay } : {}),
+          ...(input.halfTaxMonth !== undefined ? { half_tax_month: input.halfTaxMonth } : {}),
+          ...(input.monthlyGoal !== undefined ? { monthly_goal: input.monthlyGoal } : {}),
+          sort_order: nextSortOrder,
+          is_default: activeJobs.length === 0,
+        });
+
+        return {
+          success: true,
+          message: t(tr.createdWorkplace, { name: created.name }),
+          data: {
+            id: created.id,
+            name: created.name,
+            color: created.color ?? null,
+            isDefault: created.is_default,
+            isArchived: Boolean(created.archived_at),
+          },
+        };
+      }
+
+      case "update": {
+        if (!input.jobId) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceId,
+          };
+        }
+
+        const hasAnyField =
+          input.name !== undefined
+          || input.color !== undefined
+          || input.payrollDay !== undefined
+          || input.halfTaxMonth !== undefined
+          || input.monthlyGoal !== undefined;
+
+        if (!hasAnyField) {
+          return {
+            success: false,
+            message: tr.mustProvideWorkplaceField,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const target = jobs.find((job) => job.id === input.jobId && !job.deleted_at);
+        if (!target) {
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId }),
+          };
+        }
+
+        const trimmedName = input.name?.trim();
+        if (input.name !== undefined && !trimmedName) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceName,
+          };
+        }
+
+        const updated = await updateJob(userId, input.jobId, {
+          ...(trimmedName !== undefined ? { name: trimmedName } : {}),
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.payrollDay !== undefined ? { payroll_day: input.payrollDay } : {}),
+          ...(input.halfTaxMonth !== undefined ? { half_tax_month: input.halfTaxMonth } : {}),
+          ...(input.monthlyGoal !== undefined ? { monthly_goal: input.monthlyGoal } : {}),
+        });
+
+        return {
+          success: true,
+          message: t(tr.updatedWorkplace, { name: updated.name }),
+          data: {
+            id: updated.id,
+            name: updated.name,
+            color: updated.color ?? null,
+            isDefault: updated.is_default,
+            isArchived: Boolean(updated.archived_at),
+          },
+        };
+      }
+
+      case "archive": {
+        if (!input.jobId) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceId,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const activeJobs = jobs.filter((job) => !job.deleted_at && !job.archived_at);
+        const target = activeJobs.find((job) => job.id === input.jobId);
+
+        if (!target) {
+          const maybeArchived = jobs.find((job) => job.id === input.jobId && !job.deleted_at && !!job.archived_at);
+          if (maybeArchived) {
+            return {
+              success: false,
+              message: t(tr.workplaceAlreadyArchived, { name: maybeArchived.name }),
+            };
+          }
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId }),
+          };
+        }
+
+        if (activeJobs.length <= 1) {
+          return {
+            success: false,
+            message: tr.cannotArchiveLastActiveWorkplace,
+          };
+        }
+
+        if (target.is_default) {
+          return {
+            success: false,
+            message: tr.cannotArchiveDefaultWorkplace,
+          };
+        }
+
+        await archiveJob(userId, input.jobId);
+
+        return {
+          success: true,
+          message: t(tr.archivedWorkplace, { name: target.name }),
+        };
+      }
+
+      case "unarchive": {
+        if (!input.jobId) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceId,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const activeJobs = jobs.filter((job) => !job.deleted_at && !job.archived_at);
+        const target = jobs.find((job) => job.id === input.jobId && !job.deleted_at);
+
+        if (!target) {
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId }),
+          };
+        }
+
+        if (!target.archived_at) {
+          return {
+            success: false,
+            message: t(tr.workplaceAlreadyActive, { name: target.name }),
+          };
+        }
+
+        const nextSortOrder =
+          activeJobs.length === 0
+            ? 0
+            : Math.max(...activeJobs.map((job) => job.sort_order ?? 0)) + 1;
+
+        const unarchived = await updateJob(userId, input.jobId, {
+          archived_at: null,
+          sort_order: nextSortOrder,
+        });
+
+        return {
+          success: true,
+          message: t(tr.unarchivedWorkplace, { name: unarchived.name }),
+          data: {
+            id: unarchived.id,
+            name: unarchived.name,
+            color: unarchived.color ?? null,
+            isDefault: unarchived.is_default,
+            isArchived: Boolean(unarchived.archived_at),
+          },
+        };
+      }
+
+      case "set_default": {
+        if (!input.jobId) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceId,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const activeJobs = jobs.filter((job) => !job.deleted_at && !job.archived_at);
+        const target = activeJobs.find((job) => job.id === input.jobId);
+
+        if (!target) {
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId }),
+          };
+        }
+
+        if (target.is_default) {
+          return {
+            success: true,
+            message: t(tr.workplaceAlreadyDefault, { name: target.name }),
+          };
+        }
+
+        const currentDefault = activeJobs.find((job) => job.is_default && job.id !== input.jobId);
+        if (currentDefault) {
+          await updateJob(userId, currentDefault.id, { is_default: false });
+        }
+
+        const updated = await updateJob(userId, input.jobId, { is_default: true });
+
+        return {
+          success: true,
+          message: t(tr.setDefaultWorkplace, { name: updated.name }),
+          data: {
+            id: updated.id,
+            name: updated.name,
+            color: updated.color ?? null,
+            isDefault: updated.is_default,
+            isArchived: Boolean(updated.archived_at),
+          },
+        };
+      }
+
+      case "reorder": {
+        if (!input.jobId) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceId,
+          };
+        }
+
+        if (!input.direction) {
+          return {
+            success: false,
+            message: tr.missingDirection,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const activeJobs = jobs
+          .filter((job) => !job.deleted_at && !job.archived_at)
+          .sort((a, b) => {
+            const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+            if (orderDiff !== 0) return orderDiff;
+            return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+          });
+
+        const index = activeJobs.findIndex((job) => job.id === input.jobId);
+        if (index === -1) {
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId }),
+          };
+        }
+
+        const swapIndex = input.direction === "up" ? index - 1 : index + 1;
+        if (swapIndex < 0 || swapIndex >= activeJobs.length) {
+          return {
+            success: true,
+            message: t(tr.workplaceAlreadyAtEdge, { direction: input.direction }),
+          };
+        }
+
+        const current = activeJobs[index];
+
+        // Rebuild a deterministic order and write sequential sort_order values.
+        // This avoids no-op swaps when neighboring jobs share the same sort_order.
+        const reordered = [...activeJobs];
+        [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+
+        await Promise.all(
+          reordered.map((job, order) => updateJob(userId, job.id, { sort_order: order }))
+        );
+
+        return {
+          success: true,
+          message: t(tr.reorderedWorkplace, { name: current.name, direction: input.direction }),
+        };
+      }
+
+      case "delete": {
+        if (!input.jobId) {
+          return {
+            success: false,
+            message: tr.missingWorkplaceId,
+          };
+        }
+
+        const jobs = await getUserJobs(userId, { includeArchived: true });
+        const nonDeleted = jobs.filter((job) => !job.deleted_at);
+        const activeJobs = nonDeleted.filter((job) => !job.archived_at);
+        const target = nonDeleted.find((job) => job.id === input.jobId);
+
+        if (!target) {
+          return {
+            success: false,
+            message: t(tr.workplaceNotFound, { id: input.jobId }),
+          };
+        }
+
+        if (target.is_default) {
+          return {
+            success: false,
+            message: tr.cannotDeleteDefaultWorkplace,
+          };
+        }
+
+        const isActiveTarget = !target.archived_at;
+        if (isActiveTarget && activeJobs.length <= 1) {
+          return {
+            success: false,
+            message: tr.cannotDeleteLastActiveWorkplace,
+          };
+        }
+
+        await deleteJob(userId, input.jobId);
+
+        return {
+          success: true,
+          message: t(tr.deletedWorkplace, { name: target.name }),
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownAction, { action: input.action }),
+        };
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : tr.failedToManageWorkplaces
+    );
+  }
+}
+
+function getFriendDisplayName(friend: FriendEntry): string {
+  return friend.firstName?.trim() || friend.email || friend.phone || friend.id;
+}
+
+/**
+ * Execute list_friends tool
+ */
+async function executeListFriends(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = listFriendsSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ListFriendsInput = parsed.data;
+
+  try {
+    const friends = await getAllFriends(userId);
+    const visibleFriends = input.includeBlocked
+      ? friends
+      : friends.filter((friend) => !(friend.sharesWithMe?.blocked ?? false));
+
+    const data = visibleFriends.map((friend) => ({
+      id: friend.id,
+      name: getFriendDisplayName(friend),
+      email: friend.email,
+      phone: friend.phone,
+      sharesWithMe: Boolean(friend.sharesWithMe),
+      blocked: friend.sharesWithMe ? friend.sharesWithMe.blocked : null,
+      showEarningsToMe: friend.sharesWithMe ? friend.sharesWithMe.showEarningsToMe : null,
+      iShareWith: Boolean(friend.iShareWith),
+    }));
+
+    return {
+      success: true,
+      message: data.length === 1
+        ? t(tr.foundFriend, { count: data.length })
+        : t(tr.foundFriends, { count: data.length }),
+      data,
+    };
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToListFriends);
+  }
+}
+
+/**
+ * Execute query_friend_shifts tool
+ */
+async function executeQueryFriendShifts(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = queryFriendShiftsSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: QueryFriendShiftsInput = parsed.data;
+
+  try {
+    const friends = await getAllFriends(userId);
+    const friend = friends.find((entry) => entry.id === input.friendId);
+
+    if (!friend || !friend.sharesWithMe) {
+      return {
+        success: true,
+        message: tr.friendNoAccess,
+        data: {
+          access: "no_access",
+          friendId: input.friendId,
+        },
+      };
+    }
+
+    if (friend.sharesWithMe.blocked) {
+      return {
+        success: true,
+        message: tr.friendBlocked,
+        data: {
+          access: "blocked",
+          friendId: input.friendId,
+        },
+      };
+    }
+
+    const weekRange = getCurrentWeekRange();
+    const sharedResult = await getSharedUserShifts(input.friendId, {
+      startDate: input.startDate ?? weekRange.startDate,
+      endDate: input.endDate ?? weekRange.endDate,
+      limit: 1000,
+    });
+
+    const jobMap = new Map(sharedResult.jobs.map((job) => [job.id, job.name]));
+
+    let filteredShifts = sharedResult.shifts;
+
+    if (input.jobId) {
+      filteredShifts = filteredShifts.filter((shift) => shift.job_id === input.jobId);
+    }
+
+    if (input.minTime) {
+      filteredShifts = filteredShifts.filter((shift) => shift.start_time >= input.minTime!);
+    }
+    if (input.maxTime) {
+      filteredShifts = filteredShifts.filter((shift) => shift.start_time <= input.maxTime!);
+    }
+
+    if (input.weekdays && input.weekdays.length > 0) {
+      filteredShifts = filteredShifts.filter((shift) => {
+        const date = new Date(shift.shift_date + "T12:00:00");
+        const weekday = date.getDay();
+        return input.weekdays!.includes(weekday);
+      });
+    }
+
+    if (input.sortBy === "earnings") {
+      filteredShifts = filteredShifts.sort((a, b) => b.computed.gross - a.computed.gross);
+    } else if (input.sortBy === "hours") {
+      filteredShifts = filteredShifts.sort((a, b) => b.computed.paidHours - a.computed.paidHours);
+    }
+
+    const limitedShifts = filteredShifts.slice(0, input.limit || 30);
+    const canShowEarnings = sharedResult.showEarnings && friend.sharesWithMe.showEarningsToMe;
+    const currency = typeof sharedResult.settings.currency === "string" && sharedResult.settings.currency.trim().length > 0
+      ? sharedResult.settings.currency
+      : "NOK";
+
+    const rows = limitedShifts.map((shift) => {
+      const base = {
+        id: toDisplayShiftId(shift.id),
+        date: shift.shift_date,
+        day: getWeekdayAbbr(shift.shift_date, tr),
+        start: shift.start_time,
+        end: shift.end_time,
+        hours: Number(shift.computed.paidHours.toFixed(2)),
+        workplace: shift.job_id ? (jobMap.get(shift.job_id) ?? null) : null,
+      };
+
+      if (!canShowEarnings) {
+        return base;
+      }
+
+      return {
+        ...base,
+        gross: Number(shift.computed.gross.toFixed(2)),
+        net: Number(calculateNetPay(
+          shift.computed.gross,
+          { tax_enabled: shift.tax_enabled, tax_percentage: shift.tax_percentage },
+          sharedResult.settings.half_tax_month,
+          shift.shift_date
+        ).toFixed(2)),
+      };
+    });
+
+    const totalHours = Number(
+      limitedShifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0).toFixed(2)
+    );
+    const totalEarnings = canShowEarnings
+      ? Number(limitedShifts.reduce((sum, shift) => sum + shift.computed.gross, 0).toFixed(2))
+      : null;
+
+    return {
+      success: true,
+      message: rows.length === 1
+        ? t(tr.foundFriendShift, { count: rows.length })
+        : t(tr.foundFriendShifts, { count: rows.length }),
+      data: {
+        friend: {
+          id: friend.id,
+          name: getFriendDisplayName(friend),
+        },
+        showEarningsToMe: canShowEarnings,
+        shifts: rows,
+        summary: {
+          shiftCount: rows.length,
+          totalHours,
+          totalEarnings,
+        },
+      },
+      currency,
+    };
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToQueryFriendShifts);
+  }
+}
+
+/**
+ * Execute manage_friend_sharing tool
+ */
+async function executeManageFriendSharing(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = manageFriendSharingSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ManageFriendSharingInput = parsed.data;
+
+  try {
+    const requireFriendId = () => {
+      if (!input.friendId) {
+        return {
+          success: false,
+          message: tr.missingFriendId,
+        } satisfies ToolResult;
+      }
+      return null;
+    };
+
+    switch (input.action) {
+      case "share_by_identifier": {
+        const identifier = input.identifier?.trim();
+        if (!identifier) {
+          return {
+            success: false,
+            message: tr.missingIdentifier,
+          };
+        }
+
+        const result = await createShare(identifier, {
+          showEarnings: input.showEarnings ?? false,
+        });
+
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: tr.friendShareCreated,
+        };
+      }
+
+      case "share_back": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+
+        if (!friend || !friend.sharesWithMe) {
+          return {
+            success: false,
+            message: tr.friendMustShareWithMeFirst,
+          };
+        }
+
+        const result = await shareBack(input.friendId!);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: t(tr.friendSharedBack, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      case "remove_recipient": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+        if (!friend || !friend.iShareWith) {
+          return {
+            success: false,
+            message: tr.friendMustBeRecipient,
+          };
+        }
+
+        const result = await removeShare(input.friendId!);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: t(tr.friendRecipientRemoved, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      case "toggle_recipient_earnings": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        if (typeof input.showEarnings !== "boolean") {
+          return {
+            success: false,
+            message: tr.missingShowEarnings,
+          };
+        }
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+        if (!friend || !friend.iShareWith) {
+          return {
+            success: false,
+            message: tr.friendMustBeRecipient,
+          };
+        }
+
+        const result = await toggleShareEarnings(input.friendId!, input.showEarnings);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: input.showEarnings
+            ? t(tr.friendRecipientEarningsEnabled, { name: getFriendDisplayName(friend) })
+            : t(tr.friendRecipientEarningsDisabled, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      case "block_sharer": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+        if (!friend || !friend.sharesWithMe) {
+          return {
+            success: false,
+            message: tr.friendMustBeSharer,
+          };
+        }
+
+        const result = await blockSharerAction(input.friendId!);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: t(tr.friendSharerBlocked, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      case "unblock_sharer": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+        if (!friend || !friend.sharesWithMe) {
+          return {
+            success: false,
+            message: tr.friendMustBeSharer,
+          };
+        }
+
+        const result = await unblockSharerAction(input.friendId!);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: t(tr.friendSharerUnblocked, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      case "set_sharer_muted": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        if (typeof input.muted !== "boolean") {
+          return {
+            success: false,
+            message: tr.missingMuted,
+          };
+        }
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+        if (!friend || !friend.sharesWithMe) {
+          return {
+            success: false,
+            message: tr.friendMustBeSharer,
+          };
+        }
+
+        const result = await toggleSharerMuted(input.friendId!, input.muted);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: input.muted
+            ? t(tr.friendSharerMuted, { name: getFriendDisplayName(friend) })
+            : t(tr.friendSharerUnmuted, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      case "remove_sharer": {
+        const missing = requireFriendId();
+        if (missing) return missing;
+
+        const friends = await getAllFriends(userId);
+        const friend = friends.find((entry) => entry.id === input.friendId);
+        if (!friend || !friend.sharesWithMe) {
+          return {
+            success: false,
+            message: tr.friendMustBeSharer,
+          };
+        }
+
+        const result = await removeSharer(input.friendId!);
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: t(tr.friendSharerRemoved, { name: getFriendDisplayName(friend) }),
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownAction, { action: input.action }),
+        };
+    }
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToManageFriendSharing);
+  }
+}
+
+/**
+ * Execute manage_shift_advanced tool
+ */
+async function executeManageShiftAdvanced(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = manageShiftAdvancedSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ManageShiftAdvancedInput = parsed.data;
+
+  try {
+    switch (input.action) {
+      case "copy_shifts": {
+        if (!input.shiftIds || input.shiftIds.length === 0 || !input.targetDate) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: "shiftIds, targetDate" }),
+          };
+        }
+
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
+        const resolvedShiftIds = resolveShortIdsFromShifts(input.shiftIds, shiftsResult.shifts);
+        if (resolvedShiftIds.length === 0) {
+          return {
+            success: false,
+            message: tr.noShiftsWithIds,
+          };
+        }
+
+        const result = await copyShifts({
+          shiftIds: resolvedShiftIds,
+          targetDate: input.targetDate,
+        });
+
+        return {
+          success: true,
+          message: t(tr.copiedShifts, { count: result.copied }),
+          data: result,
+        };
+      }
+
+      case "update_custom_supplements": {
+        if (!input.shiftId || input.customSupplements === undefined) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: "shiftId, customSupplements" }),
+          };
+        }
+
+        let recurringId: string | undefined;
+        if (input.recurringId) {
+          if (!input.shiftDate) {
+            return {
+              success: false,
+              message: t(tr.missingFields, { fields: "shiftDate" }),
+            };
+          }
+
+          const resolvedRecurringId = await resolveRecurringId(input.recurringId, userId);
+          if (!resolvedRecurringId) {
+            return {
+              success: false,
+              message: t(tr.recurringNotFound, { id: input.recurringId }),
+            };
+          }
+          recurringId = resolvedRecurringId;
+        }
+
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
+        const resolvedShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts) ?? input.shiftId;
+
+        const result = await updateCustomSupplements({
+          shiftId: resolvedShiftId,
+          customSupplements: input.customSupplements,
+          ...(recurringId ? { recurringId } : {}),
+          ...(input.shiftDate ? { shiftDate: input.shiftDate } : {}),
+        });
+
+        return {
+          success: true,
+          message: tr.updatedCustomSupplements,
+          data: result,
+        };
+      }
+
+      case "convert_recurring_to_standalone": {
+        if (!input.recurringId || !input.shiftDate || !input.startTime || !input.endTime) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: "recurringId, shiftDate, startTime, endTime" }),
+          };
+        }
+
+        const fullRecurringId = await resolveRecurringId(input.recurringId, userId);
+        if (!fullRecurringId) {
+          return {
+            success: false,
+            message: t(tr.recurringNotFound, { id: input.recurringId }),
+          };
+        }
+
+        await convertRecurringShiftToStandalone({
+          recurringId: fullRecurringId,
+          shiftDate: input.shiftDate,
+          startTime: input.startTime,
+          endTime: input.endTime,
+        });
+
+        return {
+          success: true,
+          message: tr.convertedRecurringShift,
+        };
+      }
+
+      case "move_recurring_occurrence": {
+        if (!input.recurringId || !input.sourceDate || !input.targetDate || !input.startTime || !input.endTime) {
+          return {
+            success: false,
+            message: t(tr.missingFields, { fields: "recurringId, sourceDate, targetDate, startTime, endTime" }),
+          };
+        }
+
+        const fullRecurringId = await resolveRecurringId(input.recurringId, userId);
+        if (!fullRecurringId) {
+          return {
+            success: false,
+            message: t(tr.recurringNotFound, { id: input.recurringId }),
+          };
+        }
+
+        await moveRecurringShift({
+          recurringId: fullRecurringId,
+          sourceDate: input.sourceDate,
+          targetDate: input.targetDate,
+          startTime: input.startTime,
+          endTime: input.endTime,
+        });
+
+        return {
+          success: true,
+          message: tr.movedRecurringShift,
+        };
+      }
+
+      case "clear_shift_snapshots": {
+        if (!input.shiftId) {
+          return {
+            success: false,
+            message: tr.missingShiftId,
+          };
+        }
+
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
+        const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
+        if (!fullShiftId) {
+          return {
+            success: false,
+            message: t(tr.shiftNotFound, { id: input.shiftId }),
+          };
+        }
+
+        const result = await clearShiftSnapshots(fullShiftId);
+        return {
+          success: true,
+          message: tr.clearedShiftSnapshots,
+          data: result,
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownAction, { action: input.action }),
+        };
+    }
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToManageShiftAdvanced);
+  }
+}
+
+/**
+ * Execute manage_feedback tool
+ */
+async function executeManageFeedback(
+  args: unknown,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = manageFeedbackSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ManageFeedbackInput = parsed.data;
+
+  try {
+    switch (input.action) {
+      case "submit": {
+        const message = input.message?.trim();
+        if (!message) {
+          return {
+            success: false,
+            message: tr.missingFeedbackMessage,
+          };
+        }
+
+        await submitFeedback(message);
+        return {
+          success: true,
+          message: tr.submittedFeedback,
+        };
+      }
+
+      case "list": {
+        const items = await getUserFeedback();
+        return {
+          success: true,
+          message: t(tr.listedFeedback, { count: items.length }),
+          data: items,
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownAction, { action: input.action }),
+        };
+    }
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToManageFeedback);
+  }
+}
+
+/**
+ * Execute manage_profile tool
+ */
+async function executeManageProfile(
+  args: unknown,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = manageProfileSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ManageProfileInput = parsed.data;
+
+  try {
+    switch (input.action) {
+      case "view": {
+        const { user } = await verifySession();
+        const metadata = user.user_metadata ?? {};
+        const firstName = (metadata.full_name as string) ?? (metadata.name as string) ?? null;
+
+        return {
+          success: true,
+          message: tr.retrievedProfile,
+          data: {
+            id: user.id,
+            firstName,
+            email: user.email ?? null,
+            phone: user.phone ?? null,
+          },
+        };
+      }
+
+      case "update_name": {
+        const firstName = input.firstName?.trim();
+        if (!firstName) {
+          return {
+            success: false,
+            message: tr.emptyProfileName,
+          };
+        }
+
+        await updateProfileSettings({ firstName });
+
+        return {
+          success: true,
+          message: t(tr.updatedProfileName, { name: firstName }),
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownAction, { action: input.action }),
+        };
+    }
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : tr.failedToManageProfile);
   }
 }
 

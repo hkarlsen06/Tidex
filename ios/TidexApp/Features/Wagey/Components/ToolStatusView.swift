@@ -65,8 +65,14 @@ struct ToolStatusView: View {
       let action = json["action"] as? String
     else { return nil }
 
-    let key = "\(toolCall.name).\(action)"
-    return actionNameMapping[key]
+    var key = "\(toolCall.name).\(action)"
+    if toolCall.name == "manage_workplace",
+      action == "reorder",
+      let direction = json["direction"] as? String
+    {
+      key = "\(key).\(direction)"
+    }
+    return actionNameMapping[key] ?? actionNameMapping["\(toolCall.name).\(action)"]
   }
 
   /// Map (tool_name.action) pairs to specific display names
@@ -86,6 +92,45 @@ struct ToolStatusView: View {
       "manage_wage_snapshots.create": String(localized: .wageyToolWageSnapshotAdding),
       "manage_wage_snapshots.update": String(localized: .wageyToolWageSnapshotUpdating),
       "manage_wage_snapshots.delete": String(localized: .wageyToolWageSnapshotDeleting),
+
+      "manage_workplace.create": String(localized: .wageyToolWorkplaceCreating),
+      "manage_workplace.update": String(localized: .wageyToolWorkplaceUpdating),
+      "manage_workplace.archive": String(localized: .wageyToolWorkplaceArchiving),
+      "manage_workplace.unarchive": String(localized: .wageyToolWorkplaceUnarchiving),
+      "manage_workplace.set_default": String(localized: .wageyToolWorkplaceSettingDefault),
+      "manage_workplace.reorder.up": String(localized: .wageyToolWorkplaceReorderingUp),
+      "manage_workplace.reorder.down": String(localized: .wageyToolWorkplaceReorderingDown),
+      "manage_workplace.delete": String(localized: .wageyToolWorkplaceDeleting),
+
+      "manage_friend_sharing.share_by_identifier": String(
+        localized: .wageyToolFriendSharingShareByIdentifier),
+      "manage_friend_sharing.share_back": String(localized: .wageyToolFriendSharingShareBack),
+      "manage_friend_sharing.remove_recipient": String(
+        localized: .wageyToolFriendSharingRemoveRecipient),
+      "manage_friend_sharing.toggle_recipient_earnings": String(
+        localized: .wageyToolFriendSharingToggleRecipientEarnings),
+      "manage_friend_sharing.block_sharer": String(localized: .wageyToolFriendSharingBlockSharer),
+      "manage_friend_sharing.unblock_sharer": String(
+        localized: .wageyToolFriendSharingUnblockSharer),
+      "manage_friend_sharing.set_sharer_muted": String(
+        localized: .wageyToolFriendSharingSetSharerMuted),
+      "manage_friend_sharing.remove_sharer": String(localized: .wageyToolFriendSharingRemoveSharer),
+
+      "manage_shift_advanced.copy_shifts": String(localized: .wageyToolShiftAdvancedCopyShifts),
+      "manage_shift_advanced.update_custom_supplements": String(
+        localized: .wageyToolShiftAdvancedUpdateCustomSupplements),
+      "manage_shift_advanced.convert_recurring_to_standalone": String(
+        localized: .wageyToolShiftAdvancedConvertRecurringToStandalone),
+      "manage_shift_advanced.move_recurring_occurrence": String(
+        localized: .wageyToolShiftAdvancedMoveRecurringOccurrence),
+      "manage_shift_advanced.clear_shift_snapshots": String(
+        localized: .wageyToolShiftAdvancedClearShiftSnapshots),
+
+      "manage_feedback.submit": String(localized: .wageyToolFeedbackSubmit),
+      "manage_feedback.list": String(localized: .wageyToolFeedbackList),
+
+      "manage_profile.view": String(localized: .wageyToolProfileView),
+      "manage_profile.update_name": String(localized: .wageyToolProfileUpdateName),
     ]
   }
 
@@ -112,6 +157,22 @@ struct ToolStatusView: View {
 
       // Wage snapshots
       "manage_wage_snapshots": String(localized: .wageyToolManageWageSnapshots),
+
+      // Workplaces
+      "list_workplaces": String(localized: .wageyToolListWorkplaces),
+      "manage_workplace": String(localized: .wageyToolManageWorkplace),
+
+      // Friends and sharing
+      "list_friends": String(localized: .wageyToolListFriends),
+      "manage_friend_sharing": String(localized: .wageyToolManageFriendSharing),
+      "query_friend_shifts": String(localized: .wageyToolQueryFriendShifts),
+
+      // Advanced shifts
+      "manage_shift_advanced": String(localized: .wageyToolManageShiftAdvanced),
+
+      // Feedback and profile
+      "manage_feedback": String(localized: .wageyToolManageFeedback),
+      "manage_profile": String(localized: .wageyToolManageProfile),
     ]
   }
 
