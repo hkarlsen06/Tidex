@@ -82,7 +82,7 @@ struct CalendarDayCell<Content: View>: View {
   private let horizontalCornerInset: CGFloat = Spacing.xxxs
   private let topCornerInset: CGFloat = 1
   private let topRowHeight: CGFloat = 17
-  private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm - 1
+  private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm - 2
   private let stackedMetricSpacing: CGFloat = -3
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
@@ -179,13 +179,17 @@ struct CalendarDayCell<Content: View>: View {
       .font(.tidexBodyMedium)
       .fixedSize(horizontal: true, vertical: false)
       .monospacedDigit()
-      .foregroundColor(style.dayNumberColor)
+      .foregroundColor(style.showsTodayBadge ? .tidexTextOnBrand : style.dayNumberColor)
       .background {
         if style.showsTodayBadge {
           RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
-            .fill(Color.tidexBlue)
-            .padding(.horizontal, -(horizontalCornerInset - topCornerInset))
-            .padding(.vertical, 0)
+            .fill(Color.tidexBrandPrimary)
+            .overlay {
+              RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
+                .fill(Color.black.opacity(0.15))
+            }
+            .padding(.horizontal, -(horizontalCornerInset - topCornerInset - 1))
+            .padding(.vertical, 1)
         }
       }
   }

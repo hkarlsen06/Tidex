@@ -847,15 +847,7 @@ struct DashboardView: View {
       progress: payrollProgress
     )
 
-    if showsWorkplaceVariants {
-      card
-        .contentShape(Rectangle())
-        .onTapGesture {
-          guard variantCount > 1 else { return }
-          selectedPayrollVariantIndex = (selectedPayrollVariantIndex + 1) % variantCount
-          Haptics.play(.light)
-        }
-    } else {
+    if canManuallySetPayrollStatus && !showsWorkplaceVariants {
       Menu {
         Section(String(localized: .dashboardPayrollStatusTitle)) {
           Button {
@@ -883,7 +875,16 @@ struct DashboardView: View {
         card
       }
       .menuIndicator(.hidden)
-      .disabled(!canManuallySetPayrollStatus)
+    } else if showsWorkplaceVariants {
+      card
+        .contentShape(Rectangle())
+        .onTapGesture {
+          guard variantCount > 1 else { return }
+          selectedPayrollVariantIndex = (selectedPayrollVariantIndex + 1) % variantCount
+          Haptics.play(.light)
+        }
+    } else {
+      card
     }
   }
 

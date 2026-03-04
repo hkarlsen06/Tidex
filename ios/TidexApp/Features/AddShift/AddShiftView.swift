@@ -447,8 +447,7 @@ private struct SingleShiftContent: View {
             .font(.tidexMicro)
           Text(.addShiftSingleTimeScopeHint)
             .font(.tidexMicro)
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundColor(.tidexTextMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
