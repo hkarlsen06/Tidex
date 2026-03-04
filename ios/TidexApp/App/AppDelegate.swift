@@ -6,6 +6,8 @@ import os
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
+  /// Stable reference for flows where `UIApplication.shared.delegate` is wrapped by runtime internals.
+  static weak var shared: AppDelegate?
 
   // Track background task to ensure proper cleanup
   // This prevents "Background task still not ended after expiration handlers were called" warning
@@ -21,6 +23,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// Collapses rapid foreground/sync/auth triggers into one serialized maintenance run.
   private var liveActivityMaintenanceInFlight = false
   private var liveActivityMaintenancePending = false
+
+  override init() {
+    super.init()
+    Self.shared = self
+  }
 
   private func shiftDateTimeFormatter() -> DateFormatter {
     FormatterCache.shiftDateTimeFormatter(timeZone: .current)
@@ -83,6 +90,39 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     return false
+  }
+
+  private func isTerminalLiveActivityState(_ state: ActivityState) -> Bool {
+    switch state {
+    case .ended, .dismissed:
+      return true
+    default:
+      return false
+    }
+  }
+
+  private func nonTerminalLiveActivities() -> [Activity<ShiftActivityAttributes>] {
+    Activity<ShiftActivityAttributes>.activities.filter {
+      !isTerminalLiveActivityState($0.activityState)
+    }
+  }
+
+  @MainActor
+  private func waitForLiveActivityListToClear(
+    maxAttempts: Int = 4,
+    delayNanoseconds: UInt64 = 300_000_000
+  ) async -> Bool {
+    for attempt in 0..<maxAttempts {
+      if nonTerminalLiveActivities().isEmpty {
+        return true
+      }
+
+      // Wait for ActivityKit to clear ended activities from its in-memory list.
+      guard attempt < maxAttempts - 1 else { break }
+      try? await Task.sleep(nanoseconds: delayNanoseconds)
+    }
+
+    return nonTerminalLiveActivities().isEmpty
   }
 
   private func sharedUserDefaults() -> UserDefaults? {
@@ -177,7 +217,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Check if Live Activities are enabled
     let authInfo = ActivityAuthorizationInfo()
     guard authInfo.areActivitiesEnabled else {
-      print("[LiveActivity] Activities not enabled - user may have disabled them in Settings")
       return
     }
 
@@ -185,7 +224,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let endedAnyStaleActivities = await endStaleActivities()
 
     // Check if there's already an active activity
-    let remainingActivities = Activity<ShiftActivityAttributes>.activities
+    let remainingActivities = Activity<ShiftActivityAttributes>.activities.filter {
+      !isTerminalLiveActivityState($0.activityState)
+    }
     guard remainingActivities.isEmpty else {
       // Some ended activities can persist briefly in ActivityKit's in-memory list.
       // Queue one more pass so we can start the replacement activity once the list clears.
@@ -214,15 +255,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
       // Find the ongoing shift without verbose per-shift logging
       if let ongoingShift = shifts.first(where: { isShiftOngoing($0, at: now) }) {
-        print(
-          "[LiveActivity] Starting activity for shift \(ongoingShift.shiftDate) \(ongoingShift.startTime)-\(ongoingShift.endTime)"
-        )
         startLiveActivityForShift(ongoingShift)
       }
       // Silent when no ongoing shift - this is the normal case
-    } catch {
-      print("[LiveActivity] Failed to parse shifts: \(error)")
-    }
+    } catch {}
   }
 
   /// End any Live Activities whose shifts are no longer ongoing.
@@ -232,7 +268,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// - The shift has ended naturally
   @MainActor
   private func endStaleActivities() async -> Bool {
-    let activities = Activity<ShiftActivityAttributes>.activities
+    let activities = Activity<ShiftActivityAttributes>.activities.filter {
+      !isTerminalLiveActivityState($0.activityState)
+    }
     guard !activities.isEmpty else { return false }
 
     // Read current shifts from storage
@@ -257,8 +295,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       let matchingShift = currentShifts.first { $0.shiftId == shiftId }
 
       var shouldEnd = false
-      var reason = ""
-
       if matchingShift == nil {
         if isTemporaryClockActivity(activity.attributes) {
           if hasTemporaryClockSession(shiftId: shiftId) {
@@ -268,26 +304,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
           }
           // Temporary activity has no backing local session anymore (e.g., after sign-out/reset).
           shouldEnd = true
-          reason = "temporary session no longer exists"
         } else {
           // Shift was deleted
           shouldEnd = true
-          reason = "shift was deleted"
         }
       } else if let shift = matchingShift {
         // Shift exists - check if it's still ongoing
         if !isShiftOngoing(shift, at: now) {
           shouldEnd = true
-          reason = "shift is no longer ongoing (edited or ended)"
         } else if shouldReplaceActivity(activity, with: shift) {
           shouldEnd = true
-          reason = "shift details changed while ongoing"
         }
       }
 
       if shouldEnd {
         endedAny = true
-        print("[LiveActivity] Ending activity for shift \(shiftId): \(reason)")
         await activity.end(nil, dismissalPolicy: .immediate)
       }
     }
@@ -305,7 +336,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       guard !matchingActivities.isEmpty else { return }
 
       for activity in matchingActivities {
-        print("[LiveActivity] Force ending activity for shift \(shiftId) from user action")
         await activity.end(nil, dismissalPolicy: .immediate)
       }
 
@@ -320,13 +350,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   @MainActor
-  func endAllLiveActivities(reason: String = "user context changed") async {
+  func endAllLiveActivities(reason _: String = "user context changed") async {
     let activities = Activity<ShiftActivityAttributes>.activities
     guard !activities.isEmpty else { return }
 
     for activity in activities {
-      print(
-        "[LiveActivity] Ending activity for shift \(activity.attributes.shiftId): \(reason)")
       await activity.end(nil, dismissalPolicy: .immediate)
     }
 
@@ -335,16 +363,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   /// Start a temporary open-ended clock Live Activity.
   /// Uses `startDate` as both start and timer anchor so the Live Activity timer counts up.
+  @MainActor
   func startTemporaryLiveActivity(
     shiftId: String,
     startedAt: Date,
     currencySymbol: String? = "kr"
   ) async {
     let authInfo = ActivityAuthorizationInfo()
-    guard authInfo.areActivitiesEnabled else { return }
+    guard authInfo.areActivitiesEnabled else {
+      return
+    }
 
     // Ensure stale/previous activities do not block starting a fresh temporary clock activity.
     await endAllLiveActivities(reason: "starting temporary clock activity")
+    guard await waitForLiveActivityListToClear() else {
+      return
+    }
 
     let isoDate = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(
       from: startedAt)
@@ -375,16 +409,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       progressPercent: 0
     )
 
-    do {
-      _ = try Activity.request(
-        attributes: attributes,
-        content: .init(state: initialState, staleDate: nil),
-        pushType: nil
-      )
-      print("[LiveActivity] Started temporary clock activity \(shiftId)")
-    } catch {
-      print(
-        "[LiveActivity] Failed to start temporary clock activity: \(error.localizedDescription)")
+    let maxAttempts = 3
+    for attempt in 1...maxAttempts {
+      do {
+        _ = try Activity.request(
+          attributes: attributes,
+          content: .init(state: initialState, staleDate: nil),
+          pushType: nil
+        )
+        return
+      } catch {
+        guard attempt < maxAttempts else {
+          return
+        }
+        try? await Task.sleep(nanoseconds: 300_000_000)
+      }
     }
   }
 
@@ -485,10 +524,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         content: .init(state: initialState, staleDate: nil),
         pushType: nil
       )
-      print("[LiveActivity] Started successfully for shift \(shift.shiftId)")
-    } catch {
-      print("[LiveActivity] Failed to start: \(error.localizedDescription)")
-    }
+    } catch {}
   }
 
   func applicationWillTerminate(_ application: UIApplication) {

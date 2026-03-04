@@ -55,13 +55,14 @@ final class AppLifecycleHandler {
     loadingRecoveryTask?.cancel()
     loadingRecoveryTask = nil
     BiometricAuthService.shared.handleAppBackground()
-    (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()
     // Defensive: ensure blur is shown when entering background.
     PrivacyBlurManager.showIfNeeded()
   }
 
   private func runForegroundLiveActivityMaintenance() {
-    guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
+    guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
+    else { return }
     // Reconcile Live Activity state against current shifts when returning to foreground.
     appDelegate.checkAndStartLiveActivityIfNeeded()
     appDelegate.endBackgroundTaskIfNeeded()

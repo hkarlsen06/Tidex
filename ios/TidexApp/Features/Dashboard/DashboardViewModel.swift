@@ -216,7 +216,8 @@ final class ClockSessionReconciler {
     if Self.hasExceededEndOfDayLimit(temporarySession, at: referenceDate) {
       cancelTemporarySession(temporarySession)
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
-      (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
+      ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+        .checkAndStartLiveActivityIfNeeded()
       return
     }
 
@@ -250,21 +251,32 @@ final class ClockSessionReconciler {
     cancelTemporarySession(temporarySession)
 
     NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
-    (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+      .checkAndStartLiveActivityIfNeeded()
   }
 
   private func cancelTemporarySession(_ session: TemporaryClockSession) {
-    (UIApplication.shared.delegate as? AppDelegate)?.endLiveActivity(for: session.id)
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.endLiveActivity(
+      for: session.id)
     clockSessionStore.clear(for: session.userId)
   }
 
   private func ensureTemporaryLiveActivity(for session: TemporaryClockSession) async {
-    let hasMatchingActivity = Activity<ShiftActivityAttributes>.activities.contains {
-      $0.attributes.shiftId == session.id
+    let hasMatchingActivity = Activity<ShiftActivityAttributes>.activities.contains { activity in
+      guard activity.attributes.shiftId == session.id else { return false }
+      switch activity.activityState {
+      case .ended, .dismissed:
+        return false
+      default:
+        return true
+      }
     }
-    guard !hasMatchingActivity else { return }
+    guard !hasMatchingActivity else {
+      return
+    }
 
-    guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
+    guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
+    else { return }
     await appDelegate.startTemporaryLiveActivity(
       shiftId: session.id,
       startedAt: session.startedAt
@@ -386,6 +398,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     case none
     case temporary(TemporaryClockSession)
     case persisted(ShiftRow)
+    case computed(ShiftWithComputations)
   }
 
   enum ClockOutRoute: Equatable {
@@ -1572,7 +1585,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Trigger shift completion celebration for current month (if applicable)
   private func maybeTriggerCelebration() {
-    guard let userId = cachedUserId, !userId.isEmpty else { return }
+    let resolvedUserId = cachedUserId ?? resolveUserIdForPayrollVariants()
+    guard let userId = resolvedUserId, !userId.isEmpty else { return }
+    cachedUserId = userId
     guard let dashboardData = dashboardData, let settings = settings else { return }
 
     let current = Date.currentYearMonth()
@@ -1838,6 +1853,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   func refreshClockState() async {
     await refreshClockActiveState(referenceDate: Date())
+    maybeTriggerCelebration()
   }
 
   func refreshAppearanceSettingsFromLocal() async {
@@ -1936,12 +1952,38 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   }
 
   func clockIn(jobId: String? = nil, at now: Date = Date()) async {
-    guard !isClockActionInProgress else { return }
+    print("[Clock] Clock in requested")
+    guard !isClockActionInProgress else {
+      print("[Clock] Clock in skipped: action already in progress")
+      return
+    }
     await refreshClockActiveState(referenceDate: now)
 
-    guard case .none = activeClockState else { return }
+    guard case .none = activeClockState else {
+      let stateDescription: String = {
+        switch activeClockState {
+        case .none:
+          return "none"
+        case .temporary(let session):
+          return "temporary(\(session.id))"
+        case .persisted(let shift):
+          return "persisted(\(shift.id))"
+        case .computed(let shift):
+          return "computed(\(shift.id))"
+        }
+      }()
+      print("[Clock] Clock in skipped: active state is \(stateDescription)")
+      // Self-heal: if an active local clock state exists but its Live Activity is missing,
+      // reconciling can recreate the temporary activity.
+      await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: now)
+      return
+    }
 
-    guard let userId = await ensureCachedUserId() else { return }
+    guard let userId = await ensureCachedUserId() else {
+      logger.error("❌ Clock in aborted: unable to resolve user ID")
+      print("[Clock] Clock in aborted: unable to resolve user ID")
+      return
+    }
     let resolvedJobId = jobId ?? defaultJobId(for: userId)
 
     let alignedStart = Self.minuteAligned(now)
@@ -1956,13 +1998,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     activeClockState = .temporary(session)
 
     let currency = settings?.currency ?? "kr"
-    if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-      await appDelegate.startTemporaryLiveActivity(
-        shiftId: session.id,
-        startedAt: session.startedAt,
-        currencySymbol: currency
-      )
+    guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
+    else {
+      logger.error("❌ Clock in aborted: AppDelegate unavailable")
+      print("[Clock] Clock in aborted: AppDelegate unavailable")
+      return
     }
+
+    await appDelegate.startTemporaryLiveActivity(
+      shiftId: session.id,
+      startedAt: session.startedAt,
+      currencySymbol: currency
+    )
   }
 
   func routeClockOut(at now: Date = Date()) async -> ClockOutRoute {
@@ -1975,6 +2022,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     case .temporary(let session):
       return .temporaryReview(session)
     case .persisted(let ongoingShift):
+      isClockActionInProgress = true
+      defer { isClockActionInProgress = false }
+      await endShiftNow(ongoingShift, at: now)
+      await refreshClockActiveState(referenceDate: Date())
+      return .persistedEnded
+    case .computed(let ongoingShift):
       isClockActionInProgress = true
       defer { isClockActionInProgress = false }
       await endShiftNow(ongoingShift, at: now)
@@ -2090,7 +2143,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   func endShiftNow(_ shift: ShiftWithComputations, at now: Date = Date()) async {
     guard !isUpdatingShift else { return }
 
-    (UIApplication.shared.delegate as? AppDelegate)?.endLiveActivity(for: shift.id)
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.endLiveActivity(
+      for: shift.id)
 
     let editResult = ShiftEditResult(
       shiftId: shift.id,
@@ -2111,7 +2165,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   func endShiftNow(_ shift: ShiftRow, at now: Date = Date()) async {
     guard !isUpdatingShift else { return }
 
-    (UIApplication.shared.delegate as? AppDelegate)?.endLiveActivity(for: shift.id)
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.endLiveActivity(
+      for: shift.id)
 
     let editResult = ShiftEditResult(
       shiftId: shift.id,
@@ -2205,6 +2260,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     if let cachedUserId, !cachedUserId.isEmpty {
       return cachedUserId
     }
+
+    // Use session-derived user ID for clock actions to avoid stale settings/coordinator
+    // values during reload/account-context transitions.
     cachedUserId = try? await getCurrentUserId()
     return cachedUserId
   }
@@ -2252,11 +2310,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       return
     }
 
+    if let ongoingShift = findComputedOngoingShift(at: referenceDate) {
+      activeClockState = .computed(ongoingShift)
+      return
+    }
+
     activeClockState = .none
   }
 
   private func cancelTemporarySession(_ session: TemporaryClockSession) {
-    (UIApplication.shared.delegate as? AppDelegate)?.endLiveActivity(for: session.id)
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.endLiveActivity(
+      for: session.id)
     clockSessionStore.clear(for: session.userId)
   }
 
@@ -2287,6 +2351,27 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         return lhs.shift_date < rhs.shift_date
       }
       .first(where: { Self.isShiftOngoing($0, at: referenceDate) })
+  }
+
+  /// Fallback for ongoing recurring/virtual shifts that are visible in dashboard data
+  /// but not persisted in the local shifts table yet.
+  private func findComputedOngoingShift(at referenceDate: Date) -> ShiftWithComputations? {
+    var best: ShiftWithComputations?
+
+    for shift in displayedMonthShifts where Self.isShiftOngoing(shift.shift, at: referenceDate) {
+      guard let currentBest = best else {
+        best = shift
+        continue
+      }
+
+      if shift.shiftDate < currentBest.shiftDate
+        || (shift.shiftDate == currentBest.shiftDate && shift.startTime < currentBest.startTime)
+      {
+        best = shift
+      }
+    }
+
+    return best
   }
 
   // MARK: - Payroll Override Helpers

@@ -221,6 +221,11 @@ final class SyncCoordinator: ObservableObject {
     case .skippedInterval:
       // Keep locale metadata in sync even when full sync is interval-skipped.
       await updateAppLocaleMetadataIfNeeded()
+      // Keep foreground Live Activity state fresh without running full widget
+      // storage recomputation on the main thread when sync is interval-skipped.
+      await MainActor.run {
+        AppDelegate.shared?.checkAndStartLiveActivityIfNeeded()
+      }
       return SyncResult(
         success: false,
         tableResults: [],

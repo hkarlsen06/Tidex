@@ -166,7 +166,7 @@ enum NativeWidgetStorage {
     reloadWidgetTimelines()
 
     // Re-check in-app Live Activity state after fresh shift data is written.
-    if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
       appDelegate.checkAndStartLiveActivityIfNeeded()
     }
 
