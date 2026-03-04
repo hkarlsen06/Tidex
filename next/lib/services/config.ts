@@ -16,6 +16,8 @@
 import { Context, Effect, Layer, Schema, Redacted, ParseResult } from "effect";
 import { ConfigError } from "../errors/tagged";
 
+export type WageyAIProvider = "claude" | "chatgpt";
+
 /**
  * Supabase Configuration Schema
  * Validates Supabase connection settings
@@ -81,32 +83,12 @@ const SecurityConfigSchema = Schema.Struct({
 });
 
 /**
- * AI Configuration Schema
- * Validates AI service settings (Claude API)
- */
-const AIConfigSchema = Schema.Struct({
-  claudeApiKey: Schema.String.pipe(
-    Schema.nonEmptyString(),
-    Schema.annotations({
-      message: () => "Claude API key is required (CLAUDE_API_KEY)",
-    })
-  ),
-  claudeModel: Schema.String.pipe(
-    Schema.nonEmptyString(),
-    Schema.annotations({
-      message: () => "Claude model is required (CLAUDE_MODEL)",
-    })
-  ),
-});
-
-/**
  * Complete Application Configuration Schema
  */
 const AppConfigSchema = Schema.Struct({
   supabase: SupabaseConfigSchema,
   stripe: StripeConfigSchema,
   security: SecurityConfigSchema,
-  ai: AIConfigSchema,
 });
 
 /**
@@ -130,18 +112,47 @@ export class AppConfig extends Context.Tag("AppConfig")<
       readonly turnstileSiteKey: Redacted.Redacted<string>;
     };
     readonly ai: {
+      readonly provider: WageyAIProvider;
       readonly claudeApiKey: Redacted.Redacted<string>;
       readonly claudeModel: string;
+      readonly openaiApiKey: Redacted.Redacted<string>;
+      readonly openaiModel: string;
+      readonly openaiRealtimeModel: string;
     };
   }
 >() {}
+
+const DEFAULT_WAGEY_PROVIDER: WageyAIProvider = "claude";
+const DEFAULT_OPENAI_MODEL = "gpt-5.3-codex";
+const DEFAULT_OPENAI_REALTIME_MODEL = "gpt-realtime";
+const FALLBACK_UNUSED_SECRET = "__unused__";
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const normalizeProvider = (
+  provider: string | undefined
+): Effect.Effect<WageyAIProvider, ConfigError> => {
+  const normalized = (provider ?? DEFAULT_WAGEY_PROVIDER).trim().toLowerCase();
+
+  if (normalized === "claude" || normalized === "chatgpt") {
+    return Effect.succeed(normalized);
+  }
+
+  return Effect.fail(
+    new ConfigError({
+      configKey: "WAGEY_AI_PROVIDER",
+      reason: "invalid",
+      cause: `Expected 'claude' or 'chatgpt', got '${provider ?? ""}'`,
+    })
+  );
+};
 
 /**
  * Load configuration from environment variables
  * Validates and transforms raw env vars into typed config
  */
 const loadConfig = Effect.gen(function* () {
-  // Gather all required environment variables
   const rawConfig = {
     supabase: {
       url: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -156,13 +167,8 @@ const loadConfig = Effect.gen(function* () {
     security: {
       turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     },
-    ai: {
-      claudeApiKey: process.env.CLAUDE_API_KEY,
-      claudeModel: process.env.CLAUDE_MODEL,
-    },
   };
 
-  // Validate configuration with schema
   const validated = yield* Schema.decodeUnknown(AppConfigSchema)(rawConfig).pipe(
     Effect.mapError((parseError) => {
       const errors = ParseResult.TreeFormatter.formatErrorSync(parseError);
@@ -174,7 +180,82 @@ const loadConfig = Effect.gen(function* () {
     })
   );
 
-  // Return with sensitive values redacted
+  const provider = yield* normalizeProvider(process.env.WAGEY_AI_PROVIDER);
+
+  const claudeApiKey = process.env.CLAUDE_API_KEY?.trim();
+  const claudeModel = process.env.CLAUDE_MODEL?.trim();
+  const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
+  const openaiModel = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+  const openaiRealtimeModel =
+    process.env.OPENAI_REALTIME_MODEL?.trim() || DEFAULT_OPENAI_REALTIME_MODEL;
+
+  if (provider === "claude") {
+    if (!isNonEmptyString(claudeApiKey)) {
+      return yield* Effect.fail(
+        new ConfigError({
+          configKey: "CLAUDE_API_KEY",
+          reason: "missing",
+          cause: "Claude API key is required when WAGEY_AI_PROVIDER=claude",
+        })
+      );
+    }
+    if (!isNonEmptyString(claudeModel)) {
+      return yield* Effect.fail(
+        new ConfigError({
+          configKey: "CLAUDE_MODEL",
+          reason: "missing",
+          cause: "Claude model is required when WAGEY_AI_PROVIDER=claude",
+        })
+      );
+    }
+  }
+
+  if (provider === "chatgpt" && !isNonEmptyString(openaiApiKey)) {
+    return yield* Effect.fail(
+      new ConfigError({
+        configKey: "OPENAI_API_KEY",
+        reason: "missing",
+        cause: "OpenAI API key is required when WAGEY_AI_PROVIDER=chatgpt",
+      })
+    );
+  }
+
+  const resolvedClaudeApiKey =
+    claudeApiKey ??
+    (provider === "chatgpt" ? FALLBACK_UNUSED_SECRET : claudeApiKey);
+  const resolvedClaudeModel =
+    claudeModel ?? (provider === "chatgpt" ? "claude-opus-4-6" : claudeModel);
+  const resolvedOpenAIApiKey =
+    openaiApiKey ??
+    (provider === "claude" ? FALLBACK_UNUSED_SECRET : openaiApiKey);
+
+  if (!isNonEmptyString(resolvedClaudeApiKey)) {
+    return yield* Effect.fail(
+      new ConfigError({
+        configKey: "CLAUDE_API_KEY",
+        reason: "missing",
+      })
+    );
+  }
+
+  if (!isNonEmptyString(resolvedClaudeModel)) {
+    return yield* Effect.fail(
+      new ConfigError({
+        configKey: "CLAUDE_MODEL",
+        reason: "missing",
+      })
+    );
+  }
+
+  if (!isNonEmptyString(resolvedOpenAIApiKey)) {
+    return yield* Effect.fail(
+      new ConfigError({
+        configKey: "OPENAI_API_KEY",
+        reason: "missing",
+      })
+    );
+  }
+
   return {
     supabase: {
       url: validated.supabase.url,
@@ -190,8 +271,12 @@ const loadConfig = Effect.gen(function* () {
       turnstileSiteKey: Redacted.make(validated.security.turnstileSiteKey),
     },
     ai: {
-      claudeApiKey: Redacted.make(validated.ai.claudeApiKey),
-      claudeModel: validated.ai.claudeModel,
+      provider,
+      claudeApiKey: Redacted.make(resolvedClaudeApiKey),
+      claudeModel: resolvedClaudeModel,
+      openaiApiKey: Redacted.make(resolvedOpenAIApiKey),
+      openaiModel,
+      openaiRealtimeModel,
     },
   };
 });
@@ -216,6 +301,12 @@ export const ENV = {
   PRO_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_PRO_YEARLY_ID,
   MAX_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_MAX_YEARLY_ID,
   TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  WAGEY_AI_PROVIDER: process.env.WAGEY_AI_PROVIDER,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_MODEL: process.env.OPENAI_MODEL,
+  OPENAI_REALTIME_MODEL: process.env.OPENAI_REALTIME_MODEL,
+  CLAUDE_API_KEY: process.env.CLAUDE_API_KEY,
+  CLAUDE_MODEL: process.env.CLAUDE_MODEL,
 } as const;
 
 /**

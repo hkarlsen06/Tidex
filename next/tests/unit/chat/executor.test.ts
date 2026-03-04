@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   updateProfileSettings: vi.fn(),
   verifySession: vi.fn(),
   getComputedShiftsForApi: vi.fn(),
+  getStatsDataForApi: vi.fn(),
 }));
 
 vi.mock("@/data-access/jobs", () => ({
@@ -74,7 +75,7 @@ vi.mock("@/app/[locale]/(app)/shifts/_actions/clearShiftSnapshots", () => ({ cle
 vi.mock("@/app/[locale]/(app)/settings/feedback/_actions/submitFeedback", () => ({ submitFeedback: vi.fn() }));
 vi.mock("@/app/[locale]/(app)/settings/feedback/_actions/getUserFeedback", () => ({ getUserFeedback: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: vi.fn() }));
-vi.mock("@/data-access/stats", () => ({ getStatsDataForApi: vi.fn() }));
+vi.mock("@/data-access/stats", () => ({ getStatsDataForApi: mocks.getStatsDataForApi }));
 vi.mock("@/data-access/tariff", () => ({
   getLatestTariffVersion: vi.fn(),
   getTariffVersionForDate: vi.fn(),
@@ -735,5 +736,41 @@ describe("chat executor guardrails", () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain(jobB);
+  });
+
+  it("omits empty optional jobId in get_statistics tool args", async () => {
+    mocks.getStatsDataForApi.mockResolvedValue({
+      currentMonth: { gross: 0, hours: 0, shifts: 0 },
+      lastMonth: { gross: 0, hours: 0, shifts: 0 },
+      yearToDate: { gross: 0, hours: 0, shifts: 0 },
+      fullYear: { gross: 0, hours: 0, shifts: 0 },
+      yearlyMonths: [],
+      thisWeek: [],
+      monthlyGoal: null,
+      currentMonthBreakdown: [],
+    });
+
+    const result = await executeTool(
+      "get_statistics",
+      JSON.stringify({
+        metric: "current_month",
+        year: 2026,
+        month: 3,
+        jobId: "",
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(mocks.getStatsDataForApi).toHaveBeenCalledWith(
+      userId,
+      expect.objectContaining({
+        year: 2026,
+        month: 3,
+        locale: "en",
+        jobId: undefined,
+      })
+    );
   });
 });

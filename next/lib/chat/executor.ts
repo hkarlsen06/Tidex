@@ -308,6 +308,35 @@ function normalizeToolName(toolName: string): ToolName | null {
   return fuzzyMatch ?? null;
 }
 
+function isIdentifierField(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return normalized.endsWith("id") || normalized.endsWith("_id");
+}
+
+function sanitizeToolArgs(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeToolArgs(entry));
+  }
+
+  if (value && typeof value === "object") {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+      const next = sanitizeToolArgs(raw);
+      if (
+        typeof next === "string" &&
+        next.trim().length === 0 &&
+        isIdentifierField(key)
+      ) {
+        continue;
+      }
+      sanitized[key] = next;
+    }
+    return sanitized;
+  }
+
+  return value;
+}
+
 export async function executeTool(
   toolName: string,
   argumentsJson: string,
@@ -330,7 +359,9 @@ export async function executeTool(
 
     // Parse arguments - handle empty string as empty object
     const trimmedArgs = argumentsJson.trim();
-    const args = trimmedArgs === "" ? {} : JSON.parse(trimmedArgs);
+    const args = sanitizeToolArgs(
+      trimmedArgs === "" ? {} : JSON.parse(trimmedArgs)
+    );
 
     // Execute tool with retry (once)
     let attempt = 0;
