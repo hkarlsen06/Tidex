@@ -4,7 +4,7 @@ import SwiftUI
 private let recentTimesChipBarHeight: CGFloat = 36
 
 /// Spacing between chips
-private let chipSpacing: CGFloat = 8
+private let chipSpacing: CGFloat = CornerRadius.sm
 
 /// A time range combination with its usage count
 struct TimeRangeCount: Identifiable, Hashable {
@@ -139,7 +139,7 @@ private struct RecentTimeChip: View {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .background(isSelected ? Color.tidexBlue : Color.tidexBlue.opacity(0.1))
-        .clipShape(Capsule())
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
     }
     .buttonStyle(.plain)
   }
