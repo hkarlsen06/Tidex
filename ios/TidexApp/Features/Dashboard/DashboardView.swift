@@ -290,6 +290,7 @@ struct DashboardView: View {
         },
         onSelect: { jobId in
           showClockInJobChooser = false
+          print("[Clock] Job chooser selected job \(jobId)")
           Task {
             await viewModel.clockIn(jobId: jobId)
           }
@@ -729,10 +730,12 @@ struct DashboardView: View {
         systemImage: "play.fill",
         isEnabled: viewModel.isClockInEnabled
       ) {
+        print("[Clock] Clock in button tapped (enabled=\(viewModel.isClockInEnabled))")
         guard viewModel.isClockInEnabled else { return }
         impactHaptic.impactOccurred()
         Task {
           let cachedJobs = viewModel.clockSelectableJobsSnapshot()
+          print("[Clock] Clock in has \(cachedJobs.count) cached jobs")
           if cachedJobs.count > 1 {
             clockInJobOptions = cachedJobs
             showClockInJobChooser = true
@@ -902,16 +905,13 @@ struct DashboardView: View {
           shift: temporaryShift,
           isToday: true,
           isBestShift: false,
-          countdownText: temporarySessionCountdownText(
-            startedAt: session.startedAt,
-            now: temporarySessionReferenceDate
-          ),
+          countdownText: String(localized: .commonInProgress),
           showJobIndicator: viewModel.shouldShowJobIndicators,
           jobName: shiftJob?.name,
           jobColorHex: shiftJob?.color,
           progress: 0,
           finalCountdownSeconds: nil,
-          showTimeRangeEndSkeleton: true
+          showTimeRangeEndSkeleton: false
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -956,17 +956,6 @@ struct DashboardView: View {
         })
       }
     }
-  }
-
-  private func temporarySessionCountdownText(startedAt: Date, now: Date) -> String {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = Date.localTimeZone
-    let alignedStart = calendar.dateInterval(of: .minute, for: startedAt)?.start ?? startedAt
-    return CountdownFormatter.formatRelativeCountdown(
-      referenceDate: alignedStart,
-      dayBoundaryReferenceDate: alignedStart,
-      now: now
-    )
   }
 
   private func presentTemporaryClockReview(_ session: TemporaryClockSession) async {

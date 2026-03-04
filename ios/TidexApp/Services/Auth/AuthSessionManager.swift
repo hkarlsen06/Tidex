@@ -58,6 +58,12 @@ final class AuthSessionManager: ObservableObject {
   /// The current refresh task, if one is in progress
   private var refreshTask: Task<Session, Error>?
 
+  /// The current session resolution task, if one is in progress.
+  /// This serializes concurrent getSession() callers to a single SDK auth.session call.
+  private var sessionTask: Task<Session, Error>?
+  /// Whether the in-flight `sessionTask` was created with proactive refresh enabled.
+  private var sessionTaskAllowsProactiveRefresh = false
+
   /// Whether a refresh is currently in progress
   @Published private(set) var isRefreshing = false
 
@@ -83,31 +89,72 @@ final class AuthSessionManager: ObservableObject {
   /// - Returns: A valid session with a fresh access token
   /// - Throws: Auth errors if session cannot be obtained or refreshed
   func getSession(allowProactiveRefresh: Bool = true) async throws -> Session {
-    // If a refresh is already in progress, wait for it with timeout
-    if let existingTask = refreshTask {
-      logger.debug("Refresh in progress, waiting for existing task...")
-      if let session = try await waitForRefreshTask(existingTask) {
-        return session
+    // If a session lookup/refresh flow is already in progress, await it.
+    if let existingSessionTask = sessionTask {
+      let existingAllowsProactiveRefresh = sessionTaskAllowsProactiveRefresh
+      logger.debug("Session fetch already in progress, waiting for existing task...")
+      let session = try await existingSessionTask.value
+
+      // Preserve caller semantics: if the in-flight task skipped proactive refresh,
+      // a waiter that requires proactive refresh should still refresh when needed.
+      if allowProactiveRefresh && !existingAllowsProactiveRefresh {
+        let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
+        let timeUntilExpiry = expiresAt.timeIntervalSinceNow
+        if timeUntilExpiry < refreshBuffer {
+          logger.info(
+            "Waiting caller requires proactive refresh; token expires in \(timeUntilExpiry)s")
+          return try await performRefresh()
+        }
       }
-      // Timeout occurred, existing task will be cancelled and we'll start fresh below
+
+      return session
     }
 
-    // Get the current session with timeout protection
-    let session = try await fetchSessionWithTimeout()
+    let task = Task<Session, Error> { @MainActor [weak self] in
+      guard let self else {
+        throw AuthSessionManagerError.sessionFetchTimedOut
+      }
 
-    // Check if token is close to expiry and needs proactive refresh
-    let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
-    let timeUntilExpiry = expiresAt.timeIntervalSinceNow
+      // If a refresh is already in progress, wait for it with timeout
+      if let existingTask = self.refreshTask {
+        logger.debug("Refresh in progress, waiting for existing task...")
+        if let session = try await self.waitForRefreshTask(existingTask) {
+          return session
+        }
+        // Timeout occurred, existing task will be cancelled and we'll start fresh below
+      }
 
-    if allowProactiveRefresh && timeUntilExpiry < refreshBuffer {
-      logger.info("Token expires in \(timeUntilExpiry)s, proactively refreshing...")
-      return try await performRefresh()
+      // Get the current session with timeout protection
+      let session = try await self.fetchSessionWithTimeout()
+
+      // Check if token is close to expiry and needs proactive refresh
+      let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
+      let timeUntilExpiry = expiresAt.timeIntervalSinceNow
+
+      if allowProactiveRefresh && timeUntilExpiry < self.refreshBuffer {
+        logger.info("Token expires in \(timeUntilExpiry)s, proactively refreshing...")
+        return try await self.performRefresh()
+      }
+
+      // Store token in shared keychain for widget/watch access
+      self.storeTokenInSharedKeychain(session)
+
+      return session
     }
 
-    // Store token in shared keychain for widget/watch access
-    storeTokenInSharedKeychain(session)
+    sessionTaskAllowsProactiveRefresh = allowProactiveRefresh
+    sessionTask = task
 
-    return session
+    do {
+      let session = try await task.value
+      sessionTask = nil
+      sessionTaskAllowsProactiveRefresh = false
+      return session
+    } catch {
+      sessionTask = nil
+      sessionTaskAllowsProactiveRefresh = false
+      throw error
+    }
   }
 
   /// Get session if available, returning nil instead of throwing on error.

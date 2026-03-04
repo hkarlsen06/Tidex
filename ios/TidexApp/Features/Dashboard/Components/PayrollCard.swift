@@ -22,7 +22,6 @@ struct PayrollCard: View {
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
-  @State private var hasInitializedProgress = false
 
   // MARK: - Computed Properties
 
@@ -176,18 +175,22 @@ struct PayrollCard: View {
     .tidexCardShadow()
     .shimmer(isActive: isLoading)
     .onChange(of: progress) { _, newValue in
-      guard hasInitializedProgress else { return }
-
       // Animate to new progress value
       withAnimation(.linear(duration: 1.0)) {
         animatedProgress = newValue ?? 0
       }
     }
     .onAppear {
-      guard !hasInitializedProgress else { return }
-      hasInitializedProgress = true
-      // Set initial progress immediately so re-mounts during launch don't restart the bar.
-      animatedProgress = progress ?? 0
+      guard let progress = progress, progress >= 1, progress <= 100 else {
+        animatedProgress = 0
+        return
+      }
+
+      // Animate from zero on appear so card re-mounts during month navigation
+      // keep the same fill animation behavior as live month-to-month updates.
+      withAnimation(.linear(duration: 1.0)) {
+        animatedProgress = progress
+      }
     }
   }
 

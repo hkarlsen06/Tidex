@@ -635,7 +635,7 @@ final class AppCoordinator: ObservableObject {
       // Trigger initial sync in background after authentication
       triggerInitialSync(userId: currentUserId)
 
-      if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+      if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
         let expectedUserId = currentUserId
         runTrackedTask { [weak self] in
           guard let self = self else { return }
@@ -794,7 +794,7 @@ final class AppCoordinator: ObservableObject {
         }
 
         if let appDelegate = await MainActor.run(body: {
-          UIApplication.shared.delegate as? AppDelegate
+          (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
         }) {
           await appDelegate.registerCachedAPNsTokenIfNeeded()
         }
@@ -812,11 +812,34 @@ final class AppCoordinator: ObservableObject {
 
         // Re-evaluate completed-shift celebration after foreground sync (or sync skip).
         await Task { @MainActor in
-          guard self.userId == userId else { return }
+          if let currentUserId = self.userId, currentUserId != userId { return }
           ShiftCompletionCelebrationManager.shared.checkForCelebrationFromLocal(userId: userId)
         }.value
       } catch {
-        // No session available
+        if await AuthSessionManager.shared.isSessionRevokedError(error) {
+          launchLog.warning(
+            "[Auth] Foreground session fetch detected revoked session; transitioning to unauthenticated"
+          )
+          // Best effort: clear local session cache in SDK storage.
+          try? await supabase.auth.signOut(scope: .local)
+          Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.clearAllCachedData()
+            self.applySignedOutState()
+          }
+          return
+        }
+
+        if await AuthSessionManager.shared.isTransientNetworkError(error)
+          || (error as? AuthSessionManagerError) != nil
+        {
+          launchLog.warning(
+            "[Auth] Foreground session fetch transient failure; keeping authenticated state")
+          return
+        }
+
+        launchLog.warning(
+          "[Auth] Foreground session fetch failed: \(error.localizedDescription, privacy: .public)")
       }
     }
   }
@@ -933,7 +956,7 @@ final class AppCoordinator: ObservableObject {
     // Cancel all tracked background tasks to prevent stale state updates
     cancelAllBackgroundTasks()
 
-    if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
       await appDelegate.endAllLiveActivities(reason: "auth/session context reset")
     }
 
@@ -1149,7 +1172,7 @@ final class AppCoordinator: ObservableObject {
       // Skip during impersonation to prevent registering the admin's device
       // token under the impersonated user's account
       if !ImpersonationManager.shared.isImpersonating,
-        let appDelegate = UIApplication.shared.delegate as? AppDelegate
+        let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
       {
         await appDelegate.registerCachedAPNsTokenIfNeeded()
       }

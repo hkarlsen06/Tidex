@@ -28,6 +28,21 @@ private func beforeTaxText(
   return "\(label): \(amount) \(currencySymbol)"
 }
 
+private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> Bool {
+  attributes.endTime == "00:00"
+    && attributes.totalGrossEstimate == 0
+    && attributes.hourlyWage == 0
+    && attributes.supplementRatePerHour == 0
+}
+
+private func temporaryStartedLabel() -> String {
+  let languageCode = Locale.current.language.languageCode?.identifier.lowercased()
+  if languageCode == "nb" || languageCode == "nn" || languageCode == "no" {
+    return "Startet"
+  }
+  return String(localized: .widgetStart)
+}
+
 // MARK: - Lock Screen View
 
 struct LockScreenLiveActivityView: View {
@@ -47,6 +62,10 @@ struct LockScreenLiveActivityView: View {
     context.attributes.totalNetEstimate != nil
   }
 
+  private var isTemporaryClock: Bool {
+    isTemporaryClockActivity(context.attributes)
+  }
+
   var body: some View {
     HStack(spacing: 16) {
       // Left side: Time info
@@ -64,26 +83,38 @@ struct LockScreenLiveActivityView: View {
         }
 
         // Shift time range
-        Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
-          .font(.system(size: 15, weight: .medium))
-          .foregroundColor(.secondary)
+        if isTemporaryClock {
+          Text("\(temporaryStartedLabel()) \(context.attributes.startTime)")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.secondary)
+        } else {
+          Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.secondary)
+        }
       }
 
       Spacer()
 
       // Right side: Earnings
       VStack(alignment: .trailing, spacing: 2) {
-        // Primary amount (net or gross)
-        Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
-          .font(.system(size: 22, weight: .bold, design: .rounded))
-          .monospacedDigit()
-          .foregroundColor(tidexBlue)
+        if isTemporaryClock {
+          Text(String(localized: .widgetActive))
+            .font(.system(size: 20, weight: .bold, design: .rounded))
+            .foregroundColor(tidexBlue)
+        } else {
+          // Primary amount (net or gross)
+          Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+            .font(.system(size: 22, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundColor(tidexBlue)
 
-        // Before tax (only if tax is configured)
-        if showBeforeTax {
-          Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
-            .font(.system(size: 12))
-            .foregroundColor(.secondary)
+          // Before tax (only if tax is configured)
+          if showBeforeTax {
+            Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
+              .font(.system(size: 12))
+              .foregroundColor(.secondary)
+          }
         }
       }
     }
@@ -122,11 +153,21 @@ struct CompactTrailingView: View {
     context.attributes.totalNetEstimate ?? context.attributes.totalGrossEstimate
   }
 
+  private var isTemporaryClock: Bool {
+    isTemporaryClockActivity(context.attributes)
+  }
+
   var body: some View {
-    Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
-      .font(.system(size: 13, weight: .semibold, design: .rounded))
-      .monospacedDigit()
-      .foregroundColor(tidexBlue)
+    if isTemporaryClock {
+      Text(String(localized: .widgetActive))
+        .font(.system(size: 13, weight: .semibold, design: .rounded))
+        .foregroundColor(tidexBlue)
+    } else {
+      Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+        .font(.system(size: 13, weight: .semibold, design: .rounded))
+        .monospacedDigit()
+        .foregroundColor(tidexBlue)
+    }
   }
 }
 
@@ -149,6 +190,10 @@ struct ExpandedView: View {
     context.attributes.totalNetEstimate != nil
   }
 
+  private var isTemporaryClock: Bool {
+    isTemporaryClockActivity(context.attributes)
+  }
+
   var body: some View {
     HStack(spacing: 12) {
       // Left column: Countdown (top), Time range (bottom)
@@ -164,26 +209,38 @@ struct ExpandedView: View {
         }
 
         // Shift time range
-        Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
-          .font(.system(size: 13, weight: .medium))
-          .foregroundColor(.secondary)
+        if isTemporaryClock {
+          Text("\(temporaryStartedLabel()) \(context.attributes.startTime)")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(.secondary)
+        } else {
+          Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(.secondary)
+        }
       }
 
       Spacer()
 
       // Right column: Net (top), Before tax (bottom)
       VStack(alignment: .trailing, spacing: 4) {
-        // Net amount
-        Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
-          .font(.system(size: 18, weight: .bold, design: .rounded))
-          .monospacedDigit()
-          .foregroundColor(tidexBlue)
+        if isTemporaryClock {
+          Text(String(localized: .widgetActive))
+            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .foregroundColor(tidexBlue)
+        } else {
+          // Net amount
+          Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundColor(tidexBlue)
 
-        // Before tax (only if tax configured)
-        if showBeforeTax {
-          Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
+          // Before tax (only if tax configured)
+          if showBeforeTax {
+            Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
+              .font(.system(size: 11))
+              .foregroundColor(.secondary)
+          }
         }
       }
     }
