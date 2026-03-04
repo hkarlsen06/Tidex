@@ -43,7 +43,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Currently selected sharer (nil shows sharer list)
   @Published var selectedSharer: SharedUser?
 
-  /// Shifts from the selected sharer for the current month
+  /// Shifts from the selected sharer for the currently visible calendar range
+  /// (includes out-of-month padding days for the committed month grid)
   @Published private(set) var sharedShifts: [ShiftWithComputations] = []
 
   /// Job metadata for currently selected sharer
@@ -85,10 +86,10 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Whether to show user's own shifts overlaid on friend's calendar
   @Published var isSuperimposing = false
 
-  /// User's own shifts for the currently displayed month (raw data, no payroll needed)
+  /// User's own shifts for the currently visible calendar range (raw data, no payroll needed)
   @Published private(set) var userShiftsForMonth: [ShiftRow] = []
 
-  /// User's own earnings by date for the currently displayed month
+  /// User's own earnings by date for the currently visible calendar range
   @Published private(set) var userEarningsByDate: [String: CalendarEarningsData] = [:]
 
   // MARK: - Committed Display State
@@ -152,6 +153,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     let userId: String
     let year: Int
     let month: Int
+    let visibleRange: (start: Date, end: Date)
+    let monthsInVisibleRange: [(year: Int, month: Int)]
     let shifts: [ShiftRow]
     let recurringShifts: [RecurringShiftRow]
     let settings: UserSettings
@@ -162,6 +165,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   private struct UserShiftComputationResult {
     let shifts: [ShiftRow]
     let earningsByDate: [String: CalendarEarningsData]
+  }
+
+  private struct YearMonthKey: Hashable {
+    let year: Int
+    let month: Int
   }
 
   // MARK: - Initialization
@@ -523,6 +531,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       let year = displayYear
       let month = displayMonth
       let requestKey = "\(sharer.id):\(year):\(month)"
+      let visibleRange = Date.visibleCalendarRange(year: year, month: month)
+      let monthWindow = Self.monthWindowForVisibleRange(year: year, month: month)
 
       if inFlightRequestKey == requestKey {
         logger.debug("Skipping duplicate shared shift request for \(year)-\(month)")
@@ -535,12 +545,19 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         }
       }
 
-      // Load from cache first (synchronously, before setting loading state)
-      let cachedShifts = sharedShiftsRepository.getSharedShifts(
-        ownerId: sharer.id,
-        viewerId: userId,
-        year: year,
-        month: month
+      // Load from cache first (synchronously, before setting loading state).
+      // We merge previous/current/next month cache so out-of-month calendar days are populated.
+      let cachedShiftSets = monthWindow.map { key in
+        sharedShiftsRepository.getSharedShifts(
+          ownerId: sharer.id,
+          viewerId: userId,
+          year: key.year,
+          month: key.month
+        )
+      }
+      let cachedShifts = Self.mergeSharedShifts(
+        cachedShiftSets,
+        visibleRange: visibleRange
       )
 
       if !cachedShifts.isEmpty {
@@ -572,38 +589,49 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         isLoadingShifts = true
       }
 
-      // Fetch fresh data from API
-      let response = try await sharingService.fetchSharedShifts(
+      // Fetch fresh data from API for the visible month window.
+      let responsesByMonth = try await fetchSharedShiftsForMonthWindow(
         ownerId: sharer.id,
-        year: year,
-        month: month
+        monthWindow: monthWindow
       )
 
       // If selection/month changed while request was in-flight, ignore stale result.
       if selectedSharer?.id != sharer.id || displayYear != year || displayMonth != month {
         logger.info("Discarding stale shared shift result for \(year)-\(month)")
       } else {
-        // Convert to ShiftWithComputations
-        let freshShifts = await Self.convertSharedShiftsOffMain(response.shifts)
+        var freshShiftSets: [[ShiftWithComputations]] = []
+        for key in monthWindow {
+          guard let response = responsesByMonth[key] else { continue }
+          let converted = await Self.convertSharedShiftsOffMain(response.shifts)
+          freshShiftSets.append(converted)
+        }
+        let freshShifts = Self.mergeSharedShifts(
+          freshShiftSets,
+          visibleRange: visibleRange
+        )
+        let currentMonthResponse = responsesByMonth[YearMonthKey(year: year, month: month)]
 
         // ATOMIC UPDATE: Set shifts and committed state together
         // This ensures the calendar structure and data update in the same render pass
         sharedShifts = freshShifts
-        sharedJobs = response.jobs
-        sharedCurrency = response.settings.currency
+        sharedJobs = currentMonthResponse?.jobs ?? []
+        sharedCurrency = currentMonthResponse?.settings.currency
         committedYear = year
         committedMonth = month
         lastCacheTime = Date()
 
-        // Save to cache
-        await sharedShiftsRepository.saveSharedShifts(
-          response.shifts,
-          ownerId: sharer.id,
-          viewerId: userId,
-          showEarnings: sharer.showEarnings,
-          year: year,
-          month: month
-        )
+        // Save each month payload to cache.
+        for key in monthWindow {
+          guard let response = responsesByMonth[key] else { continue }
+          await sharedShiftsRepository.saveSharedShifts(
+            response.shifts,
+            ownerId: sharer.id,
+            viewerId: userId,
+            showEarnings: sharer.showEarnings,
+            year: key.year,
+            month: key.month
+          )
+        }
 
         logger.info("Loaded \(freshShifts.count) shared shifts for \(year)-\(month)")
       }
@@ -646,27 +674,17 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   /// Load user's own shifts for a specific month from local repositories.
   private func loadUserShifts(for userId: String, year: Int, month: Int) async {
-
-    // Calculate date range for the month
-    var components = DateComponents()
-    components.year = year
-    components.month = month
-    components.day = 1
-
-    guard let startDate = Calendar.current.date(from: components),
-      let endDate = Calendar.current.date(byAdding: .month, value: 1, to: startDate)?
-        .addingTimeInterval(-1)
-    else {
-      userShiftsForMonth = []
-      userEarningsByDate = [:]
-      return
-    }
+    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
+    let monthsInVisibleRange = Self.monthsInRange(
+      startDate: visibleRange.start,
+      endDate: visibleRange.end
+    )
 
     // Fetch user's real shifts from local repositories
     let shifts = ShiftsRepository.shared.getShifts(
       for: userId,
-      startDate: startDate,
-      endDate: endDate
+      startDate: visibleRange.start,
+      endDate: visibleRange.end
     )
     let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
 
@@ -689,6 +707,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         userId: userId,
         year: year,
         month: month,
+        visibleRange: visibleRange,
+        monthsInVisibleRange: monthsInVisibleRange,
         shifts: shifts,
         recurringShifts: recurringShifts,
         settings: settings,
@@ -702,7 +722,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     userShiftsForMonth = result.shifts
     userEarningsByDate = result.earningsByDate
     logger.info(
-      "Loaded \(result.shifts.count) user shifts for superimpose (\(year)-\(month)) - includes virtual shifts"
+      "Loaded \(result.shifts.count) user shifts for superimpose visible range (\(year)-\(month))"
     )
   }
 
@@ -806,34 +826,40 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   ) async -> UserShiftComputationResult {
     await Task.detached(priority: .userInitiated) {
       var allShifts = input.shifts
-      let realShiftKeys = Set(
-        input.shifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" }
-      )
+      var realShiftKeys = Set(
+        input.shifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" })
+      let startISO = input.visibleRange.start.toISODateString()
+      let endISO = input.visibleRange.end.toISODateString()
 
       for recurring in input.recurringShifts {
-        let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-          year: input.year,
-          month: input.month,
-          recurring: recurring
-        )
-
-        for virtual in virtualShifts {
-          let key = "\(virtual.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
-          if realShiftKeys.contains(key) { continue }
-
-          allShifts.append(
-            ShiftRow(
-              id: "virtual-\(recurring.id)-\(virtual.date)",
-              user_id: recurring.user_id,
-              shift_date: virtual.date,
-              start_time: recurring.cleanStartTime,
-              end_time: recurring.cleanEndTime,
-              custom_supplements: recurring.date_specific_supplements?[virtual.date],
-              created_at: nil,
-              recurring_id: recurring.id,
-              recurring_anchor_weekday: virtual.weekday
-            )
+        for (genYear, genMonth) in input.monthsInVisibleRange {
+          let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+            year: genYear,
+            month: genMonth,
+            recurring: recurring
           )
+
+          for virtual in virtualShifts {
+            guard virtual.date >= startISO && virtual.date <= endISO else { continue }
+
+            let key = "\(virtual.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
+            if realShiftKeys.contains(key) { continue }
+            realShiftKeys.insert(key)
+
+            allShifts.append(
+              ShiftRow(
+                id: "virtual-\(recurring.id)-\(virtual.date)",
+                user_id: recurring.user_id,
+                shift_date: virtual.date,
+                start_time: recurring.cleanStartTime,
+                end_time: recurring.cleanEndTime,
+                custom_supplements: recurring.date_specific_supplements?[virtual.date],
+                created_at: nil,
+                recurring_id: recurring.id,
+                recurring_anchor_weekday: virtual.weekday
+              )
+            )
+          }
         }
       }
 
@@ -848,6 +874,143 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       return UserShiftComputationResult(shifts: allShifts, earningsByDate: earningsByDate)
     }.value
+  }
+
+  private static func monthWindowForVisibleRange(year: Int, month: Int) -> [YearMonthKey] {
+    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
+    return monthsInRange(startDate: visibleRange.start, endDate: visibleRange.end).map {
+      YearMonthKey(year: $0.year, month: $0.month)
+    }
+  }
+
+  private static func monthsInRange(startDate: Date, endDate: Date) -> [(year: Int, month: Int)] {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = Date.localTimeZone
+
+    guard
+      let startMonth = calendar.date(
+        from: calendar.dateComponents([.year, .month], from: startDate)),
+      let endMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: endDate))
+    else {
+      return []
+    }
+
+    var result: [(year: Int, month: Int)] = []
+    var current = startMonth
+
+    while current <= endMonth {
+      let components = calendar.dateComponents([.year, .month], from: current)
+      if let year = components.year, let month = components.month {
+        result.append((year: year, month: month))
+      }
+      guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: current) else {
+        break
+      }
+      current = nextMonth
+    }
+
+    return result
+  }
+
+  private static func mergeSharedShifts(
+    _ shiftSets: [[ShiftWithComputations]],
+    visibleRange: (start: Date, end: Date)
+  ) -> [ShiftWithComputations] {
+    let startISO = visibleRange.start.toISODateString()
+    let endISO = visibleRange.end.toISODateString()
+
+    var seenIds = Set<String>()
+    var merged: [ShiftWithComputations] = []
+
+    for shifts in shiftSets {
+      for shift in shifts where shift.shiftDate >= startISO && shift.shiftDate <= endISO {
+        if seenIds.insert(shift.id).inserted {
+          merged.append(shift)
+        }
+      }
+    }
+
+    return merged.sorted { lhs, rhs in
+      if lhs.shiftDate == rhs.shiftDate {
+        return lhs.startTime < rhs.startTime
+      }
+      return lhs.shiftDate < rhs.shiftDate
+    }
+  }
+
+  private func fetchSharedShiftsForMonthWindow(
+    ownerId: String,
+    monthWindow: [YearMonthKey]
+  ) async throws -> [YearMonthKey: SharedShiftsResponse] {
+    switch monthWindow.count {
+    case 0:
+      return [:]
+    case 1:
+      let key = monthWindow[0]
+      let response = try await sharingService.fetchSharedShifts(
+        ownerId: ownerId,
+        year: key.year,
+        month: key.month
+      )
+      return [key: response]
+    case 2:
+      let key0 = monthWindow[0]
+      let key1 = monthWindow[1]
+
+      async let response0 = sharingService.fetchSharedShifts(
+        ownerId: ownerId,
+        year: key0.year,
+        month: key0.month
+      )
+      async let response1 = sharingService.fetchSharedShifts(
+        ownerId: ownerId,
+        year: key1.year,
+        month: key1.month
+      )
+
+      return [
+        key0: try await response0,
+        key1: try await response1,
+      ]
+    default:
+      let key0 = monthWindow[0]
+      let key1 = monthWindow[1]
+      let key2 = monthWindow[2]
+
+      async let response0 = sharingService.fetchSharedShifts(
+        ownerId: ownerId,
+        year: key0.year,
+        month: key0.month
+      )
+      async let response1 = sharingService.fetchSharedShifts(
+        ownerId: ownerId,
+        year: key1.year,
+        month: key1.month
+      )
+      async let response2 = sharingService.fetchSharedShifts(
+        ownerId: ownerId,
+        year: key2.year,
+        month: key2.month
+      )
+
+      var responses: [YearMonthKey: SharedShiftsResponse] = [
+        key0: try await response0,
+        key1: try await response1,
+        key2: try await response2,
+      ]
+
+      if monthWindow.count > 3 {
+        for key in monthWindow.dropFirst(3) {
+          responses[key] = try await sharingService.fetchSharedShifts(
+            ownerId: ownerId,
+            year: key.year,
+            month: key.month
+          )
+        }
+      }
+
+      return responses
+    }
   }
 
   private nonisolated static func calculateUserEarningsByDate(
