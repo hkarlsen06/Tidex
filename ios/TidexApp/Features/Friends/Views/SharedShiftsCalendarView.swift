@@ -31,6 +31,7 @@ struct SharedShiftsCalendarView: View {
   var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
   @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+  private let calendar = Calendar.current
 
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
   private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
@@ -121,10 +122,19 @@ struct SharedShiftsCalendarView: View {
     return result
   }
 
+  /// Shifts that belong to the committed month (excludes out-of-month padding days)
+  private var shiftsInDisplayedMonth: [ShiftWithComputations] {
+    shifts.filter { shift in
+      guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
+      let components = calendar.dateComponents([.year, .month], from: date)
+      return components.year == year && components.month == month
+    }
+  }
+
   /// Monthly totals (net and gross)
   private var monthlyTotals: (net: Double, gross: Double) {
-    let gross = shifts.reduce(0) { $0 + $1.grossPay }
-    let net = shifts.reduce(0) {
+    let gross = shiftsInDisplayedMonth.reduce(0) { $0 + $1.grossPay }
+    let net = shiftsInDisplayedMonth.reduce(0) {
       $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay)
     }
     return (net: net, gross: gross)
@@ -132,7 +142,7 @@ struct SharedShiftsCalendarView: View {
 
   /// Whether tax is enabled for any shift
   private var hasTaxEnabled: Bool {
-    shifts.contains { $0.taxEnabled }
+    shiftsInDisplayedMonth.contains { $0.taxEnabled }
   }
 
   /// Month name
