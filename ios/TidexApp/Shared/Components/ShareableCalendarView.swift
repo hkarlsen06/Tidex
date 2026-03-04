@@ -208,7 +208,8 @@ struct ShareableCalendarView: View {
         backgroundColor: Color.tidexBlue.opacity(0.2),
         borderColor: .clear,
         borderWidth: 0,
-        dayNumberColor: .tidexBlue
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: true
       )
     }
     return .default

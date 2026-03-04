@@ -1135,7 +1135,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.3.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -1165,7 +1164,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.3.0;
 				"OTHER_SWIFT_FLAGS[arch=*]" = "-suppress-warnings";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;

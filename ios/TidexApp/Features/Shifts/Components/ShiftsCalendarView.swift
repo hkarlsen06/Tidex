@@ -416,7 +416,8 @@ struct ShiftsCalendarView: View {
         backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
         borderColor: Self.deepLinkHighlightColor,
         borderWidth: 2.5,
-        dayNumberColor: .tidexTextPrimary
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: false
       )
     }
     if isNewlyAdded {
@@ -424,7 +425,8 @@ struct ShiftsCalendarView: View {
         backgroundColor: Self.celebrationColor.opacity(0.2),
         borderColor: Self.celebrationColor,
         borderWidth: 2.5,
-        dayNumberColor: .tidexTextPrimary
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: false
       )
     }
     if isSelected || isInDragPreview {
@@ -432,7 +434,8 @@ struct ShiftsCalendarView: View {
         backgroundColor: isToday ? Color.tidexBlue.opacity(0.2) : .tidexSurfacePrimary,
         borderColor: .tidexBlue,
         borderWidth: 2,
-        dayNumberColor: isToday ? .tidexBlue : .tidexTextPrimary
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: isToday
       )
     }
     if hasConflict {
@@ -440,7 +443,8 @@ struct ShiftsCalendarView: View {
         backgroundColor: Color.tidexWarning.opacity(0.15),
         borderColor: .clear,
         borderWidth: 0,
-        dayNumberColor: .tidexTextPrimary
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: false
       )
     }
     if isToday {
@@ -448,7 +452,8 @@ struct ShiftsCalendarView: View {
         backgroundColor: Color.tidexBlue.opacity(0.2),
         borderColor: .clear,
         borderWidth: 0,
-        dayNumberColor: .tidexBlue
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: true
       )
     }
     return .default

@@ -176,7 +176,8 @@ private struct AddShiftCalendarDayCell: View {
       backgroundColor: backgroundColor,
       borderColor: borderColor,
       borderWidth: isSelected ? 2 : 0,
-      dayNumberColor: dayNumberColor
+      dayNumberColor: dayNumberColor,
+      showsTodayBadge: isToday && !dayInfo.isOutsideMonth
     )
   }
 
@@ -202,7 +203,7 @@ private struct AddShiftCalendarDayCell: View {
       return .tidexWarning
     }
     if isToday && !dayInfo.isOutsideMonth {
-      return .tidexBlue
+      return .tidexTextPrimary
     }
     return .tidexTextPrimary
   }

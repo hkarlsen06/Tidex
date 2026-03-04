@@ -8,12 +8,14 @@ struct CalendarCellStyle {
   let borderColor: Color
   let borderWidth: CGFloat
   let dayNumberColor: Color
+  let showsTodayBadge: Bool
 
   static let `default` = CalendarCellStyle(
     backgroundColor: .tidexSurfacePrimary,
     borderColor: .clear,
     borderWidth: 0,
-    dayNumberColor: .tidexTextPrimary
+    dayNumberColor: .tidexTextPrimary,
+    showsTodayBadge: false
   )
 
   static func today() -> CalendarCellStyle {
@@ -21,7 +23,8 @@ struct CalendarCellStyle {
       backgroundColor: Color.tidexBlue.opacity(0.2),
       borderColor: .clear,
       borderWidth: 0,
-      dayNumberColor: .tidexBlue
+      dayNumberColor: .tidexTextPrimary,
+      showsTodayBadge: true
     )
   }
 
@@ -30,7 +33,8 @@ struct CalendarCellStyle {
       backgroundColor: Color.tidexBlue.opacity(0.15),
       borderColor: .tidexBlue,
       borderWidth: 2,
-      dayNumberColor: .tidexTextPrimary
+      dayNumberColor: .tidexTextPrimary,
+      showsTodayBadge: false
     )
   }
 }
@@ -78,6 +82,7 @@ struct CalendarDayCell<Content: View>: View {
   private let horizontalCornerInset: CGFloat = Spacing.xxxs
   private let topCornerInset: CGFloat = 1
   private let topRowHeight: CGFloat = 17
+  private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm - 1
   private let stackedMetricSpacing: CGFloat = -3
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
@@ -115,10 +120,7 @@ struct CalendarDayCell<Content: View>: View {
 
         Spacer(minLength: 0)
 
-        Text("\(dayInfo.dayNumber)")
-          .font(.tidexBodyMedium)
-          .fixedSize(horizontal: true, vertical: false)
-          .foregroundColor(style.dayNumberColor)
+        dayNumberView
       }
       .frame(height: topRowHeight, alignment: .top)
       .padding(.horizontal, horizontalCornerInset)
@@ -168,6 +170,23 @@ struct CalendarDayCell<Content: View>: View {
       .accessibilityHidden(true)
       .overlay(alignment: .leading) {
         leadingMarkerContent
+      }
+  }
+
+  @ViewBuilder
+  private var dayNumberView: some View {
+    Text("\(dayInfo.dayNumber)")
+      .font(.tidexBodyMedium)
+      .fixedSize(horizontal: true, vertical: false)
+      .monospacedDigit()
+      .foregroundColor(style.dayNumberColor)
+      .background {
+        if style.showsTodayBadge {
+          RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
+            .fill(Color.tidexBlue)
+            .padding(.horizontal, -(horizontalCornerInset - topCornerInset))
+            .padding(.vertical, 0)
+        }
       }
   }
 
@@ -382,7 +401,8 @@ extension CalendarDayCell where Content == EmptyView {
           backgroundColor: .tidexBlue,
           borderColor: .tidexBlue,
           borderWidth: 2,
-          dayNumberColor: .white
+          dayNumberColor: .white,
+          showsTodayBadge: false
         ),
         content: .starIcon()
       )
