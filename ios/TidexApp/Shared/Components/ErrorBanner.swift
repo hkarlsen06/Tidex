@@ -120,7 +120,7 @@ struct SuccessBanner: View {
             .font(isToast ? .tidexFootnoteStrong : .tidexLabel)
             .foregroundColor(.tidexBlue)
             .lineLimit(1)
-            .frame(minWidth: isToast ? 0 : 44, minHeight: isToast ? 30 : 44)
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -132,7 +132,7 @@ struct SuccessBanner: View {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
             .font(isToast ? .tidexMicro : .tidexCaptionStrong)
-            .frame(minWidth: isToast ? 30 : 44, minHeight: isToast ? 30 : 44)
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

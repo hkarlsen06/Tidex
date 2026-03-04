@@ -338,10 +338,10 @@ async function upsertAppleSubscription(
 
   if (existingByProviderSub) {
     // Found by unique constraint - update it
-    // Security: Verify user_id matches (unless this is first verification)
+    // Allow transfers between Tidex accounts on restore/re-purchase.
+    // The authenticated caller has already proven ownership of the Apple transaction.
     if (existingByProviderSub.user_id && existingByProviderSub.user_id !== userId) {
-      console.error(`[apple-verify] User ID mismatch: ${existingByProviderSub.user_id} vs ${userId}`);
-      return { success: false, error: "Subscription belongs to different user" };
+      console.warn(`[apple-verify] Reassigning subscription ownership: ${existingByProviderSub.user_id} -> ${userId}`);
     }
 
     // Don't overwrite price_display if it already exists (preserve original purchase price)
@@ -374,8 +374,7 @@ async function upsertAppleSubscription(
   if (existingByAppleTxn) {
     // Found by apple_original_transaction_id - update it
     if (existingByAppleTxn.user_id && existingByAppleTxn.user_id !== userId) {
-      console.error(`[apple-verify] User ID mismatch: ${existingByAppleTxn.user_id} vs ${userId}`);
-      return { success: false, error: "Subscription belongs to different user" };
+      console.warn(`[apple-verify] Reassigning subscription ownership: ${existingByAppleTxn.user_id} -> ${userId}`);
     }
 
     const updatePayload = { ...payload };
