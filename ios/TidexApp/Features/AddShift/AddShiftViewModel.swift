@@ -94,7 +94,7 @@ final class AddShiftViewModel: ObservableObject {
   @Published private(set) var distinctShiftTimePairCount: Int = 0
 
   /// Selected job for new shift creation.
-  /// For single-job users this is auto-assigned.
+  /// Defaults to the user's standard workplace when no valid selection exists.
   @Published var selectedJobId: String? {
     didSet {
       guard oldValue != selectedJobId else { return }
@@ -1111,20 +1111,13 @@ final class AddShiftViewModel: ObservableObject {
       return
     }
 
-    if requiresExplicitJobSelection {
-      // Keep a previously selected active job; otherwise require explicit new selection.
-      if let selectedJobId, activeJobs.contains(where: { $0.id == selectedJobId }) {
-        return
-      }
-      selectedJobId = nil
-      return
-    }
-
     if let selectedJobId, activeJobs.contains(where: { $0.id == selectedJobId }) {
       return
     }
 
-    selectedJobId = activeJobs.first?.id
+    selectedJobId =
+      activeJobs.first(where: { $0.is_default })?.id
+      ?? activeJobs.first?.id
   }
 
   private func snapshotsForJob(_ jobId: String?) -> [WageSnapshot] {
