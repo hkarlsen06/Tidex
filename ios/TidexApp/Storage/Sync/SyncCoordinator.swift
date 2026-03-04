@@ -1771,7 +1771,26 @@ final class SyncCoordinator: ObservableObject {
     var newConflicts = 0
     var rebased = 0
 
-    for job in dirtyJobs {
+    // Keep default-workplace updates constraint-safe:
+    // 1) push rows unsetting is_default first
+    // 2) push regular updates
+    // 3) push rows setting is_default=true last
+    let orderedDirtyJobs = dirtyJobs.sorted { lhs, rhs in
+      let lhsPriority = jobPushPriority(lhs)
+      let rhsPriority = jobPushPriority(rhs)
+
+      if lhsPriority != rhsPriority {
+        return lhsPriority < rhsPriority
+      }
+
+      if lhs.localUpdatedAt != rhs.localUpdatedAt {
+        return lhs.localUpdatedAt < rhs.localUpdatedAt
+      }
+
+      return lhs.id < rhs.id
+    }
+
+    for job in orderedDirtyJobs {
       let result = try await pushJob(job, userId: userId, storeActor: storeActor, isRetry: false)
       switch result {
       case .success, .deleted:
@@ -1789,6 +1808,14 @@ final class SyncCoordinator: ObservableObject {
     try await storeActor.save()
     return TablePushResult(
       table: .jobs, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+  }
+
+  private func jobPushPriority(_ job: LocalJob) -> Int {
+    let dirtyFields = job.dirtyFieldKeys
+    guard dirtyFields.contains(.isDefault) else {
+      return 1
+    }
+    return job.isDefault ? 2 : 0
   }
 
   private func pushJob(
@@ -1912,6 +1939,17 @@ final class SyncCoordinator: ObservableObject {
       )
     } catch {
       let errorString = String(describing: error)
+      if errorString.contains("duplicate") || errorString.contains("23505") {
+        logger.warning(
+          "Job \(jobId.prefix(8)) hit unique constraint on UPDATE, resolving via conflict flow"
+        )
+        return try await handleJobPushConflict(
+          job: job,
+          userId: userId,
+          storeActor: storeActor,
+          isRetry: isRetry
+        )
+      }
       if errorString.contains("row-level security") || errorString.contains("42501") {
         logger.warning(
           "Job \(jobId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
