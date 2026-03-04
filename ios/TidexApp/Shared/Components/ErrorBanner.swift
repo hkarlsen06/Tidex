@@ -56,41 +56,99 @@ struct ErrorBanner: View {
 
 /// Success banner for displaying success messages
 struct SuccessBanner: View {
+  enum Style {
+    case inline
+    case toast
+  }
+
   let message: String
+  var style: Style = .inline
+  var actionTitle: LocalizedStringResource? = nil
+  var onAction: (() -> Void)? = nil
   var onDismiss: (() -> Void)? = nil
 
+  private var backgroundColor: Color {
+    switch style {
+    case .inline:
+      return Color.tidexSuccess.opacity(0.15)
+    case .toast:
+      return .tidexSurfacePrimary
+    }
+  }
+
+  private var borderColor: Color {
+    switch style {
+    case .inline:
+      return Color.tidexSuccess.opacity(0.3)
+    case .toast:
+      return .tidexBorder
+    }
+  }
+
+  private var cornerRadius: CGFloat {
+    switch style {
+    case .inline:
+      return CornerRadius.md
+    case .toast:
+      return CornerRadius.xxxl
+    }
+  }
+
+  private var isToast: Bool {
+    style == .toast
+  }
+
   var body: some View {
-    HStack(alignment: .top, spacing: Spacing.sm) {
+    HStack(alignment: isToast ? .center : .top, spacing: isToast ? Spacing.xs : Spacing.sm) {
       Image(systemName: "checkmark.circle.fill")
         .foregroundColor(.tidexSuccess)
-        .font(.tidexBody)
+        .font(isToast ? .tidexLabelStrong : .tidexBody)
 
       Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.leading)
+        .lineLimit(isToast ? 1 : nil)
+        .truncationMode(.tail)
+        .layoutPriority(1)
 
       Spacer()
+
+      if let actionTitle, let onAction {
+        Button(action: onAction) {
+          Text(actionTitle)
+            .font(isToast ? .tidexFootnoteStrong : .tidexLabel)
+            .foregroundColor(.tidexBlue)
+            .lineLimit(1)
+            .frame(minWidth: isToast ? 0 : 44, minHeight: isToast ? 30 : 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+      }
 
       if let onDismiss = onDismiss {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
-            .font(.tidexCaptionStrong)
-            .frame(minWidth: 44, minHeight: 44)
+            .font(isToast ? .tidexMicro : .tidexCaptionStrong)
+            .frame(minWidth: isToast ? 30 : 44, minHeight: isToast ? 30 : 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
       }
     }
-    .padding(Spacing.md)
-    .background(Color.tidexSuccess.opacity(0.15))
+    .padding(.horizontal, isToast ? Spacing.sm : Spacing.md)
+    .padding(.vertical, isToast ? Spacing.xs : Spacing.md)
+    .background(backgroundColor)
     .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.md)
-        .stroke(Color.tidexSuccess.opacity(0.3), lineWidth: 1)
+      RoundedRectangle(cornerRadius: cornerRadius)
+        .stroke(borderColor, lineWidth: 1)
     )
-    .cornerRadius(CornerRadius.md)
+    .cornerRadius(cornerRadius)
+    .shadow(color: style == .toast ? Color.black.opacity(0.12) : .clear, radius: 10, y: 3)
   }
 }
 

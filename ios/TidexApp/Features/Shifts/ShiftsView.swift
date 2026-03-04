@@ -72,9 +72,6 @@ struct ShiftsView: View {
   // Recurring shift editor state
   @State private var recurringShiftToEdit: RecurringShiftRow?
 
-  // Celebration state
-  @State private var showConfetti = false
-
   // List scroll state (hidden until scrolled to today to prevent flash)
   @State private var listReady = false
 
@@ -101,7 +98,6 @@ struct ShiftsView: View {
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
-  private let celebrationHaptic = UINotificationFeedbackGenerator()
 
   // Orientation tracking for iPad landscape layout
   @ObservedObject private var orientationTracker = OrientationTracker.shared
@@ -374,7 +370,6 @@ struct ShiftsView: View {
         .onAppear {
           selectionHaptic.prepare()
           impactHaptic.prepare()
-          celebrationHaptic.prepare()
           // Handle any pending deep link on initial appearance
           handleDeepLink(coordinator.pendingDeepLink)
         }
@@ -407,35 +402,12 @@ struct ShiftsView: View {
         }
         // Disable animations during view mode transition to prevent lag
         .animation(.none, value: showListView)
-        // Confetti overlay for celebration when shifts are added
-        .overlay {
-          ConfettiView(isActive: showConfetti) {
-            showConfetti = false
-            celebrationManager.confettiDidShow()
-          }
-          .allowsHitTesting(false)
-        }
         // Listen for "use share button" from the screenshot prompt overlay (hosted in MainTabView)
         .onReceive(NotificationCenter.default.publisher(for: .screenshotPromptUseShareButton)) {
           _ in
           showingShareOptions = true
         }
-        // Trigger celebration when shifts are added (check on view appear and when month matches)
-        .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
-          if shouldShow
-            && celebrationManager.shouldShowConfetti(
-              forYear: viewModel.committedYear, month: viewModel.committedMonth)
-          {
-            triggerCelebration()
-          }
-        }
         .onChange(of: viewModel.committedMonth) { _, _ in
-          // Check if we should show confetti for the newly committed (visible) month
-          if celebrationManager.shouldShowConfetti(
-            forYear: viewModel.committedYear, month: viewModel.committedMonth)
-          {
-            triggerCelebration()
-          }
           // Check if we have a pending deep link for this month
           if let dateISO = highlightedDateISO, !viewModel.isLoading {
             selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
@@ -598,20 +570,6 @@ struct ShiftsView: View {
         popover.permittedArrowDirections = .up
       }
       topVC.present(activityVC, animated: true)
-    }
-  }
-
-  // MARK: - Celebration
-
-  /// Trigger celebration effects (confetti + haptic)
-  private func triggerCelebration() {
-    // Small delay to allow view to render
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-      // Haptic feedback
-      celebrationHaptic.notificationOccurred(.success)
-
-      // Show confetti
-      showConfetti = true
     }
   }
 
