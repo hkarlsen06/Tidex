@@ -2,7 +2,7 @@
  * Wagey Chat Router
  *
  * River stream definition for the chat interface.
- * Uses Claude API directly for improved tool use with input_examples.
+ * Uses runtime-selectable AI provider (Claude or OpenAI).
  */
 
 import { z } from "zod";
@@ -18,6 +18,7 @@ import type {
   ContentBlock,
   CompactionContent,
   ImageContent,
+  StreamChunk,
   ToolResultContent,
   ThinkingContent,
   RedactedThinkingContent,
@@ -27,6 +28,7 @@ import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
 import { LOCALE_COOKIE, defaultLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import type { WageyAIProvider } from "@/lib/services/config";
 
 /**
  * Chat chunk types (sent to frontend)
@@ -330,6 +332,56 @@ function convertToClaudeMessages(
   return { system: systemPrompt, messages: claudeMessages };
 }
 
+export async function getConfiguredWageyAiProvider(): Promise<WageyAIProvider> {
+  const { AppConfig, AppConfigLive } = await import("@/lib/services/config");
+  const getProvider = Effect.gen(function* () {
+    const config = yield* AppConfig;
+    return config.ai.provider;
+  }).pipe(Effect.provide(AppConfigLive), Effect.scoped);
+
+  return Effect.runPromise(getProvider);
+}
+
+export async function streamChatWithProvider(
+  provider: WageyAIProvider,
+  options: {
+    system?: string;
+    messages: Message[];
+  }
+): Promise<AsyncIterable<StreamChunk>> {
+  if (provider === "chatgpt") {
+    const { OpenAIService } = await import("@/lib/services/openai");
+    const { OpenAILive } = await import("@/lib/layers/app");
+
+    const getAiStream = Effect.gen(function* () {
+      const openai = yield* OpenAIService;
+      return yield* openai.streamChat({
+        system: options.system,
+        messages: options.messages,
+        tools,
+        maxTokens: 2048,
+      });
+    }).pipe(Effect.provide(OpenAILive), Effect.scoped);
+
+    return Effect.runPromise(getAiStream);
+  }
+
+  const { ClaudeService } = await import("@/lib/services/claude");
+  const { ClaudeLive } = await import("@/lib/layers/app");
+
+  const getAiStream = Effect.gen(function* () {
+    const claude = yield* ClaudeService;
+    return yield* claude.streamChat({
+      system: options.system,
+      messages: options.messages,
+      tools,
+      maxTokens: 2048,
+    });
+  }).pipe(Effect.provide(ClaudeLive), Effect.scoped);
+
+  return Effect.runPromise(getAiStream);
+}
+
 /**
  * Wagey Chat Stream
  *
@@ -414,240 +466,253 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       system = getSystemPrompt(systemPromptContext);
     }
 
-    // Dynamically import Claude service to avoid static analysis issues
-    const { ClaudeService } = await import("@/lib/services/claude");
-    const { ClaudeLive } = await import("@/lib/layers/app");
+    const aiProvider = await getConfiguredWageyAiProvider();
 
     // Agentic loop: continues until AI stops making tool calls
     let conversationMessages = [...claudeMessages];
     let iterationCount = 0;
     const MAX_ITERATIONS = 10; // Safety limit to prevent infinite loops
     let latestCompactionContent: string | undefined;
+    let aiLoopFailed = false;
+    let hasUserVisibleAssistantOutput = false;
 
-    while (iterationCount < MAX_ITERATIONS) {
-      iterationCount++;
+    try {
+      while (iterationCount < MAX_ITERATIONS) {
+        iterationCount++;
 
-      // Get AI response
-      const getAiStream = Effect.gen(function* () {
-        const claude = yield* ClaudeService;
-        return yield* claude.streamChat({
+        const aiStream = await streamChatWithProvider(aiProvider, {
           system,
           messages: conversationMessages,
-          tools,
-          maxTokens: 2048,
         });
-      }).pipe(Effect.provide(ClaudeLive), Effect.scoped);
 
-      const aiStream = await Effect.runPromise(getAiStream);
+        let currentTextContent = "";
+        let compactionBlock: CompactionContent | null = null;
+        const thinkingBlocks: Array<ThinkingContent | RedactedThinkingContent> = [];
+        const toolUses: Array<{
+          id: string;
+          name: string;
+          input: Record<string, unknown>;
+        }> = [];
 
-      let currentTextContent = "";
-      let compactionBlock: CompactionContent | null = null;
-      const thinkingBlocks: Array<ThinkingContent | RedactedThinkingContent> = [];
-      const toolUses: Array<{
-        id: string;
-        name: string;
-        input: Record<string, unknown>;
-      }> = [];
+        // Process stream chunks
+        for await (const chunk of aiStream) {
+          if (abortSignal.aborted) {
+            break;
+          }
 
-      // Process stream chunks
-      for await (const chunk of aiStream) {
+          if (chunk.type === "text") {
+            currentTextContent += chunk.content;
+            hasUserVisibleAssistantOutput = true;
+            await stream.appendChunk({
+              type: "text",
+              content: chunk.content,
+            });
+          } else if (chunk.type === "tool_use") {
+            // Check for duplicate tool calls
+            const isDuplicateCall = toolUses.some(
+              (use) =>
+                use.name === chunk.name &&
+                JSON.stringify(use.input) === JSON.stringify(chunk.input)
+            );
+
+            if (!isDuplicateCall) {
+              toolUses.push({
+                id: chunk.id,
+                name: chunk.name,
+                input: chunk.input,
+              });
+              hasUserVisibleAssistantOutput = true;
+
+              // Send tool_start chunk to frontend
+              await stream.appendChunk({
+                type: "tool_start",
+                toolName: chunk.name,
+                toolCallId: chunk.id,
+                toolArguments: JSON.stringify(chunk.input),
+              });
+            }
+          } else if (chunk.type === "compaction" && aiProvider === "claude") {
+            // Preserve compaction block for server continuity and optional client state sync
+            compactionBlock = { type: "compaction", content: chunk.content };
+            latestCompactionContent = chunk.content;
+          } else if (chunk.type === "thinking") {
+            // Preserve thinking/signature blocks for tool-use round-trip integrity
+            thinkingBlocks.push({
+              type: "thinking",
+              thinking: chunk.thinking,
+              signature: chunk.signature,
+            });
+          } else if (chunk.type === "redacted_thinking") {
+            thinkingBlocks.push({
+              type: "redacted_thinking",
+              data: chunk.data,
+            });
+          }
+        }
+
+        // If aborted, break out of agentic loop
         if (abortSignal.aborted) {
           break;
         }
 
-        if (chunk.type === "text") {
-          currentTextContent += chunk.content;
-          await stream.appendChunk({
+        // Build assistant message content blocks
+        const assistantContent: ContentBlock[] = [];
+        // Compaction block must come first - API drops everything before it
+        if (compactionBlock) {
+          assistantContent.push(compactionBlock);
+        }
+        if (thinkingBlocks.length > 0) {
+          assistantContent.push(...thinkingBlocks);
+        }
+        if (currentTextContent) {
+          assistantContent.push({
             type: "text",
-            content: chunk.content,
-          });
-        } else if (chunk.type === "tool_use") {
-          // Check for duplicate tool calls
-          const isDuplicateCall = toolUses.some(
-            (use) =>
-              use.name === chunk.name &&
-              JSON.stringify(use.input) === JSON.stringify(chunk.input)
-          );
-
-          if (!isDuplicateCall) {
-            toolUses.push({
-              id: chunk.id,
-              name: chunk.name,
-              input: chunk.input,
-            });
-
-            // Send tool_start chunk to frontend
-            await stream.appendChunk({
-              type: "tool_start",
-              toolName: chunk.name,
-              toolCallId: chunk.id,
-              toolArguments: JSON.stringify(chunk.input),
-            });
-          }
-        } else if (chunk.type === "compaction") {
-          // Preserve compaction block for server continuity and optional client state sync
-          compactionBlock = { type: "compaction", content: chunk.content };
-          latestCompactionContent = chunk.content;
-        } else if (chunk.type === "thinking") {
-          // Preserve thinking/signature blocks for tool-use round-trip integrity
-          thinkingBlocks.push({
-            type: "thinking",
-            thinking: chunk.thinking,
-            signature: chunk.signature,
-          });
-        } else if (chunk.type === "redacted_thinking") {
-          thinkingBlocks.push({
-            type: "redacted_thinking",
-            data: chunk.data,
+            text: currentTextContent,
           });
         }
-      }
+        for (const toolUse of toolUses) {
+          assistantContent.push({
+            type: "tool_use",
+            id: toolUse.id,
+            name: toolUse.name,
+            input: toolUse.input,
+          });
+        }
 
-      // If aborted, break out of agentic loop
-      if (abortSignal.aborted) {
-        break;
-      }
-
-      // Build assistant message content blocks
-      const assistantContent: ContentBlock[] = [];
-      // Compaction block must come first - API drops everything before it
-      if (compactionBlock) {
-        assistantContent.push(compactionBlock);
-      }
-      if (thinkingBlocks.length > 0) {
-        assistantContent.push(...thinkingBlocks);
-      }
-      if (currentTextContent) {
-        assistantContent.push({
-          type: "text",
-          text: currentTextContent,
+        // Add assistant message to conversation
+        conversationMessages.push({
+          role: "assistant",
+          content: assistantContent.length > 0 ? assistantContent : currentTextContent,
         });
-      }
-      for (const toolUse of toolUses) {
-        assistantContent.push({
-          type: "tool_use",
-          id: toolUse.id,
-          name: toolUse.name,
-          input: toolUse.input,
-        });
-      }
 
-      // Add assistant message to conversation
-      conversationMessages.push({
-        role: "assistant",
-        content: assistantContent.length > 0 ? assistantContent : currentTextContent,
-      });
+        // If no tool calls, we're done - AI has decided to stop
+        if (toolUses.length === 0) {
+          break;
+        }
 
-      // If no tool calls, we're done - AI has decided to stop
-      if (toolUses.length === 0) {
-        break;
-      }
+        // Execute all tool calls
+        const toolResults: ToolResultContent[] = [];
 
-      // Execute all tool calls
-      const toolResults: ToolResultContent[] = [];
+        for (const toolUse of toolUses) {
+          try {
+            const invalidJson = toolUse.input.INVALID_JSON;
+            if (typeof invalidJson === "string") {
+              const invalidResult = {
+                success: false,
+                message:
+                  "Tool input was invalid or incomplete JSON. Please resend a valid JSON object for this tool call.",
+                invalid_input: {
+                  INVALID_JSON: invalidJson,
+                },
+              };
 
-      for (const toolUse of toolUses) {
-        try {
-          const invalidJson = toolUse.input.INVALID_JSON;
-          if (typeof invalidJson === "string") {
-            const invalidResult = {
-              success: false,
-              message:
-                "Tool input was invalid or incomplete JSON. Please resend a valid JSON object for this tool call.",
-              invalid_input: {
-                INVALID_JSON: invalidJson,
-              },
-            };
+              await stream.appendChunk({
+                type: "tool_result",
+                toolName: toolUse.name,
+                toolCallId: toolUse.id,
+                result: JSON.stringify(invalidResult),
+                success: false,
+              });
 
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: toolUse.id,
+                content: JSON.stringify(invalidResult),
+                is_error: true,
+              });
+              continue;
+            }
+
+            const result = await executeTool(
+              toolUse.name as ToolName,
+              JSON.stringify(toolUse.input),
+              userId,
+              locale
+            );
+
+            // Send tool_result chunk to UI for both success and failure
+            // iOS needs this to track tool call state and include results in subsequent requests
             await stream.appendChunk({
               type: "tool_result",
               toolName: toolUse.name,
               toolCallId: toolUse.id,
-              result: JSON.stringify(invalidResult),
+              result: JSON.stringify(result),
+              success: result.success,
+            });
+
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: toolUse.id,
+              content: JSON.stringify(result),
+              is_error: !result.success,
+            });
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : "Unknown error";
+            const errorResult = JSON.stringify({
+              success: false,
+              message: errorMessage,
+            });
+
+            // Send tool_result chunk to UI for exception case
+            // iOS needs this to track tool call state and include results in subsequent requests
+            await stream.appendChunk({
+              type: "tool_result",
+              toolName: toolUse.name,
+              toolCallId: toolUse.id,
+              result: errorResult,
               success: false,
             });
 
             toolResults.push({
               type: "tool_result",
               tool_use_id: toolUse.id,
-              content: JSON.stringify(invalidResult),
+              content: errorResult,
               is_error: true,
             });
-            continue;
           }
-
-          const result = await executeTool(
-            toolUse.name as ToolName,
-            JSON.stringify(toolUse.input),
-            userId,
-            locale
-          );
-
-          // Send tool_result chunk to UI for both success and failure
-          // iOS needs this to track tool call state and include results in subsequent requests
-          await stream.appendChunk({
-            type: "tool_result",
-            toolName: toolUse.name,
-            toolCallId: toolUse.id,
-            result: JSON.stringify(result),
-            success: result.success,
-          });
-
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            content: JSON.stringify(result),
-            is_error: !result.success,
-          });
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          const errorResult = JSON.stringify({
-            success: false,
-            message: errorMessage,
-          });
-
-          // Send tool_result chunk to UI for exception case
-          // iOS needs this to track tool call state and include results in subsequent requests
-          await stream.appendChunk({
-            type: "tool_result",
-            toolName: toolUse.name,
-            toolCallId: toolUse.id,
-            result: errorResult,
-            success: false,
-          });
-
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            content: errorResult,
-            is_error: true,
-          });
         }
-      }
 
-      // Add tool results as a user message (Claude format)
-      conversationMessages.push({
-        role: "user",
-        content: toolResults,
+        // Add tool results as a user message (Claude format)
+        conversationMessages.push({
+          role: "user",
+          content: toolResults,
+        });
+
+        // Check if any tool calls failed
+        const hasFailures = toolResults.some((result) => result.is_error);
+
+        // If there were failures, add a system hint in the next user message
+        if (hasFailures) {
+          // Add hint as a text block to help Claude understand the failure
+          const lastUserMessage = conversationMessages[conversationMessages.length - 1];
+          if (Array.isArray(lastUserMessage.content)) {
+            (lastUserMessage.content as ContentBlock[]).push({
+              type: "text",
+              text: "Note: Some tool calls failed. Please analyze the error messages and try again with corrected parameters if possible, or explain the issue to the user if you cannot proceed.",
+            } as any);
+          }
+        }
+
+        // Continue the loop - AI will get another chance to make tool calls or respond with text
+      }
+    } catch (error) {
+      aiLoopFailed = true;
+      const message =
+        error instanceof Error
+          ? error.message
+          : "AI stream failed before producing a response";
+      await stream.appendChunk({
+        type: "error",
+        error: message,
       });
+    }
 
-      // Check if any tool calls failed
-      const hasFailures = toolResults.some((result) => result.is_error);
-
-      // If there were failures, add a system hint in the next user message
-      if (hasFailures) {
-        // Add hint as a text block to help Claude understand the failure
-        const lastUserMessage = conversationMessages[conversationMessages.length - 1];
-        if (Array.isArray(lastUserMessage.content)) {
-          (lastUserMessage.content as ContentBlock[]).push({
-            type: "text",
-            text: "Note: Some tool calls failed. Please analyze the error messages and try again with corrected parameters if possible, or explain the issue to the user if you cannot proceed.",
-          } as any);
-        }
-      }
-
-      // Continue the loop - AI will get another chance to make tool calls or respond with text
+    if (!aiLoopFailed && !hasUserVisibleAssistantOutput && !abortSignal.aborted) {
+      await stream.appendChunk({
+        type: "error",
+        error: "No response from AI provider",
+      });
     }
 
     // If we hit max iterations, inform the user

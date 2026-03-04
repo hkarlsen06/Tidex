@@ -270,6 +270,18 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         processedChunksRef.current.clear();
         setIsStreaming(false);
         setCurrentChunk("");
+      } else if (chunk.type === "error") {
+        setCurrentChunk("");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMessageId("error"),
+            role: "assistant",
+            content: `❌ ${chunk.error}`,
+          },
+        ]);
+        processedChunksRef.current.clear();
+        setIsStreaming(false);
       } else if (chunk.type === "done") {
         // Finalize any remaining text
         setCurrentChunk((currentText) => {

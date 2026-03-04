@@ -38,6 +38,8 @@ import { JobsServiceLive } from "../services/jobs";
 import { StatsServiceLive } from "../services/stats";
 import { SubscriptionServiceLive } from "../services/subscription";
 import { ClaudeServiceLive } from "../services/claude";
+import { OpenAIServiceLive } from "../services/openai";
+import { OpenAIRealtimeServiceLive } from "../services/openai-realtime";
 import { WageyServiceLive } from "../services/wagey";
 import { SharingServiceLive } from "../services/sharing";
 
@@ -139,6 +141,28 @@ export const ClaudeLive = Layer.provideMerge(
 );
 
 /**
+ * Layer for OpenAI AI operations
+ * Use this when you need AI/LLM capabilities via OpenAI Responses API
+ *
+ * Dependencies: none (provides AppConfig and OpenAIService)
+ */
+export const OpenAILive = Layer.provideMerge(
+  OpenAIServiceLive,
+  AppConfigLive
+);
+
+/**
+ * Layer for OpenAI Realtime operations over WebSocket
+ * Use this when you need low-level realtime event streaming.
+ *
+ * Dependencies: none (provides AppConfig and OpenAIRealtimeService)
+ */
+export const OpenAIRealtimeLive = Layer.provideMerge(
+  OpenAIRealtimeServiceLive,
+  AppConfigLive
+);
+
+/**
  * Layer for Wagey AI assistant operations
  * Use this when you need Wagey access control and usage tracking
  *
@@ -173,6 +197,8 @@ export const SharingLive = Layer.provideMerge(
  * - StatsService: Statistics and analytics with projections
  * - SubscriptionService: Subscription and profile management
  * - ClaudeService: AI/LLM capabilities via Claude API
+ * - OpenAIService: AI/LLM capabilities via OpenAI Responses API
+ * - OpenAIRealtimeService: Realtime WebSocket integration
  * - WageyService: Wagey access control and usage tracking
  * - SharingService: Shift sharing functionality
  *
@@ -186,6 +212,8 @@ export const AppLive = Layer.mergeAll(
   StatsLive,
   SubscriptionLive,
   ClaudeLive,
+  OpenAILive,
+  OpenAIRealtimeLive,
   WageyLive,
   SharingLive
 );
