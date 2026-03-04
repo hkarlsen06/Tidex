@@ -14,6 +14,9 @@ struct AddShiftView: View {
   @State private var tabTransitionOffset: CGFloat = 0
   @State private var tabTransitionOpacity: Double = 1
   @State private var showStartFreshConfirmation = false
+  @State private var showSingleSuccessBanner = false
+  @State private var showAddConfetti = false
+  @State private var singleSuccessDismissTask: Task<Void, Never>?
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -114,26 +117,51 @@ struct AddShiftView: View {
           }
         }
 
-        // Error display - positioned above the shared month picker
-        if let error = viewModel.error, !isKeyboardVisible {
-          ErrorBanner(
-            message: error,
-            onRetry: {
-              Task {
-                switch viewModel.mode {
-                case .single:
-                  await viewModel.submitSingleShifts()
-                case .recurring:
-                  await viewModel.submitRecurringShift()
+        ConfettiView(isActive: showAddConfetti, launchYRatio: 0.2) {
+          showAddConfetti = false
+        }
+        .allowsHitTesting(false)
+
+        // Feedback display - positioned above the shared month picker
+        if !isKeyboardVisible {
+          if let error = viewModel.error {
+            ErrorBanner(
+              message: error,
+              onRetry: {
+                Task {
+                  switch viewModel.mode {
+                  case .single:
+                    await viewModel.submitSingleShifts()
+                  case .recurring:
+                    await viewModel.submitRecurringShift()
+                  }
                 }
+              },
+              onDismiss: { viewModel.error = nil }
+            )
+            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+            .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+          } else if showSingleSuccessBanner {
+            SuccessBanner(
+              message: String(localized: .addShiftSingleSuccessSaved),
+              style: .toast,
+              actionTitle: .addShiftSingleViewShifts,
+              onAction: {
+                dismissSingleSaveSuccessBanner()
+                selectedTab = .shifts
+              },
+              onDismiss: {
+                dismissSingleSaveSuccessBanner()
               }
-            },
-            onDismiss: { viewModel.error = nil }
-          )
-          .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-          .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
-          .transition(.move(edge: .bottom).combined(with: .opacity))
+            )
+            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+            .padding(.top, Spacing.xs)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .transition(.move(edge: .top).combined(with: .opacity))
+          }
         }
       }
       .navigationBarTitleDisplayMode(.inline)
@@ -189,14 +217,30 @@ struct AddShiftView: View {
       await viewModel.loadData()
     }
     .onAppear {
-      viewModel.onShiftsCreated = {
-        selectedTab = .shifts
+      viewModel.onShiftsCreated = { completion in
+        switch completion {
+        case .single:
+          showAddConfettiCelebration()
+          showSingleSaveSuccessBanner()
+        case .recurring:
+          selectedTab = .shifts
+        }
       }
 
       // Check for pre-selected date when tab becomes visible
       // (e.g., when user taps empty day in Shifts calendar)
       viewModel.checkPreselectedDate()
       handleDeepLink(coordinator.pendingDeepLink)
+    }
+    .onChange(of: viewModel.error) { _, newError in
+      if newError != nil {
+        dismissSingleSaveSuccessBanner()
+      }
+    }
+    .onChange(of: viewModel.mode) { _, newMode in
+      if newMode != .single {
+        dismissSingleSaveSuccessBanner()
+      }
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
       handleDeepLink(deepLink)
@@ -221,6 +265,9 @@ struct AddShiftView: View {
       focusedTimeField = nil
       isKeyboardVisible = false
       keyboardHeight = 0
+      showAddConfetti = false
+      dismissSingleSaveSuccessBanner()
+      viewModel.onShiftsCreated = nil
     }
     .sheet(isPresented: $viewModel.showPreviewSheet) {
       RecurringPreviewSheet(viewModel: viewModel)
@@ -331,6 +378,46 @@ struct AddShiftView: View {
       hideKeyboard()
     }
   }
+
+  private func showSingleSaveSuccessBanner() {
+    dismissSingleSaveSuccessBanner()
+    withAnimation {
+      showSingleSuccessBanner = true
+    }
+
+    singleSuccessDismissTask = Task {
+      do {
+        try await Task.sleep(nanoseconds: 4_000_000_000)
+        guard !Task.isCancelled else { return }
+        await MainActor.run {
+          withAnimation {
+            showSingleSuccessBanner = false
+          }
+          singleSuccessDismissTask = nil
+        }
+      } catch {
+        // Task cancelled.
+      }
+    }
+  }
+
+  private func dismissSingleSaveSuccessBanner() {
+    singleSuccessDismissTask?.cancel()
+    singleSuccessDismissTask = nil
+    if showSingleSuccessBanner {
+      withAnimation {
+        showSingleSuccessBanner = false
+      }
+    }
+  }
+
+  private func showAddConfettiCelebration() {
+    showAddConfetti = false
+    Task { @MainActor in
+      await Task.yield()
+      showAddConfetti = true
+    }
+  }
 }
 
 // MARK: - Single Shift Content
@@ -351,8 +438,21 @@ private struct SingleShiftContent: View {
   }
 
   var body: some View {
-    VStack(spacing: Spacing.sm) {
+    VStack(spacing: Spacing.xs) {
       AddShiftCalendarView(viewModel: viewModel)
+
+      if viewModel.shouldShowSingleTimeScopeHint {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "info.circle")
+            .font(.tidexMicro)
+          Text(.addShiftSingleTimeScopeHint)
+            .font(.tidexMicro)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+        }
+        .foregroundColor(.tidexTextMuted)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
 
       TimeRangePicker(
         startTime: $viewModel.startTime,
@@ -362,7 +462,6 @@ private struct SingleShiftContent: View {
         focusedFieldBinding: $focusedTimeField,
         leadingChipAccessory: leadingJobAccessory
       )
-      .padding(.top, Spacing.sm)
     }
   }
 }

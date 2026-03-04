@@ -847,7 +847,15 @@ struct DashboardView: View {
       progress: payrollProgress
     )
 
-    if canManuallySetPayrollStatus && !showsWorkplaceVariants {
+    if showsWorkplaceVariants {
+      card
+        .contentShape(Rectangle())
+        .onTapGesture {
+          guard variantCount > 1 else { return }
+          selectedPayrollVariantIndex = (selectedPayrollVariantIndex + 1) % variantCount
+          Haptics.play(.light)
+        }
+    } else {
       Menu {
         Section(String(localized: .dashboardPayrollStatusTitle)) {
           Button {
@@ -859,6 +867,7 @@ struct DashboardView: View {
               systemImage: payrollMarkedReceived ? "checkmark.circle.fill" : "circle"
             )
           }
+
           Button {
             impactHaptic.impactOccurred()
             viewModel.clearPayrollReceivedOverrideForDisplayedMonth(
@@ -874,16 +883,7 @@ struct DashboardView: View {
         card
       }
       .menuIndicator(.hidden)
-    } else if showsWorkplaceVariants {
-      card
-        .contentShape(Rectangle())
-        .onTapGesture {
-          guard variantCount > 1 else { return }
-          selectedPayrollVariantIndex = (selectedPayrollVariantIndex + 1) % variantCount
-          Haptics.play(.light)
-        }
-    } else {
-      card
+      .disabled(!canManuallySetPayrollStatus)
     }
   }
 

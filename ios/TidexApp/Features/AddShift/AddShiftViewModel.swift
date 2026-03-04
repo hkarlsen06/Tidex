@@ -5,6 +5,11 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
+enum AddShiftCompletion {
+  case single
+  case recurring
+}
+
 // MARK: - Calendar Display Data
 
 /// Pre-computed display data for calendar cells to avoid redundant computation
@@ -84,6 +89,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Active (non-archived, non-deleted) jobs for the current user.
   @Published private(set) var activeJobs: [Job] = []
+
+  /// Number of distinct start/end time pairs the user has used across all shifts.
+  @Published private(set) var distinctShiftTimePairCount: Int = 0
 
   /// Selected job for new shift creation.
   /// For single-job users this is auto-assigned.
@@ -306,8 +314,8 @@ final class AddShiftViewModel: ObservableObject {
 
   // MARK: - Navigation Callback
 
-  /// Called when shifts are successfully created - used to navigate to Shifts tab
-  var onShiftsCreated: (() -> Void)?
+  /// Called when shifts are successfully created.
+  var onShiftsCreated: ((AddShiftCompletion) -> Void)?
 
   // MARK: - Initialization
 
@@ -510,6 +518,11 @@ final class AddShiftViewModel: ObservableObject {
     }
   }
 
+  /// Show hint until user has created at least 3 distinct start/end combinations.
+  var shouldShowSingleTimeScopeHint: Bool {
+    distinctShiftTimePairCount < 3
+  }
+
   /// Start time as HH:mm string
   var startTimeString: String {
     guard let time = startTime else { return "" }
@@ -664,6 +677,7 @@ final class AddShiftViewModel: ObservableObject {
 
     // Load existing shifts for displayed month (for conflict detection)
     reloadShiftsForDisplayedMonth()
+    refreshDistinctShiftTimePairCount(for: userId)
 
     // Load recurring shifts
     cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
@@ -700,6 +714,7 @@ final class AddShiftViewModel: ObservableObject {
     cachedSnapshots = snapshotsRepository.getSnapshots(for: userId)
     cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
     reloadShiftsForDisplayedMonth()
+    refreshDistinctShiftTimePairCount(for: userId)
 
     publishStateToCoordinator()
 
@@ -760,6 +775,19 @@ final class AddShiftViewModel: ObservableObject {
 
     // Trigger view update for new month's shift indicators
     cacheVersion += 1
+  }
+
+  /// Refresh number of distinct start/end pairs used in historical shifts.
+  private func refreshDistinctShiftTimePairCount(for userId: String) {
+    let allShifts = shiftsRepository.getAllShifts(for: userId)
+    let distinctPairs = Set(
+      allShifts.compactMap { shift -> String? in
+        let start = shift.start_time.trimmingCharacters(in: .whitespacesAndNewlines)
+        let end = shift.end_time.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !start.isEmpty, !end.isEmpty else { return nil }
+        return "\(start)|\(end)"
+      })
+    distinctShiftTimePairCount = distinctPairs.count
   }
 
   // MARK: - Single Shift Actions
@@ -846,6 +874,10 @@ final class AddShiftViewModel: ObservableObject {
         originMonth: (year: displayYear, month: displayMonthNumber)
       )
 
+      // Refresh month cache so newly created shifts are immediately visible in Add calendar.
+      reloadShiftsForDisplayedMonth()
+      refreshDistinctShiftTimePairCount(for: userId)
+
       // Clear form
       clearForm()
 
@@ -855,8 +887,8 @@ final class AddShiftViewModel: ObservableObject {
       // Notify that shifts changed (for dashboard refresh)
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
-      // Navigate to Shifts tab
-      onShiftsCreated?()
+      // Notify completion
+      onShiftsCreated?(.single)
 
     } catch ShiftCreationError.monthLimitReached(let months) {
       // Show month limit sheet instead of error
@@ -994,6 +1026,8 @@ final class AddShiftViewModel: ObservableObject {
         originMonth: (year: displayYear, month: displayMonthNumber)
       )
 
+      refreshDistinctShiftTimePairCount(for: userId)
+
       // Clear form
       clearForm()
 
@@ -1006,8 +1040,8 @@ final class AddShiftViewModel: ObservableObject {
       // Notify that shifts changed (for dashboard refresh)
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
-      // Navigate to Shifts tab
-      onShiftsCreated?()
+      // Notify completion
+      onShiftsCreated?(.recurring)
 
     } catch {
       logger.error("Failed to create recurring shift: \(error.localizedDescription)")
@@ -1041,6 +1075,7 @@ final class AddShiftViewModel: ObservableObject {
 
       // Reload cached data to reflect deletions in UI
       reloadShiftsForDisplayedMonth()
+      refreshDistinctShiftTimePairCount(for: userId)
 
       // Notify that shifts changed (for other views like dashboard)
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
