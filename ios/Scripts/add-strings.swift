@@ -169,12 +169,12 @@ private func parseArgs() throws -> Config {
 
 private enum EntryResult {
   case added
-  case updated
+  case needsManualUpdate
   case skipped
 }
 
 private func processEntry(_ entry: StringEntry, in catalog: inout Catalog) -> EntryResult {
-  if var existingEntry = catalog.strings[entry.key] {
+  if let existingEntry = catalog.strings[entry.key] {
     var localizations = existingEntry.localizations ?? [:]
     var added: [String] = []
 
@@ -196,10 +196,10 @@ private func processEntry(_ entry: StringEntry, in catalog: inout Catalog) -> En
       return .skipped
     }
 
-    existingEntry.localizations = localizations
-    catalog.strings[entry.key] = existingEntry
-    print("  Updated '\(entry.key)' — added missing: \(added.joined(separator: ", "))")
-    return .updated
+    print(
+      "  Needs manual update '\(entry.key)' — missing: \(added.joined(separator: ", ")) (skipped to avoid full catalog rewrite)"
+    )
+    return .needsManualUpdate
   }
 
   let newEntry = CatalogEntry(
@@ -216,17 +216,6 @@ private func processEntry(_ entry: StringEntry, in catalog: inout Catalog) -> En
   catalog.strings[entry.key] = newEntry
   print("  Added '\(entry.key)'")
   return .added
-}
-
-private func writeCatalog(_ catalog: Catalog, to path: String) throws {
-  let encoder = JSONEncoder()
-  encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-  let outputData = try encoder.encode(catalog)
-  guard var outputString = String(data: outputData, encoding: .utf8) else {
-    throw AddStringError.invalidUTF8Encoding
-  }
-  outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
-  try outputString.write(toFile: path, atomically: true, encoding: .utf8)
 }
 
 private struct StringsObjectBounds {
@@ -373,7 +362,7 @@ private func run() throws {
   }
 
   var addedCount = 0
-  var updatedCount = 0
+  var manualUpdateCount = 0
   var addedEntries: [StringEntry] = []
 
   try withExclusiveCatalogLock(catalogPath: config.catalogPath) {
@@ -386,14 +375,13 @@ private func run() throws {
       case .added:
         addedCount += 1
         addedEntries.append(entry)
-      case .updated: updatedCount += 1
+      case .needsManualUpdate:
+        manualUpdateCount += 1
       case .skipped: break
       }
     }
 
-    if updatedCount > 0 {
-      try writeCatalog(catalog, to: config.catalogPath)
-    } else if addedCount > 0 {
+    if addedCount > 0 {
       try appendEntriesWithoutReordering(addedEntries, to: config.catalogPath)
     }
   }
@@ -401,11 +389,17 @@ private func run() throws {
   print("")
   var parts: [String] = []
   if addedCount > 0 { parts.append("\(addedCount) added") }
-  if updatedCount > 0 { parts.append("\(updatedCount) updated") }
+  if manualUpdateCount > 0 { parts.append("\(manualUpdateCount) needs manual update") }
   if !parts.isEmpty {
     print("Done: \(parts.joined(separator: ", "))")
   } else {
     print("Done: no changes")
+  }
+
+  if manualUpdateCount > 0 {
+    print(
+      "Note: Existing keys with missing locales are not auto-updated to avoid rewriting entire .xcstrings files."
+    )
   }
 
   if addedCount > 0 {
