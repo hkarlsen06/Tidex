@@ -390,7 +390,8 @@ struct SharedShiftsCalendarView: View {
         backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
         borderColor: Self.deepLinkHighlightColor,
         borderWidth: 2.5,
-        dayNumberColor: .tidexTextPrimary
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: false
       )
     }
     if isToday {

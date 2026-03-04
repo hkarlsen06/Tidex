@@ -85,7 +85,8 @@ struct RecurringCalendarView: View {
         backgroundColor: .tidexBlue,
         borderColor: .tidexBlue,
         borderWidth: 2,
-        dayNumberColor: .white
+        dayNumberColor: .white,
+        showsTodayBadge: false
       )
     }
     if isProjected {
@@ -94,7 +95,8 @@ struct RecurringCalendarView: View {
           ? Color.tidexWarning.opacity(0.15) : Color.tidexBlue.opacity(0.15),
         borderColor: hasConflict ? .tidexWarning : .tidexBlue,
         borderWidth: 2,
-        dayNumberColor: hasConflict ? .tidexWarning : .tidexBlue
+        dayNumberColor: hasConflict ? .tidexWarning : .tidexBlue,
+        showsTodayBadge: false
       )
     }
     if isToday && !isOutsideMonth {
@@ -102,7 +104,8 @@ struct RecurringCalendarView: View {
         backgroundColor: .tidexSurfacePrimary,
         borderColor: .tidexBlue,
         borderWidth: 2,
-        dayNumberColor: .tidexBlue
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: true
       )
     }
     if hasExistingShift && !isOutsideMonth {
@@ -110,7 +113,8 @@ struct RecurringCalendarView: View {
         backgroundColor: .tidexSurfacePrimary,
         borderColor: .clear,
         borderWidth: 0,
-        dayNumberColor: .tidexBlue
+        dayNumberColor: .tidexBlue,
+        showsTodayBadge: false
       )
     }
     return .default
