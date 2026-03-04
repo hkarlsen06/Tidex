@@ -46,6 +46,9 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
   public let totalNetEstimate: Double?
   /// Currency symbol to display (e.g., "kr", "$", "€")
   public let currencySymbol: String?
+  /// Explicit marker for temporary open-ended clock activities.
+  /// Optional for backward compatibility with already-running activities created by older builds.
+  public let isTemporaryClock: Bool?
 
   // MARK: - Date Attributes for Real-Time Updates
 
@@ -64,6 +67,7 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     totalGrossEstimate: Double,
     totalNetEstimate: Double? = nil,
     currencySymbol: String? = "kr",
+    isTemporaryClock: Bool? = nil,
     startDate: Date,
     endDate: Date
   ) {
@@ -76,6 +80,7 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     self.totalGrossEstimate = totalGrossEstimate
     self.totalNetEstimate = totalNetEstimate
     self.currencySymbol = currencySymbol
+    self.isTemporaryClock = isTemporaryClock
     self.startDate = startDate
     self.endDate = endDate
   }

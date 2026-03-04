@@ -49,7 +49,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> Bool {
-    attributes.endTime == "00:00"
+    if let explicitFlag = attributes.isTemporaryClock {
+      return explicitFlag
+    }
+
+    // Legacy fallback for activities created before the explicit marker existed.
+    return attributes.endTime == "00:00"
       && attributes.totalGrossEstimate == 0
       && attributes.hourlyWage == 0
       && attributes.supplementRatePerHour == 0
@@ -399,6 +404,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       totalGrossEstimate: 0,
       totalNetEstimate: nil,
       currencySymbol: currencySymbol ?? "kr",
+      isTemporaryClock: true,
       startDate: startedAt,
       endDate: startedAt
     )
@@ -507,6 +513,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       totalGrossEstimate: shift.totalGrossEstimate,
       totalNetEstimate: totalNetEstimate,
       currencySymbol: shift.currencySymbol ?? "kr",
+      isTemporaryClock: false,
       startDate: startDate,
       endDate: endDate
     )

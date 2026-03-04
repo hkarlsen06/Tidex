@@ -29,7 +29,12 @@ private func beforeTaxText(
 }
 
 private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> Bool {
-  attributes.endTime == "00:00"
+  if let explicitFlag = attributes.isTemporaryClock {
+    return explicitFlag
+  }
+
+  // Legacy fallback for activities created before the explicit marker existed.
+  return attributes.endTime == "00:00"
     && attributes.totalGrossEstimate == 0
     && attributes.hourlyWage == 0
     && attributes.supplementRatePerHour == 0
