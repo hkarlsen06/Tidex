@@ -10,6 +10,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_job_id uuid;
+  v_default_currency text;
 BEGIN
   IF pg_trigger_depth() > 1 THEN
     RETURN NEW;
@@ -22,6 +23,18 @@ BEGIN
       half_tax_month = NEW.half_tax_month,
       monthly_goal = NEW.monthly_goal
   WHERE id = v_job_id;
+
+  SELECT COALESCE(j.currency, 'kr')
+  INTO v_default_currency
+  FROM public.jobs j
+  WHERE j.id = v_job_id
+  LIMIT 1;
+
+  IF NEW.currency IS DISTINCT FROM v_default_currency THEN
+    UPDATE public.user_settings
+    SET currency = v_default_currency
+    WHERE user_id = NEW.user_id;
+  END IF;
 
   RETURN NEW;
 END;

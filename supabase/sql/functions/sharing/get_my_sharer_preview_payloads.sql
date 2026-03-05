@@ -175,6 +175,7 @@ AS $function$
             'color', j.color,
             'is_default', j.is_default,
             'sort_order', j.sort_order,
+            'currency', j.currency,
             'payroll_day', j.payroll_day,
             'half_tax_month', j.half_tax_month,
             'monthly_goal', j.monthly_goal,

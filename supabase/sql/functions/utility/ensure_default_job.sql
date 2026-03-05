@@ -14,6 +14,7 @@ DECLARE
   v_payroll_day integer;
   v_half_tax_month integer;
   v_monthly_goal integer;
+  v_currency text;
 BEGIN
   SELECT j.id
   INTO v_job_id
@@ -28,8 +29,9 @@ BEGIN
     SELECT
       COALESCE(us.payroll_day, 15),
       us.half_tax_month,
-      COALESCE(us.monthly_goal, 20000)
-    INTO v_payroll_day, v_half_tax_month, v_monthly_goal
+      COALESCE(us.monthly_goal, 20000),
+      COALESCE(us.currency, 'kr')
+    INTO v_payroll_day, v_half_tax_month, v_monthly_goal, v_currency
     FROM public.user_settings us
     WHERE us.user_id = p_user_id
     LIMIT 1;
@@ -40,7 +42,8 @@ BEGIN
       is_default,
       payroll_day,
       half_tax_month,
-      monthly_goal
+      monthly_goal,
+      currency
     )
     VALUES (
       p_user_id,
@@ -48,7 +51,8 @@ BEGIN
       true,
       COALESCE(v_payroll_day, 15),
       v_half_tax_month,
-      COALESCE(v_monthly_goal, 20000)
+      COALESCE(v_monthly_goal, 20000),
+      COALESCE(v_currency, 'kr')
     )
     ON CONFLICT DO NOTHING;
 
