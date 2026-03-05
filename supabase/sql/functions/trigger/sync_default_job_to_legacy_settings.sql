@@ -17,7 +17,8 @@ BEGIN
     UPDATE public.user_settings
     SET payroll_day = NEW.payroll_day,
         half_tax_month = NEW.half_tax_month,
-        monthly_goal = NEW.monthly_goal
+        monthly_goal = NEW.monthly_goal,
+        currency = NEW.currency
     WHERE user_id = NEW.user_id;
   END IF;
 
