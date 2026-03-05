@@ -143,11 +143,6 @@ struct WageSnapshotEditorSheet: View {
             Divider()
               .padding(.horizontal)
 
-            // Tariff version indicator (when using tariff)
-            if showTariffOption && usePreset {
-              tariffVersionIndicator
-            }
-
             // Wage source selector
             WageSourceSelector(
               usePreset: $usePreset,
@@ -155,7 +150,10 @@ struct WageSnapshotEditorSheet: View {
               customWage: $customWage,
               currency: currency,
               showTariffOption: showTariffOption,
-              tariffVersion: tariffVersion
+              tariffVersion: tariffVersion,
+              selectorFooterContent: showTariffOption && usePreset
+                ? AnyView(tariffVersionIndicator)
+                : nil
             )
             .padding(.horizontal)
 
@@ -168,22 +166,22 @@ struct WageSnapshotEditorSheet: View {
             Divider()
               .padding(.horizontal)
 
-            // Break deduction section
-            BreakDeductionSection(
-              enabled: $breakEnabled,
-              method: $breakMethod,
-              thresholdHours: $breakThresholdHours,
-              deductionMinutes: $breakDeductionMinutes
+            // Tax deduction section
+            TaxDeductionSection(
+              enabled: $taxEnabled,
+              percentage: $taxPercentage
             )
             .padding(.horizontal)
 
             Divider()
               .padding(.horizontal)
 
-            // Tax deduction section
-            TaxDeductionSection(
-              enabled: $taxEnabled,
-              percentage: $taxPercentage
+            // Break deduction section
+            BreakDeductionSection(
+              enabled: $breakEnabled,
+              method: $breakMethod,
+              thresholdHours: $breakThresholdHours,
+              deductionMinutes: $breakDeductionMinutes
             )
             .padding(.horizontal)
 
@@ -429,7 +427,6 @@ struct WageSnapshotEditorSheet: View {
         }
       }
     }
-    .padding(.horizontal)
   }
 
   /// Format effective date for display

@@ -100,32 +100,41 @@ struct FriendProfileView: View {
 
   private var profileHeaderSection: some View {
     Section {
-      HStack(spacing: Spacing.sm) {
-        AvatarView(
-          url: sharedUser.avatarUrl,
-          initials: sharedUser.initials,
-          size: 64
-        )
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        HStack {
+          Spacer()
 
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(sharedUser.displayName)
-            .font(.tidexTitle)
-            .foregroundColor(.tidexTextPrimary)
+          Button(String(localized: .commonDone)) {
+            dismiss()
+          }
+          .font(.tidexHeadline)
+          .foregroundColor(.tidexBlue)
+          .buttonStyle(.plain)
+        }
 
-          if let contactInfo = sharedUser.contactInfo {
-            Text(contactInfo)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextMuted)
+        HStack(spacing: Spacing.sm) {
+          AvatarView(
+            url: sharedUser.avatarUrl,
+            initials: sharedUser.initials,
+            size: 64
+          )
+
+          VStack(alignment: .leading, spacing: Spacing.micro) {
+            Text(sharedUser.displayName)
+              .font(.tidexTitle)
+              .foregroundColor(.tidexTextPrimary)
+              .lineLimit(1)
+              .truncationMode(.tail)
+
+            if let contactInfo = sharedUser.contactInfo {
+              Text(contactInfo)
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            }
           }
         }
-
-        Spacer()
-
-        Button(String(localized: .commonDone)) {
-          dismiss()
-        }
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexBlue)
       }
       .padding(.vertical, Spacing.xs)
     }

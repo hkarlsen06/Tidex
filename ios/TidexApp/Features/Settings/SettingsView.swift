@@ -447,7 +447,7 @@ struct SettingsView: View {
       payJobManagementError = nil
       showArchivedPayJobs = false
 
-      if payChooserJobs.count > 1 {
+      if payChooserJobs.count > 1 || !payArchivedJobs.isEmpty {
         showPayJobChooser = true
       } else {
         navigationPath.append(SettingsDestination.pay(jobId: payChooserJobs.first?.id))
