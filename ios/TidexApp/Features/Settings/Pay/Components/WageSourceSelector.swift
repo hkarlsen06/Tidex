@@ -15,6 +15,8 @@ struct WageSourceSelector: View {
   var showTariffOption: Bool = true
   /// Optional tariff version to use for rates (when nil, uses static fallback)
   var tariffVersion: TariffVersion? = nil
+  /// Optional content shown between selector buttons and the tariff/custom input list.
+  var selectorFooterContent: AnyView? = nil
 
   /// Tariff levels to display - from version if available, otherwise static fallback
   private var tariffLevels: [TariffLevel] {
@@ -67,6 +69,10 @@ struct WageSourceSelector: View {
             }
           )
         }
+      }
+
+      if let selectorFooterContent {
+        selectorFooterContent
       }
 
       // Content based on selection

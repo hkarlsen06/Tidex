@@ -23,15 +23,16 @@ struct WageHistoryTimelineView: View {
           UIImpactFeedbackGenerator(style: .light).impactOccurred()
           onAddNew()
         }) {
-          HStack(spacing: Spacing.xxs) {
-            Image(systemName: "plus")
-              .font(.tidexLabelStrong)
-
-            Text(.settingsPayTimelineAddNew)
-              .font(.tidexLabel)
-          }
-          .foregroundColor(.tidexBlue)
+          Text(.settingsPayTimelineAddChange)
+            .font(.tidexLabel)
+            .foregroundColor(.tidexBlue)
+            .lineLimit(1)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xxxs)
         }
+        .buttonStyle(.plain)
+        .tidexGlass(shape: .capsule, interactive: true)
+        .accessibilityHint(Text(.settingsPayTimelineAddChangeHint))
       }
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.md)

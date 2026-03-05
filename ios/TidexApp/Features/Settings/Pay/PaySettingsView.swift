@@ -177,8 +177,10 @@ struct PaySettingsView: View {
   private var mainContent: some View {
     ScrollView {
       VStack(spacing: Spacing.lg) {
-        currentWorkplaceTitle
-          .padding(.horizontal, Spacing.md)
+        if viewModel.shouldShowJobPicker {
+          currentWorkplaceTitle
+            .padding(.horizontal, Spacing.md)
+        }
 
         // Wage History Timeline
         WageHistoryTimelineView(

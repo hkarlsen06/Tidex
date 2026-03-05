@@ -399,7 +399,6 @@ private struct SharedShiftsDetailView: View {
       )
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
-      .interactiveDismissDisabled()
     }
   }
 

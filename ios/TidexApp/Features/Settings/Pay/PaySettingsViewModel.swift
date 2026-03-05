@@ -30,6 +30,8 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Active jobs for job-scoped timeline filtering.
   @Published private(set) var activeJobs: [Job] = []
+  /// Whether the user has archived workplaces.
+  @Published private(set) var hasArchivedJobs = false
 
   /// Selected job for this screen's wage timeline.
   @Published private(set) var selectedJobId: String?
@@ -126,6 +128,9 @@ final class PaySettingsViewModel: ObservableObject {
 
       let jobs = jobsRepository.getActiveJobs(for: userId)
       activeJobs = jobs
+      hasArchivedJobs = jobsRepository.getNonDeletedJobs(for: userId).contains {
+        $0.archived_at != nil
+      }
       applySelection(from: jobs)
 
       // Load snapshots and settings
@@ -154,6 +159,9 @@ final class PaySettingsViewModel: ObservableObject {
 
     let jobs = jobsRepository.getActiveJobs(for: userId)
     activeJobs = jobs
+    hasArchivedJobs = jobsRepository.getNonDeletedJobs(for: userId).contains {
+      $0.archived_at != nil
+    }
     applySelection(from: jobs)
 
     if let selectedJobId {
@@ -199,7 +207,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   var shouldShowJobPicker: Bool {
-    activeJobs.count > 1
+    activeJobs.count > 1 || hasArchivedJobs
   }
 
   var selectedJobName: String? {
