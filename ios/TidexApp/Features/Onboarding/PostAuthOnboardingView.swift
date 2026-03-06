@@ -377,6 +377,7 @@ struct PostAuthOnboardingView: View {
         userId: userId,
         name: input.name,
         color: input.color,
+        currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
         monthlyGoal: input.monthlyGoal,

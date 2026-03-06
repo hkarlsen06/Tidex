@@ -61,6 +61,7 @@ enum TestFixtures {
   static func job(
     id: String,
     isDefault: Bool,
+    currency: String = "kr",
     payrollDay: Int? = 25,
     halfTaxMonth: Int? = nil
   ) -> Job {
@@ -69,6 +70,7 @@ enum TestFixtures {
       user_id: "user-1",
       name: "Job \(id)",
       color: nil,
+      currency: currency,
       is_default: isDefault,
       sort_order: 0,
       payroll_day: payrollDay,
@@ -86,6 +88,7 @@ enum TestFixtures {
     shiftDate: String,
     startTime: String,
     endTime: String,
+    jobId: String? = nil,
     gross: Double,
     supplementPay: Double = 0,
     taxEnabled: Bool = false,
@@ -96,7 +99,7 @@ enum TestFixtures {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
-      jobId: nil,
+      jobId: jobId,
       customSupplements: nil
     )
 

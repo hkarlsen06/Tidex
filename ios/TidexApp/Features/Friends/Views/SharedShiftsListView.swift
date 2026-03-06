@@ -120,6 +120,7 @@ struct SharedShiftsListView: View {
         jobColorHex: shiftJob?.color,
         onDelete: nil
       )
+      .userCurrency(shiftJob?.currency ?? currency)
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
       .interactiveDismissDisabled()
@@ -198,6 +199,7 @@ struct SharedShiftsListView: View {
                 jobColorHex: shiftJob?.color,
                 onTap: { selectedShift = shift }
               )
+              .userCurrency(shiftJob?.currency ?? currency)
               .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
               .listRowBackground(Color.tidexBackground)
               .listRowSeparator(.hidden)

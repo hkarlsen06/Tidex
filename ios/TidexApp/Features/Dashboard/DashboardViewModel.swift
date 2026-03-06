@@ -57,6 +57,7 @@ struct DashboardData: Equatable {
 
   // User Settings
   let currency: String  // User's selected currency (e.g., "kr", "$", "€")
+  let currentMonthCurrencyAggregate: JobCurrencyAggregateResolution
 
   /// Whether there are future shifts (main display should be projected total)
   var hasFutureShifts: Bool {
@@ -74,6 +75,7 @@ struct PayrollCardVariant: Identifiable, Equatable {
   let id: String
   let title: String
   let colorHex: String?
+  let currency: String
   let payoutDate: Date
   let gross: Double
   let net: Double?
@@ -473,6 +475,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           id: "default",
           title: defaultTitle,
           colorHex: nil,
+          currency: fallback.currency,
           payoutDate: fallback.payrollDate,
           gross: fallback.previousMonthGross,
           net: fallback.previousMonthNet,
@@ -489,6 +492,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           id: "default",
           title: defaultTitle,
           colorHex: nil,
+          currency: fallback.currency,
           payoutDate: fallback.payrollDate,
           gross: fallback.previousMonthGross,
           net: fallback.previousMonthNet,
@@ -550,6 +554,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         id: job.id,
         title: job.name,
         colorHex: job.color,
+        currency: job.currency,
         payoutDate: payoutDate,
         gross: totals.gross,
         net: taxEnabled ? totals.net : nil,
@@ -846,11 +851,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let capturedDisplay = displayCache.shifts
         let capturedPrevious = previousCache.shifts
         let capturedCurrency = currentSettings.currency ?? "kr"
+        let capturedJobs = displayJobs
 
         Task.detached(priority: .userInitiated) {
           [
             displayYM = (year: targetYear, month: targetMonth), previousYM, currentSettings,
-            capturedCurrency, capturedDisplay, capturedPrevious
+            capturedCurrency, capturedJobs, capturedDisplay, capturedPrevious
           ] in
           let data = Self.buildDashboardDataOffMain(
             displayedMonthShifts: capturedDisplay,
@@ -858,7 +864,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             settings: currentSettings,
             displayYM: displayYM,
             previousYM: previousYM,
-            currency: capturedCurrency
+            currency: capturedCurrency,
+            jobs: capturedJobs
           )
           await MainActor.run {
             self.dashboardData = data
@@ -1245,7 +1252,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           settings: currentSettings,
           displayYM: displayYM,
           previousYM: previousYM,
-          currency: capturedCurrency
+          currency: capturedCurrency,
+          jobs: capturedJobs
         )
 
         return (display: displayComputed, previous: previousComputed, dashboardData: dashboardData)
@@ -1402,7 +1410,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           settings: currentSettings,
           displayYM: displayYM,
           previousYM: previousYM,
-          currency: capturedCurrency
+          currency: capturedCurrency,
+          jobs: capturedJobs
         )
 
         return (display: displayComputed, previous: previousComputed, dashboardData: dashboardData)
@@ -1633,33 +1642,57 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let prevTaxEnabled = previousMonthShifts.first?.taxEnabled ?? false
     let prevTax: Double? = prevTaxEnabled ? prevTotals.gross - prevTotals.net : nil
 
-    // Displayed month totals using PayrollEngine
-    // This correctly applies half-tax and conflict exclusion
-    let displayTotals = PayrollEngine.summarizeShiftTotals(
+    let fallbackCurrency = settings?.currency ?? "kr"
+    let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(
       shifts: displayedMonthShifts,
+      jobs: displayJobs,
+      fallbackCurrency: fallbackCurrency,
+      referenceDate: now
+    )
+    let primaryMonthShifts = JobCurrencyAggregateResolver.shifts(
+      matching: currentMonthAggregate.primary,
+      in: displayedMonthShifts,
+      jobs: displayJobs,
+      fallbackCurrency: fallbackCurrency
+    )
+
+    // Displayed month totals (primary currency bucket only).
+    let displayTotals = PayrollEngine.summarizeShiftTotals(
+      shifts: primaryMonthShifts,
       halfTaxMonth: halfTaxMonth,
       earningsMonth: displayYM.month,
       now: now
     )
-    let displayTaxEnabled = displayedMonthShifts.first?.taxEnabled ?? false
+    let displayTaxEnabled = currentMonthAggregate.primary.hasTaxEnabled
     let monthlyGoal = settings?.effectiveMonthlyGoal(year: displayYM.year, month: displayYM.month)
       .flatMap { $0 > 0 ? Double($0) : nil }
 
-    // Count completed and planned shifts
-    let completedShifts = displayedMonthShifts.filter { shift in
-      Date.hasShiftEnded(
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        referenceDate: now
-      )
-    }
-    let plannedShifts = displayedMonthShifts.filter { $0.shiftDate > today }
+    let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount
+    let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount
 
-    // Percentage change vs previous month (comparing projected totals)
+    // Percentage change vs previous month (same currency scope as the primary bucket)
+    let previousComparisonGross: Double
+    if currentMonthAggregate.hasMixedCurrency {
+      let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(
+        matching: currentMonthAggregate.primary,
+        in: previousMonthShifts,
+        jobs: displayJobs,
+        fallbackCurrency: fallbackCurrency
+      )
+      previousComparisonGross =
+        PayrollEngine.summarizeShiftTotals(
+          shifts: previousPrimaryShifts,
+          halfTaxMonth: halfTaxMonth,
+          earningsMonth: previousYM.month,
+          now: now
+        ).gross
+    } else {
+      previousComparisonGross = prevTotals.gross
+    }
+
     let percentChange: Double? =
-      prevTotals.gross > 0
-      ? ((displayTotals.gross - prevTotals.gross) / prevTotals.gross) * 100
+      previousComparisonGross > 0
+      ? ((displayTotals.gross - previousComparisonGross) / previousComparisonGross) * 100
       : nil
 
     // Featured shift logic:
@@ -1701,9 +1734,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       currentMonthNet: displayTaxEnabled ? displayTotals.net : nil,
       currentMonthCompletedGross: displayTotals.completedGross,
       currentMonthCompletedNet: displayTaxEnabled ? displayTotals.completedNet : nil,
-      currentMonthShiftCount: displayedMonthShifts.count,
-      currentMonthCompletedCount: completedShifts.count,
-      currentMonthPlannedCount: plannedShifts.count,
+      currentMonthShiftCount: currentMonthAggregate.primary.shiftCount,
+      currentMonthCompletedCount: completedShiftsCount,
+      currentMonthPlannedCount: plannedShiftsCount,
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
       currentMonthGoal: monthlyGoal,
@@ -1712,7 +1745,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       featuredShiftIsBestShift: featuredShiftIsBestShift,
       currentMonthName: displayMonthName,
       previousMonthName: previousMonthName,
-      currency: settings?.currency ?? "kr"
+      currency: currentMonthAggregate.primary.currency,
+      currentMonthCurrencyAggregate: currentMonthAggregate
     )
   }
 
@@ -1723,7 +1757,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     settings: UserSettings,
     displayYM: (year: Int, month: Int),
     previousYM: (year: Int, month: Int),
-    currency: String
+    currency: String,
+    jobs: [Job]
   ) -> DashboardData {
     let today = todayISO()
     let now = Date()
@@ -1746,29 +1781,54 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let prevTaxEnabled = previousMonthShifts.first?.taxEnabled ?? false
     let prevTax: Double? = prevTaxEnabled ? prevTotals.gross - prevTotals.net : nil
 
-    let displayTotals = PayrollEngine.summarizeShiftTotals(
+    let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(
       shifts: displayedMonthShifts,
+      jobs: jobs,
+      fallbackCurrency: currency,
+      referenceDate: now
+    )
+    let primaryMonthShifts = JobCurrencyAggregateResolver.shifts(
+      matching: currentMonthAggregate.primary,
+      in: displayedMonthShifts,
+      jobs: jobs,
+      fallbackCurrency: currency
+    )
+
+    let displayTotals = PayrollEngine.summarizeShiftTotals(
+      shifts: primaryMonthShifts,
       halfTaxMonth: halfTaxMonth,
       earningsMonth: displayYM.month,
       now: now
     )
-    let displayTaxEnabled = displayedMonthShifts.first?.taxEnabled ?? false
+    let displayTaxEnabled = currentMonthAggregate.primary.hasTaxEnabled
     let monthlyGoal = settings.effectiveMonthlyGoal(year: displayYM.year, month: displayYM.month)
       .flatMap { $0 > 0 ? Double($0) : nil }
 
-    let completedShifts = displayedMonthShifts.filter { shift in
-      Date.hasShiftEnded(
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        referenceDate: now
+    let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount
+    let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount
+
+    let previousComparisonGross: Double
+    if currentMonthAggregate.hasMixedCurrency {
+      let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(
+        matching: currentMonthAggregate.primary,
+        in: previousMonthShifts,
+        jobs: jobs,
+        fallbackCurrency: currency
       )
+      previousComparisonGross =
+        PayrollEngine.summarizeShiftTotals(
+          shifts: previousPrimaryShifts,
+          halfTaxMonth: halfTaxMonth,
+          earningsMonth: previousYM.month,
+          now: now
+        ).gross
+    } else {
+      previousComparisonGross = prevTotals.gross
     }
-    let plannedShifts = displayedMonthShifts.filter { $0.shiftDate > today }
 
     let percentChange: Double? =
-      prevTotals.gross > 0
-      ? ((displayTotals.gross - prevTotals.gross) / prevTotals.gross) * 100
+      previousComparisonGross > 0
+      ? ((displayTotals.gross - previousComparisonGross) / previousComparisonGross) * 100
       : nil
 
     let current = Date.currentYearMonth()
@@ -1804,9 +1864,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       currentMonthNet: displayTaxEnabled ? displayTotals.net : nil,
       currentMonthCompletedGross: displayTotals.completedGross,
       currentMonthCompletedNet: displayTaxEnabled ? displayTotals.completedNet : nil,
-      currentMonthShiftCount: displayedMonthShifts.count,
-      currentMonthCompletedCount: completedShifts.count,
-      currentMonthPlannedCount: plannedShifts.count,
+      currentMonthShiftCount: currentMonthAggregate.primary.shiftCount,
+      currentMonthCompletedCount: completedShiftsCount,
+      currentMonthPlannedCount: plannedShiftsCount,
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
       currentMonthGoal: monthlyGoal,
@@ -1815,7 +1875,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       featuredShiftIsBestShift: featuredShiftIsBestShift,
       currentMonthName: displayMonthName,
       previousMonthName: previousMonthName,
-      currency: currency
+      currency: currentMonthAggregate.primary.currency,
+      currentMonthCurrencyAggregate: currentMonthAggregate
     )
   }
 

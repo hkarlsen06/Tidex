@@ -43,6 +43,7 @@ struct DashboardView: View {
   @State private var showClockInJobChooser = false
   @State private var selectedPayrollVariantIndex = 0
   @State private var temporarySessionReferenceDate = Date()
+  @State private var showMixedCurrencyBreakdownPopover = false
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -146,6 +147,7 @@ struct DashboardView: View {
     }
     .onChange(of: viewModel.dashboardData) { _, newData in
       configureCountdown(with: newData)
+      showMixedCurrencyBreakdownPopover = false
     }
     .onChange(of: selectedPayrollVariantIndex) { _, _ in
       configureCountdown(with: viewModel.dashboardData)
@@ -673,7 +675,16 @@ struct DashboardView: View {
       )
       .contentShape(Rectangle())
       .onTapGesture {
-        openMonthlyGoalEditor()
+        if data.currentMonthCurrencyAggregate.hasMixedCurrency {
+          impactHaptic.impactOccurred()
+          showMixedCurrencyBreakdownPopover.toggle()
+        } else {
+          openMonthlyGoalEditor()
+        }
+      }
+      .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
+        MixedCurrencyBreakdownPopover(entries: data.currentMonthCurrencyAggregate.secondary)
+          .presentationCompactAdaptation(.popover)
       }
 
       if viewModel.shouldShowDashboardClockButtons {
@@ -873,10 +884,12 @@ struct DashboardView: View {
         }
       } label: {
         card
+          .userCurrency(selectedVariant.currency)
       }
       .menuIndicator(.hidden)
     } else if showsWorkplaceVariants {
       card
+        .userCurrency(selectedVariant.currency)
         .contentShape(Rectangle())
         .onTapGesture {
           guard variantCount > 1 else { return }
@@ -885,6 +898,7 @@ struct DashboardView: View {
         }
     } else {
       card
+        .userCurrency(selectedVariant.currency)
     }
   }
 
@@ -914,6 +928,7 @@ struct DashboardView: View {
           finalCountdownSeconds: nil,
           showTimeRangeEndSkeleton: false
         )
+        .userCurrency(shiftJob?.currency ?? data.currency)
         .contentShape(Rectangle())
         .onTapGesture {
           impactHaptic.impactOccurred()
@@ -941,6 +956,7 @@ struct DashboardView: View {
           progress: shiftProgress,
           finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
         )
+        .userCurrency(shiftJob?.currency ?? data.currency)
         .contentShape(Rectangle())
         .onTapGesture {
           impactHaptic.impactOccurred()

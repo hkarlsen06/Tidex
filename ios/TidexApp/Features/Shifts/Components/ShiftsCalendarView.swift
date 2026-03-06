@@ -44,6 +44,7 @@ struct ShiftsCalendarView: View {
 
   /// Selected earnings from ViewModel (computed across all months)
   let selectedEarnings: (net: Double, gross: Double)?
+  let selectedCurrencyAggregate: JobCurrencyAggregateResolution?
 
   /// Whether any selected shift has tax enabled
   let selectedHasTaxEnabled: Bool
@@ -94,6 +95,7 @@ struct ShiftsCalendarView: View {
   @State private var showSingleSelectionOverflowMenu = false
   @State private var showSingleSelectionDeleteConfirm = false
   @State private var showMultiSelectionDeleteConfirm = false
+  @State private var showMixedCurrencyBreakdownPopover = false
 
   private struct DayJobTimeColors {
     let topColor: Color
@@ -266,6 +268,17 @@ struct ShiftsCalendarView: View {
         totals: headerTotals,
         trailingAccessory: nil
       )
+      .userCurrency(headerDisplayCurrency)
+      .contentShape(Rectangle())
+      .onTapGesture {
+        guard canShowMixedCurrencyBreakdown else { return }
+        toggleHaptic.impactOccurred()
+        showMixedCurrencyBreakdownPopover.toggle()
+      }
+      .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
+        MixedCurrencyBreakdownPopover(entries: activeCurrencyAggregate?.secondary ?? [])
+          .presentationCompactAdaptation(.popover)
+      }
 
       CalendarWeekdayHeader()
         .padding(.bottom, Spacing.xs)
@@ -280,6 +293,9 @@ struct ShiftsCalendarView: View {
       actionBar
         .padding(.top, Spacing.sm)
     }
+    .onChange(of: selectedDates) { _, _ in
+      showMixedCurrencyBreakdownPopover = false
+    }
   }
 
   // MARK: - Header Data
@@ -287,27 +303,70 @@ struct ShiftsCalendarView: View {
   private var headerTotals: CalendarHeaderTotals? {
     guard showEarnings else { return nil }
 
-    // Use selection earnings if dates are selected, otherwise monthly
-    let displayTotals: (net: Double, gross: Double) = {
-      if selectedDates.isEmpty {
-        return monthlyTotals
-      } else if let selected = selectedEarnings {
-        return selected
-      } else {
-        return monthlyTotals
-      }
-    }()
+    let primaryAmount: Double?
+    let secondaryAmount: Double?
 
-    // Use selectedHasTaxEnabled when dates are selected
-    let showTax = selectedDates.isEmpty ? hasTaxEnabled : selectedHasTaxEnabled
-    let primaryAmount =
-      displayTotals.gross > 0 ? (showTax ? displayTotals.net : displayTotals.gross) : nil
-    let secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
+    if selectedDates.isEmpty {
+      let aggregate = monthlyCurrencyAggregate
+      primaryAmount = aggregate.primary.displayAmount > 0 ? aggregate.primary.displayAmount : nil
+      secondaryAmount =
+        (!aggregate.hasMixedCurrency && aggregate.primary.hasTaxEnabled
+          && aggregate.primary.grossAmount > 0
+          && aggregate.primary.grossAmount != aggregate.primary.displayAmount)
+        ? aggregate.primary.grossAmount : nil
+    } else if let aggregate = selectedCurrencyAggregate {
+      primaryAmount = aggregate.primary.displayAmount > 0 ? aggregate.primary.displayAmount : nil
+      secondaryAmount =
+        (!aggregate.hasMixedCurrency && aggregate.primary.hasTaxEnabled
+          && aggregate.primary.grossAmount > 0
+          && aggregate.primary.grossAmount != aggregate.primary.displayAmount)
+        ? aggregate.primary.grossAmount : nil
+    } else {
+      let displayTotals = selectedEarnings ?? monthlyTotals
+      let showTax = selectedHasTaxEnabled
+      primaryAmount =
+        displayTotals.gross > 0 ? (showTax ? displayTotals.net : displayTotals.gross) : nil
+      secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
+    }
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
       secondary: secondaryAmount
     )
+  }
+
+  private var monthlyIncludedShifts: [ShiftWithComputations] {
+    shifts.filter { shift in
+      guard !excludedFromTotalIds.contains(shift.id) else { return false }
+      guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
+      let components = calendar.dateComponents([.year, .month], from: date)
+      return components.year == year && components.month == monthNumber
+    }
+  }
+
+  private var monthlyCurrencyAggregate: JobCurrencyAggregateResolution {
+    JobCurrencyAggregateResolver.resolve(
+      shifts: monthlyIncludedShifts,
+      jobs: jobs,
+      fallbackCurrency: currency
+    )
+  }
+
+  private var canShowMixedCurrencyBreakdown: Bool {
+    showEarnings
+      && activeCurrencyAggregate?.hasMixedCurrency == true
+      && !(activeCurrencyAggregate?.secondary.isEmpty ?? true)
+  }
+
+  private var headerDisplayCurrency: String {
+    activeCurrencyAggregate?.primary.currency ?? currency
+  }
+
+  private var activeCurrencyAggregate: JobCurrencyAggregateResolution? {
+    if selectedDates.isEmpty {
+      return monthlyCurrencyAggregate
+    }
+    return selectedCurrencyAggregate
   }
 
   // MARK: - Month Name
@@ -1017,6 +1076,7 @@ struct ShiftsCalendarView: View {
           confirmingDelete: false,
           isDeleting: false,
           selectedEarnings: nil,
+          selectedCurrencyAggregate: nil,
           selectedHasTaxEnabled: false,
           isCopyMode: false,
           isMoveMode: false,

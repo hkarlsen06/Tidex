@@ -1,4 +1,5 @@
 import Auth
+import Combine
 import Foundation
 import Supabase
 import os.log
@@ -466,6 +467,7 @@ final class SharingService: ObservableObject {
             user_id: $0.userId,
             name: $0.name,
             color: $0.color,
+            currency: $0.currency,
             is_default: $0.isDefault,
             sort_order: $0.sortOrder,
             payroll_day: $0.payrollDay,

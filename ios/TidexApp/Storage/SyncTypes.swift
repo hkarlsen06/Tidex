@@ -58,6 +58,7 @@ enum WageSnapshotField: String, Codable, CaseIterable {
 enum JobField: String, Codable, CaseIterable {
   case name = "name"
   case color = "color"
+  case currency = "currency"
   case isDefault = "is_default"
   case sortOrder = "sort_order"
   case payrollDay = "payroll_day"

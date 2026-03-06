@@ -67,6 +67,7 @@ struct SharingRPCJobRow: Codable, Equatable, Sendable {
   let userId: String
   let name: String
   let color: String?
+  let currency: String?
   let isDefault: Bool
   let sortOrder: Int?
   let payrollDay: Int?
@@ -82,6 +83,7 @@ struct SharingRPCJobRow: Codable, Equatable, Sendable {
     case userId = "user_id"
     case name
     case color
+    case currency
     case isDefault = "is_default"
     case sortOrder = "sort_order"
     case payrollDay = "payroll_day"

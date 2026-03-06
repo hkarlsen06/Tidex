@@ -131,6 +131,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     let original = JobServerSnapshot(
       name: "Store",
       color: "#FF0000",
+      currency: "kr",
       isDefault: true,
       sortOrder: 0,
       payrollDay: 25,
@@ -145,6 +146,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     let updated = JobServerSnapshot(
       name: "Store",
       color: "#00FF00",
+      currency: "$",
       isDefault: false,
       sortOrder: 0,
       payrollDay: 20,
@@ -158,7 +160,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
     XCTAssertEqual(
       updated.changedFields(from: original),
-      Set([.color, .isDefault, .payrollDay, .archivedAt])
+      Set([.color, .currency, .isDefault, .payrollDay, .archivedAt])
     )
   }
 
@@ -230,5 +232,54 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
     XCTAssertEqual(decoded.monthlyGoalsByMonth, [:])
     XCTAssertTrue(decoded.showDashboardClockButtons)
+  }
+
+  func testSyncJobRowDecodeBackfillsMissingCurrency() throws {
+    let json = """
+      {
+        "id": "job-1",
+        "user_id": "user-1",
+        "name": "Store",
+        "color": "#FF0000",
+        "is_default": true,
+        "sort_order": 0,
+        "payroll_day": 15,
+        "half_tax_month": null,
+        "monthly_goal": 30000,
+        "archived_at": null,
+        "deleted_at": null,
+        "created_at": "2026-03-02T12:00:00Z",
+        "updated_at": "2026-03-02T12:00:00Z",
+        "revision": 10
+      }
+      """
+
+    let decoded = try JSONDecoder().decode(SyncJobRow.self, from: Data(json.utf8))
+
+    XCTAssertEqual(decoded.currency, "kr")
+  }
+
+  func testJobDecodeBackfillsMissingCurrency() throws {
+    let json = """
+      {
+        "id": "job-1",
+        "user_id": "user-1",
+        "name": "Store",
+        "color": "#FF0000",
+        "is_default": true,
+        "sort_order": 0,
+        "payroll_day": 15,
+        "half_tax_month": null,
+        "monthly_goal": 30000,
+        "archived_at": null,
+        "deleted_at": null,
+        "created_at": "2026-03-02T12:00:00Z",
+        "updated_at": "2026-03-02T12:00:00Z"
+      }
+      """
+
+    let decoded = try JSONDecoder().decode(Job.self, from: Data(json.utf8))
+
+    XCTAssertEqual(decoded.currency, "kr")
   }
 }

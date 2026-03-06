@@ -1852,6 +1852,9 @@ final class SyncCoordinator: ObservableObject {
         updateData["color"] = .null
       }
     }
+    if dirtyFields.contains(.currency) {
+      updateData["currency"] = .string(job.currency)
+    }
     if dirtyFields.contains(.isDefault) {
       updateData["is_default"] = .bool(job.isDefault)
     }
@@ -2036,6 +2039,7 @@ final class SyncCoordinator: ObservableObject {
       "id": .string(jobId),
       "user_id": .string(userId),
       "name": .string(job.name),
+      "currency": .string(job.currency),
       "is_default": .bool(job.isDefault),
       "sort_order": .integer(job.sortOrder),
     ]

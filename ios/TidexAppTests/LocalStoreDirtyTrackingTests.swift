@@ -226,6 +226,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       userId: userId,
       name: "Store",
       color: "#00AA00",
+      currency: "kr",
       isDefault: true,
       sortOrder: 0,
       payrollDay: 25,
@@ -247,6 +248,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       userId: userId,
       name: "Store",
       color: nil,
+      currency: "kr",
       isDefault: false,
       sortOrder: 0,
       payrollDay: 25,
@@ -271,6 +273,37 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.name]))
   }
 
+  func testUpdateJobMetadataTracksCurrencyChangesAfterClean() async throws {
+    let store = try makeStoreActor()
+
+    let created = try await store.createJob(
+      userId: userId,
+      name: "Store",
+      color: nil,
+      currency: "kr",
+      isDefault: false,
+      sortOrder: 0,
+      payrollDay: 25,
+      halfTaxMonth: nil,
+      monthlyGoal: nil
+    )
+
+    await store.markJobClean(id: created.id)
+    try await store.save()
+
+    _ = try await store.updateJobCurrency(
+      id: created.id,
+      currency: "$"
+    )
+
+    let localRecord = try await store.getJob(id: created.id)
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.currency, "$")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.currency]))
+  }
+
   func testMarkJobPendingDeleteMarksDeletedAtAndPendingStatus() async throws {
     let store = try makeStoreActor()
 
@@ -278,6 +311,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       userId: userId,
       name: "Store",
       color: nil,
+      currency: "kr",
       isDefault: true,
       sortOrder: 0,
       payrollDay: 25,
@@ -304,6 +338,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       userId: userId,
       name: "Local Job",
       color: "#111111",
+      currency: "kr",
       isDefault: false,
       sortOrder: 0,
       payrollDay: 25,
@@ -315,6 +350,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     let serverSnapshot = JobServerSnapshot(
       name: "Server Job",
       color: "#222222",
+      currency: "kr",
       isDefault: true,
       sortOrder: 2,
       payrollDay: 20,
@@ -359,6 +395,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       userId: userId,
       name: "Local Job",
       color: "#111111",
+      currency: "kr",
       isDefault: false,
       sortOrder: 0,
       payrollDay: 25,
@@ -379,6 +416,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     let serverSnapshot = JobServerSnapshot(
       name: "Server Job",
       color: "#222222",
+      currency: "kr",
       isDefault: true,
       sortOrder: 4,
       payrollDay: 20,

@@ -84,4 +84,18 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {
 
     XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
   }
+
+  func testJobsFingerprintChangesWhenCurrencyChanges() {
+    let original = [
+      TestFixtures.job(id: "job-1", isDefault: true, currency: "kr")
+    ]
+    let updated = [
+      TestFixtures.job(id: "job-1", isDefault: true, currency: "$")
+    ]
+
+    let originalFingerprint = StatsService.fingerprintJobsForCaching(original)
+    let updatedFingerprint = StatsService.fingerprintJobsForCaching(updated)
+
+    XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
+  }
 }

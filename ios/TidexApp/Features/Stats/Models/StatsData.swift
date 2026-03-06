@@ -6,6 +6,7 @@ struct StatsData: Codable, Equatable {
   let focusMonth: FocusMonth
   let tax: TaxSettings
   let currentMonth: MonthStats
+  let currentMonthCurrencyAggregate: JobCurrencyAggregateResolution?
   let lastMonth: MonthStats
   let percentageChange: Double?
   let monthlyGoal: MonthlyGoal
@@ -125,6 +126,7 @@ extension StatsData {
         totalHours: 0,
         shiftCount: 0
       ),
+      currentMonthCurrencyAggregate: nil,
       lastMonth: MonthStats(
         totalEarnings: 0,
         totalEarningsNet: 0,
@@ -157,6 +159,7 @@ extension StatsData {
       totalHours: 60.3,
       shiftCount: 9
     ),
+    currentMonthCurrencyAggregate: nil,
     lastMonth: MonthStats(
       totalEarnings: 20000,
       totalEarningsNet: 18500,
@@ -188,6 +191,7 @@ extension StatsData {
       totalHours: 85,
       shiftCount: 12
     ),
+    currentMonthCurrencyAggregate: nil,
     lastMonth: MonthStats(
       totalEarnings: 18000,
       totalEarningsNet: 16650,
@@ -219,6 +223,7 @@ extension StatsData {
       totalHours: 0,
       shiftCount: 0
     ),
+    currentMonthCurrencyAggregate: nil,
     lastMonth: MonthStats(
       totalEarnings: 0,
       totalEarningsNet: 0,
