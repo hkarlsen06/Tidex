@@ -30,6 +30,8 @@ struct UserMenuButton: View {
       }
       .sheet(isPresented: $showSettings) {
         SettingsView()
+          .presentationDetents([.large])
+          .presentationDragIndicator(.visible)
       }
     } else {
       menuButton
