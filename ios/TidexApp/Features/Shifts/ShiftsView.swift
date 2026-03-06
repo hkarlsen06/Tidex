@@ -860,6 +860,7 @@ struct ShiftsView: View {
               confirmingDelete: viewModel.confirmingDelete,
               isDeleting: viewModel.isDeleting,
               selectedEarnings: viewModel.selectedEarnings,
+              selectedCurrencyAggregate: viewModel.selectedCurrencyAggregate,
               selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
               onDelete: {
                 viewModel.confirmingDelete = true
@@ -1070,6 +1071,7 @@ struct ShiftsView: View {
               confirmingDelete: viewModel.confirmingDelete,
               isDeleting: viewModel.isDeleting,
               selectedEarnings: viewModel.selectedEarnings,
+              selectedCurrencyAggregate: viewModel.selectedCurrencyAggregate,
               selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
               onDelete: {
                 viewModel.confirmingDelete = true

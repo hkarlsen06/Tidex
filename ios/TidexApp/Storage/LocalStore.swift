@@ -295,6 +295,7 @@ actor LocalStoreActor {
       existing.userId = job.userId
       existing.name = job.name
       existing.color = job.color
+      existing.currency = job.currency
       existing.isDefault = job.isDefault
       existing.sortOrder = job.sortOrder
       existing.payrollDay = job.payrollDay
@@ -348,6 +349,7 @@ actor LocalStoreActor {
     userId: String,
     name: String,
     color: String?,
+    currency: String,
     isDefault: Bool,
     sortOrder: Int,
     payrollDay: Int?,
@@ -378,6 +380,7 @@ actor LocalStoreActor {
     let serverSnapshot = JobServerSnapshot(
       name: trimmedName,
       color: color,
+      currency: currency,
       isDefault: isDefault,
       sortOrder: sortOrder,
       payrollDay: payrollDay,
@@ -398,6 +401,7 @@ actor LocalStoreActor {
       userId: userId,
       name: trimmedName,
       color: color,
+      currency: currency,
       isDefault: isDefault,
       sortOrder: sortOrder,
       payrollDay: payrollDay,
@@ -447,6 +451,38 @@ actor LocalStoreActor {
       newDirtyFields.insert(.color)
     }
 
+    localJob.dirtyFieldKeys = newDirtyFields
+    localJob.localUpdatedAt = now
+
+    if !newDirtyFields.isEmpty && localJob.syncStatus == .clean {
+      localJob.syncStatus = .dirty
+    }
+
+    try modelContext.save()
+    return localJob.toJob()
+  }
+
+  func updateJobCurrency(
+    id: String,
+    currency: String
+  ) throws -> Job {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localJob = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    guard localJob.currency != currency else {
+      return localJob.toJob()
+    }
+
+    var newDirtyFields = localJob.dirtyFieldKeys
+    let now = Date()
+
+    localJob.currency = currency
+    newDirtyFields.insert(.currency)
     localJob.dirtyFieldKeys = newDirtyFields
     localJob.localUpdatedAt = now
 
@@ -662,6 +698,7 @@ actor LocalStoreActor {
 
     localJob.name = serverSnapshot.name
     localJob.color = serverSnapshot.color
+    localJob.currency = serverSnapshot.currency
     localJob.isDefault = serverSnapshot.isDefault
     localJob.sortOrder = serverSnapshot.sortOrder
     localJob.payrollDay = serverSnapshot.payrollDay
@@ -2112,6 +2149,7 @@ actor LocalStoreActor {
 
     existing.name = serverRow.name
     existing.color = serverRow.color
+    existing.currency = serverRow.currency
     existing.isDefault = serverRow.is_default
     existing.sortOrder = serverRow.sort_order
     existing.payrollDay = serverRow.payroll_day
@@ -2168,6 +2206,9 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.color) {
       existing.color = serverRow.color
+    }
+    if !localDirtyFields.contains(.currency) {
+      existing.currency = serverRow.currency
     }
     if !localDirtyFields.contains(.isDefault) {
       existing.isDefault = serverRow.is_default
@@ -2662,6 +2703,7 @@ actor LocalStoreActor {
 
     existing.name = serverRow.name
     existing.color = serverRow.color
+    existing.currency = serverRow.currency
     existing.isDefault = serverRow.is_default
     existing.sortOrder = serverRow.sort_order
     existing.payrollDay = serverRow.payroll_day
@@ -2743,6 +2785,7 @@ actor LocalStoreActor {
 
     existing.name = serverSnapshot.name
     existing.color = serverSnapshot.color
+    existing.currency = serverSnapshot.currency
     existing.isDefault = serverSnapshot.isDefault
     existing.sortOrder = serverSnapshot.sortOrder
     existing.payrollDay = serverSnapshot.payrollDay

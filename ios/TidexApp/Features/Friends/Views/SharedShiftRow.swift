@@ -5,8 +5,8 @@ struct SharedShiftRow: View {
   let shift: ShiftWithComputations
   let isToday: Bool
   let showEarnings: Bool
+  let currency: String
 
-  @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
 
   // MARK: - Computed Properties
@@ -200,7 +200,8 @@ struct SharedShiftRow: View {
         taxPercentage: 0
       ),
       isToday: true,
-      showEarnings: true
+      showEarnings: true,
+      currency: "kr"
     )
 
     // With earnings hidden
@@ -229,7 +230,8 @@ struct SharedShiftRow: View {
         taxPercentage: 0
       ),
       isToday: false,
-      showEarnings: false
+      showEarnings: false,
+      currency: "kr"
     )
   }
   .padding()

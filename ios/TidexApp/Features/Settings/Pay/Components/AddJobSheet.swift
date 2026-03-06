@@ -5,6 +5,7 @@ struct AddJobSetupInput {
   let existingJobSetup: ExistingJobSetupInput?
   let name: String
   let color: String?
+  let currency: String
   let payrollDay: Int
   let halfTaxMonth: Int?
   let monthlyGoal: Int?
@@ -746,6 +747,7 @@ struct AddJobSheet: View {
         existingJobSetup: existingJobSetupInput,
         name: trimmedName,
         color: normalizedHex(from: selectedColor),
+        currency: onboardingData.currency.isEmpty ? "kr" : onboardingData.currency,
         payrollDay: payrollDay,
         halfTaxMonth: halfTaxMonth,
         monthlyGoal: monthlyGoalValue,

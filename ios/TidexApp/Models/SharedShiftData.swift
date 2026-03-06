@@ -65,6 +65,7 @@ struct SharedJob: Codable, Identifiable, Equatable {
   let user_id: String
   let name: String
   let color: String?
+  let currency: String?
   let is_default: Bool?
   let sort_order: Int?
   let payroll_day: Int?

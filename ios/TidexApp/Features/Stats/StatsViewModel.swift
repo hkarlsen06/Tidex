@@ -266,9 +266,13 @@ final class StatsViewModel: ObservableObject {
 
       if let loadedSettings = settingsRepository.getSettings(for: session.normalizedUserId) {
         settings = loadedSettings
-        currency = loadedSettings.currency ?? "kr"
+        currency =
+          jobs.first(where: { $0.id == selectedJobId })?.currency
+          ?? loadedSettings.currency
+          ?? "kr"
       } else {
         settings = nil
+        currency = jobs.first(where: { $0.id == selectedJobId })?.currency ?? "kr"
       }
 
       let computedStats = try await statsService.computeStats(

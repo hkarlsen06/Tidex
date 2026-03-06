@@ -18,6 +18,7 @@ struct StatsView: View {
   @StateObject private var viewModel = StatsViewModel()
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
   @State private var isJobFilterDialogPresented = false
+  @State private var showMixedCurrencyBreakdownPopover = false
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -96,6 +97,9 @@ struct StatsView: View {
     .onAppear {
       selectionHaptic.prepare()
     }
+    .onChange(of: viewModel.stats?.focusMonth) { _, _ in
+      showMixedCurrencyBreakdownPopover = false
+    }
   }
 
   // MARK: - Stats Content
@@ -114,13 +118,30 @@ struct StatsView: View {
           sectionHeader(.statsSectionOverview)
 
           // Monthly Earnings Card (large)
+          let currentMonthAggregate = stats.currentMonthCurrencyAggregate
+          let usesMixedCurrency = currentMonthAggregate?.hasMixedCurrency == true
+          let breakdownEntries = currentMonthAggregate?.secondary ?? []
+          let monthlyCardCurrency = currentMonthAggregate?.primary.currency ?? viewModel.currency
+
           MonthlyEarningsCard(
             grossEarnings: stats.currentMonth.totalEarnings,
             netEarnings: stats.currentMonth.totalEarningsNet,
             taxEnabled: stats.tax.enabled,
             percentageChange: stats.percentageChange,
-            onTap: { openMonthlyGoalEditor() }
+            onTap: {
+              if usesMixedCurrency && !breakdownEntries.isEmpty {
+                selectionHaptic.selectionChanged()
+                showMixedCurrencyBreakdownPopover.toggle()
+              } else {
+                openMonthlyGoalEditor()
+              }
+            }
           )
+          .userCurrency(monthlyCardCurrency)
+          .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
+            MixedCurrencyBreakdownPopover(entries: breakdownEntries)
+              .presentationCompactAdaptation(.popover)
+          }
 
           // Hours and Shifts cards (side by side)
           HStack(spacing: Spacing.sm) {

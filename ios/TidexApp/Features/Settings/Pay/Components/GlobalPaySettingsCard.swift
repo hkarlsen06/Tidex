@@ -10,7 +10,6 @@ struct GlobalPaySettingsCard: View {
   let monthlyGoal: Int?
   let payrollDay: Int
   let halfTaxMonth: Int?
-  /// Whether currency can be changed (false if tariff snapshots exist)
   let canChangeCurrency: Bool
   let onUpdateMonthlyGoal: (Int?) -> Void
   let onUpdatePayrollDay: (Int) -> Void
@@ -275,7 +274,6 @@ struct GlobalPaySettingsCard: View {
 
 // MARK: - Currency Picker Sheet
 
-/// Sheet for selecting a currency
 private struct CurrencyPickerSheet: View {
   @Binding var selectedCurrency: String
   @Binding var isPresented: Bool
@@ -332,8 +330,6 @@ private struct CurrencyPickerSheet: View {
     }
   }
 }
-
-// MARK: - Currency Row
 
 private struct CurrencyRow: View {
   let option: CurrencyOption

@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -20,6 +21,7 @@ struct JobBaselineSnapshotInput {
 enum JobsRepositoryError: LocalizedError {
   case jobNameEmpty
   case jobNotFound
+  case cannotChangeTariffJobCurrency
   case cannotArchiveLastActiveJob
   case cannotArchiveDefaultJob
   case cannotDeleteLastActiveJob
@@ -32,6 +34,8 @@ enum JobsRepositoryError: LocalizedError {
       return "Job name cannot be empty."
     case .jobNotFound:
       return "Job not found."
+    case .cannotChangeTariffJobCurrency:
+      return "Currency cannot be changed for jobs using tariff rates."
     case .cannotArchiveLastActiveJob:
       return "Cannot archive the last active job."
     case .cannotArchiveDefaultJob:
@@ -67,6 +71,16 @@ final class JobsRepository: ObservableObject {
   private func triggerSync(userId: String) {
     Task {
       _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+    }
+  }
+
+  private func usesTariffRates(_ snapshot: JobBaselineSnapshotInput) -> Bool {
+    snapshot.wageLevel != nil || snapshot.tariffTypeId != nil
+  }
+
+  private func jobUsesTariffRates(userId: String, jobId: String) -> Bool {
+    snapshotsRepository.getSnapshots(for: userId, jobId: jobId).contains {
+      $0.wage_level != nil || $0.tariff_type_id != nil
     }
   }
 
@@ -154,10 +168,12 @@ final class JobsRepository: ObservableObject {
     }
   }
 
+  // swiftlint:disable:next function_parameter_count
   func createJob(
     userId: String,
     name: String,
     color: String?,
+    currency: String,
     payrollDay: Int?,
     halfTaxMonth: Int?,
     monthlyGoal: Int?
@@ -175,6 +191,7 @@ final class JobsRepository: ObservableObject {
       userId: userId,
       name: trimmedName,
       color: color,
+      currency: currency,
       isDefault: shouldBeDefault,
       sortOrder: nextSortOrder,
       payrollDay: payrollDay ?? 15,
@@ -192,6 +209,7 @@ final class JobsRepository: ObservableObject {
     userId: String,
     name: String,
     color: String?,
+    currency: String,
     payrollDay: Int?,
     halfTaxMonth: Int?,
     monthlyGoal: Int?,
@@ -205,11 +223,13 @@ final class JobsRepository: ObservableObject {
     let activeJobs = getActiveJobs(for: userId)
     let nextSortOrder = (activeJobs.map(\.sort_order).max() ?? -1) + 1
     let shouldBeDefault = activeJobs.isEmpty
+    let resolvedCurrency = usesTariffRates(baselineSnapshot) ? "kr" : currency
 
     let createdJob = try await localStore.storeActor.createJob(
       userId: userId,
       name: trimmedName,
       color: color,
+      currency: resolvedCurrency,
       isDefault: shouldBeDefault,
       sortOrder: nextSortOrder,
       payrollDay: payrollDay ?? 15,
@@ -272,6 +292,34 @@ final class JobsRepository: ObservableObject {
       return updated
     } catch LocalStoreWriteError.notFound {
       logger.warning("Job not found for metadata update: \(jobId)")
+      return nil
+    } catch {
+      throw error
+    }
+  }
+
+  func updateJobCurrency(
+    userId: String,
+    jobId: String,
+    currency: String
+  ) async throws -> Job? {
+    if jobUsesTariffRates(userId: userId, jobId: jobId) {
+      if let existingJob = getJob(id: jobId), existingJob.currency == currency {
+        return existingJob
+      }
+      throw JobsRepositoryError.cannotChangeTariffJobCurrency
+    }
+
+    do {
+      let updated = try await localStore.storeActor.updateJobCurrency(
+        id: jobId,
+        currency: currency
+      )
+      logger.info("Updated job currency for job: \(jobId)")
+      triggerSync(userId: userId)
+      return updated
+    } catch LocalStoreWriteError.notFound {
+      logger.warning("Job not found for currency update: \(jobId)")
       return nil
     } catch {
       throw error

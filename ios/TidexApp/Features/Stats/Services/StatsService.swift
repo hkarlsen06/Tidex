@@ -233,11 +233,24 @@ final class StatsService: ObservableObject {
           newFullYearCacheData = computedData
         }
 
+        let fallbackCurrency = settings.currency ?? "kr"
+        let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(
+          shifts: currentMonthIncluded,
+          jobs: jobs,
+          fallbackCurrency: fallbackCurrency,
+          referenceDate: now
+        )
+        let primaryCurrentMonthShifts = JobCurrencyAggregateResolver.shifts(
+          matching: currentMonthAggregate.primary,
+          in: currentMonthIncluded,
+          jobs: jobs,
+          fallbackCurrency: fallbackCurrency
+        )
+
         // Get totals using PayrollEngine with centralized exclusion IDs
         let halfTaxMonth = settings.half_tax_month
         let currentTotals = PayrollEngine.summarizeShiftTotals(
-          shifts: currentMonthShifts,
-          excludedShiftIds: currentMonthPartition.analysis.excludedIds,
+          shifts: primaryCurrentMonthShifts,
           halfTaxMonth: halfTaxMonth,
           earningsMonth: currentYM.month,
           now: now
@@ -250,19 +263,41 @@ final class StatsService: ObservableObject {
           now: now
         )
 
+        let previousComparisonGross: Double
+        if currentMonthAggregate.hasMixedCurrency {
+          let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(
+            matching: currentMonthAggregate.primary,
+            in: previousMonthIncluded,
+            jobs: jobs,
+            fallbackCurrency: fallbackCurrency
+          )
+          previousComparisonGross =
+            PayrollEngine.summarizeShiftTotals(
+              shifts: previousPrimaryShifts,
+              halfTaxMonth: halfTaxMonth,
+              earningsMonth: previousYM.month,
+              now: now
+            ).gross
+        } else {
+          previousComparisonGross = previousTotals.gross
+        }
+
         // Calculate total hours (using filtered shifts that exclude conflicts)
         let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }
         let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }
 
-        // Get tax settings from first shift or snapshots
-        let taxEnabled = currentMonthShifts.first?.taxEnabled ?? false
-        let taxPercentage = currentMonthShifts.first?.taxPercentage ?? 0
+        // Get tax settings from the primary aggregate bucket.
+        let taxEnabled = currentMonthAggregate.primary.hasTaxEnabled
+        let taxPercentage =
+          primaryCurrentMonthShifts.first?.taxPercentage
+          ?? currentMonthShifts.first?.taxPercentage
+          ?? 0
 
         // Calculate percentage change
         let percentageChange: Double?
-        if previousTotals.gross > 0 {
+        if previousComparisonGross > 0 {
           percentageChange =
-            ((currentTotals.gross - previousTotals.gross) / previousTotals.gross) * 100
+            ((currentTotals.gross - previousComparisonGross) / previousComparisonGross) * 100
         } else if currentTotals.gross > 0 {
           percentageChange = nil  // Can't compute meaningful change from zero
         } else {
@@ -350,6 +385,7 @@ final class StatsService: ObservableObject {
             totalHours: currentHours,
             shiftCount: currentMonthShifts.count
           ),
+          currentMonthCurrencyAggregate: currentMonthAggregate,
           lastMonth: MonthStats(
             totalEarnings: previousTotals.gross,
             totalEarningsNet: previousTotals.net,
@@ -489,6 +525,7 @@ final class StatsService: ObservableObject {
       hasher.combine(job.payroll_day ?? -1)
       hasher.combine(job.half_tax_month ?? -1)
       hasher.combine(job.monthly_goal ?? -1)
+      hasher.combine(job.currency)
       hasher.combine(job.archived_at ?? "")
       hasher.combine(job.deleted_at ?? "")
       hasher.combine(job.updated_at ?? "")

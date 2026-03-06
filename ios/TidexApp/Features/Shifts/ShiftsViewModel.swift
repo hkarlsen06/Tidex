@@ -91,6 +91,7 @@ private struct SelectionSummary {
   let net: Double
   let gross: Double
   let hasTaxEnabled: Bool
+  let currencyAggregate: JobCurrencyAggregateResolution?
 }
 
 private struct MonthComputationInput {
@@ -263,6 +264,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     selectionSummary?.hasTaxEnabled ?? false
   }
 
+  var selectedCurrencyAggregate: JobCurrencyAggregateResolution? {
+    selectionSummary?.currencyAggregate
+  }
+
   /// Shifts for the selected date (single selection mode)
   var selectedDateShifts: [ShiftWithComputations] {
     guard selectedDates.count == 1, let dateISO = selectedDates.first else { return [] }
@@ -293,6 +298,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     var gross: Double = 0
     var net: Double = 0
     var hasTaxEnabled = false
+    var includedShifts: [ShiftWithComputations] = []
 
     func consume(_ shifts: [ShiftWithComputations]) {
       for shift in shifts where selectedDates.contains(shift.shiftDate) {
@@ -300,6 +306,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           if !excludedFromTotalIds.contains(shift.id) {
             gross += shift.grossPay
             net += shift.taxEnabled ? shift.netPay : shift.grossPay
+            includedShifts.append(shift)
           }
           if shift.taxEnabled {
             hasTaxEnabled = true
@@ -315,7 +322,21 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // Also check current month's shifts (may not be in cache yet)
     consume(shifts)
 
-    selectionSummary = SelectionSummary(net: net, gross: gross, hasTaxEnabled: hasTaxEnabled)
+    let currencyAggregate =
+      includedShifts.isEmpty
+      ? nil
+      : JobCurrencyAggregateResolver.resolve(
+        shifts: includedShifts,
+        jobs: activeJobs,
+        fallbackCurrency: currency
+      )
+
+    selectionSummary = SelectionSummary(
+      net: net,
+      gross: gross,
+      hasTaxEnabled: hasTaxEnabled,
+      currencyAggregate: currencyAggregate
+    )
   }
 
   // MARK: - Private State

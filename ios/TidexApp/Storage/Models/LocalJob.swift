@@ -20,6 +20,8 @@ final class LocalJob {
 
   var name: String
   var color: String?
+  /// Keep a model-level default so lightweight migration can populate legacy rows.
+  var currency: String = "kr"
   var isDefault: Bool
   var sortOrder: Int
   var payrollDay: Int?
@@ -92,6 +94,7 @@ final class LocalJob {
     userId: String,
     name: String,
     color: String? = nil,
+    currency: String = "kr",
     isDefault: Bool,
     sortOrder: Int,
     payrollDay: Int? = nil,
@@ -112,6 +115,7 @@ final class LocalJob {
     self.userId = userId
     self.name = name
     self.color = color
+    self.currency = currency
     self.isDefault = isDefault
     self.sortOrder = sortOrder
     self.payrollDay = payrollDay
@@ -141,6 +145,7 @@ final class LocalJob {
 struct JobServerSnapshot: Codable, Equatable {
   let name: String
   let color: String?
+  let currency: String
   let isDefault: Bool
   let sortOrder: Int
   let payrollDay: Int?
@@ -158,6 +163,7 @@ struct JobServerSnapshot: Codable, Equatable {
     JobServerSnapshot(
       name: row.name,
       color: row.color,
+      currency: row.currency,
       isDefault: row.is_default,
       sortOrder: row.sort_order,
       payrollDay: row.payroll_day,
@@ -191,6 +197,9 @@ struct JobServerSnapshot: Codable, Equatable {
     if color != other.color {
       changed.insert(.color)
     }
+    if currency != other.currency {
+      changed.insert(.currency)
+    }
     if isDefault != other.isDefault {
       changed.insert(.isDefault)
     }
@@ -217,6 +226,40 @@ struct JobServerSnapshot: Codable, Equatable {
   }
 }
 
+extension JobServerSnapshot {
+  private enum CodingKeys: String, CodingKey {
+    case name
+    case color
+    case currency
+    case isDefault
+    case sortOrder
+    case payrollDay
+    case halfTaxMonth
+    case monthlyGoal
+    case archivedAt
+    case deletedAt
+    case updatedAt
+    case revision
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    name = try container.decode(String.self, forKey: .name)
+    color = try container.decodeIfPresent(String.self, forKey: .color)
+    currency = try container.decodeIfPresent(String.self, forKey: .currency) ?? "kr"
+    isDefault = try container.decode(Bool.self, forKey: .isDefault)
+    sortOrder = try container.decode(Int.self, forKey: .sortOrder)
+    payrollDay = try container.decodeIfPresent(Int.self, forKey: .payrollDay)
+    halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
+    monthlyGoal = try container.decodeIfPresent(Int.self, forKey: .monthlyGoal)
+    archivedAt = try container.decodeIfPresent(Date.self, forKey: .archivedAt)
+    deletedAt = try container.decodeIfPresent(Date.self, forKey: .deletedAt)
+    updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    revision = try container.decode(Int64.self, forKey: .revision)
+  }
+}
+
 // MARK: - Conversion Extensions
 
 extension LocalJob {
@@ -226,6 +269,7 @@ extension LocalJob {
       user_id: userId,
       name: name,
       color: color,
+      currency: currency,
       is_default: isDefault,
       sort_order: sortOrder,
       payroll_day: payrollDay,
@@ -247,6 +291,7 @@ extension LocalJob {
       userId: serverRow.user_id,
       name: serverRow.name,
       color: serverRow.color,
+      currency: serverRow.currency,
       isDefault: serverRow.is_default,
       sortOrder: serverRow.sort_order,
       payrollDay: serverRow.payroll_day,

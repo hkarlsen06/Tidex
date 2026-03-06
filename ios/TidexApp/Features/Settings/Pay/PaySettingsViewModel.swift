@@ -42,16 +42,15 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// User's current currency
   var userCurrency: String {
-    globalSettings?.currency ?? "kr"
+    selectedJob?.currency ?? globalSettings?.currency ?? "kr"
   }
 
   /// Whether any snapshot uses tariff (wage_level is set)
   var hasTariffSnapshots: Bool {
-    snapshots.contains { $0.wage_level != nil }
+    snapshots.contains { $0.wage_level != nil || $0.tariff_type_id != nil }
   }
 
-  /// Whether user can change their currency
-  /// Only allowed if no snapshots use tariff rates
+  /// Whether the selected job can change currency.
   var canChangeCurrency: Bool {
     !hasTariffSnapshots
   }
@@ -276,6 +275,7 @@ final class PaySettingsViewModel: ObservableObject {
         userId: userId,
         name: input.name,
         color: input.color,
+        currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
         monthlyGoal: input.monthlyGoal,
@@ -323,6 +323,38 @@ final class PaySettingsViewModel: ObservableObject {
       logger.error("Failed to update selected job metadata: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
       return false
+    }
+  }
+
+  func updateCurrency(_ value: String) async {
+    guard let userId else {
+      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
+      return
+    }
+    guard let selectedJob else {
+      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+      return
+    }
+    guard selectedJob.currency != value else { return }
+    guard canChangeCurrency else { return }
+
+    do {
+      guard
+        try await jobsRepository.updateJobCurrency(
+          userId: userId,
+          jobId: selectedJob.id,
+          currency: value
+        ) != nil
+      else {
+        errorMessage = String(localized: .settingsPayErrorLoadFailed)
+        return
+      }
+
+      refreshData()
+      Haptics.play(.success)
+    } catch {
+      logger.error("Failed to update selected job currency: \(error.localizedDescription)")
+      errorMessage = error.localizedDescription
     }
   }
 
@@ -658,29 +690,6 @@ final class PaySettingsViewModel: ObservableObject {
       logger.info("Updated half tax month to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update half tax month: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorSaveFailed)
-    }
-  }
-
-  /// Update currency (immediate, no debounce needed for picker)
-  /// Only allowed if no snapshots use tariff rates
-  func updateCurrency(_ value: String) async {
-    guard let userId = userId else { return }
-    guard canChangeCurrency else {
-      errorMessage = String(localized: .settingsPayCurrencyChangeTariffError)
-      return
-    }
-
-    do {
-      _ = try await settingsRepository.updateSettings(
-        for: userId,
-        currency: value
-      )
-
-      refreshData()
-      logger.info("Updated currency to: \(value)")
-    } catch {
-      logger.error("Failed to update currency: \(error.localizedDescription)")
       errorMessage = String(localized: .settingsPayErrorSaveFailed)
     }
   }

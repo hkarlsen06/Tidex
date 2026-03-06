@@ -140,6 +140,7 @@ struct SyncJobRow: Codable {
   let user_id: String
   let name: String
   let color: String?
+  let currency: String
   let is_default: Bool
   let sort_order: Int
   let payroll_day: Int?
@@ -150,6 +151,44 @@ struct SyncJobRow: Codable {
   let created_at: String?
   let updated_at: String
   let revision: Int64
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case user_id
+    case name
+    case color
+    case currency
+    case is_default
+    case sort_order
+    case payroll_day
+    case half_tax_month
+    case monthly_goal
+    case archived_at
+    case deleted_at
+    case created_at
+    case updated_at
+    case revision
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    id = try container.decode(String.self, forKey: .id)
+    user_id = try container.decode(String.self, forKey: .user_id)
+    name = try container.decode(String.self, forKey: .name)
+    color = try container.decodeIfPresent(String.self, forKey: .color)
+    currency = try container.decodeIfPresent(String.self, forKey: .currency) ?? "kr"
+    is_default = try container.decode(Bool.self, forKey: .is_default)
+    sort_order = try container.decode(Int.self, forKey: .sort_order)
+    payroll_day = try container.decodeIfPresent(Int.self, forKey: .payroll_day)
+    half_tax_month = try container.decodeIfPresent(Int.self, forKey: .half_tax_month)
+    monthly_goal = try container.decodeIfPresent(Int.self, forKey: .monthly_goal)
+    archived_at = try container.decodeIfPresent(String.self, forKey: .archived_at)
+    deleted_at = try container.decodeIfPresent(String.self, forKey: .deleted_at)
+    created_at = try container.decodeIfPresent(String.self, forKey: .created_at)
+    updated_at = try container.decode(String.self, forKey: .updated_at)
+    revision = try container.decode(Int64.self, forKey: .revision)
+  }
 }
 
 /// Extended user settings row with sync metadata fields
