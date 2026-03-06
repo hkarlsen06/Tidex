@@ -50,6 +50,12 @@ struct SettingsView: View {
 
   private let jobsRepository = JobsRepository.shared
   private let settingsRepository = SettingsRepository.shared
+  private let compactSettingsRowInsets = EdgeInsets(
+    top: 0,
+    leading: Spacing.md,
+    bottom: 0,
+    trailing: Spacing.md
+  )
 
   /// Settings navigation destinations
   enum SettingsDestination: Hashable {
@@ -85,43 +91,42 @@ struct SettingsView: View {
           Button {
             navigationPath.append(SettingsDestination.profile)
           } label: {
-            HStack(spacing: Spacing.msm) {
+            HStack(spacing: Spacing.sm) {
               AvatarView(
                 url: coordinator.userAvatarUrl,
                 initials: userInitials,
-                size: 60
+                size: AvatarView.Size.large
               )
 
-              VStack(alignment: .leading, spacing: Spacing.micro) {
-                Text(coordinator.userDisplayName)
-                  .font(.tidexTitle)
-                  .foregroundColor(.tidexTextPrimary)
+              Text(coordinator.userDisplayName)
+                .font(.tidexTitle)
+                .foregroundColor(.tidexTextPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
 
-                Text(.settingsMenuAccountDescription)
-                  .font(.tidexSubheadline)
-                  .foregroundColor(.tidexTextSecondary)
-                  .lineLimit(2)
-              }
-
-              Spacer()
+              Spacer(minLength: Spacing.xs)
 
               Image(
                 systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
               )
-              .font(.tidexLabelStrong)
+              .font(.tidexFootnoteMedium)
               .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, Spacing.xxxs)
+            .padding(.vertical, Spacing.sm)
+            .frame(minHeight: 84, alignment: .leading)
+            .contentShape(Rectangle())
           }
+          .buttonStyle(.plain)
+          .listRowInsets(compactSettingsRowInsets)
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
         // MARK: - Account & Security
-        Section(header: Text(String(localized: .settingsGroupAccountSecurity))) {
+        Section {
           SettingsMenuItem(
             icon: "lock.shield",
             title: String(localized: .settingsMenuSecurityLabel),
-            description: String(localized: .settingsMenuSecurityDescription),
             iconBackgroundColor: .green
           ) {
             navigationPath.append(SettingsDestination.security)
@@ -130,20 +135,20 @@ struct SettingsView: View {
           SettingsMenuItem(
             icon: "creditcard",
             title: String(localized: .settingsMenuSubscriptionLabel),
-            description: String(localized: .settingsMenuSubscriptionDescription),
             iconBackgroundColor: .orange
           ) {
             navigationPath.append(SettingsDestination.subscription)
           }
+        } header: {
+          Text(String(localized: .settingsGroupAccountSecurity))
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
         // MARK: - Preferences
-        Section(header: Text(String(localized: .settingsGroupPreferences))) {
+        Section {
           SettingsMenuItem(
             icon: "bell",
             title: String(localized: .settingsMenuNotificationsLabel),
-            description: String(localized: .settingsMenuNotificationsDescription),
             iconBackgroundColor: .red
           ) {
             navigationPath.append(SettingsDestination.notifications)
@@ -152,21 +157,20 @@ struct SettingsView: View {
           SettingsMenuItem(
             icon: "paintpalette",
             title: String(localized: .settingsMenuAppearanceLabel),
-            description: String(localized: .settingsMenuAppearanceDescription),
             iconBackgroundColor: .indigo
           ) {
             navigationPath.append(SettingsDestination.appearance)
           }
-
+        } header: {
+          Text(String(localized: .settingsGroupPreferences))
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
         // MARK: - App Settings
-        Section(header: Text(String(localized: .settingsGroupAppSettings))) {
+        Section {
           SettingsMenuItem(
             icon: "banknote",
             title: String(localized: .settingsMenuPayLabel),
-            description: String(localized: .settingsMenuPayDescription),
             iconBackgroundColor: .green
           ) {
             Task {
@@ -177,20 +181,20 @@ struct SettingsView: View {
           SettingsMenuItem(
             icon: "repeat.circle",
             title: String(localized: .settingsMenuRecurringShiftsLabel),
-            description: String(localized: .settingsMenuRecurringShiftsDescription),
             iconBackgroundColor: .purple
           ) {
             navigationPath.append(SettingsDestination.recurringShifts)
           }
+        } header: {
+          Text(String(localized: .settingsGroupAppSettings))
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
         // MARK: - Data & Support
-        Section(header: Text(String(localized: .settingsGroupDataSupport))) {
+        Section {
           SettingsMenuItem(
             icon: "externaldrive",
             title: String(localized: .settingsMenuDataLabel),
-            description: String(localized: .settingsMenuDataDescription),
             iconBackgroundColor: .gray
           ) {
             navigationPath.append(SettingsDestination.data)
@@ -199,25 +203,27 @@ struct SettingsView: View {
           SettingsMenuItem(
             icon: "message",
             title: String(localized: .settingsMenuFeedbackLabel),
-            description: String(localized: .settingsMenuFeedbackDescription),
             iconBackgroundColor: .tidexBlue
           ) {
             navigationPath.append(SettingsDestination.feedback)
           }
+        } header: {
+          Text(String(localized: .settingsGroupDataSupport))
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
         // MARK: - Admin
         if canAccessAdminSettings {
-          Section(header: Text(String(localized: .settingsGroupAdmin))) {
+          Section {
             SettingsMenuItem(
               icon: "shield.lefthalf.filled.badge.checkmark",
               title: String(localized: .settingsMenuAdminLabel),
-              description: String(localized: .settingsMenuAdminDescription),
               iconBackgroundColor: .tidexWarning
             ) {
               navigationPath.append(SettingsDestination.admin)
             }
+          } header: {
+            Text(String(localized: .settingsGroupAdmin))
           }
           .listRowBackground(Color.tidexSurfacePrimary)
         }
@@ -231,42 +237,29 @@ struct SettingsView: View {
 
         // MARK: - Debug (DEBUG builds only)
         #if DEBUG
-          Section(header: Text("Debug")) {
+          Section {
             SettingsMenuItem(
               icon: "ladybug",
               title: "Debug",
-              description: "Sync, StoreKit, and notification diagnostics",
               iconBackgroundColor: .pink
             ) {
               navigationPath.append(SettingsDestination.debug)
             }
+          } header: {
+            Text("Debug")
           }
           .listRowBackground(Color.tidexSurfacePrimary)
         #endif
       }
       .listStyle(.insetGrouped)
       .scrollContentBackground(.hidden)
-      .background(Color.tidexBackground)
+      .background(Color.tidexBackgroundSecondary)
+      .navigationTitle(String(localized: .settingsTitle))
+      .navigationBarTitleDisplayMode(.large)
       .toolbar {
-        ToolbarItem(placement: .principal) {
-          VStack(spacing: Spacing.micro) {
-            Text(.settingsTitle)
-              .font(.tidexHeadline)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.settingsSubtitle)
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextSecondary)
-          }
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-          Button {
+        ToolbarItem(placement: .confirmationAction) {
+          Button(String(localized: .commonDone)) {
             dismiss()
-          } label: {
-            Image(systemName: "xmark")
-              .font(.tidexBodyMedium)
-              .foregroundStyle(Color.tidexTextMuted)
           }
         }
       }
@@ -341,14 +334,8 @@ struct SettingsView: View {
       }
     } label: {
       HStack(spacing: Spacing.sm) {
-        Image(systemName: "rectangle.portrait.and.arrow.right")
-          .font(.system(size: 14))
-          .foregroundColor(.white)
-          .frame(width: 29, height: 29)
-          .background(
-            Color.tidexError.opacity(0.75),
-            in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-          )
+        SettingsRowIcon(
+          systemName: "rectangle.portrait.and.arrow.right", backgroundColor: .tidexError)
 
         if isSigningOut {
           ProgressView()
@@ -364,6 +351,7 @@ struct SettingsView: View {
       }
     }
     .disabled(isSigningOut || isSigningOutGlobal)
+    .listRowInsets(compactSettingsRowInsets)
   }
 
   /// Sign out from ALL devices (global scope)
@@ -372,14 +360,10 @@ struct SettingsView: View {
       showSignOutEverywhereAlert = true
     } label: {
       HStack(spacing: Spacing.sm) {
-        Image(systemName: "rectangle.portrait.and.arrow.right.fill")
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.white)
-          .frame(width: 29, height: 29)
-          .background(
-            Color.gray.opacity(0.75),
-            in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-          )
+        SettingsRowIcon(
+          systemName: "rectangle.portrait.and.arrow.right.fill",
+          backgroundColor: .tidexTextMuted
+        )
 
         if isSigningOutGlobal {
           ProgressView()
@@ -395,6 +379,7 @@ struct SettingsView: View {
       }
     }
     .disabled(isSigningOut || isSigningOutGlobal)
+    .listRowInsets(compactSettingsRowInsets)
   }
 
   // MARK: - Actions
@@ -1188,12 +1173,11 @@ private struct RecurringShiftsSettingsView: View {
 
 // MARK: - Settings Menu Item
 
-/// A single settings menu item with colored icon background, title, description, and chevron
+/// A single settings menu item with colored icon background, title, and chevron
 /// Designed for use inside a List section (iOS Settings style)
 struct SettingsMenuItem: View {
   let icon: String
   let title: String
-  let description: String
   var iconBackgroundColor: Color = .tidexBlue
   let action: () -> Void
 
@@ -1202,41 +1186,49 @@ struct SettingsMenuItem: View {
   var body: some View {
     Button(action: action) {
       HStack(spacing: Spacing.sm) {
-        // Icon with colored background (fixed size to fit 29x29 container)
-        Image(systemName: icon)
-          .font(.system(size: 14))
-          .foregroundColor(.white)
-          .frame(width: 29, height: 29)
-          .background(
-            iconBackgroundColor.opacity(0.75),
-            in: RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-          )
+        SettingsRowIcon(systemName: icon, backgroundColor: iconBackgroundColor)
 
-        // Title and description
-        VStack(alignment: .leading, spacing: 0) {
-          Text(title)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(description)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-            .lineLimit(2)
-            .fixedSize(horizontal: false, vertical: true)
-        }
+        Text(title)
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
 
         Spacer()
 
         // Chevron
         Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-          .font(.tidexLabelStrong)
+          .font(.tidexFootnoteMedium)
           .foregroundStyle(.tertiary)
       }
-      .padding(.vertical, Spacing.xxxs)
-      .frame(minHeight: 56)
+      .frame(minHeight: 44)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .listRowInsets(EdgeInsets(top: 0, leading: Spacing.md, bottom: 0, trailing: Spacing.md))
+  }
+}
+
+private struct SettingsRowIcon: View {
+  let systemName: String
+  let backgroundColor: Color
+
+  var body: some View {
+    Image(systemName: systemName)
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundColor(.white)
+      .frame(width: 28, height: 28)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
+          .fill(backgroundColor)
+          .saturation(0.72)
+          .brightness(-0.03)
+          .opacity(0.88)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
+          .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+      )
+      .accessibilityHidden(true)
   }
 }
 
