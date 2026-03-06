@@ -9,7 +9,9 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AppLifecycleH
 final class AppLifecycleHandler {
   static let shared = AppLifecycleHandler()
   private static let loadingRecoveryDelay: UInt64 = 1_500_000_000  // 1.5 seconds
+  private static let liveActivityRecoveryDelay: UInt64 = 1_000_000_000  // 1 second
   private var loadingRecoveryTask: Task<Void, Never>?
+  private var liveActivityRecoveryTask: Task<Void, Never>?
 
   private init() {}
 
@@ -19,11 +21,14 @@ final class AppLifecycleHandler {
     AppearanceManager.shared.applyToWindows()
     PrivacyBlurManager.hide()
     scheduleLoadingRecoveryIfNeeded()
+    liveActivityRecoveryTask?.cancel()
+    liveActivityRecoveryTask = nil
     BiometricAuthService.shared.handleAppForeground()
     AppCoordinator.shared.handleAppForeground()
     Task { @MainActor [weak self] in
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
       self?.runForegroundLiveActivityMaintenance()
+      self?.scheduleForegroundLiveActivityRecovery()
     }
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
     // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
@@ -48,12 +53,16 @@ final class AppLifecycleHandler {
   func handleWillResignActive() {
     loadingRecoveryTask?.cancel()
     loadingRecoveryTask = nil
+    liveActivityRecoveryTask?.cancel()
+    liveActivityRecoveryTask = nil
     PrivacyBlurManager.showIfNeeded()
   }
 
   func handleDidEnterBackground() {
     loadingRecoveryTask?.cancel()
     loadingRecoveryTask = nil
+    liveActivityRecoveryTask?.cancel()
+    liveActivityRecoveryTask = nil
     BiometricAuthService.shared.handleAppBackground()
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()
     // Defensive: ensure blur is shown when entering background.
@@ -63,9 +72,32 @@ final class AppLifecycleHandler {
   private func runForegroundLiveActivityMaintenance() {
     guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
     else { return }
-    // Reconcile Live Activity state against current shifts when returning to foreground.
-    appDelegate.checkAndStartLiveActivityIfNeeded()
+
+    // Refresh the App Group snapshot from local storage before reconciling so
+    // foreground maintenance does not depend on stale widget storage.
+    if let userId = AppCoordinator.shared.getCurrentUserId() {
+      NativeWidgetStorage.updateWidgetStorage(for: userId)
+    } else {
+      appDelegate.checkAndStartLiveActivityIfNeeded()
+    }
+
     appDelegate.endBackgroundTaskIfNeeded()
+  }
+
+  private func scheduleForegroundLiveActivityRecovery() {
+    liveActivityRecoveryTask?.cancel()
+    liveActivityRecoveryTask = Task { @MainActor [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: Self.liveActivityRecoveryDelay)
+      } catch {
+        return
+      }
+
+      guard !Task.isCancelled else { return }
+      await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
+      self?.runForegroundLiveActivityMaintenance()
+      self?.liveActivityRecoveryTask = nil
+    }
   }
 
   // MARK: - Loading Recovery

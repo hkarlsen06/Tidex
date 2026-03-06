@@ -330,12 +330,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
     do {
       try session.updateApplicationContext(envelope)
       session.transferUserInfo(envelope)
+      queueComplicationTransferIfPossible(envelope, session: session, reason: reason)
       logger.info(
         "Sent Watch update (\(reason, privacy: .public)): user=\(payload.userShift != nil), friends=\(payload.friendShifts.count), bytes=\(data.count)"
       )
       return true
     } catch {
-      logger.error("Failed to send Watch payload (\(reason, privacy: .public)): \(error.localizedDescription)")
+      logger.error(
+        "Failed to send Watch payload (\(reason, privacy: .public)): \(error.localizedDescription)")
       return false
     }
   }
@@ -389,6 +391,23 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
     logger.warning("Using fallback Watch payload (user shift only) to stay within size budget")
     return fallbackData
+  }
+
+  private func queueComplicationTransferIfPossible(
+    _ envelope: [String: Any],
+    session: WCSession,
+    reason: String
+  ) {
+    guard session.remainingComplicationUserInfoTransfers > 0 else {
+      logger.info(
+        "Skipping complication transfer (\(reason, privacy: .public)): no remaining budget")
+      return
+    }
+
+    session.transferCurrentComplicationUserInfo(envelope)
+    logger.info(
+      "Queued complication transfer (\(reason, privacy: .public)); remaining budget=\(session.remainingComplicationUserInfoTransfers)"
+    )
   }
 
   private func compactPayload(_ payload: WatchDataPayload) -> WatchDataPayload {
