@@ -14,7 +14,7 @@ final class AppleAuthProvider: NSObject {
   }
 
   private var continuation: CheckedContinuation<ASAuthorization, Error>?
-  private weak var presentationAnchor: UIWindow?
+  private var presentationAnchor: UIWindow?
 
   // MARK: - Sign In
 
@@ -22,14 +22,11 @@ final class AppleAuthProvider: NSObject {
   /// - Parameter anchor: The window to present the sign-in sheet
   /// - Returns: The identity token and optional name from Apple
   func signIn(from anchor: UIWindow? = nil) async throws -> SignInResult {
-    let keyWindow = UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)
-    guard let resolvedAnchor = anchor ?? keyWindow else {
+    guard let resolvedAnchor = resolvePresentationAnchor(preferredAnchor: anchor) else {
       throw AppleAuthError.presentationAnchorUnavailable
     }
-    self.presentationAnchor = resolvedAnchor
+    presentationAnchor = resolvedAnchor
+    defer { presentationAnchor = nil }
 
     let authorization = try await performRequest()
 
@@ -57,6 +54,28 @@ final class AppleAuthProvider: NSObject {
       controller.performRequests()
     }
   }
+
+  private func resolvePresentationAnchor(preferredAnchor: UIWindow? = nil) -> UIWindow? {
+    if let preferredAnchor {
+      return preferredAnchor
+    }
+
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+
+    if let keyWindow = scenes.flatMap(\.windows).first(where: \.isKeyWindow) {
+      return keyWindow
+    }
+
+    if let existingWindow = scenes.flatMap(\.windows).first {
+      return existingWindow
+    }
+
+    if let firstScene = scenes.first {
+      return UIWindow(windowScene: firstScene)
+    }
+
+    return nil
+  }
 }
 
 // MARK: - ASAuthorizationControllerDelegate
@@ -69,6 +88,7 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
     Task { @MainActor in
       continuation?.resume(returning: authorization)
       continuation = nil
+      presentationAnchor = nil
     }
   }
 
@@ -105,6 +125,7 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
         continuation?.resume(throwing: error)
       }
       continuation = nil
+      presentationAnchor = nil
     }
   }
 }
@@ -117,27 +138,9 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
   {
     // Access MainActor-isolated property safely
     return MainActor.assumeIsolated {
-      if let anchor = presentationAnchor {
-        return anchor
-      }
-      // Fallback: get key window from connected scenes
-      let keyWindow = UIApplication.shared.connectedScenes
-        .compactMap { $0 as? UIWindowScene }
-        .flatMap { $0.windows }
-        .first { $0.isKeyWindow }
-      if let keyWindow {
-        return keyWindow
-      }
-      // Create window from first available scene (required in iOS 26+)
-      if let windowScene = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .first
-      {
-        return UIWindow(windowScene: windowScene)
-      }
-      // No window scene available — should never happen in practice.
-      // fatalError is acceptable here: if there's no window scene, the app is in an unusable state.
-      fatalError("No window scene available for Apple Sign-In presentation")
+      presentationAnchor
+        ?? resolvePresentationAnchor()
+        ?? UIWindow()
     }
   }
 }

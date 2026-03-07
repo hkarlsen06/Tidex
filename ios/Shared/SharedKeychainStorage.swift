@@ -27,8 +27,8 @@ enum SharedKeychainStorage {
   private static var cachedAccessGroup: String?
 
   /// Get the full access group with team ID prefix
-  /// Derives the team ID at runtime by querying an existing keychain item
-  private static func getAccessGroup() -> String {
+  /// Prefers the current target's entitlements and falls back to probing for the team ID.
+  private static func getAccessGroup() -> String? {
     if let cached = cachedAccessGroup {
       return cached
     }
@@ -40,10 +40,9 @@ enum SharedKeychainStorage {
       return fullGroup
     }
 
-    // Fallback: try without explicit access group (uses app's default)
-    // This works when the app only has one access group
-    cachedAccessGroup = accessGroupSuffix
-    return accessGroupSuffix
+    // Avoid writing an invalid bare suffix like "no.tidex.shared".
+    // If we cannot resolve the shared group, fall back to the default group.
+    return nil
   }
 
   /// Discover the team ID by creating and querying a temporary keychain item
@@ -168,13 +167,7 @@ enum SharedKeychainStorage {
       throw KeychainError.unableToStore(status: errSecParam)
     }
 
-    // Build query for existing item
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: service,
-      kSecAttrAccount as String: key,
-      kSecAttrAccessGroup as String: getAccessGroup(),
-    ]
+    let query = baseQuery(forKey: key)
 
     // Delete existing item first
     SecItemDelete(query as CFDictionary)
@@ -192,14 +185,9 @@ enum SharedKeychainStorage {
   }
 
   private static func getString(forKey key: String) throws -> String? {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: service,
-      kSecAttrAccount as String: key,
-      kSecAttrAccessGroup as String: getAccessGroup(),
-      kSecReturnData as String: true,
-      kSecMatchLimit as String: kSecMatchLimitOne,
-    ]
+    var query = baseQuery(forKey: key)
+    query[kSecReturnData as String] = true
+    query[kSecMatchLimit as String] = kSecMatchLimitOne
 
     var result: AnyObject?
     let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -220,16 +208,25 @@ enum SharedKeychainStorage {
   }
 
   private static func deleteItem(forKey key: String) throws {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: service,
-      kSecAttrAccount as String: key,
-      kSecAttrAccessGroup as String: getAccessGroup(),
-    ]
+    let query = baseQuery(forKey: key)
 
     let status = SecItemDelete(query as CFDictionary)
     guard status == errSecSuccess || status == errSecItemNotFound else {
       throw KeychainError.unableToDelete(status: status)
     }
+  }
+
+  private static func baseQuery(forKey key: String) -> [String: Any] {
+    var query: [String: Any] = [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: service,
+      kSecAttrAccount as String: key,
+    ]
+
+    if let accessGroup = getAccessGroup() {
+      query[kSecAttrAccessGroup as String] = accessGroup
+    }
+
+    return query
   }
 }
