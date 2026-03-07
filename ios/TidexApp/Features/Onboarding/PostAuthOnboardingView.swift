@@ -2,11 +2,18 @@ import CoreImage.CIFilterBuiltins
 import Supabase
 import SwiftUI
 
+enum PostAuthOnboardingEntryMode: Equatable {
+  case initial
+  case reentry
+}
+
 /// Post-auth onboarding flow container
 /// Collects wage, supplements, settings, and optionally MFA setup
 /// Creates a baseline wage snapshot before transitioning to the app
 struct PostAuthOnboardingView: View {
+  let entryMode: PostAuthOnboardingEntryMode
   let onComplete: () -> Void
+  let onClose: (() -> Void)?
   let userId: String
 
   @State private var currentScreen: PostAuthScreen = .loading
@@ -14,14 +21,19 @@ struct PostAuthOnboardingView: View {
   @StateObject private var saveManager = OnboardingSaveManager()
   @State private var showingMFAEnrollment = false
   @State private var showAddJobSheet = false
+  @State private var addJobSheetPresentationID = UUID()
   @State private var isPreparingJobSheet = false
   @State private var navigateToMFAAfterJobSheet = false
   @State private var onboardingActiveJobs: [Job] = []
+  @State private var onboardingJobNeedingSetup: Job?
+  @State private var temporaryPlaceholderJobId: String?
   @State private var multiJobErrorMessage: String?
   @State private var isNavigatingBack = false
+  @State private var successCompletionMode: OnboardingCompletionMode = .fullSetup
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.scenePhase) private var scenePhase
   private let jobsRepository = JobsRepository.shared
+  private let snapshotsRepository = SnapshotsRepository.shared
   private let syncCoordinator = SyncCoordinator.shared
 
   enum PostAuthScreen: String {
@@ -54,7 +66,11 @@ struct PostAuthOnboardingView: View {
             onContinue: {
               navigateFromWage()
             },
-            onBack: nil
+            onBack: nil,
+            onSkipSetup: entryMode == .initial
+              ? {
+                startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
+              } : nil
           )
           .transition(screenTransition)
 
@@ -120,6 +136,7 @@ struct PostAuthOnboardingView: View {
 
         case .success:
           SuccessScreen(
+            completionMode: successCompletionMode,
             saveStatus: saveManager.status,
             errorMessage: saveManager.errorMessage,
             onComplete: {
@@ -145,6 +162,27 @@ struct PostAuthOnboardingView: View {
         }
       }
     }
+    .overlay(alignment: .topTrailing) {
+      if shouldShowCloseButton {
+        Button {
+          closeOnboarding()
+        } label: {
+          Image(systemName: "xmark")
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextPrimary)
+            .frame(width: 36, height: 36)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(Circle())
+            .overlay(
+              Circle()
+                .stroke(Color.tidexBorder, lineWidth: 1)
+            )
+        }
+        .padding(.top, 12)
+        .padding(.trailing, Spacing.lg)
+        .accessibilityLabel(String(localized: .commonCancel))
+      }
+    }
     .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
     .sheet(isPresented: $showingMFAEnrollment) {
       MFAEnrollmentSheet(
@@ -163,15 +201,20 @@ struct PostAuthOnboardingView: View {
         if navigateToMFAAfterJobSheet {
           navigateToMFAAfterJobSheet = false
           navigateTo(.mfaSetup)
+        } else {
+          Task {
+            await discardTemporaryPlaceholderIfNeeded()
+          }
         }
       }
     ) {
       AddJobSheet(
         initialCurrency: onboardingData.currency,
-        existingJobNeedingSetup: onboardingActiveJobs.count == 1 ? onboardingActiveJobs.first : nil
+        existingJobNeedingSetup: nil
       ) { input in
         await createOnboardingJob(input: input)
       }
+      .id(addJobSheetPresentationID)
     }
     .onAppear {
       initializeOnboarding()
@@ -247,13 +290,16 @@ struct PostAuthOnboardingView: View {
 
   /// Initialize onboarding by restoring progress
   private func initializeOnboarding() {
-    // Try to restore saved progress
-    if let savedScreenName = onboardingData.restore(),
-      let savedScreen = PostAuthScreen(rawValue: savedScreenName),
-      savedScreen != .success && savedScreen != .loading
-    {
-      currentScreen = savedScreen
-      return
+    if entryMode == .initial {
+      if let savedScreenName = onboardingData.restore(),
+        let savedScreen = PostAuthScreen(rawValue: savedScreenName),
+        savedScreen != .success && savedScreen != .loading
+      {
+        currentScreen = savedScreen
+        return
+      }
+    } else {
+      onboardingData = OnboardingData()
     }
 
     onboardingData.currency =
@@ -314,13 +360,21 @@ struct PostAuthOnboardingView: View {
     }
   }
 
-  private func startSaveAndNavigateToSuccess() {
+  private func startSaveAndNavigateToSuccess(
+    completionMode: OnboardingCompletionMode = .fullSetup
+  ) {
+    successCompletionMode = completionMode
+
     // Navigate to success screen first
     navigateTo(.success)
 
     // Start saving in the background
     Task {
-      await saveManager.saveOnboardingData(userId: userId, data: onboardingData)
+      await saveManager.saveOnboardingData(
+        userId: userId,
+        data: onboardingData,
+        completionMode: completionMode
+      )
     }
   }
 
@@ -333,22 +387,36 @@ struct PostAuthOnboardingView: View {
     }
 
     multiJobErrorMessage = nil
-    let activeJobs = jobsRepository.getActiveJobs(for: userId)
+    var activeJobs = jobsRepository.getActiveJobs(for: userId)
 
     if activeJobs.isEmpty {
       _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
       guard currentScreen == .multiJobPrompt else { return }
-      let jobsAfterSync = jobsRepository.getActiveJobs(for: userId)
-      guard !jobsAfterSync.isEmpty else {
-        multiJobErrorMessage = String(localized: .settingsPayErrorLoadFailed)
+      activeJobs = jobsRepository.getActiveJobs(for: userId)
+    }
+
+    if activeJobs.isEmpty && entryMode == .reentry {
+      do {
+        let placeholderJob = try await jobsRepository.createJob(
+          userId: userId,
+          name: "Jobb",
+          color: nil,
+          currency: onboardingData.currency.isEmpty ? "kr" : onboardingData.currency,
+          payrollDay: onboardingData.payrollDay,
+          halfTaxMonth: nil,
+          monthlyGoal: nil
+        )
+        activeJobs = [placeholderJob]
+        temporaryPlaceholderJobId = placeholderJob.id
+      } catch {
+        multiJobErrorMessage = error.localizedDescription
         return
       }
-      onboardingActiveJobs = jobsAfterSync
-      showAddJobSheet = true
-      return
     }
 
     onboardingActiveJobs = activeJobs
+    onboardingJobNeedingSetup = incompleteSetupJob(from: activeJobs)
+    addJobSheetPresentationID = UUID()
     showAddJobSheet = true
   }
 
@@ -359,32 +427,27 @@ struct PostAuthOnboardingView: View {
     }
 
     do {
-      if let existingJobSetup = input.existingJobSetup {
-        guard
-          try await jobsRepository.updateJob(
-            userId: userId,
-            jobId: existingJobSetup.id,
-            name: existingJobSetup.name,
-            color: existingJobSetup.color
-          ) != nil
-        else {
-          multiJobErrorMessage = String(localized: .settingsPayErrorLoadFailed)
-          return false
+      if let jobNeedingSetup = onboardingJobNeedingSetup {
+        try await completeOnboardingSetup(for: jobNeedingSetup, input: input)
+
+        if jobNeedingSetup.id == temporaryPlaceholderJobId {
+          temporaryPlaceholderJobId = nil
         }
+      } else {
+        _ = try await jobsRepository.createJobWithBaselineSnapshot(
+          userId: userId,
+          name: input.name,
+          color: input.color,
+          currency: input.currency,
+          payrollDay: input.payrollDay,
+          halfTaxMonth: input.halfTaxMonth,
+          monthlyGoal: input.monthlyGoal,
+          baselineSnapshot: input.baselineSnapshot
+        )
       }
 
-      _ = try await jobsRepository.createJobWithBaselineSnapshot(
-        userId: userId,
-        name: input.name,
-        color: input.color,
-        currency: input.currency,
-        payrollDay: input.payrollDay,
-        halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal,
-        baselineSnapshot: input.baselineSnapshot
-      )
-
       onboardingActiveJobs = jobsRepository.getActiveJobs(for: userId)
+      onboardingJobNeedingSetup = incompleteSetupJob(from: onboardingActiveJobs)
       multiJobErrorMessage = nil
       navigateToMFAAfterJobSheet = true
       return true
@@ -392,6 +455,109 @@ struct PostAuthOnboardingView: View {
       multiJobErrorMessage = error.localizedDescription
       return false
     }
+  }
+
+  private func completeOnboardingSetup(for job: Job, input: AddJobSetupInput) async throws {
+    guard
+      try await jobsRepository.updateJob(
+        userId: userId,
+        jobId: job.id,
+        name: input.name,
+        color: input.color
+      ) != nil
+    else {
+      throw JobsRepositoryError.jobNotFound
+    }
+
+    if job.currency != input.currency {
+      guard
+        try await jobsRepository.updateJobCurrency(
+          userId: userId,
+          jobId: job.id,
+          currency: input.currency
+        ) != nil
+      else {
+        throw JobsRepositoryError.jobNotFound
+      }
+    }
+
+    guard
+      try await jobsRepository.updateJobPaySettings(
+        userId: userId,
+        jobId: job.id,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal
+      ) != nil
+    else {
+      throw JobsRepositoryError.jobNotFound
+    }
+
+    _ = try await snapshotsRepository.createSnapshot(
+      userId: userId,
+      jobId: job.id,
+      fromDate: nil,
+      hourlyWage: input.baselineSnapshot.hourlyWage,
+      wageLevel: input.baselineSnapshot.wageLevel,
+      tariffTypeId: input.baselineSnapshot.tariffTypeId,
+      supplements: input.baselineSnapshot.supplements,
+      taxEnabled: input.baselineSnapshot.taxEnabled,
+      taxPercentage: input.baselineSnapshot.taxPercentage,
+      breakEnabled: input.baselineSnapshot.breakEnabled,
+      breakMethod: input.baselineSnapshot.breakMethod,
+      breakThresholdHours: input.baselineSnapshot.breakThresholdHours,
+      breakDeductionMinutes: input.baselineSnapshot.breakDeductionMinutes
+    )
+  }
+
+  private func incompleteSetupJob(from activeJobs: [Job]) -> Job? {
+    let status = WorkSetupStatusResolver.resolve(activeJobs: activeJobs) { jobId in
+      snapshotsRepository.getBaselineSnapshot(for: userId, jobId: jobId) != nil
+    }
+
+    guard !status.hasBaselineSnapshotForActiveSetupJob,
+      let activeSetupJobId = status.activeSetupJobId
+    else {
+      return nil
+    }
+
+    return activeJobs.first(where: { $0.id == activeSetupJobId })
+  }
+
+  private var shouldShowCloseButton: Bool {
+    entryMode == .reentry && currentScreen != .loading && currentScreen != .success
+  }
+
+  private func closeOnboarding() {
+    OnboardingData.clearSavedData()
+    OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
+    Task {
+      await discardTemporaryPlaceholderIfNeeded()
+      onClose?()
+    }
+  }
+
+  private func discardTemporaryPlaceholderIfNeeded() async {
+    guard let temporaryPlaceholderJobId else { return }
+
+    let otherActiveJobs = jobsRepository.getActiveJobs(for: userId).filter {
+      $0.id != temporaryPlaceholderJobId
+    }
+
+    do {
+      if let replacementJob = otherActiveJobs.first {
+        try await jobsRepository.setDefaultJob(userId: userId, jobId: replacementJob.id)
+      }
+
+      try await jobsRepository.discardIncompleteJob(
+        userId: userId,
+        jobId: temporaryPlaceholderJobId
+      )
+    } catch {
+      multiJobErrorMessage = error.localizedDescription
+    }
+
+    self.temporaryPlaceholderJobId = nil
   }
 }
 
@@ -657,7 +823,9 @@ private struct MFAEnrollmentSheet: View {
 
 #Preview {
   PostAuthOnboardingView(
+    entryMode: .initial,
     onComplete: {},
+    onClose: nil,
     userId: "test-user-id"
   )
 }

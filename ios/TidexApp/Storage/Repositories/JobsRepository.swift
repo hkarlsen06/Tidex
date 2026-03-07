@@ -424,4 +424,12 @@ final class JobsRepository: ObservableObject {
     logger.info("Reordered jobs for user \(userId.prefix(8))")
     triggerSync(userId: userId)
   }
+
+  func discardIncompleteJob(userId: String, jobId: String) async throws {
+    guard snapshotsRepository.getSnapshots(for: userId, jobId: jobId).isEmpty else { return }
+
+    let affectedUserId = try await localStore.storeActor.markJobPendingDelete(id: jobId)
+    logger.info("Discarded incomplete job: \(jobId)")
+    triggerSync(userId: affectedUserId)
+  }
 }

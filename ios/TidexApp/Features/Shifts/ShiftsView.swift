@@ -98,6 +98,7 @@ struct ShiftsView: View {
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+  private let workSetupStatusService = WorkSetupStatusService.shared
 
   // Orientation tracking for iPad landscape layout
   @ObservedObject private var orientationTracker = OrientationTracker.shared
@@ -112,11 +113,25 @@ struct ShiftsView: View {
     UIDevice.current.userInterfaceIdiom == .phone
   }
 
+  private var workSetupPresentationState: WorkSetupPresentationState? {
+    guard let userId = coordinator.getCurrentUserId() else { return nil }
+    return workSetupStatusService.presentationState(
+      for: userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
+  private var shouldShowWorkSetupRequiredPlaceholder: Bool {
+    workSetupPresentationState?.shouldShowPlaceholder == true
+  }
+
   // MARK: - Body
 
   @ViewBuilder
   private var mainContentLayer: some View {
-    if let error = viewModel.error {
+    if shouldShowWorkSetupRequiredPlaceholder {
+      WorkSetupRequiredPlaceholder()
+    } else if let error = viewModel.error {
       errorView(error: error)
     } else {
       // Unified content view - handles both empty and populated states
@@ -128,7 +143,7 @@ struct ShiftsView: View {
   @ToolbarContentBuilder
   private var shiftsToolbarContent: some ToolbarContent {
     // Share button (only in calendar view, not list view)
-    if !showListView {
+    if !showListView && !shouldShowWorkSetupRequiredPlaceholder {
       ToolbarItem(placement: .topBarLeading) {
         Button {
           impactHaptic.impactOccurred()
@@ -143,7 +158,7 @@ struct ShiftsView: View {
     }
 
     // Selection mode toggle (only in calendar view)
-    if !showListView {
+    if !showListView && !shouldShowWorkSetupRequiredPlaceholder {
       ToolbarSpacer(.fixed, placement: .topBarLeading)
       ToolbarItem(placement: .topBarLeading) {
         selectionModeToggleButton
@@ -172,15 +187,16 @@ struct ShiftsView: View {
 
         // Month picker is now in shared overlay in MainTabView
 
-        // Sync status indicator (shows when syncing, failed, or offline)
-        VStack {
-          SyncStatusIndicator {
-            Task {
-              await viewModel.refresh()
+        if !shouldShowWorkSetupRequiredPlaceholder {
+          VStack {
+            SyncStatusIndicator {
+              Task {
+                await viewModel.refresh()
+              }
             }
+            .padding(.top, Spacing.xs)
+            Spacer()
           }
-          .padding(.top, Spacing.xs)
-          Spacer()
         }
       }
       .navigationBarTitleDisplayMode(.inline)
@@ -204,9 +220,11 @@ struct ShiftsView: View {
     AnyView(
       baseBody
         .task {
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           await viewModel.loadShifts()
         }
         .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           // Reload shifts when they change (e.g., after adding a shift)
           Task {
             await viewModel.reloadFromLocal()
@@ -222,6 +240,7 @@ struct ShiftsView: View {
           }
         }
         .onAppear {
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           recomputeListDerivedDataIfNeeded(force: true)
         }
         .onChange(of: selectedListJobId) { _, _ in

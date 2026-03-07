@@ -49,7 +49,8 @@ enum WageTimelineProcessor {
   /// - Returns: Timeline entries ready for display
   static func processSnapshots(
     _ snapshots: [WageSnapshot],
-    locale: Locale
+    locale: Locale,
+    currency: String
   ) -> [WageTimelineEntry] {
     guard !snapshots.isEmpty else { return [] }
 
@@ -95,7 +96,12 @@ enum WageTimelineProcessor {
       )
 
       // Detect changes from the next snapshot (chronologically earlier)
-      let changes = detectChanges(current: snapshot, previous: nextSnapshot, locale: locale)
+      let changes = detectChanges(
+        current: snapshot,
+        previous: nextSnapshot,
+        locale: locale,
+        currency: currency
+      )
 
       entries.append(
         WageTimelineEntry(
@@ -194,7 +200,8 @@ enum WageTimelineProcessor {
   private static func detectChanges(
     current: WageSnapshot,
     previous: WageSnapshot?,
-    locale: Locale
+    locale: Locale,
+    currency: String
   ) -> [WageChange] {
     guard let previous = previous else { return [] }
 
@@ -215,7 +222,8 @@ enum WageTimelineProcessor {
 
       changes.append(
         WageChange(
-          description: "\(oldWage) \u{2192} \(newWage) kr/t",
+          description:
+            "\(formatHourlyAmount(oldWage, currency: currency)) \u{2192} \(formatHourlyAmount(newWage, currency: currency))",
           type: .wage
         ))
     }
@@ -301,6 +309,18 @@ enum WageTimelineProcessor {
     }
 
     return changes
+  }
+
+  private static func formatHourlyAmount(_ amount: String, currency: String) -> String {
+    let currencyConfig = CurrencyConfig.get(currency)
+    let perHour = String(localized: .commonPerHourShort)
+
+    switch currencyConfig.display {
+    case .prefix:
+      return "\(currency)\(amount)\(perHour)"
+    case .suffix:
+      return "\(amount) \(currency)\(perHour)"
+    }
   }
 }
 

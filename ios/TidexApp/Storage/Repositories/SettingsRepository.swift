@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -129,6 +130,7 @@ final class SettingsRepository: ObservableObject {
   ///   - halfTaxMonth: New half tax month (optional)
   ///   - currency: New currency (optional)
   ///   - defaultStartupTab: New default startup tab (optional)
+  ///   - triggerSync: Whether to trigger sync immediately after the local write
   /// - Returns: Updated UserSettings if successful
   func updateSettings(
     for userId: String,
@@ -142,7 +144,8 @@ final class SettingsRepository: ObservableObject {
     showDashboardClockButtons: Bool? = nil,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
-    defaultStartupTab: String? = nil
+    defaultStartupTab: String? = nil,
+    triggerSync: Bool = true
   ) async throws -> UserSettings? {
     do {
       let updatedSettings = try await localStore.storeActor.updateUserSettings(
@@ -162,8 +165,9 @@ final class SettingsRepository: ObservableObject {
 
       logger.info("Updated local settings for user: \(userId)")
 
-      // Trigger sync to upload immediately
-      triggerSync(userId: userId)
+      if triggerSync {
+        self.triggerSync(userId: userId)
+      }
 
       return updatedSettings
     } catch LocalStoreWriteError.notFound {

@@ -26,12 +26,24 @@ struct MonthlyEarningsCard: View {
     percentageChange != nil && percentageChange != 0
   }
 
-  private var isPositive: Bool {
-    (percentageChange ?? 0) >= 0
+  private var changeText: String {
+    let change = percentageChange ?? 0
+    let prefix: String
+
+    if change > 0 {
+      prefix = "+"
+    } else if change < 0 {
+      prefix = "-"
+    } else {
+      prefix = ""
+    }
+
+    return
+      "\(prefix)\(Int(abs(change)))% \(String(localized: .statsFromPreviousMonth))"
   }
 
-  private var displayPercentage: Int {
-    Int(abs(percentageChange ?? 0))
+  private var isPositive: Bool {
+    (percentageChange ?? 0) >= 0
   }
 
   // MARK: - Body
@@ -67,26 +79,21 @@ struct MonthlyEarningsCard: View {
           .foregroundColor(.tidexTextMuted)
       }
 
-      // Percentage change indicator
-      if hasChange || percentageChange == nil {
-        HStack(spacing: Spacing.xxs) {
-          if hasChange {
-            Image(
-              systemName: isPositive ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis"
-            )
-            .font(.tidexCaptionStrong)
-          }
-
-          if hasChange {
-            Text(
-              "\(isPositive ? "+" : "-")\(displayPercentage)% \(String(localized: .statsFromPreviousMonth))"
-            )
-            .font(.tidexSubheadline)
-          }
+      // Always reserve space for the month-over-month footer to avoid card height jumps.
+      HStack(spacing: Spacing.xxs) {
+        if hasChange {
+          Image(
+            systemName: isPositive ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis"
+          )
+          .font(.tidexCaptionStrong)
         }
-        .foregroundColor(hasChange ? (isPositive ? .tidexSuccess : .tidexError) : .tidexTextMuted)
-        .padding(.top, Spacing.xxs)
+
+        Text(changeText)
+          .font(.tidexSubheadline)
+          .opacity(percentageChange == nil ? 0 : 1)
       }
+      .foregroundColor(hasChange ? (isPositive ? .tidexSuccess : .tidexError) : .tidexTextMuted)
+      .padding(.top, Spacing.xxs)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.lg)

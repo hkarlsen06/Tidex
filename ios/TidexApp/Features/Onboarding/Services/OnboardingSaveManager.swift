@@ -1,13 +1,21 @@
+import Combine
 import Foundation
 import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "OnboardingSaveManager")
 
+enum OnboardingCompletionMode: Equatable {
+  case fullSetup
+  case friendOnlySkip
+}
+
 /// Handles async save with status tracking for onboarding data
 /// Creates baseline wage snapshot and updates settings
 @MainActor
 final class OnboardingSaveManager: ObservableObject {
+  private static let startupTabCacheKey = "defaultStartupTab"
+
   // MARK: - Published State
 
   @Published private(set) var status: SaveStatus = .idle
@@ -27,6 +35,7 @@ final class OnboardingSaveManager: ObservableObject {
   private let snapshotsRepository: SnapshotsRepository
   private let settingsRepository: SettingsRepository
   private let syncCoordinator: SyncCoordinator
+  private var lastCompletionMode: OnboardingCompletionMode = .fullSetup
 
   // MARK: - Init
 
@@ -42,27 +51,44 @@ final class OnboardingSaveManager: ObservableObject {
   /// - Parameters:
   ///   - userId: The user's ID
   ///   - data: The collected onboarding data
-  func saveOnboardingData(userId: String, data: OnboardingData) async {
+  ///   - completionMode: Whether onboarding should finish with full setup or friend-only skip
+  func saveOnboardingData(
+    userId: String,
+    data: OnboardingData,
+    completionMode: OnboardingCompletionMode = .fullSetup
+  ) async {
     status = .saving
     errorMessage = nil
+    lastCompletionMode = completionMode
 
-    logger.info("Starting onboarding save for user: \(userId)")
+    logger.info(
+      "Starting onboarding save for user: \(userId), mode: \(String(describing: completionMode))")
 
     do {
-      // Step 1: Create baseline wage snapshot
-      let snapshot = try await createBaselineSnapshot(userId: userId, data: data)
-      logger.info("Created baseline snapshot: \(snapshot.id)")
+      switch completionMode {
+      case .fullSetup:
+        let snapshot = try await createBaselineSnapshot(userId: userId, data: data)
+        logger.info("Created baseline snapshot: \(snapshot.id)")
 
-      // Step 2: Update settings (payroll day and currency)
-      try await updateSettings(userId: userId, payrollDay: data.payrollDay, currency: data.currency)
-      logger.info(
-        "Updated settings with payroll day: \(data.payrollDay), currency: \(data.currency)")
+        try await updateSettings(
+          userId: userId,
+          payrollDay: data.payrollDay,
+          currency: data.currency
+        )
+        logger.info(
+          "Updated settings with payroll day: \(data.payrollDay), currency: \(data.currency)")
+      case .friendOnlySkip:
+        try await prepareFriendOnlySkip(userId: userId, data: data)
+        logger.info("Prepared friend-only skip state")
+      }
 
-      // Step 3: Mark onboarding as finished in Supabase user metadata
       try await markOnboardingFinished()
       logger.info("Marked onboarding as finished in user metadata")
 
-      // Step 4: Trigger sync to push changes to server
+      if completionMode == .friendOnlySkip {
+        clearOnboardingDraftState()
+      }
+
       let syncResult = await syncCoordinator.sync(reason: .localChange, userId: userId)
       if syncResult.success {
         logger.info("Sync completed successfully")
@@ -83,7 +109,7 @@ final class OnboardingSaveManager: ObservableObject {
 
   /// Retry saving after an error
   func retry(userId: String, data: OnboardingData) async {
-    await saveOnboardingData(userId: userId, data: data)
+    await saveOnboardingData(userId: userId, data: data, completionMode: lastCompletionMode)
   }
 
   // MARK: - Private Helpers
@@ -118,11 +144,28 @@ final class OnboardingSaveManager: ObservableObject {
     )
   }
 
+  private func prepareFriendOnlySkip(userId: String, data: OnboardingData) async throws {
+    _ = try await settingsRepository.getOrCreateSettings(for: userId, currency: data.currency)
+
+    _ = try await settingsRepository.updateSettings(
+      for: userId,
+      defaultStartupTab: "sharing",
+      triggerSync: false
+    )
+
+    UserDefaults.standard.set("sharing", forKey: Self.startupTabCacheKey)
+  }
+
   private func markOnboardingFinished() async throws {
     _ = try await supabase.auth.update(
       user: UserAttributes(
         data: ["finishedOnboarding": .bool(true)]
       )
     )
+  }
+
+  private func clearOnboardingDraftState() {
+    OnboardingData.clearSavedData()
+    OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
   }
 }

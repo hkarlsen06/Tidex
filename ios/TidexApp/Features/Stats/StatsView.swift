@@ -19,6 +19,7 @@ struct StatsView: View {
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
+  private let workSetupStatusService = WorkSetupStatusService.shared
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
   private func refreshStatsContent() async {
@@ -31,6 +32,18 @@ struct StatsView: View {
       ?? StatsData.empty(year: viewModel.displayYear, month: viewModel.displayMonth)
   }
 
+  private var workSetupPresentationState: WorkSetupPresentationState? {
+    guard let userId = coordinator.getCurrentUserId() else { return nil }
+    return workSetupStatusService.presentationState(
+      for: userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
+  private var shouldShowWorkSetupRequiredPlaceholder: Bool {
+    workSetupPresentationState?.shouldShowPlaceholder == true
+  }
+
   var body: some View {
     NavigationStack {
       ZStack {
@@ -40,7 +53,9 @@ struct StatsView: View {
 
         // Main content - month picker is now in shared overlay
         Group {
-          if let error = viewModel.error, viewModel.stats == nil {
+          if shouldShowWorkSetupRequiredPlaceholder {
+            WorkSetupRequiredPlaceholder()
+          } else if let error = viewModel.error, viewModel.stats == nil {
             errorView(error: error)
           } else {
             statsContent(stats: displayedStats)
@@ -50,15 +65,16 @@ struct StatsView: View {
         // Pass user's currency to all child views
         .userCurrency(viewModel.currency)
 
-        // Sync status indicator (shows when syncing, failed, or offline)
-        VStack {
-          SyncStatusIndicator {
-            Task {
-              await refreshStatsContent()
+        if !shouldShowWorkSetupRequiredPlaceholder {
+          VStack {
+            SyncStatusIndicator {
+              Task {
+                await refreshStatsContent()
+              }
             }
+            .padding(.top, Spacing.xs)
+            Spacer()
           }
-          .padding(.top, Spacing.xs)
-          Spacer()
         }
       }
       .navigationBarTitleDisplayMode(.inline)
@@ -89,6 +105,7 @@ struct StatsView: View {
       }
     }
     .task {
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       await viewModel.loadStats()
     }
     .onAppear {

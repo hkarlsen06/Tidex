@@ -48,6 +48,7 @@ struct DashboardView: View {
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+  private let workSetupStatusService = WorkSetupStatusService.shared
 
   /// Use fixed minimum card heights for regular Dynamic Type sizes so loading
   /// placeholders and real content occupy the same vertical space.
@@ -62,6 +63,18 @@ struct DashboardView: View {
   private let temporarySessionTicker = Timer.publish(every: 1, on: .main, in: .common)
     .autoconnect()
 
+  private var workSetupPresentationState: WorkSetupPresentationState? {
+    guard let userId = coordinator.getCurrentUserId() else { return nil }
+    return workSetupStatusService.presentationState(
+      for: userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
+  private var shouldShowWorkSetupRequiredPlaceholder: Bool {
+    workSetupPresentationState?.shouldShowPlaceholder == true
+  }
+
   var body: some View {
     NavigationStack {
       ZStack {
@@ -72,7 +85,9 @@ struct DashboardView: View {
 
         // Main content - month picker is now in shared overlay
         Group {
-          if let error = viewModel.error {
+          if shouldShowWorkSetupRequiredPlaceholder {
+            WorkSetupRequiredPlaceholder()
+          } else if let error = viewModel.error {
             errorView(error: error)
           } else if let data = viewModel.dashboardData {
             cardContent(data: data)
@@ -84,21 +99,22 @@ struct DashboardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        // Sync status indicator (shows when syncing, failed, or offline)
-        VStack {
-          SyncStatusIndicator {
-            Task {
-              await viewModel.refresh()
+        if !shouldShowWorkSetupRequiredPlaceholder {
+          VStack {
+            SyncStatusIndicator {
+              Task {
+                await viewModel.refresh()
+              }
             }
+            .padding(.top, Spacing.xs)
+            Spacer()
           }
-          .padding(.top, Spacing.xs)
-          Spacer()
         }
-
       }
       .contentShape(Rectangle())
       .highPriorityGesture(
         TapGesture(count: 2).onEnded {
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           guard !viewModel.isCurrentMonth else { return }
           Haptics.play(.light)
           viewModel.goToCurrentMonth()
@@ -125,6 +141,7 @@ struct DashboardView: View {
       .iPadToolbarTransaction()
     }
     .task {
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       await viewModel.loadDashboard()
 
       // If sync already completed before view appeared, reload to pick up synced data
@@ -134,6 +151,7 @@ struct DashboardView: View {
       }
     }
     .onChange(of: coordinator.initialSyncComplete) { _, completed in
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       // When initial sync completes after login, reload dashboard to show synced data
       if completed {
         // Set loading state SYNCHRONOUSLY before starting async task
@@ -163,6 +181,7 @@ struct DashboardView: View {
       }
     }
     .onAppear {
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       // Reconfigure timers when returning to the dashboard after a disappear cycle.
       configureCountdown(with: viewModel.dashboardData)
       Task {
@@ -175,6 +194,7 @@ struct DashboardView: View {
       countdownManager.stop()
     }
     .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       // Reload dashboard when shifts change (e.g., after adding a shift)
       Task {
         await viewModel.reloadFromLocal()
@@ -182,17 +202,20 @@ struct DashboardView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .dashboardClockButtonsVisibilityDidChange))
     { notification in
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       if let isVisible = notification.userInfo?["isVisible"] as? Bool {
         viewModel.applyDashboardClockButtonsVisibility(isVisible)
       }
     }
     .onReceive(clockStateRefreshTicker) { _ in
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       guard selectedTab == .home else { return }
       Task {
         await viewModel.refreshClockState()
       }
     }
     .onReceive(temporarySessionTicker) { now in
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       guard selectedTab == .home else { return }
       guard case .temporary = viewModel.activeClockState else { return }
       temporarySessionReferenceDate = now

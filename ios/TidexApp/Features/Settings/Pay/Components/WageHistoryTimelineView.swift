@@ -6,6 +6,7 @@ import UIKit
 /// Visual timeline displaying wage snapshots with change detection
 struct WageHistoryTimelineView: View {
   let entries: [WageTimelineEntry]
+  let currency: String
   let onAddNew: () -> Void
   let onEdit: (WageSnapshot) -> Void
 
@@ -47,6 +48,7 @@ struct WageHistoryTimelineView: View {
           ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
             TimelineEntryRow(
               entry: entry,
+              currency: currency,
               isFirst: index == 0,
               isLast: index == entries.count - 1,
               hasFutureAbove: hasFutureAbove(at: index),
@@ -139,6 +141,7 @@ struct WageHistoryTimelineView: View {
 private struct TimelineEntryRow: View {
   @Environment(\.layoutDirection) private var layoutDirection
   let entry: WageTimelineEntry
+  let currency: String
   let isFirst: Bool
   let isLast: Bool
   let hasFutureAbove: Bool
@@ -273,7 +276,16 @@ private struct TimelineEntryRow: View {
     formatter.minimumFractionDigits = 2
     formatter.maximumFractionDigits = 2
     formatter.locale = Locale.appLocale
-    return formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
+    let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
+    let currencyConfig = CurrencyConfig.get(currency)
+    let perHour = String(localized: .commonPerHourShort)
+
+    switch currencyConfig.display {
+    case .prefix:
+      return "\(currency)\(formatted)\(perHour)"
+    case .suffix:
+      return "\(formatted) \(currency)\(perHour)"
+    }
   }
 
   /// Determine what to show as the title
@@ -293,7 +305,7 @@ private struct TimelineEntryRow: View {
 
   @ViewBuilder
   private var wageTitle: some View {
-    Text("\(formattedWage) kr/t")
+    Text(formattedWage)
       .font(
         .system(
           size: entry.type == .current ? 24 : 16, weight: entry.type == .current ? .bold : .semibold
@@ -448,6 +460,7 @@ private struct DashedLineRect: View {
           changes: []
         ),
       ],
+      currency: "kr",
       onAddNew: {},
       onEdit: { _ in }
     )
