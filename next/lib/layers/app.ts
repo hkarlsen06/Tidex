@@ -37,9 +37,7 @@ import { ShiftsServiceLive } from "../services/shifts";
 import { JobsServiceLive } from "../services/jobs";
 import { StatsServiceLive } from "../services/stats";
 import { SubscriptionServiceLive } from "../services/subscription";
-import { ClaudeServiceLive } from "../services/claude";
 import { OpenAIServiceLive } from "../services/openai";
-import { OpenAIRealtimeServiceLive } from "../services/openai-realtime";
 import { WageyServiceLive } from "../services/wagey";
 import { SharingServiceLive } from "../services/sharing";
 
@@ -130,17 +128,6 @@ export const SubscriptionLive = Layer.provideMerge(
 );
 
 /**
- * Layer for Claude AI operations
- * Use this when you need AI/LLM capabilities
- *
- * Dependencies: none (provides AppConfig and ClaudeService)
- */
-export const ClaudeLive = Layer.provideMerge(
-  ClaudeServiceLive,
-  AppConfigLive
-);
-
-/**
  * Layer for OpenAI AI operations
  * Use this when you need AI/LLM capabilities via OpenAI Responses API
  *
@@ -148,17 +135,6 @@ export const ClaudeLive = Layer.provideMerge(
  */
 export const OpenAILive = Layer.provideMerge(
   OpenAIServiceLive,
-  AppConfigLive
-);
-
-/**
- * Layer for OpenAI Realtime operations over WebSocket
- * Use this when you need low-level realtime event streaming.
- *
- * Dependencies: none (provides AppConfig and OpenAIRealtimeService)
- */
-export const OpenAIRealtimeLive = Layer.provideMerge(
-  OpenAIRealtimeServiceLive,
   AppConfigLive
 );
 
@@ -196,9 +172,7 @@ export const SharingLive = Layer.provideMerge(
  * - ShiftsService: Shift data with payroll computations
  * - StatsService: Statistics and analytics with projections
  * - SubscriptionService: Subscription and profile management
- * - ClaudeService: AI/LLM capabilities via Claude API
  * - OpenAIService: AI/LLM capabilities via OpenAI Responses API
- * - OpenAIRealtimeService: Realtime WebSocket integration
  * - WageyService: Wagey access control and usage tracking
  * - SharingService: Shift sharing functionality
  *
@@ -211,9 +185,7 @@ export const AppLive = Layer.mergeAll(
   ShiftsLive,
   StatsLive,
   SubscriptionLive,
-  ClaudeLive,
   OpenAILive,
-  OpenAIRealtimeLive,
   WageyLive,
   SharingLive
 );

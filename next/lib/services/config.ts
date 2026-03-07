@@ -16,8 +16,6 @@
 import { Context, Effect, Layer, Schema, Redacted, ParseResult } from "effect";
 import { ConfigError } from "../errors/tagged";
 
-export type WageyAIProvider = "claude" | "chatgpt";
-
 /**
  * Supabase Configuration Schema
  * Validates Supabase connection settings
@@ -112,38 +110,44 @@ export class AppConfig extends Context.Tag("AppConfig")<
       readonly turnstileSiteKey: Redacted.Redacted<string>;
     };
     readonly ai: {
-      readonly provider: WageyAIProvider;
-      readonly claudeApiKey: Redacted.Redacted<string>;
-      readonly claudeModel: string;
       readonly openaiApiKey: Redacted.Redacted<string>;
       readonly openaiModel: string;
-      readonly openaiRealtimeModel: string;
+      readonly openaiReasoningEffort:
+        | "none"
+        | "low"
+        | "medium"
+        | "high"
+        | "xhigh";
     };
   }
 >() {}
 
-const DEFAULT_WAGEY_PROVIDER: WageyAIProvider = "claude";
-const DEFAULT_OPENAI_MODEL = "gpt-5.3-codex";
-const DEFAULT_OPENAI_REALTIME_MODEL = "gpt-realtime";
-const FALLBACK_UNUSED_SECRET = "__unused__";
+const DEFAULT_OPENAI_MODEL = "gpt-5.4";
+const DEFAULT_OPENAI_REASONING_EFFORT = "medium";
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
-const normalizeProvider = (
-  provider: string | undefined
-): Effect.Effect<WageyAIProvider, ConfigError> => {
-  const normalized = (provider ?? DEFAULT_WAGEY_PROVIDER).trim().toLowerCase();
+const normalizeReasoningEffort = (
+  value: string | undefined
+): Effect.Effect<"none" | "low" | "medium" | "high" | "xhigh", ConfigError> => {
+  const normalized = (value ?? DEFAULT_OPENAI_REASONING_EFFORT).trim().toLowerCase();
 
-  if (normalized === "claude" || normalized === "chatgpt") {
+  if (
+    normalized === "none" ||
+    normalized === "low" ||
+    normalized === "medium" ||
+    normalized === "high" ||
+    normalized === "xhigh"
+  ) {
     return Effect.succeed(normalized);
   }
 
   return Effect.fail(
     new ConfigError({
-      configKey: "WAGEY_AI_PROVIDER",
+      configKey: "OPENAI_REASONING_EFFORT",
       reason: "invalid",
-      cause: `Expected 'claude' or 'chatgpt', got '${provider ?? ""}'`,
+      cause: `Expected 'none', 'low', 'medium', 'high', or 'xhigh', got '${value ?? ""}'`,
     })
   );
 };
@@ -180,78 +184,18 @@ const loadConfig = Effect.gen(function* () {
     })
   );
 
-  const provider = yield* normalizeProvider(process.env.WAGEY_AI_PROVIDER);
-
-  const claudeApiKey = process.env.CLAUDE_API_KEY?.trim();
-  const claudeModel = process.env.CLAUDE_MODEL?.trim();
   const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
   const openaiModel = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
-  const openaiRealtimeModel =
-    process.env.OPENAI_REALTIME_MODEL?.trim() || DEFAULT_OPENAI_REALTIME_MODEL;
+  const openaiReasoningEffort = yield* normalizeReasoningEffort(
+    process.env.OPENAI_REASONING_EFFORT
+  );
 
-  if (provider === "claude") {
-    if (!isNonEmptyString(claudeApiKey)) {
-      return yield* Effect.fail(
-        new ConfigError({
-          configKey: "CLAUDE_API_KEY",
-          reason: "missing",
-          cause: "Claude API key is required when WAGEY_AI_PROVIDER=claude",
-        })
-      );
-    }
-    if (!isNonEmptyString(claudeModel)) {
-      return yield* Effect.fail(
-        new ConfigError({
-          configKey: "CLAUDE_MODEL",
-          reason: "missing",
-          cause: "Claude model is required when WAGEY_AI_PROVIDER=claude",
-        })
-      );
-    }
-  }
-
-  if (provider === "chatgpt" && !isNonEmptyString(openaiApiKey)) {
+  if (!isNonEmptyString(openaiApiKey)) {
     return yield* Effect.fail(
       new ConfigError({
         configKey: "OPENAI_API_KEY",
         reason: "missing",
-        cause: "OpenAI API key is required when WAGEY_AI_PROVIDER=chatgpt",
-      })
-    );
-  }
-
-  const resolvedClaudeApiKey =
-    claudeApiKey ??
-    (provider === "chatgpt" ? FALLBACK_UNUSED_SECRET : claudeApiKey);
-  const resolvedClaudeModel =
-    claudeModel ?? (provider === "chatgpt" ? "claude-opus-4-6" : claudeModel);
-  const resolvedOpenAIApiKey =
-    openaiApiKey ??
-    (provider === "claude" ? FALLBACK_UNUSED_SECRET : openaiApiKey);
-
-  if (!isNonEmptyString(resolvedClaudeApiKey)) {
-    return yield* Effect.fail(
-      new ConfigError({
-        configKey: "CLAUDE_API_KEY",
-        reason: "missing",
-      })
-    );
-  }
-
-  if (!isNonEmptyString(resolvedClaudeModel)) {
-    return yield* Effect.fail(
-      new ConfigError({
-        configKey: "CLAUDE_MODEL",
-        reason: "missing",
-      })
-    );
-  }
-
-  if (!isNonEmptyString(resolvedOpenAIApiKey)) {
-    return yield* Effect.fail(
-      new ConfigError({
-        configKey: "OPENAI_API_KEY",
-        reason: "missing",
+        cause: "OpenAI API key is required for Wagey",
       })
     );
   }
@@ -271,12 +215,9 @@ const loadConfig = Effect.gen(function* () {
       turnstileSiteKey: Redacted.make(validated.security.turnstileSiteKey),
     },
     ai: {
-      provider,
-      claudeApiKey: Redacted.make(resolvedClaudeApiKey),
-      claudeModel: resolvedClaudeModel,
-      openaiApiKey: Redacted.make(resolvedOpenAIApiKey),
+      openaiApiKey: Redacted.make(openaiApiKey),
       openaiModel,
-      openaiRealtimeModel,
+      openaiReasoningEffort,
     },
   };
 });
@@ -301,12 +242,9 @@ export const ENV = {
   PRO_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_PRO_YEARLY_ID,
   MAX_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_MAX_YEARLY_ID,
   TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-  WAGEY_AI_PROVIDER: process.env.WAGEY_AI_PROVIDER,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL,
-  OPENAI_REALTIME_MODEL: process.env.OPENAI_REALTIME_MODEL,
-  CLAUDE_API_KEY: process.env.CLAUDE_API_KEY,
-  CLAUDE_MODEL: process.env.CLAUDE_MODEL,
+  OPENAI_REASONING_EFFORT: process.env.OPENAI_REASONING_EFFORT,
 } as const;
 
 /**

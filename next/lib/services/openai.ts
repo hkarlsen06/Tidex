@@ -1,13 +1,10 @@
 /**
- * OpenAI Responses API Service
- *
- * Effect-based service for OpenAI with streaming and tool calling.
- * Uses the same message/tool contract as ClaudeService so the chat router
- * can swap providers at runtime.
+ * OpenAI Responses API service over official WebSocket mode.
  */
 
 import "server-only";
 
+import WebSocket from "ws";
 import { Context, Effect, Layer, Redacted } from "effect";
 import { AIError } from "@/lib/errors/tagged";
 import { AppConfig } from "./config";
@@ -15,13 +12,38 @@ import type {
   ContentBlock,
   Message,
   StreamChunk,
-  StreamOptions,
   Tool,
-} from "./claude";
+} from "./ai-types";
 
-const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
+const OPENAI_RESPONSES_WS_URL = "wss://api.openai.com/v1/realtime";
+const DEFAULT_TIMEOUT_MS = 60_000;
 
-type OpenAIInputItem = Record<string, unknown>;
+export type OpenAIInputItem = Record<string, unknown>;
+
+export type OpenAIResponseOptions = {
+  instructions?: string;
+  input: OpenAIInputItem[];
+  tools?: Tool[];
+  maxTokens?: number;
+  previousResponseId?: string;
+};
+
+export type OpenAIResponseCompletion = {
+  responseId?: string;
+  stopReason: string;
+};
+
+export type OpenAIResponseStream = {
+  events: AsyncIterable<StreamChunk>;
+  completed: Promise<OpenAIResponseCompletion>;
+};
+
+export type OpenAIResponseSession = {
+  createResponse: (options: OpenAIResponseOptions) => Promise<OpenAIResponseStream>;
+  close: () => Promise<void>;
+};
+
+type JsonObject = Record<string, unknown>;
 
 type FunctionCallAccumulator = {
   itemId: string;
@@ -30,22 +52,179 @@ type FunctionCallAccumulator = {
   arguments: string;
 };
 
-type JsonObject = Record<string, unknown>;
+type OpenAIEvent = Record<string, unknown>;
 
-function extractOpenAIErrorMessage(errorText: string): string | null {
-  if (!errorText) return null;
-  try {
-    const parsed = JSON.parse(errorText) as {
-      error?: { message?: unknown };
-    };
-    const message = parsed.error?.message;
-    if (typeof message === "string" && message.trim().length > 0) {
-      return message.trim();
+class AsyncQueue<T> implements AsyncIterable<T> {
+  private items: T[] = [];
+  private pending:
+    | { resolve: (value: IteratorResult<T>) => void; reject: (error: unknown) => void }
+    | null = null;
+  private closed = false;
+  private failure: unknown;
+
+  push(item: T): void {
+    if (this.closed || this.failure) return;
+    if (this.pending) {
+      const pending = this.pending;
+      this.pending = null;
+      pending.resolve({ done: false, value: item });
+      return;
     }
-  } catch {
-    // Ignore JSON parse failures and fall back to status-only message.
+    this.items.push(item);
   }
-  return null;
+
+  close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    if (this.pending) {
+      const pending = this.pending;
+      this.pending = null;
+      pending.resolve({ done: true, value: undefined });
+    }
+  }
+
+  fail(error: unknown): void {
+    if (this.closed || this.failure) return;
+    this.failure = error;
+    if (this.pending) {
+      const pending = this.pending;
+      this.pending = null;
+      pending.reject(error);
+    }
+  }
+
+  [Symbol.asyncIterator](): AsyncIterator<T> {
+    return {
+      next: async (): Promise<IteratorResult<T>> => {
+        if (this.items.length > 0) {
+          const value = this.items.shift() as T;
+          return { done: false, value };
+        }
+        if (this.failure) {
+          throw this.failure;
+        }
+        if (this.closed) {
+          return { done: true, value: undefined };
+        }
+
+        return await new Promise<IteratorResult<T>>((resolve, reject) => {
+          this.pending = { resolve, reject };
+        });
+      },
+    };
+  }
+}
+
+class ResponseState {
+  readonly events = new AsyncQueue<StreamChunk>();
+  readonly functionCalls = new Map<string, FunctionCallAccumulator>();
+  readonly completed: Promise<OpenAIResponseCompletion>;
+
+  responseId?: string;
+
+  private completedResolve!: (value: OpenAIResponseCompletion) => void;
+  private completedReject!: (reason?: unknown) => void;
+  private finished = false;
+
+  constructor() {
+    this.completed = new Promise<OpenAIResponseCompletion>((resolve, reject) => {
+      this.completedResolve = resolve;
+      this.completedReject = reject;
+    });
+  }
+
+  setResponseId(responseId: string | undefined): void {
+    if (responseId) {
+      this.responseId = responseId;
+    }
+  }
+
+  push(chunk: StreamChunk): void {
+    this.events.push(chunk);
+  }
+
+  complete(stopReason: string): void {
+    if (this.finished) return;
+    this.finished = true;
+    this.events.push({
+      type: "done",
+      stopReason,
+      responseId: this.responseId,
+    });
+    this.events.close();
+    this.completedResolve({
+      responseId: this.responseId,
+      stopReason,
+    });
+  }
+
+  fail(error: unknown): void {
+    if (this.finished) return;
+    this.finished = true;
+    this.events.fail(error);
+    this.completedReject(error);
+  }
+}
+
+function toAIError(message: string, cause?: unknown): AIError {
+  return new AIError({
+    provider: "openai",
+    operation: "responses_websocket",
+    message,
+    cause,
+  });
+}
+
+function parseEvent(rawData: WebSocket.RawData): OpenAIEvent | null {
+  const payload = typeof rawData === "string" ? rawData : rawData.toString();
+  try {
+    return JSON.parse(payload) as OpenAIEvent;
+  } catch {
+    return null;
+  }
+}
+
+function getStringField(
+  obj: Record<string, unknown>,
+  key: string
+): string | undefined {
+  const value = obj[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getNestedRecord(
+  obj: Record<string, unknown>,
+  key: string
+): Record<string, unknown> | undefined {
+  const value = obj[key];
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function extractResponseId(event: OpenAIEvent): string | undefined {
+  const direct = getStringField(event, "response_id");
+  if (direct) return direct;
+  const response = getNestedRecord(event, "response");
+  return response ? getStringField(response, "id") : undefined;
+}
+
+function extractStopReason(event: OpenAIEvent): string {
+  return (
+    getStringField(event, "status") ??
+    getStringField(event, "reason") ??
+    getStringField(event, "stop_reason") ??
+    "completed"
+  );
+}
+
+function extractErrorMessage(event: OpenAIEvent): string {
+  const error = getNestedRecord(event, "error");
+  return (
+    (error ? getStringField(error, "message") : undefined) ??
+    getStringField(event, "message") ??
+    "OpenAI websocket request failed"
+  );
 }
 
 function safeJsonParse(input: string): Record<string, unknown> {
@@ -141,9 +320,6 @@ function flushAssistantContentBuffer(
   });
 }
 
-/**
- * Convert Claude-style history into OpenAI Responses input items.
- */
 export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
   const input: OpenAIInputItem[] = [];
 
@@ -166,17 +342,15 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
       const userContentBuffer: OpenAIInputItem[] = [];
       for (const block of message.content) {
         switch (block.type) {
-          case "text": {
+          case "text":
             if (block.text.trim()) {
               userContentBuffer.push(toUserTextBlock(block.text));
             }
             break;
-          }
-          case "image": {
+          case "image":
             userContentBuffer.push(toUserImageBlock(block));
             break;
-          }
-          case "tool_result": {
+          case "tool_result":
             flushUserContentBuffer(input, userContentBuffer);
             input.push({
               type: "function_call_output",
@@ -184,7 +358,9 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
               output: block.content,
             });
             break;
-          }
+          case "compaction":
+            userContentBuffer.push(toUserTextBlock(block.content));
+            break;
           default:
             break;
         }
@@ -196,13 +372,12 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
     const assistantContentBuffer: OpenAIInputItem[] = [];
     for (const block of message.content) {
       switch (block.type) {
-        case "text": {
+        case "text":
           if (block.text.trim()) {
             assistantContentBuffer.push(toAssistantTextBlock(block.text));
           }
           break;
-        }
-        case "tool_use": {
+        case "tool_use":
           flushAssistantContentBuffer(input, assistantContentBuffer);
           input.push({
             type: "function_call",
@@ -211,7 +386,11 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
             arguments: JSON.stringify(block.input ?? {}),
           });
           break;
-        }
+        case "compaction":
+          if (block.content.trim()) {
+            assistantContentBuffer.push(toAssistantTextBlock(block.content));
+          }
+          break;
         default:
           break;
       }
@@ -222,13 +401,10 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
   return input;
 }
 
-/**
- * Convert Claude-style tool definition to OpenAI Responses tool format.
- */
 export function toOpenAITools(tools: Tool[] | undefined): OpenAIInputItem[] | undefined {
   if (!tools?.length) return undefined;
 
-  return tools.map(({ input_examples: _inputExamples, ...tool }) => ({
+  return tools.map(({ input_examples: _inputExamples, eager_input_streaming: _streaming, ...tool }) => ({
     type: "function",
     name: tool.name,
     description: tool.description,
@@ -236,32 +412,9 @@ export function toOpenAITools(tools: Tool[] | undefined): OpenAIInputItem[] | un
   }));
 }
 
-/**
- * Parse a JSON payload from an SSE data line.
- */
-function parseDataLine(line: string): Record<string, unknown> | null {
-  if (!line.startsWith("data:")) return null;
-  const rawData = line.slice(5).trim();
-  if (!rawData || rawData === "[DONE]") return null;
-
-  try {
-    return JSON.parse(rawData) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function getStringField(
-  obj: Record<string, unknown>,
-  key: string
-): string | undefined {
-  const value = obj[key];
-  return typeof value === "string" ? value : undefined;
-}
-
 function pushFunctionCallDelta(
   accumulators: Map<string, FunctionCallAccumulator>,
-  event: Record<string, unknown>
+  event: OpenAIEvent
 ): void {
   const itemId = getStringField(event, "item_id");
   if (!itemId) return;
@@ -287,7 +440,7 @@ function pushFunctionCallDelta(
 
 function parseToolUseChunk(
   accumulators: Map<string, FunctionCallAccumulator>,
-  event: Record<string, unknown>
+  event: OpenAIEvent
 ): StreamChunk | null {
   const item = event.item;
   if (!item || typeof item !== "object") return null;
@@ -299,7 +452,6 @@ function parseToolUseChunk(
   if (!itemId) return null;
 
   const accumulator = accumulators.get(itemId);
-
   const callId =
     getStringField(parsedItem, "call_id") ??
     accumulator?.callId ??
@@ -332,227 +484,345 @@ function parseToolUseChunk(
   }
 }
 
-/**
- * OpenAI Service
- */
+class WebSocketResponsesSession implements OpenAIResponseSession {
+  private ws: WebSocket;
+  private readonly openPromise: Promise<void>;
+  private readonly signal?: AbortSignal;
+  private readonly timeoutMs: number;
+  private readonly defaultModel: string;
+  private readonly reasoningEffort: "none" | "low" | "medium" | "high" | "xhigh";
+  private readonly apiKey: string;
+  private activeResponse: ResponseState | null = null;
+  private timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  private closed = false;
+  private aborted = false;
+
+  constructor(options: {
+    apiKey: string;
+    defaultModel: string;
+    reasoningEffort: "none" | "low" | "medium" | "high" | "xhigh";
+    signal?: AbortSignal;
+    timeoutMs?: number;
+  }) {
+    this.signal = options.signal;
+    this.timeoutMs = Math.max(1_000, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    this.defaultModel = options.defaultModel;
+    this.reasoningEffort = options.reasoningEffort;
+    this.apiKey = options.apiKey;
+
+    this.ws = new WebSocket(
+      `${OPENAI_RESPONSES_WS_URL}?model=${encodeURIComponent(this.defaultModel)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      }
+    );
+
+    this.openPromise = new Promise<void>((resolve, reject) => {
+      this.ws.once("open", () => resolve());
+      this.ws.once("error", (error) => {
+        reject(toAIError("Failed to open OpenAI websocket session", error));
+      });
+    });
+
+    this.ws.on("message", (data) => this.handleMessage(data));
+    this.ws.on("error", (error) => {
+      this.failActiveResponse(toAIError("OpenAI websocket error", error));
+    });
+    this.ws.on("close", (code, reason) => {
+      const reasonText = reason.toString();
+      if (this.closed) return;
+
+      if (this.aborted) {
+        this.failActiveResponse(toAIError("OpenAI websocket session aborted"));
+        return;
+      }
+
+      if (this.activeResponse) {
+        this.failActiveResponse(
+          toAIError(
+            `OpenAI websocket closed before the response completed with code ${code}${reasonText ? ` (${reasonText})` : ""}`
+          )
+        );
+      }
+    });
+
+    if (this.signal) {
+      if (this.signal.aborted) {
+        this.aborted = true;
+        this.ws.close(1000, "client_aborted");
+      } else {
+        this.signal.addEventListener("abort", () => {
+          this.aborted = true;
+          this.ws.close(1000, "client_aborted");
+        });
+      }
+    }
+  }
+
+  async createResponse(options: OpenAIResponseOptions): Promise<OpenAIResponseStream> {
+    await this.openPromise;
+
+    if (this.closed) {
+      throw toAIError("OpenAI websocket session is already closed");
+    }
+    if (this.activeResponse) {
+      throw toAIError("OpenAI websocket session already has an active response");
+    }
+
+    const state = new ResponseState();
+    this.activeResponse = state;
+    this.armTimeout();
+
+    const payload: Record<string, unknown> = {
+      type: "response.create",
+      response: {
+        model: this.defaultModel,
+        instructions: options.instructions,
+        input: options.input,
+        parallel_tool_calls: true,
+        tool_choice: "auto",
+        max_output_tokens: options.maxTokens ?? 2048,
+        reasoning: {
+          effort: this.reasoningEffort,
+        },
+        previous_response_id: options.previousResponseId,
+      },
+    };
+
+    const mappedTools = toOpenAITools(options.tools);
+    if (mappedTools?.length) {
+      (payload.response as Record<string, unknown>).tools = mappedTools;
+    }
+
+    if (!options.instructions) {
+      delete (payload.response as Record<string, unknown>).instructions;
+    }
+    if (!options.previousResponseId) {
+      delete (payload.response as Record<string, unknown>).previous_response_id;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      this.ws.send(JSON.stringify(payload), (error) => {
+        if (error) {
+          reject(toAIError("Failed to send response.create", error));
+          return;
+        }
+        resolve();
+      });
+    });
+
+    const completed = state.completed.finally(() => {
+      if (this.activeResponse === state) {
+        this.activeResponse = null;
+      }
+      this.clearTimeout();
+    });
+
+    return {
+      events: state.events,
+      completed,
+    };
+  }
+
+  async close(): Promise<void> {
+    this.closed = true;
+    this.clearTimeout();
+    if (
+      this.ws.readyState === WebSocket.OPEN ||
+      this.ws.readyState === WebSocket.CONNECTING
+    ) {
+      await new Promise<void>((resolve) => {
+        this.ws.once("close", () => resolve());
+        this.ws.close(1000, "session_complete");
+      });
+    }
+  }
+
+  private armTimeout(): void {
+    this.clearTimeout();
+    this.timeoutHandle = setTimeout(() => {
+      this.failActiveResponse(
+        toAIError(`OpenAI response timed out after ${this.timeoutMs}ms`)
+      );
+      this.ws.close(1000, "response_timeout");
+    }, this.timeoutMs);
+  }
+
+  private clearTimeout(): void {
+    if (this.timeoutHandle) {
+      clearTimeout(this.timeoutHandle);
+      this.timeoutHandle = null;
+    }
+  }
+
+  private handleMessage(data: WebSocket.RawData): void {
+    const event = parseEvent(data);
+    if (!event || !this.activeResponse) return;
+
+    const state = this.activeResponse;
+    state.setResponseId(extractResponseId(event));
+
+    const eventType = getStringField(event, "type") ?? "";
+    const isTerminalEvent =
+      eventType === "response.completed" ||
+      eventType === "response.done" ||
+      eventType === "error" ||
+      eventType === "response.failed";
+
+    if (!isTerminalEvent) {
+      this.armTimeout();
+    }
+
+    if (eventType === "response.output_text.delta") {
+      const delta = getStringField(event, "delta");
+      if (delta) {
+        state.push({ type: "text", content: delta });
+      }
+      return;
+    }
+
+    if (eventType === "response.function_call_arguments.delta") {
+      pushFunctionCallDelta(state.functionCalls, event);
+      return;
+    }
+
+    if (eventType === "response.output_item.added") {
+      const item = event.item;
+      if (item && typeof item === "object") {
+        const parsedItem = item as Record<string, unknown>;
+        if (parsedItem.type === "function_call") {
+          const itemId = getStringField(parsedItem, "id");
+          if (itemId) {
+            state.functionCalls.set(itemId, {
+              itemId,
+              callId: getStringField(parsedItem, "call_id"),
+              name: getStringField(parsedItem, "name"),
+              arguments: getStringField(parsedItem, "arguments") ?? "",
+            });
+          }
+        }
+      }
+      return;
+    }
+
+    if (eventType === "response.output_item.done") {
+      const chunk = parseToolUseChunk(state.functionCalls, event);
+      if (chunk) {
+        state.push(chunk);
+      }
+      return;
+    }
+
+    if (eventType === "response.completed" || eventType === "response.done") {
+      state.complete(extractStopReason(event));
+      return;
+    }
+
+    if (eventType === "error" || eventType === "response.failed") {
+      state.fail(toAIError(extractErrorMessage(event), event));
+    }
+  }
+
+  private failActiveResponse(error: AIError): void {
+    this.clearTimeout();
+    if (this.activeResponse) {
+      this.activeResponse.fail(error);
+      this.activeResponse = null;
+    }
+  }
+}
+
 export class OpenAIService extends Context.Tag("OpenAIService")<
   OpenAIService,
   {
+    readonly openSession: (options?: {
+      signal?: AbortSignal;
+      timeoutMs?: number;
+    }) => Effect.Effect<OpenAIResponseSession, AIError, never>;
     readonly streamChat: (
-      options: StreamOptions
+      options: {
+        messages: Message[];
+        system?: string;
+        tools?: Tool[];
+        maxTokens?: number;
+        signal?: AbortSignal;
+      }
     ) => Effect.Effect<AsyncIterable<StreamChunk>, AIError, never>;
   }
 >() {}
 
-/**
- * Create OpenAI Service (Live)
- */
 export const OpenAIServiceLive = Layer.effect(
   OpenAIService,
   Effect.gen(function* () {
     const config = yield* AppConfig;
     const apiKey = Redacted.value(config.ai.openaiApiKey);
     const defaultModel = config.ai.openaiModel;
+    const reasoningEffort = config.ai.openaiReasoningEffort;
 
-    const streamChat = (
-      options: StreamOptions
-    ): Effect.Effect<AsyncIterable<StreamChunk>, AIError, never> =>
+    const openSession = (options?: {
+      signal?: AbortSignal;
+      timeoutMs?: number;
+    }): Effect.Effect<OpenAIResponseSession, AIError, never> =>
+      Effect.try({
+        try: () =>
+          new WebSocketResponsesSession({
+            apiKey,
+            defaultModel,
+            reasoningEffort,
+            signal: options?.signal,
+            timeoutMs: options?.timeoutMs,
+          }),
+        catch: (error) =>
+          toAIError("Failed to create OpenAI websocket session", error),
+      });
+
+    const streamChat = (options: {
+      messages: Message[];
+      system?: string;
+      tools?: Tool[];
+      maxTokens?: number;
+      signal?: AbortSignal;
+    }): Effect.Effect<AsyncIterable<StreamChunk>, AIError, never> =>
       Effect.gen(function* () {
-        const { messages, system, tools, maxTokens = 4096 } = options;
+        const session = yield* openSession({ signal: options.signal });
 
-        const body: Record<string, unknown> = {
-          model: defaultModel,
-          stream: true,
-          store: false,
-          parallel_tool_calls: true,
-          tool_choice: "auto",
-          max_output_tokens: maxTokens,
-          input: toOpenAIInput(messages),
-        };
+        const result = yield* Effect.tryPromise({
+          try: async () => {
+            const response = await session.createResponse({
+              instructions: options.system,
+              input: toOpenAIInput(options.messages),
+              tools: options.tools,
+              maxTokens: options.maxTokens,
+            });
 
-        if (system) {
-          body.instructions = system;
-        }
-
-        const mappedTools = toOpenAITools(tools);
-        if (mappedTools?.length) {
-          body.tools = mappedTools;
-        }
-
-        const response = yield* Effect.tryPromise({
-          try: () =>
-            fetch(OPENAI_RESPONSES_API_URL, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
+            const iterable: AsyncIterable<StreamChunk> = {
+              async *[Symbol.asyncIterator]() {
+                try {
+                  for await (const chunk of response.events) {
+                    yield chunk;
+                  }
+                  await response.completed;
+                } finally {
+                  await session.close();
+                }
               },
-              body: JSON.stringify(body),
-            }),
+            };
+
+            return iterable;
+          },
           catch: (error) =>
-            new AIError({
-              provider: "openai",
-              operation: "stream_chat",
-              message: error instanceof Error ? error.message : "Fetch failed",
-              cause: error,
-            }),
+            error instanceof AIError
+              ? error
+              : toAIError("Failed to stream chat", error),
         });
 
-        if (!response.ok) {
-          const errorText = yield* Effect.promise(() => response.text()).pipe(
-            Effect.catchAll(() => Effect.succeed(""))
-          );
-          const upstreamMessage = extractOpenAIErrorMessage(errorText);
-          const message = upstreamMessage
-            ? `OpenAI Responses API error: ${response.status} (${upstreamMessage})`
-            : `OpenAI Responses API error: ${response.status}`;
-
-          return yield* Effect.fail(
-            new AIError({
-              provider: "openai",
-              operation: "stream_chat",
-              message,
-              cause: errorText,
-            })
-          );
-        }
-
-        if (!response.body) {
-          return yield* Effect.fail(
-            new AIError({
-              provider: "openai",
-              operation: "stream_chat",
-              message: "No response body",
-            })
-          );
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        const asyncIterable: AsyncIterable<StreamChunk> = {
-          async *[Symbol.asyncIterator]() {
-            let buffer = "";
-            let currentEventName: string | null = null;
-            let doneEmitted = false;
-            const functionCallAccumulators = new Map<string, FunctionCallAccumulator>();
-
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() ?? "";
-
-                for (const rawLine of lines) {
-                  const line = rawLine.trim();
-                  if (!line) {
-                    currentEventName = null;
-                    continue;
-                  }
-
-                  if (line.startsWith("event:")) {
-                    currentEventName = line.slice(6).trim();
-                    continue;
-                  }
-
-                  if (line === "data: [DONE]") {
-                    if (!doneEmitted) {
-                      doneEmitted = true;
-                      yield { type: "done", stopReason: "stop" };
-                    }
-                    return;
-                  }
-
-                  const event = parseDataLine(line);
-                  if (!event) continue;
-
-                  const eventType =
-                    getStringField(event, "type") ?? currentEventName ?? "";
-
-                  if (eventType === "response.output_text.delta") {
-                    const delta = getStringField(event, "delta");
-                    if (delta) {
-                      yield { type: "text", content: delta };
-                    }
-                    continue;
-                  }
-
-                  if (eventType === "response.function_call_arguments.delta") {
-                    pushFunctionCallDelta(functionCallAccumulators, event);
-                    continue;
-                  }
-
-                  if (eventType === "response.output_item.added") {
-                    const item = event.item;
-                    if (item && typeof item === "object") {
-                      const parsedItem = item as Record<string, unknown>;
-                      if (parsedItem.type === "function_call") {
-                        const itemId = getStringField(parsedItem, "id");
-                        if (itemId) {
-                          functionCallAccumulators.set(itemId, {
-                            itemId,
-                            callId: getStringField(parsedItem, "call_id"),
-                            name: getStringField(parsedItem, "name"),
-                            arguments: getStringField(parsedItem, "arguments") ?? "",
-                          });
-                        }
-                      }
-                    }
-                    continue;
-                  }
-
-                  if (eventType === "response.output_item.done") {
-                    const toolUseChunk = parseToolUseChunk(
-                      functionCallAccumulators,
-                      event
-                    );
-                    if (toolUseChunk) {
-                      yield toolUseChunk;
-                    }
-                    continue;
-                  }
-
-                  if (
-                    eventType === "response.completed" ||
-                    eventType === "response.done"
-                  ) {
-                    if (!doneEmitted) {
-                      doneEmitted = true;
-                      const status =
-                        getStringField(event, "status") ??
-                        "completed";
-                      yield { type: "done", stopReason: status };
-                    }
-                    return;
-                  }
-
-                  if (eventType === "error") {
-                    const err = event.error;
-                    const message =
-                      err && typeof err === "object"
-                        ? getStringField(err as Record<string, unknown>, "message")
-                        : undefined;
-                    throw new Error(message ?? "OpenAI streaming error");
-                  }
-                }
-              }
-
-              if (!doneEmitted) {
-                yield { type: "done", stopReason: "stop" };
-              }
-            } finally {
-              reader.releaseLock();
-            }
-          },
-        };
-
-        return asyncIterable;
+        return result;
       });
 
     return {
+      openSession,
       streamChat,
     };
   })

@@ -159,7 +159,7 @@ All DAL and services use Effect-TS internally with Promise wrappers at boundarie
 
 - **Effect in Core**: DAL and services use Effect for type-safe operations
 - **Promises at Boundaries**: Pages/Server Actions remain Promise-based
-- **Services**: `lib/services/` (AppConfig, SupabaseService, AuthService, SettingsService, SnapshotsService, ShiftsService, StatsService, SubscriptionService, ClaudeService, WageyService, SharingService)
+- **Services**: `lib/services/` (AppConfig, SupabaseService, AuthService, SettingsService, SnapshotsService, ShiftsService, StatsService, SubscriptionService, OpenAIService, WageyService, SharingService)
 - **Tagged Errors**: `lib/errors/tagged.ts`
 - **Layers**: `lib/layers/app.ts`
 
