@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
@@ -9,11 +10,10 @@ extension Notification.Name {
 
 /// Root view wrapper that ensures a seamless launch experience.
 ///
-/// The first SwiftUI frame renders a lightweight `LoadingView` with zero singleton
-/// dependencies. This guarantees the frame is committed before iOS removes the
-/// launch storyboard, preventing the black-flash issue that can occur when
-/// `@ObservedObject` singletons trigger heavy initialization during the first body
-/// evaluation.
+/// The first SwiftUI frame renders a lightweight `LoadingView` that only depends
+/// on cached appearance state. This guarantees the frame is committed before iOS
+/// removes the launch storyboard, preventing the black-flash issue that can occur
+/// when heavier singletons trigger initialization during the first body evaluation.
 ///
 /// After the initial frame is on screen, `isReady` flips and `RootContent` is
 /// created, which initializes `AppCoordinator`, `BiometricAuthService`, etc.
@@ -172,11 +172,35 @@ private struct RootContent: View {
 /// Initial loading view shown while checking authentication state
 /// Matches the splash screen exactly, with a spinner below the logo
 struct LoadingView: View {
+  @ObservedObject private var appearanceManager = AppearanceManager.shared
+  @Environment(\.colorScheme) private var systemColorScheme
+
+  private var launchBackgroundColor: Color {
+    let userInterfaceStyle: UIUserInterfaceStyle
+
+    switch appearanceManager.theme.resolvedColorScheme(fallback: systemColorScheme) {
+    case .light:
+      userInterfaceStyle = .light
+    case .dark:
+      userInterfaceStyle = .dark
+    @unknown default:
+      userInterfaceStyle = .light
+    }
+
+    let traits = UITraitCollection(userInterfaceStyle: userInterfaceStyle)
+    if let color = UIColor(named: "LaunchBackground", in: .main, compatibleWith: traits) {
+      return Color(uiColor: color)
+    }
+
+    return .tidexLaunchBackground
+  }
+
   var body: some View {
     GeometryReader { geometry in
       ZStack {
-        // Background - exact match for LaunchScreen.storyboard
-        Color.tidexLaunchBackground
+        // Use the cached app theme so the first SwiftUI frame matches the
+        // user's last-selected appearance as early as possible.
+        launchBackgroundColor
 
         // Logo centered in full screen (ignoring safe areas) - matches storyboard centerX/centerY
         Image("SplashLaunch")

@@ -18,6 +18,11 @@ struct TidexApp: App {
   var body: some Scene {
     WindowGroup {
       RootView()
+        .overlay {
+          WindowAppearanceConfigurator()
+            .frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+        }
         .onOpenURL { url in
           AppLifecycleHandler.shared.handleOpenURL(url)
         }
