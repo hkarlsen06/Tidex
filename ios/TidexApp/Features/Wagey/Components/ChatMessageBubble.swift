@@ -260,6 +260,7 @@ struct TypingIndicatorView: View {
 /// A bubble showing the currently streaming assistant response
 struct StreamingMessageBubble: View {
   let contentBlocks: [ContentBlock]
+  let isThinking: Bool
 
   /// Whether any text block has content
   private var hasAnyText: Bool {
@@ -291,7 +292,7 @@ struct StreamingMessageBubble: View {
           }
 
           // If blocks exist but no text yet (e.g., only tool calls), show typing indicator
-          if !hasAnyText {
+          if isThinking || !hasAnyText {
             TypingIndicatorView()
           }
         }
@@ -409,7 +410,7 @@ struct StreamingMessageBubble: View {
 }
 
 #Preview("Streaming - Typing") {
-  StreamingMessageBubble(contentBlocks: [])
+  StreamingMessageBubble(contentBlocks: [], isThinking: true)
     .padding()
     .background(Color.tidexBackground)
 }
@@ -426,7 +427,8 @@ struct StreamingMessageBubble: View {
           result: nil,
           success: nil
         )),
-    ]
+    ],
+    isThinking: true
   )
   .padding()
   .background(Color.tidexBackground)

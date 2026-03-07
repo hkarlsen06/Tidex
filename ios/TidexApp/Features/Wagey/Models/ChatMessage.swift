@@ -205,6 +205,9 @@ struct ToolCall: Identifiable, Equatable, Codable {
 /// The API streams responses as Server-Sent Events, with each event
 /// containing a chunk of one of these types.
 enum ChatChunk: Equatable {
+  /// Backend status signal indicating the model is actively working
+  case status(thinking: Bool)
+
   /// Text content to append to the current message
   case text(content: String)
 
@@ -233,6 +236,7 @@ extension ChatChunk: Decodable {
   private enum CodingKeys: String, CodingKey {
     case type
     case content
+    case status
     case toolName
     case toolCallId
     case toolArguments
@@ -250,6 +254,10 @@ extension ChatChunk: Decodable {
     let type = try container.decode(String.self, forKey: .type)
 
     switch type {
+    case "status":
+      let status = try container.decode(String.self, forKey: .status)
+      self = .status(thinking: status == "thinking")
+
     case "text":
       let content = try container.decode(String.self, forKey: .content)
       self = .text(content: content)
@@ -280,7 +288,8 @@ extension ChatChunk: Decodable {
       let resetDays = try container.decode(Int.self, forKey: .resetDays)
       let exceeded = try container.decodeIfPresent(Bool.self, forKey: .exceeded) ?? false
       let bonus = try container.decodeIfPresent(Int.self, forKey: .bonus) ?? 0
-      self = .wageyLimit(remaining: remaining, resetDays: resetDays, exceeded: exceeded, bonus: bonus)
+      self = .wageyLimit(
+        remaining: remaining, resetDays: resetDays, exceeded: exceeded, bonus: bonus)
 
     case "wagey_no_access":
       self = .wageyNoAccess

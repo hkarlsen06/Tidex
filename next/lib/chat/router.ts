@@ -40,6 +40,10 @@ export type ChatChunk =
       content: string;
     }
   | {
+      type: "status";
+      status: "thinking";
+    }
+  | {
       type: "tool_start";
       toolName: string;
       toolCallId: string;
@@ -464,6 +468,11 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     try {
       while (iterationCount < MAX_ITERATIONS) {
         iterationCount++;
+
+        await stream.appendChunk({
+          type: "status",
+          status: "thinking",
+        });
 
         const response = await session.createResponse({
           instructions: system,

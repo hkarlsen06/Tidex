@@ -7,6 +7,7 @@ struct ChatMessageList: View {
   let messages: [ChatMessage]
   let streamingContentBlocks: [ContentBlock]
   let isStreaming: Bool
+  let isThinking: Bool
   let remainingMessagesText: String?
   let showsHistoryButton: Bool
 
@@ -35,7 +36,7 @@ struct ChatMessageList: View {
       messageCount: messages.count,
       lastMessageID: messages.last?.id,
       streamingSignature: streamingContentSignature,
-      isStreaming: isStreaming
+      isStreaming: isStreaming || isThinking
     )
   }
 
@@ -78,8 +79,11 @@ struct ChatMessageList: View {
 
             // Streaming message
             if isStreaming {
-              StreamingMessageBubble(contentBlocks: streamingContentBlocks)
-                .id("streaming")
+              StreamingMessageBubble(
+                contentBlocks: streamingContentBlocks,
+                isThinking: isThinking
+              )
+              .id("streaming")
             }
 
             // Copy conversation button (after last assistant message, when not streaming)
@@ -469,6 +473,7 @@ private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
     messages: [],
     streamingContentBlocks: [],
     isStreaming: false,
+    isThinking: false,
     remainingMessagesText: "15 messages left",
     showsHistoryButton: true
   )
@@ -498,6 +503,7 @@ private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
     ],
     streamingContentBlocks: [],
     isStreaming: false,
+    isThinking: false,
     remainingMessagesText: nil,
     showsHistoryButton: true
   )
@@ -521,6 +527,7 @@ private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
         ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil)),
     ],
     isStreaming: true,
+    isThinking: true,
     remainingMessagesText: nil,
     showsHistoryButton: false
   )

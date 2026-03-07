@@ -57,6 +57,7 @@ type MessageListProps = {
   messages: Message[];
   currentChunk: string;
   isStreaming: boolean;
+  isThinking: boolean;
   userName?: string;
 };
 
@@ -471,6 +472,7 @@ export function MessageList({
   messages,
   currentChunk,
   isStreaming,
+  isThinking,
   userName,
 }: MessageListProps) {
   const { t } = useTranslations();
@@ -505,7 +507,7 @@ export function MessageList({
         ))}
 
         {/* Thinking indicator - show when streaming but no content yet */}
-        {isStreaming && !currentChunk && (
+        {isStreaming && isThinking && !currentChunk && (
           <ThinkingBubble key="thinking" />
         )}
 

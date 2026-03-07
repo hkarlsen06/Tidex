@@ -160,6 +160,7 @@ describe("/api/chat route", () => {
 
     expect(chunks).toEqual(
       expect.arrayContaining([
+        { type: "status", status: "thinking" },
         { type: "text", content: "Checking your shifts. " },
         {
           type: "tool_start",
@@ -174,6 +175,7 @@ describe("/api/chat route", () => {
           result: "{\"success\":true,\"message\":\"Created shift\",\"data\":{\"id\":\"shift_1\"}}",
           success: true,
         },
+        { type: "status", status: "thinking" },
         { type: "text", content: "Done. Your shift is added." },
         {
           type: "wagey_limit",
