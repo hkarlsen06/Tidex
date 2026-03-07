@@ -308,6 +308,65 @@ describe("OpenAIService WebSocket mode", () => {
     expect(tool.parameters?.properties?.settings).not.toHaveProperty("additionalProperties");
   });
 
+  it("keeps typed array items for manage_wage_snapshots supplements", async () => {
+    const [{ toOpenAITools }, { tools }] = await Promise.all([
+      import("@/lib/services/openai"),
+      import("@/lib/chat/tools"),
+    ]);
+
+    const mapped = toOpenAITools(tools);
+    const tool = mapped?.find((entry) => entry.name === "manage_wage_snapshots") as {
+      strict?: boolean;
+      parameters?: {
+        properties?: {
+          supplements?: {
+            anyOf?: Array<{
+              type?: string;
+              items?: {
+                type?: string;
+                additionalProperties?: boolean;
+                properties?: {
+                  days?: {
+                    type?: string;
+                    items?: { type?: string };
+                  };
+                  from?: {
+                    anyOf?: Array<{ type?: string }>;
+                  };
+                  startTime?: {
+                    anyOf?: Array<{ type?: string }>;
+                  };
+                };
+              };
+            }>;
+          };
+        };
+      };
+    };
+
+    const arraySchema = tool.parameters?.properties?.supplements?.anyOf?.find(
+      (entry) => entry.type === "array"
+    );
+
+    expect(tool.strict).toBe(true);
+    expect(arraySchema?.items).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        days: {
+          type: "array",
+          items: { type: "integer" },
+        },
+        from: {
+          anyOf: [{ type: "string" }, { type: "null" }],
+        },
+        startTime: {
+          anyOf: [{ type: "string" }, { type: "null" }],
+        },
+      },
+    });
+  });
+
   it("sends response.create payloads with GPT-5.4 defaults", async () => {
     setBaseEnv();
 

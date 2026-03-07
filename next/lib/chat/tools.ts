@@ -1340,6 +1340,50 @@ Other notes:
         },
         supplements: {
           type: ["string", "array"],
+          items: {
+            type: "object",
+            properties: {
+              days: {
+                type: "array",
+                items: { type: "integer" },
+                description: "Weekday numbers 1-7 (Monday-Sunday)",
+              },
+              from: {
+                type: "string",
+                description: "Canonical start time (HH:mm)",
+              },
+              to: {
+                type: "string",
+                description: "Canonical end time (HH:mm, use 24:00 for end of day)",
+              },
+              startTime: {
+                type: "string",
+                description: "Alias for from (HH:mm)",
+              },
+              endTime: {
+                type: "string",
+                description: "Alias for to (HH:mm, use 24:00 for end of day)",
+              },
+              amount: {
+                type: "number",
+                description: "Alias for rate (fixed NOK per hour supplement)",
+              },
+              rate: {
+                type: "number",
+                description: "Fixed NOK per hour supplement",
+              },
+              percent: {
+                type: "number",
+                description: "Percentage supplement",
+              },
+              type: {
+                type: "string",
+                description: "Optional legacy metadata field; ignored by the executor",
+              },
+            },
+            required: ["days"],
+            description: "Supplement rule. Use canonical fields (days/from/to/rate or percent) or alias fields (days/startTime/endTime/amount or percent).",
+          },
           description: '"copy_current" to copy from current snapshot, or array of supplement rules. Rule keys can be canonical (from/to/rate) or alias (startTime/endTime/amount).',
         },
       },
