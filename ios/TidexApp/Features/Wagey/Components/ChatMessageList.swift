@@ -3,6 +3,7 @@ import SwiftUI
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
   private let pinnedBottomThreshold: CGFloat = 44
+  private let scrollCoordinateSpaceName = "wagey-chat-scroll"
 
   let messages: [ChatMessage]
   let streamingContentBlocks: [ContentBlock]
@@ -10,8 +11,10 @@ struct ChatMessageList: View {
   let isThinking: Bool
   let remainingMessagesText: String?
   let showsHistoryButton: Bool
+  let bottomContentInset: CGFloat
   @Binding var isScrolledToBottom: Bool
   let scrollToBottomTrigger: Int
+  var onStreamEndedAwayFromBottom: (() -> Void)?
 
   /// Callback when a suggestion chip is tapped
   var onSuggestionTapped: ((String) -> Void)?
@@ -22,7 +25,7 @@ struct ChatMessageList: View {
   @State private var showsSuggestions = false
   @State private var scrollTask: Task<Void, Never>?
   @State private var bottomAnchorMaxY: CGFloat = 0
-  @State private var viewportMaxY: CGFloat = 0
+  @State private var viewportHeight: CGFloat = 0
   @State private var isPinnedToBottom = true
   @State private var suppressAutoFollow = false
 
@@ -33,8 +36,10 @@ struct ChatMessageList: View {
     isThinking: Bool,
     remainingMessagesText: String?,
     showsHistoryButton: Bool,
+    bottomContentInset: CGFloat = Spacing.bottomScrollMargin,
     isScrolledToBottom: Binding<Bool>,
     scrollToBottomTrigger: Int = 0,
+    onStreamEndedAwayFromBottom: (() -> Void)? = nil,
     onSuggestionTapped: ((String) -> Void)? = nil,
     onHistoryTapped: (() -> Void)? = nil
   ) {
@@ -44,8 +49,10 @@ struct ChatMessageList: View {
     self.isThinking = isThinking
     self.remainingMessagesText = remainingMessagesText
     self.showsHistoryButton = showsHistoryButton
+    self.bottomContentInset = bottomContentInset
     self._isScrolledToBottom = isScrolledToBottom
     self.scrollToBottomTrigger = scrollToBottomTrigger
+    self.onStreamEndedAwayFromBottom = onStreamEndedAwayFromBottom
     self.onSuggestionTapped = onSuggestionTapped
     self.onHistoryTapped = onHistoryTapped
   }
@@ -122,19 +129,21 @@ struct ChatMessageList: View {
               GeometryReader { geometry in
                 Color.clear.preference(
                   key: ChatBottomAnchorMaxYPreferenceKey.self,
-                  value: geometry.frame(in: .global).maxY
+                  value: geometry.frame(in: .named(scrollCoordinateSpaceName)).maxY
                 )
               }
             )
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, max(bottomContentInset, Spacing.bottomScrollMargin))
       }
+      .coordinateSpace(name: scrollCoordinateSpaceName)
       .background(
         GeometryReader { geometry in
           Color.clear.preference(
             key: ChatViewportMaxYPreferenceKey.self,
-            value: geometry.frame(in: .global).maxY
+            value: geometry.size.height
           )
         }
       )
@@ -164,7 +173,7 @@ struct ChatMessageList: View {
         updatePinnedToBottom()
       }
       .onPreferenceChange(ChatViewportMaxYPreferenceKey.self) { value in
-        viewportMaxY = value
+        viewportHeight = value
         updatePinnedToBottom()
       }
       .scrollDismissesKeyboard(.interactively)
@@ -262,26 +271,6 @@ struct ChatMessageList: View {
         .offset(x: 180, y: 24)
 
       VStack(alignment: .leading, spacing: Spacing.md) {
-        HStack {
-          Spacer()
-
-          if showsHistoryButton {
-            Button {
-              Haptics.play(.light)
-              onHistoryTapped?()
-            } label: {
-              Image(systemName: "clock.arrow.circlepath")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextSecondary)
-                .frame(width: 40, height: 40)
-                .background(Color.tidexSurfacePrimary.opacity(0.9))
-                .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Conversation history"))
-          }
-        }
-
         HStack(alignment: .top, spacing: Spacing.md) {
           Text(.wageyEmptyStateWelcomeTitle)
             .font(.tidexScreenTitle)
@@ -316,21 +305,41 @@ struct ChatMessageList: View {
                   .font(.tidexFootnoteStrong)
 
                 Text(.wageyEmptyStateQuickStart)
-                  .font(.tidexButton)
+                  .font(.tidexFootnoteStrong)
               }
-              .foregroundColor(.tidexTextOnBrand)
-              .padding(.horizontal, Spacing.md)
-              .padding(.vertical, Spacing.sm)
-              .background(Color.tidexBrandPrimary)
-              .clipShape(Capsule())
+              .foregroundColor(.tidexTextSecondary)
+              .padding(.horizontal, Spacing.sm)
+              .padding(.vertical, Spacing.xs)
+              .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.1))
             }
             .buttonStyle(.plain)
           }
         }
       }
-      .padding(Spacing.lg)
+      .padding(.top, Spacing.md)
+      .padding(.leading, Spacing.lg)
+      .padding(.trailing, Spacing.lg)
+      .padding(.bottom, Spacing.lg)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+    .overlay(alignment: .topTrailing) {
+      if showsHistoryButton {
+        Button {
+          Haptics.play(.light)
+          onHistoryTapped?()
+        } label: {
+          Image(systemName: "clock.arrow.circlepath")
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextSecondary)
+            .frame(width: 40, height: 40)
+            .tidexGlass(shape: .circle, tint: .tidexBlue.opacity(0.08))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, Spacing.sm)
+        .padding(.trailing, Spacing.sm)
+        .accessibilityLabel(Text("Conversation history"))
+      }
+    }
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
         .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
@@ -490,6 +499,7 @@ struct ChatMessageList: View {
     proxy: ScrollViewProxy
   ) {
     let startedStreaming = !oldValue.isStreaming && newValue.isStreaming
+    let finishedStreaming = oldValue.isStreaming && !newValue.isStreaming
     let appendedMessage =
       oldValue.messageCount != newValue.messageCount
       || oldValue.lastMessageID != newValue.lastMessageID
@@ -497,6 +507,10 @@ struct ChatMessageList: View {
     if startedStreaming {
       scheduleScrollToBottom(proxy: proxy, animated: false)
       return
+    }
+
+    if finishedStreaming && (!isPinnedToBottom || suppressAutoFollow) {
+      onStreamEndedAwayFromBottom?()
     }
 
     if appendedMessage {
@@ -513,8 +527,8 @@ struct ChatMessageList: View {
   }
 
   private func updatePinnedToBottom() {
-    guard viewportMaxY > 0, bottomAnchorMaxY > 0 else { return }
-    let distanceFromBottom = bottomAnchorMaxY - viewportMaxY
+    guard viewportHeight > 0, bottomAnchorMaxY > 0 else { return }
+    let distanceFromBottom = bottomAnchorMaxY - viewportHeight
     let isNearBottom = distanceFromBottom <= pinnedBottomThreshold
     isPinnedToBottom = isNearBottom
     isScrolledToBottom = isNearBottom
