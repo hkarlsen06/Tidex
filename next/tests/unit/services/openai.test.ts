@@ -154,9 +154,10 @@ describe("OpenAIService WebSocket mode", () => {
 
     const payload = JSON.parse(instance.sent[0]);
     expect(payload.type).toBe("response.create");
-    expect(payload.response.model).toBe("gpt-5.4");
-    expect(payload.response.reasoning).toEqual({ effort: "medium" });
-    expect(payload.response.max_output_tokens).toBe(512);
+    expect(payload.model).toBe("gpt-5.4");
+    expect(payload.reasoning).toEqual({ effort: "medium" });
+    expect(payload.max_output_tokens).toBe(512);
+    expect(payload.store).toBe(false);
 
     emitEvent(instance, {
       type: "response.completed",
@@ -197,7 +198,13 @@ describe("OpenAIService WebSocket mode", () => {
     const session = await createSession();
     const response = await session.createResponse({
       instructions: "You are Wagey",
-      input: [{ role: "user", content: [{ type: "input_text", text: "Create shift" }] }],
+      input: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "Create shift" }],
+        },
+      ],
       tools: [
         {
           name: "manage_shift",
@@ -215,7 +222,7 @@ describe("OpenAIService WebSocket mode", () => {
 
     const instance = wsState.instances[0];
     const secondPayload = JSON.parse(instance.sent[0]);
-    expect(secondPayload.response.previous_response_id).toBe("resp_prev");
+    expect(secondPayload.previous_response_id).toBe("resp_prev");
 
     emitEvent(instance, {
       type: "response.output_item.added",
@@ -272,7 +279,13 @@ describe("OpenAIService WebSocket mode", () => {
     setBaseEnv();
     const session = await createSession();
     const response = await session.createResponse({
-      input: [{ role: "user", content: [{ type: "input_text", text: "Create shift" }] }],
+      input: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "Create shift" }],
+        },
+      ],
     });
 
     const instance = wsState.instances[0];
@@ -321,7 +334,13 @@ describe("OpenAIService WebSocket mode", () => {
     setBaseEnv();
     const session = await createSession();
     const response = await session.createResponse({
-      input: [{ role: "user", content: [{ type: "input_text", text: "Hello" }] }],
+      input: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "Hello" }],
+        },
+      ],
     });
 
     const instance = wsState.instances[0];

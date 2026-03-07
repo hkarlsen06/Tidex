@@ -55,6 +55,7 @@ describe("chat router message mapping", () => {
 
     const input = toOpenAIInput(messages);
     expect(input[0]).toEqual({
+      type: "message",
       role: "assistant",
       content: [
         {
@@ -64,6 +65,7 @@ describe("chat router message mapping", () => {
       ],
     });
     expect(input[1]).toEqual({
+      type: "message",
       role: "user",
       content: [
         {
@@ -77,6 +79,7 @@ describe("chat router message mapping", () => {
       ],
     });
     expect(input[2]).toEqual({
+      type: "message",
       role: "assistant",
       content: [
         {

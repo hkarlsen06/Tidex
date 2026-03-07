@@ -15,7 +15,7 @@ import type {
   Tool,
 } from "./ai-types";
 
-const OPENAI_RESPONSES_WS_URL = "wss://api.openai.com/v1/realtime";
+const OPENAI_RESPONSES_WS_URL = "wss://api.openai.com/v1/responses";
 const DEFAULT_TIMEOUT_MS = 60_000;
 
 export type OpenAIInputItem = Record<string, unknown>;
@@ -304,6 +304,7 @@ function flushUserContentBuffer(
 ): void {
   if (bufferedBlocks.length === 0) return;
   input.push({
+    type: "message",
     role: "user",
     content: bufferedBlocks.splice(0, bufferedBlocks.length),
   });
@@ -315,6 +316,7 @@ function flushAssistantContentBuffer(
 ): void {
   if (bufferedBlocks.length === 0) return;
   input.push({
+    type: "message",
     role: "assistant",
     content: bufferedBlocks.splice(0, bufferedBlocks.length),
   });
@@ -328,6 +330,7 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
       const text = message.content.trim();
       if (!text) continue;
       input.push({
+        type: "message",
         role: message.role,
         content: [
           message.role === "assistant"
@@ -577,30 +580,29 @@ class WebSocketResponsesSession implements OpenAIResponseSession {
 
     const payload: Record<string, unknown> = {
       type: "response.create",
-      response: {
-        model: this.defaultModel,
-        instructions: options.instructions,
-        input: options.input,
-        parallel_tool_calls: true,
-        tool_choice: "auto",
-        max_output_tokens: options.maxTokens ?? 2048,
-        reasoning: {
-          effort: this.reasoningEffort,
-        },
-        previous_response_id: options.previousResponseId,
+      model: this.defaultModel,
+      store: false,
+      instructions: options.instructions,
+      input: options.input,
+      parallel_tool_calls: true,
+      tool_choice: "auto",
+      max_output_tokens: options.maxTokens ?? 2048,
+      reasoning: {
+        effort: this.reasoningEffort,
       },
+      previous_response_id: options.previousResponseId,
     };
 
     const mappedTools = toOpenAITools(options.tools);
     if (mappedTools?.length) {
-      (payload.response as Record<string, unknown>).tools = mappedTools;
+      payload.tools = mappedTools;
     }
 
     if (!options.instructions) {
-      delete (payload.response as Record<string, unknown>).instructions;
+      delete payload.instructions;
     }
     if (!options.previousResponseId) {
-      delete (payload.response as Record<string, unknown>).previous_response_id;
+      delete payload.previous_response_id;
     }
 
     await new Promise<void>((resolve, reject) => {
