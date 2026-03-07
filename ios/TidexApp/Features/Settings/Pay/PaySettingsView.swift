@@ -185,6 +185,7 @@ struct PaySettingsView: View {
         // Wage History Timeline
         WageHistoryTimelineView(
           entries: viewModel.timelineEntries,
+          currency: viewModel.userCurrency,
           onAddNew: { viewModel.openCreateEditor() },
           onEdit: { snapshot in viewModel.openEditEditor(snapshot: snapshot) }
         )

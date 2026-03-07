@@ -7,6 +7,7 @@ struct WageScreen: View {
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
   var onBack: (() -> Void)? = nil
+  var onSkipSetup: (() -> Void)? = nil
 
   @State private var isLoadingTariffData = false
   @State private var showingTariffDisabledInfoAlert = false
@@ -109,10 +110,51 @@ struct WageScreen: View {
             }
           )
           .padding(.horizontal, Spacing.lg)
-          .padding(.bottom, Spacing.xl)
           .adaptiveContentWidth()
-          .background(Color.tidexBackground)
+
+          if let onSkipSetup {
+            Rectangle()
+              .fill(Color.tidexBorderSubtle)
+              .frame(height: 1)
+              .padding(.horizontal, Spacing.lg)
+              .padding(.top, Spacing.md)
+              .adaptiveContentWidth()
+
+            Button(action: onSkipSetup) {
+              HStack(spacing: Spacing.xs) {
+                Image(systemName: "person.2.fill")
+                  .font(.tidexBodyMedium)
+                Text("onboarding.post_auth.skip_work_setup.cta", tableName: "Localizable")
+                  .font(.tidexHeadline)
+              }
+              .foregroundColor(.tidexBlue)
+              .frame(maxWidth: .infinity)
+              .frame(height: 54)
+              .background(Color.tidexBlue.opacity(0.08))
+              .overlay {
+                RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+                  .stroke(Color.tidexBlue.opacity(0.18), lineWidth: 1)
+              }
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.sm)
+            .adaptiveContentWidth()
+
+            Text("onboarding.post_auth.skip_work_setup.description", tableName: "Localizable")
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+              .multilineTextAlignment(.center)
+              .padding(.horizontal, Spacing.xl)
+              .padding(.top, Spacing.xxs)
+              .adaptiveContentWidth()
+          }
+
+          Spacer()
+            .frame(height: Spacing.xl)
         }
+        .background(Color.tidexBackground)
       }
     }
     .alert(

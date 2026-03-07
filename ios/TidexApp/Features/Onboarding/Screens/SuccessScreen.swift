@@ -4,6 +4,7 @@ import UIKit
 /// Screen 6: Success/Ready
 /// Confirms setup complete, shows save status, transitions to app
 struct SuccessScreen: View {
+  let completionMode: OnboardingCompletionMode
   // New API with save status handling
   var saveStatus: OnboardingSaveManager.SaveStatus = .success
   var errorMessage: String?
@@ -46,7 +47,7 @@ struct SuccessScreen: View {
               .frame(height: 8)
 
             // Reassurance line
-            Text(.onboardingSuccessReassurance)
+            Text(reassuranceText)
               .font(.tidexSubheadline)
               .foregroundColor(.tidexTextMuted)
               .multilineTextAlignment(.center)
@@ -74,7 +75,7 @@ struct SuccessScreen: View {
         VStack(spacing: Spacing.sm) {
           // Go to Dashboard button
           OnboardingButton(
-            title: String(localized: .onboardingSuccessButton),
+            title: buttonTitle,
             action: {
               UIImpactFeedbackGenerator(style: .medium).impactOccurred()
               onComplete()
@@ -162,7 +163,13 @@ struct SuccessScreen: View {
   private var statusTitle: String {
     switch saveStatus {
     case .idle, .success:
-      return String(localized: .onboardingSuccessTitle)
+      switch completionMode {
+      case .fullSetup:
+        return String(localized: .onboardingSuccessTitle)
+      case .friendOnlySkip:
+        return String(
+          localized: "onboarding.success.friend_only.title", table: "Localizable")
+      }
     case .saving:
       return String(localized: .onboardingSuccessSavingTitle)
     case .error:
@@ -173,11 +180,36 @@ struct SuccessScreen: View {
   private var statusSubtitle: String {
     switch saveStatus {
     case .idle, .success:
-      return String(localized: .onboardingSuccessSubtitle)
+      switch completionMode {
+      case .fullSetup:
+        return String(localized: .onboardingSuccessSubtitle)
+      case .friendOnlySkip:
+        return String(
+          localized: "onboarding.success.friend_only.subtitle", table: "Localizable")
+      }
     case .saving:
       return String(localized: .onboardingSuccessSaving)
     case .error:
       return String(localized: .onboardingSuccessErrorSubtitle)
+    }
+  }
+
+  private var reassuranceText: LocalizedStringResource {
+    switch completionMode {
+    case .fullSetup:
+      return .onboardingSuccessReassurance
+    case .friendOnlySkip:
+      return LocalizedStringResource(
+        "onboarding.success.friend_only.reassurance", table: "Localizable")
+    }
+  }
+
+  private var buttonTitle: String {
+    switch completionMode {
+    case .fullSetup:
+      return String(localized: .onboardingSuccessButton)
+    case .friendOnlySkip:
+      return String(localized: "onboarding.success.friend_only.button", table: "Localizable")
     }
   }
 
@@ -233,6 +265,7 @@ struct SuccessScreen: View {
 
 #Preview("Success") {
   SuccessScreen(
+    completionMode: .fullSetup,
     saveStatus: .success,
     onComplete: {},
     onRetry: nil
@@ -241,6 +274,7 @@ struct SuccessScreen: View {
 
 #Preview("Saving") {
   SuccessScreen(
+    completionMode: .fullSetup,
     saveStatus: .saving,
     onComplete: {},
     onRetry: nil
@@ -249,6 +283,7 @@ struct SuccessScreen: View {
 
 #Preview("Error") {
   SuccessScreen(
+    completionMode: .fullSetup,
     saveStatus: .error,
     errorMessage: "Could not connect to server. Please check your internet connection.",
     onComplete: {},

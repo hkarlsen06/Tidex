@@ -61,6 +61,10 @@ private struct RootContent: View {
   }
 
   var body: some View {
+    let postAuthOnboardingPresentation = coordinator.currentPostAuthOnboardingPresentation(
+      hasCompletedLocally: hasCompletedPostAuthOnboarding
+    )
+
     ZStack {
       // Background - adapts to system appearance
       // Uses tidexBackground (adaptive) for main content areas
@@ -110,11 +114,15 @@ private struct RootContent: View {
             .transition(.opacity)
 
         case .authenticated:
-          if !hasCompletedPostAuthOnboarding && !coordinator.hasFinishedOnboardingRemotely {
-            // Show post-auth onboarding (screens 5-6)
+          if let entryMode = postAuthOnboardingPresentation.entryMode {
             PostAuthOnboardingView(
+              entryMode: entryMode,
               onComplete: {
                 hasCompletedPostAuthOnboarding = true
+                coordinator.dismissPostAuthOnboarding(markCompletedRemotely: true)
+              },
+              onClose: {
+                coordinator.dismissPostAuthOnboarding()
               },
               userId: coordinator.userId ?? ""
             )
@@ -144,6 +152,9 @@ private struct RootContent: View {
     .onAppear {
       launchLog.info(
         "[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
+      coordinator.refreshPostAuthOnboardingPresentation(
+        hasCompletedLocally: hasCompletedPostAuthOnboarding
+      )
     }
     .onAppear {
       Task { @MainActor in
@@ -163,6 +174,19 @@ private struct RootContent: View {
       hasCompletedPreAuthOnboarding = false
       showAuthAfterOnboarding = false
       authDestination = .login
+    }
+    .onChange(of: coordinator.appState) { _, _ in
+      coordinator.refreshPostAuthOnboardingPresentation(
+        hasCompletedLocally: hasCompletedPostAuthOnboarding
+      )
+    }
+    .onChange(of: coordinator.hasFinishedOnboardingRemotely) { _, _ in
+      coordinator.refreshPostAuthOnboardingPresentation(
+        hasCompletedLocally: hasCompletedPostAuthOnboarding
+      )
+    }
+    .onChange(of: hasCompletedPostAuthOnboarding) { _, newValue in
+      coordinator.refreshPostAuthOnboardingPresentation(hasCompletedLocally: newValue)
     }
   }
 }

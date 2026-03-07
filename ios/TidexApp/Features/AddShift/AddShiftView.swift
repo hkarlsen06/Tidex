@@ -17,6 +17,7 @@ struct AddShiftView: View {
   @State private var showSingleSuccessBanner = false
   @State private var showAddConfetti = false
   @State private var singleSuccessDismissTask: Task<Void, Never>?
+  private let workSetupStatusService = WorkSetupStatusService.shared
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -33,6 +34,18 @@ struct AddShiftView: View {
     }
   }
 
+  private var workSetupPresentationState: WorkSetupPresentationState? {
+    guard let userId = coordinator.getCurrentUserId() else { return nil }
+    return workSetupStatusService.presentationState(
+      for: userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
+  private var shouldShowWorkSetupRequiredPlaceholder: Bool {
+    workSetupPresentationState?.shouldShowPlaceholder == true
+  }
+
   var body: some View {
     NavigationStack {
       ZStack(alignment: .bottom) {
@@ -40,136 +53,140 @@ struct AddShiftView: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        // Content area - different layouts for single vs recurring mode
-        GeometryReader { geometry in
-          let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
+        if shouldShowWorkSetupRequiredPlaceholder {
+          WorkSetupRequiredPlaceholder()
+        } else {
+          // Content area - different layouts for single vs recurring mode
+          GeometryReader { geometry in
+            let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
 
-          ScrollViewReader { scrollProxy in
-            switch viewModel.mode {
-            case .single:
-              // Single mode: Fixed layout with centered calendar
-              // Uses manual offset for keyboard avoidance to handle 6-week months
-              PullToRefreshContainer(onRefresh: {
-                await refreshAddContent()
-              }) {
-                VStack(spacing: 0) {
-                  Spacer()
+            ScrollViewReader { scrollProxy in
+              switch viewModel.mode {
+              case .single:
+                // Single mode: Fixed layout with centered calendar
+                // Uses manual offset for keyboard avoidance to handle 6-week months
+                PullToRefreshContainer(onRefresh: {
+                  await refreshAddContent()
+                }) {
+                  VStack(spacing: 0) {
+                    Spacer()
 
-                  SingleShiftContent(
-                    viewModel: viewModel, scrollProxy: scrollProxy,
-                    focusedTimeField: $focusedTimeField
+                    SingleShiftContent(
+                      viewModel: viewModel, scrollProxy: scrollProxy,
+                      focusedTimeField: $focusedTimeField
+                    )
+                    .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+                    .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+                    .offset(y: tabTransitionOffset)
+                    .opacity(tabTransitionOpacity)
+
+                    Spacer()
+                  }
+                  .padding(.bottom, MonthPickerLayout.totalBottomInset)
+                  .contentShape(Rectangle())
+                  .monthSwipeGesture(
+                    onSwipeLeft: { viewModel.goToNextMonth() },
+                    onSwipeRight: { viewModel.goToPreviousMonth() },
+                    isEnabled: true
                   )
+                  .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
+                  .motionAnimation(
+                    .subtle, value: focusedTimeField != nil, reduceMotion: reduceMotion)
+                }
+                .ignoresSafeArea(.keyboard)
+                .onTapGesture {
+                  hideKeyboard()
+                }
+
+              case .recurring:
+                // Recurring mode: Scrollable content (more elements)
+                ScrollView {
+                  VStack(spacing: Spacing.lg) {
+                    RecurringShiftContent(
+                      viewModel: viewModel, scrollProxy: scrollProxy,
+                      focusedTimeField: $focusedTimeField)
+                  }
                   .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
                   .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+                  .padding(.top, Spacing.md)
+                  .frame(maxWidth: .infinity)
+                  .frame(minHeight: availableHeight, alignment: .center)
                   .offset(y: tabTransitionOffset)
                   .opacity(tabTransitionOpacity)
-
-                  Spacer()
                 }
-                .padding(.bottom, MonthPickerLayout.totalBottomInset)
-                .contentShape(Rectangle())
                 .monthSwipeGesture(
                   onSwipeLeft: { viewModel.goToNextMonth() },
                   onSwipeRight: { viewModel.goToPreviousMonth() },
                   isEnabled: true
                 )
-                .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
-                .motionAnimation(
-                  .subtle, value: focusedTimeField != nil, reduceMotion: reduceMotion)
-              }
-              .ignoresSafeArea(.keyboard)
-              .onTapGesture {
-                hideKeyboard()
-              }
-
-            case .recurring:
-              // Recurring mode: Scrollable content (more elements)
-              ScrollView {
-                VStack(spacing: Spacing.lg) {
-                  RecurringShiftContent(
-                    viewModel: viewModel, scrollProxy: scrollProxy,
-                    focusedTimeField: $focusedTimeField)
+                .refreshable {
+                  await refreshAddContent()
                 }
-                .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-                .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-                .padding(.top, Spacing.md)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: availableHeight, alignment: .center)
-                .offset(y: tabTransitionOffset)
-                .opacity(tabTransitionOpacity)
-              }
-              .monthSwipeGesture(
-                onSwipeLeft: { viewModel.goToNextMonth() },
-                onSwipeRight: { viewModel.goToPreviousMonth() },
-                isEnabled: true
-              )
-              .refreshable {
-                await refreshAddContent()
-              }
-              .scrollDismissesKeyboard(.interactively)
-              .contentMargins(
-                .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
-              )
-              .onTapGesture {
-                hideKeyboard()
+                .scrollDismissesKeyboard(.interactively)
+                .contentMargins(
+                  .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
+                )
+                .onTapGesture {
+                  hideKeyboard()
+                }
               }
             }
           }
-        }
+          ConfettiView(isActive: showAddConfetti, launchYRatio: 0.2) {
+            showAddConfetti = false
+          }
+          .allowsHitTesting(false)
 
-        ConfettiView(isActive: showAddConfetti, launchYRatio: 0.2) {
-          showAddConfetti = false
-        }
-        .allowsHitTesting(false)
-
-        // Feedback display - positioned above the shared month picker
-        if !isKeyboardVisible {
-          if let error = viewModel.error {
-            ErrorBanner(
-              message: error,
-              onRetry: {
-                Task {
-                  switch viewModel.mode {
-                  case .single:
-                    await viewModel.submitSingleShifts()
-                  case .recurring:
-                    await viewModel.submitRecurringShift()
+          if !isKeyboardVisible {
+            if let error = viewModel.error {
+              ErrorBanner(
+                message: error,
+                onRetry: {
+                  Task {
+                    switch viewModel.mode {
+                    case .single:
+                      await viewModel.submitSingleShifts()
+                    case .recurring:
+                      await viewModel.submitRecurringShift()
+                    }
                   }
+                },
+                onDismiss: { viewModel.error = nil }
+              )
+              .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+              .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+              .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
+              .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if showSingleSuccessBanner {
+              SuccessBanner(
+                message: String(localized: .addShiftSingleSuccessSaved),
+                style: .toast,
+                actionTitle: .addShiftSingleViewShifts,
+                onAction: {
+                  dismissSingleSaveSuccessBanner()
+                  selectedTab = .shifts
+                },
+                onDismiss: {
+                  dismissSingleSaveSuccessBanner()
                 }
-              },
-              onDismiss: { viewModel.error = nil }
-            )
-            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-            .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-          } else if showSingleSuccessBanner {
-            SuccessBanner(
-              message: String(localized: .addShiftSingleSuccessSaved),
-              style: .toast,
-              actionTitle: .addShiftSingleViewShifts,
-              onAction: {
-                dismissSingleSaveSuccessBanner()
-                selectedTab = .shifts
-              },
-              onDismiss: {
-                dismissSingleSaveSuccessBanner()
-              }
-            )
-            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-            .padding(.top, Spacing.xs)
-            .frame(maxHeight: .infinity, alignment: .top)
-            .transition(.move(edge: .top).combined(with: .opacity))
+              )
+              .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+              .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+              .padding(.top, Spacing.xs)
+              .frame(maxHeight: .infinity, alignment: .top)
+              .transition(.move(edge: .top).combined(with: .opacity))
+            }
           }
         }
       }
       .navigationBarTitleDisplayMode(.inline)
       .iPadToolbarBackground()
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
-            .fixedSize()
+        if !shouldShowWorkSetupRequiredPlaceholder {
+          ToolbarItem(placement: .topBarLeading) {
+            ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
+              .fixedSize()
+          }
         }
         ToolbarItem(placement: .principal) {
           Text(.tabsAdd)
@@ -177,27 +194,29 @@ struct AddShiftView: View {
             .foregroundColor(.tidexTextPrimary)
             .frame(maxWidth: .infinity, alignment: .center)
         }
-        ToolbarItem(placement: .topBarTrailing) {
-          HStack(spacing: Spacing.xs) {
-            Button {
-              presentStartFreshConfirmation()
-            } label: {
-              Image(systemName: "arrow.uturn.backward.circle.fill")
-                .font(.tidexHeadline)
-                .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
-            }
-            .buttonStyle(.plain)
-            .disabled(!viewModel.hasContent)
-            .accessibilityLabel(Text(.commonBack))
-
-            AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
-          }
-          .fixedSize(horizontal: true, vertical: false)
-        }
         .sharedBackgroundVisibility(.hidden)
+        if !shouldShowWorkSetupRequiredPlaceholder {
+          ToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: Spacing.xs) {
+              Button {
+                presentStartFreshConfirmation()
+              } label: {
+                Image(systemName: "arrow.uturn.backward.circle.fill")
+                  .font(.tidexHeadline)
+                  .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
+              }
+              .buttonStyle(.plain)
+              .disabled(!viewModel.hasContent)
+              .accessibilityLabel(Text(.commonBack))
+
+              AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+          }
+        }
       }
       .overlay(alignment: .bottomTrailing) {
-        if isKeyboardVisible {
+        if isKeyboardVisible && !shouldShowWorkSetupRequiredPlaceholder {
           Button(keyboardButtonLabel) {
             handleKeyboardButtonTap()
           }
@@ -214,9 +233,11 @@ struct AddShiftView: View {
       .userCurrency(viewModel.currency)
     }
     .task {
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       await viewModel.loadData()
     }
     .onAppear {
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       viewModel.onShiftsCreated = { completion in
         switch completion {
         case .single:
@@ -243,6 +264,7 @@ struct AddShiftView: View {
       }
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       handleDeepLink(deepLink)
     }
     .onChange(of: selectedTab) { oldTab, newTab in

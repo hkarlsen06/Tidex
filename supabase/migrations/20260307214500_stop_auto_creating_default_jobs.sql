@@ -1,7 +1,20 @@
--- Function: sync_legacy_settings_to_default_job
--- Description:
---   Mirrors legacy payroll fields from user_settings to an existing default job.
---   Does not create a job when settings are written for users without work setup.
+-- Stop creating default jobs for users who have not started work setup.
+-- Keep lazy default-job creation for legacy work writes that omit job_id.
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.profiles (id)
+  VALUES (NEW.id)
+  ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.sync_legacy_settings_to_default_job()
 RETURNS trigger

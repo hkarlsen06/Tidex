@@ -366,7 +366,8 @@ final class PaySettingsViewModel: ObservableObject {
   private func processTimelineEntries() {
     timelineEntries = WageTimelineProcessor.processSnapshots(
       snapshots,
-      locale: Locale.appLocale
+      locale: Locale.appLocale,
+      currency: userCurrency
     )
   }
 

@@ -20,6 +20,23 @@ final class AppCoordinator: ObservableObject {
   static let shared = AppCoordinator()
   private static let startupTabCacheKey = "defaultStartupTab"
 
+  enum PostAuthOnboardingPresentationState: Equatable {
+    case none
+    case initial
+    case reentry
+
+    var entryMode: PostAuthOnboardingEntryMode? {
+      switch self {
+      case .none:
+        return nil
+      case .initial:
+        return .initial
+      case .reentry:
+        return .reentry
+      }
+    }
+  }
+
   // MARK: - Navigation State
 
   enum AppState: Equatable {
@@ -97,6 +114,39 @@ final class AppCoordinator: ObservableObject {
     return userId
   }
 
+  func currentPostAuthOnboardingPresentation(
+    hasCompletedLocally: Bool
+  ) -> PostAuthOnboardingPresentationState {
+    if postAuthOnboardingPresentation == .reentry {
+      return .reentry
+    }
+
+    guard appState == .authenticated else {
+      return .none
+    }
+
+    return !hasCompletedLocally && !hasFinishedOnboardingRemotely ? .initial : .none
+  }
+
+  func refreshPostAuthOnboardingPresentation(hasCompletedLocally: Bool) {
+    postAuthOnboardingPresentation = currentPostAuthOnboardingPresentation(
+      hasCompletedLocally: hasCompletedLocally
+    )
+  }
+
+  func requestPostAuthOnboardingReentry() {
+    guard appState == .authenticated else { return }
+    postAuthOnboardingPresentation = .reentry
+  }
+
+  func dismissPostAuthOnboarding(markCompletedRemotely: Bool = false) {
+    if markCompletedRemotely {
+      hasFinishedOnboardingRemotely = true
+    }
+
+    postAuthOnboardingPresentation = .none
+  }
+
   /// Get the current user ID, throwing an error if not authenticated
   /// Use this when the operation requires a valid user ID to proceed
   /// - Throws: `UserIdError.notAuthenticated` if no user is logged in
@@ -114,6 +164,8 @@ final class AppCoordinator: ObservableObject {
   @Published private(set) var userAvatarUrl: String?
   /// Whether the user has already completed onboarding (from Supabase user metadata)
   @Published private(set) var hasFinishedOnboardingRemotely: Bool = false
+  @Published private(set) var postAuthOnboardingPresentation: PostAuthOnboardingPresentationState =
+    .none
 
   // MARK: - Sync State
 
@@ -1008,6 +1060,7 @@ final class AppCoordinator: ObservableObject {
     userDisplayName = ""
     userAvatarUrl = nil
     hasFinishedOnboardingRemotely = false
+    postAuthOnboardingPresentation = .none
     initialSyncComplete = false
   }
 
