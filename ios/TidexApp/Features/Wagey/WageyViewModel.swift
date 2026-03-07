@@ -84,6 +84,9 @@ final class WageyViewModel {
   /// Whether currently receiving a streaming response
   private(set) var isStreaming: Bool = false
 
+  /// Whether the backend has reported that the model is currently thinking
+  private(set) var isModelThinking: Bool = false
+
   /// Whether the user has reached their message limit
   private(set) var limitReached: Bool = false
 
@@ -508,6 +511,7 @@ final class WageyViewModel {
 
     // Start streaming
     isStreaming = true
+    isModelThinking = true
     activeContentBlocks = []
     hadSuccessfulToolCalls = false
     currentAssistantMessageId = UUID().uuidString
@@ -682,7 +686,11 @@ final class WageyViewModel {
   /// Process a single chunk from the stream
   private func processChunk(_ chunk: ChatChunk) {
     switch chunk {
+    case .status(let thinking):
+      isModelThinking = thinking
+
     case .text(let content):
+      isModelThinking = false
       // Append text to the last text block, or create a new one
       if let lastIndex = activeContentBlocks.indices.last,
         case .text(let existingText) = activeContentBlocks[lastIndex]
@@ -698,6 +706,7 @@ final class WageyViewModel {
       Haptics.playStreamingToken()
 
     case .toolStart(let toolName, let toolCallId, let toolArguments):
+      isModelThinking = false
       // Add a new tool call in progress
       let toolCall = ToolCall(
         id: toolCallId,
@@ -709,6 +718,7 @@ final class WageyViewModel {
       activeContentBlocks.append(.toolCall(toolCall))
 
     case .toolResult(let toolName, let toolCallId, let result, let success):
+      isModelThinking = false
       // Update the tool call with its result (find by id in content blocks)
       if let index = activeContentBlocks.firstIndex(where: { block in
         if case .toolCall(let tc) = block { return tc.id == toolCallId }
@@ -729,6 +739,7 @@ final class WageyViewModel {
       }
 
     case .wageyLimit(let remaining, let days, let exceeded, let bonus):
+      isModelThinking = false
       // Update wagey invocations from API response to stay in sync
       // The count is: limit - remaining
       let usedCount = max(0, messageLimit - remaining)
@@ -760,15 +771,17 @@ final class WageyViewModel {
       }
 
     case .wageyNoAccess:
+      isModelThinking = false
       // User doesn't have access to Wagey
       limitReached = true
       error = WageyError.noAccess
 
     case .done:
-      // Stream completed - finalize handled after loop
-      break
+      isModelThinking = false
+    // Stream completed - finalize handled after loop
 
     case .error(let message):
+      isModelThinking = false
       // Server-side error
       error = WageyError.serverError(message)
     }
@@ -801,6 +814,7 @@ final class WageyViewModel {
     activeContentBlocks = []
     hadSuccessfulToolCalls = false
     isStreaming = false
+    isModelThinking = false
     currentAssistantMessageId = nil
     streamTask = nil
   }

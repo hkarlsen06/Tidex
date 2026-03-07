@@ -46,6 +46,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [currentChunk, setCurrentChunk] = useState("");
   const [resumptionToken, setResumptionToken] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -117,6 +118,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
   const streamCaller = client.wagey.useStream({
     onStart: ({ encodedResumptionToken }) => {
       setResumptionToken(encodedResumptionToken);
+      setIsThinking(true);
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
       chunkSequenceRef.current = 0;
@@ -129,6 +131,8 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       const signature =
         chunk.type === "text"
           ? `text:${chunkSequenceRef.current++}`
+          : chunk.type === "status"
+            ? `status:${chunk.status}:${chunkSequenceRef.current++}`
           : chunk.type === "tool_start"
             ? `tool_start:${chunk.toolCallId}`
             : chunk.type === "tool_result"
@@ -138,9 +142,15 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       if (processedChunksRef.current.has(signature)) return;
       processedChunksRef.current.add(signature);
 
-      if (chunk.type === "text") {
+      if (chunk.type === "status") {
+        if (chunk.status === "thinking") {
+          setIsThinking(true);
+        }
+      } else if (chunk.type === "text") {
+        setIsThinking(false);
         setCurrentChunk((prev) => prev + chunk.content);
       } else if (chunk.type === "tool_start") {
+        setIsThinking(false);
         // Finalize current streaming text first
         setCurrentChunk((prev) => {
           // Store current text for batch update
@@ -203,6 +213,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
           return "";
         });
       } else if (chunk.type === "tool_result") {
+        setIsThinking(false);
         // Track successful tool calls for cache invalidation
         if (chunk.success) {
           hasSuccessfulToolCallsRef.current = true;
@@ -241,6 +252,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
           })
         );
       } else if (chunk.type === "wagey_limit") {
+        setIsThinking(false);
         // User hit their monthly limit
         setLimitReached(true);
         setLimitResetDays(chunk.resetDays);
@@ -258,6 +270,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         setIsStreaming(false);
         setCurrentChunk("");
       } else if (chunk.type === "wagey_no_access") {
+        setIsThinking(false);
         // User doesn't have access (shouldn't happen if page guards work)
         setMessages((prev) => [
           ...prev,
@@ -271,6 +284,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         setIsStreaming(false);
         setCurrentChunk("");
       } else if (chunk.type === "error") {
+        setIsThinking(false);
         setCurrentChunk("");
         setMessages((prev) => [
           ...prev,
@@ -283,6 +297,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         processedChunksRef.current.clear();
         setIsStreaming(false);
       } else if (chunk.type === "done") {
+        setIsThinking(false);
         // Finalize any remaining text
         setCurrentChunk((currentText) => {
           if (currentText) {
@@ -326,6 +341,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
       setIsStreaming(false);
+      setIsThinking(false);
     },
 
     onError: (error) => {
@@ -341,6 +357,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
       setIsStreaming(false);
+      setIsThinking(false);
       setCurrentChunk("");
 
       // Save error state to sessionStorage
@@ -368,6 +385,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
       setIsStreaming(false);
+      setIsThinking(false);
       setCurrentChunk("");
 
       // Save fatal error state to sessionStorage
@@ -393,6 +411,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
       setIsStreaming(false);
+      setIsThinking(false);
       setCurrentChunk("");
     },
   });
@@ -414,6 +433,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
     toolMessageMapRef.current.clear();
     setMessages((prev) => [...prev, userMessage]);
     setIsStreaming(true);
+    setIsThinking(true);
     setCurrentChunk("");
 
     // Build messages for AI
@@ -534,6 +554,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       setCurrentChunk("");
       setResumptionToken(null);
       setIsStreaming(false);
+      setIsThinking(false);
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
 
@@ -636,12 +657,13 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-2 pt-8 md:px-5 md:pb-6 md:pt-10"
       >
         <div className="flex flex-col gap-3 md:gap-4 py-2 max-w-3xl mx-auto">
-          <MessageList
-            messages={messages}
-            currentChunk={currentChunk}
-            isStreaming={isStreaming}
-            userName={userName}
-          />
+        <MessageList
+          messages={messages}
+          currentChunk={currentChunk}
+          isStreaming={isStreaming}
+          isThinking={isThinking}
+          userName={userName}
+        />
           <div ref={messagesEndRef} />
         </div>
       </div>

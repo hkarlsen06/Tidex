@@ -385,6 +385,9 @@ final class WageyService: ObservableObject {
   /// Maps the raw API chunk to our ChatChunk type
   private func mapToChatChunk(_ raw: RawChatChunk) -> ChatChunk? {
     switch raw.type {
+    case "status":
+      return .status(thinking: raw.status == "thinking")
+
     case "text":
       guard let content = raw.content else { return nil }
       return .text(content: content)
@@ -468,6 +471,9 @@ private struct RawChatChunk: Decodable {
 
   // Text chunk
   let content: String?
+
+  // Status chunk
+  let status: String?
 
   // Tool chunks
   let toolName: String?

@@ -155,6 +155,7 @@ struct WageyView: View {
         messages: viewModel.messages,
         streamingContentBlocks: viewModel.activeContentBlocks,
         isStreaming: viewModel.isStreaming,
+        isThinking: viewModel.isModelThinking,
         remainingMessagesText: nil,
         showsHistoryButton: false,
         onSuggestionTapped: { suggestion in
