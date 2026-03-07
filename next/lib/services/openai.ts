@@ -288,9 +288,38 @@ function makeNullableSchema(schema: unknown): unknown {
     return schema;
   }
 
+  if (Array.isArray(schema.anyOf)) {
+    return {
+      ...schema,
+      anyOf: [...schema.anyOf, { type: "null" }],
+    };
+  }
+
   return {
     anyOf: [schema, { type: "null" }],
   };
+}
+
+function buildTypeVariantSchema(schema: JsonObject, type: unknown): JsonObject {
+  const variant: JsonObject = { type };
+
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === "type") {
+      continue;
+    }
+
+    if ((key === "properties" || key === "required" || key === "additionalProperties") && type !== "object") {
+      continue;
+    }
+
+    if ((key === "items" || key === "minItems" || key === "maxItems") && type !== "array") {
+      continue;
+    }
+
+    variant[key] = value;
+  }
+
+  return variant;
 }
 
 function normalizeSchemaForOpenAI(schema: unknown): unknown {
@@ -329,6 +358,14 @@ function normalizeSchemaForOpenAI(schema: unknown): unknown {
   }
 
   const rawType = normalized.type;
+  if (Array.isArray(rawType) && rawType.length > 1) {
+    return {
+      anyOf: rawType.map((type) =>
+        normalizeSchemaForOpenAI(buildTypeVariantSchema(normalized, type))
+      ),
+    };
+  }
+
   const isArrayType =
     rawType === "array" || (Array.isArray(rawType) && rawType.includes("array"));
 
