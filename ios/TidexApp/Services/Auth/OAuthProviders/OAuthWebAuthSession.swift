@@ -9,7 +9,7 @@ final class OAuthWebAuthSession: NSObject {
   static let shared = OAuthWebAuthSession()
 
   private var webAuthSession: ASWebAuthenticationSession?
-  private weak var presentationAnchor: UIWindow?
+  private var presentationAnchor: UIWindow?
 
   /// Current OAuth state parameter for CSRF protection
   /// Generated at the start of an OAuth flow and validated on callback
@@ -75,15 +75,11 @@ final class OAuthWebAuthSession: NSObject {
   }
 
   private func performWebAuth(url: URL) async throws -> URL {
-    // Get the presentation anchor
-    let keyWindow = UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)
-    guard let resolvedAnchor = keyWindow else {
+    guard let resolvedAnchor = resolvePresentationAnchor() else {
       throw OAuthWebAuthError.presentationAnchorUnavailable
     }
     presentationAnchor = resolvedAnchor
+    defer { presentationAnchor = nil }
 
     return try await withCheckedThrowingContinuation { continuation in
       // Guard against double resume if both completion handler and start() failure fire
@@ -130,6 +126,24 @@ final class OAuthWebAuthSession: NSObject {
       }
     }
   }
+
+  private func resolvePresentationAnchor() -> UIWindow? {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+
+    if let keyWindow = scenes.flatMap(\.windows).first(where: \.isKeyWindow) {
+      return keyWindow
+    }
+
+    if let existingWindow = scenes.flatMap(\.windows).first {
+      return existingWindow
+    }
+
+    if let firstScene = scenes.first {
+      return UIWindow(windowScene: firstScene)
+    }
+
+    return nil
+  }
 }
 
 // MARK: - Redirect Capture Delegate
@@ -160,6 +174,7 @@ extension OAuthWebAuthSession {
     webAuthSession?.cancel()
     webAuthSession = nil
     currentState = nil
+    presentationAnchor = nil
   }
 
   /// Validates the state parameter from an OAuth callback and clears the stored state
@@ -194,34 +209,9 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
     -> ASPresentationAnchor
   {
     MainActor.assumeIsolated {
-      if let anchor = presentationAnchor {
-        return anchor
-      }
-      let keyWindow = UIApplication.shared.connectedScenes
-        .compactMap { $0 as? UIWindowScene }
-        .flatMap { $0.windows }
-        .first { $0.isKeyWindow }
-      if let keyWindow {
-        return keyWindow
-      }
-      // Create window from first available scene
-      if let windowScene = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .first
-      {
-        return UIWindow(windowScene: windowScene)
-      }
-      // Fallback: try to get any window from any scene
-      // This should never happen in practice since we already checked for window scenes above
-      if let anyWindow = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .flatMap({ $0.windows })
-        .first
-      {
-        return anyWindow
-      }
-      // Should never happen: an active app always has at least one window scene.
-      fatalError("No window scene available for auth presentation")
+      presentationAnchor
+        ?? resolvePresentationAnchor()
+        ?? UIWindow()
     }
   }
 }

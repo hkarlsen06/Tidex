@@ -3,16 +3,13 @@ import PackageDescription
 
 // All non-Package.swift files in the directory — each target picks its own source and excludes the rest
 let allFiles: [String] = [
-  "validate-localization",
   "validate-localization.swift",
-  "add-strings",
   "add-strings.swift",
-  "audit-strings",
   "audit-strings.swift",
-  "delete-strings",
   "delete-strings.swift",
-  "search-strings",
   "search-strings.swift",
+  "check-swift-imports.swift",
+  "validate-localization.sh",
   "generate-appstore-metadata.mjs",
   "reset-translations.mjs",
   "translate-xcstrings.mjs",
