@@ -203,8 +203,10 @@ actor LocalStoreActor {
 
   func fetchSnapshots(userId: String) -> [WageSnapshot] {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
-      predicate: #Predicate { $0.userId == userId },
-      sortBy: [SortDescriptor(\LocalWageSnapshot.localUpdatedAt, order: .reverse)]
+      predicate: #Predicate { snapshot in
+        snapshot.userId == userId && snapshot.serverDeletedAt == nil
+      },
+      sortBy: [SortDescriptor(\LocalWageSnapshot.fromDate, order: .reverse)]
     )
 
     do {

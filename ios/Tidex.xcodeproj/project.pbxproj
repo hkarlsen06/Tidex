@@ -126,10 +126,10 @@
 		6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TemporaryClockSessionStoreTests.swift; sourceTree = "<group>"; };
 		855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/App/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollTotalsTests.swift; sourceTree = "<group>"; };
-		A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LaunchAppearanceTests.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC732DB07C7200EA8C5F /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC742DB07C7200EA8C5F /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
+		A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LaunchAppearanceTests.swift; sourceTree = "<group>"; };
 		A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/Watch/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };

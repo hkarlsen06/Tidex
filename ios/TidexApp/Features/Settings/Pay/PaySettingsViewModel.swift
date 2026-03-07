@@ -284,6 +284,7 @@ final class PaySettingsViewModel: ObservableObject {
       requiresJobReselection = false
       selectedJobId = created.id
       refreshData()
+      notifyDashboardDataChanged()
       Haptics.play(.success)
       return true
     } catch {
@@ -317,6 +318,7 @@ final class PaySettingsViewModel: ObservableObject {
       }
 
       refreshData()
+      notifyDashboardDataChanged()
       Haptics.play(.success)
       return true
     } catch {
@@ -351,6 +353,7 @@ final class PaySettingsViewModel: ObservableObject {
       }
 
       refreshData()
+      notifyDashboardDataChanged()
       Haptics.play(.success)
     } catch {
       logger.error("Failed to update selected job currency: \(error.localizedDescription)")
@@ -387,6 +390,10 @@ final class PaySettingsViewModel: ObservableObject {
   func closeEditor() {
     showingEditor = false
     selectedSnapshot = nil
+  }
+
+  private func notifyDashboardDataChanged() {
+    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
   }
 
   // MARK: - Snapshot CRUD
@@ -427,6 +434,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       // Refresh UI
       refreshData()
+      notifyDashboardDataChanged()
       Haptics.play(.success)
       closeEditor()
 
@@ -472,6 +480,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       // Refresh UI
       refreshData()
+      notifyDashboardDataChanged()
       Haptics.play(.success)
       closeEditor()
 
@@ -516,6 +525,7 @@ final class PaySettingsViewModel: ObservableObject {
 
       // Refresh UI
       refreshData()
+      notifyDashboardDataChanged()
       Haptics.play(.success)
       closeEditor()
 
@@ -622,6 +632,7 @@ final class PaySettingsViewModel: ObservableObject {
       )
 
       refreshData()
+      notifyDashboardDataChanged()
       logger.info("Updated monthly goal to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update monthly goal: \(error.localizedDescription)")
@@ -662,6 +673,7 @@ final class PaySettingsViewModel: ObservableObject {
       )
 
       refreshData()
+      notifyDashboardDataChanged()
       logger.info("Updated payroll day to: \(value)")
     } catch {
       logger.error("Failed to update payroll day: \(error.localizedDescription)")
@@ -687,6 +699,7 @@ final class PaySettingsViewModel: ObservableObject {
       )
 
       refreshData()
+      notifyDashboardDataChanged()
       logger.info("Updated half tax month to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update half tax month: \(error.localizedDescription)")

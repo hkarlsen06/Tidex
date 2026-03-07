@@ -291,8 +291,8 @@ final class ClockSessionReconciler {
     let calendar = Calendar.current
     let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate
     let endDate = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate
-    let shifts = await LocalStore.shared.storeActor.fetchShifts(
-      userId: userId,
+    let shifts = await shiftsRepository.getShiftsOffMain(
+      for: userId,
       startDate: startDate,
       endDate: endDate
     )
@@ -385,10 +385,21 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
+  private let monthlyPayrollReadService: MonthlyPayrollReadService
   private let syncCoordinator: SyncCoordinator
   private let monthContext: SharedMonthContext
   private let clockSessionStore: TemporaryClockSessionStore
   nonisolated private static let gregorianCalendar = Calendar(identifier: .gregorian)
+
+  private struct DashboardDataBuildInput {
+    let displayedMonthShifts: [ShiftWithComputations]
+    let previousMonthShifts: [ShiftWithComputations]
+    let settings: UserSettings
+    let displayYM: (year: Int, month: Int)
+    let previousYM: (year: Int, month: Int)
+    let currency: String
+    let jobs: [Job]
+  }
 
   // MARK: - Published State
 
@@ -652,6 +663,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
+    monthlyPayrollReadService: MonthlyPayrollReadService? = nil,
     syncCoordinator: SyncCoordinator? = nil,
     monthContext: SharedMonthContext? = nil,
     clockSessionStore: TemporaryClockSessionStore? = nil
@@ -663,6 +675,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
+    self.monthlyPayrollReadService =
+      monthlyPayrollReadService
+      ?? MonthlyPayrollReadService(
+        shiftsRepository: self.shiftsRepository,
+        settingsRepository: self.settingsRepository,
+        snapshotsRepository: self.snapshotsRepository,
+        recurringShiftsRepository: self.recurringShiftsRepository,
+        jobsRepository: self.jobsRepository
+      )
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
     self.clockSessionStore = clockSessionStore ?? TemporaryClockSessionStore.shared
@@ -859,14 +880,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             capturedCurrency, capturedJobs, capturedDisplay, capturedPrevious
           ] in
           let data = Self.buildDashboardDataOffMain(
-            displayedMonthShifts: capturedDisplay,
-            previousMonthShifts: capturedPrevious,
-            settings: currentSettings,
-            displayYM: displayYM,
-            previousYM: previousYM,
-            currency: capturedCurrency,
-            jobs: capturedJobs
-          )
+            .init(
+              displayedMonthShifts: capturedDisplay,
+              previousMonthShifts: capturedPrevious,
+              settings: currentSettings,
+              displayYM: displayYM,
+              previousYM: previousYM,
+              currency: capturedCurrency,
+              jobs: capturedJobs
+            ))
           await MainActor.run {
             self.dashboardData = data
             self.maybeTriggerCelebration()
@@ -1023,6 +1045,54 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
   }
 
+  private func loadDashboardDependencies(
+    for userId: String,
+    forceReload: Bool = false
+  ) {
+    guard forceReload || settings == nil || snapshots.isEmpty || recurringShifts.isEmpty else {
+      return
+    }
+
+    let context = monthlyPayrollReadService.loadContext(for: userId)
+    settings = context.settings
+    snapshots = context.snapshots
+    recurringShifts = context.recurringShifts
+    displayJobs = context.jobs
+    shouldShowDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+  }
+
+  private func fetchShiftRows(
+    for userId: String,
+    year: Int,
+    month: Int
+  ) async -> [ShiftRow] {
+    await monthlyPayrollReadService.loadShiftRows(
+      for: userId,
+      year: year,
+      month: month
+    )
+  }
+
+  private func fetchMonthShiftRows(
+    for userId: String,
+    displayYM: (year: Int, month: Int),
+    previousYM: (year: Int, month: Int)
+  ) async -> (display: [ShiftRow], previous: [ShiftRow]) {
+    let months = [
+      PayrollReadMonth(year: displayYM.year, month: displayYM.month),
+      PayrollReadMonth(year: previousYM.year, month: previousYM.month),
+    ]
+    let rowsByMonth = await monthlyPayrollReadService.loadShiftRows(
+      for: userId,
+      months: months
+    )
+    let displayRows =
+      rowsByMonth[PayrollReadMonth(year: displayYM.year, month: displayYM.month)] ?? []
+    let previousRows =
+      rowsByMonth[PayrollReadMonth(year: previousYM.year, month: previousYM.month)] ?? []
+    return (displayRows, previousRows)
+  }
+
   /// Prepare for reload by setting loading state synchronously
   /// Call this BEFORE starting a Task to reload, to prevent empty state flash
   /// This ensures the loading indicator shows immediately when sync completes
@@ -1136,10 +1206,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
 
-      // Load settings from local store
+      // Load settings from repositories
       if settings == nil {
-        settings = await LocalStore.shared.storeActor.fetchUserSettings(userId: userId)
-        shouldShowDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+        loadDashboardDependencies(for: userId)
         logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
       }
 
@@ -1159,9 +1228,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             break
           }
 
-          // Retry loading settings
-          settings = await LocalStore.shared.storeActor.fetchUserSettings(userId: userId)
-          shouldShowDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+          // Retry loading through the shared monthly payroll read path
+          loadDashboardDependencies(for: userId, forceReload: true)
           if settings != nil {
             logger.info("📋 Settings found on retry \(attempt)")
             break
@@ -1179,42 +1247,24 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       updateUserAvatarFromSettings()
 
-      // Load snapshots from local store
-      if snapshots.isEmpty {
-        snapshots = await LocalStore.shared.storeActor.fetchSnapshots(userId: userId)
-        logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
-      }
-
-      // Load recurring shifts from local store
-      if recurringShifts.isEmpty {
-        recurringShifts = await LocalStore.shared.storeActor.fetchRecurringShifts(userId: userId)
-        logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
-      }
+      loadDashboardDependencies(for: userId)
+      logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
+      logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
 
       // Calculate date ranges for displayed month
       let displayYM = (year: displayYear, month: displayMonth)
       let previousYM = Date.previousYearMonth(from: displayYM)
 
-      let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-      let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-      let previousStartDate = Date.firstDayOfMonthDate(
-        year: previousYM.year, month: previousYM.month)
-      let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-
-      // Load shifts from local store (after settings retry to avoid stale empty reads)
-      let displayShifts = await LocalStore.shared.storeActor.fetchShifts(
-        userId: userId,
-        startDate: displayStartDate,
-        endDate: displayEndDate
+      // Load shifts through the repository/DAL path (after settings retry to avoid stale empty reads)
+      let fetchedShiftRows = await fetchMonthShiftRows(
+        for: userId,
+        displayYM: displayYM,
+        previousYM: previousYM
       )
+      let displayShifts = fetchedShiftRows.display
       logger.info(
         "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
-
-      let fetchedPreviousShifts = await LocalStore.shared.storeActor.fetchShifts(
-        userId: userId,
-        startDate: previousStartDate,
-        endDate: previousEndDate
-      )
+      let fetchedPreviousShifts = fetchedShiftRows.previous
 
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
@@ -1247,14 +1297,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         )
 
         let dashboardData = Self.buildDashboardDataOffMain(
-          displayedMonthShifts: displayComputed,
-          previousMonthShifts: previousComputed,
-          settings: currentSettings,
-          displayYM: displayYM,
-          previousYM: previousYM,
-          currency: capturedCurrency,
-          jobs: capturedJobs
-        )
+          .init(
+            displayedMonthShifts: displayComputed,
+            previousMonthShifts: previousComputed,
+            settings: currentSettings,
+            displayYM: displayYM,
+            previousYM: previousYM,
+            currency: capturedCurrency,
+            jobs: capturedJobs
+          ))
 
         return (display: displayComputed, previous: previousComputed, dashboardData: dashboardData)
       }.value
@@ -1327,44 +1378,24 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
 
-      // Load settings and snapshots from local if not cached
-      if settings == nil {
-        settings = await LocalStore.shared.storeActor.fetchUserSettings(userId: userId)
-        shouldShowDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+      // Load settings and cached payroll inputs through repositories if needed
+      if settings == nil || snapshots.isEmpty || recurringShifts.isEmpty {
+        loadDashboardDependencies(for: userId)
         updateUserAvatarFromSettings()
-      }
-
-      if snapshots.isEmpty {
-        snapshots = await LocalStore.shared.storeActor.fetchSnapshots(userId: userId)
-      }
-
-      // Load recurring shifts if not cached
-      if recurringShifts.isEmpty {
-        recurringShifts = await LocalStore.shared.storeActor.fetchRecurringShifts(userId: userId)
       }
 
       // Calculate date ranges for displayed month
       let displayYM = (year: displayYear, month: displayMonth)
       let previousYM = Date.previousYearMonth(from: displayYM)
 
-      let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-      let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-      let previousStartDate = Date.firstDayOfMonthDate(
-        year: previousYM.year, month: previousYM.month)
-      let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-
-      // Load shifts from local repositories
-      let displayShifts = await LocalStore.shared.storeActor.fetchShifts(
-        userId: userId,
-        startDate: displayStartDate,
-        endDate: displayEndDate
+      // Load shifts through the repository/DAL path
+      let fetchedShiftRows = await fetchMonthShiftRows(
+        for: userId,
+        displayYM: displayYM,
+        previousYM: previousYM
       )
-
-      let fetchedPreviousShifts = await LocalStore.shared.storeActor.fetchShifts(
-        userId: userId,
-        startDate: previousStartDate,
-        endDate: previousEndDate
-      )
+      let displayShifts = fetchedShiftRows.display
+      let fetchedPreviousShifts = fetchedShiftRows.previous
 
       // Ensure settings are available before computing payroll
       guard let currentSettings = self.settings else {
@@ -1405,14 +1436,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         )
 
         let dashboardData = Self.buildDashboardDataOffMain(
-          displayedMonthShifts: displayComputed,
-          previousMonthShifts: previousComputed,
-          settings: currentSettings,
-          displayYM: displayYM,
-          previousYM: previousYM,
-          currency: capturedCurrency,
-          jobs: capturedJobs
-        )
+          .init(
+            displayedMonthShifts: displayComputed,
+            previousMonthShifts: previousComputed,
+            settings: currentSettings,
+            displayYM: displayYM,
+            previousYM: previousYM,
+            currency: capturedCurrency,
+            jobs: capturedJobs
+          ))
 
         return (display: displayComputed, previous: previousComputed, dashboardData: dashboardData)
       }.value
@@ -1502,9 +1534,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let startDate = Date.firstDayOfMonthDate(year: year, month: month)
       let endDate = Date.lastDayOfMonthDate(year: year, month: month)
 
-      // Read from local store off the main actor
-      let fetchedShifts = await LocalStore.shared.storeActor.fetchShifts(
-        userId: userId,
+      // Read from the repository/DAL path off the main actor
+      let fetchedShifts = await shiftsRepository.getShiftsOffMain(
+        for: userId,
         startDate: startDate,
         endDate: endDate
       )
@@ -1752,14 +1784,16 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Build dashboard data off the main actor to avoid blocking animations.
   nonisolated private static func buildDashboardDataOffMain(
-    displayedMonthShifts: [ShiftWithComputations],
-    previousMonthShifts: [ShiftWithComputations],
-    settings: UserSettings,
-    displayYM: (year: Int, month: Int),
-    previousYM: (year: Int, month: Int),
-    currency: String,
-    jobs: [Job]
+    _ input: DashboardDataBuildInput
   ) -> DashboardData {
+    let displayedMonthShifts = input.displayedMonthShifts
+    let previousMonthShifts = input.previousMonthShifts
+    let settings = input.settings
+    let displayYM = input.displayYM
+    let previousYM = input.previousYM
+    let currency = input.currency
+    let jobs = input.jobs
+
     let today = todayISO()
     let now = Date()
     let payrollDay = settings.effectivePayrollDay
@@ -2397,8 +2431,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let calendar = Calendar.current
     let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate
     let endDate = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate
-    let shifts = await LocalStore.shared.storeActor.fetchShifts(
-      userId: userId,
+    let shifts = await shiftsRepository.getShiftsOffMain(
+      for: userId,
       startDate: startDate,
       endDate: endDate
     )

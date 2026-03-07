@@ -39,11 +39,7 @@ final class StatsService: ObservableObject {
 
   // MARK: - Dependencies
 
-  private let shiftsRepository: ShiftsRepository
-  private let settingsRepository: SettingsRepository
-  private let snapshotsRepository: SnapshotsRepository
-  private let recurringShiftsRepository: RecurringShiftsRepository
-  private let jobsRepository: JobsRepository
+  private let monthlyPayrollReadService: MonthlyPayrollReadService
 
   // MARK: - Published State
 
@@ -63,13 +59,25 @@ final class StatsService: ObservableObject {
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
-    jobsRepository: JobsRepository? = nil
+    jobsRepository: JobsRepository? = nil,
+    monthlyPayrollReadService: MonthlyPayrollReadService? = nil
   ) {
-    self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
-    self.settingsRepository = settingsRepository ?? SettingsRepository.shared
-    self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
-    self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
-    self.jobsRepository = jobsRepository ?? JobsRepository.shared
+    let resolvedShiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+    let resolvedSettingsRepository = settingsRepository ?? SettingsRepository.shared
+    let resolvedSnapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
+    let resolvedRecurringShiftsRepository =
+      recurringShiftsRepository ?? RecurringShiftsRepository.shared
+    let resolvedJobsRepository = jobsRepository ?? JobsRepository.shared
+
+    self.monthlyPayrollReadService =
+      monthlyPayrollReadService
+      ?? MonthlyPayrollReadService(
+        shiftsRepository: resolvedShiftsRepository,
+        settingsRepository: resolvedSettingsRepository,
+        snapshotsRepository: resolvedSnapshotsRepository,
+        recurringShiftsRepository: resolvedRecurringShiftsRepository,
+        jobsRepository: resolvedJobsRepository
+      )
   }
 
   // MARK: - Public API
@@ -105,14 +113,16 @@ final class StatsService: ObservableObject {
         throw StatsServiceError.notAuthenticated
       }
 
-      // Load data from local repositories
-      guard let settings = settingsRepository.getSettings(for: userId) else {
+      // Load shared payroll inputs through the DAL-backed read service
+      let readContext = monthlyPayrollReadService.loadContext(for: userId, jobId: jobId)
+
+      guard let settings = readContext.settings else {
         throw StatsServiceError.noLocalData
       }
 
-      let snapshots = snapshotsRepository.getSnapshots(for: userId, jobId: jobId)
-      let recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId, jobId: jobId)
-      let jobs = jobsRepository.getNonDeletedJobs(for: userId)
+      let snapshots = readContext.snapshots
+      let recurringShifts = readContext.recurringShifts
+      let jobs = readContext.jobs
 
       // Calculate date ranges
       let currentYM = (year: targetYear, month: targetMonth)
@@ -128,24 +138,27 @@ final class StatsService: ObservableObject {
       let yearEndDate = Date.lastDayOfMonthDate(year: targetYear, month: 12)
 
       // Load shifts from local repositories
-      let currentMonthShiftsRaw = shiftsRepository.getShifts(
+      async let currentMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(
         for: userId,
         startDate: currentStartDate,
         endDate: currentEndDate,
         jobId: jobId
       )
-      let previousMonthShiftsRaw = shiftsRepository.getShifts(
+      async let previousMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(
         for: userId,
         startDate: previousStartDate,
         endDate: previousEndDate,
         jobId: jobId
       )
-      let yearShiftsRaw = shiftsRepository.getShifts(
+      async let yearShiftsRaw = monthlyPayrollReadService.loadShiftRows(
         for: userId,
         startDate: yearStartDate,
         endDate: yearEndDate,
         jobId: jobId
       )
+
+      let (resolvedCurrentMonthShiftsRaw, resolvedPreviousMonthShiftsRaw, resolvedYearShiftsRaw) =
+        await (currentMonthShiftsRaw, previousMonthShiftsRaw, yearShiftsRaw)
 
       // Build a deterministic fingerprint so we only recompute full-year data when inputs changed.
       let cacheKey = FullYearCacheKey(
@@ -156,7 +169,7 @@ final class StatsService: ObservableObject {
         snapshotsFingerprint: Self.fingerprintSnapshotsForCaching(snapshots),
         recurringFingerprint: Self.fingerprintRecurringShiftsForCaching(recurringShifts),
         jobsFingerprint: Self.fingerprintJobsForCaching(jobs),
-        shiftsFingerprint: Self.fingerprintShiftsForCaching(yearShiftsRaw)
+        shiftsFingerprint: Self.fingerprintShiftsForCaching(resolvedYearShiftsRaw)
       )
       let cachedFullYearData = fullYearCache[cacheKey]
 
@@ -169,7 +182,7 @@ final class StatsService: ObservableObject {
           .init(
             year: currentYM.year,
             month: currentYM.month,
-            shifts: currentMonthShiftsRaw,
+            shifts: resolvedCurrentMonthShiftsRaw,
             recurring: recurringShifts,
             snapshots: snapshots,
             settings: settings,
@@ -181,7 +194,7 @@ final class StatsService: ObservableObject {
           .init(
             year: previousYM.year,
             month: previousYM.month,
-            shifts: previousMonthShiftsRaw,
+            shifts: resolvedPreviousMonthShiftsRaw,
             recurring: recurringShifts,
             snapshots: snapshots,
             settings: settings,
@@ -200,12 +213,12 @@ final class StatsService: ObservableObject {
           fullYearData = cachedFullYearData
           newFullYearCacheData = nil
         } else {
-          let shiftsByMonth = Dictionary(grouping: yearShiftsRaw) { shift in
+          let shiftsByMonth = Dictionary(grouping: resolvedYearShiftsRaw) { shift in
             Self.monthNumber(fromISODate: shift.shift_date)
           }
 
           var fullYearShifts: [ShiftWithComputations] = []
-          fullYearShifts.reserveCapacity(max(yearShiftsRaw.count, 64))
+          fullYearShifts.reserveCapacity(max(resolvedYearShiftsRaw.count, 64))
 
           for month in 1...12 {
             try Task.checkCancellation()
