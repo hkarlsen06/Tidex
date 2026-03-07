@@ -111,6 +111,9 @@ final class WageyViewModel {
   /// Whether the user has consented to AI data sharing (per user, stored in UserDefaults)
   private(set) var hasConsentedToAISharing: Bool = false
 
+  /// Whether the entry flow state has been loaded for the current user context
+  private(set) var hasResolvedEntryState: Bool = false
+
   // MARK: - Computed Properties for Usage
 
   /// The user's current subscription tier
@@ -222,8 +225,6 @@ final class WageyViewModel {
   /// Private initializer to enforce singleton pattern
   private init() {
     loadConversations()
-    loadShowcaseState()
-    loadConsentState()
     observeTierChanges()
   }
 
@@ -263,6 +264,7 @@ final class WageyViewModel {
   func markShowcaseSeen() {
     guard let userId = AppCoordinator.shared.userId else { return }
     hasSeenShowcase = true
+    hasResolvedEntryState = true
     UserDefaults.standard.set(true, forKey: showcaseKey(for: userId))
   }
 
@@ -293,6 +295,7 @@ final class WageyViewModel {
   func grantAIConsent() {
     guard let userId = AppCoordinator.shared.userId else { return }
     hasConsentedToAISharing = true
+    hasResolvedEntryState = true
     UserDefaults.standard.set(true, forKey: consentKey(for: userId))
   }
 
@@ -300,6 +303,7 @@ final class WageyViewModel {
   func revokeAIConsent() {
     guard let userId = AppCoordinator.shared.userId else { return }
     hasConsentedToAISharing = false
+    hasResolvedEntryState = true
     UserDefaults.standard.set(false, forKey: consentKey(for: userId))
   }
 
@@ -324,10 +328,25 @@ final class WageyViewModel {
     entitlementSyncMessage = nil
     hasSeenShowcase = false
     hasConsentedToAISharing = false
+    hasResolvedEntryState = false
     isSidebarVisible = false
     cachedUserId = nil
     hadSuccessfulToolCalls = false
     currentAssistantMessageId = nil
+  }
+
+  /// Refresh the user-scoped showcase and consent state.
+  func refreshEntryState() {
+    guard AppCoordinator.shared.userId != nil else {
+      hasSeenShowcase = false
+      hasConsentedToAISharing = false
+      hasResolvedEntryState = false
+      return
+    }
+
+    loadShowcaseState()
+    loadConsentState()
+    hasResolvedEntryState = true
   }
 
   // MARK: - Conversation Management
@@ -340,8 +359,7 @@ final class WageyViewModel {
     }
     cachedUserId = userId
     conversations = conversationsRepository.getConversations(for: userId)
-    loadShowcaseState()
-    loadConsentState()
+    refreshEntryState()
   }
 
   /// Fetch wagey usage data from the profiles table

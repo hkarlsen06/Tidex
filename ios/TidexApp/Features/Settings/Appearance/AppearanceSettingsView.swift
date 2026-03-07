@@ -340,8 +340,8 @@ struct AppearanceSettingsView: View {
       return String(localized: .tabsShifts)
     case .add:
       return String(localized: .tabsAdd)
-    case .stats:
-      return String(localized: .tabsStats)
+    case .wagey:
+      return String(localized: .tabsWagey)
     case .sharing:
       return String(localized: .tabsSharing)
     }
@@ -355,8 +355,8 @@ struct AppearanceSettingsView: View {
       return "calendar"
     case .add:
       return "plus.circle.fill"
-    case .stats:
-      return "chart.bar.xaxis"
+    case .wagey:
+      return "wand.and.stars"
     case .sharing:
       return "person.2.fill"
     }

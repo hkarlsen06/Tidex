@@ -7,7 +7,7 @@ enum StartupTabOption: String, CaseIterable {
   case home
   case shifts
   case add
-  case stats
+  case wagey
   case sharing
 }
 
@@ -125,7 +125,10 @@ final class AppearanceSettingsViewModel: ObservableObject {
       resolvedStartupTabRawValue =
         UserDefaults.standard.string(forKey: Self.startupTabCacheKey) ?? "home"
     }
-    selectedStartupTab = StartupTabOption(rawValue: resolvedStartupTabRawValue) ?? .home
+    let normalizedStartupTabRawValue =
+      resolvedStartupTabRawValue == "stats"
+      ? StartupTabOption.home.rawValue : resolvedStartupTabRawValue
+    selectedStartupTab = StartupTabOption(rawValue: normalizedStartupTabRawValue) ?? .home
     UserDefaults.standard.set(selectedStartupTab.rawValue, forKey: Self.startupTabCacheKey)
 
     isInitialLoad = false

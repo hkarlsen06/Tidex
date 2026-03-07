@@ -2,23 +2,69 @@ import SwiftUI
 
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
+  private let pinnedBottomThreshold: CGFloat = 44
+
   let messages: [ChatMessage]
   let streamingContentBlocks: [ContentBlock]
   let isStreaming: Bool
+  let remainingMessagesText: String?
+  let showsHistoryButton: Bool
 
   /// Callback when a suggestion chip is tapped
   var onSuggestionTapped: ((String) -> Void)?
-
-  /// Namespace for scroll-to-bottom animation
-  @Namespace private var bottomID
+  var onHistoryTapped: (() -> Void)?
 
   /// Whether the "Copied!" confirmation is showing
   @State private var showCopiedConfirmation = false
+  @State private var showsSuggestions = false
+  @State private var scrollTask: Task<Void, Never>?
+  @State private var bottomAnchorMaxY: CGFloat = 0
+  @State private var viewportMaxY: CGFloat = 0
+  @State private var isPinnedToBottom = true
+  @State private var suppressAutoFollow = false
+
+  private struct ScrollState: Equatable {
+    let messageCount: Int
+    let lastMessageID: String?
+    let streamingSignature: Int
+    let isStreaming: Bool
+  }
+
+  private var scrollState: ScrollState {
+    ScrollState(
+      messageCount: messages.count,
+      lastMessageID: messages.last?.id,
+      streamingSignature: streamingContentSignature,
+      isStreaming: isStreaming
+    )
+  }
+
+  private var streamingContentSignature: Int {
+    streamingContentBlocks.reduce(into: 0) { result, block in
+      switch block {
+      case .text(let text):
+        result = result &* 31 &+ text.count
+      case .toolCall(let toolCall):
+        result = result &* 31 &+ toolCall.name.count
+        result = result &* 31 &+ (toolCall.result?.count ?? 0)
+      case .image:
+        result = result &* 31 &+ 1
+      }
+    }
+  }
+
+  private var showsJumpToLatestButton: Bool {
+    !isPinnedToBottom && (isStreaming || !messages.isEmpty)
+  }
+
+  private var shouldAutoFollow: Bool {
+    isPinnedToBottom && !suppressAutoFollow
+  }
 
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        LazyVStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.sm) {
           // Empty state when no messages
           if messages.isEmpty && !isStreaming {
             emptyStateView
@@ -46,22 +92,61 @@ struct ChatMessageList: View {
           Color.clear
             .frame(height: 1)
             .id("bottom")
+            .background(
+              GeometryReader { geometry in
+                Color.clear.preference(
+                  key: ChatBottomAnchorMaxYPreferenceKey.self,
+                  value: geometry.frame(in: .global).maxY
+                )
+              }
+            )
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
       }
-      .onChange(of: messages.count) { _, _ in
-        scrollToBottom(proxy: proxy)
+      .background(
+        GeometryReader { geometry in
+          Color.clear.preference(
+            key: ChatViewportMaxYPreferenceKey.self,
+            value: geometry.frame(in: .global).maxY
+          )
+        }
+      )
+      .simultaneousGesture(
+        DragGesture(minimumDistance: 4)
+          .onChanged { _ in
+            suppressAutoFollow = true
+          }
+      )
+      .onAppear {
+        isPinnedToBottom = true
+        suppressAutoFollow = false
+        scheduleScrollToBottom(proxy: proxy, animated: false)
       }
-      .onChange(of: streamingContentBlocks.count) { _, _ in
-        scrollToBottom(proxy: proxy)
+      .onChange(of: scrollState) { oldValue, newValue in
+        handleScrollStateChange(from: oldValue, to: newValue, proxy: proxy)
       }
-      .onChange(of: isStreaming) { _, streaming in
-        if streaming {
-          scrollToBottom(proxy: proxy)
+      .onPreferenceChange(ChatBottomAnchorMaxYPreferenceKey.self) { value in
+        bottomAnchorMaxY = value
+        updatePinnedToBottom()
+      }
+      .onPreferenceChange(ChatViewportMaxYPreferenceKey.self) { value in
+        viewportMaxY = value
+        updatePinnedToBottom()
+      }
+      .overlay(alignment: .bottomTrailing) {
+        if showsJumpToLatestButton {
+          jumpToLatestButton(proxy: proxy)
+            .padding(.trailing, Spacing.lg)
+            .padding(.bottom, Spacing.lg)
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
       }
       .scrollDismissesKeyboard(.interactively)
+      .onDisappear {
+        scrollTask?.cancel()
+        scrollTask = nil
+      }
     }
     .onTapGesture {
       // Dismiss keyboard when tapping on the message area
@@ -76,33 +161,134 @@ struct ChatMessageList: View {
   private var suggestions: [(icon: String, text: String)] {
     [
       ("calendar.badge.plus", String(localized: .wageyEmptyStateSuggestion1)),
-      ("chart.bar.fill", String(localized: .wageyEmptyStateSuggestion2)),
+      ("banknote.fill", String(localized: .wageyEmptyStateSuggestion2)),
       ("list.clipboard.fill", String(localized: .wageyEmptyStateSuggestion3)),
-      ("banknote.fill", String(localized: .wageyEmptyStateSuggestion4)),
+      (
+        "arrow.trianglehead.2.clockwise.rotate.90.circle.fill",
+        String(localized: .wageyEmptyStateSuggestion4)
+      ),
     ]
   }
 
   private var emptyStateView: some View {
-    VStack(spacing: Spacing.xl) {
-      VStack(spacing: Spacing.xxxs) {
-        Text(.wageyEmptyStateTitle)
-          .font(.tidexLargeTitle)
-          .foregroundColor(.tidexTextPrimary)
+    VStack(alignment: .leading, spacing: Spacing.lg) {
+      welcomeHero
 
-        Text(.wageyEmptyStateSubtitle)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .multilineTextAlignment(.center)
-      }
-
-      // Suggestion list
-      VStack(spacing: Spacing.xsm) {
-        ForEach(suggestions, id: \.text) { suggestion in
-          suggestionRow(icon: suggestion.icon, text: suggestion.text)
+      if showsSuggestions {
+        VStack(spacing: Spacing.sm) {
+          ForEach(suggestions, id: \.text) { suggestion in
+            suggestionRow(icon: suggestion.icon, text: suggestion.text)
+          }
         }
+        .transition(.move(edge: .top).combined(with: .opacity))
       }
     }
-    .padding(.horizontal, Spacing.lg)
+    .padding(.horizontal, Spacing.md)
+  }
+
+  private var welcomeHero: some View {
+    ZStack(alignment: .topLeading) {
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        .fill(
+          LinearGradient(
+            colors: [
+              Color.tidexSurfacePrimary,
+              Color.tidexSurfacePrimary.opacity(0.95),
+              Color.tidexBlue.opacity(0.12),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
+
+      Circle()
+        .fill(Color.tidexBlue.opacity(0.12))
+        .frame(width: 180, height: 180)
+        .blur(radius: 42)
+        .offset(x: -16, y: -52)
+
+      Circle()
+        .fill(Color.white.opacity(0.08))
+        .frame(width: 120, height: 120)
+        .blur(radius: 40)
+        .offset(x: 180, y: 24)
+
+      VStack(alignment: .leading, spacing: Spacing.md) {
+        HStack {
+          Spacer()
+
+          if showsHistoryButton {
+            Button {
+              Haptics.play(.light)
+              onHistoryTapped?()
+            } label: {
+              Image(systemName: "clock.arrow.circlepath")
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexTextSecondary)
+                .frame(width: 40, height: 40)
+                .background(Color.tidexSurfacePrimary.opacity(0.9))
+                .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Conversation history"))
+          }
+        }
+
+        HStack(alignment: .top, spacing: Spacing.md) {
+          Text(.wageyEmptyStateWelcomeTitle)
+            .font(.tidexScreenTitle)
+            .foregroundColor(.tidexTextPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        Text(.wageyEmptyStateWelcomeSubtitle)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+
+        HStack(spacing: Spacing.sm) {
+          if let remainingMessagesText, !remainingMessagesText.isEmpty {
+            Text(remainingMessagesText)
+              .font(.tidexFootnoteStrong)
+              .foregroundColor(.tidexTextSecondary)
+              .padding(.horizontal, Spacing.sm)
+              .padding(.vertical, Spacing.xs)
+              .background(Color.tidexSurfaceSecondary.opacity(0.8))
+              .clipShape(Capsule())
+          }
+
+          if !showsSuggestions {
+            Button {
+              withAnimation(.easeInOut(duration: 0.2)) {
+                showsSuggestions = true
+              }
+            } label: {
+              HStack(spacing: Spacing.xs) {
+                Image(systemName: "sparkles")
+                  .font(.tidexFootnoteStrong)
+
+                Text(.wageyEmptyStateQuickStart)
+                  .font(.tidexButton)
+              }
+              .foregroundColor(.tidexTextOnBrand)
+              .padding(.horizontal, Spacing.md)
+              .padding(.vertical, Spacing.sm)
+              .background(Color.tidexBrandPrimary)
+              .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+          }
+        }
+      }
+      .padding(Spacing.lg)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
+    .tidexCardShadow(cornerRadius: CornerRadius.card)
   }
 
   private func suggestionRow(icon: String, text: String) -> some View {
@@ -110,26 +296,28 @@ struct ChatMessageList: View {
       Haptics.play(.light)
       onSuggestionTapped?(text)
     } label: {
-      HStack(spacing: Spacing.msm) {
-        Image(systemName: icon)
-          .font(.tidexBody)
-          .foregroundColor(.tidexBlue)
-          .frame(width: 24)
+      HStack(spacing: Spacing.md) {
+        ZStack {
+          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+            .fill(Color.tidexBlue.opacity(0.14))
+            .frame(width: 44, height: 44)
 
-        Text(text)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(2)
-          .multilineTextAlignment(.leading)
+          Image(systemName: icon)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexBlue)
+        }
+
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+          Text(text)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+            .multilineTextAlignment(.leading)
+        }
 
         Spacer(minLength: 0)
-
-        Image(systemName: "chevron.right")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
       }
       .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.msm)
+      .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfacePrimary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
     }
@@ -174,10 +362,103 @@ struct ChatMessageList: View {
 
   // MARK: - Scroll Helper
 
-  private func scrollToBottom(proxy: ScrollViewProxy) {
-    withAnimation(.easeOut(duration: 0.2)) {
-      proxy.scrollTo("bottom", anchor: .bottom)
+  private func scheduleScrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
+    scrollTask?.cancel()
+    scrollTask = Task { @MainActor in
+      await Task.yield()
+      await Task.yield()
+      guard !Task.isCancelled else { return }
+
+      if animated {
+        withAnimation(.easeOut(duration: 0.2)) {
+          proxy.scrollTo("bottom", anchor: .bottom)
+        }
+      } else {
+        proxy.scrollTo("bottom", anchor: .bottom)
+      }
     }
+  }
+
+  private func handleScrollStateChange(
+    from oldValue: ScrollState,
+    to newValue: ScrollState,
+    proxy: ScrollViewProxy
+  ) {
+    let startedStreaming = !oldValue.isStreaming && newValue.isStreaming
+    let appendedMessage =
+      oldValue.messageCount != newValue.messageCount
+      || oldValue.lastMessageID != newValue.lastMessageID
+    let updatedStreamingContent = oldValue.streamingSignature != newValue.streamingSignature
+
+    if startedStreaming {
+      scheduleScrollToBottom(proxy: proxy, animated: false)
+      return
+    }
+
+    if appendedMessage {
+      guard shouldAutoFollow else { return }
+      let shouldAnimate = !newValue.isStreaming
+      scheduleScrollToBottom(proxy: proxy, animated: shouldAnimate)
+      return
+    }
+
+    guard updatedStreamingContent, shouldAutoFollow else { return }
+    scheduleScrollToBottom(proxy: proxy, animated: false)
+  }
+
+  private func updatePinnedToBottom() {
+    guard viewportMaxY > 0, bottomAnchorMaxY > 0 else { return }
+    let distanceFromBottom = bottomAnchorMaxY - viewportMaxY
+    let isNearBottom = distanceFromBottom <= pinnedBottomThreshold
+    isPinnedToBottom = isNearBottom
+    if isNearBottom {
+      suppressAutoFollow = false
+    }
+  }
+
+  private func jumpToLatestButton(proxy: ScrollViewProxy) -> some View {
+    Button {
+      Haptics.play(.light)
+      isPinnedToBottom = true
+      suppressAutoFollow = false
+      scheduleScrollToBottom(proxy: proxy, animated: true)
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "arrow.down")
+          .font(.tidexFootnoteStrong)
+
+        Text(String(localized: "wagey.chat.jump_to_latest"))
+          .font(.tidexFootnoteStrong)
+      }
+      .foregroundColor(.tidexTextPrimary)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
+      .background(Color.tidexSurfacePrimary.opacity(0.96))
+      .overlay(
+        Capsule()
+          .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+      )
+      .clipShape(Capsule())
+      .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(String(localized: "wagey.chat.jump_to_latest")))
+  }
+}
+
+private struct ChatBottomAnchorMaxYPreferenceKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = nextValue()
+  }
+}
+
+private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = nextValue()
   }
 }
 
@@ -187,7 +468,9 @@ struct ChatMessageList: View {
   ChatMessageList(
     messages: [],
     streamingContentBlocks: [],
-    isStreaming: false
+    isStreaming: false,
+    remainingMessagesText: "15 messages left",
+    showsHistoryButton: true
   )
   .background(Color.tidexBackground)
 }
@@ -214,7 +497,9 @@ struct ChatMessageList: View {
       ),
     ],
     streamingContentBlocks: [],
-    isStreaming: false
+    isStreaming: false,
+    remainingMessagesText: nil,
+    showsHistoryButton: true
   )
   .background(Color.tidexBackground)
 }
@@ -235,7 +520,9 @@ struct ChatMessageList: View {
       .toolCall(
         ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil)),
     ],
-    isStreaming: true
+    isStreaming: true,
+    remainingMessagesText: nil,
+    showsHistoryButton: false
   )
   .background(Color.tidexBackground)
 }

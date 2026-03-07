@@ -4,7 +4,7 @@ import SwiftUI
 /// Composes the header, message list, input field, and conversation sidebar
 struct WageyView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
-  @Environment(\.dismiss) private var dismiss
+  @Binding private var selectedTab: MainTabView.Tab
 
   /// Shared ViewModel for managing chat state
   /// Using shared instance ensures conversation persists when dismissing and reopening Wagey
@@ -13,17 +13,8 @@ struct WageyView: View {
   /// Whether to show the conversation history sheet
   @State private var showHistory = false
 
-  /// Whether to show the consent view for AI data sharing
-  @State private var showConsent: Bool
-
-  /// Whether to show the showcase for first-time free users
-  /// Initialize based on ViewModel state so it shows immediately
-  @State private var showShowcase: Bool
-
-  init() {
-    // Check if consent and showcase should be shown at initialization time
-    _showConsent = State(initialValue: WageyViewModel.shared.shouldShowConsent)
-    _showShowcase = State(initialValue: WageyViewModel.shared.shouldShowShowcase)
+  init(selectedTab: Binding<MainTabView.Tab>) {
+    _selectedTab = selectedTab
   }
 
   /// Input text for the chat field
@@ -35,35 +26,39 @@ struct WageyView: View {
   /// Pending message to send after upgrade
   @State private var pendingMessage: String?
 
+  private var isShowingWelcomeState: Bool {
+    viewModel.messages.isEmpty && !viewModel.isStreaming
+  }
+
   var body: some View {
-    if showShowcase {
-      // Show showcase first so the user learns what Wagey is
-      WageyShowcaseView(
-        onTryWagey: {
-          viewModel.markShowcaseSeen()
-          showShowcase = false
-          // After showcase, check if consent is still needed
-          showConsent = viewModel.shouldShowConsent
-        },
-        onClose: {
-          // Close the entire Wagey flow
-          dismiss()
-        }
-      )
-      .environmentObject(coordinator)
-    } else if showConsent {
-      // Then ask for data-sharing consent before using Wagey
-      WageyConsentView(
-        onAgree: {
-          viewModel.grantAIConsent()
-          showConsent = false
-        },
-        onDecline: {
-          dismiss()
-        }
-      )
-    } else {
-      chatInterface
+    Group {
+      if !viewModel.hasResolvedEntryState {
+        onboardingStatePlaceholder
+      } else if viewModel.shouldShowShowcase {
+        // Show showcase first so the user learns what Wagey is
+        WageyShowcaseView(
+          onTryWagey: {
+            viewModel.markShowcaseSeen()
+          }
+        )
+        .environmentObject(coordinator)
+      } else if viewModel.shouldShowConsent {
+        // Then ask for data-sharing consent before using Wagey
+        WageyConsentView(
+          onAgree: {
+            viewModel.grantAIConsent()
+          },
+          onDecline: {
+            selectedTab = .home
+          }
+        )
+      } else {
+        chatInterface
+      }
+    }
+    .task(id: coordinator.userId) {
+      viewModel.loadConversations()
+      await viewModel.fetchWageyUsage()
     }
   }
 
@@ -74,21 +69,29 @@ struct WageyView: View {
       mainContent
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-          ToolbarItem(placement: .principal) {
-            headerTitle
+          if shouldShowUsageSubtitle {
+            ToolbarItem(placement: .topBarLeading) {
+              messagesRemainingBadge
+            }
+            .sharedBackgroundVisibility(.hidden)
           }
 
-          // Left side: close button
-          ToolbarItem(placement: .topBarLeading) {
-            closeButton
+          if !isShowingWelcomeState {
+            ToolbarItem(placement: .principal) {
+              headerTitle
+            }
           }
 
-          // Right side: new chat, then history
-          ToolbarItem(placement: .topBarTrailing) {
-            newChatButton
+          if !isShowingWelcomeState {
+            ToolbarItem(placement: .topBarTrailing) {
+              newChatButton
+            }
           }
-          ToolbarItem(placement: .topBarTrailing) {
-            historyButton
+
+          if !viewModel.conversations.isEmpty {
+            ToolbarItem(placement: .topBarTrailing) {
+              historyButton
+            }
           }
         }
     }
@@ -119,9 +122,11 @@ struct WageyView: View {
         showPaywall = true
       }
     }
-    .task {
-      await viewModel.fetchWageyUsage()
-    }
+  }
+
+  private var onboardingStatePlaceholder: some View {
+    Color.tidexBackground
+      .ignoresSafeArea()
   }
 
   /// Handle paywall dismiss - check if user upgraded
@@ -150,6 +155,8 @@ struct WageyView: View {
         messages: viewModel.messages,
         streamingContentBlocks: viewModel.activeContentBlocks,
         isStreaming: viewModel.isStreaming,
+        remainingMessagesText: nil,
+        showsHistoryButton: false,
         onSuggestionTapped: { suggestion in
           inputText = suggestion
         }
@@ -307,30 +314,28 @@ struct WageyView: View {
   }
 
   private var headerTitle: some View {
-    VStack(spacing: Spacing.micro) {
-      Text(localizedConversationTitle)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
-
-      if shouldShowUsageSubtitle {
-        Text(String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount))))
-          .font(.tidexMicro)
-          .foregroundColor(
-            viewModel.remainingMessagesCount <= 3 ? .tidexWarning : .tidexTextSecondary
-          )
-      }
-    }
+    Text(localizedConversationTitle)
+      .font(.tidexBodyMedium)
+      .foregroundColor(.tidexTextPrimary)
+      .lineLimit(1)
   }
 
-  private var closeButton: some View {
-    Button {
-      dismiss()
-    } label: {
-      Image(systemName: "xmark")
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextMuted)
-    }
+  private var messagesRemainingBadge: some View {
+    Text(
+      isShowingWelcomeState
+        ? String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount)))
+        : "\(viewModel.remainingMessagesCount)"
+    )
+    .font(.tidexFootnote)
+    .monospacedDigit()
+    .foregroundColor(
+      viewModel.remainingMessagesCount <= 3 ? .tidexWarning : .tidexTextSecondary
+    )
+    .lineLimit(1)
+    .fixedSize(horizontal: true, vertical: false)
+    .accessibilityLabel(
+      Text(String(localized: .wageyMessagesRemaining(Int32(viewModel.remainingMessagesCount))))
+    )
   }
 
   private var historyButton: some View {
@@ -362,13 +367,22 @@ struct WageyView: View {
 // MARK: - Previews
 
 #Preview("Empty") {
-  WageyView()
-    .environmentObject(AppCoordinator.shared)
+  PreviewWageyView()
 }
 
 #Preview("With Messages") {
   // Note: For preview purposes, the view will show empty state
   // as we can't inject state into @State property from preview
-  WageyView()
-    .environmentObject(AppCoordinator.shared)
+  PreviewWageyView()
+}
+
+@MainActor
+private struct PreviewWageyView: View {
+  @StateObject private var coordinator = AppCoordinator.shared
+  @State private var selectedTab: MainTabView.Tab = .wagey
+
+  var body: some View {
+    WageyView(selectedTab: $selectedTab)
+      .environmentObject(coordinator)
+  }
 }

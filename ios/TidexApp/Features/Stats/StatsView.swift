@@ -5,9 +5,6 @@ import SwiftUI
 struct StatsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
 
-  /// Binding to the selected tab for navigation
-  @Binding var selectedTab: MainTabView.Tab
-
   private struct MonthlyGoalEditContext: Identifiable {
     let id = UUID()
     let monthDate: Date
@@ -106,7 +103,7 @@ struct StatsView: View {
 
   @ViewBuilder
   private func statsContent(stats: StatsData) -> some View {
-    ScrollViewReader { proxy in
+    ScrollViewReader { _ in
       ScrollView {
         VStack(spacing: Spacing.md) {
           Color.clear.frame(height: 0).id("stats-top")
@@ -211,12 +208,6 @@ struct StatsView: View {
       }
       .refreshable {
         await refreshStatsContent()
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
-        guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
-          tab == .stats
-        else { return }
-        withAnimation { proxy.scrollTo("stats-top", anchor: .top) }
       }
     }  // ScrollViewReader
   }
@@ -446,6 +437,6 @@ struct StatsView: View {
 }
 
 #Preview {
-  StatsView(selectedTab: .constant(.stats))
+  StatsView()
     .environmentObject(AppCoordinator.shared)
 }
