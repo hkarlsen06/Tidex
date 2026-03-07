@@ -2,7 +2,7 @@
  * Wagey Chat Router
  *
  * River stream definition for the chat interface.
- * Uses runtime-selectable AI provider (Claude or OpenAI).
+ * Uses OpenAI Responses API over WebSocket mode.
  */
 
 import { z } from "zod";
@@ -15,20 +15,21 @@ import {
 } from "@/lib/river";
 import type {
   Message,
-  ContentBlock,
   CompactionContent,
+  ContentBlock,
   ImageContent,
-  StreamChunk,
   ToolResultContent,
-  ThinkingContent,
-  RedactedThinkingContent,
-} from "@/lib/services/claude";
+} from "@/lib/services/ai-types";
 import { getSystemPrompt, type SystemPromptContext } from "./system-prompt";
 import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
 import { LOCALE_COOKIE, defaultLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import type { WageyAIProvider } from "@/lib/services/config";
+import type {
+  OpenAIInputItem,
+  OpenAIResponseSession,
+} from "@/lib/services/openai";
+import { toOpenAIInput } from "@/lib/services/openai";
 
 /**
  * Chat chunk types (sent to frontend)
@@ -191,18 +192,18 @@ function extractTextContent(content: ChatInput["messages"][0]["content"]): strin
 }
 
 /**
- * Convert OpenAI-style messages from frontend to Claude format
+ * Convert OpenAI-style messages from frontend to provider-neutral model history.
  * Supports multimodal messages with images
  */
-function convertToClaudeMessages(
+export function convertToOpenAIMessages(
   openAiMessages: ChatInput["messages"],
   compaction?: string
 ): { system?: string; messages: Message[] } {
   let systemPrompt: string | undefined;
-  const claudeMessages: Message[] = [];
+  const modelMessages: Message[] = [];
 
   if (compaction) {
-    claudeMessages.push({
+    modelMessages.push({
       role: "assistant",
       content: [
         {
@@ -226,10 +227,8 @@ function convertToClaudeMessages(
       if (Array.isArray(msg.content)) {
         const hasImages = msg.content.some((block) => block.type === "image");
         if (hasImages) {
-          // Convert to Claude multimodal format
-          const claudeContent: ContentBlock[] = msg.content.map((block) => {
+          const modelContent: ContentBlock[] = msg.content.map((block) => {
             if (block.type === "image") {
-              // Claude image format
               return {
                 type: "image",
                 source: {
@@ -246,16 +245,15 @@ function convertToClaudeMessages(
             };
           });
 
-          claudeMessages.push({
+          modelMessages.push({
             role: "user",
-            content: claudeContent,
+            content: modelContent,
           });
           continue;
         }
       }
 
-      // Plain text message
-      claudeMessages.push({
+      modelMessages.push({
         role: "user",
         content: extractTextContent(msg.content),
       });
@@ -294,28 +292,24 @@ function convertToClaudeMessages(
         }
       }
 
-      claudeMessages.push({
+      modelMessages.push({
         role: "assistant",
         content: contentBlocks.length > 0 ? contentBlocks : textContent,
       });
       continue;
     }
 
-    // Handle tool results - Claude expects them as user messages with tool_result content
     if (msg.role === "tool" && msg.tool_call_id) {
       const resultContent = extractTextContent(msg.content);
-      // Check if last message is a user message with tool results, if so append to it
-      const lastMessage = claudeMessages[claudeMessages.length - 1];
+      const lastMessage = modelMessages[modelMessages.length - 1];
       if (lastMessage?.role === "user" && Array.isArray(lastMessage.content)) {
-        // Append to existing tool results
         (lastMessage.content as ContentBlock[]).push({
           type: "tool_result",
           tool_use_id: msg.tool_call_id,
           content: resultContent,
         });
       } else {
-        // Create new user message with tool result
-        claudeMessages.push({
+        modelMessages.push({
           role: "user",
           content: [
             {
@@ -329,57 +323,48 @@ function convertToClaudeMessages(
     }
   }
 
-  return { system: systemPrompt, messages: claudeMessages };
+  return { system: systemPrompt, messages: modelMessages };
 }
 
-export async function getConfiguredWageyAiProvider(): Promise<WageyAIProvider> {
-  const { AppConfig, AppConfigLive } = await import("@/lib/services/config");
-  const getProvider = Effect.gen(function* () {
-    const config = yield* AppConfig;
-    return config.ai.provider;
-  }).pipe(Effect.provide(AppConfigLive), Effect.scoped);
+async function openOpenAISession(
+  abortSignal: AbortSignal
+): Promise<OpenAIResponseSession> {
+  const { OpenAIService } = await import("@/lib/services/openai");
+  const { OpenAILive } = await import("@/lib/layers/app");
 
-  return Effect.runPromise(getProvider);
-}
-
-export async function streamChatWithProvider(
-  provider: WageyAIProvider,
-  options: {
-    system?: string;
-    messages: Message[];
-  }
-): Promise<AsyncIterable<StreamChunk>> {
-  if (provider === "chatgpt") {
-    const { OpenAIService } = await import("@/lib/services/openai");
-    const { OpenAILive } = await import("@/lib/layers/app");
-
-    const getAiStream = Effect.gen(function* () {
-      const openai = yield* OpenAIService;
-      return yield* openai.streamChat({
-        system: options.system,
-        messages: options.messages,
-        tools,
-        maxTokens: 2048,
-      });
-    }).pipe(Effect.provide(OpenAILive), Effect.scoped);
-
-    return Effect.runPromise(getAiStream);
-  }
-
-  const { ClaudeService } = await import("@/lib/services/claude");
-  const { ClaudeLive } = await import("@/lib/layers/app");
-
-  const getAiStream = Effect.gen(function* () {
-    const claude = yield* ClaudeService;
-    return yield* claude.streamChat({
-      system: options.system,
-      messages: options.messages,
-      tools,
-      maxTokens: 2048,
+  const getSession = Effect.gen(function* () {
+    const openai = yield* OpenAIService;
+    return yield* openai.openSession({
+      signal: abortSignal,
     });
-  }).pipe(Effect.provide(ClaudeLive), Effect.scoped);
+  }).pipe(Effect.provide(OpenAILive), Effect.scoped);
 
-  return Effect.runPromise(getAiStream);
+  return Effect.runPromise(getSession);
+}
+
+function buildToolResultInput(
+  toolResults: ToolResultContent[],
+  hasFailures: boolean
+): OpenAIInputItem[] {
+  const input: OpenAIInputItem[] = toolResults.map((result) => ({
+    type: "function_call_output",
+    call_id: result.tool_use_id,
+    output: result.content,
+  }));
+
+  if (hasFailures) {
+    input.push({
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: "Some tool calls failed. Analyze the errors, retry with corrected parameters if possible, or explain clearly what blocked the request.",
+        },
+      ],
+    });
+  }
+
+  return input;
 }
 
 /**
@@ -459,49 +444,46 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     };
 
     // Convert messages and add system prompt if not present
-    let { system, messages: claudeMessages } = convertToClaudeMessages(messages, compaction);
+    let { system, messages: modelMessages } = convertToOpenAIMessages(messages, compaction);
 
     // Use our system prompt if none provided
     if (!system) {
       system = getSystemPrompt(systemPromptContext);
     }
 
-    const aiProvider = await getConfiguredWageyAiProvider();
-
     // Agentic loop: continues until AI stops making tool calls
-    let conversationMessages = [...claudeMessages];
     let iterationCount = 0;
     const MAX_ITERATIONS = 10; // Safety limit to prevent infinite loops
-    let latestCompactionContent: string | undefined;
     let aiLoopFailed = false;
     let hasUserVisibleAssistantOutput = false;
+    let previousResponseId: string | undefined;
+    let pendingInput = toOpenAIInput(modelMessages);
+    const session = await openOpenAISession(abortSignal);
 
     try {
       while (iterationCount < MAX_ITERATIONS) {
         iterationCount++;
 
-        const aiStream = await streamChatWithProvider(aiProvider, {
-          system,
-          messages: conversationMessages,
+        const response = await session.createResponse({
+          instructions: system,
+          input: pendingInput,
+          tools,
+          maxTokens: 2048,
+          previousResponseId,
         });
 
-        let currentTextContent = "";
-        let compactionBlock: CompactionContent | null = null;
-        const thinkingBlocks: Array<ThinkingContent | RedactedThinkingContent> = [];
         const toolUses: Array<{
           id: string;
           name: string;
           input: Record<string, unknown>;
         }> = [];
 
-        // Process stream chunks
-        for await (const chunk of aiStream) {
+        for await (const chunk of response.events) {
           if (abortSignal.aborted) {
             break;
           }
 
           if (chunk.type === "text") {
-            currentTextContent += chunk.content;
             hasUserVisibleAssistantOutput = true;
             await stream.appendChunk({
               type: "text",
@@ -531,66 +513,20 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
                 toolArguments: JSON.stringify(chunk.input),
               });
             }
-          } else if (chunk.type === "compaction" && aiProvider === "claude") {
-            // Preserve compaction block for server continuity and optional client state sync
-            compactionBlock = { type: "compaction", content: chunk.content };
-            latestCompactionContent = chunk.content;
-          } else if (chunk.type === "thinking") {
-            // Preserve thinking/signature blocks for tool-use round-trip integrity
-            thinkingBlocks.push({
-              type: "thinking",
-              thinking: chunk.thinking,
-              signature: chunk.signature,
-            });
-          } else if (chunk.type === "redacted_thinking") {
-            thinkingBlocks.push({
-              type: "redacted_thinking",
-              data: chunk.data,
-            });
           }
         }
 
-        // If aborted, break out of agentic loop
+        const completion = await response.completed;
+        previousResponseId = completion.responseId ?? previousResponseId;
+
         if (abortSignal.aborted) {
           break;
         }
 
-        // Build assistant message content blocks
-        const assistantContent: ContentBlock[] = [];
-        // Compaction block must come first - API drops everything before it
-        if (compactionBlock) {
-          assistantContent.push(compactionBlock);
-        }
-        if (thinkingBlocks.length > 0) {
-          assistantContent.push(...thinkingBlocks);
-        }
-        if (currentTextContent) {
-          assistantContent.push({
-            type: "text",
-            text: currentTextContent,
-          });
-        }
-        for (const toolUse of toolUses) {
-          assistantContent.push({
-            type: "tool_use",
-            id: toolUse.id,
-            name: toolUse.name,
-            input: toolUse.input,
-          });
-        }
-
-        // Add assistant message to conversation
-        conversationMessages.push({
-          role: "assistant",
-          content: assistantContent.length > 0 ? assistantContent : currentTextContent,
-        });
-
-        // If no tool calls, we're done - AI has decided to stop
         if (toolUses.length === 0) {
           break;
         }
 
-        // Execute all tool calls
         const toolResults: ToolResultContent[] = [];
 
         for (const toolUse of toolUses) {
@@ -673,28 +609,8 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           }
         }
 
-        // Add tool results as a user message (Claude format)
-        conversationMessages.push({
-          role: "user",
-          content: toolResults,
-        });
-
-        // Check if any tool calls failed
         const hasFailures = toolResults.some((result) => result.is_error);
-
-        // If there were failures, add a system hint in the next user message
-        if (hasFailures) {
-          // Add hint as a text block to help Claude understand the failure
-          const lastUserMessage = conversationMessages[conversationMessages.length - 1];
-          if (Array.isArray(lastUserMessage.content)) {
-            (lastUserMessage.content as ContentBlock[]).push({
-              type: "text",
-              text: "Note: Some tool calls failed. Please analyze the error messages and try again with corrected parameters if possible, or explain the issue to the user if you cannot proceed.",
-            } as any);
-          }
-        }
-
-        // Continue the loop - AI will get another chance to make tool calls or respond with text
+        pendingInput = buildToolResultInput(toolResults, hasFailures);
       }
     } catch (error) {
       aiLoopFailed = true;
@@ -706,6 +622,8 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
         type: "error",
         error: message,
       });
+    } finally {
+      await session.close();
     }
 
     if (!aiLoopFailed && !hasUserVisibleAssistantOutput && !abortSignal.aborted) {
@@ -732,14 +650,6 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       exceeded: limitExceeded,
       bonus,
     });
-
-    // Send compaction state for clients that support long-context continuity.
-    if (latestCompactionContent) {
-      await stream.appendChunk({
-        type: "wagey_compaction",
-        content: latestCompactionContent,
-      });
-    }
 
     // Send done chunk
     await stream.appendChunk({ type: "done" });

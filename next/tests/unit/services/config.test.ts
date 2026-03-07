@@ -1,4 +1,4 @@
-import { describe, expect, it, afterEach } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { Effect } from "effect";
 
 const originalEnv = { ...process.env };
@@ -17,68 +17,53 @@ afterEach(() => {
   process.env = { ...originalEnv };
 });
 
-describe("AppConfig AI provider validation", () => {
-  it("defaults provider to claude when WAGEY_AI_PROVIDER is unset", async () => {
+describe("AppConfig OpenAI validation", () => {
+  it("defaults Wagey to gpt-5.4 with medium reasoning", async () => {
     setBaseEnv();
-    delete process.env.WAGEY_AI_PROVIDER;
-    process.env.CLAUDE_API_KEY = "test_claude_key";
-    process.env.CLAUDE_MODEL = "claude-opus-4-6";
-    delete process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "test_openai_key";
+    delete process.env.OPENAI_MODEL;
+    delete process.env.OPENAI_REASONING_EFFORT;
 
     const { AppConfig, AppConfigLive } = await import("@/lib/services/config");
-    const provider = await Effect.runPromise(
+    const config = await Effect.runPromise(
       Effect.gen(function* () {
-        const config = yield* AppConfig;
-        return config.ai.provider;
+        return yield* AppConfig;
       }).pipe(Effect.provide(AppConfigLive), Effect.scoped)
     );
 
-    expect(provider).toBe("claude");
+    expect(config.ai.openaiModel).toBe("gpt-5.4");
+    expect(config.ai.openaiReasoningEffort).toBe("medium");
   });
 
-  it("fails when provider is chatgpt and OPENAI_API_KEY is missing", async () => {
+  it("fails when OPENAI_API_KEY is missing", async () => {
     setBaseEnv();
-    process.env.WAGEY_AI_PROVIDER = "chatgpt";
     delete process.env.OPENAI_API_KEY;
-    process.env.OPENAI_MODEL = "gpt-5.3-codex";
-    delete process.env.CLAUDE_API_KEY;
-    delete process.env.CLAUDE_MODEL;
+    process.env.OPENAI_MODEL = "gpt-5.4";
 
     const { validateConfig } = await import("@/lib/services/config");
     expect(() => validateConfig()).toThrow();
   });
 
-  it("passes when provider is chatgpt with OPENAI_API_KEY and OPENAI_MODEL", async () => {
+  it("accepts supported reasoning effort values beyond the original enum", async () => {
     setBaseEnv();
-    process.env.WAGEY_AI_PROVIDER = "chatgpt";
     process.env.OPENAI_API_KEY = "test_openai_key";
-    process.env.OPENAI_MODEL = "gpt-5.3-codex";
-    delete process.env.CLAUDE_API_KEY;
-    delete process.env.CLAUDE_MODEL;
+    process.env.OPENAI_MODEL = "gpt-5.4";
+    process.env.OPENAI_REASONING_EFFORT = "xhigh";
 
-    const { validateConfig, AppConfig, AppConfigLive } = await import(
-      "@/lib/services/config"
-    );
-
-    expect(() => validateConfig()).not.toThrow();
-
-    const provider = await Effect.runPromise(
+    const { AppConfig, AppConfigLive } = await import("@/lib/services/config");
+    const config = await Effect.runPromise(
       Effect.gen(function* () {
-        const config = yield* AppConfig;
-        return config.ai.provider;
+        return yield* AppConfig;
       }).pipe(Effect.provide(AppConfigLive), Effect.scoped)
     );
 
-    expect(provider).toBe("chatgpt");
+    expect(config.ai.openaiReasoningEffort).toBe("xhigh");
   });
 
-  it("fails when provider is claude and CLAUDE_API_KEY is missing", async () => {
+  it("fails on invalid reasoning effort", async () => {
     setBaseEnv();
-    process.env.WAGEY_AI_PROVIDER = "claude";
-    delete process.env.CLAUDE_API_KEY;
-    process.env.CLAUDE_MODEL = "claude-opus-4-6";
-    delete process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_MODEL;
+    process.env.OPENAI_API_KEY = "test_openai_key";
+    process.env.OPENAI_REASONING_EFFORT = "extreme";
 
     const { validateConfig } = await import("@/lib/services/config");
     expect(() => validateConfig()).toThrow();

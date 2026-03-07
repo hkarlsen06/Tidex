@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import type { Tool } from "@/lib/services/claude";
+import type { Tool } from "@/lib/services/ai-types";
 
 // =============================================================================
 // ZOD SCHEMAS (for validation in executor)
