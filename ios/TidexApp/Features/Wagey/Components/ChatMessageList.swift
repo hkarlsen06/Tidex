@@ -10,6 +10,8 @@ struct ChatMessageList: View {
   let isThinking: Bool
   let remainingMessagesText: String?
   let showsHistoryButton: Bool
+  @Binding var isScrolledToBottom: Bool
+  let scrollToBottomTrigger: Int
 
   /// Callback when a suggestion chip is tapped
   var onSuggestionTapped: ((String) -> Void)?
@@ -31,6 +33,8 @@ struct ChatMessageList: View {
     isThinking: Bool,
     remainingMessagesText: String?,
     showsHistoryButton: Bool,
+    isScrolledToBottom: Binding<Bool>,
+    scrollToBottomTrigger: Int = 0,
     onSuggestionTapped: ((String) -> Void)? = nil,
     onHistoryTapped: (() -> Void)? = nil
   ) {
@@ -40,6 +44,8 @@ struct ChatMessageList: View {
     self.isThinking = isThinking
     self.remainingMessagesText = remainingMessagesText
     self.showsHistoryButton = showsHistoryButton
+    self._isScrolledToBottom = isScrolledToBottom
+    self.scrollToBottomTrigger = scrollToBottomTrigger
     self.onSuggestionTapped = onSuggestionTapped
     self.onHistoryTapped = onHistoryTapped
   }
@@ -72,10 +78,6 @@ struct ChatMessageList: View {
         result = result &* 31 &+ 1
       }
     }
-  }
-
-  private var showsJumpToLatestButton: Bool {
-    !isPinnedToBottom && (isStreaming || !messages.isEmpty)
   }
 
   private var shouldAutoFollow: Bool {
@@ -144,11 +146,18 @@ struct ChatMessageList: View {
       )
       .onAppear {
         isPinnedToBottom = true
+        isScrolledToBottom = true
         suppressAutoFollow = false
         scheduleScrollToBottom(proxy: proxy, animated: false)
       }
       .onChange(of: scrollState) { oldValue, newValue in
         handleScrollStateChange(from: oldValue, to: newValue, proxy: proxy)
+      }
+      .onChange(of: scrollToBottomTrigger) { _, _ in
+        isPinnedToBottom = true
+        isScrolledToBottom = true
+        suppressAutoFollow = false
+        scheduleScrollToBottom(proxy: proxy, animated: true)
       }
       .onPreferenceChange(ChatBottomAnchorMaxYPreferenceKey.self) { value in
         bottomAnchorMaxY = value
@@ -157,14 +166,6 @@ struct ChatMessageList: View {
       .onPreferenceChange(ChatViewportMaxYPreferenceKey.self) { value in
         viewportMaxY = value
         updatePinnedToBottom()
-      }
-      .overlay(alignment: .bottomTrailing) {
-        if showsJumpToLatestButton {
-          jumpToLatestButton(proxy: proxy)
-            .padding(.trailing, Spacing.lg)
-            .padding(.bottom, Spacing.lg)
-            .transition(.move(edge: .trailing).combined(with: .opacity))
-        }
       }
       .scrollDismissesKeyboard(.interactively)
       .onDisappear {
@@ -199,15 +200,38 @@ struct ChatMessageList: View {
       welcomeHero
 
       if showsSuggestions {
-        VStack(spacing: Spacing.sm) {
-          ForEach(suggestions, id: \.text) { suggestion in
-            suggestionRow(icon: suggestion.icon, text: suggestion.text)
-          }
-        }
-        .transition(.move(edge: .top).combined(with: .opacity))
+        suggestionsSection
+          .transition(.move(edge: .top).combined(with: .opacity))
       }
     }
     .padding(.horizontal, Spacing.md)
+  }
+
+  private var suggestionsSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      HStack(spacing: Spacing.sm) {
+        Text(.wageyEmptyStateQuickStart)
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextSecondary)
+
+        Rectangle()
+          .fill(Color.tidexBorderSubtle)
+          .frame(height: 1)
+      }
+
+      VStack(spacing: Spacing.xs) {
+        ForEach(suggestions, id: \.text) { suggestion in
+          suggestionRow(icon: suggestion.icon, text: suggestion.text)
+        }
+      }
+    }
+    .padding(Spacing.md)
+    .background(Color.tidexSurfaceSecondary.opacity(0.72))
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        .stroke(Color.tidexBorderSubtle.opacity(0.95), lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
   }
 
   private var welcomeHero: some View {
@@ -322,28 +346,36 @@ struct ChatMessageList: View {
     } label: {
       HStack(spacing: Spacing.md) {
         ZStack {
-          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .fill(Color.tidexBlue.opacity(0.14))
-            .frame(width: 44, height: 44)
+          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+            .fill(Color.tidexBlue.opacity(0.1))
+            .frame(width: 34, height: 34)
 
           Image(systemName: icon)
-            .font(.tidexBodyMedium)
+            .font(.tidexFootnoteStrong)
             .foregroundColor(.tidexBlue)
         }
 
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(text)
-            .font(.tidexBodyMedium)
+            .font(.tidexLabel)
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.leading)
         }
 
         Spacer(minLength: 0)
+
+        Image(systemName: "arrow.up.left")
+          .font(.tidexMicro)
+          .foregroundColor(.tidexTextMuted)
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
+      .background(Color.tidexSurfacePrimary.opacity(0.82))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorderSubtle.opacity(0.65), lineWidth: 1)
+      )
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(.plain)
   }
@@ -461,7 +493,6 @@ struct ChatMessageList: View {
     let appendedMessage =
       oldValue.messageCount != newValue.messageCount
       || oldValue.lastMessageID != newValue.lastMessageID
-    let updatedStreamingContent = oldValue.streamingSignature != newValue.streamingSignature
 
     if startedStreaming {
       scheduleScrollToBottom(proxy: proxy, animated: false)
@@ -475,8 +506,10 @@ struct ChatMessageList: View {
       return
     }
 
-    guard updatedStreamingContent, shouldAutoFollow else { return }
-    scheduleScrollToBottom(proxy: proxy, animated: false)
+    if oldValue.streamingSignature != newValue.streamingSignature {
+      // Let the stream grow naturally so the user can read older content without being snapped down.
+      return
+    }
   }
 
   private func updatePinnedToBottom() {
@@ -484,38 +517,10 @@ struct ChatMessageList: View {
     let distanceFromBottom = bottomAnchorMaxY - viewportMaxY
     let isNearBottom = distanceFromBottom <= pinnedBottomThreshold
     isPinnedToBottom = isNearBottom
+    isScrolledToBottom = isNearBottom
     if isNearBottom {
       suppressAutoFollow = false
     }
-  }
-
-  private func jumpToLatestButton(proxy: ScrollViewProxy) -> some View {
-    Button {
-      Haptics.play(.light)
-      isPinnedToBottom = true
-      suppressAutoFollow = false
-      scheduleScrollToBottom(proxy: proxy, animated: true)
-    } label: {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "arrow.down")
-          .font(.tidexFootnoteStrong)
-
-        Text(String(localized: "wagey.chat.jump_to_latest"))
-          .font(.tidexFootnoteStrong)
-      }
-      .foregroundColor(.tidexTextPrimary)
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
-      .background(Color.tidexSurfacePrimary.opacity(0.96))
-      .overlay(
-        Capsule()
-          .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
-      )
-      .clipShape(Capsule())
-      .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(Text(String(localized: "wagey.chat.jump_to_latest")))
   }
 }
 
@@ -544,7 +549,8 @@ private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
     isStreaming: false,
     isThinking: false,
     remainingMessagesText: "15 messages left",
-    showsHistoryButton: true
+    showsHistoryButton: true,
+    isScrolledToBottom: .constant(true)
   )
   .background(Color.tidexBackground)
 }
@@ -574,7 +580,8 @@ private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
     isStreaming: false,
     isThinking: false,
     remainingMessagesText: nil,
-    showsHistoryButton: true
+    showsHistoryButton: true,
+    isScrolledToBottom: .constant(true)
   )
   .background(Color.tidexBackground)
 }
@@ -598,7 +605,8 @@ private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
     isStreaming: true,
     isThinking: true,
     remainingMessagesText: nil,
-    showsHistoryButton: false
+    showsHistoryButton: false,
+    isScrolledToBottom: .constant(true)
   )
   .background(Color.tidexBackground)
 }
