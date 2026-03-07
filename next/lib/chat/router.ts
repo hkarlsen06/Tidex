@@ -354,6 +354,7 @@ function buildToolResultInput(
 
   if (hasFailures) {
     input.push({
+      type: "message",
       role: "user",
       content: [
         {
