@@ -273,11 +273,7 @@ final class SmartNotificationScheduler {
   }
 
   private func localizedWeekdayName(for date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "EEEE"
-    formatter.locale = appLocale()
-    let text = formatter.string(from: date)
-    return text.prefix(1).uppercased() + text.dropFirst()
+    FormatterCache.weekdayFormatter(locale: appLocale()).string(from: date)
   }
 
   private func getUpcomingShiftDates(for userId: String, from startDate: Date) async -> Set<String>

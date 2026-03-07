@@ -16,6 +16,7 @@ import {
   SupabaseError,
 } from "../errors/tagged";
 import { logger } from "../logger";
+import type { WageyInvocations } from "../wagey/types";
 
 /**
  * Subscription record from database
@@ -60,6 +61,7 @@ export type Subscription = {
 export type UserProfile = {
   readonly id: string;
   readonly before_paywall: boolean;
+  readonly wagey_invocations?: WageyInvocations | null;
   readonly created_at: string;
   readonly updated_at: string;
 };

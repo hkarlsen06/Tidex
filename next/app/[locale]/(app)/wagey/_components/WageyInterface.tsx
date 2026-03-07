@@ -37,9 +37,154 @@ type WageyInterfaceProps = {
   wageyAccess: WageyAccessResult;
 };
 
+type AIMessage = {
+  role: "user" | "assistant" | "system" | "tool";
+  content: string | null;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }>;
+  tool_call_id?: string;
+  name?: string;
+};
+
 const client = createRiverClient<ChatRouter>("/api/chat");
 
 const STORAGE_KEY = "wagey-conversation";
+const MAX_HISTORY_CHARS = 12_000;
+const TARGET_HISTORY_CHARS = 6_000;
+const SUMMARY_MESSAGE_LIMIT = 12;
+
+function truncateSummaryText(text: string, maxLength = 180) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxLength - 1)}...`;
+}
+
+function estimateMessageSize(message: Message) {
+  return (
+    message.content.length +
+    (message.toolCalls?.reduce(
+      (total, toolCall) =>
+        total +
+        (toolCall.arguments?.length ?? 0) +
+        (toolCall.result?.length ?? 0) +
+        toolCall.name.length,
+      0
+    ) ?? 0)
+  );
+}
+
+function toAiMessages(message: Message): AIMessage[] {
+  const baseMessage: AIMessage = {
+    role: message.role as "user" | "assistant",
+    content: message.content,
+  };
+
+  if (!message.toolCalls?.length) {
+    return [baseMessage];
+  }
+
+  const completedToolCalls = message.toolCalls.filter((toolCall) => toolCall.result !== undefined);
+  if (completedToolCalls.length === 0) {
+    return [baseMessage];
+  }
+
+  const assistantWithTools: AIMessage = {
+    role: "assistant",
+    content: message.content,
+    tool_calls: completedToolCalls.map((toolCall) => ({
+      id: toolCall.id,
+      type: "function",
+      function: {
+        name: toolCall.name,
+        arguments: toolCall.arguments ?? "{}",
+      },
+    })),
+  };
+
+  const toolResponses: AIMessage[] = completedToolCalls.map((toolCall) => ({
+    role: "tool",
+    content: JSON.stringify({
+      success: toolCall.success ?? true,
+      message: toolCall.result ?? "",
+    }),
+    tool_call_id: toolCall.id,
+    name: toolCall.name,
+  }));
+
+  return [assistantWithTools, ...toolResponses];
+}
+
+function buildCompactionSummary(messages: Message[]) {
+  if (messages.length === 0) {
+    return undefined;
+  }
+
+  const lines = messages.slice(-SUMMARY_MESSAGE_LIMIT).flatMap((message) => {
+    const entries: string[] = [];
+    const speaker = message.role === "user" ? "User" : "Assistant";
+
+    if (message.content.trim()) {
+      entries.push(`- ${speaker}: ${truncateSummaryText(message.content)}`);
+    }
+
+    for (const toolCall of message.toolCalls ?? []) {
+      const outcome = toolCall.success === false ? "failed" : "completed";
+      const detail = truncateSummaryText(toolCall.result ?? toolCall.arguments ?? "");
+      entries.push(
+        `- Tool ${toolCall.name} ${outcome}${detail ? `: ${detail}` : ""}`
+      );
+    }
+
+    return entries;
+  });
+
+  if (lines.length === 0) {
+    return undefined;
+  }
+
+  return `Summary of earlier conversation (${messages.length} messages):\n${lines.join("\n")}`;
+}
+
+function compactMessagesForApi(messages: Message[]): {
+  messages: AIMessage[];
+  compaction?: string;
+} {
+  const totalChars = messages.reduce((total, message) => total + estimateMessageSize(message), 0);
+  if (totalChars <= MAX_HISTORY_CHARS) {
+    return {
+      messages: messages.flatMap((message) => toAiMessages(message)),
+    };
+  }
+
+  const recent: Message[] = [];
+  let recentChars = 0;
+
+  for (const message of [...messages].reverse()) {
+    const messageSize = estimateMessageSize(message);
+    if (recentChars + messageSize > TARGET_HISTORY_CHARS && recent.length > 0) {
+      break;
+    }
+
+    recentChars += messageSize;
+    recent.unshift(message);
+  }
+
+  const compactedCount = Math.max(0, messages.length - recent.length);
+  const compactedMessages = compactedCount > 0 ? messages.slice(0, compactedCount) : [];
+
+  return {
+    messages: recent.flatMap((message) => toAiMessages(message)),
+    compaction: buildCompactionSummary(compactedMessages),
+  };
+}
 
 export function WageyInterface({ userId, userName, wageyAccess }: WageyInterfaceProps) {
   const { t, locale } = useTranslations();
@@ -253,22 +398,25 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         );
       } else if (chunk.type === "wagey_limit") {
         setIsThinking(false);
-        // User hit their monthly limit
-        setLimitReached(true);
         setLimitResetDays(chunk.resetDays);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: nextMessageId("limit"),
-            role: "assistant",
-            content: t.pages.wagey.limitReached.message
-              .replace("{limit}", String(wageyAccess.limit ?? 0))
-              .replace("{days}", String(chunk.resetDays)),
-          },
-        ]);
-        processedChunksRef.current.clear();
-        setIsStreaming(false);
-        setCurrentChunk("");
+        setRemainingMessages(chunk.remaining + (chunk.bonus ?? 0));
+
+        if (chunk.exceeded) {
+          setLimitReached(true);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: nextMessageId("limit"),
+              role: "assistant",
+              content: t.pages.wagey.limitReached.message
+                .replace("{limit}", String(wageyAccess.limit ?? 0))
+                .replace("{days}", String(chunk.resetDays)),
+            },
+          ]);
+          processedChunksRef.current.clear();
+          setIsStreaming(false);
+          setCurrentChunk("");
+        }
       } else if (chunk.type === "wagey_no_access") {
         setIsThinking(false);
         // User doesn't have access (shouldn't happen if page guards work)
@@ -321,11 +469,6 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         });
         processedChunksRef.current.clear();
         setIsStreaming(false);
-
-        // Decrement remaining messages on successful completion (for UI only)
-        if (remainingMessages !== null && remainingMessages > 0) {
-          setRemainingMessages(remainingMessages - 1);
-        }
 
         // Refresh router cache if there were successful tool calls
         // This ensures data is fresh when user navigates away
@@ -436,91 +579,18 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
     setIsThinking(true);
     setCurrentChunk("");
 
-    // Build messages for AI
-    type AIMessage = {
-      role: "user" | "assistant" | "system" | "tool";
-      content: string | null;
-      tool_calls?: Array<{
-        id: string;
-        type: "function";
-        function: {
-          name: string;
-          arguments: string;
-        };
-      }>;
-      tool_call_id?: string;
-      name?: string;
-    };
-
-    const aiMessages: AIMessage[] = messages.flatMap((msg): AIMessage[] => {
-      const baseMessage: AIMessage = {
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-      };
-
-      if (!msg.toolCalls?.length) {
-        return [baseMessage];
-      }
-
-      // Only include tool calls that have results (completed tool calls)
-      const completedToolCalls = msg.toolCalls.filter((tc) => tc.result !== undefined);
-
-      // If no completed tool calls, just return the text message
-      if (completedToolCalls.length === 0) {
-        return [baseMessage];
-      }
-
-      const assistantWithTools: AIMessage = {
-        role: "assistant" as const,
-        content: msg.content,
-        tool_calls: completedToolCalls.map((tc) => ({
-          id: tc.id,
-          type: "function" as const,
-          function: {
-            name: tc.name,
-            arguments: tc.arguments ?? "{}",
-          },
-        })),
-      };
-
-      const toolResponses: AIMessage[] = completedToolCalls.map((tc) => {
-        try {
-          return {
-            role: "tool" as const,
-            content: JSON.stringify({
-              success: tc.success ?? true,
-              message: tc.result ?? "",
-            }),
-            tool_call_id: tc.id,
-            name: tc.name,
-          };
-        } catch (error) {
-          // Handle JSON.stringify errors (circular references, etc.)
-          console.error("Failed to stringify tool result:", error);
-          return {
-            role: "tool" as const,
-            content: JSON.stringify({
-              success: false,
-              message: "Failed to serialize tool result",
-            }),
-            tool_call_id: tc.id,
-            name: tc.name,
-          };
-        }
-      });
-
-      return [assistantWithTools, ...toolResponses];
-    });
+    const compactedHistory = compactMessagesForApi(messages);
 
     // Start stream
     streamCaller.start({
       messages: [
-        ...aiMessages,
+        ...compactedHistory.messages,
         {
           role: "user" as const,
           content,
         },
       ],
+      compaction: compactedHistory.compaction,
       userId,
       userName,
     });

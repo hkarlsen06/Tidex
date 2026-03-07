@@ -149,36 +149,6 @@ const chatInputSchema = z.object({
 export type ChatInput = z.infer<typeof chatInputSchema>;
 
 /**
- * Verify authentication using the Effect-based auth service
- * Supports both Bearer token (iOS) and cookie session (web) via the service layer
- */
-async function verifyAuthentication(
-  _request: NextRequest,
-  expectedUserId: string
-): Promise<{ userId: string } | null> {
-  const { AuthService } = await import("@/lib/services/auth");
-  const { SupabaseAuthLive } = await import("@/lib/layers/app");
-
-  const program = Effect.gen(function* () {
-    const auth = yield* AuthService;
-    const user = yield* auth.verifyUserId(expectedUserId);
-    return user;
-  }).pipe(
-    Effect.provide(SupabaseAuthLive),
-    Effect.scoped,
-    Effect.catchAll(() => Effect.succeed(null))
-  );
-
-  const user = await Effect.runPromise(program);
-
-  if (user) {
-    return { userId: user.id };
-  }
-
-  return null;
-}
-
-/**
  * Helper to extract text from content (handles both string and array formats)
  */
 function extractTextContent(content: ChatInput["messages"][0]["content"]): string {
@@ -372,6 +342,132 @@ function buildToolResultInput(
   return input;
 }
 
+type PendingToolUse = {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+};
+
+type ExecutedToolUse = {
+  uiChunk: Extract<ChatChunk, { type: "tool_result" }>;
+  toolResult: ToolResultContent;
+};
+
+const READ_ONLY_TOOL_NAMES = new Set<ToolName>([
+  "query_shifts",
+  "calculate_wages",
+  "draft_recurring_shift",
+  "get_statistics",
+  "get_wage_info",
+  "calculate_earnings",
+  "list_workplaces",
+  "list_friends",
+  "query_friend_shifts",
+  "query_friend_featured_shift",
+]);
+
+function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
+  const toolName = toolUse.name as ToolName;
+
+  if (READ_ONLY_TOOL_NAMES.has(toolName)) {
+    return true;
+  }
+
+  if (toolName === "manage_settings") {
+    return toolUse.input.action === undefined || toolUse.input.action === "view";
+  }
+
+  if (toolName === "manage_recurring_shift") {
+    return toolUse.input.action === "list";
+  }
+
+  return false;
+}
+
+async function executeSingleToolUse(
+  toolUse: PendingToolUse,
+  userId: string,
+  locale: Locale
+): Promise<ExecutedToolUse> {
+  try {
+    const invalidJson = toolUse.input.INVALID_JSON;
+    if (typeof invalidJson === "string") {
+      const invalidResult = {
+        success: false,
+        message:
+          "Tool input was invalid or incomplete JSON. Please resend a valid JSON object for this tool call.",
+        invalid_input: {
+          INVALID_JSON: invalidJson,
+        },
+      };
+      const serialized = JSON.stringify(invalidResult);
+
+      return {
+        uiChunk: {
+          type: "tool_result",
+          toolName: toolUse.name,
+          toolCallId: toolUse.id,
+          result: serialized,
+          success: false,
+        },
+        toolResult: {
+          type: "tool_result",
+          tool_use_id: toolUse.id,
+          content: serialized,
+          is_error: true,
+        },
+      };
+    }
+
+    const result = await executeTool(
+      toolUse.name as ToolName,
+      JSON.stringify(toolUse.input),
+      userId,
+      locale
+    );
+    const serialized = JSON.stringify(result);
+
+    return {
+      uiChunk: {
+        type: "tool_result",
+        toolName: toolUse.name,
+        toolCallId: toolUse.id,
+        result: serialized,
+        success: result.success,
+      },
+      toolResult: {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: serialized,
+        is_error: !result.success,
+      },
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const serialized = JSON.stringify({
+      success: false,
+      message: errorMessage,
+    });
+
+    return {
+      uiChunk: {
+        type: "tool_result",
+        toolName: toolUse.name,
+        toolCallId: toolUse.id,
+        result: serialized,
+        success: false,
+      },
+      toolResult: {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: serialized,
+        is_error: true,
+      },
+    };
+  }
+}
+
 /**
  * Wagey Chat Stream
  *
@@ -384,17 +480,6 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .runner(async ({ input, stream, abortSignal, adapterRequest }) => {
     const { messages, userId, userName, compaction } = input;
 
-    // Verify authentication first (supports both Bearer token for iOS and cookies for web)
-    const authResult = await verifyAuthentication(adapterRequest, userId);
-    if (!authResult) {
-      await stream.appendChunk({
-        type: "error",
-        error: "Authentication failed",
-      });
-      await stream.close();
-      return;
-    }
-
     // Get locale from cookie for localized tool messages
     const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
 
@@ -405,9 +490,21 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     // Note: We no longer block operations based on server-side subscription checks.
     // The iOS app handles entitlement via StoreKit which may have newer information than the DB.
     // We still track usage and send warnings, but let the device decide if the user can proceed.
-    const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
-    const accessInfo = await getWageyAccessForUser(userId);
-    const result = await useWageyInvocation(userId);
+    const { beginWageyTurn } = await import("@/data-access/wagey");
+    let turn;
+    try {
+      turn = await beginWageyTurn(userId);
+    } catch {
+      await stream.appendChunk({
+        type: "error",
+        error: "Failed to initialize Wagey",
+      });
+      await stream.close();
+      return;
+    }
+
+    const accessInfo = turn.access;
+    const result = turn.invocation;
 
     // Normalize usage fields so warning logic stays correct even if older backends
     // omit bonus in RPC responses.
@@ -537,86 +634,27 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           break;
         }
 
+        const canRunInParallel =
+          toolUses.length > 1 && toolUses.every(isReadOnlyToolUse);
+        const executedToolUses = canRunInParallel
+          ? await Promise.all(
+              toolUses.map((toolUse) =>
+                executeSingleToolUse(toolUse, userId, locale)
+              )
+            )
+          : await (async () => {
+              const results: ExecutedToolUse[] = [];
+              for (const toolUse of toolUses) {
+                results.push(await executeSingleToolUse(toolUse, userId, locale));
+              }
+              return results;
+            })();
+
         const toolResults: ToolResultContent[] = [];
 
-        for (const toolUse of toolUses) {
-          try {
-            const invalidJson = toolUse.input.INVALID_JSON;
-            if (typeof invalidJson === "string") {
-              const invalidResult = {
-                success: false,
-                message:
-                  "Tool input was invalid or incomplete JSON. Please resend a valid JSON object for this tool call.",
-                invalid_input: {
-                  INVALID_JSON: invalidJson,
-                },
-              };
-
-              await stream.appendChunk({
-                type: "tool_result",
-                toolName: toolUse.name,
-                toolCallId: toolUse.id,
-                result: JSON.stringify(invalidResult),
-                success: false,
-              });
-
-              toolResults.push({
-                type: "tool_result",
-                tool_use_id: toolUse.id,
-                content: JSON.stringify(invalidResult),
-                is_error: true,
-              });
-              continue;
-            }
-
-            const result = await executeTool(
-              toolUse.name as ToolName,
-              JSON.stringify(toolUse.input),
-              userId,
-              locale
-            );
-
-            // Send tool_result chunk to UI for both success and failure
-            // iOS needs this to track tool call state and include results in subsequent requests
-            await stream.appendChunk({
-              type: "tool_result",
-              toolName: toolUse.name,
-              toolCallId: toolUse.id,
-              result: JSON.stringify(result),
-              success: result.success,
-            });
-
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: toolUse.id,
-              content: JSON.stringify(result),
-              is_error: !result.success,
-            });
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : "Unknown error";
-            const errorResult = JSON.stringify({
-              success: false,
-              message: errorMessage,
-            });
-
-            // Send tool_result chunk to UI for exception case
-            // iOS needs this to track tool call state and include results in subsequent requests
-            await stream.appendChunk({
-              type: "tool_result",
-              toolName: toolUse.name,
-              toolCallId: toolUse.id,
-              result: errorResult,
-              success: false,
-            });
-
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: toolUse.id,
-              content: errorResult,
-              is_error: true,
-            });
-          }
+        for (const executedToolUse of executedToolUses) {
+          await stream.appendChunk(executedToolUse.uiChunk);
+          toolResults.push(executedToolUse.toolResult);
         }
 
         const hasFailures = toolResults.some((result) => result.is_error);

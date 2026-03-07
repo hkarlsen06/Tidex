@@ -67,6 +67,12 @@ final class WageyViewModel {
   /// Character count threshold at which older messages are truncated before sending to the API
   private static let conversationMaxCharacters = 32_000
 
+  /// Character budget for the recent raw messages kept alongside a compaction summary
+  private static let conversationCompactionTargetCharacters = 12_000
+
+  /// Maximum number of older messages to include in the deterministic summary
+  private static let compactionMessageLimit = 12
+
   // MARK: - Published State
 
   /// All conversations for the current user
@@ -529,11 +535,14 @@ final class WageyViewModel {
         }
         let userName = coordinator.userDisplayName.isEmpty ? nil : coordinator.userDisplayName
 
-        // Start streaming from WageyService (truncate older messages if conversation is very long)
+        let apiPayload = messagesForAPI()
+
+        // Start streaming from WageyService (compact older messages when the conversation is very long)
         let stream = WageyService.shared.streamChat(
-          messages: messagesForAPI(),
+          messages: apiPayload.messages,
           userId: userId,
-          userName: userName
+          userName: userName,
+          compaction: apiPayload.compaction
         )
 
         // Process chunks
@@ -587,28 +596,22 @@ final class WageyViewModel {
 
   // MARK: - Private Helpers
 
-  /// Returns messages to send to the API, truncating older messages when the conversation
-  /// exceeds the max character threshold. Keeps the most recent messages that fit.
-  private func messagesForAPI() -> [ChatMessage] {
+  /// Returns messages to send to the API, compacting older messages when the
+  /// conversation exceeds the max character threshold.
+  private func messagesForAPI() -> (messages: [ChatMessage], compaction: String?) {
     guard estimatedConversationCharacters > Self.conversationMaxCharacters else {
-      return messages
+      return (messages, nil)
     }
 
-    // Build from the end, keeping messages until we hit the budget
     var truncated: [ChatMessage] = []
     var charCount = 0
 
     for message in messages.reversed() {
-      let messageChars = message.contentBlocks.reduce(0) { blockTotal, block in
-        switch block {
-        case .text(let text): return blockTotal + text.count
-        case .toolCall(let tc):
-          return blockTotal + (tc.arguments?.count ?? 0) + (tc.result?.count ?? 0)
-        case .image: return blockTotal
-        }
-      }
+      let messageChars = messageCharacterCount(message)
 
-      if charCount + messageChars > Self.conversationMaxCharacters && !truncated.isEmpty {
+      if charCount + messageChars > Self.conversationCompactionTargetCharacters
+        && !truncated.isEmpty
+      {
         break
       }
 
@@ -616,7 +619,80 @@ final class WageyViewModel {
       truncated.append(message)
     }
 
-    return truncated.reversed()
+    let recentMessages = truncated.reversed()
+    let omittedCount = max(0, messages.count - recentMessages.count)
+    let omittedMessages = omittedCount > 0 ? Array(messages.prefix(omittedCount)) : []
+
+    return (
+      Array(recentMessages),
+      buildCompactionSummary(for: omittedMessages)
+    )
+  }
+
+  private func messageCharacterCount(_ message: ChatMessage) -> Int {
+    message.contentBlocks.reduce(0) { blockTotal, block in
+      switch block {
+      case .text(let text):
+        return blockTotal + text.count
+      case .toolCall(let toolCall):
+        return blockTotal + (toolCall.arguments?.count ?? 0) + (toolCall.result?.count ?? 0)
+          + toolCall.name.count
+      case .image:
+        return blockTotal + 64
+      }
+    }
+  }
+
+  private func buildCompactionSummary(for messages: [ChatMessage]) -> String? {
+    guard !messages.isEmpty else {
+      return nil
+    }
+
+    let summaryLines = messages.suffix(Self.compactionMessageLimit).flatMap { message -> [String] in
+      var lines: [String] = []
+      let speaker = message.role == .user ? "User" : "Assistant"
+
+      if !message.content.isEmpty {
+        lines.append("- \(speaker): \(truncateSummaryText(message.content))")
+      }
+
+      let imageCount = message.imageAttachments.count
+      if imageCount > 0 {
+        let suffix = imageCount == 1 ? "" : "s"
+        lines.append("- \(speaker): attached \(imageCount) image\(suffix)")
+      }
+
+      for toolCall in message.toolCalls ?? [] {
+        let outcome = toolCall.success == false ? "failed" : "completed"
+        let detail = truncateSummaryText(toolCall.result ?? toolCall.arguments ?? "")
+        let detailSuffix = detail.isEmpty ? "" : ": \(detail)"
+        lines.append("- Tool \(toolCall.name) \(outcome)\(detailSuffix)")
+      }
+
+      return lines
+    }
+
+    guard !summaryLines.isEmpty else {
+      return nil
+    }
+
+    return "Summary of earlier conversation (\(messages.count) messages):\n"
+      + summaryLines.joined(separator: "\n")
+  }
+
+  private func truncateSummaryText(_ text: String, maxLength: Int = 180) -> String {
+    let normalized = text.replacingOccurrences(
+      of: "\\s+",
+      with: " ",
+      options: .regularExpression
+    ).trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard normalized.count > maxLength else {
+      return normalized
+    }
+
+    let endIndex = normalized.index(normalized.startIndex, offsetBy: maxLength - 1)
+    return String(normalized[..<endIndex]) + "..."
   }
 
   /// Trigger a background entitlement sync when server/StoreKit mismatch is detected

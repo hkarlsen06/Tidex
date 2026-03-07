@@ -14,6 +14,7 @@ private struct ChatAPIRequest: Encodable {
     let messages: [APIMessage]
     let userId: String
     let userName: String?
+    let compaction: String?
   }
 
   struct APIMessage: Encodable {
@@ -147,11 +148,13 @@ final class WageyService: ObservableObject {
   ///   - messages: The conversation history to send
   ///   - userId: The current user's ID
   ///   - userName: The user's display name (optional, for personalization)
+  ///   - compaction: Optional summary of older conversation context
   /// - Returns: An async stream of ChatChunk events
   func streamChat(
     messages: [ChatMessage],
     userId: String,
-    userName: String?
+    userName: String?,
+    compaction: String? = nil
   ) -> AsyncThrowingStream<ChatChunk, Error> {
     AsyncThrowingStream { continuation in
       let task = Task {
@@ -159,6 +162,7 @@ final class WageyService: ObservableObject {
           messages: messages,
           userId: userId,
           userName: userName,
+          compaction: compaction,
           continuation: continuation
         )
       }
@@ -177,6 +181,7 @@ final class WageyService: ObservableObject {
     messages: [ChatMessage],
     userId: String,
     userName: String?,
+    compaction: String?,
     continuation: AsyncThrowingStream<ChatChunk, Error>.Continuation
   ) async {
     isStreaming = true
@@ -309,7 +314,8 @@ final class WageyService: ObservableObject {
         input: ChatAPIRequest.ChatInput(
           messages: apiMessages,
           userId: userId,
-          userName: userName
+          userName: userName,
+          compaction: compaction
         )
       )
 
