@@ -213,7 +213,6 @@ struct ChatMessageList: View {
           .transition(.move(edge: .top).combined(with: .opacity))
       }
     }
-    .padding(.horizontal, Spacing.md)
   }
 
   private var suggestionsSection: some View {
@@ -234,30 +233,10 @@ struct ChatMessageList: View {
         }
       }
     }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfaceSecondary.opacity(0.72))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-        .stroke(Color.tidexBorderSubtle.opacity(0.95), lineWidth: 1)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
   }
 
   private var welcomeHero: some View {
     ZStack(alignment: .topLeading) {
-      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-        .fill(
-          LinearGradient(
-            colors: [
-              Color.tidexSurfacePrimary,
-              Color.tidexSurfacePrimary.opacity(0.95),
-              Color.tidexBlue.opacity(0.12),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          )
-        )
-
       Circle()
         .fill(Color.tidexBlue.opacity(0.12))
         .frame(width: 180, height: 180)
@@ -317,9 +296,7 @@ struct ChatMessageList: View {
         }
       }
       .padding(.top, Spacing.md)
-      .padding(.leading, Spacing.lg)
-      .padding(.trailing, Spacing.lg)
-      .padding(.bottom, Spacing.lg)
+      .padding(.trailing, showsHistoryButton ? 56 : 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .overlay(alignment: .topTrailing) {
@@ -340,12 +317,6 @@ struct ChatMessageList: View {
         .accessibilityLabel(Text("Conversation history"))
       }
     }
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-    .tidexCardShadow(cornerRadius: CornerRadius.card)
   }
 
   private func suggestionRow(icon: String, text: String) -> some View {
