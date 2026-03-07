@@ -2,7 +2,7 @@ import SafariServices
 import SwiftUI
 
 /// Consent view shown before first use of Wagey
-/// Explains what data is shared with Anthropic and requires explicit user consent
+/// Explains what data is shared with OpenAI and requires explicit user consent
 struct WageyConsentView: View {
   /// Callback when user agrees to data sharing
   let onAgree: () -> Void
@@ -13,8 +13,10 @@ struct WageyConsentView: View {
   /// URL for opening Safari to view the privacy policy
   @State private var safariURL: URL?
 
-  /// Anthropic privacy policy URL
-  private static let anthropicPrivacyURL = URL(string: "https://www.anthropic.com/privacy")
+  /// OpenAI privacy policy URL
+  private static let openAIPrivacyURL = URL(
+    string: "https://openai.com/policies/privacy-policy"
+  )
 
   /// Tidex privacy policy URL
   private var privacyURL: URL? {
@@ -201,7 +203,7 @@ struct WageyConsentView: View {
         .background(Color.tidexBorderSubtle)
 
       Button {
-        if let url = Self.anthropicPrivacyURL {
+        if let url = Self.openAIPrivacyURL {
           safariURL = url
         }
       } label: {

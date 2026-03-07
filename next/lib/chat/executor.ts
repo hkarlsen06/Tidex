@@ -89,7 +89,7 @@ import { SettingsService } from "@/lib/services/settings";
 import { SnapshotsService } from "@/lib/services/snapshots";
 import { AuthSettingsLive, AuthSnapshotsLive } from "@/lib/layers/app";
 import { Effect } from "effect";
-import { getLatestTariffVersion, getTariffVersionForDate } from "@/data-access/tariff";
+import { getLatestTariffVersion, getTariffTypes, getTariffVersionForDate } from "@/data-access/tariff";
 
 // Default tariff type for HK Retail agreement
 const DEFAULT_TARIFF_TYPE = "hk_retail";
@@ -3278,8 +3278,16 @@ async function executeGetWageInfo(
   try {
     const today = new Date().toISOString().split("T")[0];
 
+    type TariffInfo = {
+      id: string;
+      displayName: string;
+      description: string | null;
+      country: string;
+      isDefault: boolean;
+    };
+
     // Fetch snapshots, settings, and workplace context in parallel.
-    const [snapshots, userSettings, workplaceContext] = await Promise.all([
+    const [snapshots, userSettings, workplaceContext, tariffTypes] = await Promise.all([
       Effect.runPromise(
         Effect.gen(function* () {
           const service = yield* SnapshotsService;
@@ -3301,6 +3309,7 @@ async function executeGetWageInfo(
         )
       ),
       resolveWageWorkplaceContext(userId, input.jobId),
+      getTariffTypes(),
     ]);
 
     if (workplaceContext.requestedJobMissing) {
@@ -3327,6 +3336,35 @@ async function executeGetWageInfo(
       monthlyGoal: selectedJob?.monthly_goal ?? userSettings?.monthly_goal ?? null,
     };
 
+    const tariffTypeMap = new Map(
+      tariffTypes.map((tariffType) => [
+        tariffType.id,
+        {
+          id: tariffType.id,
+          displayName: tariffType.display_name,
+          description: tariffType.description,
+          country: tariffType.country,
+          isDefault: tariffType.is_default,
+        } satisfies TariffInfo,
+      ])
+    );
+
+    const toTariffInfo = (tariffTypeId: string | null | undefined): TariffInfo | null => {
+      if (!tariffTypeId) {
+        return null;
+      }
+
+      return (
+        tariffTypeMap.get(tariffTypeId) ?? {
+          id: tariffTypeId,
+          displayName: tariffTypeId,
+          description: null,
+          country: "unknown",
+          isDefault: false,
+        }
+      );
+    };
+
     if (scopedSnapshots.length === 0) {
       return {
         success: true,
@@ -3336,6 +3374,7 @@ async function executeGetWageInfo(
             ? { id: selectedJob.id, name: selectedJob.name, isDefault: selectedJob.is_default }
             : null,
           globalPaySettings,
+          tariffs: [],
           current: null,
         },
       };
@@ -3378,6 +3417,8 @@ async function executeGetWageInfo(
       hourlyWage: number | "unchanged";
       wageLevel: number | null | "unchanged";
       usingTariff: boolean | "unchanged";
+      tariffTypeId: string | null | "unchanged";
+      tariff: TariffInfo | null | "unchanged";
       supplements: unknown[] | "unchanged";
       taxEnabled: boolean | "unchanged";
       taxPercentage: number | "unchanged";
@@ -3396,6 +3437,14 @@ async function executeGetWageInfo(
           wageLevel: snap.wage_level !== prev?.wage_level ? snap.wage_level : "unchanged",
           usingTariff: (snap.wage_level !== null) !== (prev?.wage_level !== null)
             ? snap.wage_level !== null : "unchanged",
+          tariffTypeId:
+            snap.tariff_type_id !== (prev?.tariff_type_id ?? null)
+              ? snap.tariff_type_id
+              : "unchanged",
+          tariff:
+            snap.tariff_type_id !== (prev?.tariff_type_id ?? null)
+              ? toTariffInfo(snap.tariff_type_id)
+              : "unchanged",
           supplements: JSON.stringify(snap.supplements) !== JSON.stringify(prev?.supplements)
             ? (snap.supplements?.rules ?? []) : "unchanged",
           taxEnabled: snap.tax_enabled !== prev?.tax_enabled ? snap.tax_enabled : "unchanged",
@@ -3418,11 +3467,14 @@ async function executeGetWageInfo(
         payrollDay: number | null;
         monthlyGoal: number | null;
       };
+      tariffs: TariffInfo[];
       current: {
         id: string;  // Short ID for referencing in manage_wage_snapshots
         fromDate: string | null;
         usingTariff: boolean;
         wageLevel: number | null;
+        tariffTypeId: string | null;
+        tariff: TariffInfo | null;
         hourlyWage: number;
         supplements: unknown[];
         taxEnabled: boolean;
@@ -3435,11 +3487,21 @@ async function executeGetWageInfo(
         ? { id: selectedJob.id, name: selectedJob.name, isDefault: selectedJob.is_default }
         : null,
       globalPaySettings,
+      tariffs: Array.from(
+        new Map(
+          scopedSnapshots
+            .map((snapshot) => toTariffInfo(snapshot.tariff_type_id))
+            .filter((tariff): tariff is TariffInfo => tariff !== null)
+            .map((tariff) => [tariff.id, tariff])
+        ).values()
+      ),
       current: currentSnapshot ? {
         id: toShortId(currentSnapshot.id),  // Include short ID for referencing
         fromDate: currentSnapshot.from_date,
         usingTariff: currentSnapshot.wage_level !== null,
         wageLevel: currentSnapshot.wage_level,
+        tariffTypeId: currentSnapshot.tariff_type_id,
+        tariff: toTariffInfo(currentSnapshot.tariff_type_id),
         hourlyWage: currentSnapshot.hourly_wage,
         supplements: currentSnapshot.supplements?.rules ?? [],
         taxEnabled: currentSnapshot.tax_enabled,

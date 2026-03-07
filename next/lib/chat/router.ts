@@ -18,6 +18,8 @@ import type {
   CompactionContent,
   ContentBlock,
   ImageContent,
+  Source,
+  Tool,
   ToolResultContent,
 } from "@/lib/services/ai-types";
 import { getSystemPrompt, type SystemPromptContext } from "./system-prompt";
@@ -76,6 +78,22 @@ export type ChatChunk =
       type: "wagey_no_access";
     }
   | {
+      type: "wagey_sources";
+      items: Source[];
+    }
+  | {
+      type: "wagey_built_in_tool_start";
+      toolName: string;
+      toolCallId: string;
+    }
+  | {
+      type: "wagey_built_in_tool_result";
+      toolName: string;
+      toolCallId: string;
+      result: string;
+      success: boolean;
+    }
+  | {
       /**
        * Optional compaction state for clients that support it.
        * Older clients ignore unknown chunk types.
@@ -112,6 +130,19 @@ const contentSchema = z.union([
   z.array(z.union([textContentBlockSchema, imageContentBlockSchema])),
 ]);
 
+const clientCapabilitySchema = z.enum([
+  "rich_sources_v1",
+  "rich_built_in_tool_events_v1",
+]);
+
+const clientContextSchema = z
+  .object({
+    platform: z.enum(["ios", "web"]).optional(),
+    appVersion: z.string().optional(),
+    capabilities: z.array(clientCapabilitySchema).optional(),
+  })
+  .optional();
+
 /**
  * Chat input schema (from frontend - OpenAI format for backwards compatibility)
  * Now supports multimodal content (images) in user messages
@@ -144,9 +175,23 @@ const chatInputSchema = z.object({
    * Backwards compatible: older clients omit this field.
    */
   compaction: z.string().optional(),
+  client: clientContextSchema,
 });
 
 export type ChatInput = z.infer<typeof chatInputSchema>;
+
+const BUILT_IN_TOOLS: Tool[] = [
+  {
+    type: "web_search",
+    search_context_size: "medium",
+  },
+  {
+    type: "code_interpreter",
+    container: {
+      type: "auto",
+    },
+  },
+];
 
 /**
  * Helper to extract text from content (handles both string and array formats)
@@ -342,6 +387,13 @@ function buildToolResultInput(
   return input;
 }
 
+function hasClientCapability(
+  client: ChatInput["client"],
+  capability: z.infer<typeof clientCapabilitySchema>
+): boolean {
+  return client?.capabilities?.includes(capability) ?? false;
+}
+
 type PendingToolUse = {
   id: string;
   name: string;
@@ -478,7 +530,12 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .input(chatInputSchema)
   .provider(defaultRiverProvider())
   .runner(async ({ input, stream, abortSignal, adapterRequest }) => {
-    const { messages, userId, userName, compaction } = input;
+    const { messages, userId, userName, compaction, client } = input;
+    const supportsRichSources = hasClientCapability(client, "rich_sources_v1");
+    const supportsRichBuiltInToolEvents = hasClientCapability(
+      client,
+      "rich_built_in_tool_events_v1"
+    );
 
     // Get locale from cookie for localized tool messages
     const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
@@ -560,6 +617,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     let hasUserVisibleAssistantOutput = false;
     let previousResponseId: string | undefined;
     let pendingInput = toOpenAIInput(modelMessages);
+    const collectedSources = new Map<string, Source>();
     const session = await openOpenAISession(abortSignal);
 
     try {
@@ -574,7 +632,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
         const response = await session.createResponse({
           instructions: system,
           input: pendingInput,
-          tools,
+          tools: [...tools, ...BUILT_IN_TOOLS],
           maxTokens: 2048,
           previousResponseId,
         });
@@ -596,6 +654,30 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
               type: "text",
               content: chunk.content,
             });
+          } else if (chunk.type === "built_in_tool_start") {
+            if (supportsRichBuiltInToolEvents) {
+              hasUserVisibleAssistantOutput = true;
+              await stream.appendChunk({
+                type: "wagey_built_in_tool_start",
+                toolName: chunk.name,
+                toolCallId: chunk.id,
+              });
+            }
+          } else if (chunk.type === "built_in_tool_result") {
+            if (supportsRichBuiltInToolEvents) {
+              hasUserVisibleAssistantOutput = true;
+              await stream.appendChunk({
+                type: "wagey_built_in_tool_result",
+                toolName: chunk.name,
+                toolCallId: chunk.id,
+                result: JSON.stringify(chunk.summary),
+                success: chunk.success,
+              });
+            }
+          } else if (chunk.type === "sources") {
+            for (const item of chunk.items) {
+              collectedSources.set(item.url, item);
+            }
           } else if (chunk.type === "tool_use") {
             // Check for duplicate tool calls
             const isDuplicateCall = toolUses.some(
@@ -687,6 +769,13 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       await stream.appendChunk({
         type: "text",
         content: `\n\n${dict.pages.wagey.maxIterationsReached}`,
+      });
+    }
+
+    if (supportsRichSources && collectedSources.size > 0) {
+      await stream.appendChunk({
+        type: "wagey_sources",
+        items: Array.from(collectedSources.values()),
       });
     }
 

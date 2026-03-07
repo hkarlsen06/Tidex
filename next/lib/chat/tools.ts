@@ -1233,7 +1233,8 @@ Note: Tax deduction enabled/percentage are per-snapshot — use get_wage_info in
 Returns:
 - workplace: Selected workplace context (id, name, isDefault) when available
 - globalPaySettings: Pay configuration for the selected workplace when available (falls back to legacy/global settings)
-- current: The wage that applies today (id, fromDate, usingTariff, wageLevel, hourlyWage, supplements, taxEnabled, taxPercentage)
+- tariffs: Distinct tariff agreements referenced by the workplace's wage snapshots (id, displayName, description, country, isDefault)
+- current: The wage that applies today (id, fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
 - history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
 

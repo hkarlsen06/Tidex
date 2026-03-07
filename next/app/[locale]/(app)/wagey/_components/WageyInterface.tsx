@@ -25,6 +25,7 @@ type Message = {
   toolCalls?: Array<{
     id: string;
     name: string;
+    kind?: "function" | "built_in";
     arguments?: string;
     result?: string;
     success?: boolean;
@@ -58,6 +59,7 @@ const STORAGE_KEY = "wagey-conversation";
 const MAX_HISTORY_CHARS = 12_000;
 const TARGET_HISTORY_CHARS = 6_000;
 const SUMMARY_MESSAGE_LIMIT = 12;
+const WEB_CLIENT_CAPABILITIES = ["rich_built_in_tool_events_v1"] as const;
 
 function truncateSummaryText(text: string, maxLength = 180) {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -91,7 +93,11 @@ function toAiMessages(message: Message): AIMessage[] {
     return [baseMessage];
   }
 
-  const completedToolCalls = message.toolCalls.filter((toolCall) => toolCall.result !== undefined);
+  const completedToolCalls = message.toolCalls.filter(
+    (toolCall) =>
+      toolCall.kind !== "built_in" &&
+      toolCall.result !== undefined
+  );
   if (completedToolCalls.length === 0) {
     return [baseMessage];
   }
@@ -396,6 +402,69 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
             return msg;
           })
         );
+      } else if (chunk.type === "wagey_built_in_tool_start") {
+        setIsThinking(false);
+        setCurrentChunk((prev) => {
+          const currentText = prev;
+
+          const builtInToolMessage: Message = {
+            id: nextMessageId("tool"),
+            role: "assistant",
+            content: `🔧 ${getToolDisplayName(chunk.toolName)}`,
+            toolCalls: [
+              {
+                id: chunk.toolCallId,
+                name: chunk.toolName,
+                kind: "built_in",
+              },
+            ],
+          };
+
+          setMessages((messages) => {
+            if (toolMessageMapRef.current.has(chunk.toolCallId)) {
+              return messages;
+            }
+
+            const nextMessages = [...messages];
+            if (currentText) {
+              nextMessages.push({
+                id: nextMessageId("assistant"),
+                role: "assistant",
+                content: currentText,
+              });
+            }
+
+            toolMessageMapRef.current.set(chunk.toolCallId, builtInToolMessage.id);
+            nextMessages.push(builtInToolMessage);
+            return nextMessages;
+          });
+
+          return "";
+        });
+      } else if (chunk.type === "wagey_built_in_tool_result") {
+        setIsThinking(false);
+        setMessages((prev) =>
+          prev.map((msg) => {
+            const toolCall = msg.toolCalls?.find(
+              (tc) => tc.id === chunk.toolCallId && tc.kind === "built_in"
+            );
+            if (!toolCall) {
+              return msg;
+            }
+
+            return {
+              ...msg,
+              content: chunk.success
+                ? `✓ ${getToolDisplayName(chunk.toolName)}`
+                : `✕ ${getToolDisplayName(chunk.toolName)}`,
+              toolCalls: msg.toolCalls?.map((tc) =>
+                tc.id === chunk.toolCallId
+                  ? { ...tc, result: chunk.result, success: chunk.success }
+                  : tc
+              ),
+            };
+          })
+        );
       } else if (chunk.type === "wagey_limit") {
         setIsThinking(false);
         setLimitResetDays(chunk.resetDays);
@@ -593,6 +662,10 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       compaction: compactedHistory.compaction,
       userId,
       userName,
+      client: {
+        platform: "web" as const,
+        capabilities: [...WEB_CLIENT_CAPABILITIES],
+      },
     });
   };
 

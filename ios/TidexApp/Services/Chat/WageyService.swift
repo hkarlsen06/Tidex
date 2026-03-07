@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import os.log
 
@@ -15,6 +16,13 @@ private struct ChatAPIRequest: Encodable {
     let userId: String
     let userName: String?
     let compaction: String?
+    let client: ClientContext?
+  }
+
+  struct ClientContext: Encodable {
+    let platform: String
+    let appVersion: String?
+    let capabilities: [String]
   }
 
   struct APIMessage: Encodable {
@@ -122,6 +130,10 @@ enum WageyServiceError: Error, LocalizedError {
 @MainActor
 final class WageyService: ObservableObject {
   static let shared = WageyService()
+  private static let clientCapabilities = [
+    "rich_sources_v1",
+    "rich_built_in_tool_events_v1",
+  ]
 
   @Published private(set) var isStreaming = false
   @Published private(set) var error: Error?
@@ -223,7 +235,7 @@ final class WageyService: ObservableObject {
           // Multimodal message with images
           var blocks: [ChatAPIRequest.APIContentBlock] = []
 
-          // Add images first (Claude best practice)
+          // Add images first to match the chat API's multimodal message ordering.
           for image in images {
             blocks.append(
               .image(
@@ -245,10 +257,12 @@ final class WageyService: ObservableObject {
         }
 
         // Add the main message
+        let functionToolCalls = message.toolCalls?.filter { !$0.isBuiltIn }
+
         let apiMessage = ChatAPIRequest.APIMessage(
           role: message.role.rawValue,
           content: content,
-          toolCalls: message.toolCalls?.map { toolCall in
+          toolCalls: functionToolCalls?.map { toolCall in
             ChatAPIRequest.APIToolCall(
               id: toolCall.id,
               type: "function",
@@ -264,16 +278,16 @@ final class WageyService: ObservableObject {
         apiMessages.append(apiMessage)
 
         // If this assistant message had tool calls, add tool result messages
-        // IMPORTANT: We must send a tool_result for EVERY tool_use, or Claude API fails
+        // IMPORTANT: We must send a tool_result for every prior tool_use item.
         // If a tool call has no result (timed out), send a synthetic failure result
-        if message.role == .assistant, let toolCalls = message.toolCalls {
+        if message.role == .assistant, let toolCalls = functionToolCalls {
           for toolCall in toolCalls {
             let resultContent: String
             if let result = toolCall.result {
               resultContent = result
             } else {
               // Tool call never got a result (timeout, connection lost, etc.)
-              // Send a synthetic failure result so Claude knows it failed
+              // Send a synthetic failure result so the model sees that the call failed.
               resultContent =
                 "{\"success\":false,\"message\":\"Tool call timed out or was interrupted\"}"
             }
@@ -315,7 +329,12 @@ final class WageyService: ObservableObject {
           messages: apiMessages,
           userId: userId,
           userName: userName,
-          compaction: compaction
+          compaction: compaction,
+          client: ChatAPIRequest.ClientContext(
+            platform: "ios",
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+            capabilities: Self.clientCapabilities
+          )
         )
       )
 
@@ -420,6 +439,24 @@ final class WageyService: ObservableObject {
         success: raw.success ?? true
       )
 
+    case "wagey_built_in_tool_start":
+      guard let toolName = raw.toolName,
+        let toolCallId = raw.toolCallId
+      else { return nil }
+      return .builtInToolStart(toolName: toolName, toolCallId: toolCallId)
+
+    case "wagey_built_in_tool_result":
+      guard let toolName = raw.toolName,
+        let toolCallId = raw.toolCallId,
+        let result = raw.result
+      else { return nil }
+      return .builtInToolResult(
+        toolName: toolName,
+        toolCallId: toolCallId,
+        result: result,
+        success: raw.success ?? true
+      )
+
     case "wagey_limit":
       guard let remaining = raw.remaining,
         let resetDays = raw.resetDays
@@ -430,6 +467,9 @@ final class WageyService: ObservableObject {
 
     case "wagey_no_access":
       return .wageyNoAccess
+
+    case "wagey_sources":
+      return .sources(items: raw.items ?? [])
 
     case "done":
       return .done
@@ -496,4 +536,5 @@ private struct RawChatChunk: Decodable {
 
   // Error chunk
   let error: String?
+  let items: [MessageSource]?
 }

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,7 +12,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Load env properly with dotenv
 config({ path: path.join(__dirname, "../../next/.env.local") });
 
-const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.4";
+const OPENAI_REASONING_EFFORT = "low";
 
 const TARGET_LANGUAGES = [
   // Western Europe
@@ -192,6 +193,186 @@ async function withRetry(fn, maxRetries = 3) {
   }
 }
 
+function toErrorWithStatus(message, status) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+function getOpenAIConfig() {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new Error(
+      "OPENAI_API_KEY is not set in next/.env.local. The localization translator now uses OpenAI Responses API."
+    );
+  }
+
+  return {
+    apiKey,
+    model: OPENAI_MODEL,
+  };
+}
+
+function buildTranslationSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      translations: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            id: { type: "string" },
+            translation: { type: "string" },
+          },
+          required: ["id", "translation"],
+        },
+      },
+    },
+    required: ["translations"],
+  };
+}
+
+function extractOpenAIText(responseJson) {
+  if (typeof responseJson?.output_text === "string" && responseJson.output_text.trim()) {
+    return responseJson.output_text.trim();
+  }
+
+  const output = Array.isArray(responseJson?.output) ? responseJson.output : [];
+
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+
+    for (const block of content) {
+      if (typeof block?.text === "string" && block.text.trim()) {
+        return block.text.trim();
+      }
+
+      if (
+        block?.text &&
+        typeof block.text === "object" &&
+        typeof block.text.value === "string" &&
+        block.text.value.trim()
+      ) {
+        return block.text.value.trim();
+      }
+    }
+  }
+
+  throw new Error("OpenAI response did not include text output");
+}
+
+function extractOpenAIParsedPayload(responseJson) {
+  if (
+    responseJson?.output_parsed &&
+    typeof responseJson.output_parsed === "object" &&
+    !Array.isArray(responseJson.output_parsed)
+  ) {
+    return responseJson.output_parsed;
+  }
+
+  const output = Array.isArray(responseJson?.output) ? responseJson.output : [];
+
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+
+    for (const block of content) {
+      if (block?.parsed && typeof block.parsed === "object" && !Array.isArray(block.parsed)) {
+        return block.parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeTranslationsPayload(payload) {
+  if (!payload || typeof payload !== "object" || !Array.isArray(payload.translations)) {
+    throw new Error("OpenAI translation payload did not match the expected schema");
+  }
+
+  return Object.fromEntries(
+    payload.translations
+      .filter(
+        (entry) =>
+          entry &&
+          typeof entry === "object" &&
+          typeof entry.id === "string" &&
+          typeof entry.translation === "string"
+      )
+      .map((entry) => [entry.id, entry.translation])
+  );
+}
+
+async function createStructuredOpenAIResponse({
+  schemaName,
+  instructions,
+  prompt,
+  maxOutputTokens,
+}) {
+  const { apiKey, model } = getOpenAIConfig();
+
+  const response = await fetch(OPENAI_RESPONSES_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      store: false,
+      max_output_tokens: maxOutputTokens,
+      reasoning: {
+        effort: OPENAI_REASONING_EFFORT,
+      },
+      instructions,
+      input: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: schemaName,
+          strict: true,
+          schema: buildTranslationSchema(),
+        },
+      },
+    }),
+  });
+
+  const responseJson = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const errorMessage =
+      responseJson?.error?.message ||
+      response.statusText ||
+      "OpenAI Responses API request failed";
+    throw toErrorWithStatus(
+      `OpenAI Responses API request failed (${response.status}): ${errorMessage}`,
+      response.status
+    );
+  }
+
+  const parsedPayload = extractOpenAIParsedPayload(responseJson);
+  if (parsedPayload) {
+    return normalizeTranslationsPayload(parsedPayload);
+  }
+
+  const text = extractOpenAIText(responseJson);
+  return normalizeTranslationsPayload(extractJson(text));
+}
+
 // Extract JSON from potentially messy response
 function extractJson(text) {
   // Try to find JSON object boundaries
@@ -292,8 +473,9 @@ async function translateBatch(items, targetLang) {
 
   const hasNorwegianRefs = items.some((item) => item.norwegian !== undefined);
 
-  const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
-Translate the following strings from English to ${targetLang.name}.
+  const instructions = `You are a professional translator for Tidex, a work shift tracking app. Return only valid JSON that matches the provided schema.`;
+
+  const prompt = `Translate the following strings from English to ${targetLang.name} for Tidex, a work shift tracking app.
 
 CRITICAL RULES - FOLLOW EXACTLY:
 1. PRESERVE ALL FORMAT SPECIFIERS EXACTLY AS THEY APPEAR:
@@ -309,24 +491,21 @@ CRITICAL RULES - FOLLOW EXACTLY:
 3. Preserve leading/trailing whitespace exactly
 4. The "context" field hints at usage - use it to disambiguate meanings
 ${hasNorwegianRefs ? `5. The "norwegian" field (when present) is a manually verified translation - use it to understand the intended meaning, especially for ambiguous or short strings` : ""}
-6. Return a JSON object mapping each "id" to its translation
+6. Return exactly one translated entry for each input "id"
 
 Strings to translate:
 ${JSON.stringify(stringsToTranslate, null, 2)}
 
-Return format (JSON only, no markdown, no explanation):
-{"id1": "translation1", "id2": "translation2", ...}`;
+Return one translation per input item.`;
 
-  const response = await withRetry(() =>
-    client.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
+  return withRetry(() =>
+    createStructuredOpenAIResponse({
+      schemaName: `translation_batch_${targetLang.code.replace(/[^a-z0-9_]/gi, "_")}`,
+      instructions,
+      prompt,
+      maxOutputTokens: 4096,
     })
   );
-
-  const text = response.content[0].text.trim();
-  return extractJson(text);
 }
 
 // Translate a batch FROM Norwegian TO English
@@ -337,8 +516,9 @@ async function translateBatchToEnglish(items) {
     context: item.key,
   }));
 
-  const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
-Translate the following strings from Norwegian (Bokmål) to English.
+  const instructions = `You are a professional translator for Tidex, a work shift tracking app. Return only valid JSON that matches the provided schema.`;
+
+  const prompt = `Translate the following strings from Norwegian (Bokmal) to English for Tidex, a work shift tracking app.
 
 CRITICAL RULES - FOLLOW EXACTLY:
 1. PRESERVE ALL FORMAT SPECIFIERS EXACTLY AS THEY APPEAR:
@@ -353,24 +533,21 @@ CRITICAL RULES - FOLLOW EXACTLY:
 2. Keep translations concise (mobile UI has limited space)
 3. Preserve leading/trailing whitespace exactly
 4. The "context" field hints at usage - use it to disambiguate meanings
-5. Return a JSON object mapping each "id" to its English translation
+5. Return exactly one translated entry for each input "id"
 
 Strings to translate:
 ${JSON.stringify(stringsToTranslate, null, 2)}
 
-Return format (JSON only, no markdown, no explanation):
-{"id1": "translation1", "id2": "translation2", ...}`;
+Return one translation per input item.`;
 
-  const response = await withRetry(() =>
-    client.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
+  return withRetry(() =>
+    createStructuredOpenAIResponse({
+      schemaName: "translation_batch_en",
+      instructions,
+      prompt,
+      maxOutputTokens: 4096,
     })
   );
-
-  const text = response.content[0].text.trim();
-  return extractJson(text);
 }
 
 // Deep-set a value at a path without overwriting siblings
@@ -588,10 +765,10 @@ async function translateXcstrings(filePath) {
     return;
   }
 
-  // Process by language for clearer progress
-  // Keep batches small enough for Haiku to maintain attention on format specifiers
+  // Process by language for clearer progress.
+  // Keep batches small enough to reduce format-specifier drift.
   const BATCH_SIZE = 30;
-  const CONCURRENCY = 15; // Tier 3 Haiku 4.5: 2K req/min = 33/sec, 15 concurrent is safe
+  const CONCURRENCY = 6;
 
   // Count languages with work to do
   const langsWithWork = TARGET_LANGUAGES.filter(
@@ -711,7 +888,7 @@ async function translateXcstrings(filePath) {
           // Update progress
           completedStrings += batch.length;
           langBar.update(completedStrings, {
-            status: `${translatedThisLang} translated (15x)`,
+            status: `${translatedThisLang} translated (${CONCURRENCY}x)`,
           });
         } catch (error) {
           const errorMsg = `Batch ${batchIndex + 1} error for ${targetLang.name}: ${error.message}`;
@@ -927,8 +1104,10 @@ async function translateInfoPlistStrings() {
       }));
 
       try {
-        const prompt = `You are a professional translator for a mobile app called "Tidex" (a work shift tracking app).
-Translate these iOS permission descriptions from English to ${targetLang.name}.
+        const instructions =
+          'You are a professional translator for Tidex, a work shift tracking app. Return only valid JSON that matches the provided schema.';
+
+        const prompt = `Translate these iOS permission descriptions from English to ${targetLang.name} for Tidex, a work shift tracking app.
 
 CRITICAL RULES:
 1. Keep "Tidex" as-is (it's the app name)
@@ -938,18 +1117,16 @@ CRITICAL RULES:
 Strings to translate:
 ${JSON.stringify(items, null, 2)}
 
-Return format (JSON only, no markdown):
-{"ip0": "translation0", "ip1": "translation1", ...}`;
+Return one translation per input item.`;
 
-        const response = await withRetry(() =>
-          client.messages.create({
-            model: "claude-haiku-4-5",
-            max_tokens: 1024,
-            messages: [{ role: "user", content: prompt }],
+        const translations = await withRetry(() =>
+          createStructuredOpenAIResponse({
+            schemaName: `infoplist_batch_${targetLang.code.replace(/[^a-z0-9_]/gi, "_")}`,
+            instructions,
+            prompt,
+            maxOutputTokens: 1024,
           })
         );
-
-        const translations = extractJson(response.content[0].text.trim());
 
         // Merge translations with existing
         const mergedStrings = { ...existingStrings };

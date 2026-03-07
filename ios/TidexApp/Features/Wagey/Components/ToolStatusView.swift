@@ -174,6 +174,10 @@ struct ToolStatusView: View {
       // Feedback and profile
       "manage_feedback": String(localized: .wageyToolManageFeedback),
       "manage_profile": String(localized: .wageyToolManageProfile),
+
+      // OpenAI built-in tools
+      "web_search": String(localized: .wageyToolWebSearch),
+      "code_interpreter": String(localized: .wageyToolCodeInterpreter),
     ]
   }
 

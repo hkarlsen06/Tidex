@@ -209,9 +209,12 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
     -> ASPresentationAnchor
   {
     MainActor.assumeIsolated {
-      presentationAnchor
-        ?? resolvePresentationAnchor()
-        ?? UIWindow()
+      guard let anchor = presentationAnchor ?? resolvePresentationAnchor() else {
+        preconditionFailure(
+          "OAuthWebAuthSession.presentationAnchor requested without an active window scene")
+      }
+
+      return anchor
     }
   }
 }

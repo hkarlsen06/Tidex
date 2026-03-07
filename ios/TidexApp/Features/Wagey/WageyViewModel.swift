@@ -87,6 +87,9 @@ final class WageyViewModel {
   /// Content blocks being streamed from the assistant (in chronological order)
   private(set) var activeContentBlocks: [ContentBlock] = []
 
+  /// Sources associated with the currently streaming assistant response
+  private(set) var activeSources: [MessageSource] = []
+
   /// Whether currently receiving a streaming response
   private(set) var isStreaming: Bool = false
 
@@ -328,6 +331,7 @@ final class WageyViewModel {
     currentConversationId = nil
     messages = []
     activeContentBlocks = []
+    activeSources = []
     limitReached = false
     localMessagesSent = 0
     resetDays = 0
@@ -436,6 +440,7 @@ final class WageyViewModel {
     currentConversationId = nil
     messages = []
     activeContentBlocks = []
+    activeSources = []
     error = nil
 
     // Reload conversations list
@@ -519,6 +524,7 @@ final class WageyViewModel {
     isStreaming = true
     isModelThinking = true
     activeContentBlocks = []
+    activeSources = []
     hadSuccessfulToolCalls = false
     currentAssistantMessageId = UUID().uuidString
 
@@ -814,6 +820,32 @@ final class WageyViewModel {
         hadSuccessfulToolCalls = true
       }
 
+    case .builtInToolStart(let toolName, let toolCallId):
+      isModelThinking = false
+      let toolCall = ToolCall(
+        id: toolCallId,
+        name: toolName,
+        kind: .builtIn
+      )
+      activeContentBlocks.append(.toolCall(toolCall))
+
+    case .builtInToolResult(let toolName, let toolCallId, let result, let success):
+      isModelThinking = false
+      if let index = activeContentBlocks.firstIndex(where: { block in
+        if case .toolCall(let tc) = block { return tc.id == toolCallId }
+        return false
+      }), case .toolCall(let existingToolCall) = activeContentBlocks[index] {
+        let updatedToolCall = ToolCall(
+          id: toolCallId,
+          name: toolName,
+          kind: .builtIn,
+          arguments: existingToolCall.arguments,
+          result: result,
+          success: success
+        )
+        activeContentBlocks[index] = .toolCall(updatedToolCall)
+      }
+
     case .wageyLimit(let remaining, let days, let exceeded, let bonus):
       isModelThinking = false
       // Update wagey invocations from API response to stay in sync
@@ -852,6 +884,12 @@ final class WageyViewModel {
       limitReached = true
       error = WageyError.noAccess
 
+    case .sources(let items):
+      activeSources = items
+
+    case .unknown:
+      break
+
     case .done:
       isModelThinking = false
     // Stream completed - finalize handled after loop
@@ -871,6 +909,7 @@ final class WageyViewModel {
         id: currentAssistantMessageId ?? UUID().uuidString,
         role: .assistant,
         contentBlocks: activeContentBlocks,
+        sources: activeSources.isEmpty ? nil : activeSources,
         timestamp: Date()
       )
       messages.append(assistantMessage)
@@ -888,6 +927,7 @@ final class WageyViewModel {
 
     // Reset streaming state
     activeContentBlocks = []
+    activeSources = []
     hadSuccessfulToolCalls = false
     isStreaming = false
     isModelThinking = false
