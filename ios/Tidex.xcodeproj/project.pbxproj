@@ -25,7 +25,7 @@
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		11F0A0043011111100A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry */; };
+		11F0A0043011111100A1B2C3 /* Sentry-Dynamic-WithARM64e in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry-Dynamic-WithARM64e */; };
 		188D65FF4E96734657711265 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */; };
 		28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */; };
 		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
@@ -257,7 +257,7 @@
 				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
 				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
 				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
-				11F0A0043011111100A1B2C3 /* Sentry in Frameworks */,
+				11F0A0043011111100A1B2C3 /* Sentry-Dynamic-WithARM64e in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -465,7 +465,7 @@
 				11923C272F16BB090076AFD6 /* Supabase */,
 				11263D3B2F2FF22700233D63 /* CropViewController */,
 				11263D3F2F2FF3F700233D63 /* TOCropViewController */,
-				11F0A0033011111100A1B2C3 /* Sentry */,
+				11F0A0033011111100A1B2C3 /* Sentry-Dynamic-WithARM64e */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -1391,10 +1391,10 @@
 			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
 		};
-		11F0A0033011111100A1B2C3 /* Sentry */ = {
+		11F0A0033011111100A1B2C3 /* Sentry-Dynamic-WithARM64e */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
+			productName = "Sentry-Dynamic-WithARM64e";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
