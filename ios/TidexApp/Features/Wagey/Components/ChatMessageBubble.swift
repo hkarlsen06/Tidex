@@ -36,6 +36,10 @@ struct ChatMessageBubble: View {
             imageContent(attachment: attachment, isUser: message.role == .user)
           }
         }
+
+        if message.role == .assistant, let sources = message.sources, !sources.isEmpty {
+          MessageSourcesView(sources: sources)
+        }
       }
 
       if message.role == .assistant {
@@ -110,6 +114,84 @@ struct ChatMessageBubble: View {
           }
       }
     }
+  }
+}
+
+private struct MessageSourcesView: View {
+  let sources: [MessageSource]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.wageySourcesTitle)
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextSecondary)
+
+      ForEach(sources) { source in
+        if let url = URL(string: source.url) {
+          Link(destination: url) {
+            HStack(alignment: .top, spacing: Spacing.xs) {
+              faviconView(for: url)
+                .padding(.top, 2)
+
+              VStack(alignment: .leading, spacing: 2) {
+                Text(source.title)
+                  .font(.tidexFootnoteMedium)
+                  .foregroundColor(.tidexTextPrimary)
+                  .multilineTextAlignment(.leading)
+
+                Text(source.domain)
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexTextMuted)
+              }
+
+              Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
+            .background(Color.tidexSurfaceSecondary.opacity(0.55))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+          }
+        }
+      }
+    }
+    .frame(maxWidth: 320, alignment: .leading)
+  }
+
+  @ViewBuilder
+  private func faviconView(for pageURL: URL) -> some View {
+    if let faviconURL = faviconURL(for: pageURL) {
+      CachedAsyncImage(url: faviconURL) { image in
+        image
+          .resizable()
+          .scaledToFit()
+          .frame(width: 16, height: 16)
+          .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+      } placeholder: {
+        fallbackFavicon
+      }
+      .frame(width: 16, height: 16)
+    } else {
+      fallbackFavicon
+    }
+  }
+
+  private var fallbackFavicon: some View {
+    Image(systemName: "globe")
+      .font(.tidexCaptionRegular)
+      .foregroundColor(.tidexBlue)
+      .frame(width: 16, height: 16)
+  }
+
+  private func faviconURL(for pageURL: URL) -> URL? {
+    guard let scheme = pageURL.scheme, let host = pageURL.host else {
+      return nil
+    }
+
+    var components = URLComponents()
+    components.scheme = scheme
+    components.host = host
+    components.path = "/favicon.ico"
+    return components.url
   }
 }
 

@@ -32,4 +32,94 @@ final class WageyChatChunkDecodingTests: XCTestCase {
 
     XCTAssertEqual(chunk, .status(thinking: false))
   }
+
+  func testDecodesSourcesChunk() throws {
+    let data = Data(
+      """
+      {
+        "type": "wagey_sources",
+        "items": [
+          {
+            "id": "src_1",
+            "title": "OpenAI",
+            "url": "https://openai.com",
+            "domain": "openai.com"
+          }
+        ]
+      }
+      """.utf8
+    )
+
+    let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+
+    XCTAssertEqual(
+      chunk,
+      .sources(
+        items: [
+          MessageSource(
+            id: "src_1",
+            title: "OpenAI",
+            url: "https://openai.com",
+            domain: "openai.com"
+          )
+        ]
+      )
+    )
+  }
+
+  func testDecodesBuiltInToolChunks() throws {
+    let startData = Data(
+      """
+      {
+        "type": "wagey_built_in_tool_start",
+        "toolName": "web_search",
+        "toolCallId": "search_1"
+      }
+      """.utf8
+    )
+
+    let resultData = Data(
+      """
+      {
+        "type": "wagey_built_in_tool_result",
+        "toolName": "web_search",
+        "toolCallId": "search_1",
+        "result": "{\"status\":\"completed\"}",
+        "success": true
+      }
+      """.utf8
+    )
+
+    let startChunk = try JSONDecoder().decode(ChatChunk.self, from: startData)
+    let resultChunk = try JSONDecoder().decode(ChatChunk.self, from: resultData)
+
+    XCTAssertEqual(
+      startChunk,
+      .builtInToolStart(toolName: "web_search", toolCallId: "search_1")
+    )
+    XCTAssertEqual(
+      resultChunk,
+      .builtInToolResult(
+        toolName: "web_search",
+        toolCallId: "search_1",
+        result: "{\"status\":\"completed\"}",
+        success: true
+      )
+    )
+  }
+
+  func testDecodesUnknownChunkWithoutThrowing() throws {
+    let data = Data(
+      """
+      {
+        "type": "wagey_future_feature",
+        "value": true
+      }
+      """.utf8
+    )
+
+    let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+
+    XCTAssertEqual(chunk, .unknown(type: "wagey_future_feature"))
+  }
 }

@@ -9,11 +9,15 @@ import { Context, Effect, Layer, Redacted } from "effect";
 import { AIError } from "@/lib/errors/tagged";
 import { AppConfig } from "./config";
 import type {
+  BuiltInToolName,
+  CodeInterpreterTool,
   ContentBlock,
   FunctionTool,
   Message,
+  Source,
   StreamChunk,
   Tool,
+  WebSearchTool,
 } from "./ai-types";
 
 const OPENAI_RESPONSES_WS_URL = "wss://api.openai.com/v1/responses";
@@ -52,6 +56,15 @@ type FunctionCallAccumulator = {
   callId?: string;
   name?: string;
   arguments: string;
+};
+
+type OpenAIBuiltInToolCallType = "web_search_call" | "code_interpreter_call";
+
+type BuiltInToolCallAccumulator = {
+  itemId: string;
+  id: string;
+  name: BuiltInToolName;
+  started: boolean;
 };
 
 type OpenAIEvent = Record<string, unknown>;
@@ -120,7 +133,9 @@ class AsyncQueue<T> implements AsyncIterable<T> {
 class ResponseState {
   readonly events = new AsyncQueue<StreamChunk>();
   readonly functionCalls = new Map<string, FunctionCallAccumulator>();
+  readonly builtInToolCalls = new Map<string, BuiltInToolCallAccumulator>();
   readonly completed: Promise<OpenAIResponseCompletion>;
+  readonly sources = new Map<string, Source>();
 
   responseId?: string;
 
@@ -145,9 +160,21 @@ class ResponseState {
     this.events.push(chunk);
   }
 
+  addSources(items: Source[]): void {
+    for (const item of items) {
+      this.sources.set(item.url, item);
+    }
+  }
+
   complete(stopReason: string): void {
     if (this.finished) return;
     this.finished = true;
+    if (this.sources.size > 0) {
+      this.events.push({
+        type: "sources",
+        items: Array.from(this.sources.values()),
+      });
+    }
     this.events.push({
       type: "done",
       stopReason,
@@ -204,6 +231,22 @@ function getNestedRecord(
     : undefined;
 }
 
+function getArrayField(
+  obj: Record<string, unknown>,
+  key: string
+): unknown[] | undefined {
+  const value = obj[key];
+  return Array.isArray(value) ? value : undefined;
+}
+
+function getBooleanField(
+  obj: Record<string, unknown>,
+  key: string
+): boolean | undefined {
+  const value = obj[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
 function extractResponseId(event: OpenAIEvent): string | undefined {
   const direct = getStringField(event, "response_id");
   if (direct) return direct;
@@ -252,6 +295,142 @@ function toUserImageBlock(block: Extract<ContentBlock, { type: "image" }>): Open
     type: "input_image",
     image_url: `data:${block.source.media_type};base64,${block.source.data}`,
   };
+}
+
+function isBuiltInToolType(value: unknown): value is OpenAIBuiltInToolCallType {
+  return value === "web_search_call" || value === "code_interpreter_call";
+}
+
+function toBuiltInToolName(value: OpenAIBuiltInToolCallType): BuiltInToolName {
+  return value === "web_search_call" ? "web_search" : "code_interpreter";
+}
+
+function toOpenAIWebSearchTool(tool: WebSearchTool): OpenAIInputItem {
+  return {
+    type: "web_search",
+    ...(tool.search_context_size ? { search_context_size: tool.search_context_size } : {}),
+    ...(tool.user_location ? { user_location: tool.user_location } : {}),
+  };
+}
+
+function toOpenAICodeInterpreterTool(tool: CodeInterpreterTool): OpenAIInputItem {
+  return {
+    type: "code_interpreter",
+    ...(tool.container ? { container: tool.container } : {}),
+  };
+}
+
+function buildBuiltInToolSummary(item: Record<string, unknown>): Record<string, unknown> {
+  const itemType = getStringField(item, "type");
+
+  if (itemType === "web_search_call") {
+    const action = getNestedRecord(item, "action");
+    const query =
+      getStringField(action ?? item, "query") ??
+      getStringField(item, "query");
+    const sources =
+      getArrayField(action ?? item, "sources") ??
+      getArrayField(item, "sources");
+
+    return {
+      status: getStringField(item, "status") ?? "completed",
+      query,
+      sourceCount: Array.isArray(sources) ? sources.length : 0,
+    };
+  }
+
+  const outputs =
+    getArrayField(item, "outputs") ??
+    getArrayField(getNestedRecord(item, "result") ?? {}, "outputs");
+
+  return {
+    status: getStringField(item, "status") ?? "completed",
+    outputCount: Array.isArray(outputs) ? outputs.length : 0,
+  };
+}
+
+function toSourceId(url: string): string {
+  return Buffer.from(url).toString("base64url").slice(0, 24);
+}
+
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function normalizeSource(candidate: Record<string, unknown>): Source | null {
+  if (getStringField(candidate, "type") !== "url_citation") {
+    return null;
+  }
+
+  const url =
+    getStringField(candidate, "url") ??
+    getStringField(candidate, "href");
+  if (!url || !/^https?:\/\//.test(url)) {
+    return null;
+  }
+
+  const title =
+    getStringField(candidate, "title") ??
+    getStringField(candidate, "name") ??
+    getStringField(candidate, "text") ??
+    extractDomain(url);
+
+  return {
+    id: toSourceId(url),
+    title,
+    url,
+    domain: extractDomain(url),
+  };
+}
+
+function collectSources(value: unknown, seen = new Map<string, Source>()): Source[] {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectSources(entry, seen);
+    }
+    return Array.from(seen.values());
+  }
+
+  if (!isJsonObject(value)) {
+    return Array.from(seen.values());
+  }
+
+  const directSource = normalizeSource(value);
+  if (directSource) {
+    seen.set(directSource.url, directSource);
+  }
+
+  const annotations = getArrayField(value, "annotations");
+  if (annotations) {
+    collectSources(annotations, seen);
+  }
+
+  const action = getNestedRecord(value, "action");
+  if (action) {
+    collectSources(action, seen);
+  }
+
+  const content = getArrayField(value, "content");
+  if (content) {
+    collectSources(content, seen);
+  }
+
+  const output = getArrayField(value, "output");
+  if (output) {
+    collectSources(output, seen);
+  }
+
+  for (const nested of Object.values(value)) {
+    if (nested && typeof nested === "object") {
+      collectSources(nested, seen);
+    }
+  }
+
+  return Array.from(seen.values());
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
@@ -603,7 +782,24 @@ function toOpenAIFunctionTool(tool: FunctionTool): OpenAIInputItem {
 export function toOpenAITools(tools: Tool[] | undefined): OpenAIInputItem[] | undefined {
   if (!tools?.length) return undefined;
 
-  return tools.map((tool) => toOpenAIFunctionTool(tool));
+  return tools.map((tool) => {
+    if ("type" in tool && tool.type === "web_search") {
+      return toOpenAIWebSearchTool(tool);
+    }
+
+    if ("type" in tool && tool.type === "code_interpreter") {
+      return toOpenAICodeInterpreterTool(tool);
+    }
+
+    return toOpenAIFunctionTool(tool);
+  });
+}
+
+function hasBuiltInTool(
+  tools: Tool[] | undefined,
+  toolType: "web_search" | "code_interpreter"
+): boolean {
+  return tools?.some((tool) => "type" in tool && tool.type === toolType) ?? false;
 }
 
 function pushFunctionCallDelta(
@@ -676,6 +872,64 @@ function parseToolUseChunk(
       },
     };
   }
+}
+
+function parseBuiltInToolStartChunk(
+  accumulators: Map<string, BuiltInToolCallAccumulator>,
+  event: OpenAIEvent
+): StreamChunk | null {
+  const item = event.item;
+  if (!item || typeof item !== "object") return null;
+
+  const parsedItem = item as Record<string, unknown>;
+  const itemType = getStringField(parsedItem, "type");
+  if (!itemType || !isBuiltInToolType(itemType)) return null;
+
+  const itemId = getStringField(parsedItem, "id");
+  if (!itemId) return null;
+
+  const accumulator: BuiltInToolCallAccumulator = {
+    itemId,
+    id: getStringField(parsedItem, "call_id") ?? itemId,
+    name: toBuiltInToolName(itemType),
+    started: true,
+  };
+  accumulators.set(itemId, accumulator);
+
+  return {
+    type: "built_in_tool_start",
+    id: accumulator.id,
+    name: accumulator.name,
+  };
+}
+
+function parseBuiltInToolResultChunk(
+  accumulators: Map<string, BuiltInToolCallAccumulator>,
+  event: OpenAIEvent
+): StreamChunk | null {
+  const item = event.item;
+  if (!item || typeof item !== "object") return null;
+
+  const parsedItem = item as Record<string, unknown>;
+  const itemType = getStringField(parsedItem, "type");
+  if (!itemType || !isBuiltInToolType(itemType)) return null;
+
+  const itemId = getStringField(parsedItem, "id");
+  if (!itemId) return null;
+
+  const accumulator = accumulators.get(itemId);
+  accumulators.delete(itemId);
+
+  const name = toBuiltInToolName(itemType);
+  return {
+    type: "built_in_tool_result",
+    id: accumulator?.id ?? getStringField(parsedItem, "call_id") ?? itemId,
+    name,
+    success:
+      getBooleanField(parsedItem, "success") ??
+      (getStringField(parsedItem, "status") ?? "completed") !== "failed",
+    summary: buildBuiltInToolSummary(parsedItem),
+  };
 }
 
 class WebSocketResponsesSession implements OpenAIResponseSession {
@@ -788,6 +1042,9 @@ class WebSocketResponsesSession implements OpenAIResponseSession {
     if (mappedTools?.length) {
       payload.tools = mappedTools;
     }
+    if (hasBuiltInTool(options.tools, "web_search")) {
+      payload.include = ["web_search_call.action.sources"];
+    }
 
     if (!options.instructions) {
       delete payload.instructions;
@@ -856,6 +1113,7 @@ class WebSocketResponsesSession implements OpenAIResponseSession {
 
     const state = this.activeResponse;
     state.setResponseId(extractResponseId(event));
+    state.addSources(collectSources(event));
 
     const eventType = getStringField(event, "type") ?? "";
     const isTerminalEvent =
@@ -882,6 +1140,15 @@ class WebSocketResponsesSession implements OpenAIResponseSession {
     }
 
     if (eventType === "response.output_item.added") {
+      const builtInStartChunk = parseBuiltInToolStartChunk(
+        state.builtInToolCalls,
+        event
+      );
+      if (builtInStartChunk) {
+        state.push(builtInStartChunk);
+        return;
+      }
+
       const item = event.item;
       if (item && typeof item === "object") {
         const parsedItem = item as Record<string, unknown>;
@@ -901,6 +1168,15 @@ class WebSocketResponsesSession implements OpenAIResponseSession {
     }
 
     if (eventType === "response.output_item.done") {
+      const builtInResultChunk = parseBuiltInToolResultChunk(
+        state.builtInToolCalls,
+        event
+      );
+      if (builtInResultChunk) {
+        state.push(builtInResultChunk);
+        return;
+      }
+
       const chunk = parseToolUseChunk(state.functionCalls, event);
       if (chunk) {
         state.push(chunk);

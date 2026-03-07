@@ -19,6 +19,7 @@ struct ChatMessage: Identifiable, Equatable {
   let id: String
   let role: MessageRole
   let timestamp: Date
+  let sources: [MessageSource]?
 
   /// Ordered content blocks for assistant messages.
   /// Preserves the interleaved order of text and tool calls as they streamed in.
@@ -49,11 +50,12 @@ struct ChatMessage: Identifiable, Equatable {
   /// Full initializer with content blocks
   init(
     id: String = UUID().uuidString, role: MessageRole, contentBlocks: [ContentBlock],
-    timestamp: Date = Date()
+    sources: [MessageSource]? = nil, timestamp: Date = Date()
   ) {
     self.id = id
     self.role = role
     self.contentBlocks = contentBlocks
+    self.sources = sources
     self.timestamp = timestamp
   }
 
@@ -61,10 +63,11 @@ struct ChatMessage: Identifiable, Equatable {
   /// Tool calls are placed before text for backward compatibility with existing behavior
   init(
     id: String = UUID().uuidString, role: MessageRole, content: String,
-    toolCalls: [ToolCall]? = nil, timestamp: Date = Date()
+    toolCalls: [ToolCall]? = nil, sources: [MessageSource]? = nil, timestamp: Date = Date()
   ) {
     self.id = id
     self.role = role
+    self.sources = sources
     self.timestamp = timestamp
 
     // Build content blocks: tool calls first, then text (matches old rendering order)
@@ -169,6 +172,20 @@ struct ImageAttachment: Identifiable, Equatable {
   }
 }
 
+// MARK: - Message Source
+
+struct MessageSource: Identifiable, Equatable, Codable {
+  let id: String
+  let title: String
+  let url: String
+  let domain: String
+}
+
+enum ToolCallKind: String, Codable, Equatable {
+  case function
+  case builtIn = "built_in"
+}
+
 // MARK: - Tool Call
 
 /// A tool call that was executed during an assistant response.
@@ -178,9 +195,26 @@ struct ImageAttachment: Identifiable, Equatable {
 struct ToolCall: Identifiable, Equatable, Codable {
   let id: String
   let name: String
+  let kind: ToolCallKind?
   var arguments: String?
   var result: String?
   var success: Bool?
+
+  init(
+    id: String,
+    name: String,
+    kind: ToolCallKind? = nil,
+    arguments: String? = nil,
+    result: String? = nil,
+    success: Bool? = nil
+  ) {
+    self.id = id
+    self.name = name
+    self.kind = kind
+    self.arguments = arguments
+    self.result = result
+    self.success = success
+  }
 
   /// Whether the tool call is still executing (no result yet)
   var isExecuting: Bool {
@@ -195,6 +229,10 @@ struct ToolCall: Identifiable, Equatable, Codable {
   /// Whether the tool call failed
   var isFailed: Bool {
     success == false
+  }
+
+  var isBuiltIn: Bool {
+    kind == .builtIn
   }
 }
 
@@ -217,6 +255,12 @@ enum ChatChunk: Equatable {
   /// A tool execution has completed
   case toolResult(toolName: String, toolCallId: String, result: String, success: Bool)
 
+  /// A built-in OpenAI tool execution has started
+  case builtInToolStart(toolName: String, toolCallId: String)
+
+  /// A built-in OpenAI tool execution has completed
+  case builtInToolResult(toolName: String, toolCallId: String, result: String, success: Bool)
+
   /// The stream has completed successfully
   case done
 
@@ -228,6 +272,12 @@ enum ChatChunk: Equatable {
 
   /// User does not have access to Wagey
   case wageyNoAccess
+
+  /// Rich source metadata for capable clients
+  case sources(items: [MessageSource])
+
+  /// Future-compatible fallback for chunk types this app version does not understand.
+  case unknown(type: String)
 }
 
 // MARK: - ChatChunk Decodable
@@ -247,6 +297,7 @@ extension ChatChunk: Decodable {
     case resetDays
     case exceeded
     case bonus
+    case items
   }
 
   init(from decoder: Decoder) throws {
@@ -276,6 +327,19 @@ extension ChatChunk: Decodable {
       self = .toolResult(
         toolName: toolName, toolCallId: toolCallId, result: result, success: success)
 
+    case "wagey_built_in_tool_start":
+      let toolName = try container.decode(String.self, forKey: .toolName)
+      let toolCallId = try container.decode(String.self, forKey: .toolCallId)
+      self = .builtInToolStart(toolName: toolName, toolCallId: toolCallId)
+
+    case "wagey_built_in_tool_result":
+      let toolName = try container.decode(String.self, forKey: .toolName)
+      let toolCallId = try container.decode(String.self, forKey: .toolCallId)
+      let result = try container.decode(String.self, forKey: .result)
+      let success = try container.decode(Bool.self, forKey: .success)
+      self = .builtInToolResult(
+        toolName: toolName, toolCallId: toolCallId, result: result, success: success)
+
     case "done":
       self = .done
 
@@ -294,12 +358,12 @@ extension ChatChunk: Decodable {
     case "wagey_no_access":
       self = .wageyNoAccess
 
+    case "wagey_sources":
+      let items = try container.decode([MessageSource].self, forKey: .items)
+      self = .sources(items: items)
+
     default:
-      throw DecodingError.dataCorruptedError(
-        forKey: .type,
-        in: container,
-        debugDescription: "Unknown chunk type: \(type)"
-      )
+      self = .unknown(type: type)
     }
   }
 }
@@ -357,10 +421,12 @@ struct APIMessage: Codable, Equatable {
 
   /// Create an API message from a ChatMessage
   static func from(_ message: ChatMessage) -> APIMessage {
-    APIMessage(
+    let functionToolCalls = message.toolCalls?.filter { !$0.isBuiltIn }
+
+    return APIMessage(
       role: message.role.rawValue,
       content: message.content,
-      toolCalls: message.toolCalls?.map { APIToolCall.from($0) },
+      toolCalls: functionToolCalls?.map { APIToolCall.from($0) },
       toolCallId: nil,
       name: nil
     )

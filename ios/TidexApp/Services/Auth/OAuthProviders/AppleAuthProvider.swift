@@ -136,11 +136,13 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
   nonisolated func presentationAnchor(for controller: ASAuthorizationController)
     -> ASPresentationAnchor
   {
-    // Access MainActor-isolated property safely
-    return MainActor.assumeIsolated {
-      presentationAnchor
-        ?? resolvePresentationAnchor()
-        ?? UIWindow()
+    MainActor.assumeIsolated {
+      guard let anchor = presentationAnchor ?? resolvePresentationAnchor() else {
+        preconditionFailure(
+          "AppleAuthProvider.presentationAnchor requested without an active window scene")
+      }
+
+      return anchor
     }
   }
 }

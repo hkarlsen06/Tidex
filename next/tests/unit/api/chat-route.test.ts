@@ -300,4 +300,267 @@ describe("/api/chat route", () => {
     );
     expect(mockSession.createResponse).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps built-in tool events behind an explicit client capability", async () => {
+    const { POST } = await import("@/app/api/chat/route");
+
+    const baseInput = {
+      messages: [
+        {
+          role: "user",
+          content: "What changed recently?",
+        },
+      ],
+      userId: "032d8c2a-9af6-4777-99f0-24e2c4058bf3",
+    };
+
+    mockSession.createResponse.mockReset().mockResolvedValue(
+      createStream(
+        [
+          { type: "built_in_tool_start", id: "search_1", name: "web_search" },
+          {
+            type: "built_in_tool_result",
+            id: "search_1",
+            name: "web_search",
+            success: true,
+            summary: {
+              status: "completed",
+              query: "latest update",
+              sourceCount: 1,
+            },
+          },
+          { type: "text", content: "Here is the latest update." },
+          {
+            type: "sources",
+            items: [
+              {
+                id: "src_1",
+                title: "Skatteetaten",
+                url: "https://www.skatteetaten.no/latest",
+                domain: "skatteetaten.no",
+              },
+            ],
+          },
+        ],
+        "resp_sources_1"
+      )
+    );
+
+    const legacyResponse = await POST(
+      new NextRequest("http://localhost/api/chat", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          routerStreamKey: "wagey",
+          input: baseInput,
+        }),
+      })
+    );
+    const legacyChunks = parseChunkItems(await legacyResponse.text()).map(
+      (item) => item?.chunk
+    );
+
+    expect(legacyChunks).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "wagey_sources",
+        }),
+        expect.objectContaining({
+          type: "wagey_built_in_tool_start",
+        }),
+        expect.objectContaining({
+          type: "wagey_built_in_tool_result",
+        }),
+      ])
+    );
+
+    mockSession.createResponse.mockReset().mockResolvedValue(
+      createStream(
+        [
+          { type: "built_in_tool_start", id: "search_2", name: "web_search" },
+          {
+            type: "built_in_tool_result",
+            id: "search_2",
+            name: "web_search",
+            success: true,
+            summary: {
+              status: "completed",
+              query: "latest update",
+              sourceCount: 1,
+            },
+          },
+          { type: "text", content: "Here is the latest update." },
+          {
+            type: "sources",
+            items: [
+              {
+                id: "src_2",
+                title: "Skatteetaten",
+                url: "https://www.skatteetaten.no/latest",
+                domain: "skatteetaten.no",
+              },
+            ],
+          },
+        ],
+        "resp_sources_2"
+      )
+    );
+
+    const richResponse = await POST(
+      new NextRequest("http://localhost/api/chat", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          routerStreamKey: "wagey",
+          input: {
+            ...baseInput,
+            client: {
+              platform: "ios",
+              appVersion: "2.3.1",
+              capabilities: [
+                "rich_sources_v1",
+                "rich_built_in_tool_events_v1",
+              ],
+            },
+          },
+        }),
+      })
+    );
+    const richChunks = parseChunkItems(await richResponse.text()).map(
+      (item) => item?.chunk
+    );
+
+    expect(richChunks).toEqual(
+      expect.arrayContaining([
+        {
+          type: "wagey_built_in_tool_start",
+          toolName: "web_search",
+          toolCallId: "search_2",
+        },
+        {
+          type: "wagey_built_in_tool_result",
+          toolName: "web_search",
+          toolCallId: "search_2",
+          result:
+            "{\"status\":\"completed\",\"query\":\"latest update\",\"sourceCount\":1}",
+          success: true,
+        },
+        {
+          type: "wagey_sources",
+          items: [
+            {
+              id: "src_2",
+              title: "Skatteetaten",
+              url: "https://www.skatteetaten.no/latest",
+              domain: "skatteetaten.no",
+            },
+          ],
+        },
+      ])
+    );
+  });
+
+  it("accumulates sources across multiple response rounds", async () => {
+    const { POST } = await import("@/app/api/chat/route");
+
+    mockSession.createResponse
+      .mockReset()
+      .mockResolvedValueOnce(
+        createStream(
+          [
+            {
+              type: "sources",
+              items: [
+                {
+                  id: "src_1",
+                  title: "Arbeidstilsynet",
+                  url: "https://www.arbeidstilsynet.no/rules",
+                  domain: "arbeidstilsynet.no",
+                },
+              ],
+            },
+            {
+              type: "tool_use",
+              id: "call_1",
+              name: "query_shifts",
+              input: {},
+            },
+          ],
+          "resp_round_1"
+        )
+      )
+      .mockResolvedValueOnce(
+        createStream(
+          [
+            { type: "text", content: "Here is the answer." },
+            {
+              type: "sources",
+              items: [
+                {
+                  id: "src_2",
+                  title: "NAV",
+                  url: "https://www.nav.no/updates",
+                  domain: "nav.no",
+                },
+              ],
+            },
+          ],
+          "resp_round_2"
+        )
+      );
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/chat", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          routerStreamKey: "wagey",
+          input: {
+            messages: [
+              {
+                role: "user",
+                content: "Summarize the latest changes.",
+              },
+            ],
+            userId: "032d8c2a-9af6-4777-99f0-24e2c4058bf3",
+            client: {
+              platform: "ios",
+              appVersion: "2.3.1",
+              capabilities: ["rich_sources_v1"],
+            },
+          },
+        }),
+      })
+    );
+
+    const chunks = parseChunkItems(await response.text()).map((item) => item?.chunk);
+
+    expect(chunks).toEqual(
+      expect.arrayContaining([
+        {
+          type: "wagey_sources",
+          items: [
+            {
+              id: "src_1",
+              title: "Arbeidstilsynet",
+              url: "https://www.arbeidstilsynet.no/rules",
+              domain: "arbeidstilsynet.no",
+            },
+            {
+              id: "src_2",
+              title: "NAV",
+              url: "https://www.nav.no/updates",
+              domain: "nav.no",
+            },
+          ],
+        },
+      ])
+    );
+  });
 });

@@ -139,6 +139,7 @@ struct StoredChatMessage: Codable, Identifiable, Equatable {
   let id: String
   let role: StoredMessageRole
   let timestamp: Date
+  let sources: [MessageSource]?
 
   /// Ordered content blocks (new format)
   let contentBlocks: [StoredContentBlock]?
@@ -149,10 +150,17 @@ struct StoredChatMessage: Codable, Identifiable, Equatable {
   /// Legacy: tool calls (for backward compatibility)
   let toolCalls: [StoredToolCall]?
 
-  init(id: String, role: StoredMessageRole, contentBlocks: [StoredContentBlock], timestamp: Date) {
+  init(
+    id: String,
+    role: StoredMessageRole,
+    contentBlocks: [StoredContentBlock],
+    sources: [MessageSource]?,
+    timestamp: Date
+  ) {
     self.id = id
     self.role = role
     self.contentBlocks = contentBlocks
+    self.sources = sources
     self.timestamp = timestamp
     // Set legacy fields to nil when using new format
     self.content = nil
@@ -166,6 +174,7 @@ struct StoredChatMessage: Codable, Identifiable, Equatable {
   ) {
     self.id = id
     self.role = role
+    self.sources = nil
     self.content = content
     self.toolCalls = toolCalls
     self.timestamp = timestamp
@@ -199,6 +208,7 @@ enum StoredMessageRole: String, Codable {
 struct StoredToolCall: Codable, Identifiable, Equatable {
   let id: String
   let name: String
+  let kind: ToolCallKind?
   let arguments: String?
   let result: String?
   let success: Bool?
@@ -221,6 +231,7 @@ extension StoredChatMessage {
     self.id = message.id
     self.role = StoredMessageRole(rawValue: message.role.rawValue) ?? .user
     self.timestamp = message.timestamp
+    self.sources = message.sources
 
     // Store content blocks in new format
     self.contentBlocks = message.contentBlocks.map { block in
@@ -259,6 +270,7 @@ extension StoredChatMessage {
         id: id,
         role: messageRole,
         contentBlocks: blocks,
+        sources: sources,
         timestamp: timestamp
       )
     }
@@ -269,6 +281,7 @@ extension StoredChatMessage {
       role: messageRole,
       content: content ?? "",
       toolCalls: toolCalls?.map { $0.toToolCall() },
+      sources: sources,
       timestamp: timestamp
     )
   }
@@ -279,6 +292,7 @@ extension StoredToolCall {
   init(from toolCall: ToolCall) {
     self.id = toolCall.id
     self.name = toolCall.name
+    self.kind = toolCall.kind
     self.arguments = toolCall.arguments
     self.result = toolCall.result
     self.success = toolCall.success
@@ -289,6 +303,7 @@ extension StoredToolCall {
     ToolCall(
       id: id,
       name: name,
+      kind: kind,
       arguments: arguments,
       result: result,
       success: success

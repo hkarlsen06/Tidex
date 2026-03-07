@@ -63,7 +63,35 @@ export type FunctionTool = {
   input_examples?: ToolInputExample[];
 };
 
-export type Tool = FunctionTool;
+export type WebSearchTool = {
+  type: "web_search";
+  search_context_size?: "low" | "medium" | "high";
+  user_location?: {
+    type: "approximate";
+    city?: string;
+    country?: string;
+    region?: string;
+    timezone?: string;
+  };
+};
+
+export type CodeInterpreterTool = {
+  type: "code_interpreter";
+  container?: {
+    type: "auto";
+  };
+};
+
+export type Tool = FunctionTool | WebSearchTool | CodeInterpreterTool;
+
+export type BuiltInToolName = "web_search" | "code_interpreter";
+
+export type Source = {
+  id: string;
+  title: string;
+  url: string;
+  domain: string;
+};
 
 export type StreamChunk =
   | {
@@ -75,6 +103,22 @@ export type StreamChunk =
       id: string;
       name: string;
       input: Record<string, unknown>;
+    }
+  | {
+      type: "built_in_tool_start";
+      id: string;
+      name: BuiltInToolName;
+    }
+  | {
+      type: "built_in_tool_result";
+      id: string;
+      name: BuiltInToolName;
+      success: boolean;
+      summary: Record<string, unknown>;
+    }
+  | {
+      type: "sources";
+      items: Source[];
     }
   | {
       type: "done";

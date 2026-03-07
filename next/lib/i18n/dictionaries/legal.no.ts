@@ -272,15 +272,15 @@ export const legalNo = {
             },
           },
           {
-            boldLabel: 'Anthropic (Claude AI):',
-            text: 'Wagey AI-assistenten drives av Claude, en stor språkmodell utviklet av Anthropic. Når du bruker Wagey, sendes følgende data til Anthropics API for behandling: meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger). Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Anthropic behandler data i samsvar med deres {link}.',
+            boldLabel: 'OpenAI:',
+            text: 'Wagey AI-assistenten drives av OpenAI. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til OpenAI for behandling. Ved behov kan Wagey også bruke OpenAI web search for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. OpenAI behandler data i samsvar med deres {link}.',
             link: {
-              href: 'https://www.anthropic.com/privacy',
+              href: 'https://openai.com/policies/privacy-policy',
               text: 'personvernerklæring',
             },
           },
         ],
-        closingParagraph: 'Data deles kun med Anthropic når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med andre tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Data deles kun med OpenAI når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med andre tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',

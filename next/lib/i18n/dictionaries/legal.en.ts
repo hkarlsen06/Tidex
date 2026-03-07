@@ -272,15 +272,15 @@ export const legalEn = {
             },
           },
           {
-            boldLabel: 'Anthropic (Claude AI):',
-            text: 'The Wagey AI assistant is powered by Claude, a large language model developed by Anthropic. When you use Wagey, the following data is sent to Anthropic\'s API for processing: the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings). This data is sent only when you actively use the Wagey feature and have given your explicit consent. Anthropic processes data in accordance with their {link}.',
+            boldLabel: 'OpenAI:',
+            text: 'The Wagey AI assistant is powered by OpenAI. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to OpenAI for processing. When needed, Wagey may also use OpenAI web search to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. OpenAI processes data in accordance with their {link}.',
             link: {
-              href: 'https://www.anthropic.com/privacy',
+              href: 'https://openai.com/policies/privacy-policy',
               text: 'privacy policy',
             },
           },
         ],
-        closingParagraph: 'Data is only shared with Anthropic when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with any other third parties beyond those listed above.',
+        closingParagraph: 'Data is only shared with OpenAI when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with any other third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Effect, Layer } from "effect";
 
 const mocks = vi.hoisted(() => ({
   getUserJobs: vi.fn(),
@@ -21,6 +22,9 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getComputedShiftsForApi: vi.fn(),
   getStatsDataForApi: vi.fn(),
+  getUserWageSnapshots: vi.fn(),
+  getUserSettings: vi.fn(),
+  getTariffTypes: vi.fn(),
 }));
 
 vi.mock("@/data-access/jobs", () => ({
@@ -77,9 +81,32 @@ vi.mock("@/app/[locale]/(app)/settings/feedback/_actions/getUserFeedback", () =>
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: vi.fn() }));
 vi.mock("@/data-access/stats", () => ({ getStatsDataForApi: mocks.getStatsDataForApi }));
 vi.mock("@/data-access/tariff", () => ({
+  getTariffTypes: mocks.getTariffTypes,
   getLatestTariffVersion: vi.fn(),
   getTariffVersionForDate: vi.fn(),
 }));
+
+vi.mock("@/lib/layers/app", async () => {
+  const { SnapshotsService } = await import("@/lib/services/snapshots");
+  const { SettingsService } = await import("@/lib/services/settings");
+
+  return {
+    AuthSnapshotsLive: Layer.succeed(
+      SnapshotsService,
+      {
+        getUserWageSnapshots: (userId: string) =>
+          Effect.tryPromise(() => Promise.resolve(mocks.getUserWageSnapshots(userId))),
+      } as any
+    ),
+    AuthSettingsLive: Layer.succeed(
+      SettingsService,
+      {
+        getUserSettings: (userId: string) =>
+          Effect.tryPromise(() => Promise.resolve(mocks.getUserSettings(userId))),
+      } as any
+    ),
+  };
+});
 
 import { executeTool } from "@/lib/chat/executor";
 
@@ -125,6 +152,9 @@ describe("chat executor guardrails", () => {
         user_metadata: { full_name: "Tester" },
       },
     });
+    mocks.getUserWageSnapshots.mockResolvedValue([]);
+    mocks.getUserSettings.mockResolvedValue(null);
+    mocks.getTariffTypes.mockResolvedValue([]);
   });
 
   it("blocks deleting default workplace", async () => {
@@ -792,6 +822,70 @@ describe("chat executor guardrails", () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain(jobB);
+  });
+
+  it("includes tariff metadata for tariff-backed wage snapshots", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Default", is_default: true }),
+    ]);
+    mocks.getUserWageSnapshots.mockResolvedValue([
+      {
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        user_id: userId,
+        job_id: jobA,
+        from_date: null,
+        hourly_wage: 187.46,
+        wage_level: 3,
+        tariff_type_id: "hk_retail",
+        supplements: { rules: [] },
+        tax_enabled: true,
+        tax_percentage: 7,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 0,
+        break_deduction_minutes: 0,
+      },
+    ]);
+    mocks.getUserSettings.mockResolvedValue({
+      half_tax_month: 12,
+      payroll_day: 10,
+      monthly_goal: 15000,
+    });
+    mocks.getTariffTypes.mockResolvedValue([
+      {
+        id: "hk_retail",
+        display_name: "HK - Virke",
+        description: "Retail collective agreement",
+        country: "NO",
+        is_default: true,
+      },
+    ]);
+
+    const result = await executeTool(
+      "get_wage_info",
+      JSON.stringify({ jobId: jobA }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect((result.data as any).tariffs).toEqual([
+      {
+        id: "hk_retail",
+        displayName: "HK - Virke",
+        description: "Retail collective agreement",
+        country: "NO",
+        isDefault: true,
+      },
+    ]);
+    expect((result.data as any).current.tariffTypeId).toBe("hk_retail");
+    expect((result.data as any).current.tariff).toEqual({
+      id: "hk_retail",
+      displayName: "HK - Virke",
+      description: "Retail collective agreement",
+      country: "NO",
+      isDefault: true,
+    });
   });
 
   it("rejects unknown workplace for manage_wage_snapshots create job scoping", async () => {

@@ -308,6 +308,36 @@ describe("OpenAIService WebSocket mode", () => {
     expect(tool.parameters?.properties?.settings).not.toHaveProperty("additionalProperties");
   });
 
+  it("maps built-in web search and code interpreter tools", async () => {
+    const { toOpenAITools } = await import("@/lib/services/openai");
+
+    const mapped = toOpenAITools([
+      {
+        type: "web_search",
+        search_context_size: "medium",
+      },
+      {
+        type: "code_interpreter",
+        container: {
+          type: "auto",
+        },
+      },
+    ]);
+
+    expect(mapped).toEqual([
+      {
+        type: "web_search",
+        search_context_size: "medium",
+      },
+      {
+        type: "code_interpreter",
+        container: {
+          type: "auto",
+        },
+      },
+    ]);
+  });
+
   it("keeps typed array items for manage_wage_snapshots supplements", async () => {
     const [{ toOpenAITools }, { tools }] = await Promise.all([
       import("@/lib/services/openai"),
@@ -520,6 +550,113 @@ describe("OpenAIService WebSocket mode", () => {
       input: { action: "create" },
     });
     expect(completion.responseId).toBe("resp_1");
+    await session.close();
+  });
+
+  it("emits built-in tool events and source metadata", async () => {
+    setBaseEnv();
+    const session = await createSession();
+    const response = await session.createResponse({
+      input: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "What changed in labor law?" }],
+        },
+      ],
+      tools: [
+        {
+          type: "web_search",
+          search_context_size: "medium",
+        },
+      ],
+    });
+
+    const instance = wsState.instances[0];
+    const payload = JSON.parse(instance.sent[0]);
+    expect(payload.include).toEqual(["web_search_call.action.sources"]);
+
+    emitEvent(instance, {
+      type: "response.output_item.added",
+      item: {
+        type: "web_search_call",
+        id: "search_1",
+        status: "in_progress",
+      },
+    });
+    emitEvent(instance, {
+      type: "response.output_item.done",
+      item: {
+        type: "web_search_call",
+        id: "search_1",
+        status: "completed",
+        action: {
+          query: "labor law Norway 2026",
+          sources: [
+            {
+              title: "Arbeidstilsynet",
+              url: "https://www.arbeidstilsynet.no/rules",
+            },
+          ],
+        },
+      },
+    });
+    emitEvent(instance, {
+      type: "response.content_part.done",
+      part: {
+        type: "output_text",
+        text: "The published rates match.",
+        annotations: [
+          {
+            type: "url_citation",
+            title: "Arbeidstilsynet",
+            url: "https://www.arbeidstilsynet.no/rules",
+          },
+        ],
+      },
+    });
+    emitEvent(instance, {
+      type: "response.completed",
+      status: "completed",
+      response: { id: "resp_sources" },
+    });
+
+    const chunks: Array<{ type: string; [key: string]: unknown }> = [];
+    for await (const chunk of response.events) {
+      chunks.push(chunk as { type: string; [key: string]: unknown });
+    }
+
+    expect(chunks).toEqual([
+      {
+        type: "built_in_tool_start",
+        id: "search_1",
+        name: "web_search",
+      },
+      {
+        type: "built_in_tool_result",
+        id: "search_1",
+        name: "web_search",
+        success: true,
+        summary: {
+          status: "completed",
+          query: "labor law Norway 2026",
+          sourceCount: 1,
+        },
+      },
+      {
+        type: "sources",
+        items: [
+          {
+            id: expect.any(String),
+            title: "Arbeidstilsynet",
+            url: "https://www.arbeidstilsynet.no/rules",
+            domain: "arbeidstilsynet.no",
+          },
+        ],
+      },
+      { type: "done", stopReason: "completed", responseId: "resp_sources" },
+    ]);
+
     await session.close();
   });
 
