@@ -185,11 +185,11 @@ struct ChatMessageList: View {
   /// Suggestion card data pairing an icon with the localized text
   private var suggestions: [(icon: String, text: String)] {
     [
-      ("calendar.badge.plus", String(localized: .wageyEmptyStateSuggestion1)),
+      ("doc.on.doc", String(localized: .wageyEmptyStateSuggestion1)),
       ("banknote.fill", String(localized: .wageyEmptyStateSuggestion2)),
-      ("list.clipboard.fill", String(localized: .wageyEmptyStateSuggestion3)),
+      ("chart.bar.fill", String(localized: .wageyEmptyStateSuggestion3)),
       (
-        "arrow.trianglehead.2.clockwise.rotate.90.circle.fill",
+        "repeat.circle",
         String(localized: .wageyEmptyStateSuggestion4)
       ),
     ]

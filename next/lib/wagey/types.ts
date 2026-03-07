@@ -62,6 +62,15 @@ export type WageyInvocationResult = {
 };
 
 /**
+ * Combined result for initializing a Wagey chat turn.
+ * Includes access metadata plus the post-invocation usage counters.
+ */
+export type WageyTurnResult = {
+  readonly access: WageyAccessResult;
+  readonly invocation: WageyInvocationResult;
+};
+
+/**
  * Monthly message limits per tier
  * Updated: Pro tier increased from 30 to 40 messages
  * Note: Free users get WAGEY_TRIAL_LIMIT as a one-time trial (resets monthly like other tiers)

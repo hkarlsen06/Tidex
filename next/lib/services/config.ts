@@ -123,7 +123,7 @@ export class AppConfig extends Context.Tag("AppConfig")<
 >() {}
 
 const DEFAULT_OPENAI_MODEL = "gpt-5.4";
-const DEFAULT_OPENAI_REASONING_EFFORT = "medium";
+const DEFAULT_OPENAI_REASONING_EFFORT = "low";
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;

@@ -21,20 +21,12 @@ import { getUserTier } from "../subscription/getUserTier";
 import {
   type WageyAccessResult,
   type WageyInvocationResult,
-  type WageyInvocations,
+  type WageyTurnResult,
   WAGEY_LIMITS,
   getCurrentMonth,
   getResetDate,
 } from "../wagey/types";
-
-/**
- * Profile with wagey_invocations for internal use
- */
-type ProfileWithInvocations = {
-  readonly id: string;
-  readonly before_paywall: boolean;
-  readonly wagey_invocations: WageyInvocations | null;
-};
+import type { SubscriptionData } from "./subscription";
 
 /**
  * Wagey Service
@@ -67,6 +59,18 @@ export class WageyService extends Context.Tag("WageyService")<
       DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
       never
     >;
+
+    /**
+     * Initialize a full Wagey chat turn in one request-scoped operation.
+     * Verifies auth, resolves tier/usage, and consumes the invocation atomically.
+     */
+    readonly beginTurn: (
+      userId: string
+    ) => Effect.Effect<
+      WageyTurnResult,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
   }
 >() {}
 
@@ -82,6 +86,52 @@ export const WageyServiceLive = Layer.effect(
     const auth = yield* AuthService;
     const subscription = yield* SubscriptionService;
 
+    const buildAccessResult = (subData: SubscriptionData): WageyAccessResult => {
+      const level = getUserTier(subData.subscription, subData.profile);
+      const limit = WAGEY_LIMITS[level];
+      const hasAccess = level !== "free";
+      const currentMonth = getCurrentMonth();
+      const invocations = subData.profile?.wagey_invocations;
+      const used = invocations?.month === currentMonth ? invocations.count : 0;
+      const bonus = Math.max(0, invocations?.bonus ?? 0);
+      const remaining = limit !== null ? Math.max(0, limit - used) : null;
+      const resetDate = limit !== null ? getResetDate() : null;
+
+      return {
+        level,
+        hasAccess,
+        limit,
+        used,
+        remaining,
+        bonus,
+        resetDate,
+      };
+    };
+
+    const runInvocationRpc = (
+      userId: string,
+      limit: number
+    ): Effect.Effect<
+      WageyInvocationResult,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    > =>
+      Effect.gen(function* () {
+        const currentMonth = getCurrentMonth();
+
+        const rpcResult = yield* supabase.query(
+          async (client) =>
+            await client.rpc("increment_wagey_invocation", {
+              p_user_id: userId,
+              p_current_month: currentMonth,
+              p_max_invocations: limit,
+            }),
+          { retries: 0 }
+        );
+
+        return rpcResult as unknown as WageyInvocationResult;
+      });
+
     /**
      * Get user's Wagey access status
      */
@@ -92,54 +142,7 @@ export const WageyServiceLive = Layer.effect(
 
         // Get subscription and profile data
         const subData = yield* subscription.getUserSubscriptionData(userId);
-
-        // Determine access level
-        const level = getUserTier(subData.subscription, subData.profile);
-        const limit = WAGEY_LIMITS[level];
-        const hasAccess = level !== "free";
-
-        // Get current usage from profile
-        const currentMonth = getCurrentMonth();
-        let used = 0;
-        let bonus = 0;
-
-        // Fetch profile with wagey_invocations
-        const profileResult = yield* supabase
-          .query(
-            async (client) =>
-              await client
-                .from("profiles")
-                .select("id, before_paywall, wagey_invocations")
-                .eq("id", userId)
-                .single(),
-            { retries: 1 }
-          )
-          .pipe(
-            Effect.map((result) => result as unknown as ProfileWithInvocations),
-            Effect.catchTag("DatabaseError", () => Effect.succeed(null))
-          );
-
-        if (profileResult?.wagey_invocations) {
-          const invocations = profileResult.wagey_invocations;
-          // Only count if same month, otherwise reset is pending
-          if (invocations.month === currentMonth) {
-            used = invocations.count;
-          }
-          bonus = Math.max(0, invocations.bonus ?? 0);
-        }
-
-        const remaining = limit !== null ? Math.max(0, limit - used) : null;
-        const resetDate = limit !== null ? getResetDate() : null;
-
-        return {
-          level,
-          hasAccess,
-          limit,
-          used,
-          remaining,
-          bonus,
-          resetDate,
-        } satisfies WageyAccessResult;
+        return buildAccessResult(subData);
       });
 
     /**
@@ -153,30 +156,15 @@ export const WageyServiceLive = Layer.effect(
 
         // Get subscription data to determine limit
         const subData = yield* subscription.getUserSubscriptionData(userId);
-        const level = getUserTier(subData.subscription, subData.profile);
-
-        // Get limit for user's tier (free users get trial limit)
-        const limit = WAGEY_LIMITS[level];
-        const currentMonth = getCurrentMonth();
-
-        const rpcResult = yield* supabase.query(
-          async (client) =>
-            await client.rpc("increment_wagey_invocation", {
-              p_user_id: userId,
-              p_current_month: currentMonth,
-              p_max_invocations: limit,
-            }),
-          { retries: 0 } // No retries for atomic operations
-        );
-
-        // RPC returns JSONB with { allowed, count, remaining, bonus }
-        const result = rpcResult as unknown as WageyInvocationResult;
+        const access = buildAccessResult(subData);
+        const limit = access.limit ?? 0;
+        const result = yield* runInvocationRpc(userId, limit);
 
         // Log result for debugging (use info level since debug doesn't exist)
         if (process.env.NODE_ENV === "development") {
           logger.info("Wagey invocation result:", {
             userId,
-            level,
+            level: access.level,
             limit,
             result,
           });
@@ -196,9 +184,34 @@ export const WageyServiceLive = Layer.effect(
         })
       );
 
+    const beginTurn = (userId: string) =>
+      Effect.gen(function* () {
+        yield* auth.verifyUserId(userId);
+
+        const subData = yield* subscription.getUserSubscriptionData(userId);
+        const access = buildAccessResult(subData);
+        const limit = access.limit ?? 0;
+        const invocation = yield* runInvocationRpc(userId, limit);
+
+        if (process.env.NODE_ENV === "development") {
+          logger.info("Wagey beginTurn result:", {
+            userId,
+            level: access.level,
+            limit,
+            invocation,
+          });
+        }
+
+        return {
+          access,
+          invocation,
+        } satisfies WageyTurnResult;
+      });
+
     return {
       getWageyAccess,
       useInvocation,
+      beginTurn,
     };
   })
 );

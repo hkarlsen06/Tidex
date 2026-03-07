@@ -29,10 +29,31 @@ import { WageyService } from "@/lib/services/wagey";
 import { WageyLive } from "@/lib/layers/app";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
-import type { WageyAccessResult, WageyInvocationResult } from "@/lib/wagey/types";
+import type {
+  WageyAccessResult,
+  WageyInvocationResult,
+  WageyTurnResult,
+} from "@/lib/wagey/types";
 
 // Re-export types for convenience
-export type { WageyAccessResult, WageyInvocationResult };
+export type { WageyAccessResult, WageyInvocationResult, WageyTurnResult };
+
+const FALLBACK_WAGEY_ACCESS: WageyAccessResult = {
+  level: "free",
+  hasAccess: false,
+  limit: 0,
+  used: 0,
+  remaining: 0,
+  bonus: 0,
+  resetDate: null,
+};
+
+const FALLBACK_WAGEY_INVOCATION: WageyInvocationResult = {
+  allowed: false,
+  count: 0,
+  remaining: 0,
+  bonus: 0,
+};
 
 /**
  * Internal implementation of getWageyAccess using Effect
@@ -118,6 +139,53 @@ export async function useWageyInvocation(
       remaining: 0,
       bonus: 0,
     };
+  }
+}
+
+/**
+ * Initialize a Wagey chat turn in one request-scoped operation.
+ *
+ * This verifies auth, resolves tier/usage metadata, and performs the atomic
+ * invocation increment without duplicating the same service work across calls.
+ */
+export async function beginWageyTurn(userId: string): Promise<WageyTurnResult> {
+  const program = Effect.gen(function* () {
+    const wagey = yield* WageyService;
+    const result = yield* wagey.beginTurn(userId);
+    return result;
+  }).pipe(
+    Effect.catchTags({
+      DatabaseError: (error) => {
+        logger.error("Failed to initialize Wagey turn:", error);
+        return Effect.succeed({
+          access: FALLBACK_WAGEY_ACCESS,
+          invocation: FALLBACK_WAGEY_INVOCATION,
+        });
+      },
+      SupabaseError: (error) => {
+        logger.error("Failed to initialize Wagey turn:", error);
+        return Effect.succeed({
+          access: FALLBACK_WAGEY_ACCESS,
+          invocation: FALLBACK_WAGEY_INVOCATION,
+        });
+      },
+      TimeoutError: (error) => {
+        logger.error("Failed to initialize Wagey turn:", error);
+        return Effect.succeed({
+          access: FALLBACK_WAGEY_ACCESS,
+          invocation: FALLBACK_WAGEY_INVOCATION,
+        });
+      },
+    }),
+    Effect.provide(WageyLive),
+    Effect.scoped
+  );
+
+  try {
+    return await Effect.runPromise(program);
+  } catch (error: any) {
+    logger.error("Failed to initialize Wagey turn:", error);
+    throw error;
   }
 }
 

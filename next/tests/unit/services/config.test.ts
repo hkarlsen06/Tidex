@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("AppConfig OpenAI validation", () => {
-  it("defaults Wagey to gpt-5.4 with medium reasoning", async () => {
+  it("defaults Wagey to gpt-5.4 with low reasoning", async () => {
     setBaseEnv();
     process.env.OPENAI_API_KEY = "test_openai_key";
     delete process.env.OPENAI_MODEL;
@@ -32,7 +32,7 @@ describe("AppConfig OpenAI validation", () => {
     );
 
     expect(config.ai.openaiModel).toBe("gpt-5.4");
-    expect(config.ai.openaiReasoningEffort).toBe("medium");
+    expect(config.ai.openaiReasoningEffort).toBe("low");
   });
 
   it("fails when OPENAI_API_KEY is missing", async () => {
