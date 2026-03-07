@@ -138,9 +138,6 @@ describe("OpenAIService WebSocket mode", () => {
               },
               required: ["jobId"],
             },
-            settings: {
-              type: "object",
-            },
             weekdays: {
               type: "array",
               items: {
@@ -187,13 +184,6 @@ describe("OpenAIService WebSocket mode", () => {
               };
             }>;
           };
-          settings?: {
-            anyOf?: Array<{
-              type?: string;
-              additionalProperties?: boolean;
-              required?: string[];
-            }>;
-          };
           weekdays?: {
             anyOf?: Array<{
               type?: string;
@@ -228,13 +218,6 @@ describe("OpenAIService WebSocket mode", () => {
             };
           }>;
         };
-        settings?: {
-          anyOf?: Array<{
-            type?: string;
-            additionalProperties?: boolean;
-            required?: string[];
-          }>;
-        };
         weekdays?: {
           anyOf?: Array<{
             type?: string;
@@ -252,7 +235,7 @@ describe("OpenAIService WebSocket mode", () => {
       };
     };
 
-    expect(params.required).toEqual(["action", "filters", "settings", "weekdays"]);
+    expect(params.required).toEqual(["action", "filters", "weekdays"]);
     expect(params.additionalProperties).toBe(false);
     expect(tool.strict).toBe(true);
     expect(
@@ -267,14 +250,6 @@ describe("OpenAIService WebSocket mode", () => {
       },
     });
     expect(
-      params.properties?.settings?.anyOf?.find((entry) => entry.type === "object")
-    ).toMatchObject({
-      required: [],
-    });
-    expect(
-      params.properties?.settings?.anyOf?.find((entry) => entry.type === "object")
-    ).not.toHaveProperty("additionalProperties");
-    expect(
       params.properties?.weekdays?.anyOf?.find((entry) => entry.type === "array")?.items
     ).toMatchObject({
       additionalProperties: false,
@@ -288,6 +263,49 @@ describe("OpenAIService WebSocket mode", () => {
     expect(tool.description).toContain("Valid example arguments");
     expect(tool.description).toContain("use null when unused");
     expect(tool.description).toContain("Never send empty strings");
+  });
+
+  it("falls back to non-strict tools for open object schemas", async () => {
+    const { toOpenAITools } = await import("@/lib/services/openai");
+
+    const mapped = toOpenAITools([
+      {
+        name: "manage_settings",
+        description: "Manage settings",
+        input_schema: {
+          type: "object",
+          properties: {
+            action: {
+              type: "string",
+            },
+            settings: {
+              type: "object",
+            },
+          },
+          required: ["action"],
+        },
+      },
+    ]);
+
+    const tool = mapped?.[0] as {
+      strict?: boolean;
+      parameters?: {
+        required?: string[];
+        properties?: {
+          settings?: {
+            type?: string;
+            additionalProperties?: boolean;
+          };
+        };
+      };
+    };
+
+    expect(tool.strict).toBeUndefined();
+    expect(tool.parameters?.required).toEqual(["action"]);
+    expect(tool.parameters?.properties?.settings).toMatchObject({
+      type: "object",
+    });
+    expect(tool.parameters?.properties?.settings).not.toHaveProperty("additionalProperties");
   });
 
   it("sends response.create payloads with GPT-5.4 defaults", async () => {

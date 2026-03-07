@@ -339,6 +339,36 @@ function normalizeSchemaForOpenAI(schema: unknown): unknown {
   return normalized;
 }
 
+function supportsStrictOpenAISchema(schema: unknown): boolean {
+  if (Array.isArray(schema)) {
+    return schema.every((entry) => supportsStrictOpenAISchema(entry));
+  }
+
+  if (!isJsonObject(schema)) {
+    return true;
+  }
+
+  if (isObjectSchema(schema)) {
+    const properties = isJsonObject(schema.properties) ? schema.properties : undefined;
+    if (!properties) {
+      return false;
+    }
+
+    if (!Object.values(properties).every((property) => supportsStrictOpenAISchema(property))) {
+      return false;
+    }
+  }
+
+  if (schema.items !== undefined && !supportsStrictOpenAISchema(schema.items)) {
+    return false;
+  }
+
+  return ["anyOf", "oneOf", "allOf"].every((key) => {
+    const variants = schema[key];
+    return !Array.isArray(variants) || variants.every((variant) => supportsStrictOpenAISchema(variant));
+  });
+}
+
 function toStrictOpenAISchema(schema: unknown): unknown {
   if (!isJsonObject(schema)) {
     return schema;
@@ -520,12 +550,16 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
 }
 
 function toOpenAIFunctionTool(tool: FunctionTool): OpenAIInputItem {
+  const strict = supportsStrictOpenAISchema(tool.input_schema);
+
   return {
     type: "function",
     name: tool.name,
     description: buildToolDescription(tool),
-    parameters: toStrictOpenAISchema(tool.input_schema),
-    strict: true,
+    parameters: strict
+      ? toStrictOpenAISchema(tool.input_schema)
+      : normalizeSchemaForOpenAI(tool.input_schema),
+    ...(strict ? { strict: true } : {}),
   };
 }
 
