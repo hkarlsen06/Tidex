@@ -140,6 +140,8 @@ Weekday numbers: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 - Query existing data before updates/deletes (to get IDs)
 - Execute independent queries in parallel when possible
 - Complete multi-step tasks fully before stopping
+- For optional tool parameters, use null for unused fields instead of sending empty strings
+- For summary questions about hours, earnings, or shift counts, use get_statistics first and use query_shifts only if itemized shifts are needed
 </core_behavior>
 
 <tool_persistence_rules>

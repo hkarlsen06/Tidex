@@ -24,6 +24,26 @@ struct ChatMessageList: View {
   @State private var isPinnedToBottom = true
   @State private var suppressAutoFollow = false
 
+  init(
+    messages: [ChatMessage],
+    streamingContentBlocks: [ContentBlock],
+    isStreaming: Bool,
+    isThinking: Bool,
+    remainingMessagesText: String?,
+    showsHistoryButton: Bool,
+    onSuggestionTapped: ((String) -> Void)? = nil,
+    onHistoryTapped: (() -> Void)? = nil
+  ) {
+    self.messages = messages
+    self.streamingContentBlocks = streamingContentBlocks
+    self.isStreaming = isStreaming
+    self.isThinking = isThinking
+    self.remainingMessagesText = remainingMessagesText
+    self.showsHistoryButton = showsHistoryButton
+    self.onSuggestionTapped = onSuggestionTapped
+    self.onHistoryTapped = onHistoryTapped
+  }
+
   private struct ScrollState: Equatable {
     let messageCount: Int
     let lastMessageID: String?
@@ -347,10 +367,7 @@ struct ChatMessageList: View {
   }
 
   private func copyConversation() {
-    let text = messages.map { message in
-      let role = message.role == .user ? "You" : "Wagey"
-      return "\(role): \(message.content)"
-    }.joined(separator: "\n\n")
+    let text = messages.map(formatMessageForCopy).joined(separator: "\n\n")
 
     UIPasteboard.general.string = text
 
@@ -362,6 +379,58 @@ struct ChatMessageList: View {
         showCopiedConfirmation = false
       }
     }
+  }
+
+  private func formatMessageForCopy(_ message: ChatMessage) -> String {
+    let role = message.role == .user ? "You" : "Wagey"
+    let sections = message.contentBlocks.compactMap(formatContentBlockForCopy)
+
+    guard !sections.isEmpty else { return "\(role):" }
+    guard sections.count == 1, !sections[0].contains("\n") else {
+      return "\(role):\n\(sections.joined(separator: "\n\n"))"
+    }
+
+    return "\(role): \(sections[0])"
+  }
+
+  private func formatContentBlockForCopy(_ block: ContentBlock) -> String? {
+    switch block {
+    case .text(let text):
+      return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : text
+    case .toolCall(let toolCall):
+      return formatToolCallForCopy(toolCall)
+    case .image:
+      return nil
+    }
+  }
+
+  private func formatToolCallForCopy(_ toolCall: ToolCall) -> String {
+    var sections = ["Tool: \(toolCall.name)"]
+
+    if let arguments = toolCall.arguments, !arguments.isEmpty {
+      sections.append("\(String(localized: .wageyToolRequest)):\n\(formatJSON(arguments))")
+    }
+
+    if let result = toolCall.result, !result.isEmpty {
+      sections.append("\(String(localized: .wageyToolResponse)):\n\(formatJSON(result))")
+    }
+
+    return sections.joined(separator: "\n")
+  }
+
+  private func formatJSON(_ string: String) -> String {
+    guard let data = string.data(using: .utf8),
+      let jsonObject = try? JSONSerialization.jsonObject(with: data),
+      let prettyData = try? JSONSerialization.data(
+        withJSONObject: jsonObject,
+        options: [.prettyPrinted, .sortedKeys]
+      ),
+      let prettyString = String(data: prettyData, encoding: .utf8)
+    else {
+      return string
+    }
+
+    return prettyString
   }
 
   // MARK: - Scroll Helper

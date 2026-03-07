@@ -2,11 +2,11 @@
  * Wagey Chat Tools
  *
  * Tool definitions for AI agent to manage shifts.
- * Uses Claude format with input_examples for improved tool use accuracy.
+ * input_examples are preserved and folded into OpenAI tool descriptions at runtime.
  */
 
 import { z } from "zod";
-import type { Tool } from "@/lib/services/ai-types";
+import type { FunctionTool } from "@/lib/services/ai-types";
 
 // =============================================================================
 // ZOD SCHEMAS (for validation in executor)
@@ -422,7 +422,7 @@ export type CalculateEarningsInput = z.infer<typeof calculateEarningsSchema>;
 // TOOL DEFINITIONS (Claude format with input_examples)
 // =============================================================================
 
-export const tools: Tool[] = [
+export const tools: FunctionTool[] = [
   // ---------------------------------------------------------------------------
   // SHIFT MANAGEMENT
   // ---------------------------------------------------------------------------
@@ -522,6 +522,11 @@ Edge cases:
 
 Default behavior: Without parameters, returns shifts for the current week.
 
+Important:
+- For aggregate summaries, use get_statistics first and use query_shifts only when you need itemized shift rows
+- Use null for optional filters you are not using
+- Never send empty strings for startDate, endDate, minTime, maxTime, or jobId
+
 Response includes:
 - data: Array of shifts with id, date, day, start, end, hours, gross, net (if tax enabled), and workplace (name of the job/workplace)
 - summary: Aggregated statistics (shiftCount, totalHours, totalGross, totalNet, avgHoursPerShift, avgGrossPerShift)
@@ -562,11 +567,11 @@ Use cases:
         },
         minTime: {
           type: "string",
-          description: "Only shifts starting at or after this time (HH:mm)",
+          description: "Only shifts starting at or after this time (HH:mm). Use null if no lower time filter is needed; never send an empty string.",
         },
         maxTime: {
           type: "string",
-          description: "Only shifts starting at or before this time (HH:mm)",
+          description: "Only shifts starting at or before this time (HH:mm). Use null if no upper time filter is needed; never send an empty string.",
         },
         weekdays: {
           type: "array",
@@ -1046,6 +1051,9 @@ Note: The date must be one that would normally occur in the recurring shift patt
   {
     name: "get_statistics",
     description: `Get pre-computed statistics and analytics. Always prefer this over manual calculations.
+
+Preferred first tool for summary questions about earnings, hours, or shift counts over a week, month, or year.
+Use query_shifts only if the user also wants the individual shift rows.
 
 Available metrics:
 - current_month: Earnings, hours, shift count for current month
@@ -1745,7 +1753,11 @@ Filters match query_shifts:
   - hours: highest first
   - date: legacy alias for date_latest
 - jobId (friend workplace UUID)
-- limit (default 30, max 100)`,
+- limit (default 30, max 100)
+
+Important:
+- Use null for optional filters you are not using
+- Never send empty strings for startDate, endDate, minTime, maxTime, or jobId`,
     input_schema: {
       type: "object",
       properties: {
@@ -1767,11 +1779,11 @@ Filters match query_shifts:
         },
         minTime: {
           type: "string",
-          description: "Only shifts starting at or after this time (HH:mm)",
+          description: "Only shifts starting at or after this time (HH:mm). Use null if no lower time filter is needed; never send an empty string.",
         },
         maxTime: {
           type: "string",
-          description: "Only shifts starting at or before this time (HH:mm)",
+          description: "Only shifts starting at or before this time (HH:mm). Use null if no upper time filter is needed; never send an empty string.",
         },
         weekdays: {
           type: "array",

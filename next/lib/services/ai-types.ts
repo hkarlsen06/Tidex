@@ -51,7 +51,7 @@ export type Message = {
 
 export type ToolInputExample = Record<string, unknown>;
 
-export type Tool = {
+export type FunctionTool = {
   name: string;
   description: string;
   eager_input_streaming?: boolean;
@@ -62,6 +62,8 @@ export type Tool = {
   };
   input_examples?: ToolInputExample[];
 };
+
+export type Tool = FunctionTool;
 
 export type StreamChunk =
   | {

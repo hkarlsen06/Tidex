@@ -644,6 +644,83 @@ describe("chat executor guardrails", () => {
     expect((result.data as any).shifts[0].date).toBe("2025-01-02");
   });
 
+  it("normalizes empty optional query_shifts filters instead of failing validation", async () => {
+    mocks.getComputedShiftsForApi.mockResolvedValue({
+      shifts: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          shift_date: "2026-03-03",
+          start_time: "16:00",
+          end_time: "23:15",
+          job_id: jobA,
+          computed: {
+            paidHours: 6.75,
+            gross: 1410.11,
+            basePay: 1300,
+            supplementPay: 110.11,
+            wagePeriods: [],
+            originalWagePeriods: [],
+          },
+          tax_enabled: false,
+          tax_percentage: null,
+        },
+      ],
+      settings: { currency: "NOK", half_tax_month: null },
+      jobs: [{ id: jobA, name: "Extra" }],
+      aggregates: { totalHours: 6.75, totalEarnings: 1410.11 },
+      showEarnings: true,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
+      defaultView: "calendar",
+    });
+
+    const result = await executeTool(
+      "query_shifts",
+      JSON.stringify({
+        startDate: "2026-03-02",
+        endDate: "2026-03-08",
+        minTime: "",
+        maxTime: "",
+        sortBy: "date_earliest",
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.message).toContain("Found 1 shift");
+    expect((result.summary as any).totalHours).toBe(6.75);
+  });
+
+  it("strips strict-mode null placeholders but preserves semantic nulls", async () => {
+    mocks.getUserJobs.mockResolvedValue([
+      makeJob({ id: jobA, name: "Default", is_default: true }),
+    ]);
+    mocks.updateJob.mockResolvedValue(
+      makeJob({ id: jobA, name: "Default", is_default: true, half_tax_month: null })
+    );
+
+    const result = await executeTool(
+      "manage_workplace",
+      JSON.stringify({
+        action: "update",
+        jobId: jobA,
+        name: null,
+        payrollDay: null,
+        halfTaxMonth: null,
+        monthlyGoal: null,
+      }),
+      userId,
+      "en"
+    );
+
+    expect(result.success).toBe(true);
+    expect(mocks.updateJob).toHaveBeenCalledWith(userId, jobA, {
+      half_tax_month: null,
+      monthly_goal: null,
+    });
+  });
+
   it("rejects empty profile names", async () => {
     const result = await executeTool(
       "manage_profile",

@@ -113,30 +113,181 @@ afterEach(() => {
 });
 
 describe("OpenAIService WebSocket mode", () => {
-  it("normalizes array-union tool schemas by adding items", async () => {
+  it("converts tool schemas to strict-compatible JSON schema", async () => {
     const { toOpenAITools } = await import("@/lib/services/openai");
 
     const mapped = toOpenAITools([
       {
-        name: "manage_wage_snapshots",
-        description: "test",
+        name: "manage_shift",
+        description: "Manage shifts",
         input_schema: {
           type: "object",
           properties: {
-            supplements: {
-              type: ["string", "array"],
+            action: {
+              type: "string",
+            },
+            filters: {
+              type: "object",
+              properties: {
+                jobId: {
+                  type: "string",
+                },
+                minTime: {
+                  type: "string",
+                },
+              },
+              required: ["jobId"],
+            },
+            settings: {
+              type: "object",
+            },
+            weekdays: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  day: {
+                    type: "integer",
+                  },
+                  note: {
+                    type: "string",
+                  },
+                },
+                required: ["day"],
+              },
             },
           },
-          required: ["supplements"],
+          required: ["action"],
         },
+        input_examples: [
+          {
+            action: "query",
+            filters: { jobId: "job_1" },
+          },
+        ],
       },
     ]);
 
-    const params = mapped?.[0]?.parameters as {
-      properties?: { supplements?: { items?: unknown } };
+    const tool = mapped?.[0] as {
+      strict?: boolean;
+      description?: string;
+      parameters?: {
+        additionalProperties?: boolean;
+        required?: string[];
+        properties?: {
+          filters?: {
+            anyOf?: Array<{
+              type?: string;
+              additionalProperties?: boolean;
+              required?: string[];
+              properties?: {
+                minTime?: {
+                  anyOf?: Array<{ type?: string }>;
+                };
+              };
+            }>;
+          };
+          settings?: {
+            anyOf?: Array<{
+              type?: string;
+              additionalProperties?: boolean;
+              required?: string[];
+            }>;
+          };
+          weekdays?: {
+            anyOf?: Array<{
+              type?: string;
+              items?: {
+                additionalProperties?: boolean;
+                required?: string[];
+                properties?: {
+                  note?: {
+                    anyOf?: Array<{ type?: string }>;
+                  };
+                };
+              };
+            }>;
+          };
+        };
+      };
     };
 
-    expect(params.properties?.supplements?.items).toEqual({});
+    const params = tool.parameters as {
+      additionalProperties?: boolean;
+      required?: string[];
+      properties?: {
+        filters?: {
+          anyOf?: Array<{
+            type?: string;
+            additionalProperties?: boolean;
+            required?: string[];
+            properties?: {
+              minTime?: {
+                anyOf?: Array<{ type?: string }>;
+              };
+            };
+          }>;
+        };
+        settings?: {
+          anyOf?: Array<{
+            type?: string;
+            additionalProperties?: boolean;
+            required?: string[];
+          }>;
+        };
+        weekdays?: {
+          anyOf?: Array<{
+            type?: string;
+            items?: {
+              additionalProperties?: boolean;
+              required?: string[];
+              properties?: {
+                note?: {
+                  anyOf?: Array<{ type?: string }>;
+                };
+              };
+            };
+          }>;
+        };
+      };
+    };
+
+    expect(params.required).toEqual(["action", "filters", "settings", "weekdays"]);
+    expect(params.additionalProperties).toBe(false);
+    expect(tool.strict).toBe(true);
+    expect(
+      params.properties?.filters?.anyOf?.find((entry) => entry.type === "object")
+    ).toMatchObject({
+      additionalProperties: false,
+      required: ["jobId", "minTime"],
+      properties: {
+        minTime: {
+          anyOf: [{ type: "string" }, { type: "null" }],
+        },
+      },
+    });
+    expect(
+      params.properties?.settings?.anyOf?.find((entry) => entry.type === "object")
+    ).toMatchObject({
+      required: [],
+    });
+    expect(
+      params.properties?.settings?.anyOf?.find((entry) => entry.type === "object")
+    ).not.toHaveProperty("additionalProperties");
+    expect(
+      params.properties?.weekdays?.anyOf?.find((entry) => entry.type === "array")?.items
+    ).toMatchObject({
+      additionalProperties: false,
+      required: ["day", "note"],
+      properties: {
+        note: {
+          anyOf: [{ type: "string" }, { type: "null" }],
+        },
+      },
+    });
+    expect(tool.description).toContain("Valid example arguments");
+    expect(tool.description).toContain("use null when unused");
+    expect(tool.description).toContain("Never send empty strings");
   });
 
   it("sends response.create payloads with GPT-5.4 defaults", async () => {
@@ -146,6 +297,19 @@ describe("OpenAIService WebSocket mode", () => {
     const responsePromise = session.createResponse({
       instructions: "You are Wagey",
       input: [{ role: "user", content: [{ type: "input_text", text: "Hello" }] }],
+      tools: [
+        {
+          name: "manage_shift",
+          description: "Manage shifts",
+          input_schema: {
+            type: "object",
+            properties: {
+              action: { type: "string" },
+            },
+            required: ["action"],
+          },
+        },
+      ],
       maxTokens: 512,
     });
 
@@ -158,6 +322,13 @@ describe("OpenAIService WebSocket mode", () => {
     expect(payload.reasoning).toEqual({ effort: "medium" });
     expect(payload.max_output_tokens).toBe(512);
     expect(payload.store).toBe(false);
+    expect(payload.tools).toEqual([
+      expect.objectContaining({
+        type: "function",
+        name: "manage_shift",
+        strict: true,
+      }),
+    ]);
 
     emitEvent(instance, {
       type: "response.completed",

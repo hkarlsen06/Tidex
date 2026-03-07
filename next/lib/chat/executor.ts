@@ -61,6 +61,7 @@ import type {
   ManageWageSnapshotsInput,
 } from "./tools";
 import {
+  tools as toolDefinitions,
   manageShiftSchema,
   queryShiftsSchema,
   calculateWagesSchema,
@@ -99,6 +100,7 @@ import { defaultLocale, type Locale } from "@/lib/i18n/config";
 // Type for tool result translations
 type ToolResultTranslations = ReturnType<typeof getDictionary>['pages']['wagey']['toolResults'];
 type FriendEntry = Awaited<ReturnType<typeof getAllFriends>>[number];
+type JsonSchema = Record<string, unknown>;
 
 // Helper to interpolate translation strings
 function t(template: string, params: Record<string, string | number> = {}): string {
@@ -308,25 +310,84 @@ function normalizeToolName(toolName: string): ToolName | null {
   return fuzzyMatch ?? null;
 }
 
-function isIdentifierField(key: string): boolean {
-  const normalized = key.toLowerCase();
-  return normalized.endsWith("id") || normalized.endsWith("_id");
+function isJsonSchema(value: unknown): value is JsonSchema {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function schemaAllowsNull(schema: unknown): boolean {
+  if (!isJsonSchema(schema)) {
+    return false;
+  }
+
+  const rawType = schema.type;
+  if (rawType === "null" || (Array.isArray(rawType) && rawType.includes("null"))) {
+    return true;
+  }
+
+  if (Array.isArray(schema.enum) && schema.enum.includes(null)) {
+    return true;
+  }
+
+  return ["anyOf", "oneOf", "allOf"].some((key) => {
+    const variants = schema[key];
+    return Array.isArray(variants) && variants.some((variant) => schemaAllowsNull(variant));
+  });
+}
+
+function normalizeStrictOptionalPlaceholders(value: unknown, schema: unknown): unknown {
+  if (Array.isArray(value)) {
+    const itemSchema = isJsonSchema(schema) ? schema.items : undefined;
+    return value.map((entry) => normalizeStrictOptionalPlaceholders(entry, itemSchema));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const normalized: Record<string, unknown> = {};
+  const schemaProperties =
+    isJsonSchema(schema) && isJsonSchema(schema.properties) ? schema.properties : undefined;
+  const requiredSet = new Set(
+    isJsonSchema(schema) && Array.isArray(schema.required)
+      ? schema.required.filter((entry): entry is string => typeof entry === "string")
+      : []
+  );
+
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const propertySchema = schemaProperties?.[key];
+    const isOptionalPlaceholder =
+      raw === null &&
+      propertySchema !== undefined &&
+      !requiredSet.has(key) &&
+      !schemaAllowsNull(propertySchema);
+
+    if (isOptionalPlaceholder) {
+      continue;
+    }
+
+    normalized[key] = normalizeStrictOptionalPlaceholders(raw, propertySchema);
+  }
+
+  return normalized;
 }
 
 function sanitizeToolArgs(value: unknown): unknown {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  }
+
   if (Array.isArray(value)) {
-    return value.map((entry) => sanitizeToolArgs(entry));
+    return value
+      .map((entry) => sanitizeToolArgs(entry))
+      .filter((entry) => entry !== undefined);
   }
 
   if (value && typeof value === "object") {
     const sanitized: Record<string, unknown> = {};
     for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
       const next = sanitizeToolArgs(raw);
-      if (
-        typeof next === "string" &&
-        next.trim().length === 0 &&
-        isIdentifierField(key)
-      ) {
+      if (next === undefined) {
         continue;
       }
       sanitized[key] = next;
@@ -359,8 +420,12 @@ export async function executeTool(
 
     // Parse arguments - handle empty string as empty object
     const trimmedArgs = argumentsJson.trim();
+    const toolDefinition = toolDefinitions.find((tool) => tool.name === normalizedToolName);
     const args = sanitizeToolArgs(
-      trimmedArgs === "" ? {} : JSON.parse(trimmedArgs)
+      normalizeStrictOptionalPlaceholders(
+        trimmedArgs === "" ? {} : JSON.parse(trimmedArgs),
+        toolDefinition?.input_schema
+      )
     );
 
     // Execute tool with retry (once)

@@ -10,6 +10,7 @@ import { AIError } from "@/lib/errors/tagged";
 import { AppConfig } from "./config";
 import type {
   ContentBlock,
+  FunctionTool,
   Message,
   StreamChunk,
   Tool,
@@ -44,6 +45,7 @@ export type OpenAIResponseSession = {
 };
 
 type JsonObject = Record<string, unknown>;
+type JsonSchema = JsonObject;
 
 type FunctionCallAccumulator = {
   itemId: string;
@@ -252,20 +254,59 @@ function toUserImageBlock(block: Extract<ContentBlock, { type: "image" }>): Open
   };
 }
 
+function isJsonObject(value: unknown): value is JsonObject {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function isObjectSchema(schema: JsonObject): boolean {
+  const rawType = schema.type;
+  return rawType === "object" || (Array.isArray(rawType) && rawType.includes("object"));
+}
+
+function schemaAllowsNull(schema: unknown): boolean {
+  if (!isJsonObject(schema)) {
+    return false;
+  }
+
+  const rawType = schema.type;
+  if (rawType === "null" || (Array.isArray(rawType) && rawType.includes("null"))) {
+    return true;
+  }
+
+  if (Array.isArray(schema.enum) && schema.enum.includes(null)) {
+    return true;
+  }
+
+  return ["anyOf", "oneOf", "allOf"].some((key) => {
+    const variants = schema[key];
+    return Array.isArray(variants) && variants.some((variant) => schemaAllowsNull(variant));
+  });
+}
+
+function makeNullableSchema(schema: unknown): unknown {
+  if (!isJsonObject(schema) || schemaAllowsNull(schema)) {
+    return schema;
+  }
+
+  return {
+    anyOf: [schema, { type: "null" }],
+  };
+}
+
 function normalizeSchemaForOpenAI(schema: unknown): unknown {
   if (Array.isArray(schema)) {
     return schema.map((entry) => normalizeSchemaForOpenAI(entry));
   }
 
-  if (!schema || typeof schema !== "object") {
+  if (!isJsonObject(schema)) {
     return schema;
   }
 
   const normalized: JsonObject = {};
   for (const [key, value] of Object.entries(schema)) {
-    if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+    if (key === "properties" && isJsonObject(value)) {
       const normalizedProperties: JsonObject = {};
-      for (const [propKey, propSchema] of Object.entries(value as JsonObject)) {
+      for (const [propKey, propSchema] of Object.entries(value)) {
         normalizedProperties[propKey] = normalizeSchemaForOpenAI(propSchema);
       }
       normalized[key] = normalizedProperties;
@@ -296,6 +337,80 @@ function normalizeSchemaForOpenAI(schema: unknown): unknown {
   }
 
   return normalized;
+}
+
+function toStrictOpenAISchema(schema: unknown): unknown {
+  if (!isJsonObject(schema)) {
+    return schema;
+  }
+
+  const strictSchema = normalizeSchemaForOpenAI(schema);
+  if (!isJsonObject(strictSchema)) {
+    return strictSchema;
+  }
+
+  const normalized = { ...strictSchema } as JsonSchema;
+
+  if (isObjectSchema(normalized)) {
+    const properties = isJsonObject(normalized.properties) ? normalized.properties : undefined;
+    const requiredSet = new Set(
+      Array.isArray(normalized.required)
+        ? normalized.required.filter((entry): entry is string => typeof entry === "string")
+        : []
+    );
+
+    if (properties) {
+      const strictProperties: JsonObject = {};
+      const strictRequired: string[] = [];
+
+      for (const [propKey, propSchema] of Object.entries(properties)) {
+        const strictPropertySchema = toStrictOpenAISchema(propSchema);
+        strictProperties[propKey] = requiredSet.has(propKey)
+          ? strictPropertySchema
+          : makeNullableSchema(strictPropertySchema);
+        strictRequired.push(propKey);
+      }
+
+      normalized.properties = strictProperties;
+      normalized.required = strictRequired;
+    } else if (normalized.required === undefined) {
+      normalized.required = [];
+    }
+
+    if (properties) {
+      normalized.additionalProperties = false;
+    }
+  }
+
+  if (normalized.items !== undefined) {
+    normalized.items = toStrictOpenAISchema(normalized.items);
+  }
+
+  for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+    const variants = normalized[key];
+    if (Array.isArray(variants)) {
+      normalized[key] = variants.map((variant) => toStrictOpenAISchema(variant));
+    }
+  }
+
+  return normalized;
+}
+
+function buildToolDescription(tool: FunctionTool): string {
+  const parts = [tool.description.trim()];
+
+  if (tool.input_examples?.length) {
+    const examples = tool.input_examples
+      .slice(0, 3)
+      .map((example, index) => `${index + 1}. ${JSON.stringify(example)}`)
+      .join("\n");
+
+    parts.push(`Valid example arguments:\n${examples}`);
+  }
+
+  parts.push("For optional fields, use null when unused. Never send empty strings.");
+
+  return parts.join("\n\n");
 }
 
 function flushUserContentBuffer(
@@ -404,15 +519,20 @@ export function toOpenAIInput(messages: Message[]): OpenAIInputItem[] {
   return input;
 }
 
+function toOpenAIFunctionTool(tool: FunctionTool): OpenAIInputItem {
+  return {
+    type: "function",
+    name: tool.name,
+    description: buildToolDescription(tool),
+    parameters: toStrictOpenAISchema(tool.input_schema),
+    strict: true,
+  };
+}
+
 export function toOpenAITools(tools: Tool[] | undefined): OpenAIInputItem[] | undefined {
   if (!tools?.length) return undefined;
 
-  return tools.map(({ input_examples: _inputExamples, eager_input_streaming: _streaming, ...tool }) => ({
-    type: "function",
-    name: tool.name,
-    description: tool.description,
-    parameters: normalizeSchemaForOpenAI(tool.input_schema),
-  }));
+  return tools.map((tool) => toOpenAIFunctionTool(tool));
 }
 
 function pushFunctionCallDelta(
