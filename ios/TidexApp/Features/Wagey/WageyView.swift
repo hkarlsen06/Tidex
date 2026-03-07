@@ -26,8 +26,20 @@ struct WageyView: View {
   /// Pending message to send after upgrade
   @State private var pendingMessage: String?
 
+  /// Whether the chat list is currently pinned to the bottom
+  @State private var isChatScrolledToBottom = true
+
+  /// Triggers an imperative scroll-to-bottom inside the chat list
+  @State private var scrollToBottomTrigger = 0
+
   private var isShowingWelcomeState: Bool {
     viewModel.messages.isEmpty && !viewModel.isStreaming
+  }
+
+  private var showsScrollToBottomButton: Bool {
+    !viewModel.isStreaming
+      && !isChatScrolledToBottom
+      && (!viewModel.messages.isEmpty || !viewModel.activeContentBlocks.isEmpty)
   }
 
   var body: some View {
@@ -144,43 +156,54 @@ struct WageyView: View {
   // MARK: - Main Content
 
   private var mainContent: some View {
-    VStack(spacing: 0) {
-      // Entitlement sync banner (when server/StoreKit mismatch detected)
-      if let syncMessage = viewModel.entitlementSyncMessage {
-        entitlementSyncBanner(syncMessage)
-      }
-
-      // Message list
-      ChatMessageList(
-        messages: viewModel.messages,
-        streamingContentBlocks: viewModel.activeContentBlocks,
-        isStreaming: viewModel.isStreaming,
-        isThinking: viewModel.isModelThinking,
-        remainingMessagesText: nil,
-        showsHistoryButton: false,
-        onSuggestionTapped: { suggestion in
-          inputText = suggestion
+    ZStack(alignment: .bottom) {
+      VStack(spacing: 0) {
+        // Entitlement sync banner (when server/StoreKit mismatch detected)
+        if let syncMessage = viewModel.entitlementSyncMessage {
+          entitlementSyncBanner(syncMessage)
         }
-      )
 
-      // Soft warning when conversation is getting long
-      if viewModel.isConversationLong {
-        conversationLengthWarning
+        // Message list
+        ChatMessageList(
+          messages: viewModel.messages,
+          streamingContentBlocks: viewModel.activeContentBlocks,
+          isStreaming: viewModel.isStreaming,
+          isThinking: viewModel.isModelThinking,
+          remainingMessagesText: nil,
+          showsHistoryButton: false,
+          isScrolledToBottom: $isChatScrolledToBottom,
+          scrollToBottomTrigger: scrollToBottomTrigger,
+          onSuggestionTapped: { suggestion in
+            inputText = suggestion
+          }
+        )
+
+        // Soft warning when conversation is getting long
+        if viewModel.isConversationLong {
+          conversationLengthWarning
+        }
+
+        // Input field with image support
+        ChatInputField(
+          inputText: $inputText,
+          onSend: { content in
+            handleSendMessage(content)
+          },
+          onSendWithImage: { content, image in
+            handleSendMessageWithImage(content, image: image)
+          },
+          disabled: viewModel.isStreaming
+        )
       }
 
-      // Input field with image support
-      ChatInputField(
-        inputText: $inputText,
-        onSend: { content in
-          handleSendMessage(content)
-        },
-        onSendWithImage: { content, image in
-          handleSendMessageWithImage(content, image: image)
-        },
-        disabled: viewModel.isStreaming
-      )
+      if showsScrollToBottomButton {
+        scrollToBottomButton
+          .padding(.bottom, MonthPickerLayout.bottomPadding + Spacing.sm)
+          .transition(.move(edge: .bottom).combined(with: .opacity))
+      }
     }
     .background(Color.tidexBackground)
+    .animation(.easeInOut(duration: 0.2), value: showsScrollToBottomButton)
   }
 
   // MARK: - Entitlement Sync Banner
@@ -362,6 +385,27 @@ struct WageyView: View {
     }
     .disabled(viewModel.messages.isEmpty && !viewModel.isStreaming)
     .opacity(viewModel.messages.isEmpty && !viewModel.isStreaming ? 0.4 : 1)
+  }
+
+  private var scrollToBottomButton: some View {
+    Button {
+      Haptics.play(.light)
+      scrollToBottomTrigger += 1
+    } label: {
+      Image(systemName: "arrow.down")
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+        .frame(width: 44, height: 44)
+        .background(Color.tidexSurfacePrimary.opacity(0.96))
+        .overlay(
+          Circle()
+            .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+        )
+        .clipShape(Circle())
+        .shadow(color: Color.black.opacity(0.18), radius: 12, y: 4)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(String(localized: "wagey.chat.jump_to_latest")))
   }
 }
 
