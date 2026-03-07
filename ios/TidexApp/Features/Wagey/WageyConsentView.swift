@@ -32,45 +32,25 @@ struct WageyConsentView: View {
   )
 
   var body: some View {
-    ZStack(alignment: .topTrailing) {
-      ScrollView {
-        VStack(spacing: 0) {
-          heroSection
+    ScrollView {
+      VStack(spacing: 0) {
+        heroSection
 
-          VStack(spacing: Spacing.xl) {
-            descriptionSection
-            dataSharedSection
-            recipientSection
-            linksSection
-            withdrawNote
-            actionButtons
-          }
-          .padding(.horizontal, Spacing.lg)
-          .padding(.top, Spacing.xl)
-          .padding(.bottom, Spacing.xxxl)
+        VStack(spacing: Spacing.xl) {
+          descriptionSection
+          dataSharedSection
+          recipientSection
+          linksSection
+          withdrawNote
+          actionButtons
         }
-      }
-      .background(Color.tidexBackground)
-      .ignoresSafeArea(edges: .top)
-
-      // Close button overlay
-      if let onDecline = onDecline {
-        Button {
-          onDecline()
-        } label: {
-          Image(systemName: "xmark")
-            .font(.tidexButton)
-            .foregroundStyle(Color.white.opacity(0.9))
-            .frame(width: 32, height: 32)
-            .background(Color.white.opacity(0.2))
-            .clipShape(Circle())
-            .contentShape(Rectangle())
-            .frame(minWidth: 44, minHeight: 44)
-        }
-        .padding(.top, Spacing.md)
-        .padding(.trailing, Spacing.mlg)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.xl)
+        .padding(.bottom, Spacing.xxxl)
       }
     }
+    .background(Color.tidexBackground)
+    .ignoresSafeArea(edges: .top)
     .fullScreenCover(item: $safariURL) { url in
       SafariViewConsent(url: url)
         .ignoresSafeArea()

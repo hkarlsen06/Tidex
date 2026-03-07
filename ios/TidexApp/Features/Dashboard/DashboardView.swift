@@ -8,6 +8,7 @@ struct DashboardView: View {
 
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab
+  @Binding var showStatsView: Bool
 
   private struct MonthlyGoalEditContext: Identifiable {
     let id = UUID()
@@ -116,6 +117,10 @@ struct DashboardView: View {
             avatarUrl: coordinator.userAvatarUrl
           )
         }
+      }
+      .navigationDestination(isPresented: $showStatsView) {
+        StatsView()
+          .navigationBarBackButtonHidden(true)
       }
       .iPadToolbarTransaction()
     }
@@ -1457,9 +1462,10 @@ private struct DashboardClockJobChooserSheet: View {
 #Preview {
   struct PreviewWrapper: View {
     @State private var selectedTab: MainTabView.Tab = .home
+    @State private var showStatsView = false
 
     var body: some View {
-      DashboardView(selectedTab: $selectedTab)
+      DashboardView(selectedTab: $selectedTab, showStatsView: $showStatsView)
         .environmentObject(AppCoordinator.shared)
     }
   }

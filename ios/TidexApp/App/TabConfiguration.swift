@@ -6,7 +6,7 @@ enum AppTab: String, CaseIterable, Identifiable {
   case home
   case shifts
   case add
-  case stats
+  case wagey
   case sharing
 
   var id: String { rawValue }
@@ -17,7 +17,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case .home: return "house.fill"
     case .shifts: return "calendar"
     case .add: return "plus.circle.fill"
-    case .stats: return "chart.bar.xaxis"
+    case .wagey: return "wand.and.stars"
     case .sharing: return "person.2.fill"
     }
   }
@@ -28,7 +28,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case .home: return .tabsHome
     case .shifts: return .tabsShifts
     case .add: return .tabsAdd
-    case .stats: return .tabsStats
+    case .wagey: return .tabsWagey
     case .sharing: return .tabsSharing
     }
   }
@@ -39,7 +39,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case .home: return .dashboardTitle
     case .shifts: return .tabsShifts
     case .add: return .placeholderAddShift
-    case .stats: return .tabsStats
+    case .wagey: return .tabsWagey
     case .sharing: return .tabsSharing
     }
   }
@@ -50,7 +50,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case .home: return .placeholderDashboardDescription
     case .shifts: return .placeholderShiftsDescription
     case .add: return .placeholderAddShiftDescription
-    case .stats: return .placeholderStatsDescription
+    case .wagey: return .wageyEmptyStateTitle
     case .sharing: return .placeholderSharingDescription
     }
   }
@@ -58,9 +58,9 @@ enum AppTab: String, CaseIterable, Identifiable {
   /// Whether this tab supports pull-to-refresh
   var supportsRefresh: Bool {
     switch self {
-    case .home, .shifts, .stats, .sharing:
+    case .home, .shifts, .sharing:
       return true
-    case .add:
+    case .add, .wagey:
       return false
     }
   }

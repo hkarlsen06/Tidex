@@ -39,8 +39,8 @@ struct MainTabView: View {
   @State private var showFeedbackSheet = false
   @State private var showAdminFeedbackSheet = false
 
-  // State for Wagey AI chat sheet (home tab)
-  @State private var showWageySheet = false
+  // State for Home-owned stats navigation
+  @State private var showHomeStats = false
 
   // Screenshot share prompt state (presented as overlay to keep content visible)
   @State private var showScreenshotPrompt = false
@@ -70,7 +70,7 @@ struct MainTabView: View {
     case home
     case shifts
     case add
-    case stats
+    case wagey
     case sharing
 
     var icon: String {
@@ -78,7 +78,7 @@ struct MainTabView: View {
       case .home: return "speedometer"
       case .shifts: return "calendar"
       case .add: return "plus.circle.fill"
-      case .stats: return "chart.bar.xaxis"
+      case .wagey: return "wand.and.stars"
       case .sharing: return "person.2.fill"
       }
     }
@@ -88,7 +88,7 @@ struct MainTabView: View {
       case .home: return .tabsHome
       case .shifts: return .tabsShifts
       case .add: return .tabsAdd
-      case .stats: return .tabsStats
+      case .wagey: return .tabsWagey
       case .sharing: return .tabsSharing
       }
     }
@@ -109,11 +109,16 @@ struct MainTabView: View {
         selectionHaptic.selectionChanged()
 
         if newTab == selectedTab {
-          if newTab == .add {
+          if newTab == .home, showHomeStats {
+            showHomeStats = false
+            pendingCurrentMonthTab = nil
+          } else if newTab == .add {
             // Add tab - re-tap should return to current month when needed
             if !monthContext.isCurrentMonth {
               monthContext.goToCurrentMonth()
             }
+          } else if newTab == .wagey {
+            pendingCurrentMonthTab = nil
           } else if newTab == .sharing {
             // Sharing tab - keep existing behavior (deselect sharer)
             NotificationCenter.default.post(
@@ -165,7 +170,7 @@ struct MainTabView: View {
             .ignoresSafeArea()
 
           TabView(selection: tabSelection) {
-            DashboardView(selectedTab: $selectedTab)
+            DashboardView(selectedTab: $selectedTab, showStatsView: $showHomeStats)
               .tabItem {
                 Label(String(localized: Tab.home.localizationKey), systemImage: Tab.home.icon)
               }
@@ -183,11 +188,11 @@ struct MainTabView: View {
               }
               .tag(Tab.add)
 
-            StatsView(selectedTab: $selectedTab)
+            WageyView(selectedTab: $selectedTab)
               .tabItem {
-                Label(String(localized: Tab.stats.localizationKey), systemImage: Tab.stats.icon)
+                Label(String(localized: Tab.wagey.localizationKey), systemImage: Tab.wagey.icon)
               }
-              .tag(Tab.stats)
+              .tag(Tab.wagey)
 
             SharingView(selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
               .tabItem {
@@ -253,7 +258,6 @@ struct MainTabView: View {
         && !showScreenshotPrompt
         && !showFeedbackSheet
         && !showAdminFeedbackSheet
-        && !showWageySheet
       {
         showScreenshotPrompt = true
       }
@@ -277,9 +281,6 @@ struct MainTabView: View {
     .sheet(isPresented: $showAdminFeedbackSheet) {
       AdminSettingsView(initialTab: .feedback)
     }
-    .sheet(isPresented: $showWageySheet) {
-      WageyView()
-    }
     .alert(
       String(localized: .addShiftSubmitRequirementsTitle),
       isPresented: $showAddSubmitRequirementsAlert
@@ -295,11 +296,13 @@ struct MainTabView: View {
   /// Whether to show the month picker based on current tab and state
   private var shouldShowMonthPicker: Bool {
     switch selectedTab {
-    case .home, .shifts, .stats:
+    case .home, .shifts:
       return true
     case .add:
       // Hide when keyboard is visible
       return !isKeyboardVisible
+    case .wagey:
+      return false
     case .sharing:
       // Only show when a sharer is selected
       return sharingHasSelectedSharer
@@ -312,19 +315,20 @@ struct MainTabView: View {
   private var sharedMonthPickerOverlay: some View {
     GlassEffectContainer(spacing: Spacing.xs) {
       HStack(spacing: Spacing.xs) {
-        // Wagey button - only on Home tab
+        // Stats/Back button - only on Home
         if selectedTab == .home {
           Button {
             Haptics.play(.light)
-            showWageySheet = true
+            showHomeStats.toggle()
           } label: {
-            Image(systemName: "sparkles")
+            Image(systemName: showHomeStats ? "chevron.left" : "chart.bar.xaxis")
               .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
               .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
+          .contentTransition(.symbolEffect(.replace))
           .tidexGlass(
             shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
             clear: true,
@@ -332,6 +336,7 @@ struct MainTabView: View {
             disabled: disableHeavyCompositingForHangInvestigation
           )
           .transition(.opacity)
+          .accessibilityLabel(Text(showHomeStats ? .commonBack : .tabsStats))
         }
 
         // View mode toggle button - Shifts tab or Friends tab when viewing a friend
@@ -440,7 +445,6 @@ struct MainTabView: View {
   private func tabHasScrollableContent(_ tab: Tab) -> Bool {
     switch tab {
     case .shifts: return showListView
-    case .stats: return true
     default: return false
     }
   }

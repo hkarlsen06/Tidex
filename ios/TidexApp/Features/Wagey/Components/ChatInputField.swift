@@ -6,6 +6,8 @@ import SwiftUI
 struct ChatInputField: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+  private let composerControlHeight: CGFloat = 50
+
   /// Callback when user sends a message (text only)
   let onSend: (String) -> Void
 
@@ -75,56 +77,63 @@ struct ChatInputField: View {
 
       // Input area
       HStack(alignment: .center, spacing: Spacing.xsm) {
-        // Image picker button (outside the capsule)
+        // Image picker button
         if onSendWithImage != nil {
           imagePickerButton
         }
 
-        // Text field capsule
-        HStack(alignment: .center, spacing: Spacing.xs) {
-          TextField(
-            String(localized: .wageyPlaceholder),
-            text: $inputText,
-            axis: .vertical
-          )
-          .textFieldStyle(.plain)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1...5)
-          .focused($isFocused)
-          .disabled(disabled)
-          .submitLabel(.return)
-          .onSubmit {
-            sendMessage()
-          }
-
-          // Send button (inside capsule, appears when content ready)
-          if canSend {
-            Button(action: sendMessage) {
-              Image(systemName: "arrow.up.circle.fill")
-                .font(.system(size: 28))
-                .foregroundColor(.tidexBlue)
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-            }
-            .accessibilityLabel(Text(String(localized: "Send message")))
-            .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-          }
-        }
-        .padding(.horizontal, Spacing.msm)
-        .padding(.vertical, Spacing.xs)
-        .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        composerField
       }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
+      .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+      .padding(.top, Spacing.xs)
       .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
+      .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isFocused)
     }
     .background(Color.tidexBackground)
-    .safeAreaPadding(.bottom)
+    .padding(.bottom, MonthPickerLayout.bottomPadding)
     .onChange(of: selectedPhotoItem) { _, newItem in
       processSelectedPhoto(newItem)
     }
+  }
+
+  private var composerField: some View {
+    HStack(alignment: .center, spacing: Spacing.xs) {
+      messageTextField
+      sendButton
+    }
+    .padding(.horizontal, Spacing.msm)
+    .padding(.vertical, Spacing.xs)
+    .frame(minHeight: composerControlHeight)
+    .background(Color.tidexSurfacePrimary)
+    .overlay(composerBorder)
+    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+  }
+
+  private var messageTextField: some View {
+    TextField(
+      String(localized: .wageyPlaceholderWelcome),
+      text: $inputText,
+      axis: .vertical
+    )
+    .textFieldStyle(.plain)
+    .font(.tidexBody)
+    .foregroundColor(.tidexTextPrimary)
+    .lineLimit(1...5)
+    .focused($isFocused)
+    .disabled(disabled)
+    .submitLabel(.return)
+    .onSubmit {
+      sendMessage()
+    }
+    .padding(.vertical, Spacing.xxs)
+  }
+
+  private var composerBorder: some View {
+    RoundedRectangle(cornerRadius: 24, style: .continuous)
+      .stroke(
+        isFocused ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder.opacity(0.45),
+        lineWidth: 1
+      )
   }
 
   // MARK: - Image Picker Button
@@ -135,20 +144,43 @@ struct ChatInputField: View {
       matching: .images,
       photoLibrary: .shared()
     ) {
-      if isProcessingImage {
-        ProgressView()
-          .scaleEffect(0.8)
-          .frame(width: 28, height: 28)
-      } else {
-        Image(systemName: "photo.on.rectangle.angled")
-          .font(.system(size: 22))
-          .foregroundColor(disabled ? .tidexTextMuted : .tidexBlue)
+      ZStack {
+        Circle()
+          .fill(Color.tidexSurfacePrimary)
+          .frame(width: composerControlHeight, height: composerControlHeight)
+
+        if isProcessingImage {
+          ProgressView()
+            .scaleEffect(0.8)
+            .frame(width: composerControlHeight, height: composerControlHeight)
+        } else {
+          Image(systemName: "photo.on.rectangle.angled")
+            .font(.system(size: 21))
+            .foregroundColor(disabled ? .tidexTextMuted : .tidexBlue)
+        }
       }
     }
     .disabled(disabled || isProcessingImage)
-    .frame(minWidth: 44, minHeight: 44)
+    .frame(width: composerControlHeight, height: composerControlHeight)
     .contentShape(Rectangle())
     .accessibilityLabel(Text(String(localized: "profile.personalInfo.uploadImage")))
+  }
+
+  private var sendButton: some View {
+    Button(action: sendMessage) {
+      Image(systemName: "arrow.up")
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundColor(canSend ? .tidexTextOnBrand : .tidexTextMuted)
+        .frame(width: 38, height: 38)
+        .background(
+          Circle()
+            .fill(canSend ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
+        )
+        .contentShape(Circle())
+    }
+    .disabled(!canSend)
+    .accessibilityLabel(Text(String(localized: "Send message")))
+    .opacity(disabled ? 0.6 : 1)
   }
 
   // MARK: - Image Preview
