@@ -356,7 +356,7 @@ struct AppearanceSettingsView: View {
     case .add:
       return "plus.circle.fill"
     case .wagey:
-      return "wand.and.stars"
+      return "message.badge.waveform.fill"
     case .sharing:
       return "person.2.fill"
     }

@@ -93,7 +93,7 @@ struct WageyView: View {
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+      .iPadToolbarBackground()
       .toolbarBackground(.hidden, for: .tabBar)
       .toolbar {
         if shouldShowUsageSubtitle {
@@ -115,12 +115,30 @@ struct WageyView: View {
           }
         }
 
-        if !viewModel.conversations.isEmpty {
+        if isShowingWelcomeState && !viewModel.conversations.isEmpty {
+          ToolbarItem(placement: .topBarTrailing) {
+            historyButton
+          }
+
+          ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        }
+
+        if isShowingWelcomeState {
+          ToolbarItem(placement: .topBarTrailing) {
+            UserMenuButton(
+              displayName: coordinator.userDisplayName,
+              avatarUrl: coordinator.userAvatarUrl
+            )
+          }
+        }
+
+        if !isShowingWelcomeState && !viewModel.conversations.isEmpty {
           ToolbarItem(placement: .topBarTrailing) {
             historyButton
           }
         }
       }
+      .iPadToolbarTransaction()
     }
     .sheet(isPresented: $showHistory) {
       conversationHistorySheet
