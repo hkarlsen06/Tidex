@@ -32,12 +32,19 @@ struct WageyView: View {
   /// Triggers an imperative scroll-to-bottom inside the chat list
   @State private var scrollToBottomTrigger = 0
 
+  /// Explicit visibility state for the post-stream scroll affordance
+  @State private var showScrollToBottomButton = false
+
+  /// Measured height of the floating bottom chrome so messages can scroll underneath it.
+  @State private var bottomChromeHeight: CGFloat = Spacing.bottomScrollMargin
+
   private var isShowingWelcomeState: Bool {
     viewModel.messages.isEmpty && !viewModel.isStreaming
   }
 
   private var showsScrollToBottomButton: Bool {
-    !viewModel.isStreaming
+    showScrollToBottomButton
+      && !viewModel.isStreaming
       && !isChatScrolledToBottom
       && (!viewModel.messages.isEmpty || !viewModel.activeContentBlocks.isEmpty)
   }
@@ -78,34 +85,42 @@ struct WageyView: View {
 
   private var chatInterface: some View {
     NavigationStack {
-      mainContent
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-          if shouldShowUsageSubtitle {
-            ToolbarItem(placement: .topBarLeading) {
-              messagesRemainingBadge
-            }
-            .sharedBackgroundVisibility(.hidden)
-          }
+      ZStack {
+        Color.tidexBackground
+          .ignoresSafeArea()
 
-          if !isShowingWelcomeState {
-            ToolbarItem(placement: .principal) {
-              headerTitle
-            }
+        mainContent
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+      .toolbarBackground(.hidden, for: .tabBar)
+      .toolbar {
+        if shouldShowUsageSubtitle {
+          ToolbarItem(placement: .topBarLeading) {
+            messagesRemainingBadge
           }
+          .sharedBackgroundVisibility(.hidden)
+        }
 
-          if !isShowingWelcomeState {
-            ToolbarItem(placement: .topBarTrailing) {
-              newChatButton
-            }
-          }
-
-          if !viewModel.conversations.isEmpty {
-            ToolbarItem(placement: .topBarTrailing) {
-              historyButton
-            }
+        if !isShowingWelcomeState {
+          ToolbarItem(placement: .principal) {
+            headerTitle
           }
         }
+
+        if !isShowingWelcomeState {
+          ToolbarItem(placement: .topBarTrailing) {
+            newChatButton
+          }
+        }
+
+        if !viewModel.conversations.isEmpty {
+          ToolbarItem(placement: .topBarTrailing) {
+            historyButton
+          }
+        }
+      }
     }
     .sheet(isPresented: $showHistory) {
       conversationHistorySheet
@@ -156,7 +171,7 @@ struct WageyView: View {
   // MARK: - Main Content
 
   private var mainContent: some View {
-    ZStack(alignment: .bottom) {
+    ZStack(alignment: .bottomTrailing) {
       VStack(spacing: 0) {
         // Entitlement sync banner (when server/StoreKit mismatch detected)
         if let syncMessage = viewModel.entitlementSyncMessage {
@@ -171,39 +186,69 @@ struct WageyView: View {
           isThinking: viewModel.isModelThinking,
           remainingMessagesText: nil,
           showsHistoryButton: false,
+          bottomContentInset: bottomChromeHeight + Spacing.lg,
           isScrolledToBottom: $isChatScrolledToBottom,
           scrollToBottomTrigger: scrollToBottomTrigger,
+          onStreamEndedAwayFromBottom: {
+            showScrollToBottomButton = true
+          },
           onSuggestionTapped: { suggestion in
             inputText = suggestion
           }
-        )
-
-        // Soft warning when conversation is getting long
-        if viewModel.isConversationLong {
-          conversationLengthWarning
-        }
-
-        // Input field with image support
-        ChatInputField(
-          inputText: $inputText,
-          onSend: { content in
-            handleSendMessage(content)
-          },
-          onSendWithImage: { content, image in
-            handleSendMessageWithImage(content, image: image)
-          },
-          disabled: viewModel.isStreaming
         )
       }
 
       if showsScrollToBottomButton {
         scrollToBottomButton
-          .padding(.bottom, MonthPickerLayout.bottomPadding + Spacing.sm)
-          .transition(.move(edge: .bottom).combined(with: .opacity))
+          .padding(.trailing, MonthPickerLayout.horizontalPadding)
+          .padding(.bottom, bottomChromeHeight + Spacing.md)
+          .transition(.move(edge: .trailing).combined(with: .opacity))
       }
     }
-    .background(Color.tidexBackground)
+    .overlay(alignment: .bottom) {
+      bottomChrome
+    }
     .animation(.easeInOut(duration: 0.2), value: showsScrollToBottomButton)
+    .onPreferenceChange(WageyBottomChromeHeightPreferenceKey.self) { value in
+      bottomChromeHeight = value
+    }
+    .onChange(of: viewModel.isStreaming) { _, isStreaming in
+      if isStreaming {
+        showScrollToBottomButton = false
+      }
+    }
+    .onChange(of: isChatScrolledToBottom) { _, isScrolledToBottom in
+      if isScrolledToBottom {
+        showScrollToBottomButton = false
+      }
+    }
+  }
+
+  private var bottomChrome: some View {
+    VStack(spacing: 0) {
+      if viewModel.isConversationLong {
+        conversationLengthWarning
+      }
+
+      ChatInputField(
+        inputText: $inputText,
+        onSend: { content in
+          handleSendMessage(content)
+        },
+        onSendWithImage: { content, image in
+          handleSendMessageWithImage(content, image: image)
+        },
+        disabled: viewModel.isStreaming
+      )
+    }
+    .background(
+      GeometryReader { geometry in
+        Color.clear.preference(
+          key: WageyBottomChromeHeightPreferenceKey.self,
+          value: geometry.size.height
+        )
+      }
+    )
   }
 
   // MARK: - Entitlement Sync Banner
@@ -390,6 +435,7 @@ struct WageyView: View {
   private var scrollToBottomButton: some View {
     Button {
       Haptics.play(.light)
+      showScrollToBottomButton = false
       scrollToBottomTrigger += 1
     } label: {
       Image(systemName: "arrow.down")
@@ -406,6 +452,14 @@ struct WageyView: View {
     }
     .buttonStyle(.plain)
     .accessibilityLabel(Text(String(localized: "wagey.chat.jump_to_latest")))
+  }
+}
+
+private struct WageyBottomChromeHeightPreferenceKey: PreferenceKey {
+  static var defaultValue: CGFloat = Spacing.bottomScrollMargin
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = nextValue()
   }
 }
 

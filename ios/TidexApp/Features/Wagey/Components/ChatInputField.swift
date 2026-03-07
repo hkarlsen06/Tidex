@@ -63,6 +63,14 @@ struct ChatInputField: View {
     return (hasText || hasImage) && !disabled && !isProcessingImage
   }
 
+  private var composerTint: Color {
+    isFocused ? Color.tidexBlue.opacity(0.24) : Color.tidexBlue.opacity(0.14)
+  }
+
+  private var attachmentButtonTint: Color {
+    attachedImage != nil ? Color.tidexBlue.opacity(0.22) : Color.tidexBlue.opacity(0.12)
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       // Image preview (if attached)
@@ -89,7 +97,6 @@ struct ChatInputField: View {
       .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
       .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isFocused)
     }
-    .background(Color.tidexBackground)
     .padding(.bottom, MonthPickerLayout.bottomPadding)
     .onChange(of: selectedPhotoItem) { _, newItem in
       processSelectedPhoto(newItem)
@@ -104,9 +111,16 @@ struct ChatInputField: View {
     .padding(.horizontal, Spacing.msm)
     .padding(.vertical, Spacing.xs)
     .frame(minHeight: composerControlHeight)
-    .background(Color.tidexSurfacePrimary)
+    .tidexGlass(
+      shape: .rect(cornerRadius: 24),
+      tint: composerTint,
+      interactive: isFocused,
+      disabled: disabled,
+      fallbackOpacity: 0.9
+    )
     .overlay(composerBorder)
     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .shadow(color: Color.tidexBlue.opacity(isFocused ? 0.12 : 0.05), radius: 18, y: 6)
   }
 
   private var messageTextField: some View {
@@ -131,7 +145,7 @@ struct ChatInputField: View {
   private var composerBorder: some View {
     RoundedRectangle(cornerRadius: 24, style: .continuous)
       .stroke(
-        isFocused ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder.opacity(0.45),
+        isFocused ? Color.tidexBlue.opacity(0.4) : Color.tidexBorder.opacity(0.38),
         lineWidth: 1
       )
   }
@@ -145,10 +159,6 @@ struct ChatInputField: View {
       photoLibrary: .shared()
     ) {
       ZStack {
-        Circle()
-          .fill(Color.tidexSurfacePrimary)
-          .frame(width: composerControlHeight, height: composerControlHeight)
-
         if isProcessingImage {
           ProgressView()
             .scaleEffect(0.8)
@@ -159,6 +169,15 @@ struct ChatInputField: View {
             .foregroundColor(disabled ? .tidexTextMuted : .tidexBlue)
         }
       }
+      .frame(width: composerControlHeight, height: composerControlHeight)
+      .tidexGlass(
+        shape: .circle,
+        tint: attachmentButtonTint,
+        interactive: !disabled && !isProcessingImage,
+        disabled: disabled || isProcessingImage,
+        fallbackOpacity: 0.9
+      )
+      .shadow(color: Color.tidexBlue.opacity(0.05), radius: 12, y: 4)
     }
     .disabled(disabled || isProcessingImage)
     .frame(width: composerControlHeight, height: composerControlHeight)
