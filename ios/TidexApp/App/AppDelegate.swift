@@ -168,6 +168,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Apple recommends activating WCSession early in launch
     WatchConnectivityManager.shared.activateSession()
 
+    // Prewarm the cached theme before SwiftUI builds the first frame.
+    _ = AppearanceManager.shared
+
     // Prewarm coordinator so auth listener starts before RootContent is created.
     _ = AppCoordinator.shared
 

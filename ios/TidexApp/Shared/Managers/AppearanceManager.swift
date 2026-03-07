@@ -11,6 +11,15 @@ enum AppTheme: String, CaseIterable {
   case light
   case dark
 
+  /// Resolve the effective color scheme for launch-time views.
+  func resolvedColorScheme(fallback systemColorScheme: ColorScheme) -> ColorScheme {
+    switch self {
+    case .system: return systemColorScheme
+    case .light: return .light
+    case .dark: return .dark
+    }
+  }
+
   /// Convert to SwiftUI ColorScheme for .preferredColorScheme modifier
   var colorScheme: ColorScheme? {
     switch self {
