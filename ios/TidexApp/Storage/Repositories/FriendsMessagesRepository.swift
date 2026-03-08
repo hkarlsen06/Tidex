@@ -6,6 +6,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessag
 
 @MainActor
 protocol FriendsMessagesRepositoryProviding: AnyObject {
+  func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async
   func saveThread(_ thread: FriendThread, for viewerUserId: String) async
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
     async

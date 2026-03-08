@@ -125,28 +125,39 @@ struct SharerListView: View {
   }
 
   private var sharersList: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
+    let sharers = sortedSharers
+
+    return VStack(alignment: .leading, spacing: Spacing.sm) {
       // Sharers - sorted by shift proximity
-      ForEach(sortedSharers) { sharer in
-        FriendCard(
-          sharer: sharer,
-          preview: shiftPreviews[sharer.id],
-          isSelected: selectedSharer?.id == sharer.id,
-          isRefreshing: isRefreshing,
-          isOpeningMessage: openingThreadUserId == sharer.id,
-          onTap: {
-            onSelectSharer(sharer)
-          },
-          onMessageTap: {
-            onMessageTap(sharer)
-          }
-        )
+      ForEach(sharers) { sharer in
+        sharerCard(for: sharer)
       }
     }
     .padding(.horizontal, Spacing.md)
     // Animate the sort and card reveal together
     // Uses spring for natural movement when rows reorder and cards expand
     .animation(.spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
+  }
+
+  @ViewBuilder
+  private func sharerCard(for sharer: SharedUser) -> some View {
+    let preview = shiftPreviews[sharer.id]
+    let isSelected = selectedSharer?.id == sharer.id
+    let isOpeningMessage = openingThreadUserId == sharer.id
+
+    FriendCard(
+      sharer: sharer,
+      preview: preview,
+      isSelected: isSelected,
+      isRefreshing: isRefreshing,
+      onTap: {
+        onSelectSharer(sharer)
+      },
+      onMessageTap: {
+        onMessageTap(sharer)
+      },
+      isOpeningMessage: isOpeningMessage
+    )
   }
 }
 

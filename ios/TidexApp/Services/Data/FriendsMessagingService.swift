@@ -491,7 +491,7 @@ private struct MessagingAttachmentRow: Decodable {
   }
 }
 
-private struct MessagingThreadUserStateRow: Decodable {
+struct MessagingThreadUserStateRow: Decodable {
   let threadId: String
   let userId: String
   let lastReadMessageId: String?
