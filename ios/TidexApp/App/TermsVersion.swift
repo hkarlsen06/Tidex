@@ -17,7 +17,7 @@ enum TermsVersion {
 
   /// Fallback terms version date (used when API is unavailable)
   /// Keep this updated when terms change as a safety net
-  private static let fallbackVersionDate = "2026-02-21"
+  private static let fallbackVersionDate = "2026-03-08"
 
   /// Cached version date (fetched from API)
   private static var cachedVersionDate: String?
@@ -62,11 +62,16 @@ enum TermsVersion {
 
       let versionResponse = try JSONDecoder().decode(VersionResponse.self, from: data)
 
+      let latestVersionDate = latestVersionDate(
+        termsVersionDate: versionResponse.termsVersionDate,
+        privacyVersionDate: versionResponse.privacyVersionDate
+      )
+
       // Cache the result
-      cachedVersionDate = versionResponse.termsVersionDate
+      cachedVersionDate = latestVersionDate
       lastFetchTime = Date()
 
-      return versionResponse.termsVersionDate
+      return latestVersionDate
     } catch is TimeoutError {
       logger.warning("Request timed out after \(requestTimeout)s. Using fallback.")
       return fallbackVersionDate
@@ -172,6 +177,24 @@ enum TermsVersion {
 
     // User needs to re-accept if their acceptance date is before the current terms version
     return accepted < currentVersion
+  }
+
+  private static func latestVersionDate(
+    termsVersionDate: String,
+    privacyVersionDate: String
+  ) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.timeZone = TimeZone(identifier: "UTC")
+
+    guard
+      let termsDate = formatter.date(from: termsVersionDate),
+      let privacyDate = formatter.date(from: privacyVersionDate)
+    else {
+      return termsVersionDate
+    }
+
+    return privacyDate > termsDate ? privacyVersionDate : termsVersionDate
   }
 }
 

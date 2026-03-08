@@ -37,9 +37,7 @@ struct SharedShiftsListView: View {
   @State private var selectedShift: ShiftWithComputations?
 
   // Screenshot bubble state
-  @State private var showScreenshotBubble = false
-  @State private var showNotifiedIcon = false
-  @State private var bellShakeTrigger = false
+  @StateObject private var screenshotFeedback = ScreenshotNotificationFeedback()
 
   private var jobsById: [String: SharedJob] {
     Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
@@ -92,7 +90,7 @@ struct SharedShiftsListView: View {
         }
 
         // Screenshot bubble overlay
-        if showScreenshotBubble {
+        if screenshotFeedback.showsBubble {
           VStack {
             screenshotBubble
               .onTapGesture {
@@ -230,26 +228,12 @@ struct SharedShiftsListView: View {
   private func reportScreenshot() async {
     logger.info("Screenshot detected while viewing \(sharer.firstName ?? "friend")'s shifts")
 
-    // Reset state
-    showNotifiedIcon = false
-
-    // Show the bubble immediately
-    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-      showScreenshotBubble = true
-    }
-
-    // Bubble persists until user taps it
+    screenshotFeedback.showBubble()
 
     do {
       try await ScreenshotNotificationService.shared.reportScreenshot(sharerId: sharer.id)
       logger.info("Screenshot notification sent successfully")
-      withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-        showNotifiedIcon = true
-      }
-      Haptics.play(.success)
-      // Trigger shake after the bell springs in
-      try? await Task.sleep(for: .seconds(0.3))
-      bellShakeTrigger.toggle()
+      await screenshotFeedback.markSent()
     } catch {
       // Silently fail - don't interrupt user experience for notification failures
       logger.error("Failed to report screenshot: \(error.localizedDescription)")
@@ -258,54 +242,15 @@ struct SharedShiftsListView: View {
 
   /// Dismisses the screenshot bubble
   private func dismissScreenshotBubble() {
-    withAnimation(.easeOut(duration: 0.2)) {
-      showScreenshotBubble = false
-    }
-    // Reset after dismiss animation
-    Task {
-      try? await Task.sleep(for: .seconds(0.3))
-      showNotifiedIcon = false
-      bellShakeTrigger = false
-    }
+    screenshotFeedback.dismiss()
   }
 
   /// Screenshot notification bubble (matches SyncStatusIndicator styling)
   private var screenshotBubble: some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "camera.viewfinder")
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Text(.sharingScreenshotTaken)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-
-      if showNotifiedIcon {
-        Image(systemName: "bell.and.waves.left.and.right")
-          .font(.tidexCaption)
-          .foregroundColor(.tidexBlue)
-          .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) {
-            content, value in
-            content
-              .rotationEffect(.degrees(value.angle), anchor: .top)
-          } keyframes: { _ in
-            KeyframeTrack(\.angle) {
-              SpringKeyframe(15, duration: 0.1, spring: .bouncy)
-              SpringKeyframe(-12, duration: 0.1, spring: .bouncy)
-              SpringKeyframe(8, duration: 0.1, spring: .bouncy)
-              SpringKeyframe(-5, duration: 0.1, spring: .bouncy)
-              SpringKeyframe(2, duration: 0.1, spring: .bouncy)
-              SpringKeyframe(0, duration: 0.15, spring: .bouncy)
-            }
-          }
-          .transition(.scale.combined(with: .opacity))
-      }
-    }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.xs)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.xxxl)
-    .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+    ScreenshotNotificationBubble(
+      showNotifiedIcon: screenshotFeedback.showsNotifiedIcon,
+      bellShakeTrigger: screenshotFeedback.bellShakeTrigger
+    )
   }
 
   // MARK: - States
@@ -323,12 +268,6 @@ struct SharedShiftsListView: View {
     .padding(.vertical, 60)
   }
 
-}
-
-// MARK: - Bell Shake Keyframe
-
-private struct BellShake {
-  var angle: Double = 0
 }
 
 #Preview {

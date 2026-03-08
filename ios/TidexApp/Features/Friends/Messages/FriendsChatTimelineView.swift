@@ -495,6 +495,13 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     }
     let nextMessage = indexPath.item < messages.count - 1 ? messages[indexPath.item + 1] : nil
     let previousMessage = indexPath.item > 0 ? messages[indexPath.item - 1] : nil
+    let showsDateSeparator =
+      previousMessage == nil
+      || !Calendar.current.isDate(
+        previousMessage?.createdAt ?? message.createdAt,
+        equalTo: message.createdAt,
+        toGranularity: .day
+      )
     let showsTimestamp: Bool
     if let nextMessage {
       showsTimestamp = !Calendar.current.isDate(
@@ -518,6 +525,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         isCurrentUser: isCurrentUser,
         isHighlighted: highlightedMessageId == message.id,
         senderFirstName: senderFirstName,
+        separatorDate: showsDateSeparator ? message.createdAt : nil,
         showsSenderLabel: showsSenderLabel,
         showsTimestamp: showsTimestamp,
         onReply: { [weak self] in

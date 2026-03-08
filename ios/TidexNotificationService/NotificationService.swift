@@ -46,7 +46,7 @@ final class NotificationService: UNNotificationServiceExtension {
     content: UNMutableNotificationContent
   ) async -> UNNotificationContent {
     guard
-      let payload = ThreadMessageNotificationPayload(
+      let payload = CommunicationNotificationPayload(
         userInfo: request.content.userInfo,
         fallbackSenderDisplayName: request.content.title
       )
@@ -71,7 +71,7 @@ final class NotificationService: UNNotificationServiceExtension {
       outgoingMessageType: .outgoingMessageText,
       content: content.body,
       speakableGroupName: nil,
-      conversationIdentifier: payload.threadId,
+      conversationIdentifier: payload.conversationIdentifier,
       serviceName: "Tidex",
       sender: sender,
       attachments: nil
@@ -130,23 +130,34 @@ final class NotificationService: UNNotificationServiceExtension {
   }
 }
 
-private struct ThreadMessageNotificationPayload {
+private struct CommunicationNotificationPayload {
+  let type: String
+  let conversationIdentifier: String
   let threadId: String
   let senderUserId: String
   let senderDisplayName: String
   let senderAvatarUrl: URL?
 
   init?(userInfo: [AnyHashable: Any], fallbackSenderDisplayName: String) {
-    guard let type = userInfo["type"] as? String, type == "thread_message" else { return nil }
-    guard let threadId = userInfo["thread_id"] as? String, !threadId.isEmpty else { return nil }
-    guard let senderUserId = userInfo["sender_user_id"] as? String, !senderUserId.isEmpty else {
-      return nil
-    }
+    guard let type = userInfo["type"] as? String else { return nil }
+    guard Self.supportedTypes.contains(type) else { return nil }
 
+    let senderUserId =
+      (userInfo["sender_user_id"] as? String)?.nonEmpty
+      ?? (userInfo["screenshotter_id"] as? String)?.nonEmpty
+    guard let senderUserId else { return nil }
+
+    let threadId =
+      (userInfo["thread_id"] as? String)?.nonEmpty
+      ?? "notification:\(type):\(senderUserId)"
+
+    self.type = type
     self.threadId = threadId
+    self.conversationIdentifier = threadId
     self.senderUserId = senderUserId
     self.senderDisplayName =
       (userInfo["sender_name"] as? String)?.nonEmpty
+      ?? (userInfo["screenshotter_name"] as? String)?.nonEmpty
       ?? fallbackSenderDisplayName.nonEmpty
       ?? "Tidex"
 
@@ -159,6 +170,12 @@ private struct ThreadMessageNotificationPayload {
       self.senderAvatarUrl = nil
     }
   }
+
+  private static let supportedTypes: Set<String> = [
+    "thread_message",
+    "thread_screenshot",
+    "shifts_screenshotted",
+  ]
 }
 
 extension String {
