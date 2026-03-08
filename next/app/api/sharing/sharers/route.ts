@@ -41,8 +41,8 @@ export async function GET() {
   try {
     const sharers = await getUsersWhoSharedWithMeWithUserId(session.user.id);
 
-    // Map to the format expected by iOS, adding the blocked field
-    // (getUsersWhoSharedWithMe excludes blocked sharers, so blocked is always false here)
+    // Map to the format expected by iOS, adding the legacy blocked field.
+    // getUsersWhoSharedWithMe filters out hidden sharers, so this stays false.
     const response = sharers.map((sharer) => ({
       id: sharer.id,
       email: sharer.email,
@@ -52,7 +52,7 @@ export async function GET() {
       oauthAvatarUrl: sharer.oauthAvatarUrl,
       sharedAt: sharer.sharedAt,
       showEarnings: sharer.showEarnings,
-      blocked: false, // getUsersWhoSharedWithMe filters out blocked
+      blocked: false, // getUsersWhoSharedWithMe filters out hidden sharers
     }));
 
     return NextResponse.json(

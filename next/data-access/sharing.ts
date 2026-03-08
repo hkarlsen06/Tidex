@@ -44,7 +44,7 @@ export type Friend = {
   readonly oauthAvatarUrl: string | null;
   /**
    * If they share with me:
-   * - blocked: whether I've hidden them from my view
+   * - blocked: whether I've hidden them from my view (backed by shift_shares.hidden)
    * - showEarningsToMe: whether they allow me to see their earnings
    * - sharedWithMeAt: when they started sharing with me
    * - notificationFrequency: how often I want notifications from this sharer
@@ -139,12 +139,12 @@ export async function getUsersWhoSharedWithMeWithUserId(
   });
 
   try {
-    // Query shift_shares where viewer_id = userId and not blocked
+    // Query shift_shares where viewer_id = userId and not hidden
     const { data: shares, error: sharesError } = await adminClient
       .from("shift_shares")
       .select("owner_id, created_at, show_earnings, muted")
       .eq("viewer_id", userId)
-      .eq("blocked", false)
+      .eq("hidden", false)
       .order("created_at", { ascending: false });
 
     if (sharesError) {
@@ -464,12 +464,12 @@ export async function getSharedUserShiftsWithViewerId(
     // Step 1: Verify share access
     const { data: shareSettings, error: shareError } = await adminClient
       .from("shift_shares")
-      .select("show_earnings, blocked")
+      .select("show_earnings, hidden")
       .eq("owner_id", ownerId)
       .eq("viewer_id", viewerId)
       .maybeSingle();
 
-    if (shareError || !shareSettings || shareSettings.blocked) {
+    if (shareError || !shareSettings || shareSettings.hidden) {
       logger.warn(`User ${viewerId} attempted to access shifts of ${ownerId} without permission`);
       return {
         shifts: [],
@@ -1006,7 +1006,7 @@ async function getAllFriendsInternal(userId: string): Promise<Friend[]> {
       const sharer = sharerMap.get(id);
       const recipient = recipientMap.get(id);
 
-      // Use whichever has the user info (prefer sharer since it has blocked info)
+      // Use whichever has the user info (prefer sharer since it carries hidden/block state)
       const userInfo = sharer ?? recipient;
       if (!userInfo) continue;
 

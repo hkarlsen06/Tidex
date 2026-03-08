@@ -73,7 +73,7 @@ export async function updateShiftShare(
   // Fetch current values for audit diff
   const { data: currentData, error: fetchError } = await supabase
     .from("shift_shares")
-    .select("id, owner_id, viewer_id, show_earnings, blocked, muted")
+    .select("id, owner_id, viewer_id, show_earnings, hidden, muted")
     .eq("id", input.shareId)
     .single();
 
@@ -116,10 +116,10 @@ export async function updateShiftShare(
     };
   }
 
-  if (input.blocked !== undefined && input.blocked !== currentData.blocked) {
-    updates.blocked = input.blocked;
+  if (input.blocked !== undefined && input.blocked !== currentData.hidden) {
+    updates.hidden = input.blocked;
     changes.blocked = {
-      before: currentData.blocked,
+      before: currentData.hidden,
       after: input.blocked,
     };
   }

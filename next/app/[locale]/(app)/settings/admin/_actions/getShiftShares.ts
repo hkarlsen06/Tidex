@@ -122,7 +122,7 @@ export async function getShiftShares(
       v.phone as viewer_phone,
       ss.created_at,
       ss.show_earnings,
-      ss.blocked,
+      ss.hidden as blocked,
       ss.muted
     FROM shift_shares ss
     LEFT JOIN auth.users o ON ss.owner_id = o.id

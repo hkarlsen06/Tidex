@@ -70,7 +70,7 @@ export async function deleteShiftShare(
   // Fetch share details before delete for audit
   const { data: shareData, error: fetchError } = await supabase
     .from("shift_shares")
-    .select("id, owner_id, viewer_id, show_earnings, blocked, muted, created_at")
+    .select("id, owner_id, viewer_id, show_earnings, hidden, muted, created_at")
     .eq("id", input.shareId)
     .single();
 
@@ -138,7 +138,7 @@ export async function deleteShiftShare(
       viewer_email: viewerEmail,
       deleted_data: {
         show_earnings: shareData.show_earnings,
-        blocked: shareData.blocked,
+        blocked: shareData.hidden,
         muted: shareData.muted,
         created_at: shareData.created_at,
       },

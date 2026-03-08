@@ -2,7 +2,7 @@
 -- Description: Returns users who share their shifts with the authenticated viewer.
 -- Security:
 --   - Uses auth.uid() server-side (viewer cannot be spoofed).
---   - Filters to active (non-blocked) share rows only.
+--   - Filters to active (non-hidden) share rows only.
 --   - SECURITY DEFINER is required to read auth.users metadata safely.
 
 CREATE OR REPLACE FUNCTION public.get_my_sharers()
@@ -37,7 +37,7 @@ AS $function$
     ) AS oauth_avatar_url,
     ss.created_at AS shared_at,
     COALESCE(ss.show_earnings, false) AS show_earnings,
-    COALESCE(ss.blocked, false) AS blocked
+    COALESCE(ss.hidden, false) AS blocked
   FROM public.shift_shares ss
   LEFT JOIN auth.users au
     ON au.id = ss.owner_id
@@ -45,7 +45,7 @@ AS $function$
     ON us.user_id = ss.owner_id
   WHERE auth.uid() IS NOT NULL
     AND ss.viewer_id = auth.uid()
-    AND COALESCE(ss.blocked, false) = false
+    AND COALESCE(ss.hidden, false) = false
   ORDER BY ss.created_at DESC;
 $function$;
 

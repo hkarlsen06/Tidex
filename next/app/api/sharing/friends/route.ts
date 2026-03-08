@@ -40,10 +40,10 @@ export async function GET() {
   const adminClient = createSupabaseServiceClient();
 
   try {
-    // Fetch sharers (people who share with me) - including blocked
+    // Fetch sharers (people who share with me) - including hidden-from-list rows
     const { data: incomingShares, error: incomingError } = await adminClient
       .from("shift_shares")
-      .select("owner_id, created_at, show_earnings, blocked, muted")
+      .select("owner_id, created_at, show_earnings, hidden, muted")
       .eq("viewer_id", userId)
       .order("created_at", { ascending: false });
 
@@ -148,7 +148,7 @@ export async function GET() {
       (incomingShares || []).map((s: any) => [
         s.owner_id,
         {
-          blocked: s.blocked,
+          blocked: s.hidden,
           showEarnings: s.show_earnings,
           sharedAt: s.created_at,
           notificationFrequency: (s.muted ? "muted" : "instant") as NotificationFrequency,

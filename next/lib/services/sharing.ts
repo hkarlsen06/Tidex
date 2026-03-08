@@ -456,14 +456,14 @@ export const SharingServiceLive = Layer.effect(
           // Verify user is authenticated
           yield* auth.verifyUserId(userId);
 
-          // Query shift_shares where viewer_id = userId and not blocked
+          // Query shift_shares where viewer_id = userId and not hidden
           const sharesResult = yield* supabase.query(
             async (client) =>
               await client
                 .from("shift_shares")
                 .select("owner_id, created_at, show_earnings, muted")
                 .eq("viewer_id", userId)
-                .eq("blocked", false)
+                .eq("hidden", false)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
           );
@@ -1079,7 +1079,7 @@ export const SharingServiceLive = Layer.effect(
               const client = await Effect.runPromise(supabase.getClient());
               return client
                 .from("shift_shares")
-                .update({ blocked: true })
+                .update({ hidden: true })
                 .eq("owner_id", ownerId)
                 .eq("viewer_id", viewerId);
             },
@@ -1117,7 +1117,7 @@ export const SharingServiceLive = Layer.effect(
               const client = await Effect.runPromise(supabase.getClient());
               return client
                 .from("shift_shares")
-                .update({ blocked: false })
+                .update({ hidden: false })
                 .eq("owner_id", ownerId)
                 .eq("viewer_id", viewerId);
             },
@@ -1150,14 +1150,14 @@ export const SharingServiceLive = Layer.effect(
           // Verify viewer is authenticated
           yield* auth.verifyUserId(viewerId);
 
-          // Query shift_shares where viewer_id = userId and blocked = true
+          // Query shift_shares where viewer_id = userId and hidden = true
           const sharesResult = yield* supabase.query(
             async (client) =>
               await client
                 .from("shift_shares")
                 .select("owner_id, created_at, show_earnings, muted")
                 .eq("viewer_id", viewerId)
-                .eq("blocked", true)
+                .eq("hidden", true)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
           );
@@ -1252,12 +1252,12 @@ export const SharingServiceLive = Layer.effect(
           // Verify viewer is authenticated
           yield* auth.verifyUserId(viewerId);
 
-          // Query ALL shift_shares where viewer_id = userId (no blocked filter)
+          // Query ALL shift_shares where viewer_id = userId (no hidden filter)
           const sharesResult = yield* supabase.query(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings, blocked, muted")
+                .select("owner_id, created_at, show_earnings, hidden, muted")
                 .eq("viewer_id", viewerId)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
@@ -1334,7 +1334,7 @@ export const SharingServiceLive = Layer.effect(
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
               notificationFrequency,
-              blocked: share.blocked ?? false,
+              blocked: share.hidden ?? false,
             };
           }) as readonly (SharedUser & { blocked: boolean })[];
         }).pipe(

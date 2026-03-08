@@ -5,8 +5,8 @@
 --
 -- Authorization:
 --   - Viewer is auth.uid().
---   - Access requires shift_shares(owner_id = p_owner_id, viewer_id = auth.uid(), blocked = false).
---   - Unauthorized/blocked access returns no row.
+--   - Access requires shift_shares(owner_id = p_owner_id, viewer_id = auth.uid(), hidden = false).
+--   - Unauthorized/hidden access returns no row.
 --
 -- Redaction:
 --   - If show_earnings = false:
@@ -41,7 +41,7 @@ AS $function$
     WHERE auth.uid() IS NOT NULL
       AND ss.viewer_id = auth.uid()
       AND ss.owner_id = p_owner_id
-      AND COALESCE(ss.blocked, false) = false
+      AND COALESCE(ss.hidden, false) = false
     LIMIT 1
   ),
   month_bounds AS (
