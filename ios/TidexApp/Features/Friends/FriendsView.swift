@@ -81,12 +81,21 @@ struct SharingView: View {
           }
         )
         .toolbarRole(.editor)
+        .onAppear {
+          hasSelectedSharer = true
+        }
       }
       .navigationDestination(for: FriendChatRoute.self) { route in
         FriendsThreadView(
           route: route,
           viewerUserId: coordinator.getCurrentUserId() ?? ""
         )
+        .onAppear {
+          hasSelectedSharer = false
+        }
+        .onDisappear {
+          hasSelectedSharer = viewModel.selectedSharer != nil
+        }
       }
       .iPadToolbarTransaction()
     }
@@ -131,17 +140,20 @@ struct SharingView: View {
     .onAppear {
       // Handle any pending deep link on initial appearance
       handlePendingDeepLink(coordinator.pendingDeepLink)
-      // Sync initial state
-      hasSelectedSharer = !navigationPath.isEmpty
+      hasSelectedSharer = viewModel.selectedSharer != nil
     }
     .onChange(of: navigationPath) { _, path in
-      // Sync sharer selection state with parent for shared month picker visibility
-      let hasSharer = !path.isEmpty
-      hasSelectedSharer = hasSharer
-
       // When user navigates back (automatic back button or swipe), deselect sharer
-      if !hasSharer && viewModel.selectedSharer != nil {
+      if path.isEmpty && viewModel.selectedSharer != nil {
         viewModel.deselectSharer()
+        hasSelectedSharer = false
+      }
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
+    ) { _ in
+      Task {
+        await viewModel.loadSharers(forceRefreshPreviews: true)
       }
     }
     .onDisappear {

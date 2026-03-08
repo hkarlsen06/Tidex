@@ -90,7 +90,7 @@ BEGIN
   VALUES
     (v_thread_id, v_user_low_id, 'member', 'active'),
     (v_thread_id, v_user_high_id, 'member', 'active')
-  ON CONFLICT (thread_id, user_id) DO UPDATE
+  ON CONFLICT ON CONSTRAINT thread_memberships_pkey DO UPDATE
   SET
     role = EXCLUDED.role,
     status = 'active',
@@ -103,7 +103,7 @@ BEGIN
   VALUES
     (v_thread_id, v_user_low_id),
     (v_thread_id, v_user_high_id)
-  ON CONFLICT (thread_id, user_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT thread_user_state_pkey DO NOTHING;
 
   RETURN QUERY
   SELECT *

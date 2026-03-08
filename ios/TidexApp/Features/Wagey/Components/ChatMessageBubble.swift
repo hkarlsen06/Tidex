@@ -6,44 +6,31 @@ import SwiftUI
 struct ChatMessageBubble: View {
   let message: ChatMessage
 
-  /// Maximum width ratio for message bubbles (relative to screen width)
-  private let maxWidthRatio: CGFloat = 0.8
-
   /// State for full-screen image viewer
   @State private var selectedImageViewer: SelectedImageViewer?
 
   var body: some View {
-    HStack {
-      if message.role == .user {
-        Spacer(minLength: 40)
-      }
-
-      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Spacing.xs) {
-        // Render content blocks in chronological order
-        ForEach(Array(message.contentBlocks.enumerated()), id: \.offset) { _, block in
-          switch block {
-          case .text(let text):
-            if !text.isEmpty {
-              if message.role == .user {
-                userMessageContent(text: text)
-              } else {
-                assistantMessageContent(text: text)
-              }
+    ChatMessageRow(isCurrentUser: message.role == .user) {
+      // Render content blocks in chronological order
+      ForEach(Array(message.contentBlocks.enumerated()), id: \.offset) { _, block in
+        switch block {
+        case .text(let text):
+          if !text.isEmpty {
+            if message.role == .user {
+              userMessageContent(text: text)
+            } else {
+              assistantMessageContent(text: text)
             }
-          case .toolCall(let toolCall):
-            ToolStatusView(toolCall: toolCall)
-          case .image(let attachment):
-            imageContent(attachment: attachment, isUser: message.role == .user)
           }
-        }
-
-        if message.role == .assistant, let sources = message.sources, !sources.isEmpty {
-          MessageSourcesView(sources: sources)
+        case .toolCall(let toolCall):
+          ToolStatusView(toolCall: toolCall)
+        case .image(let attachment):
+          imageContent(attachment: attachment, isUser: message.role == .user)
         }
       }
 
-      if message.role == .assistant {
-        Spacer(minLength: 40)
+      if message.role == .assistant, let sources = message.sources, !sources.isEmpty {
+        MessageSourcesView(sources: sources)
       }
     }
     .fullScreenCover(item: $selectedImageViewer) { viewer in
@@ -56,35 +43,31 @@ struct ChatMessageBubble: View {
   // MARK: - Message Content Views
 
   private func userMessageContent(text: String) -> some View {
-    Text(text)
-      .font(.tidexBody)
-      .foregroundColor(.tidexTextOnBrand)
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
-      .background(Color.tidexBlue)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
-      .contextMenu {
-        Button {
-          UIPasteboard.general.string = text
-        } label: {
-          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-        }
+    ChatBubbleCard(isCurrentUser: true) {
+      Text(text)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextOnBrand)
+    }
+    .contextMenu {
+      Button {
+        UIPasteboard.general.string = text
+      } label: {
+        Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
       }
+    }
   }
 
   private func assistantMessageContent(text: String) -> some View {
-    FormattedMessageContent(content: text)
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
-      .contextMenu {
-        Button {
-          UIPasteboard.general.string = text
-        } label: {
-          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-        }
+    ChatBubbleCard(isCurrentUser: false) {
+      FormattedMessageContent(content: text)
+    }
+    .contextMenu {
+      Button {
+        UIPasteboard.general.string = text
+      } label: {
+        Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
       }
+    }
   }
 
   private func imageContent(attachment: ImageAttachment, isUser: Bool) -> some View {

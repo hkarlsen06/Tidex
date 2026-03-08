@@ -6,22 +6,20 @@ import SwiftUI
 struct ChatInputField: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  private let composerControlHeight: CGFloat = 50
-
   /// Callback when user sends a message (text only)
-  let onSend: (String) -> Void
+  let onSend: (String) async -> Bool
 
   /// Callback when user sends a message with an image
-  let onSendWithImage: ((String, ImageAttachment) -> Void)?
+  let onSendWithImage: ((String, ImageAttachment) async -> Bool)?
 
   /// Whether the input should be disabled
   let disabled: Bool
+  let placeholder: String
+  let horizontalPadding: CGFloat
+  let bottomPadding: CGFloat
 
   /// Current input text
   @Binding var inputText: String
-
-  /// Whether the text field is focused
-  @FocusState private var isFocused: Bool
 
   /// Selected photo item from PhotosPicker
   @State private var selectedPhotoItem: PhotosPickerItem?
@@ -31,13 +29,24 @@ struct ChatInputField: View {
 
   /// Whether image is being processed
   @State private var isProcessingImage = false
+  @State private var isSubmitting = false
 
   /// Error message for image processing
   @State private var imageError: String?
 
   /// Initialize with text-only send callback
-  init(inputText: Binding<String>, onSend: @escaping (String) -> Void, disabled: Bool) {
+  init(
+    inputText: Binding<String>,
+    placeholder: String = String(localized: .wageyPlaceholderWelcome),
+    horizontalPadding: CGFloat = MonthPickerLayout.horizontalPadding,
+    bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
+    onSend: @escaping (String) async -> Bool,
+    disabled: Bool
+  ) {
     self._inputText = inputText
+    self.placeholder = placeholder
+    self.horizontalPadding = horizontalPadding
+    self.bottomPadding = bottomPadding
     self.onSend = onSend
     self.onSendWithImage = nil
     self.disabled = disabled
@@ -46,11 +55,17 @@ struct ChatInputField: View {
   /// Initialize with both text and image send callbacks
   init(
     inputText: Binding<String>,
-    onSend: @escaping (String) -> Void,
-    onSendWithImage: @escaping (String, ImageAttachment) -> Void,
+    placeholder: String = String(localized: .wageyPlaceholderWelcome),
+    horizontalPadding: CGFloat = MonthPickerLayout.horizontalPadding,
+    bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
+    onSend: @escaping (String) async -> Bool,
+    onSendWithImage: @escaping (String, ImageAttachment) async -> Bool,
     disabled: Bool
   ) {
     self._inputText = inputText
+    self.placeholder = placeholder
+    self.horizontalPadding = horizontalPadding
+    self.bottomPadding = bottomPadding
     self.onSend = onSend
     self.onSendWithImage = onSendWithImage
     self.disabled = disabled
@@ -60,11 +75,11 @@ struct ChatInputField: View {
   private var canSend: Bool {
     let hasText = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     let hasImage = attachedImage != nil
-    return (hasText || hasImage) && !disabled && !isProcessingImage
+    return (hasText || hasImage) && !effectiveDisabled && !isProcessingImage
   }
 
-  private var composerTint: Color {
-    isFocused ? Color.tidexBlue.opacity(0.24) : Color.tidexBlue.opacity(0.14)
+  private var effectiveDisabled: Bool {
+    disabled || isSubmitting
   }
 
   private var attachmentButtonTint: Color {
@@ -84,70 +99,26 @@ struct ChatInputField: View {
       }
 
       // Input area
-      HStack(alignment: .center, spacing: Spacing.xsm) {
-        // Image picker button
+      ChatComposerField(
+        text: $inputText,
+        placeholder: placeholder,
+        disabled: effectiveDisabled,
+        isSending: isSubmitting,
+        canSend: canSend,
+        sendAccessibilityLabel: String(localized: "Send message"),
+        horizontalPadding: horizontalPadding,
+        topPadding: Spacing.xs,
+        bottomPadding: bottomPadding,
+        onSend: sendMessage
+      ) {
         if onSendWithImage != nil {
           imagePickerButton
         }
-
-        composerField
       }
-      .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-      .padding(.top, Spacing.xs)
-      .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
-      .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isFocused)
     }
-    .padding(.bottom, MonthPickerLayout.bottomPadding)
     .onChange(of: selectedPhotoItem) { _, newItem in
       processSelectedPhoto(newItem)
     }
-  }
-
-  private var composerField: some View {
-    HStack(alignment: .center, spacing: Spacing.xs) {
-      messageTextField
-      sendButton
-    }
-    .padding(.horizontal, Spacing.msm)
-    .padding(.vertical, Spacing.xs)
-    .frame(minHeight: composerControlHeight)
-    .tidexGlass(
-      shape: .rect(cornerRadius: 24),
-      tint: composerTint,
-      interactive: isFocused,
-      disabled: disabled,
-      fallbackOpacity: 0.9
-    )
-    .overlay(composerBorder)
-    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    .shadow(color: Color.tidexBlue.opacity(isFocused ? 0.12 : 0.05), radius: 18, y: 6)
-  }
-
-  private var messageTextField: some View {
-    TextField(
-      String(localized: .wageyPlaceholderWelcome),
-      text: $inputText,
-      axis: .vertical
-    )
-    .textFieldStyle(.plain)
-    .font(.tidexBody)
-    .foregroundColor(.tidexTextPrimary)
-    .lineLimit(1...5)
-    .focused($isFocused)
-    .disabled(disabled)
-    .submitLabel(.return)
-    .onSubmit {
-      sendMessage()
-    }
-    .padding(.vertical, Spacing.xxs)
-  }
-
-  private var composerBorder: some View {
-    RoundedRectangle(cornerRadius: 24, style: .continuous)
-      .stroke(
-        isFocused ? Color.tidexBlue.opacity(0.4) : Color.tidexBorder.opacity(0.38),
-        lineWidth: 1
-      )
   }
 
   // MARK: - Image Picker Button
@@ -162,44 +133,27 @@ struct ChatInputField: View {
         if isProcessingImage {
           ProgressView()
             .scaleEffect(0.8)
-            .frame(width: composerControlHeight, height: composerControlHeight)
+            .frame(width: 50, height: 50)
         } else {
           Image(systemName: "photo.on.rectangle.angled")
             .font(.system(size: 21))
-            .foregroundColor(disabled ? .tidexTextMuted : .tidexBlue)
+            .foregroundColor(effectiveDisabled ? .tidexTextMuted : .tidexBlue)
         }
       }
-      .frame(width: composerControlHeight, height: composerControlHeight)
+      .frame(width: 50, height: 50)
       .tidexGlass(
         shape: .circle,
         tint: attachmentButtonTint,
-        interactive: !disabled && !isProcessingImage,
-        disabled: disabled || isProcessingImage,
+        interactive: !effectiveDisabled && !isProcessingImage,
+        disabled: effectiveDisabled || isProcessingImage,
         fallbackOpacity: 0.9
       )
       .shadow(color: Color.tidexBlue.opacity(0.05), radius: 12, y: 4)
     }
-    .disabled(disabled || isProcessingImage)
-    .frame(width: composerControlHeight, height: composerControlHeight)
+    .disabled(effectiveDisabled || isProcessingImage)
+    .frame(width: 50, height: 50)
     .contentShape(Rectangle())
     .accessibilityLabel(Text(String(localized: "profile.personalInfo.uploadImage")))
-  }
-
-  private var sendButton: some View {
-    Button(action: sendMessage) {
-      Image(systemName: "arrow.up")
-        .font(.system(size: 17, weight: .semibold))
-        .foregroundColor(canSend ? .tidexTextOnBrand : .tidexTextMuted)
-        .frame(width: 38, height: 38)
-        .background(
-          Circle()
-            .fill(canSend ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
-        )
-        .contentShape(Circle())
-    }
-    .disabled(!canSend)
-    .accessibilityLabel(Text(String(localized: "Send message")))
-    .opacity(disabled ? 0.6 : 1)
   }
 
   // MARK: - Image Preview
@@ -215,6 +169,7 @@ struct ChatInputField: View {
 
         // Remove button
         Button {
+          guard !isSubmitting else { return }
           if reduceMotion {
             attachedImage = nil
             selectedPhotoItem = nil
@@ -333,27 +288,36 @@ struct ChatInputField: View {
     guard canSend else { return }
 
     let message = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let image = attachedImage
 
     // Provide haptic feedback
     Haptics.play(.medium)
 
     // Dismiss keyboard
-    isFocused = false
+    UIApplication.shared.sendAction(
+      #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 
-    // Clear input
-    inputText = ""
+    isSubmitting = true
 
-    // Send message with or without image
-    if let image = attachedImage, let onSendWithImage = onSendWithImage {
-      // Clear image attachment
-      attachedImage = nil
-      selectedPhotoItem = nil
+    Task {
+      let didSend: Bool
+      if let image, let onSendWithImage {
+        didSend = await onSendWithImage(message, image)
+      } else if !message.isEmpty {
+        didSend = await onSend(message)
+      } else {
+        didSend = false
+      }
 
-      // Send with image
-      onSendWithImage(message, image)
-    } else if !message.isEmpty {
-      // Send text only
-      onSend(message)
+      await MainActor.run {
+        isSubmitting = false
+
+        if didSend {
+          inputText = ""
+          attachedImage = nil
+          selectedPhotoItem = nil
+        }
+      }
     }
   }
 }
@@ -368,6 +332,7 @@ struct ChatInputField: View {
       inputText: $text,
       onSend: { message in
         print("Sent: \(message)")
+        return true
       },
       disabled: false
     )
@@ -383,9 +348,11 @@ struct ChatInputField: View {
       inputText: $text,
       onSend: { message in
         print("Sent text: \(message)")
+        return true
       },
       onSendWithImage: { message, image in
         print("Sent with image: \(message), size: \(image.data.count) bytes")
+        return true
       },
       disabled: false
     )
@@ -401,6 +368,7 @@ struct ChatInputField: View {
       inputText: $text,
       onSend: { message in
         print("Sent: \(message)")
+        return true
       },
       disabled: true
     )

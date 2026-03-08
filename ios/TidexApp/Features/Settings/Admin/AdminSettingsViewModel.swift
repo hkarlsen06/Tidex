@@ -15,6 +15,7 @@ enum AdminTab: String, CaseIterable, Identifiable {
   case notifications
   case users
   case feedback
+  case reports
   case subscribers
   case shares
   case auditLog
@@ -27,6 +28,7 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case .notifications: return "Notifications"
     case .users: return "Users"
     case .feedback: return "Feedback"
+    case .reports: return "Reports"
     case .subscribers: return "Subscribers"
     case .shares: return "Shares"
     case .auditLog: return "Audit Log"
@@ -39,6 +41,7 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case .notifications: return "bell"
     case .users: return "person.2"
     case .feedback: return "bubble.left.and.bubble.right"
+    case .reports: return "flag"
     case .subscribers: return "creditcard"
     case .shares: return "square.and.arrow.up"
     case .auditLog: return "list.bullet.clipboard"
@@ -131,6 +134,63 @@ struct AdminFeedbackItem: Codable, Identifiable {
 
 struct AdminFeedbackResponse: Codable {
   let feedback: [AdminFeedbackItem]
+  let total: Int
+}
+
+enum AdminReportStatus: String, Codable, CaseIterable, Identifiable {
+  case open
+  case inReview = "in_review"
+  case actioned
+  case dismissed
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .open: return "Open"
+    case .inReview: return "In Review"
+    case .actioned: return "Actioned"
+    case .dismissed: return "Dismissed"
+    }
+  }
+}
+
+struct AdminReportItem: Codable, Identifiable {
+  let id: String
+  let reporterUserId: String
+  let reporterName: String?
+  let reporterEmail: String?
+  let reportedUserId: String
+  let reportedName: String?
+  let reportedEmail: String?
+  let threadId: String
+  let messageId: String?
+  let reason: String
+  let note: String?
+  let status: AdminReportStatus
+  let reviewerNotes: String?
+  let reviewedAt: String?
+  let reviewedBy: String?
+  let createdAt: String
+
+  var reporterDisplayName: String {
+    reporterName ?? reporterEmail ?? String(reporterUserId.prefix(8))
+  }
+
+  var reportedDisplayName: String {
+    reportedName ?? reportedEmail ?? String(reportedUserId.prefix(8))
+  }
+
+  var reasonTitle: String {
+    reason
+      .split(separator: "_")
+      .map { $0.capitalized }
+      .joined(separator: " ")
+  }
+}
+
+struct AdminReportsResponse: Codable {
+  let reports: [AdminReportItem]
   let total: Int
 }
 
@@ -298,6 +358,15 @@ struct FeedbackTabState {
   var responseText: String = ""
 }
 
+struct ReportsTabState {
+  var items: [AdminReportItem] = []
+  var isLoading: Bool = false
+  var total: Int = 0
+  var selected: AdminReportItem?
+  var reviewerNotes: String = ""
+  var statusFilter: AdminReportStatus?
+}
+
 /// Groups related subscribers tab state
 struct SubscribersTabState {
   var items: [AdminSubscriberItem] = []
@@ -394,6 +463,7 @@ final class AdminSettingsViewModel: ObservableObject {
   @Published var usersState = UsersTabState()
   @Published var subscribersState = SubscribersTabState()
   @Published var feedbackState = FeedbackTabState()
+  @Published var reportsState = ReportsTabState()
   @Published var auditLogState = AuditLogTabState()
   @Published var sqlState = SqlTabState()
   @Published var sharesState = SharesTabState()
@@ -466,6 +536,32 @@ final class AdminSettingsViewModel: ObservableObject {
   var feedbackResponse: String {
     get { feedbackState.responseText }
     set { feedbackState.responseText = newValue }
+  }
+
+  // Reports
+  var reportsItems: [AdminReportItem] {
+    get { reportsState.items }
+    set { reportsState.items = newValue }
+  }
+  var reportsIsLoading: Bool {
+    get { reportsState.isLoading }
+    set { reportsState.isLoading = newValue }
+  }
+  var reportsTotal: Int {
+    get { reportsState.total }
+    set { reportsState.total = newValue }
+  }
+  var selectedReport: AdminReportItem? {
+    get { reportsState.selected }
+    set { reportsState.selected = newValue }
+  }
+  var reportsReviewerNotes: String {
+    get { reportsState.reviewerNotes }
+    set { reportsState.reviewerNotes = newValue }
+  }
+  var reportsStatusFilter: AdminReportStatus? {
+    get { reportsState.statusFilter }
+    set { reportsState.statusFilter = newValue }
   }
 
   // Audit Log
@@ -686,6 +782,8 @@ final class AdminSettingsViewModel: ObservableObject {
       await fetchSubscribers()
     case .feedback:
       await fetchFeedback()
+    case .reports:
+      await fetchReports()
     case .auditLog:
       await fetchAuditLog()
     case .sql:
@@ -921,6 +1019,79 @@ final class AdminSettingsViewModel: ObservableObject {
       }
     } catch {
       errorMessage = "Failed to send response"
+    }
+
+    isPerformingAction = false
+  }
+
+  // MARK: - Reports Tab Methods
+
+  func fetchReports() async {
+    reportsIsLoading = true
+
+    do {
+      var components = URLComponents(
+        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/reports"),
+        resolvingAgainstBaseURL: false)!
+      var queryItems = [
+        URLQueryItem(name: "limit", value: "50"),
+        URLQueryItem(name: "offset", value: "0"),
+      ]
+      if let reportsStatusFilter {
+        queryItems.append(URLQueryItem(name: "status", value: reportsStatusFilter.rawValue))
+      }
+      components.queryItems = queryItems
+
+      let result: AdminReportsResponse = try await makeRequest(url: components.url!, method: "GET")
+      reportsItems = result.reports
+      reportsTotal = result.total
+      if let selectedReport {
+        self.selectedReport =
+          result.reports.first(where: { $0.id == selectedReport.id }) ?? selectedReport
+        reportsReviewerNotes = self.selectedReport?.reviewerNotes ?? reportsReviewerNotes
+      }
+    } catch {
+      logger.error("Failed to fetch reports: \(error.localizedDescription)")
+      errorMessage = "Failed to load reports"
+    }
+
+    reportsIsLoading = false
+  }
+
+  func updateReportsFilter(_ filter: AdminReportStatus?) async {
+    reportsStatusFilter = filter
+    await fetchReports()
+  }
+
+  func updateReportStatus(_ reportId: String, status: AdminReportStatus, reviewerNotes: String)
+    async
+  {
+    guard !isPerformingAction else { return }
+    isPerformingAction = true
+    clearMessages()
+
+    do {
+      let trimmedNotes = reviewerNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+      let result: AdminActionResponse = try await makeRequest(
+        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/reports/status"),
+        method: "POST",
+        body: [
+          "reportId": reportId,
+          "status": status.rawValue,
+          "reviewerNotes": trimmedNotes.isEmpty ? NSNull() : trimmedNotes,
+        ]
+      )
+      if result.success {
+        Haptics.play(.success)
+        selectedReport = nil
+        reportsReviewerNotes = ""
+        await fetchReports()
+      } else {
+        errorMessage = "Failed to update report"
+      }
+    } catch {
+      logger.error("Failed to update report status: \(error.localizedDescription)")
+      errorMessage = "Failed to update report"
     }
 
     isPerformingAction = false

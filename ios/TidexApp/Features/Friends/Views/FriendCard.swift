@@ -11,8 +11,6 @@ struct FriendCard: View {
   let onMessageTap: () -> Void
   var isOpeningMessage = false
 
-  @Environment(\.layoutDirection) private var layoutDirection
-
   var body: some View {
     VStack(spacing: 0) {
       HStack(spacing: Spacing.sm) {
@@ -32,12 +30,7 @@ struct FriendCard: View {
                   .lineLimit(1)
               }
             }
-
             Spacer()
-
-            Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-              .font(.tidexLabelStrong)
-              .foregroundColor(.tidexTextMuted)
           }
           .contentShape(Rectangle())
         }

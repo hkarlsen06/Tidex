@@ -5,10 +5,29 @@ private let threadLogger = Logger(subsystem: "com.tidex.app", category: "Friends
 
 @MainActor
 final class FriendsThreadViewModel: ObservableObject {
+  private enum Pagination {
+    static let pageSize = 50
+  }
+
+  enum ActionError: LocalizedError {
+    case missingCounterpart
+
+    var errorDescription: String? {
+      switch self {
+      case .missingCounterpart:
+        return "Missing counterpart user"
+      }
+    }
+  }
+
   @Published private(set) var thread: FriendThread
   @Published private(set) var messages: [FriendMessage] = []
   @Published private(set) var isLoading = false
+  @Published private(set) var isLoadingOlderMessages = false
+  @Published private(set) var hasMoreHistoricalMessages = true
   @Published private(set) var isSending = false
+  @Published private(set) var isThreadReadOnly = false
+  @Published private(set) var restoreScrollTargetMessageId: String?
   @Published var draft = ""
   @Published var sendErrorMessage: String?
 
@@ -78,15 +97,57 @@ final class FriendsThreadViewModel: ObservableObject {
     await markLatestIncomingAsRead()
   }
 
+  func loadOlderMessagesIfNeeded(currentFirstMessageId: String) async {
+    guard !isLoading, !isLoadingOlderMessages, hasMoreHistoricalMessages,
+      let oldestLoadedMessage = messages.first,
+      oldestLoadedMessage.id == currentFirstMessageId
+    else {
+      return
+    }
+
+    isLoadingOlderMessages = true
+    defer { isLoadingOlderMessages = false }
+
+    do {
+      let olderMessages = try await service.listThreadMessages(
+        threadId: route.threadId,
+        limit: Pagination.pageSize,
+        before: oldestLoadedMessage.paginationCursor
+      )
+
+      hasMoreHistoricalMessages = olderMessages.count == Pagination.pageSize
+      guard !olderMessages.isEmpty else { return }
+
+      await repository.saveMessages(olderMessages, in: route.threadId, for: viewerUserId)
+      loadFromCache()
+      restoreScrollTargetMessageId = currentFirstMessageId
+    } catch {
+      threadLogger.error("Failed to load older messages: \(error.localizedDescription)")
+    }
+  }
+
+  func consumeRestoreScrollTarget() {
+    restoreScrollTargetMessageId = nil
+  }
+
   func stopRealtime() async {
     await realtimeCoordinator.stopThreadSubscription(threadId: route.threadId)
   }
 
-  func sendDraft() async {
-    let normalizedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalizedDraft.isEmpty, !isSending else { return }
+  func sendDraft() async -> Bool {
+    await sendMessage(content: draft, image: nil)
+  }
 
-    let previousDraft = draft
+  func sendMessage(content: String, image: ImageAttachment?) async -> Bool {
+    guard !isThreadReadOnly else {
+      sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
+      return false
+    }
+
+    let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !isSending, !normalizedContent.isEmpty || image != nil else { return false }
+
+    let previousDraft = content
     draft = ""
     sendErrorMessage = nil
     isSending = true
@@ -97,20 +158,55 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     do {
+      let outgoingAttachments: [FriendOutgoingAttachment]
+      if let image {
+        outgoingAttachments = [
+          try await service.uploadImageAttachment(threadId: route.threadId, image: image)
+        ]
+      } else {
+        outgoingAttachments = []
+      }
+
       let message = try await service.sendMessage(
         threadId: route.threadId,
         clientId: UUID().uuidString,
-        body: normalizedDraft,
-        attachments: []
+        body: normalizedContent.isEmpty ? nil : normalizedContent,
+        attachments: outgoingAttachments
       )
 
       await repository.saveMessages([message], in: route.threadId, for: viewerUserId)
       await refreshFromServer()
+      return true
     } catch {
       draft = previousDraft
       sendErrorMessage = String(localized: .friendsChatSendFailed)
       threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
+      return false
     }
+  }
+
+  func submitReport(messageId: String?, reason: FriendAbuseReportReason) async throws {
+    let counterpartUserId = route.counterpartUserId
+
+    try await service.createAbuseReport(
+      threadId: route.threadId,
+      reportedUserId: counterpartUserId,
+      messageId: messageId,
+      reason: reason
+    )
+  }
+
+  func blockCounterpart() async throws {
+    let counterpartUserId = route.counterpartUserId
+
+    try await service.blockUserPair(otherUserId: counterpartUserId)
+    draft = ""
+    sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
+    isThreadReadOnly = true
+    NotificationCenter.default.post(
+      name: Notification.Name("friendsVisibilityChanged"),
+      object: nil
+    )
   }
 
   private func refreshFromServer() async {
@@ -118,10 +214,11 @@ final class FriendsThreadViewModel: ObservableObject {
       let refreshedThread = try await service.fetchThreadSummary(threadId: route.threadId)
       let refreshedMessages = try await service.listThreadMessages(
         threadId: route.threadId,
-        limit: 200,
+        limit: Pagination.pageSize,
         before: nil
       )
 
+      hasMoreHistoricalMessages = refreshedMessages.count == Pagination.pageSize
       await repository.saveThread(refreshedThread, for: viewerUserId)
       await repository.saveMessages(refreshedMessages, in: route.threadId, for: viewerUserId)
       loadFromCache()

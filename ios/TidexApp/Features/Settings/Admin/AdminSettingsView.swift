@@ -52,6 +52,9 @@ struct AdminSettingsView: View {
     .sheet(item: $viewModel.selectedFeedback) { feedback in
       FeedbackResponseSheet(feedback: feedback, viewModel: viewModel)
     }
+    .sheet(item: $viewModel.selectedReport) { report in
+      ReportReviewSheet(report: report, viewModel: viewModel)
+    }
     .onChange(of: viewModel.shouldDismissAfterImpersonation) { _, shouldDismiss in
       if shouldDismiss {
         dismiss()
@@ -121,6 +124,7 @@ private struct TabContent: View {
     case .notifications: NotificationsTabView(viewModel: viewModel)
     case .users: UsersTabView(viewModel: viewModel)
     case .feedback: FeedbackTabView(viewModel: viewModel)
+    case .reports: ReportsTabView(viewModel: viewModel)
     case .subscribers: SubscribersTabView(viewModel: viewModel)
     case .shares: SharesTabView(viewModel: viewModel)
     case .auditLog: AuditLogTabView(viewModel: viewModel)
@@ -251,6 +255,105 @@ private struct FeedbackTabView: View {
           }
         }
         .padding(Spacing.md)
+      }
+    }
+  }
+}
+
+private enum ReportsFilterOption: String, CaseIterable, Identifiable {
+  case all
+  case open
+  case inReview
+  case actioned
+  case dismissed
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .all: return "All"
+    case .open: return "Open"
+    case .inReview: return "In Review"
+    case .actioned: return "Actioned"
+    case .dismissed: return "Dismissed"
+    }
+  }
+
+  var status: AdminReportStatus? {
+    switch self {
+    case .all: return nil
+    case .open: return .open
+    case .inReview: return .inReview
+    case .actioned: return .actioned
+    case .dismissed: return .dismissed
+    }
+  }
+
+  init(status: AdminReportStatus?) {
+    switch status {
+    case .none: self = .all
+    case .open: self = .open
+    case .inReview: self = .inReview
+    case .actioned: self = .actioned
+    case .dismissed: self = .dismissed
+    }
+  }
+}
+
+private struct ReportsTabView: View {
+  @ObservedObject var viewModel: AdminSettingsViewModel
+
+  private var selectedFilter: Binding<ReportsFilterOption> {
+    Binding(
+      get: { ReportsFilterOption(status: viewModel.reportsStatusFilter) },
+      set: { option in
+        Task { await viewModel.updateReportsFilter(option.status) }
+      }
+    )
+  }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      HStack {
+        Picker("Status", selection: selectedFilter) {
+          ForEach(ReportsFilterOption.allCases) { option in
+            Text(option.title).tag(option)
+          }
+        }
+        .pickerStyle(.menu)
+
+        Spacer()
+
+        Button {
+          Task { await viewModel.fetchReports() }
+        } label: {
+          Image(systemName: "arrow.clockwise")
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexBlue)
+        }
+        .disabled(viewModel.reportsIsLoading)
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+
+      if viewModel.reportsIsLoading {
+        AdminLoadingView()
+      } else if viewModel.reportsItems.isEmpty {
+        EmptyStateView(icon: "flag", message: "No reports found")
+      } else {
+        ScrollView {
+          LazyVStack(spacing: Spacing.sm) {
+            Text("\(viewModel.reportsTotal) reports")
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexTextMuted)
+              .frame(maxWidth: .infinity, alignment: .leading)
+
+            ForEach(viewModel.reportsItems) { item in
+              ReportCard(item: item) { viewModel.selectedReport = item }
+            }
+          }
+          .padding(Spacing.md)
+        }
       }
     }
   }
@@ -861,6 +964,82 @@ private struct FeedbackCard: View {
   }
 }
 
+private struct ReportCard: View {
+  let item: AdminReportItem
+  let onTap: () -> Void
+
+  var body: some View {
+    Button(action: onTap) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        HStack(alignment: .top) {
+          VStack(alignment: .leading, spacing: Spacing.xxxs) {
+            Text(item.reasonTitle)
+              .font(.tidexLabel)
+              .foregroundColor(.tidexTextPrimary)
+            Text("\(item.reporterDisplayName) reported \(item.reportedDisplayName)")
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexTextSecondary)
+          }
+          Spacer()
+          Badge(text: item.status.title, color: statusColor)
+        }
+
+        if let note = item.note, !note.isEmpty {
+          Text(note)
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+            .lineLimit(2)
+        }
+
+        HStack {
+          Text("Created \(formattedDate(item.createdAt))")
+            .font(.tidexMicro)
+            .foregroundColor(.tidexTextMuted)
+          Spacer()
+          if item.messageId != nil {
+            Text("Message report")
+              .font(.tidexMicro)
+              .foregroundColor(.tidexTextMuted)
+          } else {
+            Text("User report")
+              .font(.tidexMicro)
+              .foregroundColor(.tidexTextMuted)
+          }
+        }
+      }
+      .padding(Spacing.sm)
+      .background(Color.tidexSurfacePrimary)
+      .cornerRadius(CornerRadius.md)
+      .tidexCardShadow(cornerRadius: CornerRadius.md)
+    }
+    .buttonStyle(.plain)
+  }
+
+  private var statusColor: Color {
+    switch item.status {
+    case .open: return .tidexWarning
+    case .inReview: return .tidexBlue
+    case .actioned: return .tidexSuccess
+    case .dismissed: return .tidexTextMuted
+    }
+  }
+
+  private func formattedDate(_ dateString: String) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: dateString) {
+      return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    formatter.formatOptions = [.withInternetDateTime]
+    if let date = formatter.date(from: dateString) {
+      return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    return dateString
+  }
+}
+
 private struct AuditLogCard: View {
   let entry: AuditLogEntry
 
@@ -1190,6 +1369,137 @@ private struct FeedbackResponseSheet: View {
         }
       }
     }
+  }
+}
+
+private struct ReportReviewSheet: View {
+  let report: AdminReportItem
+  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Environment(\.dismiss) private var dismiss
+  @State private var selectedStatus: AdminReportStatus
+
+  init(report: AdminReportItem, viewModel: AdminSettingsViewModel) {
+    self.report = report
+    self.viewModel = viewModel
+    _selectedStatus = State(initialValue: report.status)
+  }
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+          infoSection
+
+          if let note = report.note, !note.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+              Text("User Note")
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextMuted)
+              Text(note)
+                .font(.tidexBody)
+                .foregroundColor(.tidexTextPrimary)
+            }
+            .padding()
+            .background(Color.tidexSurfacePrimary)
+            .cornerRadius(CornerRadius.lg)
+            .tidexCardShadow(cornerRadius: CornerRadius.lg)
+          }
+
+          VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Status")
+              .font(.tidexSubheadline)
+              .foregroundColor(.tidexTextMuted)
+
+            Picker("Status", selection: $selectedStatus) {
+              ForEach(AdminReportStatus.allCases) { status in
+                Text(status.title).tag(status)
+              }
+            }
+            .pickerStyle(.segmented)
+
+            TextField("Reviewer notes", text: $viewModel.reportsReviewerNotes, axis: .vertical)
+              .lineLimit(4...8)
+              .textFieldStyle(AdminTextFieldStyle())
+          }
+          .padding()
+          .background(Color.tidexSurfacePrimary)
+          .cornerRadius(CornerRadius.lg)
+          .tidexCardShadow(cornerRadius: CornerRadius.lg)
+
+          Button(action: save) {
+            Text(viewModel.isPerformingAction ? "Saving..." : "Save Review")
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, Spacing.sm)
+              .background(Color.tidexBlue)
+              .foregroundColor(.tidexTextOnBrand)
+              .cornerRadius(CornerRadius.sm)
+          }
+          .disabled(viewModel.isPerformingAction)
+        }
+        .padding()
+      }
+      .navigationTitle("Report Review")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Done") {
+            viewModel.reportsReviewerNotes = ""
+            dismiss()
+          }
+        }
+      }
+      .onAppear {
+        viewModel.reportsReviewerNotes = report.reviewerNotes ?? ""
+      }
+    }
+  }
+
+  private var infoSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      LabeledContent("Reason", value: report.reasonTitle)
+      LabeledContent("Reporter", value: report.reporterDisplayName)
+      LabeledContent("Reported", value: report.reportedDisplayName)
+      LabeledContent("Thread", value: report.threadId)
+      if let messageId = report.messageId {
+        LabeledContent("Message", value: messageId)
+      }
+      LabeledContent("Created", value: formattedDate(report.createdAt) ?? report.createdAt)
+      LabeledContent("Reviewed", value: formattedDate(report.reviewedAt) ?? "Not reviewed")
+    }
+    .font(.tidexFootnote)
+    .foregroundColor(.tidexTextPrimary)
+    .padding()
+    .background(Color.tidexSurfacePrimary)
+    .cornerRadius(CornerRadius.lg)
+    .tidexCardShadow(cornerRadius: CornerRadius.lg)
+  }
+
+  private func save() {
+    Task {
+      await viewModel.updateReportStatus(
+        report.id,
+        status: selectedStatus,
+        reviewerNotes: viewModel.reportsReviewerNotes
+      )
+      dismiss()
+    }
+  }
+
+  private func formattedDate(_ dateString: String?) -> String? {
+    guard let dateString, !dateString.isEmpty else { return nil }
+
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: dateString) {
+      return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    formatter.formatOptions = [.withInternetDateTime]
+    if let date = formatter.date(from: dateString) {
+      return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    return dateString
   }
 }
 

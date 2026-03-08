@@ -251,10 +251,10 @@ struct WageyView: View {
       ChatInputField(
         inputText: $inputText,
         onSend: { content in
-          handleSendMessage(content)
+          await handleSendMessage(content)
         },
         onSendWithImage: { content, image in
-          handleSendMessageWithImage(content, image: image)
+          await handleSendMessageWithImage(content, image: image)
         },
         disabled: viewModel.isStreaming
       )
@@ -329,26 +329,25 @@ struct WageyView: View {
   // MARK: - Message Handling
 
   /// Handle sending a message, showing paywall if limit reached
-  private func handleSendMessage(_ content: String) {
-    handleSendMessageWithImage(content, image: nil)
+  private func handleSendMessage(_ content: String) async -> Bool {
+    await handleSendMessageWithImage(content, image: nil)
   }
 
   /// Handle sending a message with an image, showing paywall if limit reached
-  private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) {
+  private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) async -> Bool
+  {
     if viewModel.limitReached {
       if viewModel.remainingMessagesCount > 0 {
         viewModel.resetLimitReached()
       } else {
         pendingMessage = content
         showPaywall = true
-        return
+        return false
       }
     }
 
-    // Send the message (with or without image)
-    Task {
-      await viewModel.sendMessage(content, image: image)
-    }
+    await viewModel.sendMessage(content, image: image)
+    return true
   }
 
   // MARK: - Conversation History Sheet

@@ -7,6 +7,10 @@ private let realtimeLogger = Logger(
 
 @MainActor
 final class FriendsMessagingRealtimeCoordinator: ObservableObject {
+  private enum Pagination {
+    static let pageSize = 50
+  }
+
   static let shared = FriendsMessagingRealtimeCoordinator()
 
   private let service: any FriendsMessagingServiceProviding
@@ -173,7 +177,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     do {
       let messages = try await service.listThreadMessages(
-        threadId: threadId, limit: 200, before: nil)
+        threadId: threadId, limit: Pagination.pageSize, before: nil)
       await repository.saveMessages(messages, in: threadId, for: viewerUserId)
     } catch {
       realtimeLogger.error(
