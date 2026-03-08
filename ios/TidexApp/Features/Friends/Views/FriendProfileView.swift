@@ -7,6 +7,7 @@ struct FriendProfileView: View {
   let sharedUser: SharedUser
   var onVisibilityChange: (() -> Void)?
   var onFriendRemoved: (() -> Void)?
+  var onMessageTapped: (() -> Void)?
 
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel = ManageSharingViewModel()
@@ -205,6 +206,15 @@ struct FriendProfileView: View {
   @ViewBuilder
   private func actionsSection(friend: Friend, sectionType: FriendSectionType) -> some View {
     Section {
+      Button {
+        onMessageTapped?()
+      } label: {
+        Label(
+          String(localized: .friendsChatMessageFriend(sharedUser.displayName)),
+          systemImage: "message.fill"
+        )
+      }
+
       if sectionType == .mutual || sectionType == .incoming {
         let isBlocked = friend.sharesWithMe?.blocked == true
         Button {

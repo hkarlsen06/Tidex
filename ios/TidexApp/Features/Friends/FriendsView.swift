@@ -34,9 +34,13 @@ struct SharingView: View {
   @State private var highlightShiftIds: Set<String> = []
   @State private var deepLinkNavigationTask: Task<Void, Never>?
   @State private var highlightClearTask: Task<Void, Never>?
+  @State private var openingThreadUserId: String?
+  @State private var chatOpenErrorMessage: String?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
+
+  private let friendsMessagingService = FriendsMessagingService.shared
 
   var body: some View {
     NavigationStack(path: $navigationPath) {
@@ -69,9 +73,20 @@ struct SharingView: View {
           sharer: sharer,
           viewModel: viewModel,
           highlightDates: $highlightDates,
-          highlightShiftIds: $highlightShiftIds
+          highlightShiftIds: $highlightShiftIds,
+          onMessageTapped: { sharedUser in
+            Task {
+              await openChat(for: sharedUser)
+            }
+          }
         )
         .toolbarRole(.editor)
+      }
+      .navigationDestination(for: FriendChatRoute.self) { route in
+        FriendsThreadView(
+          route: route,
+          viewerUserId: coordinator.getCurrentUserId() ?? ""
+        )
       }
       .iPadToolbarTransaction()
     }
@@ -134,6 +149,21 @@ struct SharingView: View {
       deepLinkNavigationTask = nil
       highlightClearTask?.cancel()
       highlightClearTask = nil
+    }
+    .alert(
+      String(localized: .friendsChatOpenFailed),
+      isPresented: .init(
+        get: { chatOpenErrorMessage != nil },
+        set: {
+          if !$0 { chatOpenErrorMessage = nil }
+        }
+      )
+    ) {
+      Button(String(localized: .commonDone), role: .cancel) {
+        chatOpenErrorMessage = nil
+      }
+    } message: {
+      Text(chatOpenErrorMessage ?? String(localized: .friendsChatOpenFailed))
     }
   }
 
@@ -272,6 +302,12 @@ struct SharingView: View {
             viewModel.selectSharer(sharer)
             navigationPath.append(sharer)
           },
+          onMessageTap: { sharer in
+            Task {
+              await openChat(for: sharer)
+            }
+          },
+          openingThreadUserId: openingThreadUserId,
           onAddFriend: {
             autoExpandAddForm = true
             showManageSheet = true
@@ -288,6 +324,29 @@ struct SharingView: View {
     }
   }
 
+  private func openChat(for sharedUser: SharedUser) async {
+    guard openingThreadUserId == nil else { return }
+
+    openingThreadUserId = sharedUser.id
+    defer { openingThreadUserId = nil }
+
+    do {
+      let thread = try await friendsMessagingService.getOrCreateDirectThread(
+        otherUserId: sharedUser.id)
+      let route = FriendChatRoute(
+        thread: thread,
+        fallbackDisplayName: sharedUser.displayName,
+        fallbackAvatarUrl: sharedUser.avatarUrl
+      )
+      navigationPath.append(route)
+    } catch {
+      chatOpenErrorMessage =
+        error.localizedDescription.isEmpty
+        ? String(localized: .friendsChatOpenFailed)
+        : error.localizedDescription
+    }
+  }
+
 }
 
 // MARK: - Shared Shifts Detail View (pushed from friend list)
@@ -299,6 +358,7 @@ private struct SharedShiftsDetailView: View {
   @ObservedObject var viewModel: SharingViewModel
   @Binding var highlightDates: Set<String>
   @Binding var highlightShiftIds: Set<String>
+  let onMessageTapped: (SharedUser) -> Void
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.userCurrency) private var fallbackCurrency
@@ -395,6 +455,10 @@ private struct SharedShiftsDetailView: View {
         },
         onFriendRemoved: {
           shouldNavigateBack = true
+        },
+        onMessageTapped: {
+          showProfile = false
+          onMessageTapped(sharer)
         }
       )
       .presentationDetents([.medium, .large])
