@@ -40,6 +40,10 @@ struct FriendsThreadView: View {
     )
   }
 
+  private var timelineBottomContentInset: CGFloat {
+    bottomChromeHeight + Spacing.lg + Spacing.huge
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       ZStack(alignment: .bottom) {
@@ -53,7 +57,8 @@ struct FriendsThreadView: View {
           counterpartDisplayName: viewModel.thread.counterpartDisplayName
             ?? viewModel.route.displayName,
           highlightedMessageId: highlightedMessageId,
-          bottomContentInset: bottomChromeHeight + Spacing.lg,
+          showTypingIndicator: viewModel.counterpartIsTyping,
+          bottomContentInset: timelineBottomContentInset,
           scrollToBottomTrigger: scrollToBottomTrigger,
           restoreScrollTargetMessageId: viewModel.restoreScrollTargetMessageId,
           replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId,
@@ -369,17 +374,6 @@ struct FriendsThreadView: View {
 
   private var composer: some View {
     VStack(spacing: Spacing.xs) {
-      if viewModel.counterpartIsTyping && isPinnedToBottom {
-        HStack {
-          TypingIndicatorView()
-          Spacer()
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.xs)
-        .transition(.opacity)
-      }
-
       if let replyTarget = viewModel.draftReplyTarget {
         DraftReplyBanner(
           preview: replyPreviewModel(for: replyTarget),

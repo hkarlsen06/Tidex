@@ -37,6 +37,9 @@ struct SharingView: View {
   @State private var openingThreadUserId: String?
   @State private var openingThreadId: String?
   @State private var chatOpenErrorMessage: String?
+  @State private var unreadChatUserIds: Set<String> = []
+  @State private var unreadChatCountsByUserId: [String: Int] = [:]
+  @State private var unreadRefreshTask: Task<Void, Never>?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
@@ -103,6 +106,7 @@ struct SharingView: View {
     }
     .task {
       await viewModel.loadSharers()
+      scheduleUnreadChatRefresh()
     }
     .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
       // Handle tab reselection - if sharing tab is tapped again while viewing a sharer,
@@ -146,8 +150,10 @@ struct SharingView: View {
     }
     .onChange(of: navigationPath) { _, path in
       // When user navigates back (automatic back button or swipe), deselect sharer
-      if path.isEmpty && viewModel.selectedSharer != nil {
-        viewModel.deselectSharer()
+      if path.isEmpty {
+        if viewModel.selectedSharer != nil {
+          viewModel.deselectSharer()
+        }
         hasSelectedSharer = false
       }
     }
@@ -158,11 +164,16 @@ struct SharingView: View {
         await viewModel.loadSharers(forceRefreshPreviews: true)
       }
     }
+    .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
+      scheduleUnreadChatRefresh()
+    }
     .onDisappear {
       deepLinkNavigationTask?.cancel()
       deepLinkNavigationTask = nil
       highlightClearTask?.cancel()
       highlightClearTask = nil
+      unreadRefreshTask?.cancel()
+      unreadRefreshTask = nil
     }
     .alert(
       String(localized: .friendsChatOpenFailed),
@@ -317,6 +328,8 @@ struct SharingView: View {
           sharers: viewModel.sharers,
           hiddenSharers: viewModel.hiddenSharers,
           chatOnlyUserIds: viewModel.chatOnlyUserIds,
+          unreadChatUserIds: unreadChatUserIds,
+          unreadChatCountsByUserId: unreadChatCountsByUserId,
           selectedSharer: viewModel.selectedSharer,
           shiftPreviews: viewModel.shiftPreviews,
           isLoading: viewModel.isLoadingSharers,
@@ -418,6 +431,42 @@ struct SharingView: View {
         error.localizedDescription.isEmpty
         ? String(localized: .friendsChatOpenFailed)
         : error.localizedDescription
+    }
+  }
+
+  private func refreshUnreadChatUserIds() {
+    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
+      withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+        unreadChatUserIds = []
+        unreadChatCountsByUserId = [:]
+      }
+      return
+    }
+
+    let unreadThreads =
+      friendsMessagesRepository
+      .getThreads(for: viewerUserId)
+      .filter { $0.kind == .direct && $0.unreadCount > 0 }
+
+    let nextUnreadChatCountsByUserId: [String: Int] = Dictionary(
+      uniqueKeysWithValues: unreadThreads.compactMap { thread in
+        guard let counterpartUserId = thread.counterpartUserId else { return nil }
+        return (counterpartUserId, thread.unreadCount)
+      }
+    )
+
+    withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+      unreadChatCountsByUserId = nextUnreadChatCountsByUserId
+      unreadChatUserIds = Set(nextUnreadChatCountsByUserId.keys)
+    }
+  }
+
+  private func scheduleUnreadChatRefresh() {
+    unreadRefreshTask?.cancel()
+    unreadRefreshTask = Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(120))
+      guard !Task.isCancelled else { return }
+      refreshUnreadChatUserIds()
     }
   }
 

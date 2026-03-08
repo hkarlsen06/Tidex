@@ -212,6 +212,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     do {
       let threads = try await service.listMyThreads(limit: 100, before: nil)
       await repository.saveThreads(threads, for: viewerUserId)
+      NotificationCenter.default.post(name: .friendsThreadDidUpdate, object: nil)
     } catch {
       realtimeLogger.error("Failed to refresh thread list: \(error.localizedDescription)")
     }

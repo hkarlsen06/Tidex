@@ -10,6 +10,8 @@ struct SharerListView: View {
   let sharers: [SharedUser]
   let hiddenSharers: [SharedUser]
   let chatOnlyUserIds: Set<String>
+  let unreadChatUserIds: Set<String>
+  let unreadChatCountsByUserId: [String: Int]
   let selectedSharer: SharedUser?
   let shiftPreviews: [String: SharerShiftPreview]
   let isLoading: Bool
@@ -30,6 +32,26 @@ struct SharerListView: View {
 
   private var sortedHiddenSharers: [SharedUser] {
     sortedSharers(from: hiddenSharers)
+  }
+
+  private var promotedUnreadSharers: [SharedUser] {
+    let combined = sortedSharers(from: sharers + hiddenSharers)
+    var seenIds = Set<String>()
+
+    return combined.filter { sharer in
+      guard unreadChatUserIds.contains(sharer.id), seenIds.insert(sharer.id).inserted else {
+        return false
+      }
+      return true
+    }
+  }
+
+  private var sortedVisibleNonUnreadSharers: [SharedUser] {
+    sortedVisibleSharers.filter { !unreadChatUserIds.contains($0.id) }
+  }
+
+  private var sortedHiddenNonUnreadSharers: [SharedUser] {
+    sortedHiddenSharers.filter { !unreadChatUserIds.contains($0.id) }
   }
 
   /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
@@ -141,17 +163,22 @@ struct SharerListView: View {
 
   private var sharersList: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      ForEach(sortedVisibleSharers) { sharer in
+      ForEach(promotedUnreadSharers) { sharer in
         sharerCard(for: sharer)
       }
 
-      if !sortedHiddenSharers.isEmpty {
+      ForEach(sortedVisibleNonUnreadSharers) { sharer in
+        sharerCard(for: sharer)
+      }
+
+      if !sortedHiddenNonUnreadSharers.isEmpty {
         hiddenSharersDisclosure
       }
     }
     .padding(.horizontal, Spacing.md)
     .animation(.spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: isShowingHiddenSharers)
+    .animation(.spring(duration: 0.35, bounce: 0.12), value: unreadChatUserIds)
   }
 
   @ViewBuilder
@@ -171,7 +198,7 @@ struct SharerListView: View {
             .font(.tidexLabelStrong)
             .foregroundColor(.tidexTextPrimary)
 
-          Text("\(sortedHiddenSharers.count)")
+          Text("\(sortedHiddenNonUnreadSharers.count)")
             .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextMuted)
             .padding(.horizontal, Spacing.xs)
@@ -198,7 +225,7 @@ struct SharerListView: View {
       .buttonStyle(.plain)
 
       if isShowingHiddenSharers {
-        ForEach(sortedHiddenSharers) { sharer in
+        ForEach(sortedHiddenNonUnreadSharers) { sharer in
           hiddenSharerCard(for: sharer)
         }
       }
@@ -217,17 +244,18 @@ struct SharerListView: View {
       preview: preview,
       isSelected: isSelected,
       isRefreshing: isRefreshing,
-      onTap: {
-        if opensChatDirectly {
-          onMessageTap(sharer)
-        } else {
-          onSelectSharer(sharer)
-        }
-      },
-      onMessageTap: {
+      onChatTap: {
         onMessageTap(sharer)
       },
-      isOpeningMessage: isOpeningMessage
+      onCalendarTap: {
+        if opensChatDirectly {
+          return
+        }
+        onSelectSharer(sharer)
+      },
+      isCalendarAvailable: !opensChatDirectly,
+      isOpeningMessage: isOpeningMessage,
+      unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
     )
   }
 
@@ -243,17 +271,18 @@ struct SharerListView: View {
       preview: preview,
       isSelected: isSelected,
       isRefreshing: isRefreshing,
-      onTap: {
-        if opensChatDirectly {
-          onMessageTap(sharer)
-        } else {
-          onSelectHiddenSharer(sharer)
-        }
-      },
-      onMessageTap: {
+      onChatTap: {
         onMessageTap(sharer)
       },
-      isOpeningMessage: isOpeningMessage
+      onCalendarTap: {
+        if opensChatDirectly {
+          return
+        }
+        onSelectHiddenSharer(sharer)
+      },
+      isCalendarAvailable: !opensChatDirectly,
+      isOpeningMessage: isOpeningMessage,
+      unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
     )
   }
 }
@@ -287,6 +316,8 @@ struct SharerListView: View {
       )
     ],
     chatOnlyUserIds: [],
+    unreadChatUserIds: [],
+    unreadChatCountsByUserId: [:],
     selectedSharer: nil,
     shiftPreviews: [:],
     isLoading: false,
