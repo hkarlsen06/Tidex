@@ -131,7 +131,7 @@ final class SharingService: ObservableObject {
             oauthAvatarUrl: sharer.oauthAvatarUrl,
             sharedAt: sharer.sharedAt,
             showEarnings: sharer.showEarnings,
-            blocked: sharer.blocked
+            hidden: sharer.hidden
           )
         }
 
@@ -753,13 +753,12 @@ final class SharingService: ObservableObject {
     logger.info("Successfully toggled earnings visibility")
   }
 
-  /// Block a sharer (hide their shifts from my list)
-  /// Viewer updates the new hidden field; legacy blocked stays in sync via DB trigger.
-  func blockSharer(ownerId: String) async throws {
+  /// Hide a sharer from the main list.
+  func hideSharer(ownerId: String) async throws {
     let session = try await AuthSessionManager.shared.getSession()
     let userId = session.normalizedUserId
 
-    logger.info("Blocking sharer \(ownerId)")
+    logger.info("Hiding sharer \(ownerId)")
 
     try await supabase
       .from("shift_shares")
@@ -768,16 +767,15 @@ final class SharingService: ObservableObject {
       .eq("viewer_id", value: userId)
       .execute()
 
-    logger.info("Successfully blocked sharer")
+    logger.info("Successfully hid sharer")
   }
 
-  /// Unblock a sharer (restore their shifts to my list)
-  /// Viewer updates the new hidden field; legacy blocked stays in sync via DB trigger.
-  func unblockSharer(ownerId: String) async throws {
+  /// Show a previously hidden sharer in the main list.
+  func showSharer(ownerId: String) async throws {
     let session = try await AuthSessionManager.shared.getSession()
     let userId = session.normalizedUserId
 
-    logger.info("Unblocking sharer \(ownerId)")
+    logger.info("Showing sharer \(ownerId)")
 
     try await supabase
       .from("shift_shares")
@@ -786,7 +784,7 @@ final class SharingService: ObservableObject {
       .eq("viewer_id", value: userId)
       .execute()
 
-    logger.info("Successfully unblocked sharer")
+    logger.info("Successfully showed sharer")
   }
 
   /// Share back with someone who has shared with me

@@ -400,7 +400,7 @@ struct FriendsListEmptyState: View {
         oauthAvatarUrl: nil,
         sharedAt: "2025-01-01",
         showEarnings: true,
-        blocked: false
+        hidden: false
       ),
       preview: nil,
       isSelected: false,
@@ -419,7 +419,7 @@ struct FriendsListEmptyState: View {
         oauthAvatarUrl: nil,
         sharedAt: "2025-01-01",
         showEarnings: false,
-        blocked: false
+        hidden: false
       ),
       preview: nil,
       isSelected: true,

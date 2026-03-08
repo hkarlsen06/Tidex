@@ -32,7 +32,7 @@ struct Friend: Codable, Identifiable, Equatable {
 
   struct SharesWithMe: Codable, Equatable {
     /// Whether I've hidden them from my view
-    let blocked: Bool
+    let hidden: Bool
     /// Whether they allow me to see their earnings
     let showEarningsToMe: Bool
     /// When they started sharing with me (ISO date string)
@@ -45,17 +45,56 @@ struct Friend: Codable, Identifiable, Equatable {
       notificationFrequency == .muted
     }
 
-    /// Create a copy with updated blocked status
-    func with(blocked: Bool) -> SharesWithMe {
+    private enum CodingKeys: String, CodingKey {
+      case hidden
+      case blocked
+      case showEarningsToMe
+      case sharedAt
+      case notificationFrequency
+    }
+
+    init(
+      hidden: Bool, showEarningsToMe: Bool, sharedAt: String,
+      notificationFrequency: NotificationFrequency
+    ) {
+      self.hidden = hidden
+      self.showEarningsToMe = showEarningsToMe
+      self.sharedAt = sharedAt
+      self.notificationFrequency = notificationFrequency
+    }
+
+    init(from decoder: Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      hidden =
+        try container.decodeIfPresent(Bool.self, forKey: .hidden)
+        ?? container.decodeIfPresent(Bool.self, forKey: .blocked)
+        ?? false
+      showEarningsToMe = try container.decode(Bool.self, forKey: .showEarningsToMe)
+      sharedAt = try container.decode(String.self, forKey: .sharedAt)
+      notificationFrequency =
+        try container.decodeIfPresent(NotificationFrequency.self, forKey: .notificationFrequency)
+        ?? .instant
+    }
+
+    func encode(to encoder: Encoder) throws {
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode(hidden, forKey: .hidden)
+      try container.encode(showEarningsToMe, forKey: .showEarningsToMe)
+      try container.encode(sharedAt, forKey: .sharedAt)
+      try container.encode(notificationFrequency, forKey: .notificationFrequency)
+    }
+
+    /// Create a copy with updated hidden status
+    func with(hidden: Bool) -> SharesWithMe {
       SharesWithMe(
-        blocked: blocked, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt,
+        hidden: hidden, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt,
         notificationFrequency: notificationFrequency)
     }
 
     /// Create a copy with updated notification frequency
     func with(notificationFrequency: NotificationFrequency) -> SharesWithMe {
       SharesWithMe(
-        blocked: blocked, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt,
+        hidden: hidden, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt,
         notificationFrequency: notificationFrequency)
     }
   }

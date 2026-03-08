@@ -198,32 +198,32 @@ final class ManageSharingViewModel: ObservableObject {
       iShareWith: iShareWith.with(showEarningsToThem: showEarnings))
   }
 
-  // MARK: - Toggle Blocked Status
+  // MARK: - Toggle Hidden Status
 
-  /// Toggle whether a sharer is blocked (hidden from my list)
-  func toggleBlocked(for friend: Friend) async {
+  /// Toggle whether a sharer is hidden from my list
+  func toggleHidden(for friend: Friend) async {
     // Prevent duplicate taps
     guard actionInProgress == nil else { return }
     guard let sharesWithMe = friend.sharesWithMe else { return }
 
-    let newValue = !sharesWithMe.blocked
+    let newValue = !sharesWithMe.hidden
 
     // Optimistic update
-    applyOptimisticBlockedUpdate(friendId: friend.id, blocked: newValue)
+    applyOptimisticHiddenUpdate(friendId: friend.id, hidden: newValue)
     actionInProgress = friend.id
 
     do {
       if newValue {
-        try await sharingService.blockSharer(ownerId: friend.id)
+        try await sharingService.hideSharer(ownerId: friend.id)
       } else {
-        try await sharingService.unblockSharer(ownerId: friend.id)
+        try await sharingService.showSharer(ownerId: friend.id)
       }
-      logger.info("Toggled blocked for \(friend.id) to \(newValue)")
+      logger.info("Toggled hidden for \(friend.id) to \(newValue)")
       Haptics.play(.selection)
     } catch {
       // Revert on failure
-      applyOptimisticBlockedUpdate(friendId: friend.id, blocked: !newValue)
-      logger.error("Failed to toggle blocked: \(error.localizedDescription)")
+      applyOptimisticHiddenUpdate(friendId: friend.id, hidden: !newValue)
+      logger.error("Failed to toggle hidden: \(error.localizedDescription)")
       errorMessage = String(localized: .sharingErrorUpdateSettings)
       Haptics.play(.error)
     }
@@ -231,12 +231,12 @@ final class ManageSharingViewModel: ObservableObject {
     actionInProgress = nil
   }
 
-  private func applyOptimisticBlockedUpdate(friendId: String, blocked: Bool) {
+  private func applyOptimisticHiddenUpdate(friendId: String, hidden: Bool) {
     guard let index = friends.firstIndex(where: { $0.id == friendId }),
       let sharesWithMe = friends[index].sharesWithMe
     else { return }
 
-    friends[index] = friends[index].with(sharesWithMe: sharesWithMe.with(blocked: blocked))
+    friends[index] = friends[index].with(sharesWithMe: sharesWithMe.with(hidden: hidden))
   }
 
   // MARK: - Toggle Muted Status
@@ -459,6 +459,6 @@ final class ManageSharingViewModel: ObservableObject {
 
   // MARK: - Callbacks
 
-  /// Callback for when visibility changes (block/unblock) to trigger sharer list refresh
+  /// Callback for when visibility changes (hide/show) to trigger sharer list refresh
   var onVisibilityChange: (() -> Void)?
 }

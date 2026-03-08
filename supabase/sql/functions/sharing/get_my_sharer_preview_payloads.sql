@@ -5,7 +5,7 @@
 --
 -- Authorization:
 --   - Viewer is auth.uid().
---   - Only rows from shift_shares where viewer_id = auth.uid() and hidden = false.
+--   - Only rows from shift_shares where viewer_id = auth.uid().
 --
 -- Redaction:
 --   - If show_earnings = false:
@@ -39,7 +39,6 @@ AS $function$
     FROM public.shift_shares ss
     WHERE auth.uid() IS NOT NULL
       AND ss.viewer_id = auth.uid()
-      AND COALESCE(ss.hidden, false) = false
       AND (p_sharer_ids IS NULL OR ss.owner_id = ANY(p_sharer_ids))
   )
   SELECT

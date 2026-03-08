@@ -15,7 +15,7 @@ struct ManageSharingSheet: View {
   /// Whether to auto-expand the add friend form and focus the input
   var autoExpandAddForm: Bool = false
 
-  /// Callback when visibility changes (block/unblock) to refresh the sharer list
+  /// Callback when visibility changes (hide/show) to refresh the sharer list
   var onVisibilityChange: (() -> Void)?
 
   /// Confirmation dialog state
@@ -272,9 +272,9 @@ struct ManageSharingSheet: View {
           await viewModel.toggleOwnerMuted(for: friend)
         }
       },
-      onToggleBlocked: {
+      onToggleHidden: {
         Task {
-          await viewModel.toggleBlocked(for: friend)
+          await viewModel.toggleHidden(for: friend)
           onVisibilityChange?()
         }
       },
@@ -299,18 +299,18 @@ struct ManageSharingSheet: View {
       if sectionType == .mutual || sectionType == .incoming {
         Button {
           Task {
-            await viewModel.toggleBlocked(for: friend)
+            await viewModel.toggleHidden(for: friend)
             onVisibilityChange?()
           }
         } label: {
           Label(
             String(
-              localized: friend.sharesWithMe?.blocked == true
+              localized: friend.sharesWithMe?.hidden == true
                 ? .sharingSwipeShow : .sharingSwipeHide),
-            systemImage: friend.sharesWithMe?.blocked == true ? "eye" : "eye.slash"
+            systemImage: friend.sharesWithMe?.hidden == true ? "eye" : "eye.slash"
           )
         }
-        .tint(friend.sharesWithMe?.blocked == true ? .green : .orange)
+        .tint(friend.sharesWithMe?.hidden == true ? .green : .orange)
       }
     }
   }

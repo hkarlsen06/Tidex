@@ -216,19 +216,19 @@ struct FriendProfileView: View {
       }
 
       if sectionType == .mutual || sectionType == .incoming {
-        let isBlocked = friend.sharesWithMe?.blocked == true
+        let isHidden = friend.sharesWithMe?.hidden == true
         Button {
           Task {
-            await viewModel.toggleBlocked(for: friend)
+            await viewModel.toggleHidden(for: friend)
             onVisibilityChange?()
           }
         } label: {
           Label(
             String(
-              localized: isBlocked
+              localized: isHidden
                 ? .sharingProfileShowInList(friend.firstNameOnly)
                 : .sharingProfileHideFromList(friend.firstNameOnly)),
-            systemImage: isBlocked ? "eye" : "eye.slash"
+            systemImage: isHidden ? "eye" : "eye.slash"
           )
         }
       }
@@ -287,7 +287,7 @@ struct FriendProfileView: View {
       oauthAvatarUrl: nil,
       sharedAt: "2025-01-01",
       showEarnings: true,
-      blocked: false
+      hidden: false
     )
   )
 }

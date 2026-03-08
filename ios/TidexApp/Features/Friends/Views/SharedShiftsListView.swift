@@ -342,7 +342,7 @@ private struct BellShake {
       oauthAvatarUrl: nil,
       sharedAt: "2025-01-01",
       showEarnings: true,
-      blocked: false
+      hidden: false
     ),
     shifts: [],
     jobs: [],
