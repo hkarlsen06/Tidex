@@ -16,7 +16,7 @@ struct FriendCard: View {
   var body: some View {
     VStack(spacing: 0) {
       HStack(spacing: Spacing.sm) {
-        Button(action: onChatTap) {
+        Button(action: primaryCardTapAction) {
           HStack(spacing: Spacing.sm) {
             avatarView
 
@@ -39,42 +39,44 @@ struct FriendCard: View {
         .buttonStyle(.plain)
         .disabled(isOpeningMessage)
 
-        if isCalendarAvailable {
-          Button(action: onCalendarTap) {
-            Group {
-              if isOpeningMessage {
-                ProgressView()
-                  .progressViewStyle(.circular)
-                  .tint(.tidexTextOnBrand)
-              } else {
-                Image(systemName: "calendar")
-                  .font(.system(size: 16, weight: .semibold))
-                  .foregroundColor(.tidexTextOnBrand)
-              }
+        Button(action: onChatTap) {
+          Group {
+            if isOpeningMessage {
+              ProgressView()
+                .progressViewStyle(.circular)
+                .tint(.tidexTextOnBrand)
+            } else {
+              Image(systemName: "message")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.tidexTextOnBrand)
             }
-            .frame(width: 44, height: 44)
-            .tidexGlass(
-              shape: .circle,
-              tint: .tidexBlue.opacity(0.26),
-              interactive: true
-            )
           }
-          .buttonStyle(.plain)
-          .disabled(isOpeningMessage)
-          .accessibilityLabel(Text(verbatim: "\(sharer.displayName) calendar"))
+          .frame(width: 44, height: 44)
+          .tidexGlass(
+            shape: .circle,
+            tint: .tidexBlue.opacity(0.26),
+            interactive: true
+          )
         }
+        .buttonStyle(.plain)
+        .disabled(isOpeningMessage)
+        .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
       }
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
 
       if let preview = preview, let shift = preview.shift, let status = preview.status {
-        Group {
-          if isRefreshing {
-            shiftPreviewSkeleton
-          } else {
-            ShiftPreviewCard(shift: shift, status: status)
+        Button(action: onCalendarTap) {
+          Group {
+            if isRefreshing {
+              shiftPreviewSkeleton
+            } else {
+              ShiftPreviewCard(shift: shift, status: status)
+            }
           }
         }
+        .buttonStyle(.plain)
+        .disabled(!isCalendarAvailable)
         .padding(.horizontal, Spacing.sm)
         .padding(.bottom, Spacing.sm)
       }
@@ -91,6 +93,10 @@ struct FriendCard: View {
         )
     )
     .tidexCardShadow()
+  }
+
+  private var primaryCardTapAction: () -> Void {
+    isCalendarAvailable ? onCalendarTap : onChatTap
   }
 
   /// Corner radius for concentric design: outer (24) - padding (12) = 12

@@ -157,6 +157,9 @@ struct SharingView: View {
         hasSelectedSharer = false
       }
     }
+    .onChange(of: coordinator.userId) { _, _ in
+      scheduleUnreadChatRefresh()
+    }
     .onReceive(
       NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
     ) { _ in

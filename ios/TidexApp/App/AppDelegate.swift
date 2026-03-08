@@ -736,6 +736,19 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
       return
     }
 
+    if let chatToastPayload = InAppChatToastPayload(
+      userInfo: userInfo,
+      notificationTitle: notification.request.content.title,
+      notificationBody: notification.request.content.body
+    ) {
+      NotificationCenter.default.post(
+        name: .inAppChatToastRequested,
+        object: chatToastPayload
+      )
+      completionHandler([])
+      return
+    }
+
     // Show banner even when app is in foreground
     completionHandler([.banner, .sound])
   }
