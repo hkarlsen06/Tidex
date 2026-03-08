@@ -1,0 +1,218 @@
+import SwiftData
+import XCTest
+
+@testable import Tidex
+
+@MainActor
+final class FriendsMessagesRepositoryTests: XCTestCase {
+  private let viewerUserId = "viewer-1"
+
+  private func makeRepository() throws -> FriendsMessagesRepository {
+    let schema = Schema([
+      LocalThread.self,
+      LocalThreadState.self,
+      LocalMessage.self,
+      LocalMessageAttachment.self,
+    ])
+
+    let configuration = ModelConfiguration(
+      schema: schema,
+      isStoredInMemoryOnly: true,
+      allowsSave: true
+    )
+
+    let container = try ModelContainer(for: schema, configurations: [configuration])
+    let storeActor = LocalStoreActor(modelContainer: container)
+    return FriendsMessagesRepository(container: container, storeActor: storeActor)
+  }
+
+  func testSaveThreadsOrdersByLatestActivityDescending() async throws {
+    let repository = try makeRepository()
+
+    await repository.saveThreads(
+      [
+        FriendThread(
+          id: "thread-older",
+          kind: .direct,
+          title: nil,
+          avatarUrl: nil,
+          metadataData: nil,
+          counterpartUserId: "friend-1",
+          counterpartDisplayName: "Older",
+          counterpartProfilePictureUrl: nil,
+          counterpartOAuthAvatarUrl: nil,
+          lastMessageId: "message-1",
+          lastMessageSenderId: "friend-1",
+          lastMessageAt: Date(timeIntervalSince1970: 1_700_000_000),
+          lastMessageBody: "Older message",
+          lastMessageHasImage: false,
+          unreadCount: 1,
+          muted: false,
+          createdAt: Date(timeIntervalSince1970: 1_699_999_000)
+        ),
+        FriendThread(
+          id: "thread-newer",
+          kind: .direct,
+          title: nil,
+          avatarUrl: nil,
+          metadataData: nil,
+          counterpartUserId: "friend-2",
+          counterpartDisplayName: "Newer",
+          counterpartProfilePictureUrl: nil,
+          counterpartOAuthAvatarUrl: nil,
+          lastMessageId: "message-2",
+          lastMessageSenderId: "viewer-1",
+          lastMessageAt: Date(timeIntervalSince1970: 1_700_000_100),
+          lastMessageBody: "Newest message",
+          lastMessageHasImage: false,
+          unreadCount: 0,
+          muted: true,
+          createdAt: Date(timeIntervalSince1970: 1_699_999_500)
+        ),
+      ],
+      for: viewerUserId
+    )
+
+    let threads = repository.getThreads(for: viewerUserId)
+
+    XCTAssertEqual(threads.map(\.id), ["thread-newer", "thread-older"])
+    XCTAssertEqual(
+      repository.getThreadState(threadId: "thread-newer", viewerUserId: viewerUserId)?.muted, true)
+  }
+
+  func testSaveMessagesRoundTripsAttachmentsInAscendingOrder() async throws {
+    let repository = try makeRepository()
+    let thread = FriendThread(
+      id: "thread-1",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: nil,
+      lastMessageSenderId: nil,
+      lastMessageAt: nil,
+      lastMessageBody: nil,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    await repository.saveThread(thread, for: viewerUserId)
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-2",
+          threadId: "thread-1",
+          senderUserId: "friend-1",
+          messageType: .user,
+          body: "Later",
+          clientId: "client-2",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_020),
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: nil,
+          attachments: []
+        ),
+        FriendMessage(
+          id: "message-1",
+          threadId: "thread-1",
+          senderUserId: "viewer-1",
+          messageType: .user,
+          body: "Photo",
+          clientId: "client-1",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_010),
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: nil,
+          attachments: [
+            FriendMessageAttachment(
+              id: "attachment-2",
+              attachmentIndex: 1,
+              kind: .image,
+              storageBucket: "message-attachments",
+              storagePath: "thread-1/viewer-1/attachment-2.jpeg",
+              mimeType: "image/jpeg",
+              byteSize: 256,
+              width: 640,
+              height: 480,
+              createdAt: Date(timeIntervalSince1970: 1_700_000_010)
+            ),
+            FriendMessageAttachment(
+              id: "attachment-1",
+              attachmentIndex: 0,
+              kind: .image,
+              storageBucket: "message-attachments",
+              storagePath: "thread-1/viewer-1/attachment-1.jpeg",
+              mimeType: "image/jpeg",
+              byteSize: 128,
+              width: 320,
+              height: 240,
+              createdAt: Date(timeIntervalSince1970: 1_700_000_009)
+            ),
+          ]
+        ),
+      ],
+      in: "thread-1",
+      for: viewerUserId
+    )
+
+    let messages = repository.getMessages(threadId: "thread-1", viewerUserId: viewerUserId)
+
+    XCTAssertEqual(messages.map(\.id), ["message-1", "message-2"])
+    XCTAssertEqual(messages.first?.attachments.map(\.id), ["attachment-1", "attachment-2"])
+    XCTAssertEqual(
+      repository.getThread(id: "thread-1", viewerUserId: viewerUserId)?.lastMessageId, "message-2")
+  }
+
+  func testSaveThreadStateMarksThreadReadAndClearsUnreadCount() async throws {
+    let repository = try makeRepository()
+
+    await repository.saveThread(
+      FriendThread(
+        id: "thread-1",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "friend-1",
+        counterpartDisplayName: "Friend",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-1",
+        lastMessageSenderId: "friend-1",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_000),
+        lastMessageBody: "Unread",
+        lastMessageHasImage: false,
+        unreadCount: 3,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_699_999_000)
+      ),
+      for: viewerUserId
+    )
+
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: true,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_001)
+      ))
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    let state = repository.getThreadState(threadId: "thread-1", viewerUserId: viewerUserId)
+
+    XCTAssertEqual(thread?.unreadCount, 0)
+    XCTAssertEqual(thread?.muted, true)
+    XCTAssertEqual(state?.lastReadMessageId, "message-1")
+    XCTAssertEqual(state?.muted, true)
+  }
+}
