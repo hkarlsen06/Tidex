@@ -5,6 +5,14 @@ import os.log
 private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagesRepository")
 
 @MainActor
+protocol FriendsMessagesRepositoryProviding: AnyObject {
+  func saveThread(_ thread: FriendThread, for viewerUserId: String) async
+  func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
+    async
+  func saveThreadState(_ state: FriendThreadState) async
+}
+
+@MainActor
 final class FriendsMessagesRepository: ObservableObject {
   static let shared = FriendsMessagesRepository()
 
@@ -144,3 +152,5 @@ final class FriendsMessagesRepository: ObservableObject {
     }
   }
 }
+
+extension FriendsMessagesRepository: FriendsMessagesRepositoryProviding {}

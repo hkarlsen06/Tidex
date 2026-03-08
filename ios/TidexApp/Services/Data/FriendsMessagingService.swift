@@ -5,6 +5,24 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagingService")
 
+@MainActor
+protocol FriendsMessagingServiceProviding: AnyObject {
+  func getOrCreateDirectThread(otherUserId: String) async throws -> FriendThread
+  func listMyThreads(limit: Int, before cursor: FriendThreadCursor?) async throws -> [FriendThread]
+  func listThreadMessages(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
+    async throws -> [FriendMessage]
+  func sendMessage(
+    threadId: String,
+    clientId: String,
+    body: String?,
+    attachments: [FriendOutgoingAttachment]
+  ) async throws -> FriendMessage
+  func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
+  func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
+  func fetchThreadSummary(threadId: String) async throws -> FriendThread
+  func fetchMessagePayload(messageId: String) async throws -> FriendMessage
+}
+
 enum FriendsMessagingServiceError: Error, LocalizedError {
   case notAuthenticated
   case networkError(underlying: Error)
@@ -228,6 +246,60 @@ final class FriendsMessagingService: ObservableObject {
     }
   }
 
+  func fetchThreadSummary(threadId: String) async throws -> FriendThread {
+    let params: [String: AnyJSON] = [
+      "p_thread_id": .string(threadId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let row: MessagingThreadSummaryRow =
+        try await supabase
+        .rpc("get_thread_summary", params: params)
+        .single()
+        .execute()
+        .value
+
+      return row.toFriendThread()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func fetchMessagePayload(messageId: String) async throws -> FriendMessage {
+    let params: [String: AnyJSON] = [
+      "p_message_id": .string(messageId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let row: MessagingMessageRow =
+        try await supabase
+        .rpc("get_message_payload", params: params)
+        .single()
+        .execute()
+        .value
+
+      return row.toFriendMessage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
   private func mapRPCError(_ error: Error) -> FriendsMessagingServiceError {
     if error is AuthError {
       return .notAuthenticated
@@ -256,6 +328,8 @@ final class FriendsMessagingService: ObservableObject {
     return .networkError(underlying: error)
   }
 }
+
+extension FriendsMessagingService: FriendsMessagingServiceProviding {}
 
 private struct MessagingThreadSummaryRow: Decodable {
   let threadId: String
