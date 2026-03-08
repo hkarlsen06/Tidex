@@ -17,7 +17,7 @@ export const legalEn = {
     },
     title: 'Terms of use',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-02-21',
+    lastUpdatedDate: '2026-03-08',
     dateLocale: 'en-US',
     sections: [
       {
@@ -61,7 +61,10 @@ export const legalEn = {
           { text: 'Disrupt or harm the functionality of the service.' },
           { text: 'Automate access to the service without explicit permission.' },
           { text: 'Abuse or bypass the payment system.' },
+          { text: 'Use chat, sharing, profile information, images, or other social features to harass, bully, threaten, spam, stalk, or impersonate other users.' },
+          { text: 'Share hateful, sexually exploitative, violent, or otherwise objectionable content through messages, attachments, profile data, or any user-generated content surface in Tidex.' },
         ],
+        closingParagraph: 'There is zero tolerance for objectionable content or abusive users. We may investigate reported behaviour, limit features, remove content, suspend messaging or sharing access, block users, or terminate accounts when we receive abuse reports or otherwise become aware of abusive behaviour.',
       },
       {
         heading: '6. Subscription and payment',
@@ -114,6 +117,7 @@ export const legalEn = {
           { text: 'We may suspend or terminate your account if you break these terms.' },
           { text: 'When the account is closed you lose access to every piece of data in the system.' },
         ],
+        closingParagraph: 'If we receive a report of objectionable content or abusive behaviour, we may investigate the relevant content, restrict access, remove the content, block the involved users, or suspend or terminate the offending account.',
       },
       {
         heading: '10. iOS app terms',
@@ -191,7 +195,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-02-21',
+    lastUpdatedDate: '2026-03-08',
     dateLocale: 'en-US',
     sections: [
       {
@@ -207,9 +211,11 @@ export const legalEn = {
         list: [
           { boldLabel: 'Account information:', text: 'Full name, email address or phone number, and encrypted password.' },
           { boldLabel: 'Shift data:', text: 'Working hours, breaks, salary settings and related information you register.' },
+          { boldLabel: 'Friends messaging data:', text: 'Messages, reply references, image attachments, abuse reports, block actions, thread metadata, and read/mute state when you use Friends messaging.' },
           { boldLabel: 'Authentication data:', text: 'Session (cookie) information that keeps you logged in.' },
           { boldLabel: 'Payment data:', text: 'Handled by Stripe (website purchases) or Apple (iOS in-app purchases). We do not store card information.' },
           { boldLabel: 'AI assistant data:', text: 'When you use the Wagey AI assistant, the messages you send (including text and images), your display name, and shift data retrieved during the conversation are processed by a third-party AI service (see section 5).' },
+          { boldLabel: 'Notification metadata:', text: 'If you enable push notifications, notification payloads may include sender identity, limited message preview text, screenshot alerts, and thread identifiers so the app can show and open the correct conversation.' },
         ],
       },
       {
@@ -217,10 +223,12 @@ export const legalEn = {
         paragraphs: ['Your data is used to:'],
         list: [
           { text: 'Provide shift tracking and salary calculations.' },
+          { text: 'Provide Friends messaging, image attachments, screenshot alerts, abuse reports, safety tooling, and user blocking.' },
           { text: 'Authenticate and manage your account.' },
           { text: 'Process subscription payments via Stripe (website) or Apple (iOS app).' },
           { text: 'Communicate with you about the service.' },
           { text: 'Provide AI-powered assistance through the Wagey feature, including answering questions about your shifts, helping manage shifts, and calculating wages. This requires sending relevant data to a third-party AI service (see section 5).' },
+          { text: 'Review abuse reports, enforce our rules, and protect users and the service from abuse.' },
         ],
         importantNote: {
           label: 'Important:',
@@ -233,6 +241,7 @@ export const legalEn = {
           { boldLabel: 'Storage:', text: 'All data is stored with Supabase (PostgreSQL).' },
           { boldLabel: 'Retention:', text: 'Data is kept for as long as you maintain an active account. We do not guarantee long-term archival.' },
           { boldLabel: 'Deletion:', text: 'If you delete your account, every piece of data is removed immediately from our systems.' },
+          { boldLabel: 'Safety review:', text: 'If content is reported or linked to abusive behaviour, authorised reviewers may inspect relevant messages, attachments, account metadata, and report records to investigate and enforce our rules.' },
         ],
       },
       {

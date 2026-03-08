@@ -14,6 +14,7 @@ struct FriendsChatMessageRowContent: View {
   let isCurrentUser: Bool
   let isHighlighted: Bool
   let senderFirstName: String?
+  let separatorDate: Date?
   let showsSenderLabel: Bool
   let showsTimestamp: Bool
   let onReply: () -> Void
@@ -24,82 +25,88 @@ struct FriendsChatMessageRowContent: View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
     let hasMessageText = !(messageText?.isEmpty ?? true)
 
-    return ChatMessageRow(isCurrentUser: isCurrentUser, minSpacer: 48, spacing: Spacing.xxs) {
-      VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
-        if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
-          Text(senderFirstName)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-            .padding(.horizontal, CornerRadius.bubble)
-        }
+    return VStack(spacing: Spacing.xs) {
+      if let separatorDate {
+        FriendsChatDateSeparator(date: separatorDate)
+      }
 
-        FriendsChatReplySwipeContainer(
-          isCurrentUser: isCurrentUser,
-          onReply: onReply
-        ) {
-          VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-            if !hasMessageText, let quotedPreview {
-              FriendsChatMessageReplyPreview(
-                preview: quotedPreview,
-                isCurrentUser: isCurrentUser,
-                isHighlighted: false,
-                onTap: onTapQuotedMessage
-              )
-            }
+      ChatMessageRow(isCurrentUser: isCurrentUser, minSpacer: 48, spacing: Spacing.xxs) {
+        VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
+          if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
+            Text(senderFirstName)
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexTextMuted)
+              .padding(.horizontal, CornerRadius.bubble)
+          }
 
-            ForEach(message.attachments) { attachment in
-              if attachment.kind == .image {
-                FriendsChatImageView(
-                  attachment: attachment,
+          FriendsChatReplySwipeContainer(
+            isCurrentUser: isCurrentUser,
+            onReply: onReply
+          ) {
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
+              if !hasMessageText, let quotedPreview {
+                FriendsChatMessageReplyPreview(
+                  preview: quotedPreview,
                   isCurrentUser: isCurrentUser,
-                  onReport: onReportMessage
+                  isHighlighted: false,
+                  onTap: onTapQuotedMessage
                 )
               }
-            }
 
-            if let messageText, !messageText.isEmpty {
-              ChatBubbleCard(
-                isCurrentUser: isCurrentUser,
-                minWidth: Self.minimumBubbleWidthForTimestamp,
-                maxWidth: 280
-              ) {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                  if let quotedPreview {
-                    FriendsChatMessageReplyPreview(
-                      preview: quotedPreview,
-                      isCurrentUser: isCurrentUser,
-                      isHighlighted: false,
-                      onTap: onTapQuotedMessage
-                    )
-                  }
-
-                  Text(messageText)
-                    .font(.tidexBody)
-                    .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+              ForEach(message.attachments) { attachment in
+                if attachment.kind == .image {
+                  FriendsChatImageView(
+                    attachment: attachment,
+                    isCurrentUser: isCurrentUser,
+                    onReport: onReportMessage
+                  )
                 }
               }
-              .contextMenu {
-                Button {
-                  UIPasteboard.general.string = messageText
-                } label: {
-                  Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-                }
 
-                if !isCurrentUser {
-                  Button(String(localized: .friendsChatReportMessage)) {
-                    onReportMessage()
+              if let messageText, !messageText.isEmpty {
+                ChatBubbleCard(
+                  isCurrentUser: isCurrentUser,
+                  minWidth: Self.minimumBubbleWidthForTimestamp,
+                  maxWidth: 280
+                ) {
+                  VStack(alignment: .leading, spacing: Spacing.xs) {
+                    if let quotedPreview {
+                      FriendsChatMessageReplyPreview(
+                        preview: quotedPreview,
+                        isCurrentUser: isCurrentUser,
+                        isHighlighted: false,
+                        onTap: onTapQuotedMessage
+                      )
+                    }
+
+                    Text(messageText)
+                      .font(.tidexBody)
+                      .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+                  }
+                }
+                .contextMenu {
+                  Button {
+                    UIPasteboard.general.string = messageText
+                  } label: {
+                    Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+                  }
+
+                  if !isCurrentUser {
+                    Button(String(localized: .friendsChatReportMessage)) {
+                      onReportMessage()
+                    }
                   }
                 }
               }
             }
           }
-        }
 
-        if showsTimestamp {
-          Text(message.createdAt.formatted(.dateTime.hour().minute()))
-            .font(.tidexMicro)
-            .foregroundColor(.tidexTextMuted)
-            .padding(.horizontal, CornerRadius.bubble)
+          if showsTimestamp {
+            Text(message.createdAt.formatted(.dateTime.hour().minute()))
+              .font(.tidexMicro)
+              .foregroundColor(.tidexTextMuted)
+              .padding(.horizontal, CornerRadius.bubble)
+          }
         }
       }
     }
@@ -107,6 +114,57 @@ struct FriendsChatMessageRowContent: View {
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .fill(isHighlighted ? Color.tidexBlue.opacity(0.08) : Color.clear)
+    )
+  }
+}
+
+private struct FriendsChatDateSeparator: View {
+  let date: Date
+
+  var body: some View {
+    HStack(spacing: Spacing.sm) {
+      Rectangle()
+        .fill(Color.tidexBorderSubtle)
+        .frame(height: 1)
+
+      Text(separatorText)
+        .font(.tidexMicro)
+        .foregroundColor(.tidexTextMuted)
+        .fixedSize(horizontal: true, vertical: false)
+
+      Rectangle()
+        .fill(Color.tidexBorderSubtle)
+        .frame(height: 1)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.xs)
+  }
+
+  private var separatorText: String {
+    let calendar = Calendar.current
+    if calendar.isDateInToday(date) {
+      return String(localized: .commonToday)
+    }
+    if calendar.isDateInYesterday(date) {
+      return String(localized: .commonYesterday)
+    }
+
+    if calendar.isDate(date, equalTo: Date(), toGranularity: .year) {
+      return date.formatted(
+        .dateTime
+          .weekday(.wide)
+          .day()
+          .month(.wide)
+      )
+    }
+
+    return date.formatted(
+      .dateTime
+        .weekday(.wide)
+        .day()
+        .month(.wide)
+        .year()
     )
   }
 }

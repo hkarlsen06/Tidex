@@ -17,7 +17,7 @@ export const legalNo = {
     },
     title: 'Vilkår for bruk',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-02-21',
+    lastUpdatedDate: '2026-03-08',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -61,7 +61,10 @@ export const legalNo = {
           { text: 'Forstyrre eller skade tjenestens funksjonalitet.' },
           { text: 'Automatisere tilgang til tjenesten uten uttrykkelig tillatelse.' },
           { text: 'Misbruke eller omgå betalingssystemet.' },
+          { text: 'Bruke chat, deling, profilinformasjon, bilder eller andre sosiale funksjoner til å trakassere, mobbe, true, spamme, stalke eller utgi deg for å være andre brukere.' },
+          { text: 'Dele hatefult, seksuelt utnyttende, voldelig eller på annen måte støtende innhold gjennom meldinger, vedlegg, profilinformasjon eller andre flater for brukergenerert innhold i Tidex.' },
         ],
+        closingParagraph: 'Det er nulltoleranse for støtende innhold og abusive brukere. Vi kan undersøke rapportert atferd, begrense funksjoner, fjerne innhold, suspendere meldings- eller delingstilgang, blokkere brukere eller avslutte kontoer når vi mottar misbruksrapporter eller på annen måte blir kjent med misbruk.',
       },
       {
         heading: '6. Abonnement og betaling',
@@ -114,6 +117,7 @@ export const legalNo = {
           { text: 'Vi kan suspendere eller avslutte kontoen din ved brudd på vilkårene.' },
           { text: 'Ved oppsigelse mister du tilgang til alle data i systemet.' },
         ],
+        closingParagraph: 'Hvis vi mottar en rapport om støtende innhold eller misbruk, kan vi undersøke det relevante innholdet, begrense tilgang, fjerne innhold, blokkere de involverte brukerne eller suspendere eller avslutte kontoen til den som har brutt reglene.',
       },
       {
         heading: '10. Vilkår for iOS-appen',
@@ -191,7 +195,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-02-21',
+    lastUpdatedDate: '2026-03-08',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -207,9 +211,11 @@ export const legalNo = {
         list: [
           { boldLabel: 'Kontoinformasjon:', text: 'Fullt navn, e-postadresse eller telefonnummer og kryptert passord.' },
           { boldLabel: 'Skiftdata:', text: 'Arbeidstider, pauser, lønnsinnstillinger og relatert informasjon du registrerer.' },
+          { boldLabel: 'Vennemeldinger:', text: 'Meldinger, svarreferanser, bildevedlegg, misbruksrapporter, blokkeringer, trådmetadata og lese-/mute-status når du bruker vennemeldinger.' },
           { boldLabel: 'Autentiseringsinformasjon:', text: 'Informasjon om økter (cookies) for å holde deg innlogget.' },
           { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Stripe (nettsidekjøp) eller Apple (iOS-kjøp i appen). Vi lagrer ikke kortinformasjon.' },
           { boldLabel: 'AI-assistentdata:', text: 'Når du bruker Wagey AI-assistenten, blir meldingene du sender (inkludert tekst og bilder), visningsnavnet ditt og skiftdata som hentes under samtalen behandlet av en tredjeparts AI-tjeneste (se punkt 5).' },
+          { boldLabel: 'Varslingsmetadata:', text: 'Hvis du aktiverer pushvarsler, kan varslingspayloaden inneholde avsenderidentitet, begrenset meldingsforhåndsvisning, skjermbildevarsler og trådidentifikatorer slik at appen kan vise og åpne riktig samtale.' },
         ],
       },
       {
@@ -217,10 +223,12 @@ export const legalNo = {
         paragraphs: ['Dine data brukes til:'],
         list: [
           { text: 'Tilby skiftsporing og lønnsutregning.' },
+          { text: 'Tilby vennemeldinger, bildevedlegg, skjermbildevarsler, misbruksrapportering, sikkerhetsfunksjoner og blokkering av brukere.' },
           { text: 'Autentisere og administrere kontoen din.' },
           { text: 'Behandle abonnementsbetalinger via Stripe (nettside) eller Apple (iOS-appen).' },
           { text: 'Kommunisere med deg om tjenesten.' },
           { text: 'Tilby AI-drevet assistanse gjennom Wagey-funksjonen, inkludert å svare på spørsmål om skiftene dine, hjelpe med å administrere skift og beregne lønn. Dette krever sending av relevante data til en tredjeparts AI-tjeneste (se punkt 5).' },
+          { text: 'Behandle misbruksrapporter, håndheve reglene våre og beskytte brukere og tjenesten mot misbruk.' },
         ],
         importantNote: {
           label: 'Viktig:',
@@ -233,6 +241,7 @@ export const legalNo = {
           { boldLabel: 'Lagring:', text: 'All data lagres hos Supabase (PostgreSQL).' },
           { boldLabel: 'Oppbevaring:', text: 'Data oppbevares så lenge du har en aktiv konto. Vi garanterer ikke langtidsoppbevaring.' },
           { boldLabel: 'Sletting:', text: 'Ved sletting av konto fjernes alle data umiddelbart fra våre systemer.' },
+          { boldLabel: 'Sikkerhetsgjennomgang:', text: 'Hvis innhold rapporteres eller knyttes til misbruk, kan autoriserte behandlere gjennomgå relevante meldinger, vedlegg, kontometadata og rapportdata for å undersøke og håndheve reglene våre.' },
         ],
       },
       {

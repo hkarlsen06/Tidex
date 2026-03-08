@@ -15,7 +15,7 @@ final class ScreenshotNotificationService {
   private let urlSession = URLSessionFactory.quick
 
   /// Cooldown tracking to prevent notification spam
-  /// Key: sharer ID, Value: last reported timestamp
+  /// Key: screenshot target, Value: last reported timestamp
   private var lastReportedTimestamps: [String: Date] = [:]
 
   /// Tracks in-flight requests to prevent concurrent duplicate reports
@@ -26,17 +26,33 @@ final class ScreenshotNotificationService {
 
   private init() {}
 
-  /// Reports that the current user took a screenshot of another user's shifts
-  /// - Parameter sharerId: The ID of the user whose shifts were screenshotted
   func reportScreenshot(sharerId: String) async throws {
-    // Check if request is already in flight for this sharer
-    guard !inFlightRequests.contains(sharerId) else {
-      logger.info("Screenshot notification skipped - request already in flight for sharer")
+    try await reportScreenshot(
+      targetKey: "shifts:\(sharerId)",
+      endpointPath: "/api/sharing/screenshot",
+      requestBody: ["sharerId": sharerId]
+    )
+  }
+
+  func reportChatScreenshot(threadId: String) async throws {
+    try await reportScreenshot(
+      targetKey: "thread:\(threadId)",
+      endpointPath: "/api/friends/chat/screenshot",
+      requestBody: ["threadId": threadId]
+    )
+  }
+
+  private func reportScreenshot(
+    targetKey: String,
+    endpointPath: String,
+    requestBody: [String: Any]
+  ) async throws {
+    guard !inFlightRequests.contains(targetKey) else {
+      logger.info("Screenshot notification skipped - request already in flight for \(targetKey)")
       return
     }
 
-    // Check cooldown to prevent spam
-    if let lastReported = lastReportedTimestamps[sharerId] {
+    if let lastReported = lastReportedTimestamps[targetKey] {
       let elapsed = Date().timeIntervalSince(lastReported)
       if elapsed < cooldownInterval {
         logger.info(
@@ -46,70 +62,56 @@ final class ScreenshotNotificationService {
       }
     }
 
-    // Mark as in-flight BEFORE async operation to prevent race conditions
-    inFlightRequests.insert(sharerId)
-    defer { inFlightRequests.remove(sharerId) }
+    inFlightRequests.insert(targetKey)
+    defer { inFlightRequests.remove(targetKey) }
 
-    // Update timestamp BEFORE network call to prevent concurrent requests from passing cooldown check
-    lastReportedTimestamps[sharerId] = Date()
+    lastReportedTimestamps[targetKey] = Date()
 
-    // Get auth session (using AuthSessionManager to prevent concurrent refresh race conditions)
     let session: Session
     do {
       session = try await AuthSessionManager.shared.getSession()
     } catch {
-      // On auth failure, remove timestamp so retry is possible
-      lastReportedTimestamps.removeValue(forKey: sharerId)
+      lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
     let accessToken = session.accessToken
 
-    // Build request
-    let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/screenshot")
+    let url = APIConfiguration.webAppBaseURL.appendingPathComponent(endpointPath)
 
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
-    let body: [String: Any] = ["sharerId": sharerId]
-    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+    logger.info("Reporting screenshot notification for \(targetKey)")
 
-    logger.info("Reporting screenshot for sharer \(sharerId)")
-
-    // Execute request
     let data: Data
     let response: URLResponse
     do {
       (data, response) = try await urlSession.data(for: request)
     } catch {
-      // On network failure, remove timestamp so retry is possible
-      lastReportedTimestamps.removeValue(forKey: sharerId)
+      lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
 
     guard let httpResponse = response as? HTTPURLResponse else {
-      // On response parsing failure, remove timestamp so retry is possible
-      lastReportedTimestamps.removeValue(forKey: sharerId)
+      lastReportedTimestamps.removeValue(forKey: targetKey)
       throw ScreenshotServiceError.networkError
     }
 
     switch httpResponse.statusCode {
     case 200, 201:
-      // Timestamp already set - keep it for cooldown
       logger.info("Screenshot reported successfully")
     case 401:
-      // On auth error, remove timestamp so retry is possible after re-auth
-      lastReportedTimestamps.removeValue(forKey: sharerId)
+      lastReportedTimestamps.removeValue(forKey: targetKey)
       throw ScreenshotServiceError.notAuthenticated
     case 429:
-      // Rate limited - keep timestamp (cooldown is working correctly)
       logger.warning("Screenshot notification rate limited")
     default:
       let message = String(data: data, encoding: .utf8) ?? "Unknown error"
       logger.error("Screenshot report failed: \(httpResponse.statusCode) - \(message)")
-      // On server error, remove timestamp so retry is possible
-      lastReportedTimestamps.removeValue(forKey: sharerId)
+      lastReportedTimestamps.removeValue(forKey: targetKey)
       throw ScreenshotServiceError.httpError(statusCode: httpResponse.statusCode)
     }
   }

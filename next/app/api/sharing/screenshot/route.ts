@@ -49,6 +49,12 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseServiceClient();
 
+  const { data: screenshotterSettings } = await supabase
+    .from("user_settings")
+    .select("profile_picture_url")
+    .eq("user_id", screenshotterId)
+    .maybeSingle();
+
   // Verify the screenshotter has access to view this sharer's shifts
   const { data: shareAccess } = await supabase
     .from("shift_shares")
@@ -73,6 +79,12 @@ export async function POST(request: NextRequest) {
     locale
   );
 
+  const screenshotterAvatarUrl =
+    screenshotterSettings?.profile_picture_url ||
+    (session.user.user_metadata?.avatar_url as string | undefined) ||
+    (session.user.user_metadata?.picture as string | undefined) ||
+    null;
+
   // Insert notification to outbox
   const idempotencyKey = `screenshot:${screenshotterId}:${sharerId}:${Date.now()}`;
 
@@ -88,6 +100,9 @@ export async function POST(request: NextRequest) {
         type: "shifts_screenshotted",
         screenshotter_id: screenshotterId,
         screenshotter_name: screenshotterName,
+        sender_user_id: screenshotterId,
+        sender_name: screenshotterName,
+        sender_avatar_url: screenshotterAvatarUrl,
       },
       idempotency_key: idempotencyKey,
     });
@@ -124,14 +139,14 @@ function buildScreenshotMessage(
 ): { title: string; body: string } {
   if (isNorwegian(locale)) {
     return {
-      title: "Skjermbilde tatt",
+      title: screenshotterName,
       body: `${screenshotterName} tok et skjermbilde av vaktene dine`,
     };
   }
 
   // English (default)
   return {
-    title: "Screenshot taken",
+    title: screenshotterName,
     body: `${screenshotterName} took a screenshot of your shifts`,
   };
 }

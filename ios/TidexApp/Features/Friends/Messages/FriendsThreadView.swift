@@ -16,6 +16,9 @@ struct FriendsThreadView: View {
   @State private var unreadIncomingCount = 0
   @State private var showsNewMessagesPill = false
   @State private var scrollToBottomTrigger = 0
+  @State private var showScreenshotBubble = false
+  @State private var showScreenshotNotifiedIcon = false
+  @State private var screenshotBellShakeTrigger = false
 
   private struct ScrollState: Equatable {
     let messageCount: Int
@@ -88,6 +91,20 @@ struct FriendsThreadView: View {
               .padding(.top, Spacing.md)
           }
         }
+        .overlay(alignment: .top) {
+          if showScreenshotBubble {
+            screenshotBubble
+              .padding(.top, Spacing.md)
+              .onTapGesture {
+                dismissScreenshotBubble()
+              }
+              .transition(
+                .asymmetric(
+                  insertion: .scale.combined(with: .opacity),
+                  removal: .opacity
+                ))
+          }
+        }
         .overlay(alignment: .bottom) {
           if showsNewMessagesPill, !viewModel.messages.isEmpty {
             scrollToLatestButton
@@ -150,6 +167,13 @@ struct FriendsThreadView: View {
 
       Task {
         await viewModel.handleExternalThreadUpdate()
+      }
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
+    ) { _ in
+      Task {
+        await reportScreenshot()
       }
     }
     .confirmationDialog(
@@ -305,6 +329,13 @@ struct FriendsThreadView: View {
       .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
     }
     .buttonStyle(.plain)
+  }
+
+  private var screenshotBubble: some View {
+    ScreenshotNotificationBubble(
+      showNotifiedIcon: showScreenshotNotifiedIcon,
+      bellShakeTrigger: screenshotBellShakeTrigger
+    )
   }
 
   private var composer: some View {
@@ -528,6 +559,40 @@ struct FriendsThreadView: View {
       if highlightedMessageId == messageId {
         highlightedMessageId = nil
       }
+    }
+  }
+
+  private func reportScreenshot() async {
+    showScreenshotNotifiedIcon = false
+
+    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+      showScreenshotBubble = true
+    }
+
+    do {
+      try await ScreenshotNotificationService.shared.reportChatScreenshot(
+        threadId: viewModel.route.threadId
+      )
+      withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+        showScreenshotNotifiedIcon = true
+      }
+      Haptics.play(.success)
+      try? await Task.sleep(for: .seconds(0.3))
+      screenshotBellShakeTrigger.toggle()
+    } catch {
+      // Keep the bubble visible, but don't interrupt chat on notification failure.
+    }
+  }
+
+  private func dismissScreenshotBubble() {
+    withAnimation(.easeOut(duration: 0.2)) {
+      showScreenshotBubble = false
+    }
+
+    Task {
+      try? await Task.sleep(for: .seconds(0.3))
+      showScreenshotNotifiedIcon = false
+      screenshotBellShakeTrigger = false
     }
   }
 

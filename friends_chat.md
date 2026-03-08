@@ -626,6 +626,16 @@
 #### Terms and Legal Surface Requirements
 
 - Update Terms of Service to explicitly prohibit harassment, bullying, hate, threats, spam, sexual exploitation, and other abusive use of chat or social features.
+- Update Privacy Policy to explicitly cover Friends messaging and attachments, including:
+  - what message and attachment data is stored,
+  - that abuse reports and moderation actions may be reviewed for safety/compliance,
+  - that push notifications may include sender identity and message-preview metadata.
+- Treat the legal copy update as launch-blocking work for messaging, not a post-launch cleanup task.
+- After the legal copy is updated, bump the canonical legal version dates used by:
+  - `next/lib/i18n/dictionaries/legal.*.ts`,
+  - `next/app/api/legal/version/route.ts`,
+  - iOS `TermsVersion` re-acceptance checks.
+- If the messaging launch materially changes data handling, require re-acceptance of updated Terms/Privacy before or at first app open after release.
 - Make Terms of Service and Privacy Policy reachable from inside the app in a support or legal surface that does not depend on onboarding.
 - Add `Privacy Policy` and `Terms of Service` links to the chat support/report flow confirmation sheet or adjacent support surface so reviewers can find them without hunting through the app.
 
@@ -718,6 +728,7 @@
   - report volume,
   - push enqueue failures.
 - Add at least one kill switch that can disable image attachments independently of text messaging if moderation or Storage issues appear during rollout.
+- Do not submit the messaging build for App Review until the updated Terms and Privacy Policy are published at their final production URLs and reflected in the App Store metadata.
 
 ### Test Plan
 

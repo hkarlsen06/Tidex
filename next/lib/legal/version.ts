@@ -1,13 +1,22 @@
 import { legalNo } from '@/lib/i18n/dictionaries/legal.no';
 
+function latestLegalVersionDate(...dates: string[]): string {
+  return dates.reduce((latest, candidate) => {
+    return new Date(candidate) > new Date(latest) ? candidate : latest;
+  });
+}
+
 /**
- * Get the current Terms of Service version date.
+ * Get the current legal version date.
  *
  * This reads directly from the legal dictionary so there's only one place
- * to update when terms change. The Norwegian dictionary is used as the
- * canonical source (both locales should have the same date).
+ * to update when terms or privacy change. The Norwegian dictionary is used
+ * as the canonical source (both locales should have the same dates).
  */
-export const CURRENT_TERMS_VERSION_DATE = legalNo.terms.lastUpdatedDate;
+export const CURRENT_LEGAL_VERSION_DATE = latestLegalVersionDate(
+  legalNo.terms.lastUpdatedDate,
+  legalNo.privacy.lastUpdatedDate,
+);
 
 /**
  * Check if the user's terms acceptance is up-to-date.
@@ -21,7 +30,7 @@ export function needsTermsReAcceptance(termsAcceptedAt: string | null | undefine
   }
 
   const acceptedDate = new Date(termsAcceptedAt);
-  const currentVersionDate = new Date(CURRENT_TERMS_VERSION_DATE);
+  const currentVersionDate = new Date(CURRENT_LEGAL_VERSION_DATE);
 
   // User needs to re-accept if their acceptance date is before the current terms version
   return acceptedDate < currentVersionDate;
@@ -45,7 +54,7 @@ export function isJwtFreshForTermsCheck(jwtIssuedAt: number | undefined): boolea
   }
 
   const jwtIssuedDate = new Date(jwtIssuedAt * 1000);
-  const termsVersionDate = new Date(CURRENT_TERMS_VERSION_DATE);
+  const termsVersionDate = new Date(CURRENT_LEGAL_VERSION_DATE);
 
   // JWT is fresh if it was issued on or after the terms version date
   return jwtIssuedDate >= termsVersionDate;
