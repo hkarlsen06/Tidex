@@ -9,6 +9,7 @@ import SwiftUI
 struct SharerListView: View {
   let sharers: [SharedUser]
   let hiddenSharers: [SharedUser]
+  let chatOnlyUserIds: Set<String>
   let selectedSharer: SharedUser?
   let shiftPreviews: [String: SharerShiftPreview]
   let isLoading: Bool
@@ -209,6 +210,7 @@ struct SharerListView: View {
     let preview = shiftPreviews[sharer.id]
     let isSelected = selectedSharer?.id == sharer.id
     let isOpeningMessage = openingThreadUserId == sharer.id
+    let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
 
     FriendCard(
       sharer: sharer,
@@ -216,7 +218,11 @@ struct SharerListView: View {
       isSelected: isSelected,
       isRefreshing: isRefreshing,
       onTap: {
-        onSelectSharer(sharer)
+        if opensChatDirectly {
+          onMessageTap(sharer)
+        } else {
+          onSelectSharer(sharer)
+        }
       },
       onMessageTap: {
         onMessageTap(sharer)
@@ -230,6 +236,7 @@ struct SharerListView: View {
     let preview = shiftPreviews[sharer.id]
     let isSelected = selectedSharer?.id == sharer.id
     let isOpeningMessage = openingThreadUserId == sharer.id
+    let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
 
     FriendCard(
       sharer: sharer,
@@ -237,7 +244,11 @@ struct SharerListView: View {
       isSelected: isSelected,
       isRefreshing: isRefreshing,
       onTap: {
-        onSelectHiddenSharer(sharer)
+        if opensChatDirectly {
+          onMessageTap(sharer)
+        } else {
+          onSelectHiddenSharer(sharer)
+        }
       },
       onMessageTap: {
         onMessageTap(sharer)
@@ -275,6 +286,7 @@ struct SharerListView: View {
         hidden: true
       )
     ],
+    chatOnlyUserIds: [],
     selectedSharer: nil,
     shiftPreviews: [:],
     isLoading: false,

@@ -43,6 +43,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Users who share their shifts with the current user but are hidden from the main list
   @Published private(set) var hiddenSharers: [SharedUser] = []
 
+  /// Users the viewer shares with, but who do not share back.
+  @Published private(set) var chatOnlyUserIds: Set<String> = []
+
   /// Currently selected sharer (nil shows sharer list)
   @Published var selectedSharer: SharedUser?
 
@@ -247,6 +250,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     sharers = partitionedSharers.visible
     hiddenSharers = partitionedSharers.hidden
+    chatOnlyUserIds = []
     shiftPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
     hasFinishedInitialSharersLoad = true
 
@@ -336,18 +340,29 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       // Fetch fresh data from network
       logger.info("Fetching fresh sharers from network...")
-      let freshSharers = try await sharingService.fetchSharers(for: userId)
+      async let sharersTask = sharingService.fetchSharers(for: userId)
+      async let friendsTask = try? sharingService.fetchAllFriends()
+
+      let freshSharers = try await sharersTask
+      let outgoingChatSharers = chatOnlySharers(
+        from: await friendsTask?.friends ?? [],
+        excluding: Set(freshSharers.map(\.id))
+      )
       logger.info(
         "Network returned \(freshSharers.count) sharers: \(freshSharers.map { $0.displayName })")
 
       let partitionedSharers = partitionSharers(freshSharers)
 
       // Update UI with fresh data
-      sharers = partitionedSharers.visible
+      sharers = partitionedSharers.visible + outgoingChatSharers
       hiddenSharers = partitionedSharers.hidden
+      chatOnlyUserIds = Set(outgoingChatSharers.map(\.id))
       hasFinishedInitialSharersLoad = true
       logger.info(
-        "Updated sharers properties, now has \(self.sharers.count) visible and \(self.hiddenSharers.count) hidden items"
+        """
+        Updated sharers properties, now has \(self.sharers.count) visible and
+        \(self.hiddenSharers.count) hidden items (\(outgoingChatSharers.count) chat-only)
+        """
       )
 
       // Save to cache
@@ -378,6 +393,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       self.error = SharingError.loadFailed(underlying: error)
       if sharers.isEmpty && hiddenSharers.isEmpty {
         hasFinishedInitialSharersLoad = true
+        chatOnlyUserIds = []
       }
       isLoadingSharers = false
     }
@@ -386,7 +402,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Load shift previews for all sharers
   /// - Parameter forceRefresh: If true, bypasses cache and fetches fresh data
   func loadShiftPreviews(forceRefresh: Bool = false) async {
-    let allSharers = sharers + hiddenSharers
+    let allSharers = (sharers + hiddenSharers).filter { !chatOnlyUserIds.contains($0.id) }
     guard !allSharers.isEmpty else { return }
 
     do {
@@ -441,9 +457,10 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       await sharedShiftsRepository.saveShiftPreviews(previews, for: userId)
 
       // Update friend widget storage with sharers and previews
-      if !sharers.isEmpty {
+      let widgetSharers = sharers.filter { !chatOnlyUserIds.contains($0.id) }
+      if !widgetSharers.isEmpty {
         NativeWidgetStorage.updateFriendWidgetStorage(
-          sharers: sharers,
+          sharers: widgetSharers,
           previews: previews
         )
       }
@@ -473,6 +490,29 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     return (visible, hidden)
+  }
+
+  private func chatOnlySharers(from friends: [Friend], excluding sharerIds: Set<String>)
+    -> [SharedUser]
+  {
+    friends.compactMap { friend in
+      guard friend.isOutgoingOnly, !sharerIds.contains(friend.id), let share = friend.iShareWith
+      else {
+        return nil
+      }
+
+      return SharedUser(
+        id: friend.id,
+        email: friend.email,
+        phone: friend.phone,
+        firstName: friend.firstName,
+        profilePictureUrl: friend.profilePictureUrl,
+        oauthAvatarUrl: friend.oauthAvatarUrl,
+        sharedAt: share.sharedAt,
+        showEarnings: false,
+        hidden: false
+      )
+    }
   }
 
   /// Refresh sharers (pull-to-refresh) - forces fresh data

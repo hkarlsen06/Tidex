@@ -1,4 +1,5 @@
 import Auth
+import Combine
 import Foundation
 import Supabase
 import UIKit
@@ -624,13 +625,15 @@ private struct MessagingMessageRow: Decodable {
       senderUserId: senderUserId,
       messageType: FriendMessageType(rawValue: messageType) ?? .user,
       body: body,
-      clientId: clientId,
+      clientId: clientId.lowercased(),
       replyToMessageId: replyToMessageId,
       createdAt: createdAt,
       editedAt: editedAt,
       deletedAt: deletedAt,
       metadataData: Self.encode(metadata),
-      attachments: attachments.map { $0.toFriendAttachment() }
+      attachments: attachments.map { $0.toFriendAttachment() },
+      sendState: .sent,
+      failureMessage: nil
     )
   }
 

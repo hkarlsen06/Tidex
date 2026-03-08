@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -105,12 +106,40 @@ final class FriendsMessagesRepository: ObservableObject {
       let messages = try context.fetch(messageDescriptor)
       let attachments = try context.fetch(attachmentDescriptor)
       let attachmentsByMessageId = Dictionary(grouping: attachments, by: \.messageId)
-      return messages.map { message in
+      let friendMessages = messages.map { message in
         message.toFriendMessage(attachments: attachmentsByMessageId[message.id] ?? [])
       }
+      return deduplicateMessages(friendMessages, viewerUserId: viewerUserId)
     } catch {
       logger.error("Failed to fetch messages: \(error.localizedDescription)")
       return []
+    }
+  }
+
+  func getMessage(id: String, viewerUserId: String) -> FriendMessage? {
+    let context = ModelContext(container)
+    let messageDescriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.id == id && localMessage.viewerUserId == viewerUserId
+      }
+    )
+    let attachmentDescriptor = FetchDescriptor<LocalMessageAttachment>(
+      predicate: #Predicate { attachment in
+        attachment.messageId == id && attachment.viewerUserId == viewerUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessageAttachment.attachmentIndex, order: .forward),
+        SortDescriptor(\LocalMessageAttachment.id, order: .forward),
+      ]
+    )
+
+    do {
+      guard let message = try context.fetch(messageDescriptor).first else { return nil }
+      let attachments = try context.fetch(attachmentDescriptor)
+      return message.toFriendMessage(attachments: attachments)
+    } catch {
+      logger.error("Failed to fetch message: \(error.localizedDescription)")
+      return nil
     }
   }
 
@@ -144,6 +173,57 @@ final class FriendsMessagesRepository: ObservableObject {
     }
   }
 
+  func saveOptimisticMessage(
+    _ message: FriendMessage, in threadId: String, for viewerUserId: String
+  )
+    async
+  {
+    do {
+      try await storeActor.saveOptimisticMessage(message, in: threadId, for: viewerUserId)
+      logger.info("Saved optimistic message for thread \(threadId, privacy: .private)")
+    } catch {
+      logger.error("Failed to save optimistic message: \(error.localizedDescription)")
+    }
+  }
+
+  func saveConfirmedMessage(
+    _ message: FriendMessage,
+    replacingLocalMessageId localMessageId: String,
+    in threadId: String,
+    for viewerUserId: String
+  ) async {
+    do {
+      try await storeActor.saveConfirmedMessage(
+        message,
+        replacingLocalMessageId: localMessageId,
+        in: threadId,
+        for: viewerUserId
+      )
+      logger.info("Saved confirmed message for thread \(threadId, privacy: .private)")
+    } catch {
+      logger.error("Failed to save confirmed message: \(error.localizedDescription)")
+    }
+  }
+
+  func updateMessageSendState(
+    messageId: String,
+    viewerUserId: String,
+    sendState: FriendMessageSendState,
+    failureMessage: String?
+  ) async {
+    do {
+      try await storeActor.updateMessageSendState(
+        messageId: messageId,
+        viewerUserId: viewerUserId,
+        sendState: sendState,
+        failureMessage: failureMessage
+      )
+      logger.info("Updated message send state for \(messageId, privacy: .private)")
+    } catch {
+      logger.error("Failed to update message send state: \(error.localizedDescription)")
+    }
+  }
+
   func saveThreadState(_ state: FriendThreadState) async {
     do {
       try await storeActor.saveThreadState(state)
@@ -155,3 +235,73 @@ final class FriendsMessagesRepository: ObservableObject {
 }
 
 extension FriendsMessagesRepository: FriendsMessagesRepositoryProviding {}
+
+extension FriendsMessagesRepository {
+  fileprivate func deduplicateMessages(_ messages: [FriendMessage], viewerUserId: String)
+    -> [FriendMessage]
+  {
+    var bestMessageByDeduplicationKey: [String: FriendMessage] = [:]
+    var orderedMessages: [FriendMessage] = []
+
+    for message in messages {
+      guard let deduplicationKey = deduplicationKey(for: message, viewerUserId: viewerUserId) else {
+        orderedMessages.append(message)
+        continue
+      }
+
+      if let existing = bestMessageByDeduplicationKey[deduplicationKey] {
+        bestMessageByDeduplicationKey[deduplicationKey] = preferredMessage(
+          between: existing, and: message)
+      } else {
+        bestMessageByDeduplicationKey[deduplicationKey] = message
+      }
+    }
+
+    let deduplicated = orderedMessages + bestMessageByDeduplicationKey.values
+    return deduplicated.sorted {
+      if $0.createdAt == $1.createdAt {
+        return $0.id < $1.id
+      }
+      return $0.createdAt < $1.createdAt
+    }
+  }
+
+  fileprivate func deduplicationKey(for message: FriendMessage, viewerUserId: String) -> String? {
+    guard message.senderUserId == viewerUserId else { return nil }
+    let normalizedClientId = message.clientId.trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+    guard !normalizedClientId.isEmpty else { return nil }
+    return "\(message.senderUserId):\(normalizedClientId)"
+  }
+
+  fileprivate func preferredMessage(between lhs: FriendMessage, and rhs: FriendMessage)
+    -> FriendMessage
+  {
+    let lhsScore = messagePreferenceScore(lhs)
+    let rhsScore = messagePreferenceScore(rhs)
+
+    if lhsScore == rhsScore {
+      if lhs.createdAt == rhs.createdAt {
+        return lhs.id < rhs.id ? lhs : rhs
+      }
+      return lhs.createdAt >= rhs.createdAt ? lhs : rhs
+    }
+
+    return lhsScore > rhsScore ? lhs : rhs
+  }
+
+  fileprivate func messagePreferenceScore(_ message: FriendMessage) -> Int {
+    let stateScore: Int
+    switch message.sendState {
+    case .sent:
+      stateScore = 3
+    case .failed:
+      stateScore = 2
+    case .sending:
+      stateScore = 1
+    }
+
+    let localPenalty = message.id.hasPrefix("local-") ? 0 : 1
+    return (stateScore * 10) + localPenalty
+  }
+}

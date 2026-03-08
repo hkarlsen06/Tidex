@@ -17,6 +17,12 @@ enum FriendMessageAttachmentKind: String, Codable, Equatable {
   case image
 }
 
+enum FriendMessageSendState: String, Codable, Equatable {
+  case sending
+  case sent
+  case failed
+}
+
 enum FriendAbuseReportReason: String, Codable, CaseIterable, Equatable {
   case harassmentOrBullying = "harassment_or_bullying"
   case sexualContent = "sexual_content"
@@ -105,13 +111,41 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   let deletedAt: Date?
   let metadataData: Data?
   let attachments: [FriendMessageAttachment]
+  let sendState: FriendMessageSendState
+  let failureMessage: String?
 
   var hasImageAttachment: Bool {
     attachments.contains { $0.kind == .image }
   }
 
+  var canRetrySend: Bool {
+    sendState == .failed
+  }
+
   var paginationCursor: FriendMessageCursor {
     FriendMessageCursor(createdAt: createdAt, messageId: id)
+  }
+
+  func withSendState(
+    _ sendState: FriendMessageSendState,
+    failureMessage: String? = nil
+  ) -> FriendMessage {
+    FriendMessage(
+      id: id,
+      threadId: threadId,
+      senderUserId: senderUserId,
+      messageType: messageType,
+      body: body,
+      clientId: clientId,
+      replyToMessageId: replyToMessageId,
+      createdAt: createdAt,
+      editedAt: editedAt,
+      deletedAt: deletedAt,
+      metadataData: metadataData,
+      attachments: attachments,
+      sendState: sendState,
+      failureMessage: failureMessage
+    )
   }
 }
 

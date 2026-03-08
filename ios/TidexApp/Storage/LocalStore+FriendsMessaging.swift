@@ -66,35 +66,57 @@ extension LocalStoreActor {
   }
 
   func saveMessage(_ message: FriendMessage, in threadId: String, for viewerUserId: String) throws {
-    let messageId = message.id
-    let descriptor = FetchDescriptor<LocalMessage>(
-      predicate: #Predicate { localMessage in
-        localMessage.id == messageId && localMessage.viewerUserId == viewerUserId
-      }
-    )
-
-    if let existing = try modelContext.fetch(descriptor).first {
+    if let existing = try fetchMessage(id: message.id, viewerUserId: viewerUserId) {
       existing.apply(message: message)
+    } else if message.senderUserId == viewerUserId,
+      let existing = try findReplaceableLocalMessage(
+        for: message,
+        in: threadId,
+        viewerUserId: viewerUserId
+      )
+    {
+      try deleteAttachments(messageId: existing.id, viewerUserId: viewerUserId)
+      modelContext.delete(existing)
+      insertMessage(message, in: threadId, for: viewerUserId)
     } else {
-      modelContext.insert(
-        LocalMessage(
-          id: messageId,
-          viewerUserId: viewerUserId,
-          threadId: threadId,
-          senderUserId: message.senderUserId,
-          messageTypeRaw: message.messageType.rawValue,
-          body: message.body,
-          clientId: message.clientId,
-          replyToMessageId: message.replyToMessageId,
-          createdAt: message.createdAt,
-          editedAt: message.editedAt,
-          deletedAt: message.deletedAt,
-          metadataData: message.metadataData ?? Data()
-        ))
+      insertMessage(message, in: threadId, for: viewerUserId)
     }
 
     try replaceAttachments(for: message, viewerUserId: viewerUserId)
     try updateThreadPreviewIfNeeded(for: message, viewerUserId: viewerUserId)
+  }
+
+  func saveOptimisticMessage(
+    _ message: FriendMessage, in threadId: String, for viewerUserId: String
+  )
+    throws
+  {
+    try saveMessage(message, in: threadId, for: viewerUserId)
+    try modelContext.save()
+  }
+
+  func saveConfirmedMessage(
+    _ message: FriendMessage,
+    replacingLocalMessageId localMessageId: String,
+    in threadId: String,
+    for viewerUserId: String
+  ) throws {
+    try deleteMessage(id: localMessageId, viewerUserId: viewerUserId)
+    try saveMessage(message, in: threadId, for: viewerUserId)
+    try modelContext.save()
+  }
+
+  func updateMessageSendState(
+    messageId: String,
+    viewerUserId: String,
+    sendState: FriendMessageSendState,
+    failureMessage: String?
+  ) throws {
+    guard let message = try fetchMessage(id: messageId, viewerUserId: viewerUserId) else { return }
+    message.sendStateRaw = sendState.rawValue
+    message.failureMessage = failureMessage
+    message.updatedAt = Date()
+    try modelContext.save()
   }
 
   func saveThreadState(_ state: FriendThreadState) throws {
@@ -145,16 +167,7 @@ extension LocalStoreActor {
   }
 
   private func replaceAttachments(for message: FriendMessage, viewerUserId: String) throws {
-    let messageId = message.id
-    let descriptor = FetchDescriptor<LocalMessageAttachment>(
-      predicate: #Predicate { attachment in
-        attachment.messageId == messageId && attachment.viewerUserId == viewerUserId
-      }
-    )
-
-    for existing in try modelContext.fetch(descriptor) {
-      modelContext.delete(existing)
-    }
+    try deleteAttachments(messageId: message.id, viewerUserId: viewerUserId)
 
     for attachment in message.attachments {
       modelContext.insert(
@@ -203,5 +216,107 @@ extension LocalStoreActor {
     thread.lastMessageHasImage = message.hasImageAttachment
     thread.sortTimestamp = message.createdAt
     thread.updatedAt = Date()
+  }
+
+  private func fetchMessage(id: String, viewerUserId: String) throws -> LocalMessage? {
+    let descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.id == id && localMessage.viewerUserId == viewerUserId
+      }
+    )
+    return try modelContext.fetch(descriptor).first
+  }
+
+  private func fetchMessage(
+    clientId: String,
+    threadId: String,
+    viewerUserId: String
+  ) throws -> LocalMessage? {
+    let descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.clientId == clientId
+          && localMessage.threadId == threadId
+          && localMessage.viewerUserId == viewerUserId
+      }
+    )
+    return try modelContext.fetch(descriptor).first
+  }
+
+  private func findReplaceableLocalMessage(
+    for message: FriendMessage,
+    in threadId: String,
+    viewerUserId: String
+  ) throws -> LocalMessage? {
+    let normalizedClientId = message.clientId.lowercased()
+    if !normalizedClientId.isEmpty,
+      let byClientId = try fetchMessage(
+        clientId: normalizedClientId,
+        threadId: threadId,
+        viewerUserId: viewerUserId
+      )
+    {
+      return byClientId
+    }
+
+    let descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.threadId == threadId
+          && localMessage.viewerUserId == viewerUserId
+          && localMessage.senderUserId == viewerUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessage.createdAt, order: .reverse),
+        SortDescriptor(\LocalMessage.updatedAt, order: .reverse),
+      ]
+    )
+
+    let candidates = try modelContext.fetch(descriptor).filter { candidate in
+      candidate.sendStateRaw != FriendMessageSendState.sent.rawValue
+        && candidate.body == message.body
+        && candidate.replyToMessageId == message.replyToMessageId
+        && abs(candidate.createdAt.timeIntervalSince(message.createdAt)) < 180
+    }
+
+    return candidates.first
+  }
+
+  private func insertMessage(
+    _ message: FriendMessage, in threadId: String, for viewerUserId: String
+  ) {
+    modelContext.insert(
+      LocalMessage(
+        id: message.id,
+        viewerUserId: viewerUserId,
+        threadId: threadId,
+        senderUserId: message.senderUserId,
+        messageTypeRaw: message.messageType.rawValue,
+        body: message.body,
+        clientId: message.clientId.lowercased(),
+        replyToMessageId: message.replyToMessageId,
+        createdAt: message.createdAt,
+        editedAt: message.editedAt,
+        deletedAt: message.deletedAt,
+        metadataData: message.metadataData ?? Data(),
+        sendStateRaw: message.sendState.rawValue,
+        failureMessage: message.failureMessage
+      ))
+  }
+
+  private func deleteAttachments(messageId: String, viewerUserId: String) throws {
+    let descriptor = FetchDescriptor<LocalMessageAttachment>(
+      predicate: #Predicate { attachment in
+        attachment.messageId == messageId && attachment.viewerUserId == viewerUserId
+      }
+    )
+
+    for existing in try modelContext.fetch(descriptor) {
+      modelContext.delete(existing)
+    }
+  }
+
+  private func deleteMessage(id: String, viewerUserId: String) throws {
+    guard let message = try fetchMessage(id: id, viewerUserId: viewerUserId) else { return }
+    try deleteAttachments(messageId: id, viewerUserId: viewerUserId)
+    modelContext.delete(message)
   }
 }

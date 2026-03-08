@@ -122,6 +122,8 @@ final class LocalMessage {
   var editedAt: Date?
   var deletedAt: Date?
   var metadataData: Data
+  var sendStateRaw: String?
+  var failureMessage: String?
   var updatedAt: Date
 
   init(
@@ -137,6 +139,8 @@ final class LocalMessage {
     editedAt: Date?,
     deletedAt: Date?,
     metadataData: Data = Data(),
+    sendStateRaw: String? = FriendMessageSendState.sent.rawValue,
+    failureMessage: String? = nil,
     updatedAt: Date = Date()
   ) {
     self.compositeKey = "\(viewerUserId):\(id)"
@@ -152,6 +156,8 @@ final class LocalMessage {
     self.editedAt = editedAt
     self.deletedAt = deletedAt
     self.metadataData = metadataData
+    self.sendStateRaw = sendStateRaw
+    self.failureMessage = failureMessage
     self.updatedAt = updatedAt
   }
 }
@@ -317,7 +323,10 @@ extension LocalMessage {
           }
           return $0.attachmentIndex < $1.attachmentIndex
         }
-        .map { $0.toFriendMessageAttachment() }
+        .map { $0.toFriendMessageAttachment() },
+      sendState: FriendMessageSendState(
+        rawValue: sendStateRaw ?? FriendMessageSendState.sent.rawValue) ?? .sent,
+      failureMessage: failureMessage
     )
   }
 
@@ -325,12 +334,14 @@ extension LocalMessage {
     senderUserId = message.senderUserId
     messageTypeRaw = message.messageType.rawValue
     body = message.body
-    clientId = message.clientId
+    clientId = message.clientId.lowercased()
     replyToMessageId = message.replyToMessageId
     createdAt = message.createdAt
     editedAt = message.editedAt
     deletedAt = message.deletedAt
     metadataData = message.metadataData ?? Data()
+    sendStateRaw = message.sendState.rawValue
+    failureMessage = message.failureMessage
     updatedAt = Date()
   }
 }

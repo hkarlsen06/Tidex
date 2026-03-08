@@ -316,6 +316,7 @@ struct SharingView: View {
         SharerListView(
           sharers: viewModel.sharers,
           hiddenSharers: viewModel.hiddenSharers,
+          chatOnlyUserIds: viewModel.chatOnlyUserIds,
           selectedSharer: viewModel.selectedSharer,
           shiftPreviews: viewModel.shiftPreviews,
           isLoading: viewModel.isLoadingSharers,

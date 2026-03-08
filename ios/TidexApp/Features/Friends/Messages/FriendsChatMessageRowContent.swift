@@ -6,6 +6,13 @@ struct FriendsChatReplyPreviewModel: Equatable {
   let hasImageAttachment: Bool
 }
 
+enum FriendsChatMessageStatus: Equatable {
+  case sending
+  case delivered
+  case read
+  case failed
+}
+
 struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
 
@@ -17,8 +24,9 @@ struct FriendsChatMessageRowContent: View {
   let separatorDate: Date?
   let showsSenderLabel: Bool
   let showsTimestamp: Bool
-  let showsReadReceipt: Bool
+  let messageStatus: FriendsChatMessageStatus?
   let onReply: () -> Void
+  let onRetry: () -> Void
   let onReportMessage: () -> Void
   let onTapQuotedMessage: () -> Void
 
@@ -104,31 +112,95 @@ struct FriendsChatMessageRowContent: View {
             }
           }
 
-          if showsTimestamp || showsReadReceipt {
+          if showsTimestamp || messageStatus != nil {
             HStack(spacing: Spacing.xxs) {
-              if showsTimestamp {
-                Text(message.createdAt.formatted(.dateTime.hour().minute()))
-              }
+              if isCurrentUser {
+                if let messageStatus {
+                  statusView(messageStatus)
+                }
 
-              if showsReadReceipt {
-                Image(systemName: "eye.fill")
-                  .font(.system(size: 11, weight: .semibold))
-                  .foregroundColor(.tidexBlue)
-                  .accessibilityLabel(Text("Read"))
+                if showsTimestamp {
+                  Text(message.createdAt.formatted(.dateTime.hour().minute()))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+              } else {
+                if showsTimestamp {
+                  Text(message.createdAt.formatted(.dateTime.hour().minute()))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+
+                if let messageStatus {
+                  statusView(messageStatus)
+                }
               }
             }
             .font(.tidexMicro)
             .foregroundColor(.tidexTextMuted)
-            .padding(.horizontal, CornerRadius.bubble)
+            .fixedSize(horizontal: true, vertical: false)
           }
         }
       }
     }
-    .padding(.vertical, 2)
+    .padding(.top, Spacing.micro)
+    .padding(.bottom, showsTimestamp || messageStatus != nil ? Spacing.xxxs : Spacing.micro)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .fill(isHighlighted ? Color.tidexBlue.opacity(0.08) : Color.clear)
     )
+  }
+
+  @ViewBuilder
+  private func statusView(_ messageStatus: FriendsChatMessageStatus) -> some View {
+    switch messageStatus {
+    case .sending:
+      HStack(spacing: 3) {
+        ProgressView()
+          .controlSize(.mini)
+
+        Text(.friendsChatStatusSending)
+          .lineLimit(1)
+          .minimumScaleFactor(0.9)
+          .fixedSize(horizontal: true, vertical: false)
+      }
+
+    case .delivered:
+      HStack(spacing: 0) {
+        Image(systemName: "checkmark")
+          .font(.system(size: 11, weight: .semibold))
+      }
+
+    case .read:
+      HStack(spacing: 0) {
+        Image(systemName: "eye.fill")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.tidexBlue)
+      }
+
+    case .failed:
+      HStack(spacing: 4) {
+        Image(systemName: "exclamationmark.circle.fill")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.tidexError)
+
+        Text(.friendsChatStatusFailed)
+          .foregroundColor(.tidexError)
+          .lineLimit(1)
+          .minimumScaleFactor(0.9)
+          .fixedSize(horizontal: true, vertical: false)
+
+        Button {
+          onRetry()
+        } label: {
+          Text(.commonRetry)
+            .foregroundColor(.tidexBlue)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.plain)
+      }
+    }
   }
 }
 

@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import Supabase
 import os.log
@@ -7,12 +8,18 @@ private let realtimeLogger = Logger(
 
 extension Notification.Name {
   static let friendsThreadDidUpdate = Notification.Name("friendsThreadDidUpdate")
+  static let friendsThreadTypingDidChange = Notification.Name("friendsThreadTypingDidChange")
 }
 
 @MainActor
 final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private enum Pagination {
     static let pageSize = 50
+  }
+
+  private enum TypingEvent {
+    static let start = "typing_start"
+    static let stop = "typing_stop"
   }
 
   static let shared = FriendsMessagingRealtimeCoordinator()
@@ -24,6 +31,18 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private var threadListTasks: [Task<Void, Never>] = []
   private var threadChannels: [String: RealtimeChannelV2] = [:]
   private var threadTasks: [String: [Task<Void, Never>]] = [:]
+
+  private struct ThreadTypingPayload: Codable {
+    let threadId: String
+    let userId: String
+    let sentAtMs: Int64
+
+    enum CodingKeys: String, CodingKey {
+      case threadId = "thread_id"
+      case userId = "user_id"
+      case sentAtMs = "sent_at_ms"
+    }
+  }
 
   init(
     service: (any FriendsMessagingServiceProviding)? = nil,
@@ -93,7 +112,9 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   func startThreadSubscription(threadId: String, viewerUserId: String) async {
     await stopThreadSubscription(threadId: threadId)
 
-    let channel = supabase.channel("friends-thread-detail:\(threadId)")
+    let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
+      config.broadcast.receiveOwnBroadcasts = true
+    }
     let threadChanges = channel.postgresChange(
       AnyAction.self,
       schema: "public",
@@ -118,6 +139,18 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       threadChannels[threadId] = channel
 
       threadTasks[threadId] = [
+        makeTypingBroadcastTask(
+          for: channel,
+          threadId: threadId,
+          event: TypingEvent.start,
+          isTyping: true
+        ),
+        makeTypingBroadcastTask(
+          for: channel,
+          threadId: threadId,
+          event: TypingEvent.stop,
+          isTyping: false
+        ),
         makeThreadStatusTask(for: channel, threadId: threadId, viewerUserId: viewerUserId),
         Task { [weak self] in
           guard let self else { return }
@@ -165,6 +198,14 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     for threadId in threadChannels.keys {
       await stopThreadSubscription(threadId: threadId)
     }
+  }
+
+  func sendTypingStart(threadId: String, userId: String) async {
+    await broadcastTypingEvent(event: TypingEvent.start, threadId: threadId, userId: userId)
+  }
+
+  func sendTypingStop(threadId: String, userId: String) async {
+    await broadcastTypingEvent(event: TypingEvent.stop, threadId: threadId, userId: userId)
   }
 
   private func refreshThreadList(viewerUserId: String) async {
@@ -282,6 +323,36 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     )
   }
 
+  private func notifyThreadTypingChanged(threadId: String, userId: String, isTyping: Bool) {
+    NotificationCenter.default.post(
+      name: .friendsThreadTypingDidChange,
+      object: nil,
+      userInfo: [
+        "threadId": threadId,
+        "userId": userId,
+        "isTyping": isTyping,
+      ]
+    )
+  }
+
+  private func broadcastTypingEvent(event: String, threadId: String, userId: String) async {
+    guard let channel = threadChannels[threadId] else { return }
+
+    let payload = ThreadTypingPayload(
+      threadId: threadId,
+      userId: userId,
+      sentAtMs: Int64(Date().timeIntervalSince1970 * 1000)
+    )
+
+    do {
+      try await channel.broadcast(event: event, message: payload)
+    } catch {
+      realtimeLogger.error(
+        "Failed to broadcast typing event \(event, privacy: .public): \(error.localizedDescription)"
+      )
+    }
+  }
+
   private func makeStatusTask(for channel: RealtimeChannelV2, viewerUserId: String) -> Task<
     Void, Never
   > {
@@ -303,6 +374,41 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       for await status in channel.statusChange where status == .subscribed {
         await self.refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
       }
+    }
+  }
+
+  private func makeTypingBroadcastTask(
+    for channel: RealtimeChannelV2,
+    threadId: String,
+    event: String,
+    isTyping: Bool
+  ) -> Task<Void, Never> {
+    Task { [weak self] in
+      guard let self else { return }
+      for await payload in channel.broadcastStream(event: event) {
+        self.handleTypingBroadcast(
+          payload,
+          threadId: threadId,
+          isTyping: isTyping
+        )
+      }
+    }
+  }
+
+  private func handleTypingBroadcast(_ payload: JSONObject, threadId: String, isTyping: Bool) {
+    do {
+      let typingPayload = try (payload["payload"]?.objectValue ?? payload).decode(
+        as: ThreadTypingPayload.self)
+      guard typingPayload.threadId == threadId else { return }
+      notifyThreadTypingChanged(
+        threadId: typingPayload.threadId,
+        userId: typingPayload.userId,
+        isTyping: isTyping
+      )
+    } catch {
+      realtimeLogger.error(
+        "Failed to decode typing payload: \(error.localizedDescription)"
+      )
     }
   }
 

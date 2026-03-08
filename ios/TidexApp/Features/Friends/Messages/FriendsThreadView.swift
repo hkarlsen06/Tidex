@@ -69,6 +69,11 @@ struct FriendsThreadView: View {
           onReply: { message in
             viewModel.setReplyTarget(message)
           },
+          onRetryMessage: { messageId in
+            Task {
+              await viewModel.retryMessage(messageId: messageId)
+            }
+          },
           onReportMessage: { messageId in
             pendingReportTarget = .message(messageId: messageId)
           },
@@ -142,6 +147,11 @@ struct FriendsThreadView: View {
     .onChange(of: scrollState) { oldValue, newValue in
       handleScrollStateChange(from: oldValue, to: newValue)
     }
+    .onChange(of: viewModel.draft) { _, newValue in
+      Task {
+        await viewModel.handleDraftChanged(to: newValue)
+      }
+    }
     .onAppear {
       FriendsChatPresentationState.shared.setActiveThreadId(viewModel.route.threadId)
     }
@@ -149,6 +159,9 @@ struct FriendsThreadView: View {
       if isPinnedToBottom {
         unreadIncomingCount = 0
         showsNewMessagesPill = false
+        Task {
+          await viewModel.markVisibleMessagesReadIfNeeded()
+        }
       }
     }
     .refreshable {
@@ -168,8 +181,21 @@ struct FriendsThreadView: View {
       }
 
       Task {
-        await viewModel.handleExternalThreadUpdate()
+        await viewModel.handleExternalThreadUpdate(shouldMarkRead: isPinnedToBottom)
       }
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: .friendsThreadTypingDidChange)
+    ) { notification in
+      guard let threadId = notification.userInfo?["threadId"] as? String,
+        threadId == viewModel.route.threadId,
+        let userId = notification.userInfo?["userId"] as? String,
+        let isTyping = notification.userInfo?["isTyping"] as? Bool
+      else {
+        return
+      }
+
+      viewModel.handleCounterpartTypingChange(userId: userId, isTyping: isTyping)
     }
     .onReceive(
       NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
@@ -259,8 +285,9 @@ struct FriendsThreadView: View {
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
     }
-    .frame(maxWidth: .infinity)
-    .padding(.top, Spacing.xxl)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    .padding(.horizontal, Spacing.lg)
+    .padding(.bottom, bottomChromeHeight)
   }
 
   private var emptyState: some View {
@@ -283,9 +310,9 @@ struct FriendsThreadView: View {
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
-    .frame(maxWidth: .infinity)
-    .padding(.top, Spacing.xxl)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     .padding(.horizontal, Spacing.lg)
+    .padding(.bottom, bottomChromeHeight)
   }
 
   private var olderMessagesLoadingState: some View {
@@ -342,6 +369,17 @@ struct FriendsThreadView: View {
 
   private var composer: some View {
     VStack(spacing: Spacing.xs) {
+      if viewModel.counterpartIsTyping && isPinnedToBottom {
+        HStack {
+          TypingIndicatorView()
+          Spacer()
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.xs)
+        .transition(.opacity)
+      }
+
       if let replyTarget = viewModel.draftReplyTarget {
         DraftReplyBanner(
           preview: replyPreviewModel(for: replyTarget),
@@ -373,19 +411,6 @@ struct FriendsThreadView: View {
             .foregroundColor(.tidexError)
 
           Spacer()
-
-          if !viewModel.isThreadReadOnly {
-            Button {
-              Task {
-                _ = await viewModel.sendDraft()
-              }
-            } label: {
-              Text(.friendsChatRetry)
-                .font(.tidexFootnoteMedium)
-                .foregroundColor(.tidexBlue)
-            }
-            .buttonStyle(.plain)
-          }
         }
         .padding(.horizontal, Spacing.md)
       }
@@ -401,7 +426,7 @@ struct FriendsThreadView: View {
         onSendWithImage: { message, image in
           await viewModel.sendMessage(content: message, image: image)
         },
-        disabled: viewModel.isSending || viewModel.isThreadReadOnly
+        disabled: viewModel.isThreadReadOnly
       )
     }
     .background(
