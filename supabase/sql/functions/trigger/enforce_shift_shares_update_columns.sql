@@ -11,6 +11,11 @@ AS $function$
 declare
   v_uid uuid := (select auth.uid());
 begin
+  -- Allow trusted maintenance/service-role updates without an auth user.
+  if v_uid is null then
+    return new;
+  end if;
+
   -- Immutable columns
   if new.id != old.id then
     raise exception 'Cannot modify id column';
@@ -30,6 +35,12 @@ begin
     if new.show_earnings is distinct from old.show_earnings then
       raise exception 'Viewers cannot modify show_earnings column';
     end if;
+    if new.owner_muted is distinct from old.owner_muted then
+      raise exception 'Viewers cannot modify owner_muted column';
+    end if;
+    if new.blocked_by_user_id is distinct from old.blocked_by_user_id then
+      raise exception 'Clients cannot modify blocked_by_user_id directly';
+    end if;
   end if;
 
   -- Owner updates
@@ -37,6 +48,20 @@ begin
     if new.blocked is distinct from old.blocked then
       raise exception 'Owners cannot modify blocked column';
     end if;
+    if new.hidden is distinct from old.hidden then
+      raise exception 'Owners cannot modify hidden column';
+    end if;
+    if new.muted is distinct from old.muted then
+      raise exception 'Owners cannot modify muted column';
+    end if;
+    if new.blocked_by_user_id is distinct from old.blocked_by_user_id then
+      raise exception 'Clients cannot modify blocked_by_user_id directly';
+    end if;
+  end if;
+
+  -- Direct client writes must not set abuse-block state yet.
+  if v_uid is not null and new.blocked_by_user_id is distinct from old.blocked_by_user_id then
+    raise exception 'Clients cannot modify blocked_by_user_id directly';
   end if;
 
   return new;

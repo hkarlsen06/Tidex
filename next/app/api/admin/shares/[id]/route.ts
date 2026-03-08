@@ -15,7 +15,7 @@ import { logAdminAction } from '../../_lib/audit-log';
  *
  * Body:
  * - showEarnings?: boolean - Whether to show earnings
- * - blocked?: boolean - Whether the share is blocked
+ * - blocked?: boolean - Whether the share is hidden from the viewer's list
  * - muted?: boolean - Whether notifications are muted
  *
  * Response:
@@ -79,7 +79,7 @@ export async function PUT(
     // Fetch current values for audit diff
     const { data: currentData, error: fetchError } = await supabase
       .from('shift_shares')
-      .select('id, owner_id, viewer_id, show_earnings, blocked, muted')
+      .select('id, owner_id, viewer_id, show_earnings, hidden, muted')
       .eq('id', shareId)
       .single();
 
@@ -125,10 +125,10 @@ export async function PUT(
       };
     }
 
-    if (blocked !== undefined && blocked !== currentData.blocked) {
-      updates.blocked = blocked;
+    if (blocked !== undefined && blocked !== currentData.hidden) {
+      updates.hidden = blocked;
       changes.blocked = {
-        before: currentData.blocked,
+        before: currentData.hidden,
         after: blocked,
       };
     }
@@ -255,7 +255,7 @@ export async function DELETE(
     const { data: shareData, error: fetchError } = await supabase
       .from('shift_shares')
       .select(
-        'id, owner_id, viewer_id, show_earnings, blocked, muted, created_at'
+        'id, owner_id, viewer_id, show_earnings, hidden, muted, created_at'
       )
       .eq('id', shareId)
       .single();
@@ -328,7 +328,7 @@ export async function DELETE(
         viewer_email: viewerEmail,
         deleted_data: {
           show_earnings: shareData.show_earnings,
-          blocked: shareData.blocked,
+          blocked: shareData.hidden,
           muted: shareData.muted,
           created_at: shareData.created_at,
         },

@@ -200,7 +200,7 @@ final class SharingService: ObservableObject {
             .execute()
             .value
         } catch let postgrestError as PostgrestError where postgrestError.code == "PGRST116" {
-          // No row means no share access or blocked.
+          // No row means no share access or the share is hidden from the viewer.
           throw SharingServiceError.noShareAccess
         }
 
@@ -754,7 +754,7 @@ final class SharingService: ObservableObject {
   }
 
   /// Block a sharer (hide their shifts from my list)
-  /// Viewer can update blocked directly via Supabase (RLS allows this)
+  /// Viewer updates the new hidden field; legacy blocked stays in sync via DB trigger.
   func blockSharer(ownerId: String) async throws {
     let session = try await AuthSessionManager.shared.getSession()
     let userId = session.normalizedUserId
@@ -763,7 +763,7 @@ final class SharingService: ObservableObject {
 
     try await supabase
       .from("shift_shares")
-      .update(["blocked": true])
+      .update(["hidden": true])
       .eq("owner_id", value: ownerId)
       .eq("viewer_id", value: userId)
       .execute()
@@ -772,7 +772,7 @@ final class SharingService: ObservableObject {
   }
 
   /// Unblock a sharer (restore their shifts to my list)
-  /// Viewer can update blocked directly via Supabase (RLS allows this)
+  /// Viewer updates the new hidden field; legacy blocked stays in sync via DB trigger.
   func unblockSharer(ownerId: String) async throws {
     let session = try await AuthSessionManager.shared.getSession()
     let userId = session.normalizedUserId
@@ -781,7 +781,7 @@ final class SharingService: ObservableObject {
 
     try await supabase
       .from("shift_shares")
-      .update(["blocked": false])
+      .update(["hidden": false])
       .eq("owner_id", value: ownerId)
       .eq("viewer_id", value: userId)
       .execute()
