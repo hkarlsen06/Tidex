@@ -18,11 +18,11 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private var threadTasks: [String: [Task<Void, Never>]] = [:]
 
   init(
-    service: any FriendsMessagingServiceProviding = FriendsMessagingService.shared,
-    repository: any FriendsMessagesRepositoryProviding = FriendsMessagesRepository.shared
+    service: (any FriendsMessagingServiceProviding)? = nil,
+    repository: (any FriendsMessagesRepositoryProviding)? = nil
   ) {
-    self.service = service
-    self.repository = repository
+    self.service = service ?? FriendsMessagingService.shared
+    self.repository = repository ?? FriendsMessagesRepository.shared
   }
 
   func startThreadListSubscription(viewerUserId: String) async {

@@ -23,15 +23,15 @@ final class FriendsThreadViewModel: ObservableObject {
   init(
     route: FriendChatRoute,
     viewerUserId: String,
-    service: any FriendsMessagingServiceProviding = FriendsMessagingService.shared,
-    repository: FriendsMessagesRepository = .shared,
-    realtimeCoordinator: FriendsMessagingRealtimeCoordinator = .shared
+    service: (any FriendsMessagingServiceProviding)? = nil,
+    repository: FriendsMessagesRepository? = nil,
+    realtimeCoordinator: FriendsMessagingRealtimeCoordinator? = nil
   ) {
     self.route = route
     self.viewerUserId = viewerUserId
-    self.service = service
-    self.repository = repository
-    self.realtimeCoordinator = realtimeCoordinator
+    self.service = service ?? FriendsMessagingService.shared
+    self.repository = repository ?? .shared
+    self.realtimeCoordinator = realtimeCoordinator ?? .shared
     self.thread = FriendThread(
       id: route.threadId,
       kind: .direct,
