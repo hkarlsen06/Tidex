@@ -7,14 +7,16 @@ struct FriendCard: View {
   let preview: SharerShiftPreview?
   let isSelected: Bool
   let isRefreshing: Bool
-  let onTap: () -> Void
-  let onMessageTap: () -> Void
+  let onChatTap: () -> Void
+  let onCalendarTap: () -> Void
+  var isCalendarAvailable = true
   var isOpeningMessage = false
+  var unreadMessageCount = 0
 
   var body: some View {
     VStack(spacing: 0) {
       HStack(spacing: Spacing.sm) {
-        Button(action: onTap) {
+        Button(action: onChatTap) {
           HStack(spacing: Spacing.sm) {
             avatarView
 
@@ -35,25 +37,32 @@ struct FriendCard: View {
           .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-
-        Button(action: onMessageTap) {
-          Group {
-            if isOpeningMessage {
-              ProgressView()
-                .progressViewStyle(.circular)
-                .tint(.tidexBlue)
-            } else {
-              Image(systemName: "message.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.tidexBlue)
-            }
-          }
-          .frame(width: 44, height: 44)
-          .tidexGlass(shape: .circle, tint: .tidexBlue.opacity(0.12), interactive: true)
-        }
-        .buttonStyle(.plain)
         .disabled(isOpeningMessage)
-        .accessibilityLabel(Text(String(localized: .friendsChatMessageFriend(sharer.displayName))))
+
+        if isCalendarAvailable {
+          Button(action: onCalendarTap) {
+            Group {
+              if isOpeningMessage {
+                ProgressView()
+                  .progressViewStyle(.circular)
+                  .tint(.tidexTextOnBrand)
+              } else {
+                Image(systemName: "calendar")
+                  .font(.system(size: 16, weight: .semibold))
+                  .foregroundColor(.tidexTextOnBrand)
+              }
+            }
+            .frame(width: 44, height: 44)
+            .tidexGlass(
+              shape: .circle,
+              tint: .tidexBlue.opacity(0.26),
+              interactive: true
+            )
+          }
+          .buttonStyle(.plain)
+          .disabled(isOpeningMessage)
+          .accessibilityLabel(Text(verbatim: "\(sharer.displayName) calendar"))
+        }
       }
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
@@ -94,6 +103,23 @@ struct FriendCard: View {
       size: AvatarView.Size.large,
       cornerRadius: Self.concentricCornerRadius
     )
+    .overlay(alignment: .topTrailing) {
+      if unreadMessageCount > 0 {
+        Text(unreadMessageCount > 9 ? "9+" : "\(unreadMessageCount)")
+          .font(.system(size: 11, weight: .bold, design: .rounded))
+          .foregroundColor(.white)
+          .frame(minWidth: 22, minHeight: 22)
+          .background(
+            Capsule(style: .continuous)
+              .fill(Color.tidexError)
+          )
+          .overlay(
+            Capsule(style: .continuous)
+              .stroke(Color.tidexSurfacePrimary, lineWidth: 2)
+          )
+          .offset(x: 8, y: -8)
+      }
+    }
   }
 
   /// Skeleton placeholder for shift preview while refreshing
@@ -402,8 +428,8 @@ struct FriendsListEmptyState: View {
       preview: nil,
       isSelected: false,
       isRefreshing: false,
-      onTap: {},
-      onMessageTap: {}
+      onChatTap: {},
+      onCalendarTap: {}
     )
 
     FriendCard(
@@ -421,8 +447,8 @@ struct FriendsListEmptyState: View {
       preview: nil,
       isSelected: true,
       isRefreshing: false,
-      onTap: {},
-      onMessageTap: {}
+      onChatTap: {},
+      onCalendarTap: {}
     )
   }
   .padding()

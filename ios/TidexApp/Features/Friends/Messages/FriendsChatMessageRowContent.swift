@@ -139,6 +139,7 @@ struct FriendsChatMessageRowContent: View {
             .font(.tidexMicro)
             .foregroundColor(.tidexTextMuted)
             .fixedSize(horizontal: true, vertical: false)
+            .animation(.easeInOut(duration: 0.2), value: messageStatus)
           }
         }
       }
@@ -169,6 +170,7 @@ struct FriendsChatMessageRowContent: View {
       HStack(spacing: 0) {
         Image(systemName: "checkmark")
           .font(.system(size: 11, weight: .semibold))
+          .transition(.offset(x: -6).combined(with: .opacity))
       }
 
     case .read:
@@ -176,6 +178,7 @@ struct FriendsChatMessageRowContent: View {
         Image(systemName: "eye.fill")
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.tidexBlue)
+          .transition(.offset(x: -6).combined(with: .opacity))
       }
 
     case .failed:

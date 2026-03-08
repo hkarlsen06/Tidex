@@ -11,6 +11,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let currentUserDisplayName: String
   let counterpartDisplayName: String
   let highlightedMessageId: String?
+  let showTypingIndicator: Bool
   let bottomContentInset: CGFloat
   let scrollToBottomTrigger: Int
   let restoreScrollTargetMessageId: String?
@@ -55,6 +56,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
         currentUserDisplayName: currentUserDisplayName,
         counterpartDisplayName: counterpartDisplayName,
         highlightedMessageId: highlightedMessageId,
+        showTypingIndicator: showTypingIndicator,
         bottomContentInset: bottomContentInset,
         scrollToBottomTrigger: scrollToBottomTrigger,
         restoreScrollTargetMessageId: restoreScrollTargetMessageId,
@@ -75,6 +77,7 @@ struct FriendsChatTimelineConfiguration {
   let currentUserDisplayName: String
   let counterpartDisplayName: String
   let highlightedMessageId: String?
+  let showTypingIndicator: Bool
   let bottomContentInset: CGFloat
   let scrollToBottomTrigger: Int
   let restoreScrollTargetMessageId: String?
@@ -101,6 +104,7 @@ final class FriendsChatTimelineViewController: UIViewController {
   private var currentUserDisplayName = ""
   private var counterpartDisplayName = ""
   private var highlightedMessageId: String?
+  private var showTypingIndicator = false
   private var lastAppliedBottomInset: CGFloat = 0
   private var lastScrollToBottomTrigger = 0
   private var lastRestoreTargetMessageId: String?
@@ -116,6 +120,8 @@ final class FriendsChatTimelineViewController: UIViewController {
   private enum UpdatePlan {
     case none
     case fullReload(preservedSnapshot: ChatLayoutPositionSnapshot?)
+    case insertTypingIndicator(indexPath: IndexPath, reloadedIndexPaths: [IndexPath])
+    case removeTypingIndicator(indexPath: IndexPath, reloadedIndexPaths: [IndexPath])
     case prepend(
       insertedIndexPaths: [IndexPath],
       reloadedIndexPaths: [IndexPath],
@@ -132,6 +138,7 @@ final class FriendsChatTimelineViewController: UIViewController {
     let counterpartLastReadMessageId: String?
     let counterpartLastReadAt: Date?
     let highlightedMessageId: String?
+    let showTypingIndicator: Bool
   }
 
   override func viewDidLoad() {
@@ -187,7 +194,8 @@ final class FriendsChatTimelineViewController: UIViewController {
       quotedMessagesById: self.quotedMessagesById,
       counterpartLastReadMessageId: self.counterpartLastReadMessageId,
       counterpartLastReadAt: self.counterpartLastReadAt,
-      highlightedMessageId: self.highlightedMessageId
+      highlightedMessageId: self.highlightedMessageId,
+      showTypingIndicator: self.showTypingIndicator
     )
     let nextState = RenderState(
       viewerUserId: config.viewerUserId,
@@ -195,7 +203,8 @@ final class FriendsChatTimelineViewController: UIViewController {
       quotedMessagesById: config.quotedMessagesById,
       counterpartLastReadMessageId: config.counterpartLastReadMessageId,
       counterpartLastReadAt: config.counterpartLastReadAt,
-      highlightedMessageId: config.highlightedMessageId
+      highlightedMessageId: config.highlightedMessageId,
+      showTypingIndicator: config.showTypingIndicator
     )
     let wasPinnedToBottom = isNearBottom()
     let updatePlan = makeUpdatePlan(
@@ -212,6 +221,7 @@ final class FriendsChatTimelineViewController: UIViewController {
     self.currentUserDisplayName = config.currentUserDisplayName
     self.counterpartDisplayName = config.counterpartDisplayName
     self.highlightedMessageId = config.highlightedMessageId
+    self.showTypingIndicator = config.showTypingIndicator
     updateInsets(config.bottomContentInset)
 
     apply(updatePlan: updatePlan) { [weak self] in
@@ -270,6 +280,28 @@ final class FriendsChatTimelineViewController: UIViewController {
   ) -> UpdatePlan {
     let previousMessages = previousState.messages
     let newMessages = nextState.messages
+    let reloadedIndexPaths = reloadedIndexPaths(previousState: previousState, nextState: nextState)
+
+    if previousState.showTypingIndicator != nextState.showTypingIndicator,
+      previousMessages.map(\.id) == newMessages.map(\.id)
+    {
+      let typingIndexPath = IndexPath(item: newMessages.count, section: 0)
+      if nextState.showTypingIndicator {
+        return .insertTypingIndicator(
+          indexPath: typingIndexPath,
+          reloadedIndexPaths: reloadedIndexPaths
+        )
+      } else {
+        return .removeTypingIndicator(
+          indexPath: typingIndexPath,
+          reloadedIndexPaths: reloadedIndexPaths
+        )
+      }
+    }
+
+    guard previousState.showTypingIndicator == nextState.showTypingIndicator else {
+      return .fullReload(preservedSnapshot: nil)
+    }
 
     guard !previousMessages.isEmpty else {
       return .fullReload(preservedSnapshot: nil)
@@ -281,7 +313,6 @@ final class FriendsChatTimelineViewController: UIViewController {
 
     let previousIds = previousMessages.map(\.id)
     let newIds = newMessages.map(\.id)
-    let reloadedIndexPaths = reloadedIndexPaths(previousState: previousState, nextState: nextState)
 
     if previousIds == newIds {
       return reloadedIndexPaths.isEmpty ? .none : .reload(indexPaths: reloadedIndexPaths)
@@ -332,6 +363,28 @@ final class FriendsChatTimelineViewController: UIViewController {
       }
       completion()
 
+    case .insertTypingIndicator(let indexPath, let reloadedIndexPaths):
+      UIView.performWithoutAnimation {
+        collectionView.performBatchUpdates {
+          collectionView.insertItems(at: [indexPath])
+          reloadItems(at: reloadedIndexPaths)
+        } completion: { [weak self] _ in
+          self?.invalidateTimelineLayout()
+          completion()
+        }
+      }
+
+    case .removeTypingIndicator(let indexPath, let reloadedIndexPaths):
+      UIView.performWithoutAnimation {
+        collectionView.performBatchUpdates {
+          collectionView.deleteItems(at: [indexPath])
+          reloadItems(at: reloadedIndexPaths)
+        } completion: { [weak self] _ in
+          self?.invalidateTimelineLayout()
+          completion()
+        }
+      }
+
     case .prepend(let insertedIndexPaths, let reloadedIndexPaths, let preservedSnapshot):
       UIView.performWithoutAnimation {
         collectionView.performBatchUpdates {
@@ -361,13 +414,11 @@ final class FriendsChatTimelineViewController: UIViewController {
         return
       }
 
-      UIView.performWithoutAnimation {
-        collectionView.performBatchUpdates {
-          reloadItems(at: indexPaths)
-        } completion: { [weak self] _ in
-          self?.invalidateTimelineLayout()
-          completion()
-        }
+      collectionView.performBatchUpdates {
+        reloadItems(at: indexPaths)
+      } completion: { [weak self] _ in
+        self?.invalidateTimelineLayout()
+        completion()
       }
     }
   }
@@ -522,7 +573,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
   func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int)
     -> Int
   {
-    messages.count
+    messages.count + (showTypingIndicator ? 1 : 0)
   }
 
   func collectionView(
@@ -535,6 +586,13 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     )
     guard let cell = reusableCell as? FriendsChatTimelineCell else {
       return reusableCell
+    }
+
+    if isTypingIndicatorItem(at: indexPath) {
+      cell.configure {
+        FriendsChatTypingRowContent()
+      }
+      return cell
     }
 
     let message = messages[indexPath.item]
@@ -636,9 +694,16 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     of kind: ItemKind,
     at indexPath: IndexPath
   ) -> ChatItemAlignment {
+    if isTypingIndicatorItem(at: indexPath) {
+      return .leading
+    }
     guard messages.indices.contains(indexPath.item) else { return .fullWidth }
     let message = messages[indexPath.item]
     return message.senderUserId == viewerUserId ? .trailing : .leading
+  }
+
+  private func isTypingIndicatorItem(at indexPath: IndexPath) -> Bool {
+    showTypingIndicator && indexPath.item == messages.count
   }
 
   private func firstName(for displayName: String) -> String {
@@ -745,5 +810,15 @@ private final class FriendsChatTimelineCell: UICollectionViewCell {
       content()
     }
     .margins(.all, 0)
+  }
+}
+
+private struct FriendsChatTypingRowContent: View {
+  var body: some View {
+    ChatMessageRow(isCurrentUser: false, minSpacer: 48, spacing: Spacing.xxs) {
+      TypingIndicatorView()
+    }
+    .padding(.top, Spacing.micro)
+    .padding(.bottom, Spacing.xxxs)
   }
 }

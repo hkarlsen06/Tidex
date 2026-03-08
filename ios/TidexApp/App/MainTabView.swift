@@ -24,6 +24,8 @@ struct MainTabView: View {
   @ObservedObject private var monthContext = SharedMonthContext.shared
   @ObservedObject private var impersonationManager = ImpersonationManager.shared
   @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
+  private let friendsMessagesRepository = FriendsMessagesRepository.shared
+  private let friendsRealtimeCoordinator = FriendsMessagingRealtimeCoordinator.shared
 
   @State private var selectedTab: Tab = .home
 
@@ -47,6 +49,8 @@ struct MainTabView: View {
 
   // Add tab disabled-submit guidance
   @State private var showAddSubmitRequirementsAlert = false
+  @State private var unreadFriendsCount = 0
+  @State private var unreadRefreshTask: Task<Void, Never>?
 
   // View mode toggle (calendar vs list) - persisted across app launches
   // Shared with ShiftsView via @AppStorage
@@ -196,7 +200,7 @@ struct MainTabView: View {
 
             SharingView(selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
               .tabItem {
-                Label(String(localized: Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
+                Label(String(localized: Tab.sharing.localizationKey), systemImage: friendsTabIcon)
               }
               .tag(Tab.sharing)
           }
@@ -248,6 +252,13 @@ struct MainTabView: View {
         )
       }
     }
+    .task {
+      await startFriendsThreadListTrackingIfPossible()
+      scheduleUnreadFriendsCountRefresh()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
+      scheduleUnreadFriendsCountRefresh()
+    }
     // Screenshot detection - prompt user to use share button instead
     .onReceive(
       NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
@@ -266,12 +277,20 @@ struct MainTabView: View {
       handlePendingDeepLink(deepLink)
     }
     .onChange(of: coordinator.userId) { _, _ in
+      Task {
+        await startFriendsThreadListTrackingIfPossible()
+        scheduleUnreadFriendsCountRefresh()
+      }
       handlePendingDeepLink(coordinator.pendingDeepLink)
     }
     .onAppear {
       // Handle any pending deep link on initial appearance
       handlePendingDeepLink(coordinator.pendingDeepLink)
       selectionHaptic.prepare()
+    }
+    .onDisappear {
+      unreadRefreshTask?.cancel()
+      unreadRefreshTask = nil
     }
     .sheet(isPresented: $showFeedbackSheet) {
       NavigationStack {
@@ -288,6 +307,37 @@ struct MainTabView: View {
       Button(String(localized: .commonOk), role: .cancel) {}
     } message: {
       Text(addSubmitRequirementsMessage)
+    }
+  }
+
+  private var friendsTabIcon: String {
+    unreadFriendsCount > 0 ? "person.2.badge.fill" : Tab.sharing.icon
+  }
+
+  private func startFriendsThreadListTrackingIfPossible() async {
+    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else { return }
+    await friendsRealtimeCoordinator.startThreadListSubscription(viewerUserId: viewerUserId)
+  }
+
+  private func refreshUnreadFriendsCount() {
+    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
+      unreadFriendsCount = 0
+      return
+    }
+
+    unreadFriendsCount =
+      friendsMessagesRepository
+      .getThreads(for: viewerUserId)
+      .filter { $0.kind == .direct }
+      .reduce(0) { $0 + $1.unreadCount }
+  }
+
+  private func scheduleUnreadFriendsCountRefresh() {
+    unreadRefreshTask?.cancel()
+    unreadRefreshTask = Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(120))
+      guard !Task.isCancelled else { return }
+      refreshUnreadFriendsCount()
     }
   }
 
