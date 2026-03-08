@@ -1,6 +1,7 @@
 import Auth
 import Foundation
 import Supabase
+import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagingService")
@@ -21,6 +22,16 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage
+  func createAbuseReport(
+    threadId: String,
+    reportedUserId: String,
+    messageId: String?,
+    reason: FriendAbuseReportReason
+  ) async throws
+  func blockUserPair(otherUserId: String) async throws
+  func uploadImageAttachment(threadId: String, image: ImageAttachment) async throws
+    -> FriendOutgoingAttachment
+  func downloadAttachmentData(path: String) async throws -> Data
 }
 
 enum FriendsMessagingServiceError: Error, LocalizedError {
@@ -46,6 +57,9 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
 @MainActor
 final class FriendsMessagingService: ObservableObject {
   static let shared = FriendsMessagingService()
+
+  private let storageBucket = "message-attachments"
+  private let urlSession = URLSessionFactory.longRunning
 
   private init() {}
 
@@ -300,6 +314,123 @@ final class FriendsMessagingService: ObservableObject {
     }
   }
 
+  func createAbuseReport(
+    threadId: String,
+    reportedUserId: String,
+    messageId: String?,
+    reason: FriendAbuseReportReason
+  ) async throws {
+    let params: [String: AnyJSON] = [
+      "p_thread_id": .string(threadId),
+      "p_reported_user_id": .string(reportedUserId),
+      "p_message_id": messageId.map(AnyJSON.string) ?? .null,
+      "p_reason": .string(reason.rawValue),
+      "p_note": .null,
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      _ =
+        try await supabase
+        .rpc("create_abuse_report", params: params)
+        .execute()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func blockUserPair(otherUserId: String) async throws {
+    let params: [String: AnyJSON] = [
+      "p_other_user_id": .string(otherUserId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      _ =
+        try await supabase
+        .rpc("block_user_pair", params: params)
+        .execute()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func uploadImageAttachment(threadId: String, image: ImageAttachment) async throws
+    -> FriendOutgoingAttachment
+  {
+    let session = try await AuthSessionManager.shared.getSession()
+    let path =
+      "\(threadId)/\(session.normalizedUserId)/\(image.id).\(fileExtension(for: image.mediaType))"
+
+    do {
+      try await supabase.storage
+        .from(storageBucket)
+        .upload(
+          path,
+          data: image.data,
+          options: FileOptions(
+            cacheControl: "3600",
+            contentType: image.mediaType,
+            upsert: false
+          )
+        )
+
+      let dimensions = imageDimensions(from: image.data)
+      return FriendOutgoingAttachment(
+        attachmentId: image.id,
+        storagePath: path,
+        mimeType: image.mediaType,
+        byteSize: Int64(image.data.count),
+        width: dimensions.width,
+        height: dimensions.height
+      )
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func downloadAttachmentData(path: String) async throws -> Data {
+    let session = try await AuthSessionManager.shared.getSession()
+    var request = URLRequest(url: authenticatedStorageURL(bucket: storageBucket, path: path))
+    request.httpMethod = "GET"
+    request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+    request.setValue(APIConfiguration.supabaseAnonKey, forHTTPHeaderField: "apikey")
+
+    do {
+      let (data, response) = try await urlSession.data(for: request)
+      guard let httpResponse = response as? HTTPURLResponse else {
+        throw FriendsMessagingServiceError.networkError(underlying: URLError(.badServerResponse))
+      }
+
+      guard (200...299).contains(httpResponse.statusCode) else {
+        throw FriendsMessagingServiceError.httpError(
+          statusCode: httpResponse.statusCode,
+          message: String(data: data, encoding: .utf8)
+        )
+      }
+
+      return data
+    } catch let error as FriendsMessagingServiceError {
+      throw error
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
   private func mapRPCError(_ error: Error) -> FriendsMessagingServiceError {
     if error is AuthError {
       return .notAuthenticated
@@ -326,6 +457,47 @@ final class FriendsMessagingService: ObservableObject {
 
     logger.error("Friends messaging RPC failed: \(error.localizedDescription)")
     return .networkError(underlying: error)
+  }
+
+  private func fileExtension(for mimeType: String) -> String {
+    switch mimeType {
+    case "image/webp":
+      return "webp"
+    case "image/heic":
+      return "heic"
+    case "image/heif":
+      return "heif"
+    case "image/png":
+      return "png"
+    default:
+      return "jpg"
+    }
+  }
+
+  private func imageDimensions(from data: Data) -> (width: Int?, height: Int?) {
+    guard let image = UIImage(data: data) else {
+      return (nil, nil)
+    }
+
+    return (
+      width: Int(image.size.width.rounded()),
+      height: Int(image.size.height.rounded())
+    )
+  }
+
+  private func authenticatedStorageURL(bucket: String, path: String) -> URL {
+    var url = APIConfiguration.supabaseURL
+      .appendingPathComponent("storage")
+      .appendingPathComponent("v1")
+      .appendingPathComponent("object")
+      .appendingPathComponent("authenticated")
+      .appendingPathComponent(bucket)
+
+    for component in path.split(separator: "/") {
+      url.appendPathComponent(String(component))
+    }
+
+    return url
   }
 }
 

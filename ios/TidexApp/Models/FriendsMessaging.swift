@@ -17,6 +17,16 @@ enum FriendMessageAttachmentKind: String, Codable, Equatable {
   case image
 }
 
+enum FriendAbuseReportReason: String, Codable, CaseIterable, Equatable {
+  case harassmentOrBullying = "harassment_or_bullying"
+  case sexualContent = "sexual_content"
+  case hateOrDiscriminatoryContent = "hate_or_discriminatory_content"
+  case violenceOrThreats = "violence_or_threats"
+  case spam = "spam"
+  case inappropriateProfileOrConduct = "inappropriate_profile_or_conduct"
+  case other
+}
+
 struct FriendThreadCursor: Equatable {
   let lastMessageAt: Date
   let threadId: String

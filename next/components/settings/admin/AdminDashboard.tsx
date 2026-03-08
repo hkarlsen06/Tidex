@@ -8,6 +8,7 @@ import { UserListCard } from "./UserListCard";
 import { SubscriberListCard } from "./SubscriberListCard";
 import { AuditLogCard } from "./AuditLogCard";
 import { FeedbackCard } from "./FeedbackCard";
+import { ReportsCard } from "./ReportsCard";
 import { SqlRunnerCard } from "./SqlRunnerCard";
 import { ShiftSharesCard } from "./ShiftSharesCard";
 import {
@@ -18,7 +19,7 @@ import {
 } from "@/components/app/Tabs";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 
-const VALID_TABS = ["notifications", "users", "subscribers", "feedback", "auditlog", "sql", "shares"] as const;
+const VALID_TABS = ["notifications", "users", "subscribers", "feedback", "reports", "auditlog", "sql", "shares"] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
@@ -54,6 +55,7 @@ export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
             <TabsTrigger value="users" className="shrink-0">Users</TabsTrigger>
             <TabsTrigger value="subscribers" className="shrink-0">Subscribers</TabsTrigger>
             <TabsTrigger value="feedback" className="shrink-0">Feedback</TabsTrigger>
+            <TabsTrigger value="reports" className="shrink-0">Reports</TabsTrigger>
             <TabsTrigger value="auditlog" className="shrink-0">Audit Log</TabsTrigger>
             <TabsTrigger value="sql" className="shrink-0">SQL</TabsTrigger>
             <TabsTrigger value="shares" className="shrink-0">Shares</TabsTrigger>
@@ -80,6 +82,10 @@ export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
 
         <TabsContent value="feedback" disableAnimation>
           <FeedbackCard refreshTrigger={refreshTrigger} />
+        </TabsContent>
+
+        <TabsContent value="reports" disableAnimation>
+          <ReportsCard refreshTrigger={refreshTrigger} />
         </TabsContent>
 
         <TabsContent value="auditlog" disableAnimation>

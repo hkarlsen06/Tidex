@@ -72,10 +72,6 @@ struct FriendRow: View {
       .environment(\.layoutDirection, nameLayoutDirection)
 
       Spacer(minLength: 8)
-
-      Image(systemName: "ellipsis.circle")
-        .font(.system(size: 20))
-        .foregroundColor(.tidexTextMuted)
     }
     .padding(.vertical, Spacing.xxs)
     .contentShape(Rectangle())

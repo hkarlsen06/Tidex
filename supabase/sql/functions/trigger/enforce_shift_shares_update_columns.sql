@@ -11,6 +11,10 @@ AS $function$
 declare
   v_uid uuid := (select auth.uid());
 begin
+  if current_setting('tidex.allow_shift_share_abuse_block_update', true) = 'true' then
+    return new;
+  end if;
+
   -- Allow trusted maintenance/service-role updates without an auth user.
   if v_uid is null then
     return new;
