@@ -47,6 +47,8 @@ struct FriendsThreadView: View {
           messages: viewModel.messages,
           quotedMessagesById: viewModel.quotedMessagesById,
           viewerUserId: viewModel.viewerUserId,
+          counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
+          counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
           currentUserDisplayName: AppCoordinator.shared.userDisplayName,
           counterpartDisplayName: viewModel.thread.counterpartDisplayName
             ?? viewModel.route.displayName,

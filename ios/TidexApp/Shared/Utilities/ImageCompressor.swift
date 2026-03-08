@@ -21,6 +21,18 @@ enum ImageCompressor {
   /// Default compression quality (0.0 - 1.0)
   private static let defaultQuality: CGFloat = 0.8
 
+  /// Hard cap for chat uploads before base64 expansion.
+  private static let maxUploadBytes = 1_500_000
+
+  /// Smallest JPEG quality we'll allow before preferring to shrink dimensions again.
+  private static let minimumQuality: CGFloat = 0.45
+
+  /// Additional dimension reduction applied when quality tuning alone is insufficient.
+  private static let iterativeDownscaleFactor: CGFloat = 0.85
+
+  /// Prevents over-shrinking tiny images while still giving us room to hit the byte budget.
+  private static let minimumDimension: CGFloat = 512
+
   // MARK: - Public API
 
   /// Compress image data for upload.
@@ -47,12 +59,9 @@ enum ImageCompressor {
   ///   - quality: Compression quality (0.0 - 1.0), defaults to 0.8
   /// - Returns: Compressed image with metadata, or nil if compression fails
   static func compress(_ image: UIImage, quality: CGFloat = defaultQuality) -> CompressedImage? {
-    // Downscale if needed
-    let scaledImage = downscaleIfNeeded(image)
-
-    // Always use JPEG for Claude API compatibility
-    // (Claude supports JPEG, PNG, GIF, WebP - JPEG is most efficient for photos)
-    guard let jpegData = scaledImage.jpegData(compressionQuality: quality) else {
+    // Always use JPEG for chat API compatibility and predictable preview rendering.
+    // The encoder now enforces both a dimension cap and a byte budget.
+    guard let jpegData = compressedJPEGData(for: image, preferredQuality: quality) else {
       return nil
     }
 
@@ -98,8 +107,61 @@ enum ImageCompressor {
 
   // MARK: - Private Helpers
 
-  /// Downscale image if it exceeds the maximum dimension
-  private static func downscaleIfNeeded(_ image: UIImage) -> UIImage {
+  private static func compressedJPEGData(for image: UIImage, preferredQuality: CGFloat) -> Data? {
+    let maxSide = max(image.size.width, image.size.height)
+    guard maxSide > 0 else { return nil }
+
+    var currentMaxDimension = min(maxSide, maxDimension)
+    var bestAttempt: Data?
+
+    while true {
+      let scaledImage = resize(image, maxDimension: currentMaxDimension)
+
+      for quality in compressionQualities(startingAt: preferredQuality) {
+        guard let data = scaledImage.jpegData(compressionQuality: quality) else {
+          continue
+        }
+
+        bestAttempt = data
+        if data.count <= maxUploadBytes {
+          return data
+        }
+      }
+
+      guard currentMaxDimension > minimumDimension else {
+        break
+      }
+
+      let nextDimension = floor(currentMaxDimension * iterativeDownscaleFactor)
+      guard nextDimension < currentMaxDimension else {
+        break
+      }
+      currentMaxDimension = max(minimumDimension, nextDimension)
+    }
+
+    guard let bestAttempt, bestAttempt.count <= maxUploadBytes else {
+      return nil
+    }
+
+    return bestAttempt
+  }
+
+  private static func compressionQualities(startingAt preferredQuality: CGFloat) -> [CGFloat] {
+    let initialQuality = min(max(preferredQuality, minimumQuality), 1)
+    var qualities = [initialQuality]
+    var currentQuality = initialQuality
+
+    while currentQuality > minimumQuality {
+      let nextQuality = max(minimumQuality, currentQuality - 0.1)
+      guard nextQuality < currentQuality else { break }
+      qualities.append(nextQuality)
+      currentQuality = nextQuality
+    }
+
+    return qualities
+  }
+
+  private static func resize(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
     let size = image.size
     let maxSide = max(size.width, size.height)
 
@@ -113,7 +175,11 @@ enum ImageCompressor {
       height: size.height * scale
     )
 
-    let renderer = UIGraphicsImageRenderer(size: newSize)
+    let format = UIGraphicsImageRendererFormat.default()
+    format.scale = 1
+    format.opaque = false
+
+    let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
     return renderer.image { _ in
       image.draw(in: CGRect(origin: .zero, size: newSize))
     }

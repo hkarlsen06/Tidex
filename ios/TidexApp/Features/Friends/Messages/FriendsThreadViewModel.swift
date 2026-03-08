@@ -27,6 +27,7 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var hasMoreHistoricalMessages = true
   @Published private(set) var isSending = false
   @Published private(set) var isThreadReadOnly = false
+  @Published private(set) var counterpartReadState: FriendThreadState?
   @Published private(set) var restoreScrollTargetMessageId: String?
   @Published private(set) var replyScrollTargetMessageId: String?
   @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
@@ -261,10 +262,20 @@ final class FriendsThreadViewModel: ObservableObject {
         limit: Pagination.pageSize,
         before: nil
       )
+      let refreshedCounterpartState =
+        route.counterpartUserId.isEmpty
+        ? nil
+        : try await service.fetchThreadState(
+          threadId: route.threadId,
+          userId: route.counterpartUserId
+        )
 
       hasMoreHistoricalMessages = refreshedMessages.count == Pagination.pageSize
       await repository.saveThread(refreshedThread, for: viewerUserId)
       await repository.saveMessages(refreshedMessages, in: route.threadId, for: viewerUserId)
+      if let refreshedCounterpartState {
+        await repository.saveThreadState(refreshedCounterpartState)
+      }
       loadFromCache()
     } catch {
       threadLogger.error("Failed to refresh thread: \(error.localizedDescription)")
@@ -289,6 +300,14 @@ final class FriendsThreadViewModel: ObservableObject {
   private func loadFromCache() {
     if let cachedThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId) {
       thread = cachedThread
+    }
+    if route.counterpartUserId.isEmpty {
+      counterpartReadState = nil
+    } else {
+      counterpartReadState = repository.getThreadState(
+        threadId: route.threadId,
+        viewerUserId: route.counterpartUserId
+      )
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
     prefetchQuotedMessagesIfNeeded()
