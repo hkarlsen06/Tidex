@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import os.log
 
@@ -7,6 +8,16 @@ private let threadLogger = Logger(subsystem: "com.tidex.app", category: "Friends
 final class FriendsThreadViewModel: ObservableObject {
   private enum Pagination {
     static let pageSize = 50
+  }
+
+  private enum Attachments {
+    static let storageBucket = "message-attachments"
+  }
+
+  private enum Typing {
+    static let refreshInterval: TimeInterval = 2.5
+    static let idleStopDelay: Duration = .seconds(4)
+    static let remoteTimeout: Duration = .seconds(5)
   }
 
   enum ActionError: LocalizedError {
@@ -28,6 +39,7 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var isSending = false
   @Published private(set) var isThreadReadOnly = false
   @Published private(set) var counterpartReadState: FriendThreadState?
+  @Published private(set) var counterpartIsTyping = false
   @Published private(set) var restoreScrollTargetMessageId: String?
   @Published private(set) var replyScrollTargetMessageId: String?
   @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
@@ -43,6 +55,11 @@ final class FriendsThreadViewModel: ObservableObject {
   private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
   private var hasLoaded = false
   private var loadingQuotedMessageIds: Set<String> = []
+  private var didSendTypingStart = false
+  private var lastTypingStartSentAt: Date?
+  private var localTypingStopTask: Task<Void, Never>?
+  private var counterpartTypingTimeoutTask: Task<Void, Never>?
+  private var reconcilingOptimisticMessageIds: Set<String> = []
 
   init(
     route: FriendChatRoute,
@@ -106,8 +123,14 @@ final class FriendsThreadViewModel: ObservableObject {
     loadFromCache()
   }
 
-  func handleExternalThreadUpdate() async {
+  func handleExternalThreadUpdate(shouldMarkRead: Bool) async {
     loadFromCache()
+    if shouldMarkRead {
+      await markLatestIncomingAsRead()
+    }
+  }
+
+  func markVisibleMessagesReadIfNeeded() async {
     await markLatestIncomingAsRead()
   }
 
@@ -171,7 +194,42 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func stopRealtime() async {
+    await stopTypingIfNeeded()
+    counterpartTypingTimeoutTask?.cancel()
+    counterpartTypingTimeoutTask = nil
+    counterpartIsTyping = false
     await realtimeCoordinator.stopThreadSubscription(threadId: route.threadId)
+  }
+
+  func handleDraftChanged(to draft: String) async {
+    guard !isThreadReadOnly, !route.counterpartUserId.isEmpty else { return }
+
+    let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    if hasText {
+      await sendTypingStartIfNeeded()
+      scheduleTypingStop()
+    } else {
+      await stopTypingIfNeeded()
+    }
+  }
+
+  func handleCounterpartTypingChange(userId: String, isTyping: Bool) {
+    guard userId == route.counterpartUserId, !userId.isEmpty else { return }
+
+    counterpartTypingTimeoutTask?.cancel()
+
+    if isTyping {
+      counterpartIsTyping = true
+      counterpartTypingTimeoutTask = Task { @MainActor [weak self] in
+        guard let self else { return }
+        try? await Task.sleep(for: Typing.remoteTimeout)
+        guard !Task.isCancelled else { return }
+        self.counterpartIsTyping = false
+      }
+    } else {
+      counterpartIsTyping = false
+      counterpartTypingTimeoutTask = nil
+    }
   }
 
   func sendDraft() async -> Bool {
@@ -185,22 +243,17 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !isSending, !normalizedContent.isEmpty || image != nil else { return false }
+    guard !normalizedContent.isEmpty || image != nil else { return false }
 
     let previousDraft = content
     let previousReplyTarget = draftReplyTarget
-    draft = ""
     sendErrorMessage = nil
-    isSending = true
-
-    defer {
-      isSending = false
-      loadFromCache()
-    }
 
     do {
       let outgoingAttachments: [FriendOutgoingAttachment]
       if let image {
+        isSending = true
+        defer { isSending = false }
         outgoingAttachments = [
           try await service.uploadImageAttachment(threadId: route.threadId, image: image)
         ]
@@ -208,17 +261,34 @@ final class FriendsThreadViewModel: ObservableObject {
         outgoingAttachments = []
       }
 
-      let message = try await service.sendMessage(
+      let clientId = UUID().uuidString.lowercased()
+      let optimisticMessage = FriendMessage(
+        id: "local-\(clientId)",
         threadId: route.threadId,
-        clientId: UUID().uuidString,
+        senderUserId: viewerUserId,
+        messageType: .user,
         body: normalizedContent.isEmpty ? nil : normalizedContent,
+        clientId: clientId,
         replyToMessageId: previousReplyTarget?.id,
-        attachments: outgoingAttachments
+        createdAt: Date(),
+        editedAt: nil,
+        deletedAt: nil,
+        metadataData: nil,
+        attachments: outgoingAttachments.map(makeOptimisticAttachment),
+        sendState: .sending,
+        failureMessage: nil
       )
 
-      await repository.saveMessages([message], in: route.threadId, for: viewerUserId)
+      draft = ""
       draftReplyTarget = nil
-      await refreshFromServer()
+      await repository.saveOptimisticMessage(
+        optimisticMessage,
+        in: route.threadId,
+        for: viewerUserId
+      )
+      loadFromCache()
+      await stopTypingIfNeeded()
+      sendMessageInBackground(optimisticMessage)
       return true
     } catch {
       draft = previousDraft
@@ -227,6 +297,24 @@ final class FriendsThreadViewModel: ObservableObject {
       threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
       return false
     }
+  }
+
+  func retryMessage(messageId: String) async {
+    guard let message = repository.getMessage(id: messageId, viewerUserId: viewerUserId),
+      message.senderUserId == viewerUserId,
+      message.canRetrySend
+    else {
+      return
+    }
+
+    await repository.updateMessageSendState(
+      messageId: messageId,
+      viewerUserId: viewerUserId,
+      sendState: .sending,
+      failureMessage: nil
+    )
+    loadFromCache()
+    sendMessageInBackground(message.withSendState(.sending))
   }
 
   func submitReport(messageId: String?, reason: FriendAbuseReportReason) async throws {
@@ -283,12 +371,20 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private func markLatestIncomingAsRead() async {
-    guard let lastMessage = messages.last, lastMessage.senderUserId != viewerUserId else { return }
+    guard let lastIncomingMessage = messages.last(where: { $0.senderUserId != viewerUserId }) else {
+      return
+    }
+
+    if repository.getThreadState(threadId: route.threadId, viewerUserId: viewerUserId)?
+      .lastReadMessageId == lastIncomingMessage.id
+    {
+      return
+    }
 
     do {
       let state = try await service.markThreadRead(
         threadId: route.threadId,
-        throughMessageId: lastMessage.id
+        throughMessageId: lastIncomingMessage.id
       )
       await repository.saveThreadState(state)
       loadFromCache()
@@ -310,7 +406,49 @@ final class FriendsThreadViewModel: ObservableObject {
       )
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+    reconcileOptimisticMessagesIfNeeded()
     prefetchQuotedMessagesIfNeeded()
+  }
+
+  private func sendTypingStartIfNeeded() async {
+    let now = Date()
+    if didSendTypingStart,
+      let lastTypingStartSentAt,
+      now.timeIntervalSince(lastTypingStartSentAt) < Typing.refreshInterval
+    {
+      return
+    }
+
+    await realtimeCoordinator.sendTypingStart(
+      threadId: route.threadId,
+      userId: viewerUserId
+    )
+    didSendTypingStart = true
+    lastTypingStartSentAt = now
+  }
+
+  private func stopTypingIfNeeded() async {
+    localTypingStopTask?.cancel()
+    localTypingStopTask = nil
+
+    guard didSendTypingStart else { return }
+
+    await realtimeCoordinator.sendTypingStop(
+      threadId: route.threadId,
+      userId: viewerUserId
+    )
+    didSendTypingStart = false
+    lastTypingStartSentAt = nil
+  }
+
+  private func scheduleTypingStop() {
+    localTypingStopTask?.cancel()
+    localTypingStopTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      try? await Task.sleep(for: Typing.idleStopDelay)
+      guard !Task.isCancelled else { return }
+      await self.stopTypingIfNeeded()
+    }
   }
 
   private func loadOlderMessages(
@@ -373,5 +511,108 @@ final class FriendsThreadViewModel: ObservableObject {
         }
       }
     }
+  }
+
+  private func sendMessageInBackground(_ message: FriendMessage) {
+    Task { @MainActor in
+      do {
+        let sentMessage = try await service.sendMessage(
+          threadId: route.threadId,
+          clientId: message.clientId,
+          body: message.body,
+          replyToMessageId: message.replyToMessageId,
+          attachments: makeOutgoingAttachments(from: message)
+        )
+
+        await repository.saveConfirmedMessage(
+          sentMessage,
+          replacingLocalMessageId: message.id,
+          in: route.threadId,
+          for: viewerUserId
+        )
+        loadFromCache()
+      } catch {
+        await repository.updateMessageSendState(
+          messageId: message.id,
+          viewerUserId: viewerUserId,
+          sendState: .failed,
+          failureMessage: error.localizedDescription
+        )
+        loadFromCache()
+        threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
+      }
+    }
+  }
+
+  private func makeOptimisticAttachment(_ attachment: FriendOutgoingAttachment)
+    -> FriendMessageAttachment
+  {
+    FriendMessageAttachment(
+      id: attachment.attachmentId,
+      attachmentIndex: 0,
+      kind: .image,
+      storageBucket: Attachments.storageBucket,
+      storagePath: attachment.storagePath,
+      mimeType: attachment.mimeType,
+      byteSize: attachment.byteSize,
+      width: attachment.width,
+      height: attachment.height,
+      createdAt: Date()
+    )
+  }
+
+  private func makeOutgoingAttachments(from message: FriendMessage) -> [FriendOutgoingAttachment] {
+    message.attachments.map { attachment in
+      FriendOutgoingAttachment(
+        attachmentId: attachment.id,
+        storagePath: attachment.storagePath,
+        mimeType: attachment.mimeType,
+        byteSize: attachment.byteSize,
+        width: attachment.width,
+        height: attachment.height
+      )
+    }
+  }
+
+  private func reconcileOptimisticMessagesIfNeeded() {
+    guard thread.lastMessageSenderId == viewerUserId else { return }
+
+    let pendingMessages = messages.filter {
+      $0.senderUserId == viewerUserId && $0.sendState == .sending
+    }
+
+    for message in pendingMessages where shouldPromoteOptimisticMessage(message) {
+      guard !reconcilingOptimisticMessageIds.contains(message.id) else { continue }
+      reconcilingOptimisticMessageIds.insert(message.id)
+
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+
+        await repository.updateMessageSendState(
+          messageId: message.id,
+          viewerUserId: viewerUserId,
+          sendState: .sent,
+          failureMessage: nil
+        )
+        reconcilingOptimisticMessageIds.remove(message.id)
+        loadFromCache()
+      }
+    }
+  }
+
+  private func shouldPromoteOptimisticMessage(_ message: FriendMessage) -> Bool {
+    guard let lastMessageAt = thread.lastMessageAt else { return false }
+    guard lastMessageAt >= message.createdAt else { return false }
+    guard lastMessageAt.timeIntervalSince(message.createdAt) < 300 else { return false }
+
+    let normalizedMessageBody = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let normalizedThreadBody = thread.lastMessageBody?.trimmingCharacters(
+      in: .whitespacesAndNewlines)
+
+    if normalizedMessageBody != normalizedThreadBody {
+      return false
+    }
+
+    return message.hasImageAttachment == thread.lastMessageHasImage
   }
 }

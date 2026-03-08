@@ -18,6 +18,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let onPinnedToBottomChanged: (Bool) -> Void
   let onReachedTopMessage: (String) -> Void
   let onReply: (FriendMessage) -> Void
+  let onRetryMessage: (String) -> Void
   let onReportMessage: (String) -> Void
   let onTapQuotedMessage: (FriendMessage) -> Void
   let onConsumeRestoreScrollTarget: () -> Void
@@ -28,6 +29,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
     controller.onPinnedToBottomChanged = onPinnedToBottomChanged
     controller.onReachedTopMessage = onReachedTopMessage
     controller.onReply = onReply
+    controller.onRetryMessage = onRetryMessage
     controller.onReportMessage = onReportMessage
     controller.onTapQuotedMessage = onTapQuotedMessage
     return controller
@@ -40,6 +42,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
     uiViewController.onPinnedToBottomChanged = onPinnedToBottomChanged
     uiViewController.onReachedTopMessage = onReachedTopMessage
     uiViewController.onReply = onReply
+    uiViewController.onRetryMessage = onRetryMessage
     uiViewController.onReportMessage = onReportMessage
     uiViewController.onTapQuotedMessage = onTapQuotedMessage
     uiViewController.apply(
@@ -83,6 +86,7 @@ final class FriendsChatTimelineViewController: UIViewController {
   var onPinnedToBottomChanged: ((Bool) -> Void)?
   var onReachedTopMessage: ((String) -> Void)?
   var onReply: ((FriendMessage) -> Void)?
+  var onRetryMessage: ((String) -> Void)?
   var onReportMessage: ((String) -> Void)?
   var onTapQuotedMessage: ((FriendMessage) -> Void)?
 
@@ -122,8 +126,11 @@ final class FriendsChatTimelineViewController: UIViewController {
   }
 
   private struct RenderState {
+    let viewerUserId: String
     let messages: [FriendMessage]
     let quotedMessagesById: [String: FriendMessage]
+    let counterpartLastReadMessageId: String?
+    let counterpartLastReadAt: Date?
     let highlightedMessageId: String?
   }
 
@@ -175,13 +182,19 @@ final class FriendsChatTimelineViewController: UIViewController {
     onConsumeReplyScrollTarget: @escaping (String) -> Void
   ) {
     let previousState = RenderState(
+      viewerUserId: self.viewerUserId,
       messages: self.messages,
       quotedMessagesById: self.quotedMessagesById,
+      counterpartLastReadMessageId: self.counterpartLastReadMessageId,
+      counterpartLastReadAt: self.counterpartLastReadAt,
       highlightedMessageId: self.highlightedMessageId
     )
     let nextState = RenderState(
+      viewerUserId: config.viewerUserId,
       messages: config.messages,
       quotedMessagesById: config.quotedMessagesById,
+      counterpartLastReadMessageId: config.counterpartLastReadMessageId,
+      counterpartLastReadAt: config.counterpartLastReadAt,
       highlightedMessageId: config.highlightedMessageId
     )
     let wasPinnedToBottom = isNearBottom()
@@ -410,6 +423,31 @@ final class FriendsChatTimelineViewController: UIViewController {
       indicesToReload.insert(index)
     }
 
+    let previousReadReceiptMessageId = readReceiptMessageId(
+      messages: previousState.messages,
+      viewerUserId: previousState.viewerUserId,
+      counterpartLastReadMessageId: previousState.counterpartLastReadMessageId,
+      counterpartLastReadAt: previousState.counterpartLastReadAt
+    )
+    let newReadReceiptMessageId = readReceiptMessageId(
+      messages: nextState.messages,
+      viewerUserId: nextState.viewerUserId,
+      counterpartLastReadMessageId: nextState.counterpartLastReadMessageId,
+      counterpartLastReadAt: nextState.counterpartLastReadAt
+    )
+
+    if let previousReadReceiptMessageId,
+      let index = newMessages.firstIndex(where: { $0.id == previousReadReceiptMessageId })
+    {
+      indicesToReload.insert(index)
+    }
+
+    if let newReadReceiptMessageId,
+      let index = newMessages.firstIndex(where: { $0.id == newReadReceiptMessageId })
+    {
+      indicesToReload.insert(index)
+    }
+
     return
       indicesToReload
       .sorted()
@@ -514,6 +552,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     let nextMessage = indexPath.item < messages.count - 1 ? messages[indexPath.item + 1] : nil
     let previousMessage = indexPath.item > 0 ? messages[indexPath.item - 1] : nil
     let readReceiptMessageId = readReceiptMessageId()
+    let latestOutgoingMessageId = latestOutgoingMessageId()
     let showsDateSeparator =
       previousMessage == nil
       || !Calendar.current.isDate(
@@ -521,20 +560,21 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         equalTo: message.createdAt,
         toGranularity: .day
       )
-    let showsTimestamp: Bool
-    if let nextMessage {
-      showsTimestamp = !Calendar.current.isDate(
-        message.createdAt,
-        equalTo: nextMessage.createdAt,
-        toGranularity: .minute
-      )
-    } else {
-      showsTimestamp = true
-    }
     let isCurrentUser = message.senderUserId == viewerUserId
     let showsSenderLabel = previousMessage?.senderUserId != message.senderUserId
     let senderFirstName = firstName(
       for: isCurrentUser ? currentUserDisplayName : counterpartDisplayName
+    )
+    let messageStatus = messageStatus(
+      for: message,
+      latestOutgoingMessageId: latestOutgoingMessageId,
+      readReceiptMessageId: readReceiptMessageId
+    )
+    let shouldShowTimestamp = shouldShowTimestamp(
+      for: message,
+      isCurrentUser: isCurrentUser,
+      defaultShowsTimestamp: defaultShowsTimestamp(for: message, nextMessage: nextMessage),
+      messageStatus: messageStatus
     )
 
     cell.configure {
@@ -546,10 +586,13 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         senderFirstName: senderFirstName,
         separatorDate: showsDateSeparator ? message.createdAt : nil,
         showsSenderLabel: showsSenderLabel,
-        showsTimestamp: showsTimestamp,
-        showsReadReceipt: isCurrentUser && readReceiptMessageId == message.id,
+        showsTimestamp: shouldShowTimestamp,
+        messageStatus: messageStatus,
         onReply: { [weak self] in
           self?.onReply?(message)
+        },
+        onRetry: { [weak self] in
+          self?.onRetryMessage?(message.id)
         },
         onReportMessage: { [weak self] in
           self?.onReportMessage?(message.id)
@@ -605,6 +648,81 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
   }
 
   private func readReceiptMessageId() -> String? {
+    readReceiptMessageId(
+      messages: messages,
+      viewerUserId: viewerUserId,
+      counterpartLastReadMessageId: counterpartLastReadMessageId,
+      counterpartLastReadAt: counterpartLastReadAt
+    )
+  }
+
+  private func latestOutgoingMessageId() -> String? {
+    messages.last(where: { $0.senderUserId == viewerUserId })?.id
+  }
+
+  private func messageStatus(
+    for message: FriendMessage,
+    latestOutgoingMessageId: String?,
+    readReceiptMessageId: String?
+  ) -> FriendsChatMessageStatus? {
+    guard message.senderUserId == viewerUserId, message.messageType == .user else { return nil }
+
+    switch message.sendState {
+    case .sending:
+      return .sending
+    case .failed:
+      return .failed
+    case .sent:
+      if readReceiptMessageId == message.id {
+        return .read
+      }
+      if latestOutgoingMessageId == message.id {
+        return .delivered
+      }
+      return nil
+    }
+  }
+
+  private func shouldShowTimestamp(
+    for message: FriendMessage,
+    isCurrentUser: Bool,
+    defaultShowsTimestamp: Bool,
+    messageStatus: FriendsChatMessageStatus?
+  ) -> Bool {
+    guard isCurrentUser else { return defaultShowsTimestamp }
+
+    switch messageStatus {
+    case .sending, .failed:
+      return false
+    case .delivered, .read:
+      return true
+    case .none:
+      return message.sendState == .sent && defaultShowsTimestamp
+    }
+  }
+
+  private func defaultShowsTimestamp(
+    for message: FriendMessage,
+    nextMessage: FriendMessage?
+  ) -> Bool {
+    guard let nextMessage else { return true }
+
+    let sharesSender = nextMessage.senderUserId == message.senderUserId
+    let sharesMinute = Calendar.current.isDate(
+      message.createdAt,
+      equalTo: nextMessage.createdAt,
+      toGranularity: .minute
+    )
+
+    return !(sharesSender && sharesMinute)
+  }
+
+  private func readReceiptMessageId(
+    messages: [FriendMessage],
+    viewerUserId: String,
+    counterpartLastReadMessageId: String?,
+    counterpartLastReadAt: Date?
+  ) -> String? {
     guard let counterpartLastReadAt else { return nil }
 
     if let counterpartLastReadMessageId,
