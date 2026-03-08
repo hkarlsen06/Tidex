@@ -24,14 +24,29 @@ final class SharedShiftsRepository: ObservableObject {
   /// - Parameter viewerId: The current user's ID
   /// - Returns: Array of SharedUser objects
   func getSharers(for viewerId: String) -> [SharedUser] {
+    getSharers(for: viewerId, includeHidden: false)
+  }
+
+  /// Get cached sharers for a viewer, optionally including hidden rows.
+  func getSharers(for viewerId: String, includeHidden: Bool) -> [SharedUser] {
     let context = localStore.mainContext
 
-    let descriptor = FetchDescriptor<LocalSharer>(
-      predicate: #Predicate { sharer in
-        sharer.viewerId == viewerId && !sharer.blocked
-      },
-      sortBy: [SortDescriptor(\LocalSharer.cachedAt, order: .reverse)]
-    )
+    let descriptor: FetchDescriptor<LocalSharer>
+    if includeHidden {
+      descriptor = FetchDescriptor<LocalSharer>(
+        predicate: #Predicate { sharer in
+          sharer.viewerId == viewerId
+        },
+        sortBy: [SortDescriptor(\LocalSharer.cachedAt, order: .reverse)]
+      )
+    } else {
+      descriptor = FetchDescriptor<LocalSharer>(
+        predicate: #Predicate { sharer in
+          sharer.viewerId == viewerId && !sharer.hidden
+        },
+        sortBy: [SortDescriptor(\LocalSharer.cachedAt, order: .reverse)]
+      )
+    }
 
     do {
       let localSharers = try context.fetch(descriptor)

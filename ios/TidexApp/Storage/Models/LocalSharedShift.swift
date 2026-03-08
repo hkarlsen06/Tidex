@@ -277,8 +277,9 @@ final class LocalSharer {
   /// Whether the viewer can see earnings
   var showEarnings: Bool
 
-  /// Whether the viewer has blocked this sharer
-  var blocked: Bool
+  /// Whether the viewer has hidden this sharer
+  @Attribute(originalName: "blocked")
+  var hidden: Bool
 
   // MARK: - Cache Metadata
 
@@ -326,7 +327,7 @@ final class LocalSharer {
     oauthAvatarUrl: String?,
     sharedAt: String,
     showEarnings: Bool,
-    blocked: Bool,
+    hidden: Bool,
     cachedAt: Date = Date()
   ) {
     self.compositeKey = "\(viewerId):\(sharerId)"
@@ -339,7 +340,7 @@ final class LocalSharer {
     self.oauthAvatarUrl = oauthAvatarUrl
     self.sharedAt = sharedAt
     self.showEarnings = showEarnings
-    self.blocked = blocked
+    self.hidden = hidden
     self.cachedAt = cachedAt
   }
 
@@ -355,7 +356,7 @@ final class LocalSharer {
       oauthAvatarUrl: sharedUser.oauthAvatarUrl,
       sharedAt: sharedUser.sharedAt,
       showEarnings: sharedUser.showEarnings,
-      blocked: sharedUser.blocked
+      hidden: sharedUser.hidden
     )
   }
 
@@ -370,7 +371,7 @@ final class LocalSharer {
       oauthAvatarUrl: oauthAvatarUrl,
       sharedAt: sharedAt,
       showEarnings: showEarnings,
-      blocked: blocked
+      hidden: hidden
     )
   }
 }

@@ -174,8 +174,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
       // Save to local cache
       await SharedShiftsRepository.shared.saveSharers(sharers, for: userId)
 
-      // Get sharer IDs (non-blocked only)
-      let sharerIds = sharers.filter { !$0.blocked }.map { $0.id }
+      // Get sharer IDs (visible only)
+      let sharerIds = sharers.filter { !$0.hidden }.map { $0.id }
 
       guard !sharerIds.isEmpty else {
         logger.info("No sharers to fetch previews for")

@@ -40,6 +40,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// List of users who share their shifts with the current user
   @Published private(set) var sharers: [SharedUser] = []
 
+  /// Users who share their shifts with the current user but are hidden from the main list
+  @Published private(set) var hiddenSharers: [SharedUser] = []
+
   /// Currently selected sharer (nil shows sharer list)
   @Published var selectedSharer: SharedUser?
 
@@ -238,15 +241,20 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
     cachedUserId = userId
 
-    let cachedSharers = sharedShiftsRepository.getSharers(for: userId)
+    let cachedSharers = sharedShiftsRepository.getSharers(for: userId, includeHidden: true)
     guard !cachedSharers.isEmpty else { return }
+    let partitionedSharers = partitionSharers(cachedSharers)
 
-    sharers = cachedSharers
+    sharers = partitionedSharers.visible
+    hiddenSharers = partitionedSharers.hidden
     shiftPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
     hasFinishedInitialSharersLoad = true
 
     logger.info(
-      "Preloaded \(cachedSharers.count) sharers and \(self.shiftPreviews.count) previews from cache at init"
+      """
+      Preloaded \(self.sharers.count) visible sharers, \(self.hiddenSharers.count) hidden sharers,
+      and \(self.shiftPreviews.count) previews from cache at init
+      """
     )
   }
 
@@ -268,14 +276,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Returns when sharers are loaded or timeout is reached (3 seconds max)
   func waitForSharersLoaded() async {
     // If already loaded, return immediately
-    guard sharers.isEmpty else { return }
+    guard sharers.isEmpty && hiddenSharers.isEmpty else { return }
 
     // Poll every 100ms until sharers are loaded (max 3 seconds)
     // We need to wait for loading to START and then COMPLETE
     let maxAttempts = 30
     for _ in 0..<maxAttempts {
       try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
-      if !sharers.isEmpty {
+      if !sharers.isEmpty || !hiddenSharers.isEmpty {
         return
       }
     }
@@ -297,27 +305,32 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       // Load BOTH sharers and shift previews together to avoid pop-in effect
       // This happens BEFORE setting isLoadingSharers so view renders with complete data instantly
       var loadedFromCache = false
-      if sharers.isEmpty {
-        let cachedSharers = sharedShiftsRepository.getSharers(for: userId)
+      if sharers.isEmpty && hiddenSharers.isEmpty {
+        let cachedSharers = sharedShiftsRepository.getSharers(for: userId, includeHidden: true)
         if !cachedSharers.isEmpty {
           // Load cached shift previews at the same time
           let cachedPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
+          let partitionedSharers = partitionSharers(cachedSharers)
 
           // Update both together so UI renders with complete data and correct sorting
-          sharers = cachedSharers
+          sharers = partitionedSharers.visible
+          hiddenSharers = partitionedSharers.hidden
           if !cachedPreviews.isEmpty {
             shiftPreviews = cachedPreviews
           }
           loadedFromCache = true
           hasFinishedInitialSharersLoad = true
           logger.info(
-            "Loaded \(cachedSharers.count) sharers and \(cachedPreviews.count) previews from cache together"
+            """
+            Loaded \(self.sharers.count) visible sharers, \(self.hiddenSharers.count) hidden sharers,
+            and \(cachedPreviews.count) previews from cache together
+            """
           )
         }
       }
 
       // Only show loading indicator if we have no cached data
-      if !loadedFromCache && sharers.isEmpty {
+      if !loadedFromCache && sharers.isEmpty && hiddenSharers.isEmpty {
         isLoadingSharers = true
       }
 
@@ -327,15 +340,22 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       logger.info(
         "Network returned \(freshSharers.count) sharers: \(freshSharers.map { $0.displayName })")
 
+      let partitionedSharers = partitionSharers(freshSharers)
+
       // Update UI with fresh data
-      sharers = freshSharers
+      sharers = partitionedSharers.visible
+      hiddenSharers = partitionedSharers.hidden
       hasFinishedInitialSharersLoad = true
-      logger.info("Updated sharers property, now has \(self.sharers.count) items")
+      logger.info(
+        "Updated sharers properties, now has \(self.sharers.count) visible and \(self.hiddenSharers.count) hidden items"
+      )
 
       // Save to cache
       await sharedShiftsRepository.saveSharers(freshSharers, for: userId)
 
-      logger.info("Loaded \(freshSharers.count) sharers")
+      logger.info(
+        "Loaded \(self.sharers.count) visible sharers and \(self.hiddenSharers.count) hidden sharers"
+      )
 
       // Fetch shift previews after sharers loaded
       isLoadingSharers = false
@@ -356,7 +376,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       logger.error("Failed to load sharers: \(error.localizedDescription)")
       self.error = SharingError.loadFailed(underlying: error)
-      if sharers.isEmpty {
+      if sharers.isEmpty && hiddenSharers.isEmpty {
         hasFinishedInitialSharersLoad = true
       }
       isLoadingSharers = false
@@ -366,7 +386,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Load shift previews for all sharers
   /// - Parameter forceRefresh: If true, bypasses cache and fetches fresh data
   func loadShiftPreviews(forceRefresh: Bool = false) async {
-    guard !sharers.isEmpty else { return }
+    let allSharers = sharers + hiddenSharers
+    guard !allSharers.isEmpty else { return }
 
     do {
       guard let userId = try await getCurrentUserId() else {
@@ -394,7 +415,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       }
 
       // Fetch fresh data from network
-      let sharerIds = sharers.map { $0.id }
+      let sharerIds = allSharers.map { $0.id }
       let previews = try await sharingService.fetchShiftPreviews(
         sharerIds: sharerIds,
         forceRefresh: forceRefresh
@@ -435,6 +456,23 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     isLoadingPreviews = false
+  }
+
+  private func partitionSharers(_ sharers: [SharedUser]) -> (
+    visible: [SharedUser], hidden: [SharedUser]
+  ) {
+    var visible: [SharedUser] = []
+    var hidden: [SharedUser] = []
+
+    for sharer in sharers {
+      if sharer.hidden {
+        hidden.append(sharer)
+      } else {
+        visible.append(sharer)
+      }
+    }
+
+    return (visible, hidden)
   }
 
   /// Refresh sharers (pull-to-refresh) - forces fresh data

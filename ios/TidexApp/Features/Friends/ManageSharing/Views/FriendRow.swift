@@ -13,7 +13,7 @@ enum FriendSectionType {
 
 /// A row displaying a friend in the sharing management modal.
 /// Tapping anywhere on the row opens a menu with all available actions.
-/// Block and remove actions are also accessible via swipe gestures on the List row.
+/// Hide and remove actions are also accessible via swipe gestures on the List row.
 struct FriendRow: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -25,7 +25,7 @@ struct FriendRow: View {
   let onShareBack: () -> Void
   let onToggleMuted: () -> Void
   let onToggleOwnerMuted: () -> Void
-  let onToggleBlocked: () -> Void
+  let onToggleHidden: () -> Void
   let onRemove: () -> Void
 
   private var nameLayoutDirection: LayoutDirection {
@@ -98,7 +98,7 @@ struct FriendRow: View {
       size: AvatarView.Size.medium
     )
     .overlay(alignment: .bottomTrailing) {
-      if friend.sharesWithMe?.blocked == true {
+      if friend.sharesWithMe?.hidden == true {
         Image(systemName: "eye.slash.fill")
           .font(.system(size: 10))
           .foregroundColor(.white)
@@ -169,13 +169,13 @@ struct FriendRow: View {
   private var actionsSection: some View {
     Section {
       if sectionType == .mutual || sectionType == .incoming {
-        let isBlocked = friend.sharesWithMe?.blocked == true
+        let isHidden = friend.sharesWithMe?.hidden == true
         Button {
-          onToggleBlocked()
+          onToggleHidden()
         } label: {
           Label(
-            String(localized: isBlocked ? .sharingMenuShowShifts : .sharingMenuHideShifts),
-            systemImage: isBlocked ? "eye" : "eye.slash"
+            String(localized: isHidden ? .sharingMenuShowShifts : .sharingMenuHideShifts),
+            systemImage: isHidden ? "eye" : "eye.slash"
           )
         }
       }
@@ -203,7 +203,7 @@ struct FriendRow: View {
           profilePictureUrl: nil,
           oauthAvatarUrl: nil,
           sharesWithMe: Friend.SharesWithMe(
-            blocked: false,
+            hidden: false,
             showEarningsToMe: true,
             sharedAt: "2025-01-01",
             notificationFrequency: .instant
@@ -219,7 +219,7 @@ struct FriendRow: View {
         onShareBack: {},
         onToggleMuted: {},
         onToggleOwnerMuted: {},
-        onToggleBlocked: {},
+        onToggleHidden: {},
         onRemove: {}
       )
     }
@@ -245,7 +245,7 @@ struct FriendRow: View {
         onShareBack: {},
         onToggleMuted: {},
         onToggleOwnerMuted: {},
-        onToggleBlocked: {},
+        onToggleHidden: {},
         onRemove: {}
       )
     }
@@ -260,7 +260,7 @@ struct FriendRow: View {
           profilePictureUrl: nil,
           oauthAvatarUrl: nil,
           sharesWithMe: Friend.SharesWithMe(
-            blocked: false,
+            hidden: false,
             showEarningsToMe: false,
             sharedAt: "2025-01-01",
             notificationFrequency: .muted
@@ -273,7 +273,7 @@ struct FriendRow: View {
         onShareBack: {},
         onToggleMuted: {},
         onToggleOwnerMuted: {},
-        onToggleBlocked: {},
+        onToggleHidden: {},
         onRemove: {}
       )
     }

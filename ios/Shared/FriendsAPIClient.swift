@@ -8,7 +8,7 @@ enum SharingRPCMode: Sendable {
   case hidden
 }
 
-struct SharingRPCSharerRow: Codable, Sendable {
+struct SharingRPCSharerRow: Decodable, Sendable {
   let id: String
   let email: String?
   let phone: String?
@@ -17,7 +17,7 @@ struct SharingRPCSharerRow: Codable, Sendable {
   let oauthAvatarUrl: String?
   let sharedAt: String
   let showEarnings: Bool
-  let blocked: Bool
+  let hidden: Bool
 
   private enum CodingKeys: String, CodingKey {
     case id
@@ -28,7 +28,24 @@ struct SharingRPCSharerRow: Codable, Sendable {
     case oauthAvatarUrl = "oauth_avatar_url"
     case sharedAt = "shared_at"
     case showEarnings = "show_earnings"
+    case hidden
     case blocked
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    email = try container.decodeIfPresent(String.self, forKey: .email)
+    phone = try container.decodeIfPresent(String.self, forKey: .phone)
+    firstName = try container.decodeIfPresent(String.self, forKey: .firstName)
+    profilePictureUrl = try container.decodeIfPresent(String.self, forKey: .profilePictureUrl)
+    oauthAvatarUrl = try container.decodeIfPresent(String.self, forKey: .oauthAvatarUrl)
+    sharedAt = try container.decode(String.self, forKey: .sharedAt)
+    showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
+    hidden =
+      try container.decodeIfPresent(Bool.self, forKey: .hidden)
+      ?? container.decodeIfPresent(Bool.self, forKey: .blocked)
+      ?? false
   }
 }
 
@@ -1575,7 +1592,7 @@ struct FriendWithShift: Sendable {
   let profilePictureUrl: String?
   let oauthAvatarUrl: String?
   let showEarnings: Bool
-  let blocked: Bool
+  let hidden: Bool
 
   // Shift data (if available)
   let shiftId: String?
@@ -1688,7 +1705,7 @@ enum FriendsAPIClient {
     }
 
     let sharers = try await fetchSharers(accessToken: accessToken)
-    let activeSharers = sharers.filter { !$0.blocked }
+    let activeSharers = sharers.filter { !$0.hidden }
 
     guard !activeSharers.isEmpty else {
       return []
@@ -1763,7 +1780,7 @@ enum FriendsAPIClient {
         profilePictureUrl: sharer.profilePictureUrl,
         oauthAvatarUrl: sharer.oauthAvatarUrl,
         showEarnings: showEarnings,
-        blocked: sharer.blocked,
+        hidden: sharer.hidden,
         shiftId: previewShift?.id,
         shiftDate: previewShift?.shiftDate,
         startTime: previewShift?.startTime,

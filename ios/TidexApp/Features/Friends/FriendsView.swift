@@ -127,7 +127,7 @@ struct SharingView: View {
         highlightUserId: highlightUserId,
         autoExpandAddForm: autoExpandAddForm,
         onVisibilityChange: {
-          // Refresh sharers list when visibility changes (block/unblock)
+          // Refresh sharers list when visibility changes (hide/show)
           Task {
             await viewModel.loadSharers(forceRefreshPreviews: true)
           }
@@ -197,7 +197,9 @@ struct SharingView: View {
           guard !Task.isCancelled else { return }
 
           // Find and select the sharer
-          if let sharer = viewModel.sharers.first(where: { $0.id == sharerId }) {
+          if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
+            $0.id == sharerId
+          }) {
             navigationPath = NavigationPath()
             viewModel.selectSharer(sharer)
             navigationPath.append(sharer)
@@ -304,6 +306,7 @@ struct SharingView: View {
         // Sharer list
         SharerListView(
           sharers: viewModel.sharers,
+          hiddenSharers: viewModel.hiddenSharers,
           selectedSharer: viewModel.selectedSharer,
           shiftPreviews: viewModel.shiftPreviews,
           isLoading: viewModel.isLoadingSharers,
@@ -311,6 +314,10 @@ struct SharingView: View {
           hasFinishedInitialLoad: viewModel.hasFinishedInitialSharersLoad,
           isRefreshing: viewModel.isRefreshing,
           onSelectSharer: { sharer in
+            viewModel.selectSharer(sharer)
+            navigationPath.append(sharer)
+          },
+          onSelectHiddenSharer: { sharer in
             viewModel.selectSharer(sharer)
             navigationPath.append(sharer)
           },

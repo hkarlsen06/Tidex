@@ -13,8 +13,72 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
   let sharedAt: String
   /// Whether this user allows the viewer to see earnings
   let showEarnings: Bool
-  /// Whether the viewer has blocked this sharer
-  let blocked: Bool
+  /// Whether the viewer has hidden this sharer from the main list
+  let hidden: Bool
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case email
+    case phone
+    case firstName
+    case profilePictureUrl
+    case oauthAvatarUrl
+    case sharedAt
+    case showEarnings
+    case hidden
+    case blocked
+  }
+
+  init(
+    id: String,
+    email: String?,
+    phone: String?,
+    firstName: String?,
+    profilePictureUrl: String?,
+    oauthAvatarUrl: String?,
+    sharedAt: String,
+    showEarnings: Bool,
+    hidden: Bool
+  ) {
+    self.id = id
+    self.email = email
+    self.phone = phone
+    self.firstName = firstName
+    self.profilePictureUrl = profilePictureUrl
+    self.oauthAvatarUrl = oauthAvatarUrl
+    self.sharedAt = sharedAt
+    self.showEarnings = showEarnings
+    self.hidden = hidden
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    email = try container.decodeIfPresent(String.self, forKey: .email)
+    phone = try container.decodeIfPresent(String.self, forKey: .phone)
+    firstName = try container.decodeIfPresent(String.self, forKey: .firstName)
+    profilePictureUrl = try container.decodeIfPresent(String.self, forKey: .profilePictureUrl)
+    oauthAvatarUrl = try container.decodeIfPresent(String.self, forKey: .oauthAvatarUrl)
+    sharedAt = try container.decode(String.self, forKey: .sharedAt)
+    showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
+    hidden =
+      try container.decodeIfPresent(Bool.self, forKey: .hidden)
+      ?? container.decodeIfPresent(Bool.self, forKey: .blocked)
+      ?? false
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(id, forKey: .id)
+    try container.encodeIfPresent(email, forKey: .email)
+    try container.encodeIfPresent(phone, forKey: .phone)
+    try container.encodeIfPresent(firstName, forKey: .firstName)
+    try container.encodeIfPresent(profilePictureUrl, forKey: .profilePictureUrl)
+    try container.encodeIfPresent(oauthAvatarUrl, forKey: .oauthAvatarUrl)
+    try container.encode(sharedAt, forKey: .sharedAt)
+    try container.encode(showEarnings, forKey: .showEarnings)
+    try container.encode(hidden, forKey: .hidden)
+  }
 
   /// Display name for the sharer (firstName > email > phone > "Unknown")
   var displayName: String {
