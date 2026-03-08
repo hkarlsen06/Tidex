@@ -17,6 +17,7 @@ struct FriendsChatMessageRowContent: View {
   let separatorDate: Date?
   let showsSenderLabel: Bool
   let showsTimestamp: Bool
+  let showsReadReceipt: Bool
   let onReply: () -> Void
   let onReportMessage: () -> Void
   let onTapQuotedMessage: () -> Void
@@ -82,6 +83,8 @@ struct FriendsChatMessageRowContent: View {
                     Text(messageText)
                       .font(.tidexBody)
                       .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+                      .multilineTextAlignment(.leading)
+                      .fixedSize(horizontal: false, vertical: true)
                   }
                 }
                 .contextMenu {
@@ -101,11 +104,22 @@ struct FriendsChatMessageRowContent: View {
             }
           }
 
-          if showsTimestamp {
-            Text(message.createdAt.formatted(.dateTime.hour().minute()))
-              .font(.tidexMicro)
-              .foregroundColor(.tidexTextMuted)
-              .padding(.horizontal, CornerRadius.bubble)
+          if showsTimestamp || showsReadReceipt {
+            HStack(spacing: Spacing.xxs) {
+              if showsTimestamp {
+                Text(message.createdAt.formatted(.dateTime.hour().minute()))
+              }
+
+              if showsReadReceipt {
+                Image(systemName: "eye.fill")
+                  .font(.system(size: 11, weight: .semibold))
+                  .foregroundColor(.tidexBlue)
+                  .accessibilityLabel(Text("Read"))
+              }
+            }
+            .font(.tidexMicro)
+            .foregroundColor(.tidexTextMuted)
+            .padding(.horizontal, CornerRadius.bubble)
           }
         }
       }

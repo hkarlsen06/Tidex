@@ -110,7 +110,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       AnyAction.self,
       schema: "public",
       table: "thread_user_state",
-      filter: .eq("user_id", value: viewerUserId)
+      filter: .eq("thread_id", value: threadId)
     )
 
     do {

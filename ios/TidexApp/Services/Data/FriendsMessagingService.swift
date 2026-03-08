@@ -22,6 +22,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
+  func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage
   func createAbuseReport(
     threadId: String,
@@ -288,6 +289,20 @@ final class FriendsMessagingService: ObservableObject {
     } catch {
       throw FriendsMessagingServiceError.networkError(underlying: error)
     }
+  }
+
+  func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState? {
+    let response: [MessagingThreadUserStateRow] =
+      try await supabase
+      .from("thread_user_state")
+      .select()
+      .eq("thread_id", value: threadId)
+      .eq("user_id", value: userId)
+      .limit(1)
+      .execute()
+      .value
+
+    return response.first?.toFriendThreadState()
   }
 
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage {

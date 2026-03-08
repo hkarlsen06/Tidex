@@ -6,6 +6,8 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let messages: [FriendMessage]
   let quotedMessagesById: [String: FriendMessage]
   let viewerUserId: String
+  let counterpartLastReadMessageId: String?
+  let counterpartLastReadAt: Date?
   let currentUserDisplayName: String
   let counterpartDisplayName: String
   let highlightedMessageId: String?
@@ -45,6 +47,8 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
         messages: messages,
         quotedMessagesById: quotedMessagesById,
         viewerUserId: viewerUserId,
+        counterpartLastReadMessageId: counterpartLastReadMessageId,
+        counterpartLastReadAt: counterpartLastReadAt,
         currentUserDisplayName: currentUserDisplayName,
         counterpartDisplayName: counterpartDisplayName,
         highlightedMessageId: highlightedMessageId,
@@ -63,6 +67,8 @@ struct FriendsChatTimelineConfiguration {
   let messages: [FriendMessage]
   let quotedMessagesById: [String: FriendMessage]
   let viewerUserId: String
+  let counterpartLastReadMessageId: String?
+  let counterpartLastReadAt: Date?
   let currentUserDisplayName: String
   let counterpartDisplayName: String
   let highlightedMessageId: String?
@@ -86,6 +92,8 @@ final class FriendsChatTimelineViewController: UIViewController {
   private var messages: [FriendMessage] = []
   private var quotedMessagesById: [String: FriendMessage] = [:]
   private var viewerUserId = ""
+  private var counterpartLastReadMessageId: String?
+  private var counterpartLastReadAt: Date?
   private var currentUserDisplayName = ""
   private var counterpartDisplayName = ""
   private var highlightedMessageId: String?
@@ -186,6 +194,8 @@ final class FriendsChatTimelineViewController: UIViewController {
     self.messages = config.messages
     self.quotedMessagesById = config.quotedMessagesById
     self.viewerUserId = config.viewerUserId
+    self.counterpartLastReadMessageId = config.counterpartLastReadMessageId
+    self.counterpartLastReadAt = config.counterpartLastReadAt
     self.currentUserDisplayName = config.currentUserDisplayName
     self.counterpartDisplayName = config.counterpartDisplayName
     self.highlightedMessageId = config.highlightedMessageId
@@ -315,6 +325,7 @@ final class FriendsChatTimelineViewController: UIViewController {
           collectionView.insertItems(at: insertedIndexPaths)
           reloadItems(at: reloadedIndexPaths)
         } completion: { [weak self] _ in
+          self?.invalidateTimelineLayout()
           if let preservedSnapshot, let self {
             self.chatLayout.restoreContentOffset(with: preservedSnapshot)
           }
@@ -326,7 +337,8 @@ final class FriendsChatTimelineViewController: UIViewController {
       collectionView.performBatchUpdates {
         collectionView.insertItems(at: insertedIndexPaths)
         reloadItems(at: reloadedIndexPaths)
-      } completion: { _ in
+      } completion: { [weak self] _ in
+        self?.invalidateTimelineLayout()
         completion()
       }
 
@@ -339,11 +351,17 @@ final class FriendsChatTimelineViewController: UIViewController {
       UIView.performWithoutAnimation {
         collectionView.performBatchUpdates {
           reloadItems(at: indexPaths)
-        } completion: { _ in
+        } completion: { [weak self] _ in
+          self?.invalidateTimelineLayout()
           completion()
         }
       }
     }
+  }
+
+  private func invalidateTimelineLayout() {
+    collectionView.collectionViewLayout.invalidateLayout()
+    collectionView.layoutIfNeeded()
   }
 
   private func reloadItems(at indexPaths: [IndexPath]) {
@@ -495,6 +513,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     }
     let nextMessage = indexPath.item < messages.count - 1 ? messages[indexPath.item + 1] : nil
     let previousMessage = indexPath.item > 0 ? messages[indexPath.item - 1] : nil
+    let readReceiptMessageId = readReceiptMessageId()
     let showsDateSeparator =
       previousMessage == nil
       || !Calendar.current.isDate(
@@ -528,6 +547,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         separatorDate: showsDateSeparator ? message.createdAt : nil,
         showsSenderLabel: showsSenderLabel,
         showsTimestamp: showsTimestamp,
+        showsReadReceipt: isCurrentUser && readReceiptMessageId == message.id,
         onReply: { [weak self] in
           self?.onReply?(message)
         },
@@ -582,6 +602,20 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return "User" }
     return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
+  }
+
+  private func readReceiptMessageId() -> String? {
+    guard let counterpartLastReadAt else { return nil }
+
+    if let counterpartLastReadMessageId,
+      let readMessageIndex = messages.firstIndex(where: { $0.id == counterpartLastReadMessageId })
+    {
+      return messages[...readMessageIndex].last(where: { $0.senderUserId == viewerUserId })?.id
+    }
+
+    return messages.last(where: {
+      $0.senderUserId == viewerUserId && $0.createdAt < counterpartLastReadAt
+    })?.id
   }
 }
 

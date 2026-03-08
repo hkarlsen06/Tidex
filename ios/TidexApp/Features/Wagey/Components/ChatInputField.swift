@@ -254,7 +254,11 @@ struct ChatInputField: View {
           throw ImageProcessingError.loadFailed
         }
 
-        guard let compressed = ImageCompressor.compress(data) else {
+        let compressed = await Task.detached(priority: .userInitiated) {
+          ImageCompressor.compress(data)
+        }.value
+
+        guard let compressed else {
           throw ImageProcessingError.compressionFailed
         }
 

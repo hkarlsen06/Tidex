@@ -491,6 +491,11 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     try XCTUnwrap(threadSummary)
   }
 
+  func fetchThreadState(threadId _: String, userId _: String) async throws -> FriendThreadState? {
+    await Task.yield()
+    return nil
+  }
+
   func fetchMessagePayload(messageId _: String) async throws -> FriendMessage {
     await Task.yield()
     try XCTUnwrap(sentMessage)
