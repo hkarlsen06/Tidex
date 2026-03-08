@@ -8,66 +8,90 @@ struct FriendCard: View {
   let isSelected: Bool
   let isRefreshing: Bool
   let onTap: () -> Void
+  let onMessageTap: () -> Void
+  var isOpeningMessage = false
 
   @Environment(\.layoutDirection) private var layoutDirection
 
   var body: some View {
-    Button(action: onTap) {
-      VStack(spacing: 0) {
-        // Header row: avatar, name, chevron
-        HStack(spacing: Spacing.sm) {
-          avatarView
+    VStack(spacing: 0) {
+      HStack(spacing: Spacing.sm) {
+        Button(action: onTap) {
+          HStack(spacing: Spacing.sm) {
+            avatarView
 
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(sharer.displayName)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
+            VStack(alignment: .leading, spacing: Spacing.micro) {
+              Text(sharer.displayName)
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexTextPrimary)
 
-            // Contact info (email or phone)
-            if let contactInfo = sharer.contactInfo {
-              Text(contactInfo)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexTextMuted)
-                .lineLimit(1)
+              if let contactInfo = sharer.contactInfo {
+                Text(contactInfo)
+                  .font(.tidexFootnote)
+                  .foregroundColor(.tidexTextMuted)
+                  .lineLimit(1)
+              }
             }
+
+            Spacer()
+
+            Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
+              .font(.tidexLabelStrong)
+              .foregroundColor(.tidexTextMuted)
           }
-
-          Spacer()
-
-          Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextMuted)
+          .contentShape(Rectangle())
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .buttonStyle(.plain)
 
-        // Shift preview section - swap between skeleton and real card
-        if let preview = preview, let shift = preview.shift, let status = preview.status {
+        Button(action: onMessageTap) {
           Group {
-            if isRefreshing {
-              shiftPreviewSkeleton
+            if isOpeningMessage {
+              ProgressView()
+                .progressViewStyle(.circular)
+                .tint(.tidexBlue)
             } else {
-              ShiftPreviewCard(shift: shift, status: status)
+              Image(systemName: "message.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.tidexBlue)
             }
           }
-          .padding(.horizontal, Spacing.sm)
-          .padding(.bottom, Spacing.sm)
-        }
-      }
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-          .fill(isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-          .strokeBorder(
-            isSelected ? Color.tidexBlue : Color.clear,
-            lineWidth: 2
+          .frame(width: 44, height: 44)
+          .background(
+            Circle()
+              .fill(Color.tidexBlue.opacity(0.12))
           )
-      )
-      .tidexCardShadow()
+        }
+        .buttonStyle(.plain)
+        .disabled(isOpeningMessage)
+        .accessibilityLabel(Text(String(localized: .friendsChatMessageFriend(sharer.displayName))))
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+
+      if let preview = preview, let shift = preview.shift, let status = preview.status {
+        Group {
+          if isRefreshing {
+            shiftPreviewSkeleton
+          } else {
+            ShiftPreviewCard(shift: shift, status: status)
+          }
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.bottom, Spacing.sm)
+      }
     }
-    .buttonStyle(PlainButtonStyle())
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        .fill(isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        .strokeBorder(
+          isSelected ? Color.tidexBlue : Color.clear,
+          lineWidth: 2
+        )
+    )
+    .tidexCardShadow()
   }
 
   /// Corner radius for concentric design: outer (24) - padding (12) = 12
@@ -388,7 +412,8 @@ struct FriendsListEmptyState: View {
       preview: nil,
       isSelected: false,
       isRefreshing: false,
-      onTap: {}
+      onTap: {},
+      onMessageTap: {}
     )
 
     FriendCard(
@@ -406,7 +431,8 @@ struct FriendsListEmptyState: View {
       preview: nil,
       isSelected: true,
       isRefreshing: false,
-      onTap: {}
+      onTap: {},
+      onMessageTap: {}
     )
   }
   .padding()

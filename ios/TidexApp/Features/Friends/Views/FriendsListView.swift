@@ -15,6 +15,8 @@ struct SharerListView: View {
   let hasFinishedInitialLoad: Bool
   let isRefreshing: Bool
   let onSelectSharer: (SharedUser) -> Void
+  let onMessageTap: (SharedUser) -> Void
+  var openingThreadUserId: String? = nil
   var onAddFriend: (() -> Void)?
 
   /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
@@ -131,8 +133,12 @@ struct SharerListView: View {
           preview: shiftPreviews[sharer.id],
           isSelected: selectedSharer?.id == sharer.id,
           isRefreshing: isRefreshing,
+          isOpeningMessage: openingThreadUserId == sharer.id,
           onTap: {
             onSelectSharer(sharer)
+          },
+          onMessageTap: {
+            onMessageTap(sharer)
           }
         )
       }
@@ -176,7 +182,8 @@ struct SharerListView: View {
     isLoadingPreviews: false,
     hasFinishedInitialLoad: true,
     isRefreshing: false,
-    onSelectSharer: { _ in }
+    onSelectSharer: { _ in },
+    onMessageTap: { _ in }
   )
   .background(Color.tidexBackground)
 }
