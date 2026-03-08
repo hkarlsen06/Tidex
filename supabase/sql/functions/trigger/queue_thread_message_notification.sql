@@ -9,14 +9,19 @@ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   v_sender_name text;
+  v_sender_avatar_url text;
   v_thread_kind text;
   v_recipient record;
   v_body_preview text;
 BEGIN
-  SELECT COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', email, 'Someone')
-  INTO v_sender_name
-  FROM auth.users
-  WHERE id = NEW.sender_user_id;
+  SELECT
+    COALESCE(au.raw_user_meta_data->>'full_name', au.raw_user_meta_data->>'name', au.email, 'Someone'),
+    COALESCE(us.profile_picture_url, au.raw_user_meta_data->>'avatar_url')
+  INTO v_sender_name, v_sender_avatar_url
+  FROM auth.users au
+  LEFT JOIN public.user_settings us
+    ON us.user_id = au.id
+  WHERE au.id = NEW.sender_user_id;
 
   IF v_sender_name IS NULL THEN
     v_sender_name := 'Someone';
@@ -79,7 +84,9 @@ BEGIN
         'thread_id', NEW.thread_id,
         'message_id', NEW.id,
         'thread_kind', COALESCE(v_thread_kind, 'direct'),
-        'sender_user_id', NEW.sender_user_id
+        'sender_user_id', NEW.sender_user_id,
+        'sender_name', v_sender_name,
+        'sender_avatar_url', v_sender_avatar_url
       ),
       'thread_message:' || NEW.id || ':' || v_recipient.user_id
     )

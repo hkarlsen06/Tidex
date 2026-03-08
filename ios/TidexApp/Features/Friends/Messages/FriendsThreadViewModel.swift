@@ -28,16 +28,20 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var isSending = false
   @Published private(set) var isThreadReadOnly = false
   @Published private(set) var restoreScrollTargetMessageId: String?
+  @Published private(set) var replyScrollTargetMessageId: String?
+  @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
+  @Published var draftReplyTarget: FriendMessage?
   @Published var draft = ""
   @Published var sendErrorMessage: String?
 
   let route: FriendChatRoute
 
-  private let viewerUserId: String
+  let viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
   private let repository: FriendsMessagesRepository
   private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
   private var hasLoaded = false
+  private var loadingQuotedMessageIds: Set<String> = []
 
   init(
     route: FriendChatRoute,
@@ -97,6 +101,15 @@ final class FriendsThreadViewModel: ObservableObject {
     await markLatestIncomingAsRead()
   }
 
+  func reloadFromCache() {
+    loadFromCache()
+  }
+
+  func handleExternalThreadUpdate() async {
+    loadFromCache()
+    await markLatestIncomingAsRead()
+  }
+
   func loadOlderMessagesIfNeeded(currentFirstMessageId: String) async {
     guard !isLoading, !isLoadingOlderMessages, hasMoreHistoricalMessages,
       let oldestLoadedMessage = messages.first,
@@ -105,29 +118,55 @@ final class FriendsThreadViewModel: ObservableObject {
       return
     }
 
-    isLoadingOlderMessages = true
-    defer { isLoadingOlderMessages = false }
-
-    do {
-      let olderMessages = try await service.listThreadMessages(
-        threadId: route.threadId,
-        limit: Pagination.pageSize,
-        before: oldestLoadedMessage.paginationCursor
-      )
-
-      hasMoreHistoricalMessages = olderMessages.count == Pagination.pageSize
-      guard !olderMessages.isEmpty else { return }
-
-      await repository.saveMessages(olderMessages, in: route.threadId, for: viewerUserId)
-      loadFromCache()
-      restoreScrollTargetMessageId = currentFirstMessageId
-    } catch {
-      threadLogger.error("Failed to load older messages: \(error.localizedDescription)")
-    }
+    _ = await loadOlderMessages(
+      before: oldestLoadedMessage, preserveScrollTargetMessageId: currentFirstMessageId)
   }
 
   func consumeRestoreScrollTarget() {
     restoreScrollTargetMessageId = nil
+  }
+
+  func consumeReplyScrollTarget() {
+    replyScrollTargetMessageId = nil
+  }
+
+  func setReplyTarget(_ message: FriendMessage) {
+    draftReplyTarget = message
+  }
+
+  func clearReplyTarget() {
+    draftReplyTarget = nil
+  }
+
+  func quotedMessage(for message: FriendMessage) -> FriendMessage? {
+    guard let replyToMessageId = message.replyToMessageId else { return nil }
+    return messages.first(where: { $0.id == replyToMessageId })
+      ?? quotedMessagesById[replyToMessageId]
+  }
+
+  func scrollToReplyTarget(for message: FriendMessage) async {
+    guard let replyToMessageId = message.replyToMessageId else { return }
+
+    if messages.contains(where: { $0.id == replyToMessageId }) {
+      replyScrollTargetMessageId = replyToMessageId
+      return
+    }
+
+    while hasMoreHistoricalMessages, let oldestLoadedMessage = messages.first {
+      let didLoadPage = await loadOlderMessages(
+        before: oldestLoadedMessage,
+        preserveScrollTargetMessageId: oldestLoadedMessage.id
+      )
+
+      if messages.contains(where: { $0.id == replyToMessageId }) {
+        replyScrollTargetMessageId = replyToMessageId
+        return
+      }
+
+      if !didLoadPage {
+        break
+      }
+    }
   }
 
   func stopRealtime() async {
@@ -148,6 +187,7 @@ final class FriendsThreadViewModel: ObservableObject {
     guard !isSending, !normalizedContent.isEmpty || image != nil else { return false }
 
     let previousDraft = content
+    let previousReplyTarget = draftReplyTarget
     draft = ""
     sendErrorMessage = nil
     isSending = true
@@ -171,14 +211,17 @@ final class FriendsThreadViewModel: ObservableObject {
         threadId: route.threadId,
         clientId: UUID().uuidString,
         body: normalizedContent.isEmpty ? nil : normalizedContent,
+        replyToMessageId: previousReplyTarget?.id,
         attachments: outgoingAttachments
       )
 
       await repository.saveMessages([message], in: route.threadId, for: viewerUserId)
+      draftReplyTarget = nil
       await refreshFromServer()
       return true
     } catch {
       draft = previousDraft
+      draftReplyTarget = previousReplyTarget
       sendErrorMessage = String(localized: .friendsChatSendFailed)
       threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
       return false
@@ -201,6 +244,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
     try await service.blockUserPair(otherUserId: counterpartUserId)
     draft = ""
+    draftReplyTarget = nil
     sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
     isThreadReadOnly = true
     NotificationCenter.default.post(
@@ -247,5 +291,68 @@ final class FriendsThreadViewModel: ObservableObject {
       thread = cachedThread
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+    prefetchQuotedMessagesIfNeeded()
+  }
+
+  private func loadOlderMessages(
+    before oldestLoadedMessage: FriendMessage,
+    preserveScrollTargetMessageId: String?
+  ) async -> Bool {
+    guard !isLoadingOlderMessages else { return false }
+
+    isLoadingOlderMessages = true
+    defer { isLoadingOlderMessages = false }
+
+    do {
+      let olderMessages = try await service.listThreadMessages(
+        threadId: route.threadId,
+        limit: Pagination.pageSize,
+        before: oldestLoadedMessage.paginationCursor
+      )
+
+      hasMoreHistoricalMessages = olderMessages.count == Pagination.pageSize
+      guard !olderMessages.isEmpty else { return false }
+
+      await repository.saveMessages(olderMessages, in: route.threadId, for: viewerUserId)
+      loadFromCache()
+      if let preserveScrollTargetMessageId {
+        restoreScrollTargetMessageId = preserveScrollTargetMessageId
+      }
+      return true
+    } catch {
+      threadLogger.error("Failed to load older messages: \(error.localizedDescription)")
+      return false
+    }
+  }
+
+  private func prefetchQuotedMessagesIfNeeded() {
+    let loadedMessageIds = Set(messages.map(\.id))
+    let replyTargetIds = Set(messages.compactMap(\.replyToMessageId))
+      .subtracting(loadedMessageIds)
+      .subtracting(Set(quotedMessagesById.keys))
+      .subtracting(loadingQuotedMessageIds)
+
+    guard !replyTargetIds.isEmpty else { return }
+
+    for messageId in replyTargetIds {
+      loadingQuotedMessageIds.insert(messageId)
+
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+
+        defer {
+          self.loadingQuotedMessageIds.remove(messageId)
+        }
+
+        do {
+          let quotedMessage = try await self.service.fetchMessagePayload(messageId: messageId)
+          guard quotedMessage.threadId == self.route.threadId else { return }
+          self.quotedMessagesById[messageId] = quotedMessage
+        } catch {
+          threadLogger.error(
+            "Failed to fetch quoted message \(messageId): \(error.localizedDescription)")
+        }
+      }
+    }
   }
 }

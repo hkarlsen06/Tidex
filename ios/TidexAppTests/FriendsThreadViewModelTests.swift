@@ -91,6 +91,86 @@ final class FriendsThreadViewModelTests: XCTestCase {
       repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").first?.body, "Hello")
   }
 
+  func testSendDraftWithReplyTargetPersistsReturnedReplyReference() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let repliedToMessage = FriendMessage(
+      id: "message-0",
+      threadId: "thread-1",
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Original",
+      clientId: "client-0",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.sentMessage = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Reply",
+      clientId: "client-1",
+      replyToMessageId: repliedToMessage.id,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_001),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    mockService.threadSummary = FriendThread(
+      id: "thread-1",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: "message-1",
+      lastMessageSenderId: "viewer-1",
+      lastMessageAt: Date(timeIntervalSince1970: 1_700_000_001),
+      lastMessageBody: "Reply",
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+    mockService.threadMessages = [repliedToMessage, try XCTUnwrap(mockService.sentMessage)]
+
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.setReplyTarget(repliedToMessage)
+    viewModel.draft = "Reply"
+    let didSend = await viewModel.sendDraft()
+
+    XCTAssertTrue(didSend)
+    XCTAssertEqual(mockService.lastSentReplyToMessageId, repliedToMessage.id)
+    XCTAssertNil(viewModel.draftReplyTarget)
+    XCTAssertEqual(
+      repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").last?.replyToMessageId,
+      repliedToMessage.id
+    )
+  }
+
   func testSendDraftRestoresDraftAndShowsErrorOnFailure() async throws {
     let repository = try makeRepository()
     let route = FriendChatRoute(
@@ -335,6 +415,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   var listThreadMessagesHandler:
     ((String, Int, FriendMessageCursor?) async throws -> [FriendMessage])?
   var sendError: Error?
+  var lastSentReplyToMessageId: String?
   var createdReport:
     (threadId: String, reportedUserId: String, messageId: String?, reason: FriendAbuseReportReason)?
   var blockedUserId: String?
@@ -368,9 +449,11 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     threadId _: String,
     clientId _: String,
     body _: String?,
+    replyToMessageId: String?,
     attachments _: [FriendOutgoingAttachment]
   ) async throws -> FriendMessage {
     await Task.yield()
+    lastSentReplyToMessageId = replyToMessageId
     if let sendError {
       throw sendError
     }

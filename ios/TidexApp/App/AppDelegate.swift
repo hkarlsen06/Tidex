@@ -711,12 +711,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 // MARK: - UNUserNotificationCenterDelegate
 extension AppDelegate: UNUserNotificationCenterDelegate {
+  private func shouldSuppressForegroundPresentation(for userInfo: [AnyHashable: Any]) -> Bool {
+    let type = userInfo["type"] as? String ?? ""
+    guard type == "thread_message",
+      let threadId = userInfo["thread_id"] as? String
+    else {
+      return false
+    }
+
+    return MainActor.assumeIsolated {
+      FriendsChatPresentationState.shared.activeThreadId == threadId
+    }
+  }
+
   // Handle notification when app is in foreground
   func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
+    let userInfo = notification.request.content.userInfo
+    if shouldSuppressForegroundPresentation(for: userInfo) {
+      completionHandler([])
+      return
+    }
+
     // Show banner even when app is in foreground
     completionHandler([.banner, .sound])
   }
@@ -806,6 +825,21 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     else if type == "feedback_submitted" {
       Task { @MainActor in
         AppCoordinator.shared.pendingDeepLink = .adminFeedback
+      }
+    }
+    // Handle friend chat message notifications
+    else if type == "thread_message",
+      let threadId = userInfo["thread_id"] as? String
+    {
+      let messageId = userInfo["message_id"] as? String
+      let senderUserId = userInfo["sender_user_id"] as? String
+
+      Task { @MainActor in
+        AppCoordinator.shared.pendingDeepLink = .friendChat(
+          threadId: threadId,
+          messageId: messageId,
+          senderUserId: senderUserId
+        )
       }
     }
     // Handle deeplink from admin broadcast or other notification types

@@ -5,6 +5,10 @@ import os.log
 private let realtimeLogger = Logger(
   subsystem: "com.tidex.app", category: "FriendsMessagingRealtime")
 
+extension Notification.Name {
+  static let friendsThreadDidUpdate = Notification.Name("friendsThreadDidUpdate")
+}
+
 @MainActor
 final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private enum Pagination {
@@ -179,6 +183,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       let messages = try await service.listThreadMessages(
         threadId: threadId, limit: Pagination.pageSize, before: nil)
       await repository.saveMessages(messages, in: threadId, for: viewerUserId)
+      notifyThreadUpdated(threadId: threadId)
     } catch {
       realtimeLogger.error(
         "Failed to refresh thread detail for \(threadId, privacy: .private): \(error.localizedDescription)"
@@ -190,6 +195,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     do {
       let thread = try await service.fetchThreadSummary(threadId: threadId)
       await repository.saveThread(thread, for: viewerUserId)
+      notifyThreadUpdated(threadId: threadId)
     } catch {
       realtimeLogger.error(
         "Failed to refresh thread summary for \(threadId, privacy: .private): \(error.localizedDescription)"
@@ -202,6 +208,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       let message = try await service.fetchMessagePayload(messageId: messageId)
       await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
       await refreshThreadSummary(threadId: message.threadId, viewerUserId: viewerUserId)
+      notifyThreadUpdated(threadId: message.threadId)
     } catch {
       realtimeLogger.error(
         "Failed to refresh message \(messageId, privacy: .private): \(error.localizedDescription)")
@@ -264,6 +271,15 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
     await repository.saveThreadState(state)
     await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    notifyThreadUpdated(threadId: threadId)
+  }
+
+  private func notifyThreadUpdated(threadId: String) {
+    NotificationCenter.default.post(
+      name: .friendsThreadDidUpdate,
+      object: nil,
+      userInfo: ["threadId": threadId]
+    )
   }
 
   private func makeStatusTask(for channel: RealtimeChannelV2, viewerUserId: String) -> Task<

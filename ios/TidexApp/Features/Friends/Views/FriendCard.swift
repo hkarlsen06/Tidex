@@ -49,10 +49,7 @@ struct FriendCard: View {
             }
           }
           .frame(width: 44, height: 44)
-          .background(
-            Circle()
-              .fill(Color.tidexBlue.opacity(0.12))
-          )
+          .tidexGlass(shape: .circle, tint: .tidexBlue.opacity(0.12), interactive: true)
         }
         .buttonStyle(.plain)
         .disabled(isOpeningMessage)

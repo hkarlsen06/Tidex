@@ -461,15 +461,16 @@ export async function getSharedUserShiftsWithViewerId(
   });
 
   try {
-    // Step 1: Verify share access
+    // Step 1: Verify share access. Hidden sharers remain accessible when
+    // explicitly opened; only a missing share should deny access here.
     const { data: shareSettings, error: shareError } = await adminClient
       .from("shift_shares")
-      .select("show_earnings, hidden")
+      .select("show_earnings")
       .eq("owner_id", ownerId)
       .eq("viewer_id", viewerId)
       .maybeSingle();
 
-    if (shareError || !shareSettings || shareSettings.hidden) {
+    if (shareError || !shareSettings) {
       logger.warn(`User ${viewerId} attempted to access shifts of ${ownerId} without permission`);
       return {
         shifts: [],

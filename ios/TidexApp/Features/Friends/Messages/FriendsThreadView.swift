@@ -5,13 +5,23 @@ struct FriendsThreadView: View {
   @Environment(\.openURL) private var openURL
 
   @StateObject private var viewModel: FriendsThreadViewModel
-  @State private var lastScrolledMessageId: String?
   @State private var pendingReportTarget: ReportTarget?
   @State private var showBlockConfirmation = false
   @State private var showSafetySupport = false
   @State private var safariURL: URL?
   @State private var alertState: AlertState?
   @State private var bottomChromeHeight: CGFloat = Spacing.bottomScrollMargin
+  @State private var highlightedMessageId: String?
+  @State private var isPinnedToBottom = true
+  @State private var unreadIncomingCount = 0
+  @State private var showsNewMessagesPill = false
+  @State private var scrollToBottomTrigger = 0
+
+  private struct ScrollState: Equatable {
+    let messageCount: Int
+    let firstMessageID: String?
+    let lastMessageID: String?
+  }
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -19,75 +29,127 @@ struct FriendsThreadView: View {
     )
   }
 
+  private var scrollState: ScrollState {
+    ScrollState(
+      messageCount: viewModel.messages.count,
+      firstMessageID: viewModel.messages.first?.id,
+      lastMessageID: viewModel.messages.last?.id
+    )
+  }
+
   var body: some View {
     VStack(spacing: 0) {
-      Divider()
-        .overlay(Color.tidexBorderSubtle)
-
       ZStack(alignment: .bottom) {
-        ScrollViewReader { proxy in
-          ScrollView {
-            LazyVStack(spacing: Spacing.sm) {
-              if viewModel.isLoading && viewModel.messages.isEmpty {
-                loadingState
-              } else if viewModel.messages.isEmpty {
-                emptyState
-              } else {
-                if viewModel.isLoadingOlderMessages {
-                  olderMessagesLoadingState
-                }
-
-                ForEach(viewModel.messages) { message in
-                  messageRow(message)
-                    .id(message.id)
-                    .onAppear {
-                      guard message.id == viewModel.messages.first?.id else { return }
-                      Task {
-                        await viewModel.loadOlderMessagesIfNeeded(currentFirstMessageId: message.id)
-                      }
-                    }
-                }
-              }
+        FriendsChatTimelineView(
+          messages: viewModel.messages,
+          quotedMessagesById: viewModel.quotedMessagesById,
+          viewerUserId: viewModel.viewerUserId,
+          currentUserDisplayName: AppCoordinator.shared.userDisplayName,
+          counterpartDisplayName: viewModel.thread.counterpartDisplayName
+            ?? viewModel.route.displayName,
+          highlightedMessageId: highlightedMessageId,
+          bottomContentInset: bottomChromeHeight + Spacing.lg,
+          scrollToBottomTrigger: scrollToBottomTrigger,
+          restoreScrollTargetMessageId: viewModel.restoreScrollTargetMessageId,
+          replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId,
+          onPinnedToBottomChanged: { isPinnedToBottom in
+            self.isPinnedToBottom = isPinnedToBottom
+          },
+          onReachedTopMessage: { currentFirstMessageId in
+            Task {
+              await viewModel.loadOlderMessagesIfNeeded(
+                currentFirstMessageId: currentFirstMessageId)
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.top, Spacing.md)
-            .padding(.bottom, bottomChromeHeight + Spacing.lg)
-          }
-          .background(Color.tidexBackground)
-          .onAppear {
-            scrollToBottom(using: proxy, animated: false)
-          }
-          .onChange(of: viewModel.messages.last?.id) { _, _ in
-            scrollToBottom(using: proxy, animated: !reduceMotion)
-          }
-          .onChange(of: viewModel.restoreScrollTargetMessageId) { _, newValue in
-            guard let targetMessageId = newValue else { return }
-            proxy.scrollTo(targetMessageId, anchor: .top)
+          },
+          onReply: { message in
+            viewModel.setReplyTarget(message)
+          },
+          onReportMessage: { messageId in
+            pendingReportTarget = .message(messageId: messageId)
+          },
+          onTapQuotedMessage: { message in
+            Task {
+              await viewModel.scrollToReplyTarget(for: message)
+            }
+          },
+          onConsumeRestoreScrollTarget: {
             viewModel.consumeRestoreScrollTarget()
+          },
+          onConsumeReplyScrollTarget: { messageId in
+            flashHighlightedMessage(messageId)
+            viewModel.consumeReplyScrollTarget()
+          }
+        )
+        .opacity(viewModel.messages.isEmpty ? 0 : 1)
+        .background(Color.tidexBackground)
+        .overlay(alignment: .top) {
+          if viewModel.isLoadingOlderMessages && !viewModel.messages.isEmpty {
+            olderMessagesLoadingState
+              .padding(.top, Spacing.md)
+          }
+        }
+        .overlay(alignment: .bottom) {
+          if showsNewMessagesPill, !viewModel.messages.isEmpty {
+            scrollToLatestButton
+              .padding(.bottom, bottomChromeHeight + Spacing.sm)
+              .transition(.move(edge: .bottom).combined(with: .opacity))
           }
         }
         .overlay(alignment: .bottom) {
           composer
+        }
+
+        if viewModel.isLoading && viewModel.messages.isEmpty {
+          loadingState
+        } else if viewModel.messages.isEmpty {
+          emptyState
         }
       }
     }
     .background(Color.tidexBackground.ignoresSafeArea())
     .navigationTitle(viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName)
     .navigationBarTitleDisplayMode(.inline)
+    .iPadToolbarBackground()
+    .toolbarBackground(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         actionsMenu
       }
     }
+    .iPadToolbarTransaction()
     .task {
       await viewModel.loadIfNeeded()
+    }
+    .onChange(of: scrollState) { oldValue, newValue in
+      handleScrollStateChange(from: oldValue, to: newValue)
+    }
+    .onAppear {
+      FriendsChatPresentationState.shared.setActiveThreadId(viewModel.route.threadId)
+    }
+    .onChange(of: isPinnedToBottom) { _, isPinnedToBottom in
+      if isPinnedToBottom {
+        unreadIncomingCount = 0
+        showsNewMessagesPill = false
+      }
     }
     .refreshable {
       await viewModel.refresh()
     }
     .onDisappear {
+      FriendsChatPresentationState.shared.setActiveThreadId(nil)
       Task {
         await viewModel.stopRealtime()
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { notification in
+      guard let threadId = notification.userInfo?["threadId"] as? String,
+        threadId == viewModel.route.threadId
+      else {
+        return
+      }
+
+      Task {
+        await viewModel.handleExternalThreadUpdate()
       }
     }
     .confirmationDialog(
@@ -213,51 +275,50 @@ struct FriendsThreadView: View {
     .padding(.bottom, Spacing.xs)
   }
 
-  private func messageRow(_ message: FriendMessage) -> some View {
-    let isCurrentUser = message.senderUserId == AppCoordinator.shared.getCurrentUserId()
+  private var scrollToLatestButton: some View {
+    Button {
+      unreadIncomingCount = 0
+      showsNewMessagesPill = false
+      Haptics.play(.light)
+      SoundManager.shared.play("tap")
+      scrollToBottomTrigger += 1
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "arrow.down")
+          .font(.system(size: 14, weight: .semibold))
 
-    return ChatMessageRow(isCurrentUser: isCurrentUser, minSpacer: 48, spacing: Spacing.xxs) {
-      ForEach(message.attachments) { attachment in
-        if attachment.kind == .image {
-          FriendMessageImageView(
-            attachment: attachment,
-            isCurrentUser: isCurrentUser,
-            onReport: {
-              pendingReportTarget = .message(messageId: message.id)
-            }
-          )
+        Text(.friendsChatNewMessages)
+          .font(.tidexFootnoteMedium)
+
+        if unreadIncomingCount > 0 {
+          Text("\(min(unreadIncomingCount, 99))")
+            .font(.tidexMicro.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.tidexBrandPrimary))
         }
       }
-
-      if let body = message.body, !body.isEmpty {
-        ChatBubbleCard(isCurrentUser: isCurrentUser, maxWidth: 280) {
-          Text(body)
-            .font(.tidexBody)
-            .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-        }
-        .contextMenu {
-          Button {
-            UIPasteboard.general.string = body
-          } label: {
-            Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-          }
-
-          if !isCurrentUser {
-            Button(String(localized: .friendsChatReportMessage)) {
-              pendingReportTarget = .message(messageId: message.id)
-            }
-          }
-        }
-      }
-
-      Text(message.createdAt.formatted(.dateTime.hour().minute()))
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+      .foregroundColor(.tidexTextPrimary)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+      .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
     }
+    .buttonStyle(.plain)
   }
 
   private var composer: some View {
     VStack(spacing: Spacing.xs) {
+      if let replyTarget = viewModel.draftReplyTarget {
+        DraftReplyBanner(
+          preview: replyPreviewModel(for: replyTarget),
+          onCancel: {
+            viewModel.clearReplyTarget()
+          }
+        )
+        .padding(.horizontal, Spacing.md)
+      }
+
       if viewModel.isThreadReadOnly {
         HStack(spacing: Spacing.xs) {
           Image(systemName: "hand.raised.fill")
@@ -406,22 +467,67 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool) {
-    guard let lastMessageId = viewModel.messages.last?.id, lastMessageId != lastScrolledMessageId
-    else {
+  private func handleScrollStateChange(
+    from oldValue: ScrollState,
+    to newValue: ScrollState
+  ) {
+    guard newValue != oldValue, let lastMessage = viewModel.messages.last else { return }
+
+    let prependedMessages =
+      newValue.messageCount > oldValue.messageCount
+      && newValue.firstMessageID != oldValue.firstMessageID
+      && newValue.lastMessageID == oldValue.lastMessageID
+    let appendedMessage =
+      newValue.lastMessageID != oldValue.lastMessageID
+      || (newValue.messageCount > oldValue.messageCount
+        && newValue.firstMessageID == oldValue.firstMessageID)
+
+    guard appendedMessage, !prependedMessages else { return }
+
+    let isIncoming = lastMessage.senderUserId != AppCoordinator.shared.getCurrentUserId()
+
+    if oldValue.messageCount == 0 || isPinnedToBottom {
+      unreadIncomingCount = 0
+      showsNewMessagesPill = false
+      scrollToBottomTrigger += 1
       return
     }
 
-    lastScrolledMessageId = lastMessageId
-
-    let action = {
-      proxy.scrollTo(lastMessageId, anchor: .bottom)
+    if !isIncoming {
+      return
     }
 
-    if animated {
-      withAnimation(.easeOut(duration: 0.2), action)
-    } else {
-      action()
+    unreadIncomingCount += 1
+    showsNewMessagesPill = true
+    isPinnedToBottom = false
+    Haptics.play(.light)
+    SoundManager.shared.play("tap")
+  }
+
+  private func replyPreviewModel(for message: FriendMessage) -> FriendsChatReplyPreviewModel {
+    FriendsChatReplyPreviewModel(
+      snippet: replySnippet(for: message),
+      hasImageAttachment: message.hasImageAttachment
+    )
+  }
+
+  private func replySnippet(for message: FriendMessage) -> String? {
+    let snippet = message.body?
+      .replacingOccurrences(of: "\n", with: " ")
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard let snippet, !snippet.isEmpty else { return nil }
+    return snippet
+  }
+
+  private func flashHighlightedMessage(_ messageId: String) {
+    highlightedMessageId = messageId
+
+    Task { @MainActor in
+      try? await Task.sleep(nanoseconds: 1_200_000_000)
+      if highlightedMessageId == messageId {
+        highlightedMessageId = nil
+      }
     }
   }
 
@@ -446,115 +552,69 @@ struct FriendsThreadView: View {
   }
 }
 
-private struct FriendMessageImageView: View {
-  let attachment: FriendMessageAttachment
-  let isCurrentUser: Bool
-  let onReport: () -> Void
-
-  @StateObject private var loader = FriendMessageImageLoader()
-  @State private var selectedImageViewer: FriendSelectedImageViewer?
+private struct DraftReplyBanner: View {
+  let preview: FriendsChatReplyPreviewModel
+  let onCancel: () -> Void
 
   var body: some View {
-    Group {
-      if let image = loader.image {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-          .frame(maxWidth: 220, maxHeight: 220)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-              .strokeBorder(
-                isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
-                lineWidth: 1
-              )
-          )
-          .onTapGesture {
-            selectedImageViewer = FriendSelectedImageViewer(image: image)
-          }
-      } else if loader.isLoading {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-          .frame(width: 160, height: 160)
-          .overlay {
-            ProgressView()
-          }
-      } else {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-          .frame(width: 160, height: 120)
-          .overlay {
+    HStack(alignment: .top, spacing: Spacing.sm) {
+      HStack(alignment: .top, spacing: Spacing.xs) {
+        RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+          .fill(Color.tidexBlue.opacity(0.7))
+          .frame(width: 3, height: 30)
+
+        VStack(alignment: .leading, spacing: 3) {
+          if preview.hasImageAttachment {
             Image(systemName: "photo")
-              .font(.tidexTitle2)
+              .font(.tidexCaptionRegular)
               .foregroundColor(.tidexTextMuted)
           }
-      }
-    }
-    .task(id: attachment.id) {
-      await loader.loadIfNeeded(attachment: attachment)
-    }
-    .contextMenu {
-      if let image = loader.image {
-        Button {
-          UIPasteboard.general.image = image
-        } label: {
-          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+
+          if let snippet = preview.snippet {
+            Text(snippet)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextMuted)
+              .lineLimit(1)
+          }
         }
+
+        Spacer(minLength: 0)
       }
-
-      if !isCurrentUser {
-        Button(String(localized: .friendsChatReportMessage)) {
-          onReport()
-        }
-      }
-    }
-    .fullScreenCover(item: $selectedImageViewer) { viewer in
-      ImageViewerOverlay(image: viewer.image) {
-        selectedImageViewer = nil
-      }
-    }
-  }
-}
-
-@MainActor
-private final class FriendMessageImageLoader: ObservableObject {
-  private static let cache = NSCache<NSString, UIImage>()
-
-  @Published private(set) var image: UIImage?
-  @Published private(set) var isLoading = false
-
-  func loadIfNeeded(attachment: FriendMessageAttachment) async {
-    if let image {
-      self.image = image
-      return
-    }
-
-    let cacheKey = attachment.storagePath as NSString
-    if let cached = Self.cache.object(forKey: cacheKey) {
-      image = cached
-      return
-    }
-
-    guard !isLoading else { return }
-    isLoading = true
-    defer { isLoading = false }
-
-    do {
-      let data = try await FriendsMessagingService.shared.downloadAttachmentData(
-        path: attachment.storagePath
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .fill(Color.tidexSurfaceSecondary.opacity(0.72))
       )
-      guard let loadedImage = UIImage(data: data) else { return }
-      Self.cache.setObject(loadedImage, forKey: cacheKey)
-      image = loadedImage
-    } catch {
-      image = nil
-    }
-  }
-}
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+      )
 
-private struct FriendSelectedImageViewer: Identifiable {
-  let id = UUID()
-  let image: UIImage
+      Button(action: onCancel) {
+        Image(systemName: "xmark")
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextMuted)
+          .frame(width: 32, height: 32)
+          .background(
+            Circle()
+              .fill(Color.tidexSurfaceSecondary)
+          )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(String(localized: .commonCancel)))
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.sm)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .stroke(Color.tidexBorder.opacity(0.35), lineWidth: 1)
+    )
+  }
 }
 
 private struct FriendsBottomChromeHeightPreferenceKey: PreferenceKey {
