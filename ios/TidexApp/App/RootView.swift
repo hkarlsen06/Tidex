@@ -54,6 +54,8 @@ private struct RootContent: View {
 
   // Storage warning state - shown when LocalStore falls back to in-memory storage
   @State private var showStorageWarning = false
+  @State private var activeChatToast: InAppChatToastPayload?
+  @State private var chatToastDismissTask: Task<Void, Never>?
 
   enum AuthDestination {
     case login
@@ -135,6 +137,29 @@ private struct RootContent: View {
                     .transition(.opacity)
                 }
               }
+              .overlay(alignment: .top) {
+                if let activeChatToast {
+                  InAppChatToastView(
+                    payload: activeChatToast,
+                    onTap: {
+                      dismissChatToast()
+                      coordinator.pendingDeepLink = .friendChat(
+                        threadId: activeChatToast.threadId,
+                        messageId: activeChatToast.messageId,
+                        senderUserId: activeChatToast.senderUserId
+                      )
+                    },
+                    onDismiss: {
+                      dismissChatToast()
+                    }
+                  )
+                  .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                  .padding(.horizontal, Spacing.md)
+                  .padding(.top, 8)
+                  .transition(.move(edge: .top).combined(with: .opacity))
+                  .zIndex(10)
+                }
+              }
           }
         }
       }
@@ -175,6 +200,16 @@ private struct RootContent: View {
       showAuthAfterOnboarding = false
       authDestination = .login
     }
+    .onReceive(NotificationCenter.default.publisher(for: .inAppChatToastRequested)) {
+      notification in
+      guard coordinator.appState == .authenticated,
+        let payload = notification.object as? InAppChatToastPayload
+      else {
+        return
+      }
+
+      showChatToast(payload)
+    }
     .onChange(of: coordinator.appState) { _, _ in
       coordinator.refreshPostAuthOnboardingPresentation(
         hasCompletedLocally: hasCompletedPostAuthOnboarding
@@ -187,6 +222,31 @@ private struct RootContent: View {
     }
     .onChange(of: hasCompletedPostAuthOnboarding) { _, newValue in
       coordinator.refreshPostAuthOnboardingPresentation(hasCompletedLocally: newValue)
+    }
+    .onDisappear {
+      chatToastDismissTask?.cancel()
+      chatToastDismissTask = nil
+    }
+  }
+
+  private func showChatToast(_ payload: InAppChatToastPayload) {
+    chatToastDismissTask?.cancel()
+    withAnimation(.spring(duration: 0.32, bounce: 0.14)) {
+      activeChatToast = payload
+    }
+
+    chatToastDismissTask = Task { @MainActor in
+      try? await Task.sleep(for: .seconds(4))
+      guard !Task.isCancelled else { return }
+      dismissChatToast()
+    }
+  }
+
+  private func dismissChatToast() {
+    chatToastDismissTask?.cancel()
+    chatToastDismissTask = nil
+    withAnimation(.spring(duration: 0.28, bounce: 0.08)) {
+      activeChatToast = nil
     }
   }
 }

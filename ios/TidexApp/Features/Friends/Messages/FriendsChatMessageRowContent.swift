@@ -417,8 +417,23 @@ private struct FriendsChatImageView: View {
   let isCurrentUser: Bool
   let onReport: () -> Void
 
-  @StateObject private var loader = FriendsChatImageLoader()
+  @StateObject private var loader: FriendsChatImageLoader
   @State private var selectedImageViewer: FriendsChatSelectedImageViewer?
+
+  init(
+    attachment: FriendMessageAttachment,
+    isCurrentUser: Bool,
+    onReport: @escaping () -> Void
+  ) {
+    self.attachment = attachment
+    self.isCurrentUser = isCurrentUser
+    self.onReport = onReport
+    let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
+    let initialImage = ImageCache.shared.get(for: cacheURL)
+    _loader = StateObject(
+      wrappedValue: FriendsChatImageLoader(initialImage: initialImage)
+    )
+  }
 
   var body: some View {
     Group {
@@ -511,6 +526,10 @@ private final class FriendsChatImageLoader: ObservableObject {
   @Published private(set) var image: UIImage?
   @Published private(set) var isLoading = false
 
+  init(initialImage: UIImage? = nil) {
+    image = initialImage
+  }
+
   func loadIfNeeded(attachment: FriendMessageAttachment) async {
     if let image {
       self.image = image
@@ -545,7 +564,7 @@ private final class FriendsChatImageLoader: ObservableObject {
     }
   }
 
-  nonisolated private static func cacheURL(for storagePath: String) -> URL {
+  nonisolated static func cacheURL(for storagePath: String) -> URL {
     var components = URLComponents()
     components.scheme = "https"
     components.host = "friends-message-cache.local"
