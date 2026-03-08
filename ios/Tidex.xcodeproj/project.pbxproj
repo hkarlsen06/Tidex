@@ -25,7 +25,9 @@
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		11F0A0043011111100A1B2C3 /* Sentry-Dynamic-WithARM64e in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry-Dynamic-WithARM64e */; };
+		11DC87CD2F5D2FA60080D9F5 /* ChatLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 11DC87CC2F5D2FA60080D9F5 /* ChatLayout */; };
+		11DC87DD2F5D35990080D9F5 /* TidexNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		11F0A0043011111100A1B2C3 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry-Dynamic */; };
 		188D65FF4E96734657711265 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */; };
 		28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */; };
 		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
@@ -57,6 +59,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 11A5CD2D2F101283002BAC91;
 			remoteInfo = TidexShiftWidgetExtension;
+		};
+		11DC87DB2F5D35990080D9F5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 11DC87D52F5D35990080D9F5;
+			remoteInfo = TidexNotificationService;
 		};
 		73C92BFDD02B4ABC9B4957C9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -103,6 +112,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				11DC87DD2F5D35990080D9F5 /* TidexNotificationService.appex in Embed Foundation Extensions */,
 				11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -119,6 +129,7 @@
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConflictExclusionTests.swift; sourceTree = "<group>"; };
 		17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalStoreDirtyTrackingTests.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -200,6 +211,13 @@
 			);
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
 		};
+		11DC87E12F5D35990080D9F5 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 11DC87D52F5D35990080D9F5 /* TidexNotificationService */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -209,6 +227,7 @@
 		11828D5E2F2828A1008A1A80 /* TidexApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828E5A2F2828A1008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexApp; sourceTree = "<group>"; };
 		11828EAF2F2AE096008A1A80 /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828EBC2F2AE096008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, 1154802F2F3E9BA700FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
 		11A5CD332F101283002BAC91 /* TidexShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (113F7F842F1017390078A6D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexShiftWidget; sourceTree = "<group>"; };
+		11DC87D72F5D35990080D9F5 /* TidexNotificationService */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11DC87E12F5D35990080D9F5 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexNotificationService; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -237,6 +256,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		11DC87D32F5D35990080D9F5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1AC8D86AACFE6830D8425FC1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -258,8 +284,9 @@
 				11923C192F16B94B0076AFD6 /* Auth in Frameworks */,
 				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
 				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
+				11DC87CD2F5D2FA60080D9F5 /* ChatLayout in Frameworks */,
 				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
-				11F0A0043011111100A1B2C3 /* Sentry-Dynamic-WithARM64e in Frameworks */,
+				11F0A0043011111100A1B2C3 /* Sentry-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,6 +358,7 @@
 				11A5CD332F101283002BAC91 /* TidexShiftWidget */,
 				114F0F432F2150EA00B587F0 /* TidexWatchApp */,
 				11546CED2F3E989700FC832F /* WatchShiftWidget */,
+				11DC87D72F5D35990080D9F5 /* TidexNotificationService */,
 				1152D0C92F01E2A7002FD5ED /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
 				11264B892F301BB900233D63 /* Recovered References */,
@@ -348,6 +376,7 @@
 				11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */,
 				A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */,
 				6BCA863EB86543B1471C227F /* TidexAppUITests.xctest */,
+				11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -418,6 +447,28 @@
 			productReference = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		11DC87D52F5D35990080D9F5 /* TidexNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 11DC87DE2F5D35990080D9F5 /* Build configuration list for PBXNativeTarget "TidexNotificationService" */;
+			buildPhases = (
+				11DC87D22F5D35990080D9F5 /* Sources */,
+				11DC87D32F5D35990080D9F5 /* Frameworks */,
+				11DC87D42F5D35990080D9F5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				11DC87D72F5D35990080D9F5 /* TidexNotificationService */,
+			);
+			name = TidexNotificationService;
+			packageProductDependencies = (
+			);
+			productName = TidexNotificationService;
+			productReference = 11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		15E19F36EFB14A527CF41BEB /* TidexAppTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F4383DBE864F1EB34B00FBDD /* Build configuration list for PBXNativeTarget "TidexAppTests" */;
@@ -451,6 +502,7 @@
 			);
 			dependencies = (
 				11A5CD402F101284002BAC91 /* PBXTargetDependency */,
+				11DC87DC2F5D35990080D9F5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				11828D5E2F2828A1008A1A80 /* TidexApp */,
@@ -468,7 +520,8 @@
 				11923C272F16BB090076AFD6 /* Supabase */,
 				11263D3B2F2FF22700233D63 /* CropViewController */,
 				11263D3F2F2FF3F700233D63 /* TOCropViewController */,
-				11F0A0033011111100A1B2C3 /* Sentry-Dynamic-WithARM64e */,
+				11F0A0033011111100A1B2C3 /* Sentry-Dynamic */,
+				11DC87CC2F5D2FA60080D9F5 /* ChatLayout */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -510,6 +563,9 @@
 					};
 					11A5CD2D2F101283002BAC91 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					11DC87D52F5D35990080D9F5 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -577,6 +633,7 @@
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 				11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				11DC87CB2F5D2FA60080D9F5 /* XCRemoteSwiftPackageReference "ChatLayout" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -588,6 +645,7 @@
 				11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */,
 				15E19F36EFB14A527CF41BEB /* TidexAppTests */,
 				8BA2D8E28A988E2E920ACBE5 /* TidexAppUITests */,
+				11DC87D52F5D35990080D9F5 /* TidexNotificationService */,
 			);
 		};
 /* End PBXProject section */
@@ -609,6 +667,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		11A5CD2C2F101283002BAC91 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		11DC87D42F5D35990080D9F5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -684,6 +749,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		11DC87D22F5D35990080D9F5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -736,6 +808,11 @@
 			isa = PBXTargetDependency;
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
 			targetProxy = 11A5CD3F2F101284002BAC91 /* PBXContainerItemProxy */;
+		};
+		11DC87DC2F5D35990080D9F5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 11DC87D52F5D35990080D9F5 /* TidexNotificationService */;
+			targetProxy = 11DC87DB2F5D35990080D9F5 /* PBXContainerItemProxy */;
 		};
 		7F938A296190A6C2DC111B80 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -967,6 +1044,74 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexShiftWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		11DC87DF2F5D35990080D9F5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TidexNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TidexNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		11DC87E02F5D35990080D9F5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 958DCC732DB07C7200EA8C5F /* release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TidexNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TidexNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1271,6 +1416,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		11DC87DE2F5D35990080D9F5 /* Build configuration list for PBXNativeTarget "TidexNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				11DC87DF2F5D35990080D9F5 /* Debug */,
+				11DC87E02F5D35990080D9F5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		1629D0282BDBAF780D3B871D /* Build configuration list for PBXNativeTarget "TidexAppUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1334,6 +1488,14 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		11DC87CB2F5D2FA60080D9F5 /* XCRemoteSwiftPackageReference "ChatLayout" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ekazaev/ChatLayout";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.2;
+			};
+		};
 		11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
@@ -1395,10 +1557,15 @@
 			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
 		};
-		11F0A0033011111100A1B2C3 /* Sentry-Dynamic-WithARM64e */ = {
+		11DC87CC2F5D2FA60080D9F5 /* ChatLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11DC87CB2F5D2FA60080D9F5 /* XCRemoteSwiftPackageReference "ChatLayout" */;
+			productName = ChatLayout;
+		};
+		11F0A0033011111100A1B2C3 /* Sentry-Dynamic */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = "Sentry-Dynamic-WithARM64e";
+			productName = "Sentry-Dynamic";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

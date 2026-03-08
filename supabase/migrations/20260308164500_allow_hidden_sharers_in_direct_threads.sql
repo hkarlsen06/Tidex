@@ -1,5 +1,4 @@
--- Function: can_create_direct_thread
--- Description: Checks whether the authenticated user may create a new direct thread with another user
+-- Hidden sharers remain eligible for direct threads; only abuse blocks revoke chat access.
 
 CREATE OR REPLACE FUNCTION public.can_create_direct_thread(p_other_user_id uuid)
 RETURNS boolean

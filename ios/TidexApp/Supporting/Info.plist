@@ -55,6 +55,10 @@
 	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>INSendMessageIntent</string>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>SENTRY_DSN</key>

@@ -2,9 +2,6 @@ import SwiftUI
 
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
-  private let pinnedBottomThreshold: CGFloat = 44
-  private let scrollCoordinateSpaceName = "wagey-chat-scroll"
-
   let messages: [ChatMessage]
   let streamingContentBlocks: [ContentBlock]
   let isStreaming: Bool
@@ -23,11 +20,6 @@ struct ChatMessageList: View {
   /// Whether the "Copied!" confirmation is showing
   @State private var showCopiedConfirmation = false
   @State private var showsSuggestions = false
-  @State private var scrollTask: Task<Void, Never>?
-  @State private var bottomAnchorMaxY: CGFloat = 0
-  @State private var viewportHeight: CGFloat = 0
-  @State private var isPinnedToBottom = true
-  @State private var suppressAutoFollow = false
 
   init(
     messages: [ChatMessage],
@@ -87,105 +79,42 @@ struct ChatMessageList: View {
     }
   }
 
-  private var shouldAutoFollow: Bool {
-    isPinnedToBottom && !suppressAutoFollow
-  }
-
   var body: some View {
-    ScrollViewReader { proxy in
-      ScrollView {
-        VStack(spacing: Spacing.sm) {
-          // Empty state when no messages
-          if messages.isEmpty && !isStreaming {
-            emptyStateView
-              .padding(.top, Spacing.xxl)
-          } else {
-            // Message bubbles
-            ForEach(messages) { message in
-              ChatMessageBubble(message: message)
-                .id(message.id)
-            }
-
-            // Streaming message
-            if isStreaming {
-              StreamingMessageBubble(
-                contentBlocks: streamingContentBlocks,
-                isThinking: isThinking
-              )
-              .id("streaming")
-            }
-
-            // Copy conversation button (after last assistant message, when not streaming)
-            if !isStreaming, messages.last?.role == .assistant {
-              copyConversationButton
-            }
-          }
-
-          // Bottom anchor for scrolling
-          Color.clear
-            .frame(height: 1)
-            .id("bottom")
-            .background(
-              GeometryReader { geometry in
-                Color.clear.preference(
-                  key: ChatBottomAnchorMaxYPreferenceKey.self,
-                  value: geometry.frame(in: .named(scrollCoordinateSpaceName)).maxY
-                )
-              }
-            )
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.md)
-        .padding(.bottom, max(bottomContentInset, Spacing.bottomScrollMargin))
+    ChatTimelineScrollView(
+      scrollState: scrollState,
+      bottomContentInset: bottomContentInset,
+      isPinnedToBottom: $isScrolledToBottom,
+      scrollToBottomTrigger: scrollToBottomTrigger,
+      dismissKeyboardOnTap: true,
+      onScrollStateChange: { oldValue, newValue, context in
+        handleScrollStateChange(from: oldValue, to: newValue, context: context)
       }
-      .coordinateSpace(name: scrollCoordinateSpaceName)
-      .background(
-        GeometryReader { geometry in
-          Color.clear.preference(
-            key: ChatViewportMaxYPreferenceKey.self,
-            value: geometry.size.height
+    ) {
+      // Empty state when no messages
+      if messages.isEmpty && !isStreaming {
+        emptyStateView
+          .padding(.top, Spacing.xxl)
+      } else {
+        // Message bubbles
+        ForEach(messages) { message in
+          ChatMessageBubble(message: message)
+            .id(message.id)
+        }
+
+        // Streaming message
+        if isStreaming {
+          StreamingMessageBubble(
+            contentBlocks: streamingContentBlocks,
+            isThinking: isThinking
           )
+          .id("streaming")
         }
-      )
-      .simultaneousGesture(
-        DragGesture(minimumDistance: 4)
-          .onChanged { _ in
-            suppressAutoFollow = true
-          }
-      )
-      .onAppear {
-        isPinnedToBottom = true
-        isScrolledToBottom = true
-        suppressAutoFollow = false
-        scheduleScrollToBottom(proxy: proxy, animated: false)
+
+        // Copy conversation button (after last assistant message, when not streaming)
+        if !isStreaming, messages.last?.role == .assistant {
+          copyConversationButton
+        }
       }
-      .onChange(of: scrollState) { oldValue, newValue in
-        handleScrollStateChange(from: oldValue, to: newValue, proxy: proxy)
-      }
-      .onChange(of: scrollToBottomTrigger) { _, _ in
-        isPinnedToBottom = true
-        isScrolledToBottom = true
-        suppressAutoFollow = false
-        scheduleScrollToBottom(proxy: proxy, animated: true)
-      }
-      .onPreferenceChange(ChatBottomAnchorMaxYPreferenceKey.self) { value in
-        bottomAnchorMaxY = value
-        updatePinnedToBottom()
-      }
-      .onPreferenceChange(ChatViewportMaxYPreferenceKey.self) { value in
-        viewportHeight = value
-        updatePinnedToBottom()
-      }
-      .scrollDismissesKeyboard(.interactively)
-      .onDisappear {
-        scrollTask?.cancel()
-        scrollTask = nil
-      }
-    }
-    .onTapGesture {
-      // Dismiss keyboard when tapping on the message area
-      UIApplication.shared.sendAction(
-        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
   }
 
@@ -447,27 +376,10 @@ struct ChatMessageList: View {
 
   // MARK: - Scroll Helper
 
-  private func scheduleScrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
-    scrollTask?.cancel()
-    scrollTask = Task { @MainActor in
-      await Task.yield()
-      await Task.yield()
-      guard !Task.isCancelled else { return }
-
-      if animated {
-        withAnimation(.easeOut(duration: 0.2)) {
-          proxy.scrollTo("bottom", anchor: .bottom)
-        }
-      } else {
-        proxy.scrollTo("bottom", anchor: .bottom)
-      }
-    }
-  }
-
   private func handleScrollStateChange(
     from oldValue: ScrollState,
     to newValue: ScrollState,
-    proxy: ScrollViewProxy
+    context: ChatTimelineScrollContext
   ) {
     let startedStreaming = !oldValue.isStreaming && newValue.isStreaming
     let finishedStreaming = oldValue.isStreaming && !newValue.isStreaming
@@ -476,18 +388,18 @@ struct ChatMessageList: View {
       || oldValue.lastMessageID != newValue.lastMessageID
 
     if startedStreaming {
-      scheduleScrollToBottom(proxy: proxy, animated: false)
+      context.scrollToBottom(false, true)
       return
     }
 
-    if finishedStreaming && (!isPinnedToBottom || suppressAutoFollow) {
+    if finishedStreaming && (!context.isPinnedToBottom || context.suppressAutoFollow) {
       onStreamEndedAwayFromBottom?()
     }
 
     if appendedMessage {
-      guard shouldAutoFollow else { return }
+      guard context.shouldAutoFollow else { return }
       let shouldAnimate = !newValue.isStreaming
-      scheduleScrollToBottom(proxy: proxy, animated: shouldAnimate)
+      context.scrollToBottom(shouldAnimate, false)
       return
     }
 
@@ -497,32 +409,6 @@ struct ChatMessageList: View {
     }
   }
 
-  private func updatePinnedToBottom() {
-    guard viewportHeight > 0, bottomAnchorMaxY > 0 else { return }
-    let distanceFromBottom = bottomAnchorMaxY - viewportHeight
-    let isNearBottom = distanceFromBottom <= pinnedBottomThreshold
-    isPinnedToBottom = isNearBottom
-    isScrolledToBottom = isNearBottom
-    if isNearBottom {
-      suppressAutoFollow = false
-    }
-  }
-}
-
-private struct ChatBottomAnchorMaxYPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = nextValue()
-  }
-}
-
-private struct ChatViewportMaxYPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = nextValue()
-  }
 }
 
 // MARK: - Previews

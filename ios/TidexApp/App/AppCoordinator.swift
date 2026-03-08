@@ -77,6 +77,7 @@ final class AppCoordinator: ObservableObject {
     case shifts(dates: [String]?, action: ShiftDeepLinkAction)  // Navigate to shifts view, optionally filtering dates
     case sharing(sharerId: String?, highlightDates: [String]?, changes: [ShiftChange]?)  // Navigate to sharing tab, select sharer, highlight specific shifts
     case sharingManage(highlightUserId: String?)  // Open sharing management modal, optionally highlighting a user
+    case friendChat(threadId: String, messageId: String?, senderUserId: String?)  // Navigate to a direct friend chat thread
     case addShift  // Navigate to Add Shift tab (preselected date set via SharedMonthContext)
     case feedback  // Navigate to feedback settings (for users receiving response)
     case adminFeedback  // Navigate to admin panel with feedback tab (for admins receiving new feedback)

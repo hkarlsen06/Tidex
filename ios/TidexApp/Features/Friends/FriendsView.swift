@@ -35,12 +35,14 @@ struct SharingView: View {
   @State private var deepLinkNavigationTask: Task<Void, Never>?
   @State private var highlightClearTask: Task<Void, Never>?
   @State private var openingThreadUserId: String?
+  @State private var openingThreadId: String?
   @State private var chatOpenErrorMessage: String?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
 
   private let friendsMessagingService = FriendsMessagingService.shared
+  private let friendsMessagesRepository = FriendsMessagesRepository.shared
 
   var body: some View {
     NavigationStack(path: $navigationPath) {
@@ -239,6 +241,13 @@ struct SharingView: View {
       showManageSheet = true
       coordinator.clearPendingDeepLink()
 
+    case .friendChat(let threadId, _, _):
+      deepLinkNavigationTask?.cancel()
+      deepLinkNavigationTask = Task { @MainActor in
+        await openChat(threadId: threadId)
+      }
+      coordinator.clearPendingDeepLink()
+
     case .shifts:
       // Not handled here - ShiftsView will handle this
       break
@@ -358,6 +367,51 @@ struct SharingView: View {
         fallbackAvatarUrl: sharedUser.avatarUrl
       )
       navigationPath.append(route)
+    } catch {
+      chatOpenErrorMessage =
+        error.localizedDescription.isEmpty
+        ? String(localized: .friendsChatOpenFailed)
+        : error.localizedDescription
+    }
+  }
+
+  private func openChat(threadId: String) async {
+    guard openingThreadId == nil else { return }
+
+    openingThreadId = threadId
+    defer { openingThreadId = nil }
+
+    do {
+      async let threadTask = friendsMessagingService.fetchThreadSummary(threadId: threadId)
+      async let messagesTask = friendsMessagingService.listThreadMessages(
+        threadId: threadId,
+        limit: 50,
+        before: nil
+      )
+
+      let thread = try await threadTask
+      let messages = try await messagesTask
+      guard !Task.isCancelled else { return }
+
+      if let viewerUserId = coordinator.getCurrentUserId() {
+        await friendsMessagesRepository.saveThread(thread, for: viewerUserId)
+        await friendsMessagesRepository.saveMessages(messages, in: threadId, for: viewerUserId)
+        guard !Task.isCancelled else { return }
+      }
+
+      let route = FriendChatRoute(
+        thread: thread,
+        fallbackDisplayName: thread.counterpartDisplayName
+          ?? String(localized: .sharingFriendsTitle),
+        fallbackAvatarUrl: thread.counterpartAvatarUrl
+      )
+
+      navigationPath = NavigationPath()
+      viewModel.deselectSharer()
+      navigationPath.append(route)
+      hasSelectedSharer = false
+    } catch is CancellationError {
+      return
     } catch {
       chatOpenErrorMessage =
         error.localizedDescription.isEmpty

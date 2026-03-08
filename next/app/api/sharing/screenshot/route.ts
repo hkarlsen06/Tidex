@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
     .select("id")
     .eq("owner_id", sharerId)
     .eq("viewer_id", screenshotterId)
-    .eq("hidden", false)
     .maybeSingle();
 
   if (!shareAccess) {

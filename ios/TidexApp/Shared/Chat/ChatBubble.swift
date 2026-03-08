@@ -25,14 +25,25 @@ struct ChatMessageRow<Content: View>: View {
 
 struct ChatBubbleCard<Content: View>: View {
   let isCurrentUser: Bool
+  var minWidth: CGFloat? = nil
   var maxWidth: CGFloat? = nil
   @ViewBuilder let content: () -> Content
 
   var body: some View {
     Group {
-      if let maxWidth {
+      if let minWidth, let maxWidth {
+        bubbleBody
+          .frame(
+            minWidth: minWidth,
+            maxWidth: maxWidth,
+            alignment: isCurrentUser ? .trailing : .leading
+          )
+      } else if let maxWidth {
         bubbleBody
           .frame(maxWidth: maxWidth, alignment: isCurrentUser ? .trailing : .leading)
+      } else if let minWidth {
+        bubbleBody
+          .frame(minWidth: minWidth, alignment: isCurrentUser ? .trailing : .leading)
       } else {
         bubbleBody
       }

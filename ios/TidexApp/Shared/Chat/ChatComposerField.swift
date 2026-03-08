@@ -53,7 +53,6 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .padding(.horizontal, horizontalPadding)
     .padding(.top, topPadding)
     .padding(.bottom, bottomPadding)
-    .background(Color.tidexBackground)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isFocused)
   }

@@ -16,6 +16,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
     threadId: String,
     clientId: String,
     body: String?,
+    replyToMessageId: String?,
     attachments: [FriendOutgoingAttachment]
   ) async throws -> FriendMessage
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
@@ -167,6 +168,7 @@ final class FriendsMessagingService: ObservableObject {
     threadId: String,
     clientId: String,
     body: String?,
+    replyToMessageId: String? = nil,
     attachments: [FriendOutgoingAttachment] = []
   ) async throws -> FriendMessage {
     let payload = try attachments.map { attachment -> AnyJSON in
@@ -178,6 +180,7 @@ final class FriendsMessagingService: ObservableObject {
       "p_thread_id": .string(threadId),
       "p_client_id": .string(clientId),
       "p_body": body.map(AnyJSON.string) ?? .null,
+      "p_reply_to_message_id": replyToMessageId.map(AnyJSON.string) ?? .null,
       "p_attachments": .array(payload),
     ]
 

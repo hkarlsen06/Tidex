@@ -508,7 +508,7 @@ struct MainTabView: View {
     guard let deepLink = deepLink else { return }
 
     switch deepLink {
-    case .sharing, .sharingManage:
+    case .sharing, .sharingManage, .friendChat:
       // Switch to sharing tab - SharingView will handle the specific navigation
       if selectedTab != .sharing {
         selectedTab = .sharing

@@ -155,7 +155,6 @@ BEGIN
       OR
       (ss.owner_id = p_other_user_id AND ss.viewer_id = v_uid)
     )
-      AND COALESCE(ss.hidden, false) = false
       AND ss.blocked_by_user_id IS NULL
   );
 END;
