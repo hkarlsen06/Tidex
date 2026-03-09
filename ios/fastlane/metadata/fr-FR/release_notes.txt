@@ -1,4 +1,5 @@
-- Correction d'un problème critique qui pouvait rendre l'application complètement non réactive pendant qu'un shift était en cours
-- Ajout de la prise en charge de plusieurs lieux de travail — suivez les shifts et salaires de différents emplois
-- Ajout du pointage entrée/sortie — démarrez et terminez facilement vos shifts sans définir d'heure de fin à l'avance
+- Ajout de la messagerie directe avec vos amis — envoyez des messages, réagissez, répondez et partagez du contenu directement dans l’app
+- Ajout de fonctionnalités de sécurité, y compris la possibilité de bloquer et débloquer des utilisateurs
+- Refonte de l’onglet Wagey AI avec une interface plus épurée
+- Ajout de la prise en charge des emplois avec différentes devises
 - Corrections de bugs et autres améliorations

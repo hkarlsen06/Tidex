@@ -1,4 +1,5 @@
-- Vardiya devam ederken uygulamanın tamamen yanıt vermemesine neden olabilecek kritik bir sorun düzeltildi
-- Birden fazla işyeri desteği eklendi — farklı işlerdeki vardiyaları ve ücretleri takip edin
-- Giriş/çıkış özelliği eklendi — önceden bitiş saati belirlemeden vardiyaları kolayca başlatın ve bitirin
+- Arkadaşlarla doğrudan mesajlaşma eklendi — uygulama içinde doğrudan mesaj gönderin, tepki verin, yanıtlayın ve içerik paylaşın
+- Kullanıcıları engelleme ve engeli kaldırma dahil güvenlik özellikleri eklendi
+- Wagey AI sekmesi daha sade bir düzenle yeniden tasarlandı
+- Farklı para birimlerine sahip işler için destek eklendi
 - Hata düzeltmeleri ve diğer iyileştirmeler

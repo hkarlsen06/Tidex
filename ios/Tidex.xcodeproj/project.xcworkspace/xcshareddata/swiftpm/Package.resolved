@@ -1,5 +1,5 @@
 {
-  "originHash" : "62ed42fa14f744d8374891e95ab5a7f6e875e0a041cfda5b515e73f396514b26",
+  "originHash" : "c18b5f7ab375adfb94b1a96ceec4e0fee840faef06fc71fa7a9507b8f4f7f120",
   "pins" : [
     {
       "identity" : "app-check",
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa",
       "state" : {
-        "revision" : "f1eefffd88cd6dfe5751159a3b32ff3c8e5b3b32",
-        "version" : "9.4.0"
+        "revision" : "990135f0881e56ac6b39404de0f5b0cd0dcf2131",
+        "version" : "9.6.0"
       }
     },
     {
@@ -150,8 +150,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/xctest-dynamic-overlay",
       "state" : {
-        "revision" : "34e463e98ab8541c604af706c99bed7160f5ec70",
-        "version" : "1.8.1"
+        "revision" : "dfd70507def84cb5fb821278448a262c6ff2bbad",
+        "version" : "1.9.0"
       }
     }
   ],

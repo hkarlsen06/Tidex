@@ -1,4 +1,5 @@
-- Javítva egy kritikus hiba, amely teljesen lefagyaszthatta az alkalmazást műszak közben
-- Több munkahely támogatása — kövesd nyomon a műszakokat és a béreket különböző munkák között
-- Be- és kilépés funkció hozzáadva — könnyedén kezdj és fejezz be műszakokat anélkül, hogy előre beállítanád a befejezési időt
+- Közvetlen üzenetküldés hozzáadva barátokkal — küldj üzeneteket, reagálj, válaszolj és ossz meg tartalmat közvetlenül az alkalmazásban
+- Új biztonsági funkciók, köztük a felhasználók letiltásának és tiltásuk feloldásának lehetősége
+- A Wagey AI fül újratervezve letisztultabb elrendezéssel
+- Támogatás hozzáadva a különböző pénznemekkel működő munkákhoz
 - Hibajavítások és egyéb fejlesztések

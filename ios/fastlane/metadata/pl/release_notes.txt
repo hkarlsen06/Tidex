@@ -1,4 +1,5 @@
-- Naprawiono krytyczny błąd, który mógł spowodować całkowitą nieresponsywność aplikacji podczas trwania zmiany
-- Dodano obsługę wielu miejsc pracy — śledź zmiany i wynagrodzenia w różnych pracach
-- Dodano wejście/wyjście — łatwo rozpoczynaj i kończ zmiany bez ustawiania godziny zakończenia z góry
+- Dodano wiadomości bezpośrednie ze znajomymi — wysyłaj wiadomości, reaguj, odpowiadaj i udostępniaj treści bezpośrednio w aplikacji
+- Dodano funkcje bezpieczeństwa, w tym możliwość blokowania i odblokowywania użytkowników
+- Przeprojektowano kartę Wagey AI, aby układ był bardziej przejrzysty
+- Dodano obsługę prac z różnymi walutami
 - Poprawki błędów i inne ulepszenia

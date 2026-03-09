@@ -8,7 +8,7 @@
       "promotional_text": "Payroll calculation made easy",
       "description": "Track your work shifts and calculate your wages with Tidex.\n\nFeatures:\n• Easy shift logging with start/end times\n• Automatic wage calculations\n• Calendar view of all shifts\n• Earnings overview and statistics\n• Widget for quick access\n• Sync across devices\n\nPerfect for employees who want to keep track of their work hours and earnings.",
       "keywords": "shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings",
-      "release_notes": "- Fixed a critical issue that could make the app completely unresponsive while a shift was in progress\n- Added support for multiple workplaces — track shifts and wages across different jobs\n- Added clock in/out — easily start and end shifts without setting an end time upfront\n- Bug fixes and other improvements"
+      "release_notes": "- Added direct messaging with friends — send messages, react, reply, and share content directly in the app\n- Added safety features including the ability to block and unblock users\n- Redesigned the Wagey AI tab with a cleaner layout\n- Added support for jobs with different currencies\n- Bug fixes and other improvements"
     },
     "nb": {
       "name": "Tidex",
@@ -16,7 +16,7 @@
       "promotional_text": "Lønnsberegning gjort enkelt",
       "description": "Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.\n\nFunksjoner:\n• Enkel vaktregistrering med start- og sluttider\n• Automatisk lønnsberegning\n• Kalendervisning av alle vakter\n• Inntektsoversikt og statistikk\n• Widget for rask tilgang\n• Synkronisering på tvers av enheter\n\nPerfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.",
       "keywords": "vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger",
-      "release_notes": "- Rettet en kritisk feil som kunne gjøre appen helt uresponsiv mens en vakt pågikk\n- Lagt til støtte for flere arbeidsplasser — følg vakter og lønn på tvers av ulike jobber\n- Lagt til inn- og utstempeling — start og avslutt vakter enkelt uten å sette sluttid på forhånd\n- Feilrettinger og andre forbedringer"
+      "release_notes": "- Lagt til direktemeldinger med venner — send meldinger, reager, svar og del innhold direkte i appen\n- Lagt til sikkerhetsfunksjoner, inkludert mulighet for å blokkere og avblokkere brukere\n- Redesignet Wagey AI-fanen med et ryddigere grensesnitt\n- Lagt til støtte for jobber med ulike valutaer\n- Feilrettinger og andre forbedringer"
     }
   }
 }

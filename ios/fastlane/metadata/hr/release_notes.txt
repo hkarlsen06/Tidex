@@ -1,4 +1,5 @@
-- Ispravljena kritična greška koja je mogla učiniti aplikaciju potpuno neodzivnom dok je smjena u tijeku
-- Dodana podrška za više radnih mjesta — pratite smjene i plaću za različite poslove
-- Dodano dolazak/odlazak — jednostavno započnite i završite smjene bez postavljanja završnog vremena unaprijed
-- Ispravke grešaka i druga poboljšanja
+- Dodane su izravne poruke s prijateljima — šaljite poruke, reagirajte, odgovarajte i dijelite sadržaj izravno u aplikaciji
+- Dodane su sigurnosne značajke, uključujući mogućnost blokiranja i deblokiranja korisnika
+- Redizajnirana je kartica Wagey AI s čišćim rasporedom
+- Dodana je podrška za poslove s različitim valutama
+- Ispravci pogrešaka i druga poboljšanja

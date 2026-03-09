@@ -1,4 +1,5 @@
-- Een kritieke fout opgelost waardoor de app volledig kon blokkeren tijdens een lopende dienst
-- Ondersteuning toegevoegd voor meerdere werkplekken — houd diensten en loon bij voor verschillende banen
-- In- en uitklokken toegevoegd — start en beëindig diensten eenvoudig zonder vooraf een eindtijd in te stellen
+- Directe berichten met vrienden toegevoegd — stuur berichten, reageer, antwoord en deel content direct in de app
+- Veiligheidsfuncties toegevoegd, waaronder de mogelijkheid om gebruikers te blokkeren en deblokkeren
+- Het tabblad Wagey AI opnieuw ontworpen met een overzichtelijkere indeling
+- Ondersteuning toegevoegd voor banen met verschillende valuta's
 - Bugfixes en andere verbeteringen

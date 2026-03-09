@@ -1,1 +1,1 @@
-pass,timmar,lön,arbete,schema,inkomst,kalkylator,skift,jobb,pengar
+arbetspass,timmar,lön,arbete,tid,tidrapport,schema,intäkter,skift,jobb
