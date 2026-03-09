@@ -68,6 +68,7 @@ struct FriendsThreadView: View {
           currentUserDisplayName: AppCoordinator.shared.userDisplayName,
           counterpartDisplayName: viewModel.thread.counterpartDisplayName
             ?? viewModel.route.displayName,
+          counterpartAvatarUrl: viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl,
           highlightedMessageId: highlightedMessageId,
           showTypingIndicator: viewModel.counterpartIsTyping,
           bottomContentInset: timelineBottomContentInset,
@@ -643,6 +644,9 @@ struct FriendsThreadView: View {
 
   private func replyPreviewModel(for message: FriendMessage) -> FriendsChatReplyPreviewModel {
     FriendsChatReplyPreviewModel(
+      senderName: message.senderUserId == viewModel.viewerUserId
+        ? firstName(from: AppCoordinator.shared.userDisplayName)
+        : firstName(from: viewModel.route.displayName),
       snippet: replySnippet(for: message),
       hasImageAttachment: message.hasImageAttachment
     )
@@ -655,6 +659,12 @@ struct FriendsThreadView: View {
 
     guard let snippet, !snippet.isEmpty else { return nil }
     return snippet
+  }
+
+  private func firstName(from displayName: String) -> String {
+    let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "?" }
+    return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
   }
 
   private func flashHighlightedMessage(_ messageId: String) {
@@ -1152,6 +1162,10 @@ private struct DraftReplyBanner: View {
           .frame(width: 3, height: 30)
 
         VStack(alignment: .leading, spacing: 3) {
+          Text(preview.senderName)
+            .font(.tidexCaptionStrong)
+            .foregroundColor(.tidexBlue)
+
           if preview.hasImageAttachment {
             Image(systemName: "photo")
               .font(.tidexCaptionRegular)

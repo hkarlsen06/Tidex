@@ -10,6 +10,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let counterpartLastReadAt: Date?
   let currentUserDisplayName: String
   let counterpartDisplayName: String
+  let counterpartAvatarUrl: String?
   let highlightedMessageId: String?
   let showTypingIndicator: Bool
   let bottomContentInset: CGFloat
@@ -64,6 +65,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
         counterpartLastReadAt: counterpartLastReadAt,
         currentUserDisplayName: currentUserDisplayName,
         counterpartDisplayName: counterpartDisplayName,
+        counterpartAvatarUrl: counterpartAvatarUrl,
         highlightedMessageId: highlightedMessageId,
         showTypingIndicator: showTypingIndicator,
         bottomContentInset: bottomContentInset,
@@ -85,6 +87,7 @@ struct FriendsChatTimelineConfiguration {
   let counterpartLastReadAt: Date?
   let currentUserDisplayName: String
   let counterpartDisplayName: String
+  let counterpartAvatarUrl: String?
   let highlightedMessageId: String?
   let showTypingIndicator: Bool
   let bottomContentInset: CGFloat
@@ -121,6 +124,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   private var counterpartLastReadAt: Date?
   private var currentUserDisplayName = ""
   private var counterpartDisplayName = ""
+  private var counterpartAvatarUrl: String?
   private var highlightedMessageId: String?
   private var showTypingIndicator = false
   private var lastAppliedBottomInset: CGFloat = 0
@@ -137,16 +141,21 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
 
   private enum UpdatePlan {
     case none
-    case fullReload(preservedSnapshot: ChatLayoutPositionSnapshot?)
+    case fullReload(preservedSnapshot: VisibleContentSnapshot?)
     case insertTypingIndicator(indexPath: IndexPath, reloadedIndexPaths: [IndexPath])
     case removeTypingIndicator(indexPath: IndexPath, reloadedIndexPaths: [IndexPath])
     case prepend(
       insertedIndexPaths: [IndexPath],
       reloadedIndexPaths: [IndexPath],
-      preservedSnapshot: ChatLayoutPositionSnapshot?
+      preservedSnapshot: VisibleContentSnapshot?
     )
     case append(insertedIndexPaths: [IndexPath], reloadedIndexPaths: [IndexPath])
     case reload(indexPaths: [IndexPath])
+  }
+
+  private struct VisibleContentSnapshot {
+    let messageId: String
+    let topOffset: CGFloat
   }
 
   private struct RenderState {
@@ -251,6 +260,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     self.counterpartLastReadAt = config.counterpartLastReadAt
     self.currentUserDisplayName = config.currentUserDisplayName
     self.counterpartDisplayName = config.counterpartDisplayName
+    self.counterpartAvatarUrl = config.counterpartAvatarUrl
     self.highlightedMessageId = config.highlightedMessageId
     self.showTypingIndicator = config.showTypingIndicator
     updateInsets(config.bottomContentInset)
@@ -312,6 +322,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     let previousMessages = previousState.messages
     let newMessages = nextState.messages
     let reloadedIndexPaths = reloadedIndexPaths(previousState: previousState, nextState: nextState)
+    let preservedSnapshot = visibleContentSnapshot(shouldPreserve: !wasPinnedToBottom)
 
     if previousState.showTypingIndicator != nextState.showTypingIndicator,
       previousMessages.map(\.id) == newMessages.map(\.id)
@@ -331,7 +342,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     }
 
     guard previousState.showTypingIndicator == nextState.showTypingIndicator else {
-      return .fullReload(preservedSnapshot: nil)
+      return .fullReload(preservedSnapshot: preservedSnapshot)
     }
 
     guard !previousMessages.isEmpty else {
@@ -339,7 +350,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     }
 
     guard !newMessages.isEmpty else {
-      return .fullReload(preservedSnapshot: nil)
+      return .fullReload(preservedSnapshot: preservedSnapshot)
     }
 
     let previousIds = previousMessages.map(\.id)
@@ -375,7 +386,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       )
     }
 
-    return .fullReload(preservedSnapshot: nil)
+    return .fullReload(preservedSnapshot: preservedSnapshot)
   }
 
   private func apply(updatePlan: UpdatePlan, completion: @escaping () -> Void) {
@@ -390,7 +401,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
         collectionView.layoutIfNeeded()
       }
       if let preservedSnapshot {
-        chatLayout.restoreContentOffset(with: preservedSnapshot)
+        restoreContentOffset(using: preservedSnapshot)
       }
       completion()
 
@@ -424,7 +435,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
         } completion: { [weak self] _ in
           self?.invalidateTimelineLayout()
           if let preservedSnapshot, let self {
-            self.chatLayout.restoreContentOffset(with: preservedSnapshot)
+            self.restoreContentOffset(using: preservedSnapshot)
           }
           completion()
         }
@@ -457,6 +468,66 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   private func invalidateTimelineLayout() {
     collectionView.collectionViewLayout.invalidateLayout()
     collectionView.layoutIfNeeded()
+  }
+
+  private func visibleContentSnapshot(shouldPreserve: Bool) -> VisibleContentSnapshot? {
+    guard shouldPreserve else { return nil }
+
+    let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+      .filter { messages.indices.contains($0.item) }
+      .sorted { lhs, rhs in
+        let lhsMinY =
+          collectionView.layoutAttributesForItem(at: lhs)?.frame.minY ?? .greatestFiniteMagnitude
+        let rhsMinY =
+          collectionView.layoutAttributesForItem(at: rhs)?.frame.minY ?? .greatestFiniteMagnitude
+
+        if lhsMinY == rhsMinY {
+          return lhs.item < rhs.item
+        }
+
+        return lhsMinY < rhsMinY
+      }
+
+    guard let topIndexPath = visibleIndexPaths.first,
+      let attributes = collectionView.layoutAttributesForItem(at: topIndexPath)
+    else {
+      return nil
+    }
+
+    let topOffset =
+      collectionView.contentOffset.y
+      + collectionView.adjustedContentInset.top
+      - attributes.frame.minY
+
+    return VisibleContentSnapshot(
+      messageId: messages[topIndexPath.item].id,
+      topOffset: topOffset
+    )
+  }
+
+  private func restoreContentOffset(using snapshot: VisibleContentSnapshot) {
+    guard let index = messages.firstIndex(where: { $0.id == snapshot.messageId }) else { return }
+
+    let indexPath = IndexPath(item: index, section: 0)
+    collectionView.layoutIfNeeded()
+
+    guard let attributes = collectionView.layoutAttributesForItem(at: indexPath) else { return }
+
+    let minOffsetY = -collectionView.adjustedContentInset.top
+    let maxOffsetY = max(
+      minOffsetY,
+      collectionView.contentSize.height
+        - collectionView.bounds.height
+        + collectionView.adjustedContentInset.bottom
+    )
+    let targetOffsetY =
+      attributes.frame.minY + snapshot.topOffset - collectionView.adjustedContentInset.top
+    let clampedOffsetY = min(max(targetOffsetY, minOffsetY), maxOffsetY)
+
+    collectionView.setContentOffset(
+      CGPoint(x: collectionView.contentOffset.x, y: clampedOffsetY),
+      animated: false
+    )
   }
 
   private func reloadItems(at indexPaths: [IndexPath]) {
@@ -621,7 +692,10 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
 
     if isTypingIndicatorItem(at: indexPath) {
       cell.configure {
-        FriendsChatTypingRowContent()
+        FriendsChatTypingRowContent(
+          counterpartAvatarUrl: counterpartAvatarUrl,
+          counterpartInitials: counterpartInitials()
+        )
       }
       return cell
     }
@@ -632,6 +706,11 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     }
     let quotedPreview = quotedMessage.map { quotedMessage in
       FriendsChatReplyPreviewModel(
+        senderName: firstName(
+          for: quotedMessage.senderUserId == viewerUserId
+            ? currentUserDisplayName
+            : counterpartDisplayName
+        ),
         snippet: quotedMessage.body?
           .replacingOccurrences(of: "\n", with: " ")
           .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -640,6 +719,12 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     }
     let nextMessage = indexPath.item < messages.count - 1 ? messages[indexPath.item + 1] : nil
     let previousMessage = indexPath.item > 0 ? messages[indexPath.item - 1] : nil
+    let groupingContext = FriendsChatMessageGrouping.context(
+      for: message,
+      previous: previousMessage,
+      next: nextMessage,
+      viewerUserId: viewerUserId
+    )
     let readReceiptMessageId = readReceiptMessageId()
     let latestOutgoingMessageId = latestOutgoingMessageId()
     let showsDateSeparator =
@@ -650,7 +735,6 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         toGranularity: .day
       )
     let isCurrentUser = message.senderUserId == viewerUserId
-    let showsSenderLabel = previousMessage?.senderUserId != message.senderUserId
     let senderFirstName = firstName(
       for: isCurrentUser ? currentUserDisplayName : counterpartDisplayName
     )
@@ -662,7 +746,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
     let shouldShowTimestamp = shouldShowTimestamp(
       for: message,
       isCurrentUser: isCurrentUser,
-      defaultShowsTimestamp: defaultShowsTimestamp(for: message, nextMessage: nextMessage),
+      groupContext: groupingContext,
       messageStatus: messageStatus
     )
 
@@ -671,10 +755,13 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         message: message,
         quotedPreview: quotedPreview,
         isCurrentUser: isCurrentUser,
+        groupContext: groupingContext,
+        counterpartAvatarUrl: counterpartAvatarUrl,
+        counterpartAvatarInitials: counterpartInitials(),
         isHighlighted: highlightedMessageId == message.id,
         senderFirstName: senderFirstName,
         separatorDate: showsDateSeparator ? message.createdAt : nil,
-        showsSenderLabel: showsSenderLabel,
+        showsSenderLabel: false,
         showsTimestamp: shouldShowTimestamp,
         messageStatus: messageStatus,
         onReply: { [weak self] in
@@ -747,6 +834,10 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
   }
 
+  private func counterpartInitials() -> String {
+    FriendsChatMessageGrouping.initials(from: counterpartDisplayName)
+  }
+
   private func readReceiptMessageId() -> String? {
     readReceiptMessageId(
       messages: messages,
@@ -786,10 +877,11 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
   private func shouldShowTimestamp(
     for message: FriendMessage,
     isCurrentUser: Bool,
-    defaultShowsTimestamp: Bool,
+    groupContext: FriendsChatMessageGroupContext,
     messageStatus: FriendsChatMessageStatus?
   ) -> Bool {
-    guard isCurrentUser else { return defaultShowsTimestamp }
+    guard !groupContext.joinsNext else { return false }
+    guard isCurrentUser else { return true }
 
     switch messageStatus {
     case .sending, .failed:
@@ -797,24 +889,8 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     case .delivered, .read:
       return true
     case .none:
-      return message.sendState == .sent && defaultShowsTimestamp
+      return message.sendState == .sent
     }
-  }
-
-  private func defaultShowsTimestamp(
-    for message: FriendMessage,
-    nextMessage: FriendMessage?
-  ) -> Bool {
-    guard let nextMessage else { return true }
-
-    let sharesSender = nextMessage.senderUserId == message.senderUserId
-    let sharesMinute = Calendar.current.isDate(
-      message.createdAt,
-      equalTo: nextMessage.createdAt,
-      toGranularity: .minute
-    )
-
-    return !(sharesSender && sharesMinute)
   }
 
   private func readReceiptMessageId(
@@ -893,9 +969,21 @@ private final class FriendsChatTimelineCell: UICollectionViewCell {
 }
 
 private struct FriendsChatTypingRowContent: View {
+  let counterpartAvatarUrl: String?
+  let counterpartInitials: String
+
   var body: some View {
     ChatMessageRow(isCurrentUser: false, minSpacer: 48, spacing: Spacing.xxs) {
-      TypingIndicatorView()
+      HStack(alignment: .bottom, spacing: Spacing.xs) {
+        AvatarView(
+          url: counterpartAvatarUrl,
+          initials: counterpartInitials,
+          size: AvatarView.Size.small,
+          cornerRadius: CornerRadius.md
+        )
+
+        TypingIndicatorView()
+      }
     }
     .padding(.top, Spacing.micro)
     .padding(.bottom, Spacing.xxxs)
