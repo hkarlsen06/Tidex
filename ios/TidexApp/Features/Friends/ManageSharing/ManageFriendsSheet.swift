@@ -64,7 +64,7 @@ struct ManageSharingSheet: View {
               loadingView
             }
             .listRowBackground(Color.clear)
-          } else if viewModel.friends.isEmpty {
+          } else if viewModel.friends.isEmpty && viewModel.blockedFriends.isEmpty {
             Section {
               emptyState
             }
@@ -99,8 +99,17 @@ struct ManageSharingSheet: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color.tidexBackground)
-        .onChange(of: viewModel.friends) { _, friends in
-          scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
+        .onChange(of: viewModel.friends) { _, _ in
+          scrollToHighlightedUserIfNeeded(
+            scrollProxy: scrollProxy,
+            friends: viewModel.friends + viewModel.blockedFriends
+          )
+        }
+        .onChange(of: viewModel.blockedFriends) { _, _ in
+          scrollToHighlightedUserIfNeeded(
+            scrollProxy: scrollProxy,
+            friends: viewModel.friends + viewModel.blockedFriends
+          )
         }
       }
       .navigationTitle(String(localized: .sharingSeeFriends))
@@ -242,6 +251,19 @@ struct ManageSharingSheet: View {
       }
       .listRowBackground(Color.tidexSurfacePrimary)
     }
+
+    if !viewModel.blockedFriends.isEmpty {
+      Section {
+        ForEach(viewModel.blockedFriends) { friend in
+          blockedFriendRow(friend)
+        }
+      } header: {
+        Text(.sharingBlockedUsersTitle)
+      } footer: {
+        Text(.sharingBlockedUsersDescription)
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    }
   }
 
   private func makeFriendRow(_ friend: Friend, sectionType: FriendSectionType) -> some View {
@@ -314,6 +336,65 @@ struct ManageSharingSheet: View {
         }
         .tint(isHiddenInFriendsTab ? .green : .orange)
       }
+    }
+  }
+
+  private func blockedFriendRow(_ friend: Friend) -> some View {
+    HStack(spacing: Spacing.sm) {
+      AvatarView(
+        url: friend.avatarUrl,
+        initials: friend.initials,
+        size: AvatarView.Size.medium
+      )
+      .overlay(alignment: .bottomTrailing) {
+        Image(systemName: "hand.raised.fill")
+          .font(.system(size: 10))
+          .foregroundColor(.white)
+          .padding(3)
+          .background(Color.tidexError.opacity(0.85))
+          .clipShape(Circle())
+          .offset(x: 2, y: 2)
+      }
+
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        Text(friend.displayName)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
+
+        if let contactInfo = friend.contactInfo {
+          Text(contactInfo)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+        }
+      }
+
+      Spacer(minLength: Spacing.sm)
+
+      Button(String(localized: .sharingUnblock)) {
+        Task {
+          await viewModel.unblockFriend(friend)
+          onVisibilityChange?()
+        }
+      }
+      .font(.tidexFootnoteMedium)
+      .foregroundColor(.tidexBlue)
+      .buttonStyle(.plain)
+      .disabled(viewModel.actionInProgress == friend.id)
+      .opacity(viewModel.actionInProgress == friend.id ? 0.6 : 1)
+    }
+    .padding(.vertical, Spacing.xxs)
+    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+      Button {
+        Task {
+          await viewModel.unblockFriend(friend)
+          onVisibilityChange?()
+        }
+      } label: {
+        Label(String(localized: .sharingUnblock), systemImage: "arrow.uturn.backward.circle")
+      }
+      .tint(.green)
     }
   }
 

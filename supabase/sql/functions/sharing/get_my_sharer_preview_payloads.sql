@@ -39,6 +39,7 @@ AS $function$
     FROM public.shift_shares ss
     WHERE auth.uid() IS NOT NULL
       AND ss.viewer_id = auth.uid()
+      AND ss.blocked_by_user_id IS NULL
       AND (p_sharer_ids IS NULL OR ss.owner_id = ANY(p_sharer_ids))
   )
   SELECT

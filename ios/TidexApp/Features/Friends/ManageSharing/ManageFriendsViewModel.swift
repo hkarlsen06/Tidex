@@ -21,6 +21,9 @@ final class ManageSharingViewModel: ObservableObject {
   /// All friends (optimistic state for immediate UI updates)
   @Published private(set) var friends: [Friend] = []
 
+  /// Users currently blocked through the friends safety flow.
+  @Published private(set) var blockedFriends: [Friend] = []
+
   /// Share capacity based on subscription tier
   @Published private(set) var capacity: ShareCapacity = ShareCapacity(
     canAdd: true, currentCount: 0, limit: 5)
@@ -94,13 +97,15 @@ final class ManageSharingViewModel: ObservableObject {
     do {
       let result = try await sharingService.fetchAllFriends()
       friends = result.friends
+      blockedFriends = result.blockedFriends
       capacity = result.capacity
       if let userId = await bestEffortCurrentUserId() {
         hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
       } else {
         hiddenOutgoingFriendIds = []
       }
-      logger.info("Loaded \(result.friends.count) friends")
+      logger.info(
+        "Loaded \(result.friends.count) friends and \(result.blockedFriends.count) blocked friends")
     } catch is CancellationError {
       // Task was cancelled (e.g., user released pull-to-refresh early)
       // This is not an error, just log and return without showing error message
@@ -508,6 +513,27 @@ final class ManageSharingViewModel: ObservableObject {
   private func revertOptimisticShareBack(originalFriend: Friend) {
     guard let index = friends.firstIndex(where: { $0.id == originalFriend.id }) else { return }
     friends[index] = originalFriend
+  }
+
+  // MARK: - Unblock
+
+  func unblockFriend(_ friend: Friend) async {
+    guard actionInProgress == nil else { return }
+
+    actionInProgress = friend.id
+
+    do {
+      try await sharingService.unblockFriend(userId: friend.id)
+      await loadFriends()
+      logger.info("Unblocked friend \(friend.id)")
+      Haptics.play(.success)
+    } catch {
+      logger.error("Failed to unblock friend: \(error.localizedDescription)")
+      errorMessage = String(localized: .sharingErrorUpdateSettings)
+      Haptics.play(.error)
+    }
+
+    actionInProgress = nil
   }
 
   // MARK: - Callbacks

@@ -41,6 +41,7 @@ AS $function$
     WHERE auth.uid() IS NOT NULL
       AND ss.viewer_id = auth.uid()
       AND ss.owner_id = p_owner_id
+      AND ss.blocked_by_user_id IS NULL
     LIMIT 1
   ),
   month_bounds AS (

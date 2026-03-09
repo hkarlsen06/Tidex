@@ -45,6 +45,7 @@ AS $function$
     ON us.user_id = ss.owner_id
   WHERE auth.uid() IS NOT NULL
     AND ss.viewer_id = auth.uid()
+    AND ss.blocked_by_user_id IS NULL
   ORDER BY ss.created_at DESC;
 $function$;
 

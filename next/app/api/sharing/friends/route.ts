@@ -24,6 +24,7 @@ const SHARE_LIMITS = {
  * Response:
  * {
  *   friends: Friend[],
+ *   blockedFriends: Friend[],
  *   capacity: { canAdd: boolean, currentCount: number, limit: number }
  * }
  */
@@ -43,7 +44,7 @@ export async function GET() {
     // Fetch sharers (people who share with me) - including hidden-from-list rows
     const { data: incomingShares, error: incomingError } = await adminClient
       .from("shift_shares")
-      .select("owner_id, created_at, show_earnings, hidden, muted")
+      .select("owner_id, created_at, show_earnings, hidden, muted, blocked_by_user_id")
       .eq("viewer_id", userId)
       .order("created_at", { ascending: false });
 
@@ -58,7 +59,7 @@ export async function GET() {
     // Fetch recipients (people I share with)
     const { data: outgoingShares, error: outgoingError } = await adminClient
       .from("shift_shares")
-      .select("viewer_id, created_at, show_earnings, owner_muted")
+      .select("viewer_id, created_at, show_earnings, owner_muted, blocked_by_user_id")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false });
 
@@ -169,13 +170,33 @@ export async function GET() {
 
     // Build unified friends list
     const friends: Friend[] = [];
+    const blockedFriends: Friend[] = [];
+
+    const blockedPairIds = new Set<string>();
+    const blockedByCurrentUserIds = new Set<string>();
+
+    for (const share of incomingShares || []) {
+      if (!share.blocked_by_user_id) continue;
+      blockedPairIds.add(share.owner_id);
+      if (share.blocked_by_user_id === userId) {
+        blockedByCurrentUserIds.add(share.owner_id);
+      }
+    }
+
+    for (const share of outgoingShares || []) {
+      if (!share.blocked_by_user_id) continue;
+      blockedPairIds.add(share.viewer_id);
+      if (share.blocked_by_user_id === userId) {
+        blockedByCurrentUserIds.add(share.viewer_id);
+      }
+    }
 
     for (const id of allUserIds) {
       const sharer = sharerMap.get(id);
       const recipient = recipientMap.get(id);
       const userInfo = userProfiles.get(id);
 
-      friends.push({
+      const friend: Friend = {
         id,
         email: userInfo?.email || null,
         phone: userInfo?.phone || null,
@@ -197,11 +218,26 @@ export async function GET() {
               ownerMuted: recipient.ownerMuted,
             }
           : null,
-      });
+      };
+
+      if (blockedPairIds.has(id)) {
+        if (blockedByCurrentUserIds.has(id)) {
+          blockedFriends.push(friend);
+        }
+        continue;
+      }
+
+      friends.push(friend);
     }
 
     // Sort alphabetically by name using Norwegian locale
     friends.sort((a, b) => {
+      const aName = (a.firstName || a.email || a.phone || "").toLowerCase();
+      const bName = (b.firstName || b.email || b.phone || "").toLowerCase();
+      return aName.localeCompare(bName, "nb");
+    });
+
+    blockedFriends.sort((a, b) => {
       const aName = (a.firstName || a.email || a.phone || "").toLowerCase();
       const bName = (b.firstName || b.email || b.phone || "").toLowerCase();
       return aName.localeCompare(bName, "nb");
@@ -232,6 +268,7 @@ export async function GET() {
 
     return NextResponse.json({
       friends,
+      blockedFriends,
       capacity,
     });
   } catch (error: any) {
