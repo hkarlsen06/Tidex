@@ -1,4 +1,5 @@
-- Sửa lỗi nghiêm trọng có thể khiến ứng dụng hoàn toàn không phản hồi trong khi ca làm việc đang diễn ra
-- Thêm hỗ trợ nhiều nơi làm việc — theo dõi ca làm và lương của nhiều công việc khác nhau
-- Thêm tính năng chấm công vào/ra — dễ dàng bắt đầu và kết thúc ca làm mà không cần đặt giờ kết thúc trước
+- Đã thêm nhắn tin trực tiếp với bạn bè — gửi tin nhắn, thả cảm xúc, trả lời và chia sẻ nội dung trực tiếp trong ứng dụng
+- Đã thêm các tính năng an toàn, bao gồm khả năng chặn và bỏ chặn người dùng
+- Đã thiết kế lại tab Wagey AI với bố cục gọn gàng hơn
+- Đã thêm hỗ trợ cho các công việc với nhiều loại tiền tệ khác nhau
 - Sửa lỗi và các cải tiến khác

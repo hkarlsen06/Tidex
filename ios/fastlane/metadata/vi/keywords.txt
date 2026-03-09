@@ -1,1 +1,1 @@
-ca làm,theo dõi,lương,tiền lương,làm việc,giờ,thời gian,chấm công,lịch trình,thu nhập
+calam,theodoi,luong,congviec,gio,chamcong,lich,thunhap,catruc,lichlam

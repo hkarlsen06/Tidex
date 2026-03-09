@@ -1,4 +1,5 @@
-- S'ha corregit un error crític que podia fer que l'aplicació deixés de respondre completament mentre un torn estava en curs
-- S'ha afegit suport per a diversos llocs de treball — fes un seguiment dels torns i salaris de diferents feines
-- S'ha afegit fitxatge d'entrada/sortida — inicia i finalitza torns fàcilment sense establir una hora de finalització per endavant
-- Correccions d'errors i altres millores
+- S'ha afegit la missatgeria directa amb amics — envia missatges, reacciona, respon i comparteix contingut directament a l'app
+- S'han afegit funcions de seguretat, inclosa la possibilitat de bloquejar i desbloquejar usuaris
+- S'ha redissenyat la pestanya Wagey AI amb una interfície més neta
+- S'ha afegit compatibilitat amb feines amb diferents monedes
+- Correcció d'errors i altres millores

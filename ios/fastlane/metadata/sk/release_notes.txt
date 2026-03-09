@@ -1,4 +1,5 @@
-- Opravená kritická chyba, ktorá mohla spôsobiť úplnú nereaktivitu aplikácie počas prebiehajúcej zmeny
-- Pridaná podpora pre viacero pracovísk — sledujte zmeny a mzdy naprieč rôznymi prácami
-- Pridané prihlásenie/odhlásenie — jednoducho začnite a ukončite zmeny bez potreby nastavovať čas ukončenia vopred
+- Pridali sme priame správy s priateľmi — posielajte správy, reagujte, odpovedajte a zdieľajte obsah priamo v aplikácii
+- Pridali sme bezpečnostné funkcie vrátane možnosti blokovať a odblokovať používateľov
+- Prepracovali sme kartu Wagey AI s čistejším rozložením
+- Pridali sme podporu pre práce s rôznymi menami
 - Opravy chýb a ďalšie vylepšenia

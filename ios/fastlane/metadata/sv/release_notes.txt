@@ -1,4 +1,5 @@
-- Åtgärdat ett kritiskt fel som kunde göra appen helt oresponsiv medan ett pass pågick
-- Lagt till stöd för flera arbetsplatser — följ pass och lön över olika jobb
-- Lagt till in- och utstämpling — starta och avsluta pass enkelt utan att ange sluttid i förväg
+- Lade till direktmeddelanden med vänner — skicka meddelanden, reagera, svara och dela innehåll direkt i appen
+- Lade till säkerhetsfunktioner, inklusive möjligheten att blockera och avblockera användare
+- Gjorde om fliken Wagey AI med en renare layout
+- Lade till stöd för jobb med olika valutor
 - Buggfixar och andra förbättringar

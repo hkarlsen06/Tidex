@@ -1,4 +1,5 @@
-- Korjattu kriittinen ongelma, joka saattoi tehdä sovelluksesta täysin reagoimattoman vuoron ollessa käynnissä
-- Lisätty tuki useille työpaikoille — seuraa vuoroja ja palkkoja eri töissä
-- Lisätty sisään- ja ulosleimaus — aloita ja lopeta vuorot helposti asettamatta lopetusaikaa etukäteen
-- Virhekorjauksia ja muita parannuksia
+- Lisätty suorat viestit ystävien kanssa — lähetä viestejä, reagoi, vastaa ja jaa sisältöä suoraan sovelluksessa
+- Lisätty turvallisuusominaisuuksia, mukaan lukien mahdollisuus estää käyttäjiä ja poistaa esto
+- Wagey AI -välilehti on uudistettu selkeämmällä asettelulla
+- Lisätty tuki töille, joissa käytetään eri valuuttoja
+- Virheenkorjauksia ja muita parannuksia

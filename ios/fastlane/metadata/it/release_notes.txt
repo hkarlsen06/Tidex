@@ -1,4 +1,5 @@
-- Risolto un problema critico che poteva rendere l'app completamente non responsiva durante un turno in corso
-- Aggiunto supporto per più luoghi di lavoro — tieni traccia di turni e stipendi per diversi lavori
-- Aggiunta timbratura entrata/uscita — inizia e termina i turni facilmente senza impostare un orario di fine in anticipo
+- Aggiunta la messaggistica diretta con gli amici — invia messaggi, reagisci, rispondi e condividi contenuti direttamente nell'app
+- Aggiunte funzionalità di sicurezza, inclusa la possibilità di bloccare e sbloccare gli utenti
+- Ridisegnata la scheda Wagey AI con un layout più pulito
+- Aggiunto il supporto per lavori con valute diverse
 - Correzioni di bug e altri miglioramenti

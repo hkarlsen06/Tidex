@@ -1,4 +1,5 @@
-- Rezolvată o problemă critică care putea face aplicația complet neresponsivă în timpul desfășurării unui schimb
-- Adăugat suport pentru mai multe locuri de muncă — urmărește schimburile și salariile din joburi diferite
-- Adăugată pontare intrare/ieșire — începe și termină schimburile ușor fără a seta ora de sfârșit dinainte
+- Am adăugat mesagerie directă cu prietenii — trimite mesaje, reacționează, răspunde și distribuie conținut direct în aplicație
+- Am adăugat funcții de siguranță, inclusiv posibilitatea de a bloca și debloca utilizatori
+- Am redesenat fila Wagey AI cu un aspect mai curat
+- Am adăugat suport pentru joburi cu valute diferite
 - Remedieri de erori și alte îmbunătățiri

@@ -1,4 +1,5 @@
-- Corrigido um problema crítico que poderia deixar o app completamente sem resposta enquanto um turno estava em andamento
-- Adicionado suporte para vários locais de trabalho — acompanhe turnos e salários em diferentes empregos
-- Adicionado registro de entrada e saída — inicie e finalize turnos facilmente sem definir horário de término antecipadamente
+- Adicionamos mensagens diretas com amigos — envie mensagens, reaja, responda e compartilhe conteúdo diretamente no app
+- Adicionamos recursos de segurança, incluindo a possibilidade de bloquear e desbloquear usuários
+- Reformulamos a aba do Wagey AI com um layout mais limpo
+- Adicionamos suporte para trabalhos com diferentes moedas
 - Correções de bugs e outras melhorias

@@ -1,4 +1,5 @@
-- Einen kritischen Fehler behoben, der die App während einer laufenden Schicht komplett unresponsiv machen konnte
-- Unterstützung für mehrere Arbeitsstätten hinzugefügt — verfolge Schichten und Löhne über verschiedene Jobs hinweg
-- Ein- und Ausstempeln hinzugefügt — starte und beende Schichten einfach, ohne vorab eine Endzeit festzulegen
+- Direktnachrichten mit Freunden hinzugefügt — sende Nachrichten, reagiere, antworte und teile Inhalte direkt in der App
+- Sicherheitsfunktionen hinzugefügt, darunter die Möglichkeit, Nutzer zu blockieren und zu entsperren
+- Den Wagey-AI-Tab mit einem übersichtlicheren Layout neu gestaltet
+- Unterstützung für Jobs mit verschiedenen Währungen hinzugefügt
 - Fehlerbehebungen und weitere Verbesserungen

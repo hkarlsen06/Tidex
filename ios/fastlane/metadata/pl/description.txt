@@ -1,11 +1,11 @@
 Śledź swoje zmiany w pracy i obliczaj wynagrodzenie z Tidex.
 
 Funkcje:
-• Proste rejestrowanie zmian z godziną rozpoczęcia i zakończenia
+• Łatwe rejestrowanie zmian z godziną rozpoczęcia i zakończenia
 • Automatyczne obliczanie wynagrodzenia
-• Widok kalendarza wszystkich zmian
+• Widok kalendarza ze wszystkimi zmianami
 • Przegląd zarobków i statystyki
-• Widget dla szybkiego dostępu
+• Widget zapewniający szybki dostęp
 • Synchronizacja między urządzeniami
 
-Idealny dla pracowników, którzy chcą kontrolować swoje godziny pracy i zarobki.
+Idealne rozwiązanie dla pracowników, którzy chcą kontrolować swoje godziny pracy i zarobki.

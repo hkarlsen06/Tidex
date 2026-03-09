@@ -1,4 +1,5 @@
-- Rettet en kritisk feil som kunne gjøre appen helt uresponsiv mens en vakt pågikk
-- Lagt til støtte for flere arbeidsplasser — følg vakter og lønn på tvers av ulike jobber
-- Lagt til inn- og utstempeling — start og avslutt vakter enkelt uten å sette sluttid på forhånd
+- Lagt til direktemeldinger med venner — send meldinger, reager, svar og del innhold direkte i appen
+- Lagt til sikkerhetsfunksjoner, inkludert mulighet for å blokkere og avblokkere brukere
+- Redesignet Wagey AI-fanen med et ryddigere grensesnitt
+- Lagt til støtte for jobber med ulike valutaer
 - Feilrettinger og andre forbedringer

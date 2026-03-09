@@ -6,7 +6,7 @@
  * Generates localized .txt files for Fastlane deliver from a structured JSON source.
  * Reads supported locales from the Xcode project file (knownRegions).
  * For source locales (en, nb), writes directly from the source JSON.
- * For other locales, translates in parallel using Claude API.
+ * For other locales, translates in parallel using OpenAI Responses API.
  *
  * Usage:
  *   node generate-appstore-metadata.mjs                  # Generate all metadata
@@ -15,7 +15,6 @@
  *   node generate-appstore-metadata.mjs --force          # Re-translate even if files exist
  */
 
-import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -27,6 +26,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load env from next/.env.local
 config({ path: path.join(__dirname, "../../next/.env.local") });
+
+const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.4";
+const OPENAI_REASONING_EFFORT = "low";
 
 // Paths
 const XCODE_PROJECT_PATH = path.join(__dirname, "../Tidex.xcodeproj/project.pbxproj");
@@ -301,9 +304,14 @@ function extractJson(text) {
 }
 
 /**
- * Translate metadata using Claude API
+ * Translate metadata using OpenAI Responses API
  */
-async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, client, fields = TRANSLATED_FIELDS) {
+async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, fields = TRANSLATED_FIELDS) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set in next/.env.local");
+  }
+
   // Build source/reference objects with only the requested fields
   const sourceFields = Object.fromEntries(fields.map((f) => [f, sourceMetadata[f]]));
   const referenceFields = Object.fromEntries(fields.map((f) => [f, norwegianMetadata[f]]));
@@ -314,8 +322,9 @@ async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale
   if (fields.includes("keywords")) limitRules.push("keywords (100)");
   const limitText = limitRules.length > 0 ? `\n4. Respect character limits: ${limitRules.join(", ")}` : "";
 
-  const prompt = `You are a professional translator for a work shift tracking app called "Tidex".
-Translate the following App Store metadata to ${languageName}.
+  const instructions = `You are a professional translator for a work shift tracking app called "Tidex". Return only valid JSON.`;
+
+  const prompt = `Translate the following App Store metadata to ${languageName}.
 
 CRITICAL RULES:
 1. Maintain the same structure and formatting (bullet points, line breaks)
@@ -331,19 +340,82 @@ ${JSON.stringify(referenceFields, null, 2)}
 Return ONLY a valid JSON object with these exact keys: ${fields.join(", ")}
 No markdown, no explanation, just the JSON object.`;
 
-  // Retry the full translate+parse cycle since JSON parse failures are non-deterministic
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    properties: Object.fromEntries(fields.map((f) => [f, { type: "string" }])),
+    required: fields,
+  };
+
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const response = await withRetry(() =>
-      client.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }],
-      })
-    );
+    const response = await withRetry(async () => {
+      const res = await fetch(OPENAI_RESPONSES_API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          store: false,
+          max_output_tokens: 2000,
+          reasoning: { effort: OPENAI_REASONING_EFFORT },
+          instructions,
+          input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+          text: {
+            format: {
+              type: "json_schema",
+              name: `metadata_${targetLocale.replace(/[^a-z0-9_]/gi, "_")}`,
+              strict: true,
+              schema,
+            },
+          },
+        }),
+      });
 
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = json?.error?.message || res.statusText || "OpenAI Responses API request failed";
+        const err = new Error(`OpenAI Responses API (${res.status}): ${msg}`);
+        err.status = res.status;
+        throw err;
+      }
+      return json;
+    });
+
+    // Extract parsed payload
+    let parsed = null;
+    if (response?.output_parsed && typeof response.output_parsed === "object") {
+      parsed = response.output_parsed;
+    } else {
+      const output = Array.isArray(response?.output) ? response.output : [];
+      for (const item of output) {
+        for (const block of Array.isArray(item?.content) ? item.content : []) {
+          if (block?.parsed && typeof block.parsed === "object") {
+            parsed = block.parsed;
+            break;
+          }
+        }
+        if (parsed) break;
+      }
+    }
+
+    if (parsed) return parsed;
+
+    // Fall back to text extraction
     try {
-      return extractJson(response.content[0].text.trim());
+      let text = response?.output_text;
+      if (!text) {
+        const output = Array.isArray(response?.output) ? response.output : [];
+        for (const item of output) {
+          for (const block of Array.isArray(item?.content) ? item.content : []) {
+            if (typeof block?.text === "string") { text = block.text; break; }
+          }
+          if (text) break;
+        }
+      }
+      if (text) return extractJson(text.trim());
     } catch (parseError) {
       if (attempt === maxAttempts - 1) throw parseError;
     }
@@ -374,7 +446,7 @@ function enforceCharacterLimits(metadata, locale) {
 /**
  * Process a single locale translation
  */
-async function processLocale(locale, folderName, sourceMetadata, norwegianMetadata, client) {
+async function processLocale(locale, folderName, sourceMetadata, norwegianMetadata) {
   if (isShuttingDown) return { status: "skipped", locale };
 
   const languageName = LANGUAGE_NAMES[locale];
@@ -406,7 +478,6 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
         norwegianMetadata,
         locale,
         languageName,
-        client,
         fieldsToTranslate
       );
     }
@@ -426,7 +497,7 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
         translated.name = existing.trim();
       } catch {
         const nameResult = await translateMetadata(
-          sourceMetadata, norwegianMetadata, locale, languageName, client, ["name"]
+          sourceMetadata, norwegianMetadata, locale, languageName, ["name"]
         );
         translated.name = nameResult.name;
       }
@@ -503,16 +574,12 @@ async function main() {
     return;
   }
 
-  // Check for Claude API key
-  const apiKey = process.env.CLAUDE_API_KEY;
-  if (!apiKey) {
-    console.log("\n⚠ CLAUDE_API_KEY not set - skipping translations");
-    console.log("  Set CLAUDE_API_KEY in next/.env.local to enable translations");
+  // Check for OpenAI API key
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    console.log("\n⚠ OPENAI_API_KEY not set - skipping translations");
+    console.log("  Set OPENAI_API_KEY in next/.env.local to enable translations");
     return;
   }
-
-  // Initialize client
-  const client = new Anthropic({ apiKey });
 
   // Collect ASC folders already written by source locales
   const sourceFolders = new Set(
@@ -569,8 +636,7 @@ async function main() {
         locale,
         folderName,
         metadata[PRIMARY_LOCALE],
-        metadata.nb,
-        client
+        metadata.nb
       );
 
       completed++;

@@ -1,4 +1,5 @@
-- Opravena kritická chyba, která mohla způsobit úplné zamrznutí aplikace během probíhající směny
-- Přidána podpora pro více pracovišť — sledujte směny a mzdy napříč různými zaměstnáními
-- Přidáno přihlášení/odhlášení — jednoduše začněte a ukončete směny bez předchozího nastavení času konce
+- Přidány přímé zprávy s přáteli — posílejte zprávy, reagujte, odpovídejte a sdílejte obsah přímo v aplikaci
+- Přidány bezpečnostní funkce včetně možnosti blokovat a odblokovat uživatele
+- Přepracována karta Wagey AI s čistším rozvržením
+- Přidána podpora pro práce s různými měnami
 - Opravy chyb a další vylepšení

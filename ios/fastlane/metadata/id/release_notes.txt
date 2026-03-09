@@ -1,4 +1,5 @@
-- Memperbaiki masalah kritis yang dapat membuat aplikasi tidak responsif saat shift sedang berlangsung
-- Menambahkan dukungan untuk beberapa tempat kerja — lacak shift dan upah di berbagai pekerjaan
-- Menambahkan clock in/out — mulai dan akhiri shift dengan mudah tanpa perlu mengatur waktu selesai di awal
+- Menambahkan pesan langsung dengan teman — kirim pesan, beri reaksi, balas, dan bagikan konten langsung di aplikasi
+- Menambahkan fitur keamanan, termasuk kemampuan untuk memblokir dan membuka blokir pengguna
+- Mendesain ulang tab Wagey AI dengan tata letak yang lebih rapi
+- Menambahkan dukungan untuk pekerjaan dengan mata uang yang berbeda
 - Perbaikan bug dan peningkatan lainnya
