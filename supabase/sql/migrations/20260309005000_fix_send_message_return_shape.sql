@@ -1,6 +1,4 @@
--- Function: send_message
--- Description: Validates and inserts a canonical user message with private attachments
-
+-- Fix send_message to match get_message_payload after reactions were added.
 DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, uuid, jsonb);
 DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, jsonb);
 
