@@ -20,6 +20,7 @@ struct FriendsThreadView: View {
   @State private var showScreenshotBubble = false
   @State private var showScreenshotNotifiedIcon = false
   @State private var screenshotBellShakeTrigger = false
+  @State private var showProfile = false
   @State private var messageActionMenu: MessageActionMenuState?
   @State private var customReactionTarget: FriendMessage?
   @State private var customReactionDraft = ""
@@ -56,6 +57,23 @@ struct FriendsThreadView: View {
 
   private var scrollToLatestBottomPadding: CGFloat {
     max(bottomAccessoryInset, 0) + Spacing.sm
+  }
+
+  private var counterpartProfileUser: SharedUser {
+    let displayName = viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName
+    let avatarUrl = viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl
+
+    return SharedUser(
+      id: viewModel.route.counterpartUserId,
+      email: nil,
+      phone: nil,
+      firstName: displayName,
+      profilePictureUrl: avatarUrl,
+      oauthAvatarUrl: nil,
+      sharedAt: "",
+      showEarnings: false,
+      hidden: false
+    )
   }
 
   var body: some View {
@@ -225,7 +243,6 @@ struct FriendsThreadView: View {
       }
     }
     .background(Color.tidexBackground.ignoresSafeArea())
-    .navigationTitle(viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName)
     .navigationBarTitleDisplayMode(.inline)
     .iPadToolbarBackground()
     .toolbarBackground(.hidden, for: .tabBar)
@@ -377,6 +394,11 @@ struct FriendsThreadView: View {
       SafariView(url: url)
         .ignoresSafeArea()
     }
+    .sheet(isPresented: $showProfile) {
+      FriendProfileView(sharedUser: counterpartProfileUser)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
     .alert(item: $alertState) { state in
       Alert(
         title: Text(state.title),
@@ -486,6 +508,10 @@ struct FriendsThreadView: View {
 
   private var actionsMenu: some View {
     Menu {
+      Button(String(localized: .profileTitle)) {
+        showProfile = true
+      }
+
       Button(String(localized: .friendsChatReportUser)) {
         pendingReportTarget = .user
       }
@@ -498,9 +524,12 @@ struct FriendsThreadView: View {
         showBlockConfirmation = true
       }
     } label: {
-      Image(systemName: "ellipsis.circle")
-        .font(.system(size: 18, weight: .semibold))
-        .foregroundColor(.tidexBlue)
+      UserMenuButton(
+        displayName: viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName,
+        avatarUrl: viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl,
+        interactive: false
+      )
+      .fixedSize(horizontal: true, vertical: false)
     }
   }
 

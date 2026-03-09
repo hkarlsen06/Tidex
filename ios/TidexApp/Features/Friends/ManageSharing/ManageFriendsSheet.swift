@@ -21,9 +21,11 @@ struct ManageSharingSheet: View {
   /// Confirmation dialog state
   @State private var friendToRemove: Friend?
   @State private var removeAction: RemoveAction?
+  @State private var friendToBlock: Friend?
 
   /// Whether the highlighted user is currently pulsing
   @State private var isHighlightActive = false
+  @State private var isBlockedUsersExpanded = false
 
   enum RemoveAction {
     case removeShare  // Revoke their access to my shifts
@@ -95,6 +97,10 @@ struct ManageSharingSheet: View {
           }
           .listRowInsets(EdgeInsets())
           .listRowBackground(Color.tidexSurfacePrimary)
+
+          if !viewModel.blockedFriends.isEmpty {
+            blockedUsersSection
+          }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -164,8 +170,40 @@ struct ManageSharingSheet: View {
         removeAction = nil
       }
     }
+    .confirmationDialog(
+      blockConfirmationTitle,
+      isPresented: .init(
+        get: { friendToBlock != nil },
+        set: {
+          if !$0 {
+            friendToBlock = nil
+          }
+        }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .friendsChatBlockUser), role: .destructive) {
+        if let friend = friendToBlock {
+          Task {
+            await viewModel.blockFriend(friend)
+            onVisibilityChange?()
+          }
+        }
+        friendToBlock = nil
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {
+        friendToBlock = nil
+      }
+    } message: {
+      Text(.friendsChatBlockConfirmMessage)
+    }
     .onChange(of: viewModel.friends) { _, _ in
       onVisibilityChange?()
+    }
+    .onChange(of: viewModel.blockedFriends) { _, blockedFriends in
+      if blockedFriends.isEmpty {
+        isBlockedUsersExpanded = false
+      }
     }
   }
 
@@ -182,6 +220,12 @@ struct ManageSharingSheet: View {
     case .removeSharer:
       return String(localized: .sharingRemoveFromList(friend.displayName))
     }
+  }
+
+  private var blockConfirmationTitle: String {
+    guard let friend = friendToBlock else { return "" }
+    return String(localized: .friendsChatBlockConfirmTitle)
+      .replacingOccurrences(of: "{name}", with: friend.displayName)
   }
 
   // MARK: - Loading View
@@ -251,19 +295,55 @@ struct ManageSharingSheet: View {
       }
       .listRowBackground(Color.tidexSurfacePrimary)
     }
+  }
 
-    if !viewModel.blockedFriends.isEmpty {
-      Section {
+  @ViewBuilder
+  private var blockedUsersSection: some View {
+    Section {
+      Button {
+        withAnimation(.spring(duration: 0.32, bounce: 0.12)) {
+          isBlockedUsersExpanded.toggle()
+        }
+      } label: {
+        HStack(spacing: Spacing.xs) {
+          Image(systemName: "hand.raised.fill")
+            .font(.tidexFootnoteMedium)
+            .foregroundColor(.tidexError)
+
+          Text(.sharingBlockedUsersTitle)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexTextPrimary)
+
+          Text("\(viewModel.blockedFriends.count)")
+            .font(.tidexFootnoteMedium)
+            .foregroundColor(.tidexTextMuted)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, Spacing.xxxs)
+            .background(
+              Capsule(style: .continuous)
+                .fill(Color.tidexSurfaceSecondary)
+            )
+
+          Spacer()
+
+          Image(systemName: isBlockedUsersExpanded ? "chevron.up" : "chevron.down")
+            .font(.tidexFootnoteMedium)
+            .foregroundColor(.tidexTextMuted)
+        }
+      }
+      .buttonStyle(.plain)
+
+      if isBlockedUsersExpanded {
         ForEach(viewModel.blockedFriends) { friend in
           blockedFriendRow(friend)
         }
-      } header: {
-        Text(.sharingBlockedUsersTitle)
-      } footer: {
+      }
+    } footer: {
+      if isBlockedUsersExpanded {
         Text(.sharingBlockedUsersDescription)
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
     }
+    .listRowBackground(Color.tidexSurfacePrimary)
   }
 
   private func makeFriendRow(_ friend: Friend, sectionType: FriendSectionType) -> some View {
@@ -301,6 +381,9 @@ struct ManageSharingSheet: View {
           await viewModel.toggleHidden(for: friend)
           onVisibilityChange?()
         }
+      },
+      onBlock: {
+        friendToBlock = friend
       },
       onRemove: {
         friendToRemove = friend

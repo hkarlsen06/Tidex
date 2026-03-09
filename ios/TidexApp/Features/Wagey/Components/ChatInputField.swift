@@ -21,6 +21,7 @@ struct ChatInputField: View {
   let disabled: Bool
   let placeholder: String
   let horizontalPadding: CGFloat
+  let focusedHorizontalPadding: CGFloat?
   let bottomPadding: CGFloat
   let showsCameraShortcut: Bool
   let collapsesAttachmentButtonForLongDrafts: Bool
@@ -52,6 +53,7 @@ struct ChatInputField: View {
     inputText: Binding<String>,
     placeholder: String = String(localized: .wageyPlaceholderWelcome),
     horizontalPadding: CGFloat = MonthPickerLayout.horizontalPadding,
+    focusedHorizontalPadding: CGFloat? = nil,
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
     showsCameraShortcut: Bool = false,
     collapsesAttachmentButtonForLongDrafts: Bool = false,
@@ -64,6 +66,7 @@ struct ChatInputField: View {
     self._inputText = inputText
     self.placeholder = placeholder
     self.horizontalPadding = horizontalPadding
+    self.focusedHorizontalPadding = focusedHorizontalPadding
     self.bottomPadding = bottomPadding
     self.showsCameraShortcut = showsCameraShortcut
     self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
@@ -79,6 +82,7 @@ struct ChatInputField: View {
     inputText: Binding<String>,
     placeholder: String = String(localized: .wageyPlaceholderWelcome),
     horizontalPadding: CGFloat = MonthPickerLayout.horizontalPadding,
+    focusedHorizontalPadding: CGFloat? = nil,
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
     showsCameraShortcut: Bool = false,
     collapsesAttachmentButtonForLongDrafts: Bool = false,
@@ -92,6 +96,7 @@ struct ChatInputField: View {
     self._inputText = inputText
     self.placeholder = placeholder
     self.horizontalPadding = horizontalPadding
+    self.focusedHorizontalPadding = focusedHorizontalPadding
     self.bottomPadding = bottomPadding
     self.showsCameraShortcut = showsCameraShortcut
     self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
@@ -119,6 +124,11 @@ struct ChatInputField: View {
 
   private var cameraAvailable: Bool {
     UIImagePickerController.isSourceTypeAvailable(.camera)
+  }
+
+  private var effectiveHorizontalPadding: CGFloat {
+    guard isComposerFocused, let focusedHorizontalPadding else { return horizontalPadding }
+    return focusedHorizontalPadding
   }
 
   private var shouldHideAttachmentButton: Bool {
@@ -153,7 +163,7 @@ struct ChatInputField: View {
         canSend: canSend,
         sendAccessibilityLabel: String(localized: "Send message"),
         onFocusChanged: { isComposerFocused = $0 },
-        horizontalPadding: horizontalPadding,
+        horizontalPadding: effectiveHorizontalPadding,
         topPadding: Spacing.xs,
         bottomPadding: bottomPadding,
         onSend: sendMessage
@@ -163,6 +173,10 @@ struct ChatInputField: View {
             .transition(.move(edge: .leading).combined(with: .opacity))
         }
       }
+      .animation(
+        reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86),
+        value: isComposerFocused
+      )
       .animation(
         reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.9),
         value: shouldHideAttachmentButton

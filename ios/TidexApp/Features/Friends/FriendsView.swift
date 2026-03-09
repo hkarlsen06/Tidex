@@ -162,7 +162,14 @@ struct SharingView: View {
     }
     .onReceive(
       NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
-    ) { _ in
+    ) { notification in
+      if let blockedUserId = notification.userInfo?["blockedUserId"] as? String {
+        viewModel.handleBlockedUser(blockedUserId)
+      }
+      if let unblockedUserId = notification.userInfo?["unblockedUserId"] as? String {
+        viewModel.handleUnblockedUser(unblockedUserId)
+      }
+      scheduleUnreadChatRefresh()
       Task {
         await viewModel.loadSharers(forceRefreshPreviews: true)
       }
@@ -384,6 +391,14 @@ struct SharingView: View {
         fallbackAvatarUrl: sharedUser.avatarUrl
       )
       navigationPath.append(route)
+    } catch let error as FriendsMessagingServiceError
+      where isBlockedDirectThreadCreationError(error)
+    {
+      viewModel.handleBlockedUser(sharedUser.id)
+      scheduleUnreadChatRefresh()
+      Task {
+        await viewModel.loadSharers(forceRefreshPreviews: true)
+      }
     } catch {
       chatOpenErrorMessage =
         error.localizedDescription.isEmpty
@@ -435,6 +450,15 @@ struct SharingView: View {
         ? String(localized: .friendsChatOpenFailed)
         : error.localizedDescription
     }
+  }
+
+  private func isBlockedDirectThreadCreationError(_ error: FriendsMessagingServiceError) -> Bool {
+    guard case .httpError(let statusCode, let message) = error else {
+      return false
+    }
+
+    let normalizedMessage = message?.lowercased() ?? ""
+    return statusCode == 400 && normalizedMessage.contains("not allowed for this user pair")
   }
 
   private func refreshUnreadChatUserIds() {

@@ -17,7 +17,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case .home: return "house.fill"
     case .shifts: return "calendar"
     case .add: return "plus.circle.fill"
-    case .wagey: return "message.badge.waveform.fill"
+    case .wagey: return "sparkles"
     case .sharing: return "person.2.fill"
     }
   }

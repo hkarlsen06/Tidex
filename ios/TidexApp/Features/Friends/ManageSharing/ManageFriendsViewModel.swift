@@ -515,6 +515,32 @@ final class ManageSharingViewModel: ObservableObject {
     friends[index] = originalFriend
   }
 
+  // MARK: - Block
+
+  func blockFriend(_ friend: Friend) async {
+    guard actionInProgress == nil else { return }
+
+    actionInProgress = friend.id
+
+    do {
+      try await sharingService.blockFriend(userId: friend.id)
+      await loadFriends()
+      NotificationCenter.default.post(
+        name: Notification.Name("friendsVisibilityChanged"),
+        object: nil,
+        userInfo: ["blockedUserId": friend.id]
+      )
+      logger.info("Blocked friend \(friend.id)")
+      Haptics.play(.success)
+    } catch {
+      logger.error("Failed to block friend: \(error.localizedDescription)")
+      errorMessage = String(localized: .sharingErrorUpdateSettings)
+      Haptics.play(.error)
+    }
+
+    actionInProgress = nil
+  }
+
   // MARK: - Unblock
 
   func unblockFriend(_ friend: Friend) async {
@@ -525,6 +551,11 @@ final class ManageSharingViewModel: ObservableObject {
     do {
       try await sharingService.unblockFriend(userId: friend.id)
       await loadFriends()
+      NotificationCenter.default.post(
+        name: Notification.Name("friendsVisibilityChanged"),
+        object: nil,
+        userInfo: ["unblockedUserId": friend.id]
+      )
       logger.info("Unblocked friend \(friend.id)")
       Haptics.play(.success)
     } catch {

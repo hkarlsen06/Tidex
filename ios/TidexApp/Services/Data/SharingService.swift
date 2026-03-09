@@ -52,6 +52,16 @@ private struct CachedPreview {
   let cachedAt: Date
 }
 
+private struct IncomingBlockedShareRow: Decodable {
+  let owner_id: String
+  let blocked_by_user_id: String?
+}
+
+private struct OutgoingBlockedShareRow: Decodable {
+  let viewer_id: String
+  let blocked_by_user_id: String?
+}
+
 // MARK: - Sharing Service
 
 /// Service for fetching shared shifts and sharers
@@ -379,6 +389,46 @@ final class SharingService: ObservableObject {
     return .networkError(underlying: error)
   }
 
+  private func fetchBlockedUserSets(for userId: String) async throws -> (
+    allBlockedPairIds: Set<String>,
+    blockedByCurrentUserIds: Set<String>
+  ) {
+    let incomingShares: [IncomingBlockedShareRow] =
+      try await supabase
+      .from("shift_shares")
+      .select("owner_id, blocked_by_user_id")
+      .eq("viewer_id", value: userId)
+      .execute()
+      .value
+
+    let outgoingShares: [OutgoingBlockedShareRow] =
+      try await supabase
+      .from("shift_shares")
+      .select("viewer_id, blocked_by_user_id")
+      .eq("owner_id", value: userId)
+      .execute()
+      .value
+
+    var allBlockedPairIds = Set<String>()
+    var blockedByCurrentUserIds = Set<String>()
+
+    for share in incomingShares where share.blocked_by_user_id != nil {
+      allBlockedPairIds.insert(share.owner_id)
+      if share.blocked_by_user_id == userId {
+        blockedByCurrentUserIds.insert(share.owner_id)
+      }
+    }
+
+    for share in outgoingShares where share.blocked_by_user_id != nil {
+      allBlockedPairIds.insert(share.viewer_id)
+      if share.blocked_by_user_id == userId {
+        blockedByCurrentUserIds.insert(share.viewer_id)
+      }
+    }
+
+    return (allBlockedPairIds, blockedByCurrentUserIds)
+  }
+
   private nonisolated static func mapComputedShiftToSharedShiftData(
     _ shift: SharingComputedShift
   ) -> SharedShiftData {
@@ -548,6 +598,7 @@ final class SharingService: ObservableObject {
         throw SharingServiceError.notAuthenticated
       }
 
+      let userId = session.normalizedUserId
       let accessToken = session.accessToken
       let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/friends")
 
@@ -583,14 +634,38 @@ final class SharingService: ObservableObject {
       let decoder = JSONDecoder()
       do {
         let apiResponse = try decoder.decode(FriendsAPIResponse.self, from: data)
+        let blockedSets = try? await fetchBlockedUserSets(for: userId)
+        let allBlockedPairIds = blockedSets?.allBlockedPairIds ?? Set<String>()
+        let blockedByCurrentUserIds = blockedSets?.blockedByCurrentUserIds ?? Set<String>()
+
+        let sanitizedFriends = apiResponse.friends.filter { !allBlockedPairIds.contains($0.id) }
+        let apiBlockedFriends = (apiResponse.blockedFriends ?? []).filter {
+          blockedByCurrentUserIds.contains($0.id)
+        }
+        let blockedFriendsFromFriends = apiResponse.friends.filter {
+          blockedByCurrentUserIds.contains($0.id)
+        }
+
+        var mergedBlockedFriendsById: [String: Friend] = [:]
+        for friend in apiBlockedFriends {
+          mergedBlockedFriendsById[friend.id] = friend
+        }
+        for friend in blockedFriendsFromFriends {
+          mergedBlockedFriendsById[friend.id] = friend
+        }
+
+        let mergedBlockedFriends = mergedBlockedFriendsById.values.sorted {
+          $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
+
         logger.info(
           """
-          Loaded \(apiResponse.friends.count) friends and
-          \((apiResponse.blockedFriends ?? []).count) blocked friends
+          Loaded \(sanitizedFriends.count) friends and
+          \(mergedBlockedFriends.count) blocked friends
           (capacity: \(apiResponse.capacity.currentCount)/\(apiResponse.capacity.limit))
           """
         )
-        return (apiResponse.friends, apiResponse.blockedFriends ?? [], apiResponse.capacity)
+        return (sanitizedFriends, mergedBlockedFriends, apiResponse.capacity)
       } catch let decodingError as DecodingError {
         // Log detailed decoding error info
         switch decodingError {
@@ -802,6 +877,34 @@ final class SharingService: ObservableObject {
       action: .shareBack,
       recipientId: recipientId
     )
+  }
+
+  /// Creates an abuse block for a user pair.
+  func blockFriend(userId: String) async throws {
+    let params: [String: AnyJSON] = [
+      "p_other_user_id": .string(userId)
+    ]
+
+    logger.info("Blocking user pair \(userId, privacy: .private)")
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      _ =
+        try await supabase
+        .rpc("block_user_pair", params: params)
+        .execute()
+
+      logger.info("Successfully blocked user pair")
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw SharingServiceError.decodingError(underlying: error)
+    } catch {
+      throw SharingServiceError.networkError(underlying: error)
+    }
   }
 
   /// Clears an abuse block for a user pair.
