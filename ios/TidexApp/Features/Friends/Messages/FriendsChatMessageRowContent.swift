@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct FriendsChatReplyPreviewModel: Equatable {
+  let senderName: String
   let snippet: String?
   let hasImageAttachment: Bool
 }
@@ -17,10 +18,14 @@ struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
   private static let reactionHorizontalOffset: CGFloat = 12
   private static let reactionVerticalOffset: CGFloat = 8
+  private static let avatarSize = AvatarView.Size.small
 
   let message: FriendMessage
   let quotedPreview: FriendsChatReplyPreviewModel?
   let isCurrentUser: Bool
+  let groupContext: FriendsChatMessageGroupContext
+  let counterpartAvatarUrl: String?
+  let counterpartAvatarInitials: String
   let isHighlighted: Bool
   let senderFirstName: String?
   let separatorDate: Date?
@@ -38,7 +43,18 @@ struct FriendsChatMessageRowContent: View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
     let hasMessageText = !(messageText?.isEmpty ?? true)
     let imageAttachments = message.attachments.filter { $0.kind == .image }
-    let reactionStripTopInset = message.reactions.isEmpty ? Spacing.micro : Spacing.md
+    let topPadding =
+      message.reactions.isEmpty
+      ? (groupContext.joinsPrevious ? CGFloat.zero : Spacing.xxs)
+      : Spacing.md
+    let bottomPadding =
+      if showsTimestamp || messageStatus != nil {
+        Spacing.xxxs
+      } else if groupContext.joinsNext {
+        CGFloat.zero
+      } else {
+        Spacing.xxs
+      }
 
     return VStack(spacing: Spacing.xs) {
       if let separatorDate {
@@ -46,118 +62,126 @@ struct FriendsChatMessageRowContent: View {
       }
 
       ChatMessageRow(isCurrentUser: isCurrentUser, minSpacer: 48, spacing: Spacing.xxs) {
-        VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
-          if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
-            Text(senderFirstName)
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-              .padding(.horizontal, CornerRadius.bubble)
+        HStack(alignment: .top, spacing: Spacing.xs) {
+          if !isCurrentUser {
+            avatarSlot
           }
 
-          FriendsChatReplySwipeContainer(
-            isCurrentUser: isCurrentUser,
-            onReply: onReply
-          ) {
-            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-              if !hasMessageText, imageAttachments.isEmpty, let quotedPreview {
-                FriendsChatMessageReplyPreview(
-                  preview: quotedPreview,
-                  isCurrentUser: isCurrentUser,
-                  isHighlighted: false,
-                  onTap: onTapQuotedMessage
-                )
-                .overlay(alignment: reactionAlignment) {
-                  reactionStrip
-                }
-              }
+          VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
+            if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
+              Text(senderFirstName)
+                .font(.tidexCaptionRegular)
+                .foregroundColor(.tidexTextMuted)
+                .padding(.horizontal, CornerRadius.bubble)
+            }
 
-              ForEach(Array(imageAttachments.enumerated()), id: \.element.id) { index, attachment in
-                if attachment.kind == .image {
-                  FriendsChatImageView(
-                    attachment: attachment,
+            FriendsChatReplySwipeContainer(
+              isCurrentUser: isCurrentUser,
+              onReply: onReply
+            ) {
+              VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
+                if !hasMessageText, imageAttachments.isEmpty, let quotedPreview {
+                  FriendsChatMessageReplyPreview(
+                    preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
-                    canReact: message.canReact,
-                    onToggleReaction: onToggleReaction,
-                    onReport: onReportMessage
+                    isHighlighted: false,
+                    onTap: onTapQuotedMessage
                   )
                   .overlay(alignment: reactionAlignment) {
-                    if !hasMessageText, index == imageAttachments.count - 1 {
-                      reactionStrip
+                    reactionStrip
+                  }
+                }
+
+                ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
+                  index, attachment in
+                  if attachment.kind == .image {
+                    FriendsChatImageView(
+                      attachment: attachment,
+                      isCurrentUser: isCurrentUser,
+                      canReact: message.canReact,
+                      onToggleReaction: onToggleReaction,
+                      onReport: onReportMessage
+                    )
+                    .overlay(alignment: reactionAlignment) {
+                      if !hasMessageText, index == imageAttachments.count - 1 {
+                        reactionStrip
+                      }
                     }
                   }
                 }
-              }
 
-              if let messageText, !messageText.isEmpty {
-                FriendsChatReactionAnchoredBubbleCard(
-                  isCurrentUser: isCurrentUser,
-                  minWidth: Self.minimumBubbleWidthForTimestamp,
-                  maxWidth: 280
-                ) {
-                  VStack(alignment: .leading, spacing: Spacing.xs) {
-                    if let quotedPreview {
-                      FriendsChatMessageReplyPreview(
-                        preview: quotedPreview,
-                        isCurrentUser: isCurrentUser,
-                        isHighlighted: false,
-                        onTap: onTapQuotedMessage
-                      )
+                if let messageText, !messageText.isEmpty {
+                  FriendsChatReactionAnchoredBubbleCard(
+                    isCurrentUser: isCurrentUser,
+                    groupContext: groupContext,
+                    minWidth: Self.minimumBubbleWidthForTimestamp,
+                    maxWidth: 280
+                  ) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                      if let quotedPreview {
+                        FriendsChatMessageReplyPreview(
+                          preview: quotedPreview,
+                          isCurrentUser: isCurrentUser,
+                          isHighlighted: false,
+                          onTap: onTapQuotedMessage
+                        )
+                      }
+
+                      Text(messageText)
+                        .font(.tidexBody)
+                        .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
-
-                    Text(messageText)
-                      .font(.tidexBody)
-                      .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-                      .multilineTextAlignment(.leading)
-                      .fixedSize(horizontal: false, vertical: true)
+                  } reaction: {
+                    reactionStrip
                   }
-                } reaction: {
-                  reactionStrip
                 }
               }
             }
-          }
-          .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.28)
-              .onEnded { _ in
-                Haptics.play(.medium)
-                onOpenActions()
+            .simultaneousGesture(
+              LongPressGesture(minimumDuration: 0.28)
+                .onEnded { _ in
+                  Haptics.play(.medium)
+                  onOpenActions()
+                }
+            )
+
+            if showsTimestamp || messageStatus != nil {
+              HStack(spacing: Spacing.xxs) {
+                if isCurrentUser {
+                  if let messageStatus {
+                    statusView(messageStatus)
+                  }
+
+                  if showsTimestamp {
+                    Text(message.createdAt.formatted(.dateTime.hour().minute()))
+                      .lineLimit(1)
+                      .fixedSize(horizontal: true, vertical: false)
+                  }
+                } else {
+                  if showsTimestamp {
+                    Text(message.createdAt.formatted(.dateTime.hour().minute()))
+                      .lineLimit(1)
+                      .fixedSize(horizontal: true, vertical: false)
+                  }
+
+                  if let messageStatus {
+                    statusView(messageStatus)
+                  }
+                }
               }
-          )
-
-          if showsTimestamp || messageStatus != nil {
-            HStack(spacing: Spacing.xxs) {
-              if isCurrentUser {
-                if let messageStatus {
-                  statusView(messageStatus)
-                }
-
-                if showsTimestamp {
-                  Text(message.createdAt.formatted(.dateTime.hour().minute()))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                }
-              } else {
-                if showsTimestamp {
-                  Text(message.createdAt.formatted(.dateTime.hour().minute()))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                }
-
-                if let messageStatus {
-                  statusView(messageStatus)
-                }
-              }
+              .font(.tidexMicro)
+              .foregroundColor(.tidexTextMuted)
+              .fixedSize(horizontal: true, vertical: false)
+              .animation(.easeInOut(duration: 0.2), value: messageStatus)
             }
-            .font(.tidexMicro)
-            .foregroundColor(.tidexTextMuted)
-            .fixedSize(horizontal: true, vertical: false)
-            .animation(.easeInOut(duration: 0.2), value: messageStatus)
           }
         }
       }
     }
-    .padding(.top, reactionStripTopInset)
-    .padding(.bottom, showsTimestamp || messageStatus != nil ? Spacing.xxxs : Spacing.micro)
+    .padding(.top, topPadding)
+    .padding(.bottom, bottomPadding)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .fill(isHighlighted ? Color.tidexBlue.opacity(0.08) : Color.clear)
@@ -254,6 +278,22 @@ struct FriendsChatMessageRowContent: View {
   private var reactionAlignment: Alignment {
     isCurrentUser ? .topLeading : .topTrailing
   }
+
+  @ViewBuilder
+  private var avatarSlot: some View {
+    if groupContext.showsAvatar {
+      AvatarView(
+        url: counterpartAvatarUrl,
+        initials: counterpartAvatarInitials,
+        size: Self.avatarSize,
+        cornerRadius: CornerRadius.md
+      )
+      .padding(.top, 2)
+    } else {
+      Color.clear
+        .frame(width: Self.avatarSize, height: Self.avatarSize)
+    }
+  }
 }
 
 struct FriendsChatEmojiGlyph: View {
@@ -272,6 +312,7 @@ struct FriendsChatEmojiGlyph: View {
 
 private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
   let isCurrentUser: Bool
+  let groupContext: FriendsChatMessageGroupContext
   var minWidth: CGFloat? = nil
   var maxWidth: CGFloat? = nil
   @ViewBuilder let content: () -> Content
@@ -303,11 +344,11 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous)
+        bubbleShape
           .fill(isCurrentUser ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous)
+        bubbleShape
           .stroke(
             isCurrentUser ? Color.clear : Color.tidexBorderSubtle,
             lineWidth: 1
@@ -316,6 +357,46 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
       .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
         reaction()
       }
+  }
+
+  private var bubbleShape: some InsettableShape {
+    UnevenRoundedRectangle(
+      cornerRadii: RectangleCornerRadii(
+        topLeading: topLeadingRadius,
+        bottomLeading: bottomLeadingRadius,
+        bottomTrailing: bottomTrailingRadius,
+        topTrailing: topTrailingRadius
+      ),
+      style: .continuous
+    )
+  }
+
+  private var topLeadingRadius: CGFloat {
+    if !isCurrentUser && groupContext.joinsPrevious {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
+  }
+
+  private var bottomLeadingRadius: CGFloat {
+    if !isCurrentUser && groupContext.joinsNext {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
+  }
+
+  private var bottomTrailingRadius: CGFloat {
+    if isCurrentUser && groupContext.joinsNext {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
+  }
+
+  private var topTrailingRadius: CGFloat {
+    if isCurrentUser && groupContext.joinsPrevious {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
   }
 }
 
@@ -474,6 +555,10 @@ private struct FriendsChatMessageReplyPreview: View {
           .frame(width: 3)
 
         VStack(alignment: .leading, spacing: 3) {
+          Text(preview.senderName)
+            .font(.tidexCaptionStrong)
+            .foregroundColor(accentColor)
+
           if preview.hasImageAttachment {
             Image(systemName: "photo")
               .font(.tidexCaptionRegular)

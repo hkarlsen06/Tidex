@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 import os.log
 
 private let threadLogger = Logger(subsystem: "com.tidex.app", category: "FriendsThreadViewModel")
@@ -22,11 +23,14 @@ final class FriendsThreadViewModel: ObservableObject {
 
   enum ActionError: LocalizedError {
     case missingCounterpart
+    case missingPendingAttachment
 
     var errorDescription: String? {
       switch self {
       case .missingCounterpart:
         return "Missing counterpart user"
+      case .missingPendingAttachment:
+        return String(localized: .friendsChatSendFailed)
       }
     }
   }
@@ -246,59 +250,40 @@ final class FriendsThreadViewModel: ObservableObject {
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedContent.isEmpty || image != nil else { return false }
 
-    let previousDraft = content
     let previousReplyTarget = draftReplyTarget
     sendErrorMessage = nil
 
-    do {
-      let outgoingAttachments: [FriendOutgoingAttachment]
-      if let image {
-        isSending = true
-        defer { isSending = false }
-        outgoingAttachments = [
-          try await service.uploadImageAttachment(threadId: route.threadId, image: image)
-        ]
-      } else {
-        outgoingAttachments = []
-      }
+    let clientId = UUID().uuidString.lowercased()
+    let optimisticAttachments = image.map { [makeOptimisticAttachment(from: $0)] } ?? []
+    let optimisticMessage = FriendMessage(
+      id: "local-\(clientId)",
+      threadId: route.threadId,
+      senderUserId: viewerUserId,
+      messageType: .user,
+      body: normalizedContent.isEmpty ? nil : normalizedContent,
+      clientId: clientId,
+      replyToMessageId: previousReplyTarget?.id,
+      createdAt: Date(),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: optimisticAttachments,
+      reactions: [],
+      sendState: .sending,
+      failureMessage: nil
+    )
 
-      let clientId = UUID().uuidString.lowercased()
-      let optimisticMessage = FriendMessage(
-        id: "local-\(clientId)",
-        threadId: route.threadId,
-        senderUserId: viewerUserId,
-        messageType: .user,
-        body: normalizedContent.isEmpty ? nil : normalizedContent,
-        clientId: clientId,
-        replyToMessageId: previousReplyTarget?.id,
-        createdAt: Date(),
-        editedAt: nil,
-        deletedAt: nil,
-        metadataData: nil,
-        attachments: outgoingAttachments.map(makeOptimisticAttachment),
-        reactions: [],
-        sendState: .sending,
-        failureMessage: nil
-      )
-
-      draft = ""
-      draftReplyTarget = nil
-      await repository.saveOptimisticMessage(
-        optimisticMessage,
-        in: route.threadId,
-        for: viewerUserId
-      )
-      loadFromCache()
-      await stopTypingIfNeeded()
-      sendMessageInBackground(optimisticMessage)
-      return true
-    } catch {
-      draft = previousDraft
-      draftReplyTarget = previousReplyTarget
-      sendErrorMessage = String(localized: .friendsChatSendFailed)
-      threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
-      return false
-    }
+    draft = ""
+    draftReplyTarget = nil
+    await repository.saveOptimisticMessage(
+      optimisticMessage,
+      in: route.threadId,
+      for: viewerUserId
+    )
+    loadFromCache()
+    await stopTypingIfNeeded()
+    sendMessageInBackground(optimisticMessage)
+    return true
   }
 
   func retryMessage(messageId: String) async {
@@ -561,12 +546,13 @@ final class FriendsThreadViewModel: ObservableObject {
   private func sendMessageInBackground(_ message: FriendMessage) {
     Task { @MainActor in
       do {
+        let outgoingAttachments = try await makeOutgoingAttachments(for: message)
         let sentMessage = try await service.sendMessage(
           threadId: route.threadId,
           clientId: message.clientId,
           body: message.body,
           replyToMessageId: message.replyToMessageId,
-          attachments: makeOutgoingAttachments(from: message)
+          attachments: outgoingAttachments
         )
 
         await repository.saveConfirmedMessage(
@@ -589,34 +575,100 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  private func makeOptimisticAttachment(_ attachment: FriendOutgoingAttachment)
-    -> FriendMessageAttachment
-  {
-    FriendMessageAttachment(
-      id: attachment.attachmentId,
+  private func makeOptimisticAttachment(from image: ImageAttachment) -> FriendMessageAttachment {
+    let storagePath = pendingAttachmentStoragePath(for: image.id)
+    cacheImage(image, for: storagePath)
+
+    let imageSize = UIImage(data: image.data)?.size
+    return FriendMessageAttachment(
+      id: image.id,
       attachmentIndex: 0,
       kind: .image,
       storageBucket: Attachments.storageBucket,
-      storagePath: attachment.storagePath,
-      mimeType: attachment.mimeType,
-      byteSize: attachment.byteSize,
-      width: attachment.width,
-      height: attachment.height,
+      storagePath: storagePath,
+      mimeType: image.mediaType,
+      byteSize: Int64(image.data.count),
+      width: imageSize.map { Int($0.width.rounded()) },
+      height: imageSize.map { Int($0.height.rounded()) },
       createdAt: Date()
     )
   }
 
-  private func makeOutgoingAttachments(from message: FriendMessage) -> [FriendOutgoingAttachment] {
-    message.attachments.map { attachment in
-      FriendOutgoingAttachment(
-        attachmentId: attachment.id,
-        storagePath: attachment.storagePath,
-        mimeType: attachment.mimeType,
-        byteSize: attachment.byteSize,
-        width: attachment.width,
-        height: attachment.height
-      )
+  private func makeOutgoingAttachments(for message: FriendMessage) async throws
+    -> [FriendOutgoingAttachment]
+  {
+    var outgoingAttachments: [FriendOutgoingAttachment] = []
+
+    for attachment in message.attachments {
+      if isPendingAttachment(attachment),
+        let pendingImage = await pendingImageAttachment(for: attachment)
+      {
+        let uploadedAttachment = try await service.uploadImageAttachment(
+          threadId: route.threadId,
+          image: pendingImage
+        )
+        cacheImage(pendingImage, for: uploadedAttachment.storagePath)
+        outgoingAttachments.append(uploadedAttachment)
+        continue
+      }
+
+      guard !isPendingAttachment(attachment) else {
+        throw ActionError.missingPendingAttachment
+      }
+
+      outgoingAttachments.append(
+        FriendOutgoingAttachment(
+          attachmentId: attachment.id,
+          storagePath: attachment.storagePath,
+          mimeType: attachment.mimeType,
+          byteSize: attachment.byteSize,
+          width: attachment.width,
+          height: attachment.height
+        ))
     }
+
+    return outgoingAttachments
+  }
+
+  private func pendingAttachmentStoragePath(for attachmentId: String) -> String {
+    "local-pending/\(attachmentId)"
+  }
+
+  private func isPendingAttachment(_ attachment: FriendMessageAttachment) -> Bool {
+    attachment.storagePath.hasPrefix("local-pending/")
+  }
+
+  private func pendingImageAttachment(for attachment: FriendMessageAttachment) async
+    -> ImageAttachment?
+  {
+    let cacheURL = imageCacheURL(for: attachment.storagePath)
+
+    if let cachedImage = ImageCache.shared.get(for: cacheURL),
+      let data = cachedImage.jpegData(compressionQuality: 0.9)
+    {
+      return ImageAttachment(id: attachment.id, data: data, mediaType: attachment.mimeType)
+    }
+
+    if let cachedImage = await ImageCache.shared.getFromDisk(for: cacheURL),
+      let data = cachedImage.jpegData(compressionQuality: 0.9)
+    {
+      return ImageAttachment(id: attachment.id, data: data, mediaType: attachment.mimeType)
+    }
+
+    return nil
+  }
+
+  private func cacheImage(_ image: ImageAttachment, for storagePath: String) {
+    guard let uiImage = UIImage(data: image.data) else { return }
+    ImageCache.shared.set(uiImage, for: imageCacheURL(for: storagePath))
+  }
+
+  private func imageCacheURL(for storagePath: String) -> URL {
+    var components = URLComponents()
+    components.scheme = "https"
+    components.host = "friends-message-cache.local"
+    components.path = "/\(storagePath)"
+    return components.url ?? URL(filePath: "/tmp/friends-message-cache-fallback")
   }
 
   private func reconcileOptimisticMessagesIfNeeded() {
