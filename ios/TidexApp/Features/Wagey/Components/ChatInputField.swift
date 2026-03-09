@@ -1,10 +1,15 @@
 import PhotosUI
 import SwiftUI
+import UIKit
 
 /// Chat input field with send button and image attachment support
 /// Supports multi-line input, image uploads, and disabled states
 struct ChatInputField: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  private enum ComposerLayout {
+    static let attachmentCollapseCharacterThreshold = 32
+  }
 
   /// Callback when user sends a message (text only)
   let onSend: (String) async -> Bool
@@ -17,6 +22,9 @@ struct ChatInputField: View {
   let placeholder: String
   let horizontalPadding: CGFloat
   let bottomPadding: CGFloat
+  let showsCameraShortcut: Bool
+  let collapsesAttachmentButtonForLongDrafts: Bool
+  let dismissKeyboardOnSend: Bool
 
   /// Current input text
   @Binding var inputText: String
@@ -30,6 +38,10 @@ struct ChatInputField: View {
   /// Whether image is being processed
   @State private var isProcessingImage = false
   @State private var isSubmitting = false
+  @State private var isComposerFocused = false
+  @State private var showCamera = false
+  @State private var showLibrary = false
+  @State private var showAttachmentSourcePicker = false
 
   /// Error message for image processing
   @State private var imageError: String?
@@ -40,6 +52,9 @@ struct ChatInputField: View {
     placeholder: String = String(localized: .wageyPlaceholderWelcome),
     horizontalPadding: CGFloat = MonthPickerLayout.horizontalPadding,
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
+    showsCameraShortcut: Bool = false,
+    collapsesAttachmentButtonForLongDrafts: Bool = false,
+    dismissKeyboardOnSend: Bool = true,
     onSend: @escaping (String) async -> Bool,
     disabled: Bool
   ) {
@@ -47,6 +62,9 @@ struct ChatInputField: View {
     self.placeholder = placeholder
     self.horizontalPadding = horizontalPadding
     self.bottomPadding = bottomPadding
+    self.showsCameraShortcut = showsCameraShortcut
+    self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
+    self.dismissKeyboardOnSend = dismissKeyboardOnSend
     self.onSend = onSend
     self.onSendWithImage = nil
     self.disabled = disabled
@@ -58,6 +76,9 @@ struct ChatInputField: View {
     placeholder: String = String(localized: .wageyPlaceholderWelcome),
     horizontalPadding: CGFloat = MonthPickerLayout.horizontalPadding,
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
+    showsCameraShortcut: Bool = false,
+    collapsesAttachmentButtonForLongDrafts: Bool = false,
+    dismissKeyboardOnSend: Bool = true,
     onSend: @escaping (String) async -> Bool,
     onSendWithImage: @escaping (String, ImageAttachment) async -> Bool,
     disabled: Bool
@@ -66,6 +87,9 @@ struct ChatInputField: View {
     self.placeholder = placeholder
     self.horizontalPadding = horizontalPadding
     self.bottomPadding = bottomPadding
+    self.showsCameraShortcut = showsCameraShortcut
+    self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
+    self.dismissKeyboardOnSend = dismissKeyboardOnSend
     self.onSend = onSend
     self.onSendWithImage = onSendWithImage
     self.disabled = disabled
@@ -84,6 +108,21 @@ struct ChatInputField: View {
 
   private var attachmentButtonTint: Color {
     attachedImage != nil ? Color.tidexBlue.opacity(0.22) : Color.tidexBlue.opacity(0.12)
+  }
+
+  private var cameraAvailable: Bool {
+    UIImagePickerController.isSourceTypeAvailable(.camera)
+  }
+
+  private var shouldHideAttachmentButton: Bool {
+    guard onSendWithImage != nil else { return false }
+    guard collapsesAttachmentButtonForLongDrafts else { return false }
+    guard attachedImage == nil else { return false }
+    guard isComposerFocused else { return false }
+
+    let draftLength = inputText.trimmingCharacters(in: .whitespacesAndNewlines).count
+    return draftLength >= ComposerLayout.attachmentCollapseCharacterThreshold
+      || inputText.contains("\n")
   }
 
   var body: some View {
@@ -106,29 +145,63 @@ struct ChatInputField: View {
         isSending: isSubmitting,
         canSend: canSend,
         sendAccessibilityLabel: String(localized: "Send message"),
+        onFocusChanged: { isComposerFocused = $0 },
         horizontalPadding: horizontalPadding,
         topPadding: Spacing.xs,
         bottomPadding: bottomPadding,
         onSend: sendMessage
       ) {
-        if onSendWithImage != nil {
-          imagePickerButton
+        if onSendWithImage != nil && !shouldHideAttachmentButton {
+          attachmentPickerButton
+            .transition(.move(edge: .leading).combined(with: .opacity))
         }
       }
+      .animation(
+        reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.9),
+        value: shouldHideAttachmentButton
+      )
     }
     .onChange(of: selectedPhotoItem) { _, newItem in
       processSelectedPhoto(newItem)
     }
-  }
-
-  // MARK: - Image Picker Button
-
-  private var imagePickerButton: some View {
-    PhotosPicker(
+    .photosPicker(
+      isPresented: $showLibrary,
       selection: $selectedPhotoItem,
       matching: .images,
       photoLibrary: .shared()
+    )
+    .fullScreenCover(isPresented: $showCamera) {
+      CameraPicker { image in
+        processCapturedImage(image)
+      }
+      .ignoresSafeArea()
+    }
+    .confirmationDialog(
+      String(localized: "profile.personalInfo.chooseImageSource"),
+      isPresented: $showAttachmentSourcePicker,
+      titleVisibility: .visible
     ) {
+      if showsCameraShortcut && cameraAvailable {
+        Button(String(localized: "profile.personalInfo.takePhoto")) {
+          showCamera = true
+        }
+      }
+
+      Button(String(localized: "profile.personalInfo.chooseFromLibrary")) {
+        showLibrary = true
+      }
+
+      Button(String(localized: .commonCancel), role: .cancel) {}
+    }
+  }
+
+  // MARK: - Attachment Button
+
+  private var attachmentPickerButton: some View {
+    Button {
+      guard !effectiveDisabled, !isProcessingImage else { return }
+      showAttachmentSourcePicker = true
+    } label: {
       ZStack {
         if isProcessingImage {
           ProgressView()
@@ -150,6 +223,7 @@ struct ChatInputField: View {
       )
       .shadow(color: Color.tidexBlue.opacity(0.05), radius: 12, y: 4)
     }
+    .buttonStyle(.plain)
     .disabled(effectiveDisabled || isProcessingImage)
     .frame(width: 50, height: 50)
     .contentShape(Rectangle())
@@ -254,8 +328,26 @@ struct ChatInputField: View {
           throw ImageProcessingError.loadFailed
         }
 
+        try await processImageData(data)
+      } catch {
+        await MainActor.run {
+          imageError = String(localized: .wageyImageError)
+          isProcessingImage = false
+          selectedPhotoItem = nil
+          Haptics.play(.error)
+        }
+      }
+    }
+  }
+
+  private func processCapturedImage(_ image: UIImage) {
+    isProcessingImage = true
+    imageError = nil
+
+    Task {
+      do {
         let compressed = await Task.detached(priority: .userInitiated) {
-          ImageCompressor.compress(data)
+          ImageCompressor.compress(image)
         }.value
 
         guard let compressed else {
@@ -274,10 +366,28 @@ struct ChatInputField: View {
         await MainActor.run {
           imageError = String(localized: .wageyImageError)
           isProcessingImage = false
-          selectedPhotoItem = nil
           Haptics.play(.error)
         }
       }
+    }
+  }
+
+  private func processImageData(_ data: Data) async throws {
+    let compressed = await Task.detached(priority: .userInitiated) {
+      ImageCompressor.compress(data)
+    }.value
+
+    guard let compressed else {
+      throw ImageProcessingError.compressionFailed
+    }
+
+    await MainActor.run {
+      attachedImage = ImageAttachment(
+        data: compressed.data,
+        mediaType: compressed.mediaType
+      )
+      isProcessingImage = false
+      Haptics.play(.success)
     }
   }
 
@@ -297,9 +407,10 @@ struct ChatInputField: View {
     // Provide haptic feedback
     Haptics.play(.medium)
 
-    // Dismiss keyboard
-    UIApplication.shared.sendAction(
-      #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    if dismissKeyboardOnSend {
+      UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 
     isSubmitting = true
 

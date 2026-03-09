@@ -3,7 +3,7 @@ import SwiftUI
 struct ChatComposerField<LeadingAccessory: View>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  private let composerControlHeight: CGFloat = 50
+  private let composerControlHeight: CGFloat = 56
 
   @Binding private var text: String
   private let placeholder: String
@@ -11,6 +11,9 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let isSending: Bool
   private let canSend: Bool
   private let sendAccessibilityLabel: String
+  private let submitLabel: SubmitLabel
+  private let focusTrigger: Int
+  private let onFocusChanged: ((Bool) -> Void)?
   private let horizontalPadding: CGFloat
   private let topPadding: CGFloat
   private let bottomPadding: CGFloat
@@ -26,6 +29,9 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     isSending: Bool = false,
     canSend: Bool,
     sendAccessibilityLabel: String,
+    submitLabel: SubmitLabel = .send,
+    focusTrigger: Int = 0,
+    onFocusChanged: ((Bool) -> Void)? = nil,
     horizontalPadding: CGFloat = Spacing.md,
     topPadding: CGFloat = Spacing.xs,
     bottomPadding: CGFloat = Spacing.md,
@@ -38,6 +44,9 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     self.isSending = isSending
     self.canSend = canSend
     self.sendAccessibilityLabel = sendAccessibilityLabel
+    self.submitLabel = submitLabel
+    self.focusTrigger = focusTrigger
+    self.onFocusChanged = onFocusChanged
     self.horizontalPadding = horizontalPadding
     self.topPadding = topPadding
     self.bottomPadding = bottomPadding
@@ -55,10 +64,17 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .padding(.bottom, bottomPadding)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isFocused)
+    .onChange(of: focusTrigger) { _, _ in
+      guard !disabled else { return }
+      isFocused = true
+    }
+    .onChange(of: isFocused) { _, newValue in
+      onFocusChanged?(newValue)
+    }
   }
 
   private var composerField: some View {
-    HStack(alignment: .center, spacing: Spacing.xs) {
+    HStack(alignment: .bottom, spacing: Spacing.xs) {
       TextField(
         placeholder,
         text: $text,
@@ -67,19 +83,20 @@ struct ChatComposerField<LeadingAccessory: View>: View {
       .textFieldStyle(.plain)
       .font(.tidexBody)
       .foregroundColor(.tidexTextPrimary)
-      .lineLimit(1...5)
+      .lineLimit(1...7)
       .focused($isFocused)
       .disabled(disabled)
-      .submitLabel(.return)
+      .submitLabel(submitLabel)
       .onSubmit {
+        guard canSend else { return }
         onSend()
       }
-      .padding(.vertical, Spacing.xxs)
+      .padding(.vertical, Spacing.xs)
 
       sendButton
     }
     .padding(.horizontal, Spacing.msm)
-    .padding(.vertical, Spacing.xs)
+    .padding(.vertical, Spacing.sm)
     .frame(minHeight: composerControlHeight)
     .tidexGlass(
       shape: .rect(cornerRadius: 24),
@@ -139,6 +156,9 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
     isSending: Bool = false,
     canSend: Bool,
     sendAccessibilityLabel: String,
+    submitLabel: SubmitLabel = .send,
+    focusTrigger: Int = 0,
+    onFocusChanged: ((Bool) -> Void)? = nil,
     horizontalPadding: CGFloat = Spacing.md,
     topPadding: CGFloat = Spacing.xs,
     bottomPadding: CGFloat = Spacing.md,
@@ -151,6 +171,9 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
       isSending: isSending,
       canSend: canSend,
       sendAccessibilityLabel: sendAccessibilityLabel,
+      submitLabel: submitLabel,
+      focusTrigger: focusTrigger,
+      onFocusChanged: onFocusChanged,
       horizontalPadding: horizontalPadding,
       topPadding: topPadding,
       bottomPadding: bottomPadding,

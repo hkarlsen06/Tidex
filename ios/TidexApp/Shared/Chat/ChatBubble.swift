@@ -20,6 +20,7 @@ struct ChatMessageRow<Content: View>: View {
         Spacer(minLength: minSpacer)
       }
     }
+    .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
   }
 }
 

@@ -74,6 +74,7 @@ struct FriendsThreadView: View {
           scrollToBottomTrigger: scrollToBottomTrigger,
           restoreScrollTargetMessageId: viewModel.restoreScrollTargetMessageId,
           replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId,
+          onBackgroundTap: dismissComposer,
           onPinnedToBottomChanged: { isPinnedToBottom in
             self.isPinnedToBottom = isPinnedToBottom
           },
@@ -495,6 +496,9 @@ struct FriendsThreadView: View {
         placeholder: String(localized: .friendsChatPlaceholder),
         horizontalPadding: MonthPickerLayout.horizontalPadding,
         bottomPadding: MonthPickerLayout.bottomPadding,
+        showsCameraShortcut: true,
+        collapsesAttachmentButtonForLongDrafts: true,
+        dismissKeyboardOnSend: false,
         onSend: { message in
           await viewModel.sendMessage(content: message, image: nil)
         },
@@ -718,6 +722,15 @@ struct FriendsThreadView: View {
       showScreenshotNotifiedIcon = false
       screenshotBellShakeTrigger = false
     }
+  }
+
+  private func dismissComposer() {
+    UIApplication.shared.sendAction(
+      #selector(UIResponder.resignFirstResponder),
+      to: nil,
+      from: nil,
+      for: nil
+    )
   }
 
   private struct AlertState: Identifiable {

@@ -16,6 +16,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let scrollToBottomTrigger: Int
   let restoreScrollTargetMessageId: String?
   let replyScrollTargetMessageId: String?
+  let onBackgroundTap: () -> Void
   let onPinnedToBottomChanged: (Bool) -> Void
   let onReachedTopMessage: (String) -> Void
   let onReply: (FriendMessage) -> Void
@@ -29,6 +30,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
 
   func makeUIViewController(context: Context) -> FriendsChatTimelineViewController {
     let controller = FriendsChatTimelineViewController()
+    controller.onBackgroundTap = onBackgroundTap
     controller.onPinnedToBottomChanged = onPinnedToBottomChanged
     controller.onReachedTopMessage = onReachedTopMessage
     controller.onReply = onReply
@@ -44,6 +46,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
     _ uiViewController: FriendsChatTimelineViewController,
     context: Context
   ) {
+    uiViewController.onBackgroundTap = onBackgroundTap
     uiViewController.onPinnedToBottomChanged = onPinnedToBottomChanged
     uiViewController.onReachedTopMessage = onReachedTopMessage
     uiViewController.onReply = onReply
@@ -91,7 +94,8 @@ struct FriendsChatTimelineConfiguration {
 }
 
 @MainActor
-final class FriendsChatTimelineViewController: UIViewController {
+final class FriendsChatTimelineViewController: UIViewController, UIGestureRecognizerDelegate {
+  var onBackgroundTap: (() -> Void)?
   var onPinnedToBottomChanged: ((Bool) -> Void)?
   var onReachedTopMessage: ((String) -> Void)?
   var onReply: ((FriendMessage) -> Void)?
@@ -103,6 +107,12 @@ final class FriendsChatTimelineViewController: UIViewController {
 
   private let chatLayout = CollectionViewChatLayout()
   private lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: chatLayout)
+  private lazy var backgroundTapRecognizer: UITapGestureRecognizer = {
+    let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleBackgroundTap))
+    recognizer.cancelsTouchesInView = false
+    recognizer.delegate = self
+    return recognizer
+  }()
 
   private var messages: [FriendMessage] = []
   private var quotedMessagesById: [String: FriendMessage] = [:]
@@ -181,6 +191,7 @@ final class FriendsChatTimelineViewController: UIViewController {
       FriendsChatTimelineCell.self,
       forCellWithReuseIdentifier: FriendsChatTimelineCell.reuseIdentifier)
     collectionView.translatesAutoresizingMaskIntoConstraints = false
+    collectionView.addGestureRecognizer(backgroundTapRecognizer)
 
     view.addSubview(collectionView)
     NSLayoutConstraint.activate([
@@ -189,6 +200,18 @@ final class FriendsChatTimelineViewController: UIViewController {
       collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
     ])
+  }
+
+  @objc
+  private func handleBackgroundTap() {
+    onBackgroundTap?()
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+  ) -> Bool {
+    true
   }
 
   func apply(
@@ -711,9 +734,7 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     if isTypingIndicatorItem(at: indexPath) {
       return .leading
     }
-    guard messages.indices.contains(indexPath.item) else { return .fullWidth }
-    let message = messages[indexPath.item]
-    return message.senderUserId == viewerUserId ? .trailing : .leading
+    return .fullWidth
   }
 
   private func isTypingIndicatorItem(at indexPath: IndexPath) -> Bool {
@@ -840,6 +861,34 @@ private final class FriendsChatTimelineCell: UICollectionViewCell {
       content()
     }
     .margins(.all, 0)
+  }
+
+  override func preferredLayoutAttributesFitting(
+    _ layoutAttributes: UICollectionViewLayoutAttributes
+  ) -> UICollectionViewLayoutAttributes {
+    let fittedAttributes = super.preferredLayoutAttributesFitting(layoutAttributes)
+    let targetWidth = layoutAttributes.size.width
+
+    guard targetWidth > 0 else { return fittedAttributes }
+
+    setNeedsLayout()
+    layoutIfNeeded()
+
+    let targetSize = CGSize(
+      width: targetWidth,
+      height: UIView.layoutFittingCompressedSize.height
+    )
+    let fittedSize = contentView.systemLayoutSizeFitting(
+      targetSize,
+      withHorizontalFittingPriority: .required,
+      verticalFittingPriority: .fittingSizeLevel
+    )
+
+    fittedAttributes.size = CGSize(
+      width: targetWidth,
+      height: ceil(fittedSize.height)
+    )
+    return fittedAttributes
   }
 }
 
