@@ -215,8 +215,8 @@ struct FriendProfileView: View {
         )
       }
 
-      if sectionType == .mutual || sectionType == .incoming {
-        let isHidden = friend.sharesWithMe?.hidden == true
+      if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
+        let isHidden = viewModel.isHiddenInFriendsTab(for: friend)
         Button {
           Task {
             await viewModel.toggleHidden(for: friend)

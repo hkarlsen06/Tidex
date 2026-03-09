@@ -23,9 +23,9 @@ Reference documentation for Tidex database tables and relationships.
 │ subscriptions │           │recurring_shifts│           └───────────────┘
 │notification_  │           │ wage_snapshots │
 │  preferences  │           │ push_devices  │
-│app_account_   │           │shift_reminders│
-│    tokens     │           │   _sent       │
-│               │           │   feedback    │
+│app_account_   │           │   feedback    │
+│    tokens     │           │               │
+│               │           │               │
 └───────────────┘           └───────────────┘
                                     │
                              jobs owns 1:N
@@ -75,7 +75,6 @@ Each user can have many of these records.
 | `auth.users` | `recurring_shifts` | One user → many recurring shift patterns |
 | `auth.users` | `wage_snapshots` | One user → many wage history records |
 | `auth.users` | `push_devices` | One user → many registered devices |
-| `auth.users` | `shift_reminders_sent` | One user → many sent reminder records |
 | `auth.users` | `feedback` | One user → many feedback submissions |
 | `jobs` | `user_shifts` | One job → many shifts belonging to that job |
 | `jobs` | `recurring_shifts` | One job → many recurring patterns belonging to that job |
@@ -292,18 +291,6 @@ Each user can have many of these records.
 | shift_reminders_enabled | `boolean` | default: true |
 | shift_reminder_minutes_array | `integer[]` | default: `{300}`, max 4 items |
 | updated_at | `timestamptz` | |
-
----
-
-### shift_reminders_sent
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| **id** | `uuid` | PK |
-| user_id | `uuid` | FK → auth.users |
-| shift_instance_key | `text` | format: `{type}:{id}:{date}:{start_time}` |
-| reminder_minutes | `integer` | values: 60, 120, 300, 1440 |
-| sent_at | `timestamptz` | |
 
 ---
 
