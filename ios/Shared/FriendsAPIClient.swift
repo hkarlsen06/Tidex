@@ -1,6 +1,10 @@
 // swiftlint:disable file_length function_body_length cyclomatic_complexity
 import Foundation
 
+#if canImport(UIKit)
+  import UIKit
+#endif
+
 // MARK: - Shared RPC Models (App + Watch + Widget)
 
 enum SharingRPCMode: Sendable {
@@ -1668,12 +1672,13 @@ private struct RPCErrorResponse: Codable {
 enum FriendsAPIClient {
   /// Base URL for Supabase REST RPC
   private static let rpcBaseURL = URL(string: "https://identity.tidex.no/rest/v1/rpc")
+  fileprivate static let webAppBaseURL = URL(string: "https://app.tidex.no")
 
   /// Fallback anon/publishable key for extension contexts lacking Info.plist config
   private static let fallbackAnonKey = "sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb"
 
   /// Shared URLSession with reasonable timeouts
-  private static let urlSession: URLSession = {
+  fileprivate static let urlSession: URLSession = {
     let config = URLSessionConfiguration.default
     config.timeoutIntervalForRequest = 15
     config.timeoutIntervalForResource = 30
@@ -1681,7 +1686,7 @@ enum FriendsAPIClient {
   }()
 
   /// Supabase anon key from Info.plist (or fallback)
-  private static var supabaseAnonKey: String {
+  fileprivate static var supabaseAnonKey: String {
     if let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
       !key.isEmpty
     {
@@ -1820,10 +1825,11 @@ enum FriendsAPIClient {
     )
   }
 
-  private static func callRPC<T: Decodable>(
+  fileprivate static func callRPC<T: Decodable>(
     functionName: String,
     body: [String: Any],
-    accessToken: String
+    accessToken: String,
+    expectsSingleObject: Bool = false
   ) async throws -> T {
     guard let rpcBaseURL else {
       throw FriendsAPIError.networkError(underlying: "Invalid RPC base URL")
@@ -1836,7 +1842,10 @@ enum FriendsAPIClient {
     request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
     request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue(
+      expectsSingleObject ? "application/vnd.pgrst.object+json" : "application/json",
+      forHTTPHeaderField: "Accept"
+    )
 
     do {
       request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -1942,4 +1951,375 @@ enum FriendsAPIClient {
     return date
   }
 }
+
+#if os(iOS)
+
+  struct ShareRecipient: Identifiable, Equatable {
+    let id: String
+    let displayName: String
+    let avatarURL: URL?
+    let statusText: String?
+  }
+
+  enum ShareExtensionMessagingClient {
+    private static let storageBucket = "message-attachments"
+    private static let storageBaseURL = URL(string: "https://identity.tidex.no/storage/v1/object")
+    private static let maxUploadBytes = 1_500_000
+
+    static func fetchRecipients() async throws -> [ShareRecipient] {
+      guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
+        throw FriendsAPIError.noAccessToken
+      }
+
+      let response = try await fetchFriends(accessToken: accessToken)
+      return response.friends
+        .filter(\.isMessageable)
+        .map(\.shareRecipient)
+        .sorted {
+          $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
+    }
+
+    static func sendSharedImage(
+      to recipientUserId: String,
+      message: String,
+      imageData: Data
+    ) async throws {
+      guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
+        throw FriendsAPIError.noAccessToken
+      }
+
+      let senderUserId = try normalizedUserId(from: accessToken)
+      let thread = try await getOrCreateDirectThread(
+        otherUserId: recipientUserId,
+        accessToken: accessToken
+      )
+      let preparedImage = try prepareImage(from: imageData)
+      let attachment = try await uploadImageAttachment(
+        preparedImage,
+        threadId: thread.threadId,
+        senderUserId: senderUserId,
+        accessToken: accessToken
+      )
+
+      let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
+      let payload: [String: Any] = [
+        "p_thread_id": thread.threadId,
+        "p_client_id": UUID().uuidString.lowercased(),
+        "p_body": trimmedMessage.isEmpty ? NSNull() : trimmedMessage,
+        "p_reply_to_message_id": NSNull(),
+        "p_attachments": [
+          [
+            "attachment_id": attachment.attachmentId,
+            "storage_path": attachment.storagePath,
+            "mime_type": attachment.mimeType,
+            "byte_size": attachment.byteSize,
+            "width": attachment.width as Any,
+            "height": attachment.height as Any,
+          ]
+        ],
+      ]
+
+      _ =
+        try await FriendsAPIClient.callRPC(
+          functionName: "send_message",
+          body: payload,
+          accessToken: accessToken,
+          expectsSingleObject: true
+        ) as ShareMessageAck
+    }
+
+    private static func getOrCreateDirectThread(
+      otherUserId: String,
+      accessToken: String
+    ) async throws -> ShareThreadRow {
+      try await FriendsAPIClient.callRPC(
+        functionName: "get_or_create_direct_thread",
+        body: ["p_other_user_id": otherUserId],
+        accessToken: accessToken,
+        expectsSingleObject: true
+      )
+    }
+
+    private static func fetchFriends(accessToken: String) async throws -> ShareFriendsResponse {
+      guard let webAppBaseURL = FriendsAPIClient.webAppBaseURL else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.invalid_web_app_base_url"))
+      }
+
+      let url = webAppBaseURL.appendingPathComponent("/api/sharing/friends")
+      var request = URLRequest(url: url)
+      request.httpMethod = "GET"
+      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+      request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+      do {
+        let (data, response) = try await FriendsAPIClient.urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+          throw FriendsAPIError.networkError(
+            underlying: String(localized: "share.error.invalid_friends_response"))
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+          return try JSONDecoder().decode(ShareFriendsResponse.self, from: data)
+        case 401:
+          throw FriendsAPIError.unauthorized
+        default:
+          throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
+        }
+      } catch let error as FriendsAPIError {
+        throw error
+      } catch {
+        throw FriendsAPIError.networkError(underlying: error.localizedDescription)
+      }
+    }
+
+    private static func uploadImageAttachment(
+      _ image: PreparedSharedImage,
+      threadId: String,
+      senderUserId: String,
+      accessToken: String
+    ) async throws -> ShareOutgoingAttachment {
+      guard let storageBaseURL else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.invalid_storage_base_url"))
+      }
+
+      let path = "\(threadId)/\(senderUserId)/\(image.id).\(image.fileExtension)"
+      let uploadURL =
+        storageBaseURL
+        .appendingPathComponent(storageBucket)
+        .appendingPathComponent(path)
+
+      var request = URLRequest(url: uploadURL)
+      request.httpMethod = "POST"
+      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+      request.setValue(FriendsAPIClient.supabaseAnonKey, forHTTPHeaderField: "apikey")
+      request.setValue(image.mimeType, forHTTPHeaderField: "Content-Type")
+      request.setValue("false", forHTTPHeaderField: "x-upsert")
+
+      do {
+        let (_, response) = try await FriendsAPIClient.urlSession.upload(
+          for: request, from: image.data)
+        guard let httpResponse = response as? HTTPURLResponse else {
+          throw FriendsAPIError.networkError(
+            underlying: String(localized: "share.error.invalid_storage_response"))
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+          throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
+        }
+      } catch let error as FriendsAPIError {
+        throw error
+      } catch {
+        throw FriendsAPIError.networkError(underlying: error.localizedDescription)
+      }
+
+      return ShareOutgoingAttachment(
+        attachmentId: image.id,
+        storagePath: path,
+        mimeType: image.mimeType,
+        byteSize: Int64(image.data.count),
+        width: image.width,
+        height: image.height
+      )
+    }
+
+    private static func normalizedUserId(from accessToken: String) throws -> String {
+      let components = accessToken.split(separator: ".")
+      guard components.count >= 2 else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.invalid_access_token"))
+      }
+
+      var payload = String(components[1])
+        .replacingOccurrences(of: "-", with: "+")
+        .replacingOccurrences(of: "_", with: "/")
+
+      let remainder = payload.count % 4
+      if remainder != 0 {
+        payload += String(repeating: "=", count: 4 - remainder)
+      }
+
+      guard let payloadData = Data(base64Encoded: payload) else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.invalid_token_payload"))
+      }
+
+      let jsonObject = try JSONSerialization.jsonObject(with: payloadData)
+      guard
+        let dictionary = jsonObject as? [String: Any],
+        let subject = dictionary["sub"] as? String,
+        !subject.isEmpty
+      else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.missing_token_subject"))
+      }
+
+      return subject.lowercased()
+    }
+
+    private static func prepareImage(from data: Data) throws -> PreparedSharedImage {
+      guard let originalImage = UIImage(data: data) else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.unable_to_read_image"))
+      }
+
+      let resizedImage = resizeImageIfNeeded(originalImage)
+      let compressedData = try makeJPEGData(from: resizedImage)
+
+      return PreparedSharedImage(
+        id: UUID().uuidString.lowercased(),
+        data: compressedData,
+        mimeType: "image/jpeg",
+        fileExtension: "jpg",
+        width: Int(resizedImage.size.width.rounded()),
+        height: Int(resizedImage.size.height.rounded())
+      )
+    }
+
+    private static func resizeImageIfNeeded(_ image: UIImage) -> UIImage {
+      let maxDimension: CGFloat = 1568
+      let maxSide = max(image.size.width, image.size.height)
+      guard maxSide > maxDimension else { return image }
+
+      let scale = maxDimension / maxSide
+      let targetSize = CGSize(
+        width: image.size.width * scale,
+        height: image.size.height * scale
+      )
+
+      let format = UIGraphicsImageRendererFormat.default()
+      format.scale = 1
+      format.opaque = false
+
+      let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
+      return renderer.image { _ in
+        image.draw(in: CGRect(origin: .zero, size: targetSize))
+      }
+    }
+
+    private static func makeJPEGData(from image: UIImage) throws -> Data {
+      let qualities: [CGFloat] = [0.82, 0.72, 0.62, 0.52]
+
+      for quality in qualities {
+        if let data = image.jpegData(compressionQuality: quality), data.count <= maxUploadBytes {
+          return data
+        }
+      }
+
+      guard let fallbackData = image.jpegData(compressionQuality: 0.45) else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.unable_to_encode_image"))
+      }
+
+      guard fallbackData.count <= maxUploadBytes else {
+        throw FriendsAPIError.networkError(
+          underlying: String(localized: "share.error.image_too_large"))
+      }
+
+      return fallbackData
+    }
+
+    private struct PreparedSharedImage {
+      let id: String
+      let data: Data
+      let mimeType: String
+      let fileExtension: String
+      let width: Int?
+      let height: Int?
+    }
+
+    private struct ShareThreadRow: Decodable {
+      let threadId: String
+
+      private enum CodingKeys: String, CodingKey {
+        case threadId = "thread_id"
+      }
+    }
+
+    private struct ShareMessageAck: Decodable {
+      let id: String
+    }
+
+    private struct ShareOutgoingAttachment {
+      let attachmentId: String
+      let storagePath: String
+      let mimeType: String
+      let byteSize: Int64
+      let width: Int?
+      let height: Int?
+    }
+
+    private struct ShareFriendsResponse: Decodable {
+      let friends: [ShareFriendRow]
+    }
+
+    private struct ShareFriendRow: Decodable {
+      let id: String
+      let email: String?
+      let phone: String?
+      let firstName: String?
+      let profilePictureUrl: String?
+      let oauthAvatarUrl: String?
+      let sharesWithMe: ShareDirection?
+      let iShareWith: ShareDirection?
+
+      var isMessageable: Bool {
+        sharesWithMe != nil || iShareWith != nil
+      }
+
+      var shareRecipient: ShareRecipient {
+        ShareRecipient(
+          id: id,
+          displayName: displayName,
+          avatarURL: effectiveAvatarURL,
+          statusText: contactInfo
+        )
+      }
+
+      private var displayName: String {
+        if let firstName, !firstName.isEmpty {
+          return firstName
+        }
+        if let email, !email.isEmpty {
+          return email.components(separatedBy: "@").first ?? email
+        }
+        if let phone, !phone.isEmpty {
+          return phone
+        }
+        return String(localized: "share.recipient.unknown")
+      }
+
+      private var contactInfo: String? {
+        if let firstName, !firstName.isEmpty {
+          if let email, !email.isEmpty {
+            return email
+          }
+          if let phone, !phone.isEmpty {
+            return phone
+          }
+        }
+
+        if let email, !email.isEmpty, let phone, !phone.isEmpty {
+          return phone
+        }
+
+        return nil
+      }
+
+      private var effectiveAvatarURL: URL? {
+        guard let urlString = profilePictureUrl ?? oauthAvatarUrl, !urlString.isEmpty else {
+          return nil
+        }
+
+        return URL(string: urlString)
+      }
+    }
+
+    private struct ShareDirection: Decodable {}
+  }
+
+#endif
 // swiftlint:enable file_length function_body_length cyclomatic_complexity
