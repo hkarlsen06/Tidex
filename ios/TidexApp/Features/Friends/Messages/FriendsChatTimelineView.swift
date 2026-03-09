@@ -149,7 +149,11 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       reloadedIndexPaths: [IndexPath],
       preservedSnapshot: VisibleContentSnapshot?
     )
-    case append(insertedIndexPaths: [IndexPath], reloadedIndexPaths: [IndexPath])
+    case append(
+      insertedIndexPaths: [IndexPath],
+      reloadedIndexPaths: [IndexPath],
+      preservedSnapshot: VisibleContentSnapshot?
+    )
     case reload(indexPaths: [IndexPath])
   }
 
@@ -382,7 +386,8 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       let insertedItems = Set(insertedIndexPaths.map(\.item))
       return .append(
         insertedIndexPaths: insertedIndexPaths,
-        reloadedIndexPaths: reloadedIndexPaths.filter { !insertedItems.contains($0.item) }
+        reloadedIndexPaths: reloadedIndexPaths.filter { !insertedItems.contains($0.item) },
+        preservedSnapshot: preservedSnapshot
       )
     }
 
@@ -441,12 +446,15 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
         }
       }
 
-    case .append(let insertedIndexPaths, let reloadedIndexPaths):
+    case .append(let insertedIndexPaths, let reloadedIndexPaths, let preservedSnapshot):
       collectionView.performBatchUpdates {
         collectionView.insertItems(at: insertedIndexPaths)
         reloadItems(at: reloadedIndexPaths)
       } completion: { [weak self] _ in
         self?.invalidateTimelineLayout()
+        if let preservedSnapshot, let self {
+          self.restoreContentOffset(using: preservedSnapshot)
+        }
         completion()
       }
 
@@ -541,10 +549,27 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   ) -> [IndexPath] {
     let previousMessages = previousState.messages
     let newMessages = nextState.messages
+    let previousMessagesById = Dictionary(
+      uniqueKeysWithValues: previousMessages.map { ($0.id, $0) })
     var indicesToReload = Set<Int>()
 
     for index in newMessages.indices {
       if previousMessages.indices.contains(index), previousMessages[index] != newMessages[index] {
+        indicesToReload.insert(index)
+      }
+
+      if let previousMessage = previousMessagesById[newMessages[index].id],
+        groupingContext(
+          for: previousMessage,
+          in: previousMessages,
+          viewerUserId: previousState.viewerUserId
+        )
+          != groupingContext(
+            for: newMessages[index],
+            in: newMessages,
+            viewerUserId: nextState.viewerUserId
+          )
+      {
         indicesToReload.insert(index)
       }
 
@@ -605,6 +630,26 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       indicesToReload
       .sorted()
       .map { IndexPath(item: $0, section: 0) }
+  }
+
+  private func groupingContext(
+    for message: FriendMessage,
+    in messages: [FriendMessage],
+    viewerUserId: String
+  ) -> FriendsChatMessageGroupContext {
+    guard let index = messages.firstIndex(where: { $0.id == message.id }) else {
+      return FriendsChatMessageGroupContext(position: .standalone, isCurrentUser: true)
+    }
+
+    let previousMessage = index > 0 ? messages[index - 1] : nil
+    let nextMessage = index < messages.count - 1 ? messages[index + 1] : nil
+
+    return FriendsChatMessageGrouping.context(
+      for: message,
+      previous: previousMessage,
+      next: nextMessage,
+      viewerUserId: viewerUserId
+    )
   }
 
   private func resolvedQuotedMessage(

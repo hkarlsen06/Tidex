@@ -362,6 +362,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       sharers = partitionedSharers.visible + partitionedOutgoingChatSharers.visible
       hiddenSharers = partitionedSharers.hidden + partitionedOutgoingChatSharers.hidden
       chatOnlyUserIds = Set(outgoingChatSharers.map(\.id))
+      if let selectedSharer,
+        !(sharers + hiddenSharers).contains(where: { $0.id == selectedSharer.id })
+      {
+        deselectSharer()
+      }
       hasFinishedInitialSharersLoad = true
       logger.info(
         """
@@ -506,7 +511,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   {
     let hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: viewerId)
 
-    friends.compactMap { friend in
+    return friends.compactMap { friend in
       guard friend.isOutgoingOnly, !sharerIds.contains(friend.id), let share = friend.iShareWith
       else {
         return nil

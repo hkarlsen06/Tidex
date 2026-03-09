@@ -215,4 +215,81 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(state?.lastReadMessageId, "message-1")
     XCTAssertEqual(state?.muted, true)
   }
+
+  func testSaveThreadsRemovesThreadsMissingFromLatestRefresh() async throws {
+    let repository = try makeRepository()
+
+    await repository.saveThreads(
+      [
+        FriendThread(
+          id: "thread-keep",
+          kind: .direct,
+          title: nil,
+          avatarUrl: nil,
+          metadataData: nil,
+          counterpartUserId: "friend-1",
+          counterpartDisplayName: "Keep",
+          counterpartProfilePictureUrl: nil,
+          counterpartOAuthAvatarUrl: nil,
+          lastMessageId: "message-keep",
+          lastMessageSenderId: "friend-1",
+          lastMessageAt: Date(timeIntervalSince1970: 1_700_000_100),
+          lastMessageBody: "Keep",
+          lastMessageHasImage: false,
+          unreadCount: 1,
+          muted: false,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+        ),
+        FriendThread(
+          id: "thread-remove",
+          kind: .direct,
+          title: nil,
+          avatarUrl: nil,
+          metadataData: nil,
+          counterpartUserId: "friend-2",
+          counterpartDisplayName: "Remove",
+          counterpartProfilePictureUrl: nil,
+          counterpartOAuthAvatarUrl: nil,
+          lastMessageId: "message-remove",
+          lastMessageSenderId: "friend-2",
+          lastMessageAt: Date(timeIntervalSince1970: 1_700_000_050),
+          lastMessageBody: "Remove",
+          lastMessageHasImage: false,
+          unreadCount: 2,
+          muted: false,
+          createdAt: Date(timeIntervalSince1970: 1_699_999_950)
+        ),
+      ],
+      for: viewerUserId
+    )
+
+    await repository.saveThreads(
+      [
+        FriendThread(
+          id: "thread-keep",
+          kind: .direct,
+          title: nil,
+          avatarUrl: nil,
+          metadataData: nil,
+          counterpartUserId: "friend-1",
+          counterpartDisplayName: "Keep",
+          counterpartProfilePictureUrl: nil,
+          counterpartOAuthAvatarUrl: nil,
+          lastMessageId: "message-keep",
+          lastMessageSenderId: "friend-1",
+          lastMessageAt: Date(timeIntervalSince1970: 1_700_000_100),
+          lastMessageBody: "Keep",
+          lastMessageHasImage: false,
+          unreadCount: 1,
+          muted: false,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+      ],
+      for: viewerUserId
+    )
+
+    XCTAssertEqual(repository.getThreads(for: viewerUserId).map(\.id), ["thread-keep"])
+    XCTAssertNil(repository.getThread(id: "thread-remove", viewerUserId: viewerUserId))
+    XCTAssertNil(repository.getThreadState(threadId: "thread-remove", viewerUserId: viewerUserId))
+  }
 }

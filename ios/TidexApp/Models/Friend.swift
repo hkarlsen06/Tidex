@@ -277,6 +277,7 @@ struct ShareCapacity: Codable, Equatable {
 /// Response from GET /api/sharing/friends
 struct FriendsAPIResponse: Codable {
   let friends: [Friend]
+  let blockedFriends: [Friend]?
   let capacity: ShareCapacity
 }
 

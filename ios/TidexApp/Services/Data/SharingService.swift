@@ -531,7 +531,11 @@ final class SharingService: ObservableObject {
 
   /// Fetch all friends (bidirectional relationships) and share capacity
   /// Used by the sharing management modal
-  func fetchAllFriends() async throws -> (friends: [Friend], capacity: ShareCapacity) {
+  func fetchAllFriends() async throws -> (
+    friends: [Friend],
+    blockedFriends: [Friend],
+    capacity: ShareCapacity
+  ) {
     do {
       logger.info("Starting fetchAllFriends...")
 
@@ -580,9 +584,13 @@ final class SharingService: ObservableObject {
       do {
         let apiResponse = try decoder.decode(FriendsAPIResponse.self, from: data)
         logger.info(
-          "Loaded \(apiResponse.friends.count) friends (capacity: \(apiResponse.capacity.currentCount)/\(apiResponse.capacity.limit))"
+          """
+          Loaded \(apiResponse.friends.count) friends and
+          \((apiResponse.blockedFriends ?? []).count) blocked friends
+          (capacity: \(apiResponse.capacity.currentCount)/\(apiResponse.capacity.limit))
+          """
         )
-        return (apiResponse.friends, apiResponse.capacity)
+        return (apiResponse.friends, apiResponse.blockedFriends ?? [], apiResponse.capacity)
       } catch let decodingError as DecodingError {
         // Log detailed decoding error info
         switch decodingError {
@@ -794,6 +802,34 @@ final class SharingService: ObservableObject {
       action: .shareBack,
       recipientId: recipientId
     )
+  }
+
+  /// Clears an abuse block for a user pair.
+  func unblockFriend(userId: String) async throws {
+    let params: [String: AnyJSON] = [
+      "p_other_user_id": .string(userId)
+    ]
+
+    logger.info("Unblocking user pair \(userId, privacy: .private)")
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      _ =
+        try await supabase
+        .rpc("unblock_user_pair", params: params)
+        .execute()
+
+      logger.info("Successfully unblocked user pair")
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw SharingServiceError.decodingError(underlying: error)
+    } catch {
+      throw SharingServiceError.networkError(underlying: error)
+    }
   }
 
   /// Toggle muted status for a specific sharer

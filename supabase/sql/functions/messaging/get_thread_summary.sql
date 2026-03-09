@@ -137,7 +137,9 @@ AS $function$
   LEFT JOIN public.user_settings us
     ON us.user_id = c.counterpart_user_id
   LEFT JOIN public.messages lm
-    ON lm.id = c.last_message_id;
+    ON lm.id = c.last_message_id
+  WHERE c.counterpart_user_id IS NULL
+     OR NOT public.is_user_pair_abuse_blocked(c.counterpart_user_id);
 $function$;
 
 REVOKE EXECUTE ON FUNCTION public.get_thread_summary(uuid) FROM public;

@@ -35,9 +35,21 @@ AS $function$
     FROM public.thread_memberships tm
     JOIN public.threads t
       ON t.id = tm.thread_id
+    LEFT JOIN public.direct_threads dt
+      ON dt.thread_id = t.id
     WHERE auth.uid() IS NOT NULL
       AND tm.user_id = auth.uid()
       AND tm.status = 'active'
+      AND (
+        dt.thread_id IS NULL
+        OR NOT public.is_user_pair_abuse_blocked(
+          CASE
+            WHEN dt.user_low_id = auth.uid() THEN dt.user_high_id
+            WHEN dt.user_high_id = auth.uid() THEN dt.user_low_id
+            ELSE NULL
+          END
+        )
+      )
       AND (
         p_before_last_message_at IS NULL
         OR p_before_thread_id IS NULL

@@ -3,6 +3,7 @@ import SwiftData
 
 extension LocalStoreActor {
   func saveThreadSummaries(_ threads: [FriendThread], for viewerUserId: String) throws {
+    try reconcileMissingThreads(keeping: threads.map(\.id), for: viewerUserId)
     for thread in threads {
       try saveThreadSummary(thread, for: viewerUserId)
     }
@@ -349,5 +350,48 @@ extension LocalStoreActor {
     try deleteAttachments(messageId: id, viewerUserId: viewerUserId)
     try deleteReactions(messageId: id, viewerUserId: viewerUserId)
     modelContext.delete(message)
+  }
+
+  private func reconcileMissingThreads(keeping threadIds: [String], for viewerUserId: String) throws
+  {
+    let descriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { $0.viewerUserId == viewerUserId }
+    )
+    let idsToKeep = Set(threadIds)
+
+    for existingThread in try modelContext.fetch(descriptor)
+    where !idsToKeep.contains(existingThread.id) {
+      try deleteThread(id: existingThread.id, viewerUserId: viewerUserId)
+    }
+  }
+
+  private func deleteThread(id: String, viewerUserId: String) throws {
+    let threadDescriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { localThread in
+        localThread.id == id && localThread.viewerUserId == viewerUserId
+      }
+    )
+
+    if let existingThread = try modelContext.fetch(threadDescriptor).first {
+      modelContext.delete(existingThread)
+    }
+
+    let threadStateCompositeKey = "\(viewerUserId):\(id)"
+    let threadStateDescriptor = FetchDescriptor<LocalThreadState>(
+      predicate: #Predicate { $0.compositeKey == threadStateCompositeKey }
+    )
+    for existingState in try modelContext.fetch(threadStateDescriptor) {
+      modelContext.delete(existingState)
+    }
+
+    let messageDescriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.threadId == id && localMessage.viewerUserId == viewerUserId
+      }
+    )
+    let messageIds = try modelContext.fetch(messageDescriptor).map(\.id)
+    for messageId in messageIds {
+      try deleteMessage(id: messageId, viewerUserId: viewerUserId)
+    }
   }
 }
