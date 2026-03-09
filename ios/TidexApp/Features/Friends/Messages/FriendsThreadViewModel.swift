@@ -40,7 +40,6 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var isLoading = false
   @Published private(set) var isLoadingOlderMessages = false
   @Published private(set) var hasMoreHistoricalMessages = true
-  @Published private(set) var isSending = false
   @Published private(set) var isThreadReadOnly = false
   @Published private(set) var counterpartReadState: FriendThreadState?
   @Published private(set) var counterpartIsTyping = false
@@ -199,6 +198,9 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func stopRealtime() async {
+    if FriendsChatPresentationState.shared.activeThreadId == route.threadId {
+      return
+    }
     await stopTypingIfNeeded()
     counterpartTypingTimeoutTask?.cancel()
     counterpartTypingTimeoutTask = nil

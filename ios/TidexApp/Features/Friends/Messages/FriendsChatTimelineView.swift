@@ -94,6 +94,38 @@ struct FriendsChatTimelineConfiguration {
   let scrollToBottomTrigger: Int
   let restoreScrollTargetMessageId: String?
   let replyScrollTargetMessageId: String?
+
+  func withBottomContentInset(_ bottomContentInset: CGFloat) -> Self {
+    FriendsChatTimelineConfiguration(
+      messages: messages,
+      quotedMessagesById: quotedMessagesById,
+      viewerUserId: viewerUserId,
+      counterpartLastReadMessageId: counterpartLastReadMessageId,
+      counterpartLastReadAt: counterpartLastReadAt,
+      currentUserDisplayName: currentUserDisplayName,
+      counterpartDisplayName: counterpartDisplayName,
+      counterpartAvatarUrl: counterpartAvatarUrl,
+      highlightedMessageId: highlightedMessageId,
+      showTypingIndicator: showTypingIndicator,
+      bottomContentInset: bottomContentInset,
+      scrollToBottomTrigger: scrollToBottomTrigger,
+      restoreScrollTargetMessageId: restoreScrollTargetMessageId,
+      replyScrollTargetMessageId: replyScrollTargetMessageId
+    )
+  }
+}
+
+struct FriendsChatViewportAnchor {
+  static func shouldMaintainBottomAnchor(
+    didInitialScroll: Bool,
+    wasPinnedToBottom: Bool,
+    hasUserAdjustedViewport: Bool,
+    hasPendingTargetedScroll: Bool
+  ) -> Bool {
+    didInitialScroll
+      && !hasPendingTargetedScroll
+      && (wasPinnedToBottom || !hasUserAdjustedViewport)
+  }
 }
 
 @MainActor
@@ -127,11 +159,15 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   private var counterpartAvatarUrl: String?
   private var highlightedMessageId: String?
   private var showTypingIndicator = false
+  private var baseBottomContentInset: CGFloat = 0
   private var lastAppliedBottomInset: CGFloat = 0
   private var lastScrollToBottomTrigger = 0
   private var lastRestoreTargetMessageId: String?
   private var lastReplyTargetMessageId: String?
   private var didInitialScroll = false
+  private var hasUserAdjustedViewport = false
+  private var lastKnownCollectionViewBoundsHeight: CGFloat = 0
+  private var boundsChangeSnapshot: ChatLayoutPositionSnapshot?
   private var isPinnedToBottom = true {
     didSet {
       guard oldValue != isPinnedToBottom else { return }
@@ -141,25 +177,20 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
 
   private enum UpdatePlan {
     case none
-    case fullReload(preservedSnapshot: VisibleContentSnapshot?)
+    case fullReload(preservedSnapshot: ChatLayoutPositionSnapshot?)
     case insertTypingIndicator(indexPath: IndexPath, reloadedIndexPaths: [IndexPath])
     case removeTypingIndicator(indexPath: IndexPath, reloadedIndexPaths: [IndexPath])
     case prepend(
       insertedIndexPaths: [IndexPath],
       reloadedIndexPaths: [IndexPath],
-      preservedSnapshot: VisibleContentSnapshot?
+      preservedSnapshot: ChatLayoutPositionSnapshot?
     )
     case append(
       insertedIndexPaths: [IndexPath],
       reloadedIndexPaths: [IndexPath],
-      preservedSnapshot: VisibleContentSnapshot?
+      preservedSnapshot: ChatLayoutPositionSnapshot?
     )
     case reload(indexPaths: [IndexPath])
-  }
-
-  private struct VisibleContentSnapshot {
-    let messageId: String
-    let topOffset: CGFloat
   }
 
   private struct RenderState {
@@ -215,6 +246,49 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     ])
   }
 
+  override func viewWillLayoutSubviews() {
+    let currentBoundsHeight = collectionView.bounds.height
+    if lastKnownCollectionViewBoundsHeight > 0,
+      currentBoundsHeight != lastKnownCollectionViewBoundsHeight
+    {
+      let shouldMaintainBottomAnchor =
+        FriendsChatViewportAnchor
+        .shouldMaintainBottomAnchor(
+          didInitialScroll: didInitialScroll,
+          wasPinnedToBottom: isNearBottom(),
+          hasUserAdjustedViewport: hasUserAdjustedViewport,
+          hasPendingTargetedScroll: false
+        )
+      boundsChangeSnapshot =
+        shouldMaintainBottomAnchor ? chatLayout.getContentOffsetSnapshot(from: .bottom) : nil
+    }
+
+    super.viewWillLayoutSubviews()
+  }
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+
+    let currentBoundsHeight = collectionView.bounds.height
+    defer {
+      lastKnownCollectionViewBoundsHeight = currentBoundsHeight
+    }
+
+    guard didInitialScroll, currentBoundsHeight > 0 else { return }
+    guard lastKnownCollectionViewBoundsHeight > 0,
+      currentBoundsHeight != lastKnownCollectionViewBoundsHeight
+    else {
+      return
+    }
+
+    if let boundsChangeSnapshot, !messages.isEmpty {
+      chatLayout.restoreContentOffset(with: boundsChangeSnapshot)
+    }
+
+    boundsChangeSnapshot = nil
+    updatePinnedState()
+  }
+
   @objc
   private func handleBackgroundTap() {
     onBackgroundTap?()
@@ -267,7 +341,13 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     self.counterpartAvatarUrl = config.counterpartAvatarUrl
     self.highlightedMessageId = config.highlightedMessageId
     self.showTypingIndicator = config.showTypingIndicator
-    updateInsets(config.bottomContentInset)
+    baseBottomContentInset = config.bottomContentInset
+    updateInsets(
+      maintainingBottomAnchor: shouldMaintainBottomAnchor(
+        hasPendingTargetedScroll: config.restoreScrollTargetMessageId != nil
+          || config.replyScrollTargetMessageId != nil
+      )
+    )
 
     apply(updatePlan: updatePlan) { [weak self] in
       guard let self else { return }
@@ -276,12 +356,10 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
 
       if !didInitialScroll, !config.messages.isEmpty {
         didInitialScroll = true
+        hasUserAdjustedViewport = false
         scrollToBottom(animated: false)
       } else if config.scrollToBottomTrigger != lastScrollToBottomTrigger {
-        scrollToBottom(animated: true)
-      } else if wasPinnedToBottom,
-        didAppendMessages(old: previousState.messages, new: config.messages)
-      {
+        hasUserAdjustedViewport = false
         scrollToBottom(animated: true)
       }
 
@@ -311,11 +389,26 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     }
   }
 
-  private func updateInsets(_ bottomContentInset: CGFloat) {
+  private func updateInsets(maintainingBottomAnchor: Bool = false) {
+    let bottomContentInset = baseBottomContentInset
     guard lastAppliedBottomInset != bottomContentInset else { return }
+    let bottomSnapshot =
+      maintainingBottomAnchor ? chatLayout.getContentOffsetSnapshot(from: .bottom) : nil
     lastAppliedBottomInset = bottomContentInset
     collectionView.contentInset.bottom = bottomContentInset
     collectionView.verticalScrollIndicatorInsets.bottom = bottomContentInset
+
+    if let bottomSnapshot {
+      chatLayout.restoreContentOffset(with: bottomSnapshot)
+    }
+  }
+
+  func setBottomContentInset(_ bottomContentInset: CGFloat) {
+    baseBottomContentInset = bottomContentInset
+    updateInsets(
+      maintainingBottomAnchor: shouldMaintainBottomAnchor(hasPendingTargetedScroll: false)
+    )
+    updatePinnedState()
   }
 
   private func makeUpdatePlan(
@@ -362,6 +455,24 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
 
     if previousIds == newIds {
       return reloadedIndexPaths.isEmpty ? .none : .reload(indexPaths: reloadedIndexPaths)
+    }
+
+    if hasEquivalentMessageOrder(previousMessages: previousMessages, newMessages: newMessages) {
+      let indexPathsWithIdentityChanges = zip(
+        previousMessages.indices, zip(previousMessages, newMessages)
+      )
+      .compactMap { index, pair in
+        let (previousMessage, newMessage) = pair
+        return previousMessage.id == newMessage.id ? nil : IndexPath(item: index, section: 0)
+      }
+      let mergedIndexPaths = Set(reloadedIndexPaths + indexPathsWithIdentityChanges)
+      let sortedIndexPaths = mergedIndexPaths.sorted { lhs, rhs in
+        if lhs.section == rhs.section {
+          return lhs.item < rhs.item
+        }
+        return lhs.section < rhs.section
+      }
+      return sortedIndexPaths.isEmpty ? .none : .reload(indexPaths: sortedIndexPaths)
     }
 
     if newMessages.count > previousMessages.count,
@@ -447,15 +558,17 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       }
 
     case .append(let insertedIndexPaths, let reloadedIndexPaths, let preservedSnapshot):
-      collectionView.performBatchUpdates {
-        collectionView.insertItems(at: insertedIndexPaths)
-        reloadItems(at: reloadedIndexPaths)
-      } completion: { [weak self] _ in
-        self?.invalidateTimelineLayout()
-        if let preservedSnapshot, let self {
-          self.restoreContentOffset(using: preservedSnapshot)
+      UIView.performWithoutAnimation {
+        collectionView.performBatchUpdates {
+          collectionView.insertItems(at: insertedIndexPaths)
+          reloadItems(at: reloadedIndexPaths)
+        } completion: { [weak self] _ in
+          self?.invalidateTimelineLayout()
+          if let preservedSnapshot, let self {
+            self.restoreContentOffset(using: preservedSnapshot)
+          }
+          completion()
         }
-        completion()
       }
 
     case .reload(let indexPaths):
@@ -478,64 +591,14 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     collectionView.layoutIfNeeded()
   }
 
-  private func visibleContentSnapshot(shouldPreserve: Bool) -> VisibleContentSnapshot? {
+  private func visibleContentSnapshot(shouldPreserve: Bool) -> ChatLayoutPositionSnapshot? {
     guard shouldPreserve else { return nil }
 
-    let visibleIndexPaths = collectionView.indexPathsForVisibleItems
-      .filter { messages.indices.contains($0.item) }
-      .sorted { lhs, rhs in
-        let lhsMinY =
-          collectionView.layoutAttributesForItem(at: lhs)?.frame.minY ?? .greatestFiniteMagnitude
-        let rhsMinY =
-          collectionView.layoutAttributesForItem(at: rhs)?.frame.minY ?? .greatestFiniteMagnitude
-
-        if lhsMinY == rhsMinY {
-          return lhs.item < rhs.item
-        }
-
-        return lhsMinY < rhsMinY
-      }
-
-    guard let topIndexPath = visibleIndexPaths.first,
-      let attributes = collectionView.layoutAttributesForItem(at: topIndexPath)
-    else {
-      return nil
-    }
-
-    let topOffset =
-      collectionView.contentOffset.y
-      + collectionView.adjustedContentInset.top
-      - attributes.frame.minY
-
-    return VisibleContentSnapshot(
-      messageId: messages[topIndexPath.item].id,
-      topOffset: topOffset
-    )
+    return chatLayout.getContentOffsetSnapshot(from: .top)
   }
 
-  private func restoreContentOffset(using snapshot: VisibleContentSnapshot) {
-    guard let index = messages.firstIndex(where: { $0.id == snapshot.messageId }) else { return }
-
-    let indexPath = IndexPath(item: index, section: 0)
-    collectionView.layoutIfNeeded()
-
-    guard let attributes = collectionView.layoutAttributesForItem(at: indexPath) else { return }
-
-    let minOffsetY = -collectionView.adjustedContentInset.top
-    let maxOffsetY = max(
-      minOffsetY,
-      collectionView.contentSize.height
-        - collectionView.bounds.height
-        + collectionView.adjustedContentInset.bottom
-    )
-    let targetOffsetY =
-      attributes.frame.minY + snapshot.topOffset - collectionView.adjustedContentInset.top
-    let clampedOffsetY = min(max(targetOffsetY, minOffsetY), maxOffsetY)
-
-    collectionView.setContentOffset(
-      CGPoint(x: collectionView.contentOffset.x, y: clampedOffsetY),
-      animated: false
-    )
+  private func restoreContentOffset(using snapshot: ChatLayoutPositionSnapshot) {
+    chatLayout.restoreContentOffset(with: snapshot)
   }
 
   private func reloadItems(at indexPaths: [IndexPath]) {
@@ -632,6 +695,19 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       .map { IndexPath(item: $0, section: 0) }
   }
 
+  private func hasEquivalentMessageOrder(
+    previousMessages: [FriendMessage],
+    newMessages: [FriendMessage]
+  ) -> Bool {
+    guard previousMessages.count == newMessages.count else { return false }
+
+    return zip(previousMessages, newMessages).allSatisfy { previousMessage, newMessage in
+      previousMessage.id == newMessage.id
+        || (!previousMessage.clientId.isEmpty
+          && previousMessage.clientId == newMessage.clientId)
+    }
+  }
+
   private func groupingContext(
     for message: FriendMessage,
     in messages: [FriendMessage],
@@ -658,21 +734,6 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     quotedMessagesById: [String: FriendMessage]
   ) -> FriendMessage? {
     messages.first(where: { $0.id == messageId }) ?? quotedMessagesById[messageId]
-  }
-
-  private func didAppendMessages(old: [FriendMessage], new: [FriendMessage]) -> Bool {
-    guard !new.isEmpty else { return false }
-    guard !old.isEmpty else { return true }
-
-    let prependedOnly =
-      new.count > old.count
-      && new.first?.id != old.first?.id
-      && new.last?.id == old.last?.id
-    if prependedOnly {
-      return false
-    }
-
-    return new.count != old.count || new.last?.id != old.last?.id
   }
 
   private func scrollToBottom(animated: Bool) {
@@ -709,6 +770,15 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
 
   private func updatePinnedState() {
     isPinnedToBottom = isNearBottom()
+  }
+
+  private func shouldMaintainBottomAnchor(hasPendingTargetedScroll: Bool) -> Bool {
+    FriendsChatViewportAnchor.shouldMaintainBottomAnchor(
+      didInitialScroll: didInitialScroll,
+      wasPinnedToBottom: isNearBottom(),
+      hasUserAdjustedViewport: hasUserAdjustedViewport,
+      hasPendingTargetedScroll: hasPendingTargetedScroll
+    )
   }
 }
 
@@ -835,6 +905,10 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
 }
 
 extension FriendsChatTimelineViewController: UICollectionViewDelegate {
+  func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+    hasUserAdjustedViewport = true
+  }
+
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     updatePinnedState()
   }
