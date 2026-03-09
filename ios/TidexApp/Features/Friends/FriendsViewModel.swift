@@ -149,6 +149,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   // MARK: - Private State
 
   private var cachedUserId: String?
+  private var locallyBlockedUserIds: Set<String> = []
   private var monthContextCancellable: AnyCancellable?
   private var lastObservedYear: Int = 0
   private var lastObservedMonth: Int = 0
@@ -249,7 +250,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     let cachedSharers = sharedShiftsRepository.getSharers(for: userId, includeHidden: true)
     guard !cachedSharers.isEmpty else { return }
-    let partitionedSharers = partitionSharers(cachedSharers)
+    let partitionedSharers = partitionSharers(filteredBlockedUsers(from: cachedSharers))
 
     sharers = partitionedSharers.visible
     hiddenSharers = partitionedSharers.hidden
@@ -317,13 +318,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         if !cachedSharers.isEmpty {
           // Load cached shift previews at the same time
           let cachedPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
-          let partitionedSharers = partitionSharers(cachedSharers)
+          let filteredCachedSharers = filteredBlockedUsers(from: cachedSharers)
+          let partitionedSharers = partitionSharers(filteredCachedSharers)
 
           // Update both together so UI renders with complete data and correct sorting
           sharers = partitionedSharers.visible
           hiddenSharers = partitionedSharers.hidden
           if !cachedPreviews.isEmpty {
-            shiftPreviews = cachedPreviews
+            shiftPreviews = cachedPreviews.filter { !locallyBlockedUserIds.contains($0.key) }
           }
           loadedFromCache = true
           hasFinishedInitialSharersLoad = true
@@ -347,21 +349,30 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       async let friendsTask = try? sharingService.fetchAllFriends()
 
       let freshSharers = try await sharersTask
+      let friendsResult = await friendsTask
+      let blockedUserIds = Set(friendsResult?.blockedFriends.map { $0.id } ?? [])
+      if friendsResult != nil {
+        locallyBlockedUserIds = blockedUserIds
+      }
+
+      let effectiveBlockedUserIds = locallyBlockedUserIds.union(blockedUserIds)
+      let filteredFreshSharers = freshSharers.filter { !effectiveBlockedUserIds.contains($0.id) }
       let outgoingChatSharers = chatOnlySharers(
-        from: await friendsTask?.friends ?? [],
-        excluding: Set(freshSharers.map(\.id)),
+        from: friendsResult?.friends ?? [],
+        excluding: Set(filteredFreshSharers.map { $0.id }).union(effectiveBlockedUserIds),
         viewerId: userId
       )
       logger.info(
-        "Network returned \(freshSharers.count) sharers: \(freshSharers.map { $0.displayName })")
+        "Network returned \(filteredFreshSharers.count) non-blocked sharers: \(filteredFreshSharers.map { $0.displayName })"
+      )
 
-      let partitionedSharers = partitionSharers(freshSharers)
+      let partitionedSharers = partitionSharers(filteredFreshSharers)
       let partitionedOutgoingChatSharers = partitionSharers(outgoingChatSharers)
 
       // Update UI with fresh data
       sharers = partitionedSharers.visible + partitionedOutgoingChatSharers.visible
       hiddenSharers = partitionedSharers.hidden + partitionedOutgoingChatSharers.hidden
-      chatOnlyUserIds = Set(outgoingChatSharers.map(\.id))
+      chatOnlyUserIds = Set(outgoingChatSharers.map { $0.id })
       if let selectedSharer,
         !(sharers + hiddenSharers).contains(where: { $0.id == selectedSharer.id })
       {
@@ -376,7 +387,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       )
 
       // Save to cache
-      await sharedShiftsRepository.saveSharers(freshSharers, for: userId)
+      await sharedShiftsRepository.saveSharers(filteredFreshSharers, for: userId)
 
       logger.info(
         "Loaded \(self.sharers.count) visible sharers and \(self.hiddenSharers.count) hidden sharers"
@@ -483,6 +494,26 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     isLoadingPreviews = false
+  }
+
+  func handleBlockedUser(_ userId: String) {
+    locallyBlockedUserIds.insert(userId)
+    sharers.removeAll { $0.id == userId }
+    hiddenSharers.removeAll { $0.id == userId }
+    chatOnlyUserIds.remove(userId)
+    shiftPreviews.removeValue(forKey: userId)
+
+    if selectedSharer?.id == userId {
+      deselectSharer()
+    }
+  }
+
+  func handleUnblockedUser(_ userId: String) {
+    locallyBlockedUserIds.remove(userId)
+  }
+
+  private func filteredBlockedUsers(from users: [SharedUser]) -> [SharedUser] {
+    users.filter { !locallyBlockedUserIds.contains($0.id) }
   }
 
   private func partitionSharers(_ sharers: [SharedUser]) -> (

@@ -250,6 +250,7 @@ struct WageyView: View {
 
       ChatInputField(
         inputText: $inputText,
+        focusedHorizontalPadding: Spacing.xs,
         onSend: { content in
           await handleSendMessage(content)
         },

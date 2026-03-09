@@ -206,13 +206,15 @@ struct FriendProfileView: View {
   @ViewBuilder
   private func actionsSection(friend: Friend, sectionType: FriendSectionType) -> some View {
     Section {
-      Button {
-        onMessageTapped?()
-      } label: {
-        Label(
-          String(localized: .friendsChatMessageFriend(sharedUser.displayName)),
-          systemImage: "message.fill"
-        )
+      if let onMessageTapped {
+        Button {
+          onMessageTapped()
+        } label: {
+          Label(
+            String(localized: .friendsChatMessageFriend(sharedUser.displayName)),
+            systemImage: "message.fill"
+          )
+        }
       }
 
       if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {

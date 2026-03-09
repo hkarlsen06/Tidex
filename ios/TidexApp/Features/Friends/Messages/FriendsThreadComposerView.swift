@@ -109,6 +109,7 @@ struct FriendsThreadComposerHostedView: View {
         inputText: bridge.draftBinding,
         placeholder: bridge.placeholder,
         horizontalPadding: MonthPickerLayout.horizontalPadding,
+        focusedHorizontalPadding: Spacing.xs,
         bottomPadding: MonthPickerLayout.bottomPadding,
         showsCameraShortcut: true,
         collapsesAttachmentButtonForLongDrafts: true,

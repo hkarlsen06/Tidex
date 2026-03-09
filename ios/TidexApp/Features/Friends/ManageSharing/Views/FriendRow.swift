@@ -27,6 +27,7 @@ struct FriendRow: View {
   let onToggleMuted: () -> Void
   let onToggleOwnerMuted: () -> Void
   let onToggleHidden: () -> Void
+  let onBlock: () -> Void
   let onRemove: () -> Void
 
   private var nameLayoutDirection: LayoutDirection {
@@ -182,6 +183,12 @@ struct FriendRow: View {
       }
 
       Button(role: .destructive) {
+        onBlock()
+      } label: {
+        Label(String(localized: .friendsChatBlockUser), systemImage: "hand.raised.fill")
+      }
+
+      Button(role: .destructive) {
         onRemove()
       } label: {
         Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
@@ -222,6 +229,7 @@ struct FriendRow: View {
         onToggleMuted: {},
         onToggleOwnerMuted: {},
         onToggleHidden: {},
+        onBlock: {},
         onRemove: {}
       )
     }
@@ -249,6 +257,7 @@ struct FriendRow: View {
         onToggleMuted: {},
         onToggleOwnerMuted: {},
         onToggleHidden: {},
+        onBlock: {},
         onRemove: {}
       )
     }
@@ -278,6 +287,7 @@ struct FriendRow: View {
         onToggleMuted: {},
         onToggleOwnerMuted: {},
         onToggleHidden: {},
+        onBlock: {},
         onRemove: {}
       )
     }

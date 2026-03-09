@@ -245,7 +245,6 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func sendMessage(content: String, image: ImageAttachment?) async -> Bool {
     guard !isThreadReadOnly else {
-      sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
       return false
     }
 
@@ -310,7 +309,6 @@ final class FriendsThreadViewModel: ObservableObject {
     let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedEmoji.isEmpty else { return }
     guard !isThreadReadOnly else {
-      sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
       return
     }
     guard let message = repository.getMessage(id: messageId, viewerUserId: viewerUserId),
@@ -366,11 +364,12 @@ final class FriendsThreadViewModel: ObservableObject {
     try await service.blockUserPair(otherUserId: counterpartUserId)
     draft = ""
     draftReplyTarget = nil
-    sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
+    sendErrorMessage = nil
     isThreadReadOnly = true
     NotificationCenter.default.post(
       name: Notification.Name("friendsVisibilityChanged"),
-      object: nil
+      object: nil,
+      userInfo: ["blockedUserId": counterpartUserId]
     )
   }
 
