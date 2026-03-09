@@ -127,6 +127,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       table: "messages",
       filter: .eq("thread_id", value: threadId)
     )
+    let reactionChanges = channel.postgresChange(
+      AnyAction.self,
+      schema: "public",
+      table: "message_reactions",
+      filter: .eq("thread_id", value: threadId)
+    )
     let stateChanges = channel.postgresChange(
       AnyAction.self,
       schema: "public",
@@ -163,6 +169,13 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           guard let self else { return }
           for await action in messageChanges {
             await self.handleThreadDetailMessageAction(
+              action, threadId: threadId, viewerUserId: viewerUserId)
+          }
+        },
+        Task { [weak self] in
+          guard let self else { return }
+          for await action in reactionChanges {
+            await self.handleThreadDetailReactionAction(
               action, threadId: threadId, viewerUserId: viewerUserId)
           }
         },
@@ -316,6 +329,20 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     notifyThreadUpdated(threadId: threadId)
   }
 
+  private func handleThreadDetailReactionAction(
+    _ action: AnyAction,
+    threadId: String,
+    viewerUserId: String
+  ) async {
+    guard Self.extractThreadId(from: action) == threadId else { return }
+
+    if let messageId = Self.extractMessageId(from: action) {
+      await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
+    } else {
+      await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
+    }
+  }
+
   private func notifyThreadUpdated(threadId: String) {
     NotificationCenter.default.post(
       name: .friendsThreadDidUpdate,
@@ -427,11 +454,11 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   static func extractMessageId(from action: AnyAction) -> String? {
     switch action {
     case .insert(let insert):
-      return insert.record["id"]?.stringValue
+      return insert.record["id"]?.stringValue ?? insert.record["message_id"]?.stringValue
     case .update(let update):
-      return update.record["id"]?.stringValue
+      return update.record["id"]?.stringValue ?? update.record["message_id"]?.stringValue
     case .delete(let delete):
-      return delete.oldRecord["id"]?.stringValue
+      return delete.oldRecord["id"]?.stringValue ?? delete.oldRecord["message_id"]?.stringValue
     }
   }
 

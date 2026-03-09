@@ -25,6 +25,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
   func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage
+  func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage
   func createAbuseReport(
     threadId: String,
     reportedUserId: String,
@@ -333,6 +334,34 @@ final class FriendsMessagingService: ObservableObject {
     }
   }
 
+  func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
+    let params: [String: AnyJSON] = [
+      "p_message_id": .string(messageId),
+      "p_emoji": .string(emoji),
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let row: MessagingMessageRow =
+        try await supabase
+        .rpc("toggle_message_reaction", params: params)
+        .single()
+        .execute()
+        .value
+
+      return row.toFriendMessage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
   func createAbuseReport(
     threadId: String,
     reportedUserId: String,
@@ -602,6 +631,7 @@ private struct MessagingMessageRow: Decodable {
   let deletedAt: Date?
   let metadata: AnyJSON?
   let attachments: [MessagingAttachmentRow]
+  let reactions: [MessagingReactionRow]?
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -616,6 +646,7 @@ private struct MessagingMessageRow: Decodable {
     case deletedAt = "deleted_at"
     case metadata
     case attachments
+    case reactions
   }
 
   func toFriendMessage() -> FriendMessage {
@@ -632,6 +663,7 @@ private struct MessagingMessageRow: Decodable {
       deletedAt: deletedAt,
       metadataData: Self.encode(metadata),
       attachments: attachments.map { $0.toFriendAttachment() },
+      reactions: (reactions ?? []).map { $0.toFriendReaction() },
       sendState: .sent,
       failureMessage: nil
     )
@@ -640,6 +672,26 @@ private struct MessagingMessageRow: Decodable {
   private static func encode(_ value: AnyJSON?) -> Data? {
     guard let value else { return nil }
     return try? JSONEncoder().encode(value)
+  }
+}
+
+private struct MessagingReactionRow: Decodable {
+  let emoji: String
+  let count: Int
+  let viewerHasReacted: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case emoji
+    case count
+    case viewerHasReacted = "viewer_has_reacted"
+  }
+
+  func toFriendReaction() -> FriendMessageReaction {
+    FriendMessageReaction(
+      emoji: emoji,
+      count: count,
+      viewerHasReacted: viewerHasReacted
+    )
   }
 }
 

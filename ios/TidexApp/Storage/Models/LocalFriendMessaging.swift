@@ -217,6 +217,43 @@ final class LocalMessageAttachment {
   }
 }
 
+// MARK: - Local Message Reaction
+
+@Model
+final class LocalMessageReaction {
+  @Attribute(.unique)
+  var compositeKey: String
+  var viewerUserId: String
+  var threadId: String
+  var messageId: String
+  var reactionIndex: Int
+  var emoji: String
+  var count: Int
+  var viewerHasReacted: Bool
+  var updatedAt: Date
+
+  init(
+    viewerUserId: String,
+    threadId: String,
+    messageId: String,
+    reactionIndex: Int,
+    emoji: String,
+    count: Int,
+    viewerHasReacted: Bool,
+    updatedAt: Date = Date()
+  ) {
+    self.compositeKey = "\(viewerUserId):\(messageId):\(emoji)"
+    self.viewerUserId = viewerUserId
+    self.threadId = threadId
+    self.messageId = messageId
+    self.reactionIndex = reactionIndex
+    self.emoji = emoji
+    self.count = count
+    self.viewerHasReacted = viewerHasReacted
+    self.updatedAt = updatedAt
+  }
+}
+
 // MARK: - Conversions
 
 extension LocalThread {
@@ -302,7 +339,10 @@ extension LocalMessageAttachment {
 }
 
 extension LocalMessage {
-  func toFriendMessage(attachments: [LocalMessageAttachment]) -> FriendMessage {
+  func toFriendMessage(
+    attachments: [LocalMessageAttachment],
+    reactions: [LocalMessageReaction]
+  ) -> FriendMessage {
     FriendMessage(
       id: id,
       threadId: threadId,
@@ -324,6 +364,21 @@ extension LocalMessage {
           return $0.attachmentIndex < $1.attachmentIndex
         }
         .map { $0.toFriendMessageAttachment() },
+      reactions:
+        reactions
+        .sorted {
+          if $0.reactionIndex == $1.reactionIndex {
+            return $0.emoji < $1.emoji
+          }
+          return $0.reactionIndex < $1.reactionIndex
+        }
+        .map {
+          FriendMessageReaction(
+            emoji: $0.emoji,
+            count: $0.count,
+            viewerHasReacted: $0.viewerHasReacted
+          )
+        },
       sendState: FriendMessageSendState(
         rawValue: sendStateRaw ?? FriendMessageSendState.sent.rawValue) ?? .sent,
       failureMessage: failureMessage

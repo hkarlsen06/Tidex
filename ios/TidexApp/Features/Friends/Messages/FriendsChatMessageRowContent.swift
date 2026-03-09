@@ -15,6 +15,8 @@ enum FriendsChatMessageStatus: Equatable {
 
 struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
+  private static let reactionHorizontalOffset: CGFloat = 12
+  private static let reactionVerticalOffset: CGFloat = 8
 
   let message: FriendMessage
   let quotedPreview: FriendsChatReplyPreviewModel?
@@ -28,11 +30,15 @@ struct FriendsChatMessageRowContent: View {
   let onReply: () -> Void
   let onRetry: () -> Void
   let onReportMessage: () -> Void
+  let onToggleReaction: (String) -> Void
+  let onOpenActions: () -> Void
   let onTapQuotedMessage: () -> Void
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
     let hasMessageText = !(messageText?.isEmpty ?? true)
+    let imageAttachments = message.attachments.filter { $0.kind == .image }
+    let reactionStripTopInset = message.reactions.isEmpty ? Spacing.micro : Spacing.md
 
     return VStack(spacing: Spacing.xs) {
       if let separatorDate {
@@ -53,27 +59,37 @@ struct FriendsChatMessageRowContent: View {
             onReply: onReply
           ) {
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-              if !hasMessageText, let quotedPreview {
+              if !hasMessageText, imageAttachments.isEmpty, let quotedPreview {
                 FriendsChatMessageReplyPreview(
                   preview: quotedPreview,
                   isCurrentUser: isCurrentUser,
                   isHighlighted: false,
                   onTap: onTapQuotedMessage
                 )
+                .overlay(alignment: reactionAlignment) {
+                  reactionStrip
+                }
               }
 
-              ForEach(message.attachments) { attachment in
+              ForEach(Array(imageAttachments.enumerated()), id: \.element.id) { index, attachment in
                 if attachment.kind == .image {
                   FriendsChatImageView(
                     attachment: attachment,
                     isCurrentUser: isCurrentUser,
+                    canReact: message.canReact,
+                    onToggleReaction: onToggleReaction,
                     onReport: onReportMessage
                   )
+                  .overlay(alignment: reactionAlignment) {
+                    if !hasMessageText, index == imageAttachments.count - 1 {
+                      reactionStrip
+                    }
+                  }
                 }
               }
 
               if let messageText, !messageText.isEmpty {
-                ChatBubbleCard(
+                FriendsChatReactionAnchoredBubbleCard(
                   isCurrentUser: isCurrentUser,
                   minWidth: Self.minimumBubbleWidthForTimestamp,
                   maxWidth: 280
@@ -94,23 +110,19 @@ struct FriendsChatMessageRowContent: View {
                       .multilineTextAlignment(.leading)
                       .fixedSize(horizontal: false, vertical: true)
                   }
-                }
-                .contextMenu {
-                  Button {
-                    UIPasteboard.general.string = messageText
-                  } label: {
-                    Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-                  }
-
-                  if !isCurrentUser {
-                    Button(String(localized: .friendsChatReportMessage)) {
-                      onReportMessage()
-                    }
-                  }
+                } reaction: {
+                  reactionStrip
                 }
               }
             }
           }
+          .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.28)
+              .onEnded { _ in
+                Haptics.play(.medium)
+                onOpenActions()
+              }
+          )
 
           if showsTimestamp || messageStatus != nil {
             HStack(spacing: Spacing.xxs) {
@@ -144,7 +156,7 @@ struct FriendsChatMessageRowContent: View {
         }
       }
     }
-    .padding(.top, Spacing.micro)
+    .padding(.top, reactionStripTopInset)
     .padding(.bottom, showsTimestamp || messageStatus != nil ? Spacing.xxxs : Spacing.micro)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
@@ -205,6 +217,106 @@ struct FriendsChatMessageRowContent: View {
       }
     }
   }
+
+  @ViewBuilder
+  private var reactionStrip: some View {
+    if !message.reactions.isEmpty {
+      HStack(spacing: Spacing.xxxs) {
+        ForEach(message.reactions) { reaction in
+          Button {
+            onToggleReaction(reaction.emoji)
+          } label: {
+            HStack(spacing: 4) {
+              FriendsChatEmojiGlyph(emoji: reaction.emoji, size: 22)
+
+              if reaction.count > 1 {
+                Text("\(reaction.count)")
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexTextSecondary)
+              }
+            }
+            .padding(.horizontal, 2)
+            .padding(.vertical, 1)
+            .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .disabled(!message.canReact)
+        }
+      }
+      .offset(
+        x: isCurrentUser ? -Self.reactionHorizontalOffset : Self.reactionHorizontalOffset,
+        y: -Self.reactionVerticalOffset
+      )
+      .zIndex(2)
+    }
+  }
+
+  private var reactionAlignment: Alignment {
+    isCurrentUser ? .topLeading : .topTrailing
+  }
+}
+
+struct FriendsChatEmojiGlyph: View {
+  let emoji: String
+  let size: CGFloat
+
+  var body: some View {
+    Text(verbatim: emoji)
+      .font(.custom("Apple Color Emoji", size: size))
+      .lineLimit(1)
+      .fixedSize()
+      .minimumScaleFactor(1)
+      .accessibilityLabel(Text(verbatim: emoji))
+  }
+}
+
+private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
+  let isCurrentUser: Bool
+  var minWidth: CGFloat? = nil
+  var maxWidth: CGFloat? = nil
+  @ViewBuilder let content: () -> Content
+  @ViewBuilder let reaction: () -> Reaction
+
+  var body: some View {
+    Group {
+      if let minWidth, let maxWidth {
+        bubbleBody
+          .frame(
+            minWidth: minWidth,
+            maxWidth: maxWidth,
+            alignment: isCurrentUser ? .trailing : .leading
+          )
+      } else if let maxWidth {
+        bubbleBody
+          .frame(maxWidth: maxWidth, alignment: isCurrentUser ? .trailing : .leading)
+      } else if let minWidth {
+        bubbleBody
+          .frame(minWidth: minWidth, alignment: isCurrentUser ? .trailing : .leading)
+      } else {
+        bubbleBody
+      }
+    }
+  }
+
+  private var bubbleBody: some View {
+    content()
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous)
+          .fill(isCurrentUser ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous)
+          .stroke(
+            isCurrentUser ? Color.clear : Color.tidexBorderSubtle,
+            lineWidth: 1
+          )
+      )
+      .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
+        reaction()
+      }
+  }
 }
 
 private struct FriendsChatDateSeparator: View {
@@ -225,9 +337,21 @@ private struct FriendsChatDateSeparator: View {
         .fill(Color.tidexBorderSubtle)
         .frame(height: 1)
     }
-    .frame(maxWidth: .infinity)
-    .padding(.horizontal, Spacing.md)
+    .frame(width: separatorWidth)
     .padding(.vertical, Spacing.xs)
+  }
+
+  private var separatorWidth: CGFloat {
+    let screenWidth =
+      UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first?
+      .screen
+      .bounds
+      .width
+      ?? 390
+
+    return screenWidth - (Spacing.md * 2)
   }
 
   private var separatorText: String {
@@ -415,6 +539,8 @@ private struct FriendsChatMessageReplyPreview: View {
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let canReact: Bool
+  let onToggleReaction: (String) -> Void
   let onReport: () -> Void
 
   @StateObject private var loader: FriendsChatImageLoader
@@ -423,10 +549,14 @@ private struct FriendsChatImageView: View {
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
+    canReact: Bool,
+    onToggleReaction: @escaping (String) -> Void,
     onReport: @escaping () -> Void
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
+    self.canReact = canReact
+    self.onToggleReaction = onToggleReaction
     self.onReport = onReport
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL)
@@ -473,21 +603,6 @@ private struct FriendsChatImageView: View {
     }
     .task(id: attachment.id) {
       await loader.loadIfNeeded(attachment: attachment)
-    }
-    .contextMenu {
-      if let image = loader.image {
-        Button {
-          UIPasteboard.general.image = image
-        } label: {
-          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-        }
-      }
-
-      if !isCurrentUser {
-        Button(String(localized: .friendsChatReportMessage)) {
-          onReport()
-        }
-      }
     }
     .fullScreenCover(item: $selectedImageViewer) { viewer in
       ImageViewerOverlay(image: viewer.image) {

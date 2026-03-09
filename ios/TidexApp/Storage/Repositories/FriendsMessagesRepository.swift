@@ -101,13 +101,27 @@ final class FriendsMessagesRepository: ObservableObject {
         SortDescriptor(\LocalMessageAttachment.id, order: .forward),
       ]
     )
+    let reactionDescriptor = FetchDescriptor<LocalMessageReaction>(
+      predicate: #Predicate { reaction in
+        reaction.threadId == threadId && reaction.viewerUserId == viewerUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessageReaction.reactionIndex, order: .forward),
+        SortDescriptor(\LocalMessageReaction.emoji, order: .forward),
+      ]
+    )
 
     do {
       let messages = try context.fetch(messageDescriptor)
       let attachments = try context.fetch(attachmentDescriptor)
+      let reactions = try context.fetch(reactionDescriptor)
       let attachmentsByMessageId = Dictionary(grouping: attachments, by: \.messageId)
+      let reactionsByMessageId = Dictionary(grouping: reactions, by: \.messageId)
       let friendMessages = messages.map { message in
-        message.toFriendMessage(attachments: attachmentsByMessageId[message.id] ?? [])
+        message.toFriendMessage(
+          attachments: attachmentsByMessageId[message.id] ?? [],
+          reactions: reactionsByMessageId[message.id] ?? []
+        )
       }
       return deduplicateMessages(friendMessages, viewerUserId: viewerUserId)
     } catch {
@@ -132,11 +146,21 @@ final class FriendsMessagesRepository: ObservableObject {
         SortDescriptor(\LocalMessageAttachment.id, order: .forward),
       ]
     )
+    let reactionDescriptor = FetchDescriptor<LocalMessageReaction>(
+      predicate: #Predicate { reaction in
+        reaction.messageId == id && reaction.viewerUserId == viewerUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessageReaction.reactionIndex, order: .forward),
+        SortDescriptor(\LocalMessageReaction.emoji, order: .forward),
+      ]
+    )
 
     do {
       guard let message = try context.fetch(messageDescriptor).first else { return nil }
       let attachments = try context.fetch(attachmentDescriptor)
-      return message.toFriendMessage(attachments: attachments)
+      let reactions = try context.fetch(reactionDescriptor)
+      return message.toFriendMessage(attachments: attachments, reactions: reactions)
     } catch {
       logger.error("Failed to fetch message: \(error.localizedDescription)")
       return nil

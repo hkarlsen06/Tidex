@@ -236,7 +236,7 @@ private struct RootContent: View {
     }
 
     chatToastDismissTask = Task { @MainActor in
-      try? await Task.sleep(for: .seconds(4))
+      try? await Task.sleep(for: .seconds(6))
       guard !Task.isCancelled else { return }
       dismissChatToast()
     }

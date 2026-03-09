@@ -98,6 +98,14 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
   let createdAt: Date
 }
 
+struct FriendMessageReaction: Identifiable, Codable, Equatable, Hashable {
+  var id: String { emoji }
+
+  let emoji: String
+  let count: Int
+  let viewerHasReacted: Bool
+}
+
 struct FriendMessage: Identifiable, Codable, Equatable {
   let id: String
   let threadId: String
@@ -111,6 +119,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   let deletedAt: Date?
   let metadataData: Data?
   let attachments: [FriendMessageAttachment]
+  let reactions: [FriendMessageReaction]
   let sendState: FriendMessageSendState
   let failureMessage: String?
 
@@ -143,9 +152,87 @@ struct FriendMessage: Identifiable, Codable, Equatable {
       deletedAt: deletedAt,
       metadataData: metadataData,
       attachments: attachments,
+      reactions: reactions,
       sendState: sendState,
       failureMessage: failureMessage
     )
+  }
+
+  func withReactions(_ reactions: [FriendMessageReaction]) -> FriendMessage {
+    FriendMessage(
+      id: id,
+      threadId: threadId,
+      senderUserId: senderUserId,
+      messageType: messageType,
+      body: body,
+      clientId: clientId,
+      replyToMessageId: replyToMessageId,
+      createdAt: createdAt,
+      editedAt: editedAt,
+      deletedAt: deletedAt,
+      metadataData: metadataData,
+      attachments: attachments,
+      reactions: reactions,
+      sendState: sendState,
+      failureMessage: failureMessage
+    )
+  }
+
+  func toggledReaction(emoji: String) -> FriendMessage {
+    let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedEmoji.isEmpty else { return self }
+
+    var updatedReactions = reactions
+
+    if let existingIndex = updatedReactions.firstIndex(where: { $0.emoji == normalizedEmoji }) {
+      let existingReaction = updatedReactions[existingIndex]
+      if existingReaction.viewerHasReacted {
+        let updatedCount = existingReaction.count - 1
+        if updatedCount <= 0 {
+          updatedReactions.remove(at: existingIndex)
+        } else {
+          updatedReactions[existingIndex] = FriendMessageReaction(
+            emoji: existingReaction.emoji,
+            count: updatedCount,
+            viewerHasReacted: false
+          )
+        }
+      } else {
+        updatedReactions[existingIndex] = FriendMessageReaction(
+          emoji: existingReaction.emoji,
+          count: existingReaction.count + 1,
+          viewerHasReacted: true
+        )
+      }
+    } else {
+      updatedReactions.append(
+        FriendMessageReaction(
+          emoji: normalizedEmoji,
+          count: 1,
+          viewerHasReacted: true
+        )
+      )
+    }
+
+    return withReactions(Self.sortedReactions(updatedReactions))
+  }
+
+  var canReact: Bool {
+    messageType == .user && deletedAt == nil && sendState == .sent
+  }
+
+  private static func sortedReactions(_ reactions: [FriendMessageReaction])
+    -> [FriendMessageReaction]
+  {
+    reactions.sorted {
+      if $0.viewerHasReacted != $1.viewerHasReacted {
+        return $0.viewerHasReacted && !$1.viewerHasReacted
+      }
+      if $0.count != $1.count {
+        return $0.count > $1.count
+      }
+      return $0.emoji < $1.emoji
+    }
   }
 }
 

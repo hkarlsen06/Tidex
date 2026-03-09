@@ -19,7 +19,8 @@ RETURNS TABLE (
   edited_at timestamptz,
   deleted_at timestamptz,
   metadata jsonb,
-  attachments jsonb
+  attachments jsonb,
+  reactions jsonb
 )
 LANGUAGE plpgsql
 STABLE

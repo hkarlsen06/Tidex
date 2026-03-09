@@ -55,19 +55,19 @@ struct InAppChatToastView: View {
           AvatarView(
             url: payload.senderAvatarUrl,
             initials: senderInitials,
-            size: AvatarView.Size.medium
+            size: AvatarView.Size.large
           )
 
-          VStack(alignment: .leading, spacing: Spacing.xxxs) {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(payload.senderName)
-              .font(.tidexFootnoteStrong)
+              .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
               .lineLimit(1)
 
             Text(payload.previewText)
-              .font(.tidexFootnote)
+              .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
-              .lineLimit(1)
+              .lineLimit(2)
               .truncationMode(.tail)
           }
 
@@ -79,15 +79,15 @@ struct InAppChatToastView: View {
 
       Button(action: onDismiss) {
         Image(systemName: "xmark")
-          .font(.tidexMicro)
+          .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexTextMuted)
-          .frame(width: 32, height: 32)
+          .frame(width: 36, height: 36)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.xs)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.sm)
     .background(Color.tidexSurfacePrimary.opacity(0.98))
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous)

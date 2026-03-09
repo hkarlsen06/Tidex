@@ -60,6 +60,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private var localTypingStopTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
   private var reconcilingOptimisticMessageIds: Set<String> = []
+  private var togglingReactionKeys: Set<String> = []
 
   init(
     route: FriendChatRoute,
@@ -275,6 +276,7 @@ final class FriendsThreadViewModel: ObservableObject {
         deletedAt: nil,
         metadataData: nil,
         attachments: outgoingAttachments.map(makeOptimisticAttachment),
+        reactions: [],
         sendState: .sending,
         failureMessage: nil
       )
@@ -315,6 +317,49 @@ final class FriendsThreadViewModel: ObservableObject {
     )
     loadFromCache()
     sendMessageInBackground(message.withSendState(.sending))
+  }
+
+  func toggleReaction(messageId: String, emoji: String) async {
+    let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedEmoji.isEmpty else { return }
+    guard !isThreadReadOnly else {
+      sendErrorMessage = String(localized: .friendsChatBlockedReadOnly)
+      return
+    }
+    guard let message = repository.getMessage(id: messageId, viewerUserId: viewerUserId),
+      message.threadId == route.threadId,
+      message.canReact
+    else {
+      return
+    }
+
+    let reactionKey = "\(messageId):\(normalizedEmoji)"
+    guard !togglingReactionKeys.contains(reactionKey) else { return }
+    togglingReactionKeys.insert(reactionKey)
+
+    let originalMessage = message
+    let optimisticMessage = message.toggledReaction(emoji: normalizedEmoji)
+    sendErrorMessage = nil
+
+    await repository.saveMessages([optimisticMessage], in: route.threadId, for: viewerUserId)
+    loadFromCache()
+
+    do {
+      let updatedMessage = try await service.toggleMessageReaction(
+        messageId: messageId,
+        emoji: normalizedEmoji
+      )
+      await repository.saveMessages([updatedMessage], in: route.threadId, for: viewerUserId)
+      Haptics.play(.light)
+    } catch {
+      await repository.saveMessages([originalMessage], in: route.threadId, for: viewerUserId)
+      sendErrorMessage = String(localized: .friendsChatReactionFailed)
+      Haptics.play(.error)
+      threadLogger.error("Failed to toggle reaction: \(error.localizedDescription)")
+    }
+
+    togglingReactionKeys.remove(reactionKey)
+    loadFromCache()
   }
 
   func submitReport(messageId: String?, reason: FriendAbuseReportReason) async throws {

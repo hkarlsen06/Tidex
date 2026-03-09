@@ -14,7 +14,8 @@ RETURNS TABLE (
   edited_at timestamptz,
   deleted_at timestamptz,
   metadata jsonb,
-  attachments jsonb
+  attachments jsonb,
+  reactions jsonb
 )
 LANGUAGE sql
 STABLE
@@ -54,7 +55,34 @@ AS $function$
         WHERE ma.message_id = m.id
       ),
       '[]'::jsonb
-    ) AS attachments
+    ) AS attachments,
+    COALESCE(
+      (
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'emoji', reaction_summary.emoji,
+            'count', reaction_summary.reaction_count,
+            'viewer_has_reacted', reaction_summary.viewer_has_reacted
+          )
+          ORDER BY
+            reaction_summary.viewer_has_reacted DESC,
+            reaction_summary.reaction_count DESC,
+            reaction_summary.first_created_at ASC,
+            reaction_summary.emoji ASC
+        )
+        FROM (
+          SELECT
+            mr.emoji,
+            COUNT(*)::integer AS reaction_count,
+            BOOL_OR(mr.user_id = auth.uid()) AS viewer_has_reacted,
+            MIN(mr.created_at) AS first_created_at
+          FROM public.message_reactions mr
+          WHERE mr.message_id = m.id
+          GROUP BY mr.emoji
+        ) AS reaction_summary
+      ),
+      '[]'::jsonb
+    ) AS reactions
   FROM public.messages m
   WHERE m.id = p_message_id
     AND public.can_access_thread(m.thread_id);
