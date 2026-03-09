@@ -246,11 +246,13 @@ struct ManageSharingSheet: View {
 
   private func makeFriendRow(_ friend: Friend, sectionType: FriendSectionType) -> some View {
     let isHighlighted = highlightUserId == friend.id && isHighlightActive
+    let isHiddenInFriendsTab = viewModel.isHiddenInFriendsTab(for: friend)
 
     return FriendRow(
       friend: friend,
       sectionType: sectionType,
       isActionInProgress: viewModel.actionInProgress == friend.id,
+      isHiddenInFriendsTab: isHiddenInFriendsTab,
       isHighlighted: isHighlighted,
       onToggleEarnings: {
         Task {
@@ -296,7 +298,7 @@ struct ManageSharingSheet: View {
       }
     }
     .swipeActions(edge: .leading, allowsFullSwipe: false) {
-      if sectionType == .mutual || sectionType == .incoming {
+      if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
         Button {
           Task {
             await viewModel.toggleHidden(for: friend)
@@ -305,12 +307,12 @@ struct ManageSharingSheet: View {
         } label: {
           Label(
             String(
-              localized: friend.sharesWithMe?.hidden == true
+              localized: isHiddenInFriendsTab
                 ? .sharingSwipeShow : .sharingSwipeHide),
-            systemImage: friend.sharesWithMe?.hidden == true ? "eye" : "eye.slash"
+            systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
           )
         }
-        .tint(friend.sharesWithMe?.hidden == true ? .green : .orange)
+        .tint(isHiddenInFriendsTab ? .green : .orange)
       }
     }
   }

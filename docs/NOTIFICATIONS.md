@@ -22,7 +22,7 @@ The notification system uses a **single pathway**:
 
 ### Immediate Notifications (via `notifications_outbox`)
 
-Used for: `share_started`, `feedback_responded`, `feedback_submitted`, `admin_broadcast`, `shift_reminder`, `error_report`
+Used for: `share_started`, `feedback_responded`, `feedback_submitted`, `admin_broadcast`, `error_report`
 
 ```
 DB trigger / Edge function → Build localized message → Insert to notifications_outbox → Edge function sends
@@ -247,7 +247,7 @@ CREATE TABLE internal.notifications_outbox (
   owner_id UUID,                    -- Who triggered the notification (NULL for admin broadcasts)
   recipient_id UUID NOT NULL,       -- Who receives it
   broadcast_id UUID,                -- For admin broadcasts
-  notification_type TEXT NOT NULL,  -- e.g., 'share_started', 'shift_reminder'
+  notification_type TEXT NOT NULL,  -- e.g., 'share_started', 'feedback_responded'
   due_at TIMESTAMPTZ DEFAULT NOW(), -- When to send (for delayed delivery)
   status TEXT DEFAULT 'pending',    -- pending, sending, sent, failed, skipped
   claimed_at TIMESTAMPTZ,           -- When edge function claimed it
@@ -312,7 +312,6 @@ The `data_payload` JSONB field is sent to the device for:
 | `feedback_submitted` | No (admin-only) | DB trigger on `feedback` INSERT | Norwegian OK for admins |
 | `feedback_responded` | Yes (SQL) | DB trigger on `feedback` UPDATE | Localized in trigger function |
 | `admin_broadcast` | No | Admin API | Pre-written messages |
-| `shift_reminder` | No (TypeScript) | Edge function | Built at send time |
 | `error_report` | No | API route | Dev-only notification |
 
 ---
@@ -342,16 +341,6 @@ Location: `supabase/functions/send-push-notifications/index.ts`
    d. Mark as sent/failed/skipped
 3. Clean up invalid tokens
 ```
-
-### `process-shift-reminders`
-
-Location: `supabase/functions/process-shift-reminders/index.ts`
-
-**Purpose:** Sends shift reminder notifications (time-sensitive, built at send time).
-
-**Note:** This is an exception to the "pre-built messages" pattern because reminder text includes real-time calculations ("2 hours until your shift").
-
----
 
 ## Testing & Troubleshooting
 
@@ -441,7 +430,6 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 | `notifications_outbox` | `internal` | Primary delivery queue with pre-built messages |
 | `push_devices` | `internal` | User device tokens (APNs + FCM) |
 | `notification_preferences` | `public` | User notification settings |
-| `shift_reminders_sent` | `public` | Tracks sent reminders for deduplication |
 
 ---
 
@@ -449,8 +437,6 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 
 | Job | Schedule | Purpose |
 |-----|----------|---------|
-| `process-shift-reminders` | `* * * * *` | Trigger shift reminders |
-| `cleanup-shift-reminders-sent` | `0 3 * * *` | Clean old reminder records |
 | `cleanup-shift-notification-events` | `0 4 * * *` | Clean sent outbox entries |
 
 ---
@@ -463,7 +449,6 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 | `supabase/sql/functions/trigger/queue_share_started_notification.sql` | Share started trigger + notification |
 | `supabase/sql/functions/notification/claim_outbox_notifications.sql` | Atomic queue claiming |
 | `supabase/functions/send-push-notifications/index.ts` | Main delivery edge function |
-| `supabase/functions/process-shift-reminders/index.ts` | Reminder processing |
 | `next/lib/notifications/enqueue.ts` | Direct notification enqueueing (error_report) |
 | `lib/notifications/push-service.ts` | Web app push handling |
 | `ios/TidexApp/Native/Services/NotificationService.swift` | iOS push handling |

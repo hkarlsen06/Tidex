@@ -14,6 +14,7 @@ final class ManageSharingViewModel: ObservableObject {
   // MARK: - Dependencies
 
   private let sharingService: SharingService
+  private let visibilityStore: FriendsVisibilityStore
 
   // MARK: - Published State
 
@@ -30,6 +31,9 @@ final class ManageSharingViewModel: ObservableObject {
   /// ID of friend currently being acted upon (for per-row loading states)
   @Published private(set) var actionInProgress: String?
 
+  /// Locally hidden outgoing-only friends for the current viewer.
+  @Published private(set) var hiddenOutgoingFriendIds: Set<String> = []
+
   /// Error message to display
   @Published var errorMessage: String?
 
@@ -40,6 +44,8 @@ final class ManageSharingViewModel: ObservableObject {
   @Published var addShowEarnings = false
   @Published var isAdding = false
   @Published var addError: String?
+
+  private var cachedUserId: String?
 
   // MARK: - Computed Properties
 
@@ -70,8 +76,12 @@ final class ManageSharingViewModel: ObservableObject {
 
   // MARK: - Initialization
 
-  init(sharingService: SharingService? = nil) {
+  init(
+    sharingService: SharingService? = nil,
+    visibilityStore: FriendsVisibilityStore? = nil
+  ) {
     self.sharingService = sharingService ?? SharingService.shared
+    self.visibilityStore = visibilityStore ?? FriendsVisibilityStore.shared
   }
 
   // MARK: - Data Loading
@@ -85,6 +95,11 @@ final class ManageSharingViewModel: ObservableObject {
       let result = try await sharingService.fetchAllFriends()
       friends = result.friends
       capacity = result.capacity
+      if let userId = await bestEffortCurrentUserId() {
+        hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
+      } else {
+        hiddenOutgoingFriendIds = []
+      }
       logger.info("Loaded \(result.friends.count) friends")
     } catch is CancellationError {
       // Task was cancelled (e.g., user released pull-to-refresh early)
@@ -204,26 +219,50 @@ final class ManageSharingViewModel: ObservableObject {
   func toggleHidden(for friend: Friend) async {
     // Prevent duplicate taps
     guard actionInProgress == nil else { return }
-    guard let sharesWithMe = friend.sharesWithMe else { return }
+    let newValue = !isHiddenInFriendsTab(for: friend)
 
-    let newValue = !sharesWithMe.hidden
-
-    // Optimistic update
-    applyOptimisticHiddenUpdate(friendId: friend.id, hidden: newValue)
     actionInProgress = friend.id
 
-    do {
-      if newValue {
-        try await sharingService.hideSharer(ownerId: friend.id)
-      } else {
-        try await sharingService.showSharer(ownerId: friend.id)
+    if friend.sharesWithMe != nil {
+      applyOptimisticHiddenUpdate(friendId: friend.id, hidden: newValue)
+
+      do {
+        if newValue {
+          try await sharingService.hideSharer(ownerId: friend.id)
+        } else {
+          try await sharingService.showSharer(ownerId: friend.id)
+        }
+        logger.info("Toggled hidden for \(friend.id) to \(newValue)")
+        Haptics.play(.selection)
+      } catch {
+        applyOptimisticHiddenUpdate(friendId: friend.id, hidden: !newValue)
+        logger.error("Failed to toggle hidden: \(error.localizedDescription)")
+        errorMessage = String(localized: .sharingErrorUpdateSettings)
+        Haptics.play(.error)
       }
-      logger.info("Toggled hidden for \(friend.id) to \(newValue)")
+
+      actionInProgress = nil
+      return
+    }
+
+    guard friend.iShareWith != nil else {
+      actionInProgress = nil
+      return
+    }
+
+    applyOptimisticOutgoingHiddenUpdate(friendId: friend.id, hidden: newValue)
+
+    do {
+      guard let userId = try await getCurrentUserId() else {
+        throw URLError(.userAuthenticationRequired)
+      }
+
+      visibilityStore.setOutgoingFriendHidden(newValue, friendId: friend.id, viewerId: userId)
+      logger.info("Toggled outgoing-only hidden for \(friend.id) to \(newValue)")
       Haptics.play(.selection)
     } catch {
-      // Revert on failure
-      applyOptimisticHiddenUpdate(friendId: friend.id, hidden: !newValue)
-      logger.error("Failed to toggle hidden: \(error.localizedDescription)")
+      applyOptimisticOutgoingHiddenUpdate(friendId: friend.id, hidden: !newValue)
+      logger.error("Failed to toggle outgoing-only hidden: \(error.localizedDescription)")
       errorMessage = String(localized: .sharingErrorUpdateSettings)
       Haptics.play(.error)
     }
@@ -237,6 +276,14 @@ final class ManageSharingViewModel: ObservableObject {
     else { return }
 
     friends[index] = friends[index].with(sharesWithMe: sharesWithMe.with(hidden: hidden))
+  }
+
+  private func applyOptimisticOutgoingHiddenUpdate(friendId: String, hidden: Bool) {
+    if hidden {
+      hiddenOutgoingFriendIds.insert(friendId)
+    } else {
+      hiddenOutgoingFriendIds.remove(friendId)
+    }
   }
 
   // MARK: - Toggle Muted Status
@@ -330,6 +377,12 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.removeShare(recipientId: friend.id)
+      if friend.isOutgoingOnly {
+        if let userId = await bestEffortCurrentUserId() {
+          visibilityStore.setOutgoingFriendHidden(false, friendId: friend.id, viewerId: userId)
+        }
+        hiddenOutgoingFriendIds.remove(friend.id)
+      }
       logger.info("Removed share with \(friend.id)")
       Haptics.play(.success)
     } catch {
@@ -461,4 +514,31 @@ final class ManageSharingViewModel: ObservableObject {
 
   /// Callback for when visibility changes (hide/show) to trigger sharer list refresh
   var onVisibilityChange: (() -> Void)?
+
+  func isHiddenInFriendsTab(for friend: Friend) -> Bool {
+    if let sharesWithMe = friend.sharesWithMe {
+      return sharesWithMe.hidden
+    }
+
+    return hiddenOutgoingFriendIds.contains(friend.id)
+  }
+
+  private func getCurrentUserId() async throws -> String? {
+    if let cachedUserId {
+      return cachedUserId
+    }
+
+    let session = try await AuthSessionManager.shared.getSession()
+    let userId = session.normalizedUserId
+    cachedUserId = userId
+    return userId
+  }
+
+  private func bestEffortCurrentUserId() async -> String? {
+    do {
+      return try await getCurrentUserId()
+    } catch {
+      return nil
+    }
+  }
 }

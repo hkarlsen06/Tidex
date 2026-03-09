@@ -34,6 +34,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   private let sharingService: SharingService
   private let sharedShiftsRepository: SharedShiftsRepository
   private let monthContext: SharedMonthContext
+  private let visibilityStore: FriendsVisibilityStore
 
   // MARK: - Published State
 
@@ -183,11 +184,13 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   init(
     sharingService: SharingService? = nil,
     sharedShiftsRepository: SharedShiftsRepository? = nil,
-    monthContext: SharedMonthContext? = nil
+    monthContext: SharedMonthContext? = nil,
+    visibilityStore: FriendsVisibilityStore? = nil
   ) {
     self.sharingService = sharingService ?? SharingService.shared
     self.sharedShiftsRepository = sharedShiftsRepository ?? SharedShiftsRepository.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
+    self.visibilityStore = visibilityStore ?? FriendsVisibilityStore.shared
 
     // Initialize committed state to current month context values
     // These will be updated atomically with shift data
@@ -346,16 +349,18 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       let freshSharers = try await sharersTask
       let outgoingChatSharers = chatOnlySharers(
         from: await friendsTask?.friends ?? [],
-        excluding: Set(freshSharers.map(\.id))
+        excluding: Set(freshSharers.map(\.id)),
+        viewerId: userId
       )
       logger.info(
         "Network returned \(freshSharers.count) sharers: \(freshSharers.map { $0.displayName })")
 
       let partitionedSharers = partitionSharers(freshSharers)
+      let partitionedOutgoingChatSharers = partitionSharers(outgoingChatSharers)
 
       // Update UI with fresh data
-      sharers = partitionedSharers.visible + outgoingChatSharers
-      hiddenSharers = partitionedSharers.hidden
+      sharers = partitionedSharers.visible + partitionedOutgoingChatSharers.visible
+      hiddenSharers = partitionedSharers.hidden + partitionedOutgoingChatSharers.hidden
       chatOnlyUserIds = Set(outgoingChatSharers.map(\.id))
       hasFinishedInitialSharersLoad = true
       logger.info(
@@ -492,9 +497,15 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     return (visible, hidden)
   }
 
-  private func chatOnlySharers(from friends: [Friend], excluding sharerIds: Set<String>)
+  private func chatOnlySharers(
+    from friends: [Friend],
+    excluding sharerIds: Set<String>,
+    viewerId: String
+  )
     -> [SharedUser]
   {
+    let hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: viewerId)
+
     friends.compactMap { friend in
       guard friend.isOutgoingOnly, !sharerIds.contains(friend.id), let share = friend.iShareWith
       else {
@@ -510,7 +521,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         oauthAvatarUrl: friend.oauthAvatarUrl,
         sharedAt: share.sharedAt,
         showEarnings: false,
-        hidden: false
+        hidden: hiddenOutgoingFriendIds.contains(friend.id)
       )
     }
   }

@@ -20,6 +20,7 @@ struct FriendRow: View {
   let friend: Friend
   let sectionType: FriendSectionType
   let isActionInProgress: Bool
+  let isHiddenInFriendsTab: Bool
   var isHighlighted: Bool = false
   let onToggleEarnings: () -> Void
   let onShareBack: () -> Void
@@ -98,7 +99,7 @@ struct FriendRow: View {
       size: AvatarView.Size.medium
     )
     .overlay(alignment: .bottomTrailing) {
-      if friend.sharesWithMe?.hidden == true {
+      if isHiddenInFriendsTab {
         Image(systemName: "eye.slash.fill")
           .font(.system(size: 10))
           .foregroundColor(.white)
@@ -168,14 +169,14 @@ struct FriendRow: View {
   @ViewBuilder
   private var actionsSection: some View {
     Section {
-      if sectionType == .mutual || sectionType == .incoming {
-        let isHidden = friend.sharesWithMe?.hidden == true
+      if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
         Button {
           onToggleHidden()
         } label: {
           Label(
-            String(localized: isHidden ? .sharingMenuShowShifts : .sharingMenuHideShifts),
-            systemImage: isHidden ? "eye" : "eye.slash"
+            String(
+              localized: isHiddenInFriendsTab ? .sharingMenuShowShifts : .sharingMenuHideShifts),
+            systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
           )
         }
       }
@@ -215,6 +216,7 @@ struct FriendRow: View {
         ),
         sectionType: .mutual,
         isActionInProgress: false,
+        isHiddenInFriendsTab: false,
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
@@ -241,6 +243,7 @@ struct FriendRow: View {
         ),
         sectionType: .outgoing,
         isActionInProgress: false,
+        isHiddenInFriendsTab: false,
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
@@ -269,6 +272,7 @@ struct FriendRow: View {
         ),
         sectionType: .incoming,
         isActionInProgress: false,
+        isHiddenInFriendsTab: false,
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},

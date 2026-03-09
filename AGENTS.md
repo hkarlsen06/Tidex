@@ -64,7 +64,6 @@ pnpm ios:l10n:validate
 | `apple-server-notifications` | `false` | Webhook |
 | `apple-verify-purchase` | `true` | User-called |
 | `send-push-notifications` | `false` | pg_cron |
-| `process-shift-reminders` | `false` | pg_cron |
 | `before-user-created` | `false` | Auth hook |
 
 Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jwt: true` only for direct user calls.
@@ -78,8 +77,6 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 **Current Cron Jobs:**
 | Job Name | Schedule | Description |
 |----------|----------|-------------|
-| `process-shift-reminders` | `* * * * *` | Trigger reminders |
-| `cleanup-shift-reminders-sent` | `0 3 * * *` | Clean old records |
 | `cleanup-shift-notification-events` | `0 4 * * *` | Clean sent outbox entries |
 
 ## Agent Behavior Guidelines
