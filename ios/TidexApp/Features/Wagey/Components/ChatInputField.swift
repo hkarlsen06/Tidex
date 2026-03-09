@@ -8,7 +8,7 @@ struct ChatInputField: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private enum ComposerLayout {
-    static let attachmentCollapseCharacterThreshold = 32
+    static let defaultAttachmentCollapseCharacterThreshold = 32
   }
 
   /// Callback when user sends a message (text only)
@@ -24,6 +24,7 @@ struct ChatInputField: View {
   let bottomPadding: CGFloat
   let showsCameraShortcut: Bool
   let collapsesAttachmentButtonForLongDrafts: Bool
+  let attachmentCollapseCharacterThreshold: Int
   let dismissKeyboardOnSend: Bool
 
   /// Current input text
@@ -54,6 +55,8 @@ struct ChatInputField: View {
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
     showsCameraShortcut: Bool = false,
     collapsesAttachmentButtonForLongDrafts: Bool = false,
+    attachmentCollapseCharacterThreshold: Int = ComposerLayout
+      .defaultAttachmentCollapseCharacterThreshold,
     dismissKeyboardOnSend: Bool = true,
     onSend: @escaping (String) async -> Bool,
     disabled: Bool
@@ -64,6 +67,7 @@ struct ChatInputField: View {
     self.bottomPadding = bottomPadding
     self.showsCameraShortcut = showsCameraShortcut
     self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
+    self.attachmentCollapseCharacterThreshold = attachmentCollapseCharacterThreshold
     self.dismissKeyboardOnSend = dismissKeyboardOnSend
     self.onSend = onSend
     self.onSendWithImage = nil
@@ -78,6 +82,8 @@ struct ChatInputField: View {
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
     showsCameraShortcut: Bool = false,
     collapsesAttachmentButtonForLongDrafts: Bool = false,
+    attachmentCollapseCharacterThreshold: Int = ComposerLayout
+      .defaultAttachmentCollapseCharacterThreshold,
     dismissKeyboardOnSend: Bool = true,
     onSend: @escaping (String) async -> Bool,
     onSendWithImage: @escaping (String, ImageAttachment) async -> Bool,
@@ -89,6 +95,7 @@ struct ChatInputField: View {
     self.bottomPadding = bottomPadding
     self.showsCameraShortcut = showsCameraShortcut
     self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
+    self.attachmentCollapseCharacterThreshold = attachmentCollapseCharacterThreshold
     self.dismissKeyboardOnSend = dismissKeyboardOnSend
     self.onSend = onSend
     self.onSendWithImage = onSendWithImage
@@ -121,7 +128,7 @@ struct ChatInputField: View {
     guard isComposerFocused else { return false }
 
     let draftLength = inputText.trimmingCharacters(in: .whitespacesAndNewlines).count
-    return draftLength >= ComposerLayout.attachmentCollapseCharacterThreshold
+    return draftLength >= attachmentCollapseCharacterThreshold
       || inputText.contains("\n")
   }
 
