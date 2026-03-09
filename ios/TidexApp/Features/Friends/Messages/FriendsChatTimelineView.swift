@@ -21,6 +21,8 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let onReply: (FriendMessage) -> Void
   let onRetryMessage: (String) -> Void
   let onReportMessage: (String) -> Void
+  let onToggleReaction: (FriendMessage, String) -> Void
+  let onOpenMessageActions: (FriendMessage, CGRect) -> Void
   let onTapQuotedMessage: (FriendMessage) -> Void
   let onConsumeRestoreScrollTarget: () -> Void
   let onConsumeReplyScrollTarget: (String) -> Void
@@ -32,6 +34,8 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
     controller.onReply = onReply
     controller.onRetryMessage = onRetryMessage
     controller.onReportMessage = onReportMessage
+    controller.onToggleReaction = onToggleReaction
+    controller.onOpenMessageActions = onOpenMessageActions
     controller.onTapQuotedMessage = onTapQuotedMessage
     return controller
   }
@@ -45,6 +49,8 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
     uiViewController.onReply = onReply
     uiViewController.onRetryMessage = onRetryMessage
     uiViewController.onReportMessage = onReportMessage
+    uiViewController.onToggleReaction = onToggleReaction
+    uiViewController.onOpenMessageActions = onOpenMessageActions
     uiViewController.onTapQuotedMessage = onTapQuotedMessage
     uiViewController.apply(
       config: FriendsChatTimelineConfiguration(
@@ -91,6 +97,8 @@ final class FriendsChatTimelineViewController: UIViewController {
   var onReply: ((FriendMessage) -> Void)?
   var onRetryMessage: ((String) -> Void)?
   var onReportMessage: ((String) -> Void)?
+  var onToggleReaction: ((FriendMessage, String) -> Void)?
+  var onOpenMessageActions: ((FriendMessage, CGRect) -> Void)?
   var onTapQuotedMessage: ((FriendMessage) -> Void)?
 
   private let chatLayout = CollectionViewChatLayout()
@@ -655,6 +663,12 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         onReportMessage: { [weak self] in
           self?.onReportMessage?(message.id)
         },
+        onToggleReaction: { [weak self] emoji in
+          self?.onToggleReaction?(message, emoji)
+        },
+        onOpenActions: { [weak self] in
+          self?.openMessageActions(for: message)
+        },
         onTapQuotedMessage: { [weak self] in
           self?.onTapQuotedMessage?(message)
         }
@@ -799,6 +813,22 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     return messages.last(where: {
       $0.senderUserId == viewerUserId && $0.createdAt < counterpartLastReadAt
     })?.id
+  }
+
+  private func openMessageActions(for message: FriendMessage) {
+    guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
+    let indexPath = IndexPath(item: index, section: 0)
+
+    let sourceFrame: CGRect
+    if let cell = collectionView.cellForItem(at: indexPath) {
+      sourceFrame = cell.convert(cell.bounds, to: view)
+    } else if let attributes = collectionView.layoutAttributesForItem(at: indexPath) {
+      sourceFrame = collectionView.convert(attributes.frame, to: view)
+    } else {
+      sourceFrame = CGRect(x: Spacing.md, y: Spacing.huge, width: 280, height: 88)
+    }
+
+    onOpenMessageActions?(message, sourceFrame)
   }
 }
 

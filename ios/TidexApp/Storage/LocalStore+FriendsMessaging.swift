@@ -83,6 +83,7 @@ extension LocalStoreActor {
     }
 
     try replaceAttachments(for: message, viewerUserId: viewerUserId)
+    try replaceReactions(for: message, viewerUserId: viewerUserId)
     try updateThreadPreviewIfNeeded(for: message, viewerUserId: viewerUserId)
   }
 
@@ -185,6 +186,23 @@ extension LocalStoreActor {
           width: attachment.width,
           height: attachment.height,
           createdAt: attachment.createdAt
+        ))
+    }
+  }
+
+  private func replaceReactions(for message: FriendMessage, viewerUserId: String) throws {
+    try deleteReactions(messageId: message.id, viewerUserId: viewerUserId)
+
+    for (index, reaction) in message.reactions.enumerated() {
+      modelContext.insert(
+        LocalMessageReaction(
+          viewerUserId: viewerUserId,
+          threadId: message.threadId,
+          messageId: message.id,
+          reactionIndex: index,
+          emoji: reaction.emoji,
+          count: reaction.count,
+          viewerHasReacted: reaction.viewerHasReacted
         ))
     }
   }
@@ -314,9 +332,22 @@ extension LocalStoreActor {
     }
   }
 
+  private func deleteReactions(messageId: String, viewerUserId: String) throws {
+    let descriptor = FetchDescriptor<LocalMessageReaction>(
+      predicate: #Predicate { reaction in
+        reaction.messageId == messageId && reaction.viewerUserId == viewerUserId
+      }
+    )
+
+    for existing in try modelContext.fetch(descriptor) {
+      modelContext.delete(existing)
+    }
+  }
+
   private func deleteMessage(id: String, viewerUserId: String) throws {
     guard let message = try fetchMessage(id: id, viewerUserId: viewerUserId) else { return }
     try deleteAttachments(messageId: id, viewerUserId: viewerUserId)
+    try deleteReactions(messageId: id, viewerUserId: viewerUserId)
     modelContext.delete(message)
   }
 }

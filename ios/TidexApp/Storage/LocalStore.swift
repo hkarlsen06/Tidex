@@ -78,6 +78,7 @@ final class LocalStore {
       LocalThreadState.self,
       LocalMessage.self,
       LocalMessageAttachment.self,
+      LocalMessageReaction.self,
     ])
 
     // Configure container for persistent storage
@@ -180,6 +181,7 @@ actor LocalStoreActor {
       try modelContext.delete(model: LocalThreadState.self)
       try modelContext.delete(model: LocalMessage.self)
       try modelContext.delete(model: LocalMessageAttachment.self)
+      try modelContext.delete(model: LocalMessageReaction.self)
       try modelContext.save()
     } catch {
       logger.error("Failed to reset all data: \(error.localizedDescription)")
