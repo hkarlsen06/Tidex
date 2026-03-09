@@ -11,9 +11,9 @@ struct FriendsThreadView: View {
   @State private var showSafetySupport = false
   @State private var safariURL: URL?
   @State private var alertState: AlertState?
-  @State private var bottomChromeHeight: CGFloat = Spacing.bottomScrollMargin
   @State private var highlightedMessageId: String?
   @State private var isPinnedToBottom = true
+  @State private var bottomAccessoryInset: CGFloat = 0
   @State private var unreadIncomingCount = 0
   @State private var showsNewMessagesPill = false
   @State private var scrollToBottomTrigger = 0
@@ -52,70 +52,110 @@ struct FriendsThreadView: View {
     )
   }
 
-  private var timelineBottomContentInset: CGFloat {
-    bottomChromeHeight + Spacing.lg + Spacing.huge
+  private let timelineBottomContentInset = Spacing.lg
+
+  private var scrollToLatestBottomPadding: CGFloat {
+    max(bottomAccessoryInset, 0) + Spacing.sm
   }
 
   var body: some View {
     VStack(spacing: 0) {
       ZStack(alignment: .bottom) {
-        FriendsChatTimelineView(
-          messages: viewModel.messages,
-          quotedMessagesById: viewModel.quotedMessagesById,
-          viewerUserId: viewModel.viewerUserId,
-          counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
-          counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
-          currentUserDisplayName: AppCoordinator.shared.userDisplayName,
-          counterpartDisplayName: viewModel.thread.counterpartDisplayName
-            ?? viewModel.route.displayName,
-          counterpartAvatarUrl: viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl,
-          highlightedMessageId: highlightedMessageId,
-          showTypingIndicator: viewModel.counterpartIsTyping,
-          bottomContentInset: timelineBottomContentInset,
-          scrollToBottomTrigger: scrollToBottomTrigger,
-          restoreScrollTargetMessageId: viewModel.restoreScrollTargetMessageId,
-          replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId,
-          onBackgroundTap: dismissComposer,
-          onPinnedToBottomChanged: { isPinnedToBottom in
-            self.isPinnedToBottom = isPinnedToBottom
-          },
-          onReachedTopMessage: { currentFirstMessageId in
-            Task {
-              await viewModel.loadOlderMessagesIfNeeded(
-                currentFirstMessageId: currentFirstMessageId)
+        FriendsThreadSurfaceView(
+          timelineConfiguration: FriendsChatTimelineConfiguration(
+            messages: viewModel.messages,
+            quotedMessagesById: viewModel.quotedMessagesById,
+            viewerUserId: viewModel.viewerUserId,
+            counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
+            counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
+            currentUserDisplayName: AppCoordinator.shared.userDisplayName,
+            counterpartDisplayName: viewModel.thread.counterpartDisplayName
+              ?? viewModel.route.displayName,
+            counterpartAvatarUrl: viewModel.thread.counterpartAvatarUrl
+              ?? viewModel.route.avatarUrl,
+            highlightedMessageId: highlightedMessageId,
+            showTypingIndicator: viewModel.counterpartIsTyping,
+            bottomContentInset: timelineBottomContentInset,
+            scrollToBottomTrigger: scrollToBottomTrigger,
+            restoreScrollTargetMessageId: viewModel.restoreScrollTargetMessageId,
+            replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId
+          ),
+          composerConfiguration: FriendsThreadComposerConfiguration(
+            draftText: viewModel.draft,
+            replyPreview: viewModel.draftReplyTarget.map { replyPreviewModel(for: $0) },
+            isThreadReadOnly: viewModel.isThreadReadOnly,
+            sendErrorMessage: viewModel.sendErrorMessage,
+            placeholder: String(localized: .friendsChatPlaceholder)
+          ),
+          callbacks: FriendsThreadSurfaceCallbacks(
+            onBackgroundTap: dismissComposer,
+            onPinnedToBottomChanged: { isPinnedToBottom in
+              self.isPinnedToBottom = isPinnedToBottom
+            },
+            onReachedTopMessage: { currentFirstMessageId in
+              Task {
+                await viewModel.loadOlderMessagesIfNeeded(
+                  currentFirstMessageId: currentFirstMessageId)
+              }
+            },
+            onReply: { message in
+              viewModel.setReplyTarget(message)
+            },
+            onRetryMessage: { messageId in
+              Task {
+                await viewModel.retryMessage(messageId: messageId)
+              }
+            },
+            onReportMessage: { messageId in
+              pendingReportTarget = .message(messageId: messageId)
+            },
+            onToggleReaction: { message, emoji in
+              handleReactionSelection(emoji, for: message)
+            },
+            onOpenMessageActions: { message, sourceFrame in
+              presentMessageActionMenu(for: message, sourceFrame: sourceFrame)
+            },
+            onTapQuotedMessage: { message in
+              Task {
+                await viewModel.scrollToReplyTarget(for: message)
+              }
+            },
+            onConsumeRestoreScrollTarget: {
+              viewModel.consumeRestoreScrollTarget()
+            },
+            onConsumeReplyScrollTarget: { messageId in
+              flashHighlightedMessage(messageId)
+              viewModel.consumeReplyScrollTarget()
+            },
+            onComposerDraftChanged: { draft in
+              viewModel.draft = draft
+              Task {
+                await viewModel.handleDraftChanged(to: draft)
+              }
+            },
+            onComposerCancelReply: {
+              viewModel.clearReplyTarget()
+            },
+            onComposerSend: { content, image in
+              let wasPinnedToBottom = isPinnedToBottom
+              let didSend = await viewModel.sendMessage(content: content, image: image)
+              if didSend {
+                await MainActor.run {
+                  unreadIncomingCount = 0
+                  showsNewMessagesPill = false
+                  isPinnedToBottom = true
+                  if !wasPinnedToBottom {
+                    scrollToBottomTrigger += 1
+                  }
+                }
+              }
+              return didSend
+            },
+            onBottomAccessoryInsetChanged: { inset in
+              bottomAccessoryInset = inset
             }
-          },
-          onReply: { message in
-            viewModel.setReplyTarget(message)
-          },
-          onRetryMessage: { messageId in
-            Task {
-              await viewModel.retryMessage(messageId: messageId)
-            }
-          },
-          onReportMessage: { messageId in
-            pendingReportTarget = .message(messageId: messageId)
-          },
-          onToggleReaction: { message, emoji in
-            handleReactionSelection(emoji, for: message)
-          },
-          onOpenMessageActions: { message, sourceFrame in
-            presentMessageActionMenu(for: message, sourceFrame: sourceFrame)
-          },
-          onTapQuotedMessage: { message in
-            Task {
-              await viewModel.scrollToReplyTarget(for: message)
-            }
-          },
-          onConsumeRestoreScrollTarget: {
-            viewModel.consumeRestoreScrollTarget()
-          },
-          onConsumeReplyScrollTarget: { messageId in
-            flashHighlightedMessage(messageId)
-            viewModel.consumeReplyScrollTarget()
-          }
+          )
         )
-        .opacity(viewModel.messages.isEmpty ? 0 : 1)
         .background(Color.tidexBackground)
         .overlay(alignment: .top) {
           if viewModel.isLoadingOlderMessages && !viewModel.messages.isEmpty {
@@ -140,12 +180,9 @@ struct FriendsThreadView: View {
         .overlay(alignment: .bottom) {
           if showsNewMessagesPill, !viewModel.messages.isEmpty {
             scrollToLatestButton
-              .padding(.bottom, bottomChromeHeight + Spacing.sm)
+              .padding(.bottom, scrollToLatestBottomPadding)
               .transition(.move(edge: .bottom).combined(with: .opacity))
           }
-        }
-        .overlay(alignment: .bottom) {
-          composer
         }
 
         if let messageActionMenu {
@@ -203,11 +240,6 @@ struct FriendsThreadView: View {
     }
     .onChange(of: scrollState) { oldValue, newValue in
       handleScrollStateChange(from: oldValue, to: newValue)
-    }
-    .onChange(of: viewModel.draft) { _, newValue in
-      Task {
-        await viewModel.handleDraftChanged(to: newValue)
-      }
     }
     .onChange(of: customReactionDraft) { _, newValue in
       guard
@@ -361,9 +393,6 @@ struct FriendsThreadView: View {
       .opacity(0.01)
       .accessibilityHidden(true)
     )
-    .onPreferenceChange(FriendsBottomChromeHeightPreferenceKey.self) { value in
-      bottomChromeHeight = value
-    }
   }
 
   private var loadingState: some View {
@@ -375,7 +404,7 @@ struct FriendsThreadView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     .padding(.horizontal, Spacing.lg)
-    .padding(.bottom, bottomChromeHeight)
+    .padding(.bottom, bottomAccessoryInset)
   }
 
   private var emptyState: some View {
@@ -400,7 +429,7 @@ struct FriendsThreadView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     .padding(.horizontal, Spacing.lg)
-    .padding(.bottom, bottomChromeHeight)
+    .padding(.bottom, bottomAccessoryInset)
   }
 
   private var olderMessagesLoadingState: some View {
@@ -452,70 +481,6 @@ struct FriendsThreadView: View {
     ScreenshotNotificationBubble(
       showNotifiedIcon: showScreenshotNotifiedIcon,
       bellShakeTrigger: screenshotBellShakeTrigger
-    )
-  }
-
-  private var composer: some View {
-    VStack(spacing: Spacing.xs) {
-      if let replyTarget = viewModel.draftReplyTarget {
-        DraftReplyBanner(
-          preview: replyPreviewModel(for: replyTarget),
-          onCancel: {
-            viewModel.clearReplyTarget()
-          }
-        )
-        .padding(.horizontal, Spacing.md)
-      }
-
-      if viewModel.isThreadReadOnly {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "hand.raised.fill")
-            .foregroundColor(.tidexWarning)
-
-          Text(.friendsChatBlockedReadOnly)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-
-          Spacer()
-        }
-        .padding(.horizontal, Spacing.md)
-      }
-
-      if let sendErrorMessage = viewModel.sendErrorMessage {
-        HStack(spacing: Spacing.xs) {
-          Text(sendErrorMessage)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
-
-          Spacer()
-        }
-        .padding(.horizontal, Spacing.md)
-      }
-
-      ChatInputField(
-        inputText: $viewModel.draft,
-        placeholder: String(localized: .friendsChatPlaceholder),
-        horizontalPadding: MonthPickerLayout.horizontalPadding,
-        bottomPadding: MonthPickerLayout.bottomPadding,
-        showsCameraShortcut: true,
-        collapsesAttachmentButtonForLongDrafts: true,
-        dismissKeyboardOnSend: false,
-        onSend: { message in
-          await viewModel.sendMessage(content: message, image: nil)
-        },
-        onSendWithImage: { message, image in
-          await viewModel.sendMessage(content: message, image: image)
-        },
-        disabled: viewModel.isThreadReadOnly
-      )
-    }
-    .background(
-      GeometryReader { geometry in
-        Color.clear.preference(
-          key: FriendsBottomChromeHeightPreferenceKey.self,
-          value: geometry.size.height
-        )
-      }
     )
   }
 
@@ -627,7 +592,6 @@ struct FriendsThreadView: View {
     if oldValue.messageCount == 0 || isPinnedToBottom {
       unreadIncomingCount = 0
       showsNewMessagesPill = false
-      scrollToBottomTrigger += 1
       return
     }
 
@@ -1216,14 +1180,6 @@ private struct DraftReplyBanner: View {
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .stroke(Color.tidexBorder.opacity(0.35), lineWidth: 1)
     )
-  }
-}
-
-private struct FriendsBottomChromeHeightPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = Spacing.bottomScrollMargin
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = nextValue()
   }
 }
 

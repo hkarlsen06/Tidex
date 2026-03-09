@@ -141,7 +141,7 @@ struct ChatInputField: View {
       ChatComposerField(
         text: $inputText,
         placeholder: placeholder,
-        disabled: effectiveDisabled,
+        disabled: disabled,
         isSending: isSubmitting,
         canSend: canSend,
         sendAccessibilityLabel: String(localized: "Send message"),
