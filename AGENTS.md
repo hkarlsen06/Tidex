@@ -1,3 +1,7 @@
+```
+
+```
+
 # AGENTS.md
 
 This file provides guidance to coding agents when working with code in this repository.
@@ -5,6 +9,7 @@ This file provides guidance to coding agents when working with code in this repo
 ## Project Overview
 
 A monorepo containing two applications for tracking work shifts and calculating wages:
+
 - **next/** - Next.js 16 web application with Supabase authentication
 - **ios/** - Native iOS application
 
@@ -29,6 +34,7 @@ tidex/
 ## Available Skills
 
 Use these skills for specialized tasks:
+
 - `ios` - Start iOS development mode for working on the native Tidex iOS app
 - `troubleshoot-supabase-cookies` - For "Refresh Token Not Found" errors
 - `add-shadcn-component` - For adding UI components
@@ -41,6 +47,7 @@ Use these skills for specialized tasks:
 Located in `ios/Scripts/`. Use `pnpm` commands from repo root as the default interface.
 
 **Commands:**
+
 ```bash
 pnpm ios:l10n:add -- --key "feature.key" --en "English" --nb "Norwegian"
 pnpm ios:l10n:delete -- --key "feature.key"
@@ -58,13 +65,14 @@ pnpm ios:l10n:validate
 - **Deployment**: `supabase functions deploy <name> --no-verify-jwt`
 
 **`verify_jwt` settings:**
-| Function | `verify_jwt` | Reason |
-|----------|-------------|--------|
-| `stripe_webhook` | `false` | Webhook |
-| `apple-server-notifications` | `false` | Webhook |
-| `apple-verify-purchase` | `true` | User-called |
-| `send-push-notifications` | `false` | pg_cron |
-| `before-user-created` | `false` | Auth hook |
+
+| Function                       | `verify_jwt` | Reason      |
+| ------------------------------ | -------------- | ----------- |
+| `stripe_webhook`             | `false`      | Webhook     |
+| `apple-server-notifications` | `false`      | Webhook     |
+| `apple-verify-purchase`      | `true`       | User-called |
+| `send-push-notifications`    | `false`      | pg_cron     |
+| `before-user-created`        | `false`      | Auth hook   |
 
 Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jwt: true` only for direct user calls.
 
@@ -75,19 +83,19 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 **CRITICAL:** Keep local files in sync with remote database when making changes.
 
 **Current Cron Jobs:**
-| Job Name | Schedule | Description |
-|----------|----------|-------------|
+
+| Job Name                              | Schedule      | Description               |
+| ------------------------------------- | ------------- | ------------------------- |
 | `cleanup-shift-notification-events` | `0 4 * * *` | Clean sent outbox entries |
 
 ## Agent Behavior Guidelines
 
 **Do NOT create unnecessary files:**
+
 - NO summary documents, audit reports, or markdown files unless explicitly requested
 - Focus on code changes only - communicate findings in chat
 
 **NEVER push to git automatically** - commit when requested, but wait for user approval before pushing.
 
 **iOS Builds:**
-- **NEVER run `xcodebuild` directly** - it is slow and often fails due to environment issues (watchOS SDK, derived data, etc.)
-- To check for Swift errors, run `swiftlint` instead (fast, catches common issues)
-- At the end of your turn, **ask the user to run a build in Xcode** to catch any remaining compilation errors
+- To check for Swift errors, run `swiftlint`(fast, catches common issues)

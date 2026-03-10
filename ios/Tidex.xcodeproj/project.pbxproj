@@ -1548,7 +1548,7 @@
 				114F0F4F2F2150EA00B587F0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		11546CFB2F3E989800FC832F /* Build configuration list for PBXNativeTarget "WatchShiftWidgetExtension" */ = {
 			isa = XCConfigurationList;
@@ -1557,7 +1557,7 @@
 				11546CFD2F3E989800FC832F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		11A5CD432F101284002BAC91 /* Build configuration list for PBXNativeTarget "TidexShiftWidgetExtension" */ = {
 			isa = XCConfigurationList;
@@ -1566,7 +1566,7 @@
 				11A5CD452F101284002BAC91 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		11DC87DE2F5D35990080D9F5 /* Build configuration list for PBXNativeTarget "TidexNotificationService" */ = {
 			isa = XCConfigurationList;
@@ -1575,7 +1575,7 @@
 				11DC87E02F5D35990080D9F5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		12B4A00E3015000001000001 /* Build configuration list for PBXNativeTarget "TidexShareExtension" */ = {
 			isa = XCConfigurationList;
@@ -1584,7 +1584,7 @@
 				12B4A00D3015000001000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		1629D0282BDBAF780D3B871D /* Build configuration list for PBXNativeTarget "TidexAppUITests" */ = {
 			isa = XCConfigurationList;
@@ -1593,7 +1593,7 @@
 				E1D1CFBBB91C778CCC33DD30 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "Tidex" */ = {
 			isa = XCConfigurationList;
@@ -1602,7 +1602,7 @@
 				504EC3151FED79650016851F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "TidexApp" */ = {
 			isa = XCConfigurationList;
@@ -1611,7 +1611,7 @@
 				504EC3181FED79650016851F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		F4383DBE864F1EB34B00FBDD /* Build configuration list for PBXNativeTarget "TidexAppTests" */ = {
 			isa = XCConfigurationList;
@@ -1620,7 +1620,7 @@
 				E909EDFB42831EF7F1EC6958 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 

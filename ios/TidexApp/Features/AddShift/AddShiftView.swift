@@ -188,31 +188,25 @@ struct AddShiftView: View {
               .fixedSize()
           }
         }
-        ToolbarItem(placement: .principal) {
-          Text(.tabsAdd)
-            .font(.headline)
-            .foregroundColor(.tidexTextPrimary)
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .sharedBackgroundVisibility(.hidden)
         if !shouldShowWorkSetupRequiredPlaceholder {
           ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: Spacing.xs) {
-              Button {
-                presentStartFreshConfirmation()
-              } label: {
-                Image(systemName: "arrow.uturn.backward.circle.fill")
-                  .font(.tidexHeadline)
-                  .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
-              }
-              .buttonStyle(.plain)
-              .disabled(!viewModel.hasContent)
-              .accessibilityLabel(Text(.commonBack))
-
-              AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
+            Button {
+              presentStartFreshConfirmation()
+            } label: {
+              Image(systemName: "arrow.uturn.backward.circle.fill")
+                .font(.tidexHeadline)
+                .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
             }
-            .fixedSize(horizontal: true, vertical: false)
+            .buttonStyle(.plain)
+            .disabled(!viewModel.hasContent)
+            .accessibilityLabel(Text(.commonBack))
           }
+          ToolbarSpacer(.fixed, placement: .topBarTrailing)
+          ToolbarItem(placement: .topBarTrailing) {
+            AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
+              .fixedSize(horizontal: true, vertical: false)
+          }
+          .sharedBackgroundVisibility(.hidden)
         }
       }
       .overlay(alignment: .bottomTrailing) {
