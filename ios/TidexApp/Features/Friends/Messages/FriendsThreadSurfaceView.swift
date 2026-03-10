@@ -54,8 +54,10 @@ final class FriendsThreadSurfaceViewController: UIViewController {
   private lazy var composerController = UIHostingController(
     rootView: FriendsThreadComposerHostedView(bridge: composerBridge)
   )
-  private lazy var composerHeightConstraint = composerController.view.heightAnchor.constraint(
-    equalToConstant: 0)
+  private lazy var composerBottomToSafeAreaConstraint = composerController.view.bottomAnchor
+    .constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+  private lazy var composerBottomToKeyboardConstraint = composerController.view.bottomAnchor
+    .constraint(equalTo: view.keyboardLayoutGuide.topAnchor)
 
   private var callbacks: FriendsThreadSurfaceCallbacks?
   private var composerConfiguration = FriendsThreadComposerConfiguration(
@@ -93,7 +95,8 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     composerController.view.setContentCompressionResistancePriority(.required, for: .vertical)
     view.addSubview(composerController.view)
     composerController.didMove(toParent: self)
-    composerHeightConstraint.isActive = true
+    composerBottomToSafeAreaConstraint.isActive = true
+    composerBottomToKeyboardConstraint.isActive = false
 
     composerBridge.onHeightChanged = { [weak self] height in
       self?.handleComposerPreferredHeightChange(height: height)
@@ -107,14 +110,13 @@ final class FriendsThreadSurfaceViewController: UIViewController {
 
       composerController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       composerController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      composerController.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
+      composerController.view.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor),
     ])
   }
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    let didUpdateComposerHeight = updateComposerHeightIfNeeded()
-    guard !didUpdateComposerHeight else { return }
+    updateComposerBottomConstraintForCurrentKeyboardState()
     updateTimelineBottomInsetIfNeeded()
     reportBottomAccessoryInsetIfNeeded()
   }
@@ -147,6 +149,7 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     timelineController.onTapQuotedMessage = callbacks.onTapQuotedMessage
 
     refreshComposer()
+    updateComposerBottomConstraintForCurrentKeyboardState()
     seedComposerHeightIfPossible()
 
     timelineController.apply(
@@ -160,47 +163,39 @@ final class FriendsThreadSurfaceViewController: UIViewController {
 
   private func refreshComposer() {
     composerBridge.apply(configuration: composerConfiguration)
+    composerController.view.invalidateIntrinsicContentSize()
     view.setNeedsLayout()
   }
 
   private func seedComposerHeightIfPossible() {
-    let targetWidth = view.bounds.width
+    let targetWidth = composerMeasurementWidth
     guard targetWidth > 0 else { return }
-    composerHeightConstraint.constant = preferredComposerHeight(for: targetWidth)
-  }
 
-  @discardableResult
-  private func updateComposerHeightIfNeeded(layoutImmediately: Bool = false) -> Bool {
-    let targetWidth =
-      composerController.view.bounds.width > 0
-      ? composerController.view.bounds.width : view.bounds.width
-    guard targetWidth > 0 else { return false }
-
-    let measuredHeight = preferredComposerHeight(for: targetWidth)
-    guard abs(measuredHeight - composerHeightConstraint.constant) > 0.5 else { return false }
-
-    composerHeightConstraint.constant = measuredHeight
-    if layoutImmediately, view.window != nil {
-      view.layoutIfNeeded()
-    } else {
-      view.setNeedsLayout()
-    }
-    return true
+    let measuredHeight = measuredComposerHeight(for: targetWidth)
+    guard measuredHeight > 0 else { return }
+    latestMeasuredComposerHeight = measuredHeight
   }
 
   private func handleComposerPreferredHeightChange(height: CGFloat) {
     latestMeasuredComposerHeight = height
-    let didUpdateComposerHeight = updateComposerHeightIfNeeded(layoutImmediately: true)
-    guard didUpdateComposerHeight else { return }
+    composerController.view.invalidateIntrinsicContentSize()
+    view.setNeedsLayout()
+    if view.window != nil {
+      updateComposerBottomConstraintForCurrentKeyboardState()
+      view.layoutIfNeeded()
+    }
     updateTimelineBottomInsetIfNeeded()
     reportBottomAccessoryInsetIfNeeded()
   }
 
-  private func preferredComposerHeight(for width: CGFloat) -> CGFloat {
-    if latestMeasuredComposerHeight > 0 {
-      return latestMeasuredComposerHeight
+  private var composerMeasurementWidth: CGFloat {
+    if composerController.view.bounds.width > 0 {
+      return composerController.view.bounds.width
     }
+    return view.bounds.width
+  }
 
+  private func measuredComposerHeight(for width: CGFloat) -> CGFloat {
     let fittedSize = composerController.sizeThatFits(
       in: CGSize(width: width, height: UIView.layoutFittingCompressedSize.height)
     )
@@ -214,7 +209,28 @@ final class FriendsThreadSurfaceViewController: UIViewController {
       withHorizontalFittingPriority: .required,
       verticalFittingPriority: .fittingSizeLevel
     )
-    return resolvedSize.height
+    return max(0, resolvedSize.height)
+  }
+
+  private func updateComposerBottomConstraintForCurrentKeyboardState() {
+    let keyboardTop = view.keyboardLayoutGuide.layoutFrame.minY
+    let safeAreaBottom = view.safeAreaLayoutGuide.layoutFrame.maxY
+    let isKeyboardPresented = keyboardTop < (safeAreaBottom - 0.5)
+
+    if isKeyboardPresented {
+      guard
+        !composerBottomToKeyboardConstraint.isActive || composerBottomToSafeAreaConstraint.isActive
+      else { return }
+      composerBottomToSafeAreaConstraint.isActive = false
+      composerBottomToKeyboardConstraint.isActive = true
+      return
+    }
+
+    guard
+      !composerBottomToSafeAreaConstraint.isActive || composerBottomToKeyboardConstraint.isActive
+    else { return }
+    composerBottomToKeyboardConstraint.isActive = false
+    composerBottomToSafeAreaConstraint.isActive = true
   }
 
   private func updateTimelineBottomInsetIfNeeded() {
@@ -233,7 +249,9 @@ final class FriendsThreadSurfaceViewController: UIViewController {
   }
 
   private var currentBottomAccessoryInset: CGFloat {
-    guard composerController.view.frame.height > 0 else { return composerHeightConstraint.constant }
+    guard composerController.view.frame.height > 0 else {
+      return max(0, latestMeasuredComposerHeight + view.safeAreaInsets.bottom)
+    }
     return max(0, view.bounds.maxY - composerController.view.frame.minY)
   }
 
