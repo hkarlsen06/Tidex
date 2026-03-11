@@ -36,6 +36,7 @@ struct SharingView: View {
   @State private var highlightClearTask: Task<Void, Never>?
   @State private var openingThreadUserId: String?
   @State private var openingThreadId: String?
+  @State private var activeChatHighlightUserId: String?
   @State private var chatOpenErrorMessage: String?
   @State private var unreadChatUserIds: Set<String> = []
   @State private var unreadChatCountsByUserId: [String: Int] = [:]
@@ -99,6 +100,7 @@ struct SharingView: View {
           hasSelectedSharer = false
         }
         .onDisappear {
+          activeChatHighlightUserId = nil
           hasSelectedSharer = viewModel.selectedSharer != nil
         }
       }
@@ -151,6 +153,7 @@ struct SharingView: View {
     .onChange(of: navigationPath) { _, path in
       // When user navigates back (automatic back button or swipe), deselect sharer
       if path.isEmpty {
+        activeChatHighlightUserId = nil
         if viewModel.selectedSharer != nil {
           viewModel.deselectSharer()
         }
@@ -359,6 +362,7 @@ struct SharingView: View {
               await openChat(for: sharer)
             }
           },
+          highlightedChatUserId: activeChatHighlightUserId,
           openingThreadUserId: openingThreadUserId,
           onAddFriend: {
             autoExpandAddForm = true
@@ -390,16 +394,19 @@ struct SharingView: View {
         fallbackDisplayName: sharedUser.displayName,
         fallbackAvatarUrl: sharedUser.avatarUrl
       )
+      activeChatHighlightUserId = sharedUser.id
       navigationPath.append(route)
     } catch let error as FriendsMessagingServiceError
       where isBlockedDirectThreadCreationError(error)
     {
+      activeChatHighlightUserId = nil
       viewModel.handleBlockedUser(sharedUser.id)
       scheduleUnreadChatRefresh()
       Task {
         await viewModel.loadSharers(forceRefreshPreviews: true)
       }
     } catch {
+      activeChatHighlightUserId = nil
       chatOpenErrorMessage =
         error.localizedDescription.isEmpty
         ? String(localized: .friendsChatOpenFailed)
@@ -438,6 +445,7 @@ struct SharingView: View {
         fallbackAvatarUrl: thread.counterpartAvatarUrl
       )
 
+      activeChatHighlightUserId = thread.counterpartUserId
       navigationPath = NavigationPath()
       viewModel.deselectSharer()
       navigationPath.append(route)
@@ -445,6 +453,7 @@ struct SharingView: View {
     } catch is CancellationError {
       return
     } catch {
+      activeChatHighlightUserId = nil
       chatOpenErrorMessage =
         error.localizedDescription.isEmpty
         ? String(localized: .friendsChatOpenFailed)

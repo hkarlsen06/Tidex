@@ -48,6 +48,9 @@ struct FriendsChatMessageRowContent: View {
   let onTapQuotedMessage: () -> Void
 
   @State private var actionSourceFrame: CGRect = .zero
+  @State private var longPressTriggerTask: Task<Void, Never>?
+  @State private var didTriggerLongPress = false
+  @State private var suppressNextImageTap = false
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -111,9 +114,10 @@ struct FriendsChatMessageRowContent: View {
                     FriendsChatImageView(
                       attachment: attachment,
                       isCurrentUser: isCurrentUser,
-                      canReact: message.canReact,
-                      onToggleReaction: onToggleReaction,
-                      onReport: onReportMessage
+                      suppressTap: suppressNextImageTap,
+                      onConsumeSuppressedTap: {
+                        suppressNextImageTap = false
+                      }
                     )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
@@ -196,13 +200,17 @@ struct FriendsChatMessageRowContent: View {
               guard frame.integral != .zero else { return }
               actionSourceFrame = frame
             }
-            .simultaneousGesture(
-              LongPressGesture(minimumDuration: 0.28)
-                .onEnded { _ in
-                  Haptics.play(.medium)
-                  onOpenActions(actionSourceFrame)
-                }
-            )
+            .onLongPressGesture(
+              minimumDuration: 0.28,
+              maximumDistance: 16,
+              perform: {}
+            ) { isPressing in
+              handleLongPressStateChange(isPressing)
+            }
+            .onDisappear {
+              cancelLongPressTrigger()
+              didTriggerLongPress = false
+            }
 
             if showsMetadataRow {
               HStack(spacing: Spacing.xxs) {
@@ -255,6 +263,30 @@ struct FriendsChatMessageRowContent: View {
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .fill(isHighlighted ? Color.tidexBlue.opacity(0.08) : Color.clear)
     )
+  }
+
+  private func handleLongPressStateChange(_ isPressing: Bool) {
+    if isPressing {
+      guard longPressTriggerTask == nil else { return }
+      didTriggerLongPress = false
+      longPressTriggerTask = Task { @MainActor in
+        try? await Task.sleep(nanoseconds: 280_000_000)
+        guard !Task.isCancelled, !didTriggerLongPress else { return }
+        didTriggerLongPress = true
+        suppressNextImageTap = true
+        Haptics.play(.medium)
+        onOpenActions(actionSourceFrame)
+      }
+      return
+    }
+
+    cancelLongPressTrigger()
+    didTriggerLongPress = false
+  }
+
+  private func cancelLongPressTrigger() {
+    longPressTriggerTask?.cancel()
+    longPressTriggerTask = nil
   }
 
   @ViewBuilder
@@ -402,6 +434,32 @@ struct FriendsChatEmojiGlyph: View {
       .fixedSize()
       .minimumScaleFactor(1)
       .accessibilityLabel(Text(verbatim: emoji))
+  }
+}
+
+extension FriendMessageAttachment {
+  func friendsChatImageFrameSize(
+    maxDimension: CGFloat = 220,
+    minDimension: CGFloat = 120
+  ) -> CGSize {
+    guard
+      let width,
+      let height,
+      width > 0,
+      height > 0
+    else {
+      return CGSize(width: 180, height: 180)
+    }
+
+    let aspectRatio = CGFloat(width) / CGFloat(height)
+
+    if aspectRatio >= 1 {
+      let scaledHeight = max(minDimension, maxDimension / aspectRatio)
+      return CGSize(width: maxDimension, height: min(maxDimension, scaledHeight))
+    }
+
+    let scaledWidth = max(minDimension, maxDimension * aspectRatio)
+    return CGSize(width: min(maxDimension, scaledWidth), height: maxDimension)
   }
 }
 
@@ -758,70 +816,33 @@ struct ChatShiftSnapshotCard: View {
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
-  let canReact: Bool
-  let onToggleReaction: (String) -> Void
-  let onReport: () -> Void
+  let suppressTap: Bool
+  let onConsumeSuppressedTap: () -> Void
 
-  @StateObject private var loader: FriendsChatImageLoader
   @State private var selectedImageViewer: FriendsChatSelectedImageViewer?
 
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
-    canReact: Bool,
-    onToggleReaction: @escaping (String) -> Void,
-    onReport: @escaping () -> Void
+    suppressTap: Bool = false,
+    onConsumeSuppressedTap: @escaping () -> Void = {}
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
-    self.canReact = canReact
-    self.onToggleReaction = onToggleReaction
-    self.onReport = onReport
-    let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
-    let initialImage = ImageCache.shared.get(for: cacheURL)
-    _loader = StateObject(
-      wrappedValue: FriendsChatImageLoader(initialImage: initialImage)
-    )
+    self.suppressTap = suppressTap
+    self.onConsumeSuppressedTap = onConsumeSuppressedTap
   }
 
   var body: some View {
-    Group {
-      if let image = loader.image {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-          .frame(width: imageFrameSize.width, height: imageFrameSize.height)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-              .strokeBorder(
-                isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
-                lineWidth: 1
-              )
-          )
-          .onTapGesture {
-            selectedImageViewer = FriendsChatSelectedImageViewer(image: image)
-          }
-      } else if loader.isLoading {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-          .frame(width: imageFrameSize.width, height: imageFrameSize.height)
-          .overlay {
-            ProgressView()
-          }
-      } else {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-          .frame(width: imageFrameSize.width, height: imageFrameSize.height)
-          .overlay {
-            Image(systemName: "photo")
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexTextMuted)
-          }
+    FriendsChatImageAttachmentCard(
+      attachment: attachment,
+      isCurrentUser: isCurrentUser
+    ) { image in
+      if suppressTap {
+        onConsumeSuppressedTap()
+        return
       }
-    }
-    .task(id: attachment.id) {
-      await loader.loadIfNeeded(attachment: attachment)
+      selectedImageViewer = FriendsChatSelectedImageViewer(image: image)
     }
     .fullScreenCover(item: $selectedImageViewer) { viewer in
       ImageViewerOverlay(image: viewer.image) {
@@ -829,34 +850,10 @@ private struct FriendsChatImageView: View {
       }
     }
   }
-
-  private var imageFrameSize: CGSize {
-    let maxDimension: CGFloat = 220
-    let minDimension: CGFloat = 120
-
-    guard
-      let width = attachment.width,
-      let height = attachment.height,
-      width > 0,
-      height > 0
-    else {
-      return CGSize(width: 180, height: 180)
-    }
-
-    let aspectRatio = CGFloat(width) / CGFloat(height)
-
-    if aspectRatio >= 1 {
-      let scaledHeight = max(minDimension, maxDimension / aspectRatio)
-      return CGSize(width: maxDimension, height: min(maxDimension, scaledHeight))
-    } else {
-      let scaledWidth = max(minDimension, maxDimension * aspectRatio)
-      return CGSize(width: min(maxDimension, scaledWidth), height: maxDimension)
-    }
-  }
 }
 
 @MainActor
-private final class FriendsChatImageLoader: ObservableObject {
+final class FriendsChatImageLoader: ObservableObject {
   @Published private(set) var image: UIImage?
   @Published private(set) var isLoading = false
 
@@ -912,6 +909,90 @@ private final class FriendsChatImageLoader: ObservableObject {
         UIImage(data: data)
       }
     }.value
+  }
+}
+
+struct FriendsChatImageAttachmentCard: View {
+  let attachment: FriendMessageAttachment
+  let isCurrentUser: Bool
+  var onTap: ((UIImage) -> Void)? = nil
+
+  @StateObject private var loader: FriendsChatImageLoader
+
+  init(
+    attachment: FriendMessageAttachment,
+    isCurrentUser: Bool,
+    onTap: ((UIImage) -> Void)? = nil
+  ) {
+    self.attachment = attachment
+    self.isCurrentUser = isCurrentUser
+    self.onTap = onTap
+    let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
+    let initialImage = ImageCache.shared.get(for: cacheURL)
+    _loader = StateObject(
+      wrappedValue: FriendsChatImageLoader(initialImage: initialImage)
+    )
+  }
+
+  var body: some View {
+    Group {
+      if let image = loader.image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+          .frame(width: imageFrameSize.width, height: imageFrameSize.height)
+          .clipShape(imageShape)
+          .overlay {
+            imageShape
+              .strokeBorder(
+                isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
+                lineWidth: 1
+              )
+          }
+          .contentShape(imageShape)
+          .onTapGesture {
+            onTap?(image)
+          }
+      } else if loader.isLoading {
+        placeholder {
+          ProgressView()
+        }
+      } else {
+        placeholder {
+          Image(systemName: "photo")
+            .font(.tidexTitle2)
+            .foregroundColor(.tidexTextMuted)
+        }
+      }
+    }
+    .task(id: attachment.id) {
+      await loader.loadIfNeeded(attachment: attachment)
+    }
+  }
+
+  private var imageFrameSize: CGSize {
+    attachment.friendsChatImageFrameSize()
+  }
+
+  private var imageShape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+  }
+
+  @ViewBuilder
+  private func placeholder<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    imageShape
+      .fill(Color.tidexSurfacePrimary)
+      .frame(width: imageFrameSize.width, height: imageFrameSize.height)
+      .overlay {
+        content()
+      }
+      .overlay {
+        imageShape
+          .strokeBorder(
+            isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
+            lineWidth: 1
+          )
+      }
   }
 }
 
