@@ -157,14 +157,14 @@ private struct FriendsThreadComposerReplyBanner: View {
             .font(.tidexCaptionStrong)
             .foregroundColor(.tidexBlue)
 
-          if preview.hasImageAttachment {
-            Image(systemName: "photo")
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
+            if let iconSystemName = preview.previewKind.friendsChatReplyIconSystemName {
+              Image(systemName: iconSystemName)
+                .font(.tidexCaptionRegular)
+                .foregroundColor(.tidexTextMuted)
+            }
 
-          if let snippet = preview.snippet {
-            Text(snippet)
+            Text(preview.snippet)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
               .lineLimit(1)

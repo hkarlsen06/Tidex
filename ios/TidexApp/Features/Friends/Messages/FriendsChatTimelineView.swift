@@ -850,10 +850,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
             ? currentUserDisplayName
             : counterpartDisplayName
         ),
-        snippet: quotedMessage.body?
-          .replacingOccurrences(of: "\n", with: " ")
-          .trimmingCharacters(in: .whitespacesAndNewlines),
-        hasImageAttachment: quotedMessage.hasImageAttachment
+        message: quotedMessage
       )
     }
     let nextMessage = indexPath.item < messages.count - 1 ? messages[indexPath.item + 1] : nil

@@ -76,6 +76,49 @@ final class FriendsMessagingRichContentTests: XCTestCase {
     XCTAssertEqual(thread.resolvedLastMessagePreviewKind, .shiftSnapshot)
     XCTAssertEqual(thread.lastMessagePreviewText, "Shared a shift")
   }
+
+  func testReplyPreviewModelUsesShiftSnapshotFallback() {
+    let message = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: nil,
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: makeShiftSnapshotMetadataData()
+    )
+
+    let preview = FriendsChatReplyPreviewModel(senderName: "Hjalmar", message: message)
+
+    XCTAssertEqual(preview.previewKind, .shiftSnapshot)
+    XCTAssertEqual(preview.snippet, "Shared a shift")
+  }
+
+  func testReplyPreviewModelUsesImageFallback() {
+    let message = FriendMessage(
+      id: "message-image",
+      threadId: "thread-1",
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: nil,
+      clientId: "client-image",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_300),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [makeImageAttachment()]
+    )
+
+    let preview = FriendsChatReplyPreviewModel(senderName: "Friend", message: message)
+
+    XCTAssertEqual(preview.previewKind, .image)
+    XCTAssertEqual(preview.snippet, "Photo")
+  }
 }
 
 private func makeShiftSnapshotMetadataData() -> Data {
@@ -106,5 +149,20 @@ private func makeShiftSnapshotMetadataData() -> Data {
       }
     }
     """.utf8
+  )
+}
+
+private func makeImageAttachment() -> FriendMessageAttachment {
+  FriendMessageAttachment(
+    id: "attachment-1",
+    attachmentIndex: 0,
+    kind: .image,
+    storageBucket: "message-attachments",
+    storagePath: "thread-1/friend-1/attachment-1.jpeg",
+    mimeType: "image/jpeg",
+    byteSize: 256,
+    width: 640,
+    height: 480,
+    createdAt: Date(timeIntervalSince1970: 1_700_000_300)
   )
 }
