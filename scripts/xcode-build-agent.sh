@@ -6,7 +6,7 @@ if [ "${1:-}" = "--json" ]; then
   MODE="json"
 fi
 
-RESULT_BUNDLE="$(mktemp -d "${TMPDIR:-/tmp}/tidex-build-XXXXXX.xcresult")"
+RESULT_BUNDLE="${TMPDIR:-/tmp}/tidex-build-$(date +%s)-$$.xcresult"
 LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-log.XXXXXX")"
 JSON_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-json.XXXXXX")"
 PARSED_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-parsed.XXXXXX")"

@@ -36,8 +36,10 @@ struct FriendsChatMessageRowContent: View {
   let onRetry: () -> Void
   let onReportMessage: () -> Void
   let onToggleReaction: (String) -> Void
-  let onOpenActions: () -> Void
+  let onOpenActions: (CGRect) -> Void
   let onTapQuotedMessage: () -> Void
+
+  @State private var actionSourceFrame: CGRect = .zero
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -138,12 +140,25 @@ struct FriendsChatMessageRowContent: View {
                   }
                 }
               }
+              .background {
+                GeometryReader { geometry in
+                  Color.clear
+                    .preference(
+                      key: FriendsChatActionSourceFramePreferenceKey.self,
+                      value: geometry.frame(in: .global)
+                    )
+                }
+              }
+            }
+            .onPreferenceChange(FriendsChatActionSourceFramePreferenceKey.self) { frame in
+              guard frame.integral != .zero else { return }
+              actionSourceFrame = frame
             }
             .simultaneousGesture(
               LongPressGesture(minimumDuration: 0.28)
                 .onEnded { _ in
                   Haptics.play(.medium)
-                  onOpenActions()
+                  onOpenActions(actionSourceFrame)
                 }
             )
 
@@ -292,6 +307,17 @@ struct FriendsChatMessageRowContent: View {
     } else {
       Color.clear
         .frame(width: Self.avatarSize, height: Self.avatarSize)
+    }
+  }
+}
+
+private struct FriendsChatActionSourceFramePreferenceKey: PreferenceKey {
+  static var defaultValue: CGRect = .zero
+
+  static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+    let next = nextValue()
+    if next != .zero {
+      value = next
     }
   }
 }
