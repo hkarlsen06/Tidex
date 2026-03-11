@@ -43,6 +43,66 @@ struct FriendMessageCursor: Equatable {
   let messageId: String
 }
 
+enum FriendLastMessagePreviewKind: String, Codable, Equatable {
+  case text
+  case image
+  case shiftSnapshot = "shift_snapshot"
+  case unknown
+}
+
+enum FriendRichContentKind: Equatable {
+  case shiftSnapshot
+  case unsupported(String)
+}
+
+enum FriendRichContent: Equatable {
+  case shiftSnapshot(FriendShiftSnapshot)
+}
+
+struct FriendShiftSnapshot: Codable, Equatable {
+  let schemaVersion: Int
+  let ownerUserId: String
+  let ownerDisplayName: String
+  let ownerAvatarUrl: String?
+  let shiftId: String
+  let jobName: String?
+  let jobColorHex: String?
+  let shiftDate: String
+  let startTime: String
+  let endTime: String
+  let paidHours: Double
+  let currency: String
+  let includesEarnings: Bool
+  let grossPay: Double?
+  let netPay: Double?
+  let taxEnabled: Bool
+  let source: String
+
+  enum CodingKeys: String, CodingKey {
+    case schemaVersion = "schema_version"
+    case ownerUserId = "owner_user_id"
+    case ownerDisplayName = "owner_display_name"
+    case ownerAvatarUrl = "owner_avatar_url"
+    case shiftId = "shift_id"
+    case jobName = "job_name"
+    case jobColorHex = "job_color_hex"
+    case shiftDate = "shift_date"
+    case startTime = "start_time"
+    case endTime = "end_time"
+    case paidHours = "paid_hours"
+    case currency
+    case includesEarnings = "includes_earnings"
+    case grossPay = "gross_pay"
+    case netPay = "net_pay"
+    case taxEnabled = "tax_enabled"
+    case source
+  }
+
+  var isSupportedSchemaVersion: Bool {
+    schemaVersion == 1
+  }
+}
+
 struct FriendThread: Identifiable, Codable, Equatable {
   let id: String
   let kind: FriendThreadKind
@@ -57,13 +117,70 @@ struct FriendThread: Identifiable, Codable, Equatable {
   let lastMessageSenderId: String?
   let lastMessageAt: Date?
   let lastMessageBody: String?
+  let lastMessagePreviewKind: FriendLastMessagePreviewKind?
   let lastMessageHasImage: Bool
   let unreadCount: Int
   let muted: Bool
   let createdAt: Date
 
+  init(
+    id: String,
+    kind: FriendThreadKind,
+    title: String?,
+    avatarUrl: String?,
+    metadataData: Data? = nil,
+    counterpartUserId: String?,
+    counterpartDisplayName: String?,
+    counterpartProfilePictureUrl: String?,
+    counterpartOAuthAvatarUrl: String?,
+    lastMessageId: String?,
+    lastMessageSenderId: String?,
+    lastMessageAt: Date?,
+    lastMessageBody: String?,
+    lastMessagePreviewKind: FriendLastMessagePreviewKind? = nil,
+    lastMessageHasImage: Bool = false,
+    unreadCount: Int = 0,
+    muted: Bool = false,
+    createdAt: Date
+  ) {
+    self.id = id
+    self.kind = kind
+    self.title = title
+    self.avatarUrl = avatarUrl
+    self.metadataData = metadataData
+    self.counterpartUserId = counterpartUserId
+    self.counterpartDisplayName = counterpartDisplayName
+    self.counterpartProfilePictureUrl = counterpartProfilePictureUrl
+    self.counterpartOAuthAvatarUrl = counterpartOAuthAvatarUrl
+    self.lastMessageId = lastMessageId
+    self.lastMessageSenderId = lastMessageSenderId
+    self.lastMessageAt = lastMessageAt
+    self.lastMessageBody = lastMessageBody
+    self.lastMessagePreviewKind = lastMessagePreviewKind
+    self.lastMessageHasImage = lastMessageHasImage
+    self.unreadCount = unreadCount
+    self.muted = muted
+    self.createdAt = createdAt
+  }
+
   var counterpartAvatarUrl: String? {
     counterpartProfilePictureUrl ?? counterpartOAuthAvatarUrl
+  }
+
+  var resolvedLastMessagePreviewKind: FriendLastMessagePreviewKind {
+    FriendMessagePreviewPolicy.resolvedPreviewKind(
+      explicitPreviewKind: lastMessagePreviewKind,
+      body: lastMessageBody,
+      hasImageAttachment: lastMessageHasImage
+    )
+  }
+
+  var lastMessagePreviewText: String? {
+    guard lastMessageId != nil else { return nil }
+    return FriendMessagePreviewPolicy.previewText(
+      body: lastMessageBody,
+      previewKind: resolvedLastMessagePreviewKind
+    )
   }
 
   var sortTimestamp: Date {
@@ -123,8 +240,67 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   let sendState: FriendMessageSendState
   let failureMessage: String?
 
+  init(
+    id: String,
+    threadId: String,
+    senderUserId: String,
+    messageType: FriendMessageType,
+    body: String?,
+    clientId: String,
+    replyToMessageId: String?,
+    createdAt: Date,
+    editedAt: Date?,
+    deletedAt: Date?,
+    metadataData: Data? = nil,
+    attachments: [FriendMessageAttachment] = [],
+    reactions: [FriendMessageReaction] = [],
+    sendState: FriendMessageSendState = .sent,
+    failureMessage: String? = nil
+  ) {
+    self.id = id
+    self.threadId = threadId
+    self.senderUserId = senderUserId
+    self.messageType = messageType
+    self.body = body
+    self.clientId = clientId
+    self.replyToMessageId = replyToMessageId
+    self.createdAt = createdAt
+    self.editedAt = editedAt
+    self.deletedAt = deletedAt
+    self.metadataData = metadataData
+    self.attachments = attachments
+    self.reactions = reactions
+    self.sendState = sendState
+    self.failureMessage = failureMessage
+  }
+
   var hasImageAttachment: Bool {
     attachments.contains { $0.kind == .image }
+  }
+
+  var richContentKind: FriendRichContentKind? {
+    FriendRichContentDecoder.richContentKind(from: metadataData)
+  }
+
+  var richContent: FriendRichContent? {
+    FriendRichContentDecoder.richContent(from: metadataData)
+  }
+
+  var shiftSnapshot: FriendShiftSnapshot? {
+    guard case .shiftSnapshot(let snapshot) = richContent else { return nil }
+    return snapshot
+  }
+
+  var previewKind: FriendLastMessagePreviewKind {
+    FriendMessagePreviewPolicy.resolvedPreviewKind(
+      body: body,
+      richContentKind: richContentKind,
+      hasImageAttachment: hasImageAttachment
+    )
+  }
+
+  var previewText: String? {
+    FriendMessagePreviewPolicy.previewText(body: body, previewKind: previewKind)
   }
 
   var canRetrySend: Bool {
@@ -251,5 +427,118 @@ struct FriendOutgoingAttachment: Codable, Equatable {
     case byteSize = "byte_size"
     case width
     case height
+  }
+}
+
+private struct FriendRichContentEnvelope: Decodable {
+  let content: Content?
+
+  struct Content: Decodable {
+    let kind: String?
+    let shiftSnapshot: FriendShiftSnapshot?
+
+    enum CodingKeys: String, CodingKey {
+      case kind
+      case shiftSnapshot = "shift_snapshot"
+    }
+  }
+}
+
+private enum FriendRichContentDecoder {
+  static func richContentKind(from metadataData: Data?) -> FriendRichContentKind? {
+    guard
+      let envelope = decodeEnvelope(from: metadataData),
+      let rawKind = envelope.content?.kind?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !rawKind.isEmpty
+    else {
+      return nil
+    }
+
+    switch rawKind {
+    case FriendLastMessagePreviewKind.shiftSnapshot.rawValue:
+      guard let snapshot = envelope.content?.shiftSnapshot, snapshot.isSupportedSchemaVersion else {
+        return .unsupported(rawKind)
+      }
+      return .shiftSnapshot
+    default:
+      return .unsupported(rawKind)
+    }
+  }
+
+  static func richContent(from metadataData: Data?) -> FriendRichContent? {
+    guard let envelope = decodeEnvelope(from: metadataData) else { return nil }
+    guard let snapshot = envelope.content?.shiftSnapshot, snapshot.isSupportedSchemaVersion else {
+      return nil
+    }
+
+    guard envelope.content?.kind == FriendLastMessagePreviewKind.shiftSnapshot.rawValue else {
+      return nil
+    }
+
+    return .shiftSnapshot(snapshot)
+  }
+
+  private static func decodeEnvelope(from metadataData: Data?) -> FriendRichContentEnvelope? {
+    guard let metadataData, !metadataData.isEmpty else { return nil }
+    return try? JSONDecoder().decode(FriendRichContentEnvelope.self, from: metadataData)
+  }
+}
+
+private enum FriendMessagePreviewPolicy {
+  static func resolvedPreviewKind(
+    explicitPreviewKind: FriendLastMessagePreviewKind? = nil,
+    body: String?,
+    richContentKind: FriendRichContentKind? = nil,
+    hasImageAttachment: Bool
+  ) -> FriendLastMessagePreviewKind {
+    if let explicitPreviewKind {
+      return explicitPreviewKind
+    }
+
+    if normalizedBody(body) != nil {
+      return .text
+    }
+
+    if hasImageAttachment {
+      return .image
+    }
+
+    switch richContentKind {
+    case .shiftSnapshot:
+      return .shiftSnapshot
+    case .unsupported:
+      return .unknown
+    case nil:
+      return .unknown
+    }
+  }
+
+  static func previewText(
+    body: String?,
+    previewKind: FriendLastMessagePreviewKind
+  ) -> String? {
+    if let normalizedBody = normalizedBody(body), previewKind == .text {
+      return normalizedBody
+    }
+
+    switch previewKind {
+    case .text:
+      return String(localized: .friendsChatPreviewUnsupported)
+    case .image:
+      return String(localized: .friendsChatPreviewImage)
+    case .shiftSnapshot:
+      return String(localized: .friendsChatPreviewSharedShift)
+    case .unknown:
+      return String(localized: .friendsChatPreviewUnsupported)
+    }
+  }
+
+  static func normalizedBody(_ body: String?) -> String? {
+    let snippet = body?
+      .replacingOccurrences(of: "\n", with: " ")
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard let snippet, !snippet.isEmpty else { return nil }
+    return snippet
   }
 }

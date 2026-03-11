@@ -565,6 +565,7 @@ private struct MessagingThreadSummaryRow: Decodable {
   let lastMessageSenderId: String?
   let lastMessageAt: Date?
   let lastMessageBody: String?
+  let lastMessagePreviewKind: String?
   let lastMessageHasImage: Bool
   let unreadCount: Int
   let muted: Bool
@@ -584,6 +585,7 @@ private struct MessagingThreadSummaryRow: Decodable {
     case lastMessageSenderId = "last_message_sender_id"
     case lastMessageAt = "last_message_at"
     case lastMessageBody = "last_message_body"
+    case lastMessagePreviewKind = "last_message_preview_kind"
     case lastMessageHasImage = "last_message_has_image"
     case unreadCount = "unread_count"
     case muted
@@ -605,6 +607,7 @@ private struct MessagingThreadSummaryRow: Decodable {
       lastMessageSenderId: lastMessageSenderId,
       lastMessageAt: lastMessageAt,
       lastMessageBody: lastMessageBody,
+      lastMessagePreviewKind: lastMessagePreviewKind.flatMap(FriendLastMessagePreviewKind.init),
       lastMessageHasImage: lastMessageHasImage,
       unreadCount: unreadCount,
       muted: muted,

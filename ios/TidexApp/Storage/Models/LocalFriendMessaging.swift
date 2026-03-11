@@ -21,6 +21,7 @@ final class LocalThread {
   var lastMessageSenderId: String?
   var lastMessageAt: Date?
   var lastMessageBody: String?
+  var lastMessagePreviewKindRaw: String?
   var lastMessageHasImage: Bool
   var unreadCount: Int
   var muted: Bool
@@ -43,6 +44,7 @@ final class LocalThread {
     lastMessageSenderId: String?,
     lastMessageAt: Date?,
     lastMessageBody: String?,
+    lastMessagePreviewKindRaw: String? = nil,
     lastMessageHasImage: Bool,
     unreadCount: Int,
     muted: Bool,
@@ -64,6 +66,7 @@ final class LocalThread {
     self.lastMessageSenderId = lastMessageSenderId
     self.lastMessageAt = lastMessageAt
     self.lastMessageBody = lastMessageBody
+    self.lastMessagePreviewKindRaw = lastMessagePreviewKindRaw
     self.lastMessageHasImage = lastMessageHasImage
     self.unreadCount = unreadCount
     self.muted = muted
@@ -272,6 +275,7 @@ extension LocalThread {
       lastMessageSenderId: lastMessageSenderId,
       lastMessageAt: lastMessageAt,
       lastMessageBody: lastMessageBody,
+      lastMessagePreviewKind: lastMessagePreviewKindRaw.flatMap(FriendLastMessagePreviewKind.init),
       lastMessageHasImage: lastMessageHasImage,
       unreadCount: unreadCount,
       muted: muted,
@@ -292,6 +296,7 @@ extension LocalThread {
     lastMessageSenderId = thread.lastMessageSenderId
     lastMessageAt = thread.lastMessageAt
     lastMessageBody = thread.lastMessageBody
+    lastMessagePreviewKindRaw = thread.lastMessagePreviewKind?.rawValue
     lastMessageHasImage = thread.lastMessageHasImage
     unreadCount = thread.unreadCount
     muted = thread.muted

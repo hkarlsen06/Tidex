@@ -37,6 +37,7 @@ extension LocalStoreActor {
           lastMessageSenderId: thread.lastMessageSenderId,
           lastMessageAt: thread.lastMessageAt,
           lastMessageBody: thread.lastMessageBody,
+          lastMessagePreviewKindRaw: thread.lastMessagePreviewKind?.rawValue,
           lastMessageHasImage: thread.lastMessageHasImage,
           unreadCount: thread.unreadCount,
           muted: thread.muted,
@@ -237,6 +238,7 @@ extension LocalStoreActor {
     thread.lastMessageSenderId = message.senderUserId
     thread.lastMessageAt = message.createdAt
     thread.lastMessageBody = message.body
+    thread.lastMessagePreviewKindRaw = message.previewKind.rawValue
     thread.lastMessageHasImage = message.hasImageAttachment
     thread.sortTimestamp = message.createdAt
     thread.updatedAt = Date()
