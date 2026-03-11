@@ -6,6 +6,26 @@ import os.log
 private let threadLogger = Logger(subsystem: "com.tidex.app", category: "FriendsThreadViewModel")
 
 @MainActor
+protocol SharingPreviewProviding: AnyObject {
+  func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool) async throws
+    -> [SharerShiftPreview]
+}
+
+extension SharingService: SharingPreviewProviding {}
+
+@MainActor
+protocol SharedShiftsCaching: AnyObject {
+  func getCachedFriends(
+    for viewerId: String,
+    includeHidden: Bool
+  ) -> SharedShiftsRepository.CachedFriendsSnapshot
+  func getShiftPreviews(for viewerId: String) -> [String: SharerShiftPreview]
+  func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) async
+}
+
+extension SharedShiftsRepository: SharedShiftsCaching {}
+
+@MainActor
 final class FriendsThreadViewModel: ObservableObject {
   private enum Pagination {
     static let pageSize = 50
@@ -46,6 +66,7 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var restoreScrollTargetMessageId: String?
   @Published private(set) var replyScrollTargetMessageId: String?
   @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
+  @Published private(set) var counterpartShiftPreview: SharerShiftPreview?
   @Published var draftReplyTarget: FriendMessage?
   @Published var draft = ""
   @Published var stagedComposerAttachment: FriendsComposerAttachmentDraft?
@@ -56,6 +77,8 @@ final class FriendsThreadViewModel: ObservableObject {
   let viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
   private let capabilities: any FriendsMessagingCapabilityProviding
+  private let sharingPreviewService: any SharingPreviewProviding
+  private let sharedShiftsCache: any SharedShiftsCaching
   private let repository: FriendsMessagesRepository
   private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
@@ -72,6 +95,8 @@ final class FriendsThreadViewModel: ObservableObject {
     viewerUserId: String,
     service: (any FriendsMessagingServiceProviding)? = nil,
     capabilities: (any FriendsMessagingCapabilityProviding)? = nil,
+    sharingPreviewService: (any SharingPreviewProviding)? = nil,
+    sharedShiftsCache: (any SharedShiftsCaching)? = nil,
     repository: FriendsMessagesRepository? = nil,
     composerDraftStore: FriendsComposerDraftStore? = nil,
     realtimeCoordinator: FriendsMessagingRealtimeCoordinator? = nil
@@ -80,6 +105,8 @@ final class FriendsThreadViewModel: ObservableObject {
     self.viewerUserId = viewerUserId
     self.service = service ?? FriendsMessagingService.shared
     self.capabilities = capabilities ?? FriendsMessagingCapabilities.shared
+    self.sharingPreviewService = sharingPreviewService ?? SharingService.shared
+    self.sharedShiftsCache = sharedShiftsCache ?? SharedShiftsRepository.shared
     self.repository = repository ?? .shared
     self.composerDraftStore = composerDraftStore ?? .shared
     self.realtimeCoordinator = realtimeCoordinator ?? .shared
@@ -121,7 +148,8 @@ final class FriendsThreadViewModel: ObservableObject {
       viewerUserId: viewerUserId
     )
     async let serverRefresh: Void = refreshFromServer()
-    _ = await (realtimeSubscription, serverRefresh)
+    async let counterpartPreviewRefresh: Void = loadCounterpartShiftPreview(forceRefresh: false)
+    _ = await (realtimeSubscription, serverRefresh, counterpartPreviewRefresh)
     isLoading = false
 
     await markLatestIncomingAsRead()
@@ -129,6 +157,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func refresh() async {
     await refreshFromServer()
+    await loadCounterpartShiftPreview(forceRefresh: true)
     await markLatestIncomingAsRead()
   }
 
@@ -138,9 +167,14 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func handleExternalThreadUpdate(shouldMarkRead: Bool) async {
     loadFromCache()
+    await loadCounterpartShiftPreview(forceRefresh: false)
     if shouldMarkRead {
       await markLatestIncomingAsRead()
     }
+  }
+
+  func refreshCounterpartShiftPreview() async {
+    await loadCounterpartShiftPreview(forceRefresh: true)
   }
 
   func markVisibleMessagesReadIfNeeded() async {
@@ -499,6 +533,31 @@ final class FriendsThreadViewModel: ObservableObject {
     )
   }
 
+  private func loadCounterpartShiftPreview(forceRefresh: Bool) async {
+    guard canViewCounterpartSharedShift else {
+      counterpartShiftPreview = nil
+      return
+    }
+
+    if !forceRefresh {
+      let cachedPreview = sharedShiftsCache.getShiftPreviews(for: viewerUserId)[
+        route.counterpartUserId]
+      counterpartShiftPreview = renderablePreview(from: cachedPreview)
+    }
+
+    do {
+      let previews = try await sharingPreviewService.fetchShiftPreviews(
+        sharerIds: [route.counterpartUserId],
+        forceRefresh: forceRefresh
+      )
+      await sharedShiftsCache.saveShiftPreviews(previews, for: viewerUserId)
+      counterpartShiftPreview = renderablePreview(from: previews.first)
+    } catch {
+      threadLogger.error(
+        "Failed to load counterpart shift preview: \(error.localizedDescription)")
+    }
+  }
+
   private func sendTypingStartIfNeeded() async {
     let now = Date()
     if didSendTypingStart,
@@ -764,5 +823,20 @@ final class FriendsThreadViewModel: ObservableObject {
   private func canSendShiftSnapshotMessage(_ message: FriendMessage) -> Bool {
     guard message.shiftSnapshot != nil else { return true }
     return capabilities.canSendShiftSnapshots
+  }
+
+  private var canViewCounterpartSharedShift: Bool {
+    let cachedFriends = sharedShiftsCache.getCachedFriends(for: viewerUserId, includeHidden: true)
+    guard let counterpart = cachedFriends.sharers.first(where: { $0.id == route.counterpartUserId })
+    else {
+      return false
+    }
+
+    return !counterpart.hidden && !cachedFriends.chatOnlyUserIds.contains(counterpart.id)
+  }
+
+  private func renderablePreview(from preview: SharerShiftPreview?) -> SharerShiftPreview? {
+    guard let preview, preview.shift != nil, preview.status != nil else { return nil }
+    return preview
   }
 }
