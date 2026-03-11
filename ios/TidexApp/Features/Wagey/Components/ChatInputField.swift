@@ -24,12 +24,16 @@ struct ChatInputField: View {
   let focusedHorizontalPadding: CGFloat?
   let bottomPadding: CGFloat
   let showsCameraShortcut: Bool
+  let showsImagePreview: Bool
+  let hasSupplementalSendContent: Bool
+  let showsAttachmentPicker: Bool
   let collapsesAttachmentButtonForLongDrafts: Bool
   let attachmentCollapseCharacterThreshold: Int
   let dismissKeyboardOnSend: Bool
 
   /// Current input text
   @Binding var inputText: String
+  private let externalAttachedImage: Binding<ImageAttachment?>?
 
   /// Selected photo item from PhotosPicker
   @State private var selectedPhotoItem: PhotosPickerItem?
@@ -56,6 +60,10 @@ struct ChatInputField: View {
     focusedHorizontalPadding: CGFloat? = nil,
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
     showsCameraShortcut: Bool = false,
+    attachedImage: Binding<ImageAttachment?>? = nil,
+    showsImagePreview: Bool = true,
+    hasSupplementalSendContent: Bool = false,
+    showsAttachmentPicker: Bool = true,
     collapsesAttachmentButtonForLongDrafts: Bool = false,
     attachmentCollapseCharacterThreshold: Int = ComposerLayout
       .defaultAttachmentCollapseCharacterThreshold,
@@ -69,6 +77,10 @@ struct ChatInputField: View {
     self.focusedHorizontalPadding = focusedHorizontalPadding
     self.bottomPadding = bottomPadding
     self.showsCameraShortcut = showsCameraShortcut
+    self.externalAttachedImage = attachedImage
+    self.showsImagePreview = showsImagePreview
+    self.hasSupplementalSendContent = hasSupplementalSendContent
+    self.showsAttachmentPicker = showsAttachmentPicker
     self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
     self.attachmentCollapseCharacterThreshold = attachmentCollapseCharacterThreshold
     self.dismissKeyboardOnSend = dismissKeyboardOnSend
@@ -85,6 +97,10 @@ struct ChatInputField: View {
     focusedHorizontalPadding: CGFloat? = nil,
     bottomPadding: CGFloat = MonthPickerLayout.bottomPadding,
     showsCameraShortcut: Bool = false,
+    attachedImage: Binding<ImageAttachment?>? = nil,
+    showsImagePreview: Bool = true,
+    hasSupplementalSendContent: Bool = false,
+    showsAttachmentPicker: Bool = true,
     collapsesAttachmentButtonForLongDrafts: Bool = false,
     attachmentCollapseCharacterThreshold: Int = ComposerLayout
       .defaultAttachmentCollapseCharacterThreshold,
@@ -99,6 +115,10 @@ struct ChatInputField: View {
     self.focusedHorizontalPadding = focusedHorizontalPadding
     self.bottomPadding = bottomPadding
     self.showsCameraShortcut = showsCameraShortcut
+    self.externalAttachedImage = attachedImage
+    self.showsImagePreview = showsImagePreview
+    self.hasSupplementalSendContent = hasSupplementalSendContent
+    self.showsAttachmentPicker = showsAttachmentPicker
     self.collapsesAttachmentButtonForLongDrafts = collapsesAttachmentButtonForLongDrafts
     self.attachmentCollapseCharacterThreshold = attachmentCollapseCharacterThreshold
     self.dismissKeyboardOnSend = dismissKeyboardOnSend
@@ -110,8 +130,10 @@ struct ChatInputField: View {
   /// Whether the send button can be tapped
   private var canSend: Bool {
     let hasText = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    let hasImage = attachedImage != nil
-    return (hasText || hasImage) && !effectiveDisabled && !isProcessingImage
+    let hasImage = currentAttachedImage != nil
+    return (hasText || hasImage || hasSupplementalSendContent)
+      && !effectiveDisabled
+      && !isProcessingImage
   }
 
   private var effectiveDisabled: Bool {
@@ -119,7 +141,7 @@ struct ChatInputField: View {
   }
 
   private var attachmentButtonTint: Color {
-    attachedImage != nil ? Color.tidexBlue.opacity(0.22) : Color.tidexBlue.opacity(0.12)
+    currentAttachedImage != nil ? Color.tidexBlue.opacity(0.22) : Color.tidexBlue.opacity(0.12)
   }
 
   private var cameraAvailable: Bool {
@@ -134,7 +156,7 @@ struct ChatInputField: View {
   private var shouldHideAttachmentButton: Bool {
     guard onSendWithImage != nil else { return false }
     guard collapsesAttachmentButtonForLongDrafts else { return false }
-    guard attachedImage == nil else { return false }
+    guard currentAttachedImage == nil else { return false }
     guard isComposerFocused else { return false }
 
     let draftLength = inputText.trimmingCharacters(in: .whitespacesAndNewlines).count
@@ -145,7 +167,9 @@ struct ChatInputField: View {
   var body: some View {
     VStack(spacing: 0) {
       // Image preview (if attached)
-      if let image = attachedImage, let uiImage = UIImage(data: image.data) {
+      if showsImagePreview, let image = currentAttachedImage,
+        let uiImage = UIImage(data: image.data)
+      {
         imagePreview(uiImage: uiImage)
       }
 
@@ -168,7 +192,7 @@ struct ChatInputField: View {
         bottomPadding: bottomPadding,
         onSend: sendMessage
       ) {
-        if onSendWithImage != nil && !shouldHideAttachmentButton {
+        if onSendWithImage != nil && showsAttachmentPicker && !shouldHideAttachmentButton {
           attachmentPickerButton
             .transition(.move(edge: .leading).combined(with: .opacity))
         }
@@ -266,11 +290,11 @@ struct ChatInputField: View {
         Button {
           guard !isSubmitting else { return }
           if reduceMotion {
-            attachedImage = nil
+            currentAttachedImage = nil
             selectedPhotoItem = nil
           } else {
             withAnimation(.easeInOut(duration: 0.2)) {
-              attachedImage = nil
+              currentAttachedImage = nil
               selectedPhotoItem = nil
             }
           }
@@ -376,7 +400,7 @@ struct ChatInputField: View {
         }
 
         await MainActor.run {
-          attachedImage = ImageAttachment(
+          currentAttachedImage = ImageAttachment(
             data: compressed.data,
             mediaType: compressed.mediaType
           )
@@ -403,7 +427,7 @@ struct ChatInputField: View {
     }
 
     await MainActor.run {
-      attachedImage = ImageAttachment(
+      currentAttachedImage = ImageAttachment(
         data: compressed.data,
         mediaType: compressed.mediaType
       )
@@ -423,7 +447,7 @@ struct ChatInputField: View {
     guard canSend else { return }
 
     let message = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-    let image = attachedImage
+    let image = currentAttachedImage
 
     // Provide haptic feedback
     Haptics.play(.medium)
@@ -450,9 +474,20 @@ struct ChatInputField: View {
 
         if didSend {
           inputText = ""
-          attachedImage = nil
+          currentAttachedImage = nil
           selectedPhotoItem = nil
         }
+      }
+    }
+  }
+
+  private var currentAttachedImage: ImageAttachment? {
+    get { externalAttachedImage?.wrappedValue ?? attachedImage }
+    nonmutating set {
+      if let externalAttachedImage {
+        externalAttachedImage.wrappedValue = newValue
+      } else {
+        attachedImage = newValue
       }
     }
   }

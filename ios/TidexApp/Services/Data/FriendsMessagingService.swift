@@ -18,7 +18,8 @@ protocol FriendsMessagingServiceProviding: AnyObject {
     clientId: String,
     body: String?,
     replyToMessageId: String?,
-    attachments: [FriendOutgoingAttachment]
+    attachments: [FriendOutgoingAttachment],
+    metadataData: Data?
   ) async throws -> FriendMessage
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
@@ -172,12 +173,19 @@ final class FriendsMessagingService: ObservableObject {
     clientId: String,
     body: String?,
     replyToMessageId: String? = nil,
-    attachments: [FriendOutgoingAttachment] = []
+    attachments: [FriendOutgoingAttachment] = [],
+    metadataData: Data? = nil
   ) async throws -> FriendMessage {
     let payload = try attachments.map { attachment -> AnyJSON in
       let data = try JSONEncoder().encode(attachment)
       return try AnyJSON.decoder.decode(AnyJSON.self, from: data)
     }
+    let metadataPayload =
+      if let metadataData {
+        try AnyJSON.decoder.decode(AnyJSON.self, from: metadataData)
+      } else {
+        AnyJSON.object([:])
+      }
 
     let params: [String: AnyJSON] = [
       "p_thread_id": .string(threadId),
@@ -185,6 +193,7 @@ final class FriendsMessagingService: ObservableObject {
       "p_body": body.map(AnyJSON.string) ?? .null,
       "p_reply_to_message_id": replyToMessageId.map(AnyJSON.string) ?? .null,
       "p_attachments": .array(payload),
+      "p_metadata": metadataPayload,
     ]
 
     do {

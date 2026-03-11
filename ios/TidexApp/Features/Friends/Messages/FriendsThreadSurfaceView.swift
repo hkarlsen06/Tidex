@@ -14,8 +14,9 @@ struct FriendsThreadSurfaceCallbacks {
   let onConsumeRestoreScrollTarget: () -> Void
   let onConsumeReplyScrollTarget: (String) -> Void
   let onComposerDraftChanged: (String) -> Void
+  let onComposerAttachmentChanged: (FriendsComposerAttachmentDraft?) -> Void
   let onComposerCancelReply: () -> Void
-  let onComposerSend: (String, ImageAttachment?) async -> Bool
+  let onComposerSend: (String) async -> Bool
   let onBottomAccessoryInsetChanged: (CGFloat) -> Void
 }
 
@@ -63,6 +64,7 @@ final class FriendsThreadSurfaceViewController: UIViewController {
   private var composerConfiguration = FriendsThreadComposerConfiguration(
     draftText: "",
     replyPreview: nil,
+    stagedAttachment: nil,
     isThreadReadOnly: false,
     sendErrorMessage: nil,
     placeholder: ""
@@ -132,6 +134,7 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     self.composerConfiguration = composerConfiguration
     baseTimelineBottomInset = timelineConfiguration.bottomContentInset
     composerBridge.onDraftChanged = callbacks.onComposerDraftChanged
+    composerBridge.onStagedAttachmentChanged = callbacks.onComposerAttachmentChanged
     composerBridge.onCancelReply = callbacks.onComposerCancelReply
     composerBridge.onSend = callbacks.onComposerSend
 

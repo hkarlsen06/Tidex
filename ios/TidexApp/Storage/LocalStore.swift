@@ -74,6 +74,7 @@ final class LocalStore {
       LocalShiftPreview.self,
       LocalSharedShiftFetchRecord.self,
       LocalConversation.self,
+      LocalPendingFriendComposerDraft.self,
       LocalThread.self,
       LocalThreadState.self,
       LocalMessage.self,
@@ -177,6 +178,7 @@ actor LocalStoreActor {
       try modelContext.delete(model: LocalShiftPreview.self)
       try modelContext.delete(model: LocalSharedShiftFetchRecord.self)
       try modelContext.delete(model: LocalConversation.self)
+      try modelContext.delete(model: LocalPendingFriendComposerDraft.self)
       try modelContext.delete(model: LocalThread.self)
       try modelContext.delete(model: LocalThreadState.self)
       try modelContext.delete(model: LocalMessage.self)

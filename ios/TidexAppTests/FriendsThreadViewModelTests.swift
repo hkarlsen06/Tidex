@@ -357,12 +357,171 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.hasMoreHistoricalMessages)
   }
 
+  func testLoadHydratesPendingComposerAttachmentDraft() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+    let snapshotDraft = FriendsComposerAttachmentDraft.shiftSnapshot(
+      ComposerShiftSnapshotDraft(snapshot: makeShiftSnapshot())
+    )
+
+    await draftStore.saveAttachmentDraft(
+      snapshotDraft, threadId: route.threadId, viewerUserId: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.load()
+
+    XCTAssertEqual(viewModel.stagedComposerAttachment, snapshotDraft)
+  }
+
+  func testSendDraftWithShiftSnapshotUsesStoredMetadata() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+    let snapshotDraft = FriendsComposerAttachmentDraft.shiftSnapshot(
+      ComposerShiftSnapshotDraft(snapshot: makeShiftSnapshot())
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.sentMessage = FriendMessage(
+      id: "message-shift",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: nil,
+      clientId: "client-shift",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_010),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: snapshotDraft.metadataData,
+      attachments: []
+    )
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.setComposerAttachment(snapshotDraft)
+    let didSend = await viewModel.sendDraft()
+    await Task.yield()
+
+    XCTAssertTrue(didSend)
+    XCTAssertNil(viewModel.stagedComposerAttachment)
+    XCTAssertEqual(mockService.lastSentMetadataData, snapshotDraft.metadataData)
+    XCTAssertNotNil(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").last?.metadataData
+    )
+    let storedDraft = await draftStore.loadAttachmentDraft(
+      threadId: route.threadId, viewerUserId: "viewer-1")
+    XCTAssertNil(storedDraft)
+  }
+
+  func testRetryMessagePreservesShiftSnapshotMetadata() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+    let metadataData = FriendsComposerAttachmentDraft.shiftSnapshot(
+      ComposerShiftSnapshotDraft(snapshot: makeShiftSnapshot())
+    ).metadataData
+
+    await repository.saveThread(thread, for: "viewer-1")
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-failed",
+          threadId: route.threadId,
+          senderUserId: "viewer-1",
+          messageType: .user,
+          body: nil,
+          clientId: "client-failed",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_020),
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: metadataData,
+          attachments: [],
+          reactions: [],
+          sendState: .failed,
+          failureMessage: "Failed"
+        )
+      ],
+      in: route.threadId,
+      for: "viewer-1"
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.sentMessage = FriendMessage(
+      id: "message-confirmed",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: nil,
+      clientId: "client-failed",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_021),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: metadataData,
+      attachments: []
+    )
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.retryMessage(messageId: "message-failed")
+    await Task.yield()
+
+    XCTAssertEqual(mockService.lastSentMetadataData, metadataData)
+  }
+
   private func makeRepository() throws -> FriendsMessagesRepository {
     let schema = Schema([
+      LocalPendingFriendComposerDraft.self,
       LocalThread.self,
       LocalThreadState.self,
       LocalMessage.self,
       LocalMessageAttachment.self,
+      LocalMessageReaction.self,
     ])
 
     let configuration = ModelConfiguration(
@@ -376,31 +535,73 @@ final class FriendsThreadViewModelTests: XCTestCase {
     return FriendsMessagesRepository(container: container, storeActor: storeActor)
   }
 
+  private func makeDraftStore() throws -> FriendsComposerDraftStore {
+    let schema = Schema([
+      LocalPendingFriendComposerDraft.self
+    ])
+
+    let configuration = ModelConfiguration(
+      schema: schema,
+      isStoredInMemoryOnly: true,
+      allowsSave: true
+    )
+
+    let container = try ModelContainer(for: schema, configurations: [configuration])
+    let storeActor = LocalStoreActor(modelContainer: container)
+    return FriendsComposerDraftStore(container: container, storeActor: storeActor)
+  }
+
   private func makeRoute() -> FriendChatRoute {
     FriendChatRoute(
-      thread: FriendThread(
-        id: "thread-1",
-        kind: .direct,
-        title: nil,
-        avatarUrl: nil,
-        metadataData: nil,
-        counterpartUserId: "friend-1",
-        counterpartDisplayName: "Friend",
-        counterpartProfilePictureUrl: nil,
-        counterpartOAuthAvatarUrl: nil,
-        lastMessageId: nil,
-        lastMessageSenderId: nil,
-        lastMessageAt: nil,
-        lastMessageBody: nil,
-        lastMessageHasImage: false,
-        unreadCount: 0,
-        muted: false,
-        createdAt: Date(timeIntervalSince1970: 1_700_000_000)
-      ),
+      thread: makeThread(),
       fallbackDisplayName: "Friend",
       fallbackAvatarUrl: nil
     )
   }
+
+  private func makeThread() -> FriendThread {
+    FriendThread(
+      id: "thread-1",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: nil,
+      lastMessageSenderId: nil,
+      lastMessageAt: nil,
+      lastMessageBody: nil,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+  }
+}
+
+private func makeShiftSnapshot() -> FriendShiftSnapshot {
+  FriendShiftSnapshot(
+    schemaVersion: 1,
+    ownerUserId: "viewer-1",
+    ownerDisplayName: "Viewer",
+    ownerAvatarUrl: nil,
+    shiftId: "shift-1",
+    jobName: "Cafe",
+    jobColorHex: "#FFAA00",
+    shiftDate: "2026-03-11",
+    startTime: "09:00",
+    endTime: "17:00",
+    paidHours: 7.5,
+    currency: "kr",
+    includesEarnings: true,
+    grossPay: 1200,
+    netPay: 1050,
+    taxEnabled: true,
+    source: "tests"
+  )
 }
 
 private enum TestError: Error {
@@ -416,6 +617,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     ((String, Int, FriendMessageCursor?) async throws -> [FriendMessage])?
   var sendError: Error?
   var lastSentReplyToMessageId: String?
+  var lastSentMetadataData: Data?
   var createdReport:
     (threadId: String, reportedUserId: String, messageId: String?, reason: FriendAbuseReportReason)?
   var blockedUserId: String?
@@ -450,10 +652,12 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     clientId _: String,
     body _: String?,
     replyToMessageId: String?,
-    attachments _: [FriendOutgoingAttachment]
+    attachments _: [FriendOutgoingAttachment],
+    metadataData: Data?
   ) async throws -> FriendMessage {
     await Task.yield()
     lastSentReplyToMessageId = replyToMessageId
+    lastSentMetadataData = metadataData
     if let sendError {
       throw sendError
     }
