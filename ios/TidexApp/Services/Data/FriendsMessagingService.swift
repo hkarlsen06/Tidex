@@ -21,6 +21,8 @@ protocol FriendsMessagingServiceProviding: AnyObject {
     attachments: [FriendOutgoingAttachment],
     metadataData: Data?
   ) async throws -> FriendMessage
+  func editMessage(messageId: String, body: String) async throws -> FriendMessage
+  func deleteMessage(messageId: String) async throws -> FriendThread
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
@@ -207,6 +209,61 @@ final class FriendsMessagingService: ObservableObject {
         .value
 
       return row.toFriendMessage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func editMessage(messageId: String, body: String) async throws -> FriendMessage {
+    let params: [String: AnyJSON] = [
+      "p_message_id": .string(messageId),
+      "p_body": .string(body),
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let row: MessagingMessageRow =
+        try await supabase
+        .rpc("edit_message", params: params)
+        .single()
+        .execute()
+        .value
+
+      return row.toFriendMessage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func deleteMessage(messageId: String) async throws -> FriendThread {
+    let params: [String: AnyJSON] = [
+      "p_message_id": .string(messageId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let row: MessagingThreadSummaryRow =
+        try await supabase
+        .rpc("delete_message", params: params)
+        .single()
+        .execute()
+        .value
+
+      return row.toFriendThread()
     } catch let error as PostgrestError {
       throw mapRPCError(error)
     } catch let error as AuthError {

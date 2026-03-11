@@ -17,7 +17,7 @@ struct FriendsThreadSurfaceCallbacks {
   let onComposerAttachmentChanged: (FriendsComposerAttachmentDraft?) -> Void
   let onComposerPrepareShiftSnapshot:
     (ShiftWithComputations) async -> FriendsComposerAttachmentDraft?
-  let onComposerCancelReply: () -> Void
+  let onComposerCancelMode: () -> Void
   let onComposerSend: (String) async -> Bool
   let onComposerAttachmentDrawerOpenChanged: (Bool) -> Void
   let onBottomAccessoryInsetChanged: (CGFloat) -> Void
@@ -76,13 +76,15 @@ final class FriendsThreadSurfaceViewController: UIViewController {
 
   private var callbacks: FriendsThreadSurfaceCallbacks?
   private var composerConfiguration = FriendsThreadComposerConfiguration(
+    mode: .normal,
     draftText: "",
     replyPreview: nil,
     stagedAttachment: nil,
     isThreadReadOnly: false,
     sendErrorMessage: nil,
     placeholder: "",
-    canSendShiftSnapshots: false
+    canSendShiftSnapshots: false,
+    focusRequestToken: 0
   )
 
   private var lastReportedComposerHeight: CGFloat = 0
@@ -167,7 +169,7 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     composerBridge.onDraftChanged = callbacks.onComposerDraftChanged
     composerBridge.onStagedAttachmentChanged = callbacks.onComposerAttachmentChanged
     composerBridge.onPrepareShiftSnapshotAttachment = callbacks.onComposerPrepareShiftSnapshot
-    composerBridge.onCancelReply = callbacks.onComposerCancelReply
+    composerBridge.onCancelMode = callbacks.onComposerCancelMode
     composerBridge.onSend = callbacks.onComposerSend
     composerBridge.onAttachmentDrawerOpenChanged = callbacks.onComposerAttachmentDrawerOpenChanged
 

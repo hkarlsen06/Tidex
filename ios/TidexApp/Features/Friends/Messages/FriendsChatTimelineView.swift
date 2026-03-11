@@ -195,6 +195,11 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       reloadedIndexPaths: [IndexPath],
       preservedSnapshot: ChatLayoutPositionSnapshot?
     )
+    case delete(
+      deletedIndexPaths: [IndexPath],
+      reloadedIndexPaths: [IndexPath],
+      preservedSnapshot: ChatLayoutPositionSnapshot?
+    )
     case reload(indexPaths: [IndexPath])
   }
 
@@ -512,6 +517,22 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       )
     }
 
+    if newMessages.count < previousMessages.count,
+      hasEquivalentMessageOrderAfterDeletions(
+        previousMessages: previousMessages, newMessages: newMessages)
+    {
+      let newIdSet = Set(newIds)
+      let deletedIndexPaths = previousMessages.enumerated().compactMap { index, message in
+        newIdSet.contains(message.id) ? nil : IndexPath(item: index, section: 0)
+      }
+
+      return .delete(
+        deletedIndexPaths: deletedIndexPaths,
+        reloadedIndexPaths: reloadedIndexPaths,
+        preservedSnapshot: preservedSnapshot
+      )
+    }
+
     return .fullReload(preservedSnapshot: preservedSnapshot)
   }
 
@@ -574,6 +595,20 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
           reloadItems(at: reloadedIndexPaths)
         } completion: { [weak self] _ in
           self?.invalidateTimelineLayout()
+          if let preservedSnapshot, let self {
+            self.restoreContentOffset(using: preservedSnapshot)
+          }
+          completion()
+        }
+      }
+
+    case .delete(let deletedIndexPaths, let reloadedIndexPaths, let preservedSnapshot):
+      UIView.performWithoutAnimation {
+        collectionView.performBatchUpdates {
+          collectionView.deleteItems(at: deletedIndexPaths)
+        } completion: { [weak self] _ in
+          self?.invalidateTimelineLayout()
+          self?.reloadItems(at: reloadedIndexPaths)
           if let preservedSnapshot, let self {
             self.restoreContentOffset(using: preservedSnapshot)
           }
@@ -716,6 +751,29 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
         || (!previousMessage.clientId.isEmpty
           && previousMessage.clientId == newMessage.clientId)
     }
+  }
+
+  private func hasEquivalentMessageOrderAfterDeletions(
+    previousMessages: [FriendMessage],
+    newMessages: [FriendMessage]
+  ) -> Bool {
+    guard newMessages.count < previousMessages.count else { return false }
+
+    var newIndex = 0
+    for previousMessage in previousMessages {
+      guard newIndex < newMessages.count else { break }
+      let newMessage = newMessages[newIndex]
+      let matchesById = previousMessage.id == newMessage.id
+      let matchesByClientId =
+        !previousMessage.clientId.isEmpty
+        && previousMessage.clientId == newMessage.clientId
+
+      if matchesById || matchesByClientId {
+        newIndex += 1
+      }
+    }
+
+    return newIndex == newMessages.count
   }
 
   private func groupingContext(

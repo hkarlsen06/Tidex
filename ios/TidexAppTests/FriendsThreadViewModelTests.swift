@@ -171,6 +171,539 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
   }
 
+  func testStartEditingSeedsComposerStateAndClearsReplyAndAttachment() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-edit",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Original message",
+      clientId: "client-edit",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_040),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let replyTarget = FriendMessage(
+      id: "message-reply",
+      threadId: route.threadId,
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Reply target",
+      clientId: "client-reply",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_030),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveMessages(
+      [replyTarget, originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.setReplyTarget(replyTarget)
+    await viewModel.setComposerAttachment(
+      .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg"))
+    )
+    await viewModel.startEditing(originalMessage)
+
+    XCTAssertEqual(viewModel.composerMode, .edit)
+    XCTAssertEqual(viewModel.draftEditTarget?.id, originalMessage.id)
+    XCTAssertNil(viewModel.draftReplyTarget)
+    XCTAssertNil(viewModel.stagedComposerAttachment)
+    XCTAssertEqual(viewModel.draft, "Original message")
+    XCTAssertEqual(viewModel.composerFocusRequestToken, 1)
+  }
+
+  func testCancelComposerModeAfterEditingRestoresSuspendedComposerState() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-edit",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Original message",
+      clientId: "client-edit",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_041),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let replyTarget = FriendMessage(
+      id: "message-reply",
+      threadId: route.threadId,
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Reply target",
+      clientId: "client-reply",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_031),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let attachment = FriendsComposerAttachmentDraft.image(
+      ImageAttachment(id: "image-restore", data: Data([0x00]), mediaType: "image/jpeg")
+    )
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveMessages(
+      [replyTarget, originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.setReplyTarget(replyTarget)
+    viewModel.draft = "Pending follow up"
+    await viewModel.setComposerAttachment(attachment)
+    await viewModel.startEditing(originalMessage)
+    await viewModel.cancelComposerMode()
+
+    XCTAssertEqual(viewModel.composerMode, .reply)
+    XCTAssertEqual(viewModel.draftReplyTarget?.id, replyTarget.id)
+    XCTAssertEqual(viewModel.draft, "Pending follow up")
+    XCTAssertEqual(viewModel.stagedComposerAttachment, attachment)
+  }
+
+  func testSendDraftInEditModeCallsEditMessageAndUpdatesStoredMessage() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-edit",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Original message",
+      clientId: "client-edit",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_050),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let editedMessage = originalMessage.withEditedBody(
+      "Updated message",
+      editedAt: Date(timeIntervalSince1970: 1_700_000_060)
+    )
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.editedMessage = editedMessage
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.startEditing(originalMessage)
+    let didSend = await viewModel.sendMessage(content: "Updated message")
+
+    XCTAssertTrue(didSend)
+    XCTAssertEqual(mockService.lastEditedMessageId, originalMessage.id)
+    XCTAssertEqual(mockService.lastEditedBody, "Updated message")
+    XCTAssertEqual(
+      repository.getMessage(id: originalMessage.id, viewerUserId: "viewer-1")?.body,
+      "Updated message"
+    )
+    XCTAssertEqual(viewModel.composerMode, .normal)
+    XCTAssertEqual(viewModel.draft, "")
+  }
+
+  func testSendDraftInEditModeRestoresSuspendedComposerStateOnSuccess() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-edit",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Original message",
+      clientId: "client-edit",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_051),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let replyTarget = FriendMessage(
+      id: "message-reply",
+      threadId: route.threadId,
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Reply target",
+      clientId: "client-reply",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_032),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let editedMessage = originalMessage.withEditedBody(
+      "Updated message",
+      editedAt: Date(timeIntervalSince1970: 1_700_000_061)
+    )
+    let attachment = FriendsComposerAttachmentDraft.image(
+      ImageAttachment(id: "image-success", data: Data([0x01]), mediaType: "image/jpeg")
+    )
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveMessages(
+      [replyTarget, originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.editedMessage = editedMessage
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.setReplyTarget(replyTarget)
+    viewModel.draft = "Pending follow up"
+    await viewModel.setComposerAttachment(attachment)
+    await viewModel.startEditing(originalMessage)
+    let didSend = await viewModel.sendMessage(content: "Updated message")
+
+    XCTAssertTrue(didSend)
+    XCTAssertEqual(viewModel.composerMode, .reply)
+    XCTAssertEqual(viewModel.draftReplyTarget?.id, replyTarget.id)
+    XCTAssertEqual(viewModel.draft, "Pending follow up")
+    XCTAssertEqual(viewModel.stagedComposerAttachment, attachment)
+    XCTAssertEqual(
+      repository.getMessage(id: originalMessage.id, viewerUserId: "viewer-1")?.body,
+      "Updated message"
+    )
+  }
+
+  func testSendDraftInEditModeRollsBackOnFailureAndShowsError() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-edit",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Original message",
+      clientId: "client-edit",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_070),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.editError = FriendsMessagingServiceError.networkError(underlying: TestError.failed)
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.startEditing(originalMessage)
+    let didSend = await viewModel.sendMessage(content: "Updated message")
+
+    XCTAssertFalse(didSend)
+    XCTAssertEqual(
+      repository.getMessage(id: originalMessage.id, viewerUserId: "viewer-1")?.body,
+      "Original message"
+    )
+    XCTAssertEqual(
+      viewModel.sendErrorMessage,
+      String(localized: "friends.chat.edit_failed", table: "Localizable")
+    )
+    XCTAssertEqual(viewModel.composerMode, .edit)
+    XCTAssertEqual(viewModel.draft, "Updated message")
+  }
+
+  func testDeleteMessageRemovesStoredMessageAndUpdatesThreadSummary() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-delete",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Delete me",
+      clientId: "client-delete",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_080),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: originalMessage.id,
+      lastMessageSenderId: "viewer-1",
+      lastMessageAt: originalMessage.createdAt,
+      lastMessageBody: originalMessage.body,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+    let emptiedThread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: nil,
+      lastMessageSenderId: nil,
+      lastMessageAt: thread.createdAt,
+      lastMessageBody: nil,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: thread.createdAt
+    )
+
+    await repository.saveThread(thread, for: "viewer-1")
+    await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.deletedThread = emptiedThread
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.deleteMessage(messageId: originalMessage.id)
+
+    XCTAssertEqual(mockService.lastDeletedMessageId, originalMessage.id)
+    XCTAssertTrue(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
+    XCTAssertNil(repository.getThread(id: route.threadId, viewerUserId: "viewer-1")?.lastMessageId)
+  }
+
+  func testDeleteMessageRestoresStoredMessageWhenDeleteFails() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-delete",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Delete me",
+      clientId: "client-delete",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_090),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: originalMessage.id,
+      lastMessageSenderId: "viewer-1",
+      lastMessageAt: originalMessage.createdAt,
+      lastMessageBody: originalMessage.body,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    await repository.saveThread(thread, for: "viewer-1")
+    await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.deleteError = FriendsMessagingServiceError.networkError(
+      underlying: TestError.failed)
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.deleteMessage(messageId: originalMessage.id)
+
+    XCTAssertEqual(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").map(\.id),
+      [originalMessage.id]
+    )
+    XCTAssertEqual(
+      repository.getThread(id: route.threadId, viewerUserId: "viewer-1")?.lastMessageId,
+      originalMessage.id
+    )
+    XCTAssertEqual(
+      viewModel.sendErrorMessage,
+      String(localized: "friends.chat.delete_failed", table: "Localizable")
+    )
+  }
+
+  func testDeleteMessageRestoresComposerStateWhenDeleteFailsInEditMode() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let originalMessage = FriendMessage(
+      id: "message-delete",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Delete me",
+      clientId: "client-delete",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_091),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: originalMessage.id,
+      lastMessageSenderId: "viewer-1",
+      lastMessageAt: originalMessage.createdAt,
+      lastMessageBody: originalMessage.body,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    await repository.saveThread(thread, for: "viewer-1")
+    await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.deleteError = FriendsMessagingServiceError.networkError(
+      underlying: TestError.failed)
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.startEditing(originalMessage)
+    viewModel.draft = "Edited draft"
+    await viewModel.deleteMessage(messageId: originalMessage.id)
+
+    XCTAssertEqual(viewModel.composerMode, .edit)
+    XCTAssertEqual(viewModel.draftEditTarget?.id, originalMessage.id)
+    XCTAssertEqual(viewModel.draft, "Edited draft")
+    XCTAssertEqual(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").map(\.id),
+      [originalMessage.id]
+    )
+  }
+
   func testSendDraftRestoresDraftAndShowsErrorOnFailure() async throws {
     let repository = try makeRepository()
     let route = FriendChatRoute(
@@ -949,13 +1482,20 @@ private final class MockSharedShiftsCache: SharedShiftsCaching {
 @MainActor
 private final class MockFriendsMessagingService: FriendsMessagingServiceProviding {
   var sentMessage: FriendMessage?
+  var editedMessage: FriendMessage?
   var threadSummary: FriendThread?
+  var deletedThread: FriendThread?
   var threadMessages: [FriendMessage] = []
   var listThreadMessagesHandler:
     ((String, Int, FriendMessageCursor?) async throws -> [FriendMessage])?
   var sendError: Error?
+  var editError: Error?
+  var deleteError: Error?
   var lastSentReplyToMessageId: String?
   var lastSentMetadataData: Data?
+  var lastEditedMessageId: String?
+  var lastEditedBody: String?
+  var lastDeletedMessageId: String?
   var createdReport:
     (threadId: String, reportedUserId: String, messageId: String?, reason: FriendAbuseReportReason)?
   var blockedUserId: String?
@@ -1000,6 +1540,25 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
       throw sendError
     }
     return try XCTUnwrap(sentMessage)
+  }
+
+  func editMessage(messageId: String, body: String) async throws -> FriendMessage {
+    await Task.yield()
+    lastEditedMessageId = messageId
+    lastEditedBody = body
+    if let editError {
+      throw editError
+    }
+    return try XCTUnwrap(editedMessage)
+  }
+
+  func deleteMessage(messageId: String) async throws -> FriendThread {
+    await Task.yield()
+    lastDeletedMessageId = messageId
+    if let deleteError {
+      throw deleteError
+    }
+    return try XCTUnwrap(deletedThread)
   }
 
   func markThreadRead(threadId _: String, throughMessageId _: String) async throws

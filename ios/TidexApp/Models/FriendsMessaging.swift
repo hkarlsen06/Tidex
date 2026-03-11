@@ -574,14 +574,55 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     sendState == .failed
   }
 
+  var normalizedBody: String? {
+    guard let body else { return nil }
+    let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
+
   var paginationCursor: FriendMessageCursor {
     FriendMessageCursor(createdAt: createdAt, messageId: id)
+  }
+
+  func canEdit(viewerUserId: String) -> Bool {
+    senderUserId == viewerUserId
+      && messageType == .user
+      && deletedAt == nil
+      && sendState == .sent
+      && normalizedBody != nil
+  }
+
+  func canDelete(viewerUserId: String) -> Bool {
+    senderUserId == viewerUserId
+      && messageType == .user
+      && deletedAt == nil
+      && sendState == .sent
   }
 
   func withSendState(
     _ sendState: FriendMessageSendState,
     failureMessage: String? = nil
   ) -> FriendMessage {
+    FriendMessage(
+      id: id,
+      threadId: threadId,
+      senderUserId: senderUserId,
+      messageType: messageType,
+      body: body,
+      clientId: clientId,
+      replyToMessageId: replyToMessageId,
+      createdAt: createdAt,
+      editedAt: editedAt,
+      deletedAt: deletedAt,
+      metadataData: metadataData,
+      attachments: attachments,
+      reactions: reactions,
+      sendState: sendState,
+      failureMessage: failureMessage
+    )
+  }
+
+  func withEditedBody(_ body: String, editedAt: Date?) -> FriendMessage {
     FriendMessage(
       id: id,
       threadId: threadId,

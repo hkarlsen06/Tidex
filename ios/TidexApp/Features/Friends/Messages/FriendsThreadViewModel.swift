@@ -41,6 +41,39 @@ final class FriendsThreadViewModel: ObservableObject {
     static let remoteTimeout: Duration = .seconds(5)
   }
 
+  private enum ComposerState: Equatable {
+    case normal
+    case reply(FriendMessage)
+    case edit(FriendMessage)
+
+    var mode: FriendsThreadComposerMode {
+      switch self {
+      case .normal:
+        return .normal
+      case .reply:
+        return .reply
+      case .edit:
+        return .edit
+      }
+    }
+
+    var replyTarget: FriendMessage? {
+      guard case .reply(let message) = self else { return nil }
+      return message
+    }
+
+    var editTarget: FriendMessage? {
+      guard case .edit(let message) = self else { return nil }
+      return message
+    }
+  }
+
+  private struct ComposerSnapshot: Equatable {
+    let state: ComposerState
+    let draft: String
+    let stagedAttachment: FriendsComposerAttachmentDraft?
+  }
+
   enum ActionError: LocalizedError {
     case missingCounterpart
     case missingPendingAttachment
@@ -67,7 +100,8 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var replyScrollTargetMessageId: String?
   @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
   @Published private(set) var counterpartShiftPreview: SharerShiftPreview?
-  @Published var draftReplyTarget: FriendMessage?
+  @Published private var composerState: ComposerState = .normal
+  @Published private(set) var composerFocusRequestToken = 0
   @Published var draft = ""
   @Published var stagedComposerAttachment: FriendsComposerAttachmentDraft?
   @Published var sendErrorMessage: String?
@@ -92,6 +126,19 @@ final class FriendsThreadViewModel: ObservableObject {
   private var localTypingStopTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
+  private var suspendedComposerSnapshot: ComposerSnapshot?
+
+  var composerMode: FriendsThreadComposerMode {
+    composerState.mode
+  }
+
+  var draftReplyTarget: FriendMessage? {
+    composerState.replyTarget
+  }
+
+  var draftEditTarget: FriendMessage? {
+    composerState.editTarget
+  }
 
   init(
     route: FriendChatRoute,
@@ -212,14 +259,43 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func setReplyTarget(_ message: FriendMessage) {
-    draftReplyTarget = message
+    composerState = .reply(message)
   }
 
   func clearReplyTarget() {
-    draftReplyTarget = nil
+    guard case .reply = composerState else { return }
+    composerState = .normal
+  }
+
+  func startEditing(_ message: FriendMessage) async {
+    guard message.canEdit(viewerUserId: viewerUserId) else { return }
+
+    await stopTypingIfNeeded()
+    sendErrorMessage = nil
+    if composerMode != .edit {
+      suspendedComposerSnapshot = currentComposerSnapshot()
+    }
+    composerState = .edit(message)
+    draft = message.normalizedBody ?? ""
+    stagedComposerAttachment = nil
+    await composerDraftStore.clearAttachmentDraft(
+      threadId: route.threadId,
+      viewerUserId: viewerUserId
+    )
+    composerFocusRequestToken += 1
+  }
+
+  func cancelComposerMode() async {
+    if composerMode == .edit {
+      await stopTypingIfNeeded()
+      await restoreSuspendedComposerAfterEdit()
+      return
+    }
+    composerState = .normal
   }
 
   func setComposerAttachment(_ attachment: FriendsComposerAttachmentDraft?) async {
+    guard composerMode != .edit else { return }
     stagedComposerAttachment = attachment
 
     if let attachment {
@@ -326,6 +402,10 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func handleDraftChanged(to draft: String) async {
     guard !isThreadReadOnly, !route.counterpartUserId.isEmpty else { return }
+    guard composerMode != .edit else {
+      await stopTypingIfNeeded()
+      return
+    }
 
     let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     if hasText {
@@ -364,6 +444,10 @@ final class FriendsThreadViewModel: ObservableObject {
       return false
     }
 
+    if composerMode == .edit {
+      return await saveEditedMessage(content: content)
+    }
+
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     let composerAttachment = stagedComposerAttachment
     guard !normalizedContent.isEmpty || composerAttachment != nil else { return false }
@@ -399,7 +483,7 @@ final class FriendsThreadViewModel: ObservableObject {
     )
 
     draft = ""
-    draftReplyTarget = nil
+    composerState = .normal
     stagedComposerAttachment = nil
     await composerDraftStore.clearAttachmentDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
@@ -412,6 +496,45 @@ final class FriendsThreadViewModel: ObservableObject {
     await stopTypingIfNeeded()
     sendMessageInBackground(optimisticMessage)
     return true
+  }
+
+  func deleteMessage(messageId: String) async {
+    guard let message = repository.getMessage(id: messageId, viewerUserId: viewerUserId),
+      message.threadId == route.threadId,
+      message.canDelete(viewerUserId: viewerUserId)
+    else {
+      return
+    }
+
+    let originalThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId)
+    let shouldCancelComposerMode =
+      draftReplyTarget?.id == messageId || draftEditTarget?.id == messageId
+    let cancelledComposerSnapshot = shouldCancelComposerMode ? currentComposerSnapshot() : nil
+
+    if shouldCancelComposerMode {
+      await cancelComposerMode()
+    }
+
+    sendErrorMessage = nil
+    await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
+    loadFromCache()
+
+    do {
+      let updatedThread = try await service.deleteMessage(messageId: messageId)
+      await repository.saveThread(updatedThread, for: viewerUserId)
+      loadFromCache()
+      Haptics.play(.light)
+    } catch {
+      await repository.saveMessages([message], in: route.threadId, for: viewerUserId)
+      if let originalThread {
+        await repository.saveThread(originalThread, for: viewerUserId)
+      }
+      await restoreComposerSnapshot(cancelledComposerSnapshot)
+      loadFromCache()
+      sendErrorMessage = deleteMessageFailedMessage
+      Haptics.play(.error)
+      threadLogger.error("Failed to delete message: \(error.localizedDescription)")
+    }
   }
 
   func retryMessage(messageId: String) async {
@@ -494,7 +617,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
     try await service.blockUserPair(otherUserId: counterpartUserId)
     draft = ""
-    draftReplyTarget = nil
+    composerState = .normal
     stagedComposerAttachment = nil
     await composerDraftStore.clearAttachmentDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
@@ -579,6 +702,7 @@ final class FriendsThreadViewModel: ObservableObject {
       )
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+    syncComposerStateWithCachedMessages()
     prefetchQuotedMessagesIfNeeded()
   }
 
@@ -587,6 +711,98 @@ final class FriendsThreadViewModel: ObservableObject {
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
+  }
+
+  private func syncComposerStateWithCachedMessages() {
+    switch composerState {
+    case .normal:
+      break
+    case .reply(let message):
+      guard let refreshedMessage = messageForComposerContext(id: message.id) else {
+        composerState = .normal
+        return
+      }
+      composerState = .reply(refreshedMessage)
+    case .edit(let message):
+      guard let refreshedMessage = messageForComposerContext(id: message.id),
+        refreshedMessage.canEdit(viewerUserId: viewerUserId)
+      else {
+        draft = ""
+        composerState = .normal
+        return
+      }
+      composerState = .edit(refreshedMessage)
+    }
+  }
+
+  private func currentComposerSnapshot() -> ComposerSnapshot {
+    ComposerSnapshot(
+      state: composerState,
+      draft: draft,
+      stagedAttachment: stagedComposerAttachment
+    )
+  }
+
+  private func restoreSuspendedComposerAfterEdit() async {
+    let snapshot = suspendedComposerSnapshot
+    suspendedComposerSnapshot = nil
+    await restoreComposerSnapshot(snapshot)
+  }
+
+  private func restoreComposerSnapshot(
+    _ snapshot: ComposerSnapshot?,
+    requestFocus: Bool? = nil
+  ) async {
+    let resolvedState = resolvedComposerState(for: snapshot?.state ?? .normal)
+    composerState = resolvedState
+    draft = snapshot?.draft ?? ""
+    stagedComposerAttachment = snapshot?.stagedAttachment
+
+    if let attachment = snapshot?.stagedAttachment {
+      await composerDraftStore.saveAttachmentDraft(
+        attachment,
+        threadId: route.threadId,
+        viewerUserId: viewerUserId
+      )
+    } else {
+      await composerDraftStore.clearAttachmentDraft(
+        threadId: route.threadId,
+        viewerUserId: viewerUserId
+      )
+    }
+
+    let shouldRequestFocus =
+      requestFocus
+      ?? (resolvedState.mode == .edit
+        || !(snapshot?.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
+
+    if shouldRequestFocus {
+      composerFocusRequestToken += 1
+    }
+  }
+
+  private func resolvedComposerState(for state: ComposerState) -> ComposerState {
+    switch state {
+    case .normal:
+      return .normal
+    case .reply(let message):
+      guard let refreshedMessage = messageForComposerContext(id: message.id) else {
+        return .normal
+      }
+      return .reply(refreshedMessage)
+    case .edit(let message):
+      guard let refreshedMessage = messageForComposerContext(id: message.id),
+        refreshedMessage.canEdit(viewerUserId: viewerUserId)
+      else {
+        return .normal
+      }
+      return .edit(refreshedMessage)
+    }
+  }
+
+  private func messageForComposerContext(id: String) -> FriendMessage? {
+    messages.first(where: { $0.id == id })
+      ?? repository.getMessage(id: id, viewerUserId: viewerUserId)
   }
 
   private func loadCounterpartShiftPreview(forceRefresh: Bool) async {
@@ -652,6 +868,57 @@ final class FriendsThreadViewModel: ObservableObject {
       try? await Task.sleep(for: Typing.idleStopDelay)
       guard !Task.isCancelled else { return }
       await self.stopTypingIfNeeded()
+    }
+  }
+
+  private func saveEditedMessage(content: String) async -> Bool {
+    guard let originalMessage = draftEditTarget,
+      let currentMessage = repository.getMessage(
+        id: originalMessage.id, viewerUserId: viewerUserId),
+      currentMessage.threadId == route.threadId,
+      currentMessage.canEdit(viewerUserId: viewerUserId)
+    else {
+      return false
+    }
+
+    let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedContent.isEmpty else { return false }
+
+    if currentMessage.normalizedBody == normalizedContent {
+      sendErrorMessage = nil
+      await stopTypingIfNeeded()
+      await restoreSuspendedComposerAfterEdit()
+      return true
+    }
+
+    let optimisticMessage = currentMessage.withEditedBody(normalizedContent, editedAt: Date())
+    sendErrorMessage = nil
+    composerState = .normal
+    draft = ""
+    await stopTypingIfNeeded()
+    await repository.saveMessages([optimisticMessage], in: route.threadId, for: viewerUserId)
+    loadFromCache()
+
+    do {
+      let updatedMessage = try await service.editMessage(
+        messageId: currentMessage.id,
+        body: normalizedContent
+      )
+      await repository.saveMessages([updatedMessage], in: route.threadId, for: viewerUserId)
+      await restoreSuspendedComposerAfterEdit()
+      loadFromCache()
+      Haptics.play(.light)
+      return true
+    } catch {
+      await repository.saveMessages([currentMessage], in: route.threadId, for: viewerUserId)
+      draft = normalizedContent
+      composerState = .edit(currentMessage)
+      composerFocusRequestToken += 1
+      loadFromCache()
+      sendErrorMessage = editMessageFailedMessage
+      Haptics.play(.error)
+      threadLogger.error("Failed to edit message: \(error.localizedDescription)")
+      return false
     }
   }
 
@@ -868,6 +1135,14 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private var shiftSnapshotSendUnavailableMessage: String {
     String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+  }
+
+  private var editMessageFailedMessage: String {
+    String(localized: "friends.chat.edit_failed", table: "Localizable")
+  }
+
+  private var deleteMessageFailedMessage: String {
+    String(localized: "friends.chat.delete_failed", table: "Localizable")
   }
 
   private func canSendShiftSnapshotAttachment(_ attachment: FriendsComposerAttachmentDraft?) -> Bool

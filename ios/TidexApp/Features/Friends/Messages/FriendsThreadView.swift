@@ -88,19 +88,6 @@ struct FriendsThreadView: View {
 
   private var threadContent: some View {
     VStack(spacing: 0) {
-      if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
-        CompactFriendShiftPreviewHeader(
-          preview: counterpartShiftPreview
-        )
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.xxs)
-        .padding(.bottom, Spacing.xxs)
-        .frame(maxWidth: .infinity)
-        .background(Color.tidexBackground)
-        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
-        .zIndex(1)
-      }
-
       ZStack(alignment: .bottom) {
         FriendsThreadSurfaceView(
           timelineConfiguration: FriendsChatTimelineConfiguration(
@@ -122,13 +109,15 @@ struct FriendsThreadView: View {
             replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId
           ),
           composerConfiguration: FriendsThreadComposerConfiguration(
+            mode: viewModel.composerMode,
             draftText: viewModel.draft,
             replyPreview: viewModel.draftReplyTarget.map { replyPreviewModel(for: $0) },
             stagedAttachment: viewModel.stagedComposerAttachment,
             isThreadReadOnly: viewModel.isThreadReadOnly,
             sendErrorMessage: viewModel.sendErrorMessage,
             placeholder: String(localized: .friendsChatPlaceholder),
-            canSendShiftSnapshots: viewModel.canSendShiftSnapshots
+            canSendShiftSnapshots: viewModel.canSendShiftSnapshots,
+            focusRequestToken: viewModel.composerFocusRequestToken
           ),
           callbacks: FriendsThreadSurfaceCallbacks(
             onBackgroundTap: dismissComposer,
@@ -185,8 +174,10 @@ struct FriendsThreadView: View {
             onComposerPrepareShiftSnapshot: { shift in
               await viewModel.prepareShiftSnapshotAttachment(for: shift)
             },
-            onComposerCancelReply: {
-              viewModel.clearReplyTarget()
+            onComposerCancelMode: {
+              Task {
+                await viewModel.cancelComposerMode()
+              }
             },
             onComposerSend: { content in
               let wasPinnedToBottom = isPinnedToBottom
@@ -250,6 +241,18 @@ struct FriendsThreadView: View {
             onDismiss: dismissMessageActionMenu,
             onReply: {
               viewModel.setReplyTarget(messageActionMenu.message)
+              dismissMessageActionMenu()
+            },
+            onEdit: {
+              Task {
+                await viewModel.startEditing(messageActionMenu.message)
+              }
+              dismissMessageActionMenu()
+            },
+            onDelete: {
+              Task {
+                await viewModel.deleteMessage(messageId: messageActionMenu.message.id)
+              }
               dismissMessageActionMenu()
             },
             onCopy: {
@@ -457,6 +460,20 @@ struct FriendsThreadView: View {
       .opacity(0.01)
       .accessibilityHidden(true)
     )
+    .overlay(alignment: .top) {
+      if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
+        CompactFriendShiftPreviewHeader(
+          preview: counterpartShiftPreview
+        )
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.xxs)
+        .padding(.bottom, Spacing.xxs)
+        .frame(maxWidth: .infinity)
+        .background(Color.tidexBackground)
+        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
+        .zIndex(1)
+      }
+    }
   }
 
   private var loadingState: some View {
@@ -822,6 +839,8 @@ private struct FriendsChatMessageActionMenuOverlay: View {
   let sourceFrame: CGRect
   let onDismiss: () -> Void
   let onReply: () -> Void
+  let onEdit: () -> Void
+  let onDelete: () -> Void
   let onCopy: () -> Void
   let onReport: () -> Void
   let onToggleReaction: (String) -> Void
@@ -832,6 +851,14 @@ private struct FriendsChatMessageActionMenuOverlay: View {
 
   private var isCurrentUser: Bool {
     message.senderUserId == viewerUserId
+  }
+
+  private var canEditMessage: Bool {
+    message.canEdit(viewerUserId: viewerUserId)
+  }
+
+  private var canDeleteMessage: Bool {
+    message.canDelete(viewerUserId: viewerUserId)
   }
 
   private var actionRows: [ActionRow] {
@@ -855,7 +882,30 @@ private struct FriendsChatMessageActionMenuOverlay: View {
       )
     }
 
-    if !isCurrentUser {
+    if isCurrentUser {
+      if canEditMessage {
+        rows.append(
+          ActionRow(
+            title: String(localized: "friends.chat.action.edit", table: "Localizable"),
+            systemImage: "pencil"
+          ) {
+            onEdit()
+          }
+        )
+      }
+
+      if canDeleteMessage {
+        rows.append(
+          ActionRow(
+            title: String(localized: "friends.chat.action.delete", table: "Localizable"),
+            systemImage: "trash",
+            role: .destructive
+          ) {
+            onDelete()
+          }
+        )
+      }
+    } else {
       rows.append(
         ActionRow(
           title: String(localized: .friendsChatReportMessage),
@@ -1004,11 +1054,11 @@ private struct FriendsChatMessageActionMenuOverlay: View {
                 Image(systemName: row.systemImage)
                   .font(.system(size: 18, weight: .medium))
                   .frame(width: 24, height: 24)
-                  .foregroundColor(.tidexBlue)
+                  .foregroundColor(row.role == .destructive ? .tidexError : .tidexBlue)
 
                 Text(row.title)
                   .font(.tidexBody)
-                  .foregroundColor(.tidexTextPrimary)
+                  .foregroundColor(row.role == .destructive ? .tidexError : .tidexTextPrimary)
 
                 Spacer(minLength: 0)
               }
@@ -1044,6 +1094,7 @@ private struct FriendsChatMessageActionMenuOverlay: View {
   private struct ActionRow {
     let title: String
     let systemImage: String
+    var role: ButtonRole? = nil
     let action: () -> Void
   }
 
