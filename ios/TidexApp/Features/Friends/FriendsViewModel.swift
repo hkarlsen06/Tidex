@@ -248,13 +248,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
     cachedUserId = userId
 
-    let cachedSharers = sharedShiftsRepository.getSharers(for: userId, includeHidden: true)
-    guard !cachedSharers.isEmpty else { return }
-    let partitionedSharers = partitionSharers(filteredBlockedUsers(from: cachedSharers))
+    let cachedFriends = sharedShiftsRepository.getCachedFriends(for: userId, includeHidden: true)
+    guard !cachedFriends.sharers.isEmpty else { return }
+    let filteredCachedSharers = filteredBlockedUsers(from: cachedFriends.sharers)
+    let partitionedSharers = partitionSharers(filteredCachedSharers)
 
     sharers = partitionedSharers.visible
     hiddenSharers = partitionedSharers.hidden
-    chatOnlyUserIds = []
+    chatOnlyUserIds = cachedFriends.chatOnlyUserIds.subtracting(locallyBlockedUserIds)
     shiftPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
     hasFinishedInitialSharersLoad = true
 
@@ -314,16 +315,18 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       // This happens BEFORE setting isLoadingSharers so view renders with complete data instantly
       var loadedFromCache = false
       if sharers.isEmpty && hiddenSharers.isEmpty {
-        let cachedSharers = sharedShiftsRepository.getSharers(for: userId, includeHidden: true)
-        if !cachedSharers.isEmpty {
+        let cachedFriends = sharedShiftsRepository.getCachedFriends(
+          for: userId, includeHidden: true)
+        if !cachedFriends.sharers.isEmpty {
           // Load cached shift previews at the same time
           let cachedPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
-          let filteredCachedSharers = filteredBlockedUsers(from: cachedSharers)
+          let filteredCachedSharers = filteredBlockedUsers(from: cachedFriends.sharers)
           let partitionedSharers = partitionSharers(filteredCachedSharers)
 
           // Update both together so UI renders with complete data and correct sorting
           sharers = partitionedSharers.visible
           hiddenSharers = partitionedSharers.hidden
+          chatOnlyUserIds = cachedFriends.chatOnlyUserIds.subtracting(locallyBlockedUserIds)
           if !cachedPreviews.isEmpty {
             shiftPreviews = cachedPreviews.filter { !locallyBlockedUserIds.contains($0.key) }
           }
@@ -387,7 +390,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       )
 
       // Save to cache
-      await sharedShiftsRepository.saveSharers(filteredFreshSharers, for: userId)
+      await sharedShiftsRepository.saveSharers(
+        sharers + hiddenSharers,
+        chatOnlyUserIds: chatOnlyUserIds,
+        for: userId
+      )
 
       logger.info(
         "Loaded \(self.sharers.count) visible sharers and \(self.hiddenSharers.count) hidden sharers"
