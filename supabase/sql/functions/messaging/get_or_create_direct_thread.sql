@@ -16,6 +16,7 @@ RETURNS TABLE (
   last_message_sender_id uuid,
   last_message_at timestamptz,
   last_message_body text,
+  last_message_preview_kind text,
   last_message_has_image boolean,
   unread_count bigint,
   muted boolean,

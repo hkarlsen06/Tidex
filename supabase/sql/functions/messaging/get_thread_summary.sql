@@ -16,6 +16,7 @@ RETURNS TABLE (
   last_message_sender_id uuid,
   last_message_at timestamptz,
   last_message_body text,
+  last_message_preview_kind text,
   last_message_has_image boolean,
   unread_count bigint,
   muted boolean,
@@ -108,11 +109,12 @@ AS $function$
     c.last_message_sender_id,
     c.last_message_at,
     lm.body AS last_message_body,
-    EXISTS (
-      SELECT 1
-      FROM public.message_attachments lma
-      WHERE lma.message_id = c.last_message_id
-    ) AS last_message_has_image,
+    public.message_preview_kind(
+      lm.body,
+      lm.metadata,
+      COALESCE(last_message_media.has_image, false)
+    ) AS last_message_preview_kind,
+    COALESCE(last_message_media.has_image, false) AS last_message_has_image,
     COALESCE(
       (
         SELECT count(*)
@@ -138,6 +140,14 @@ AS $function$
     ON us.user_id = c.counterpart_user_id
   LEFT JOIN public.messages lm
     ON lm.id = c.last_message_id
+  LEFT JOIN LATERAL (
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.message_attachments lma
+      WHERE lma.message_id = c.last_message_id
+    ) AS has_image
+  ) AS last_message_media
+    ON true
   WHERE c.counterpart_user_id IS NULL
      OR NOT public.is_user_pair_abuse_blocked(c.counterpart_user_id);
 $function$;

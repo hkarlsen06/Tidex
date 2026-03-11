@@ -1,6 +1,7 @@
 -- Function: send_message
--- Description: Validates and inserts a canonical user message with private attachments
+-- Description: Validates and inserts a canonical user message with structured metadata and private attachments
 
+DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, uuid, jsonb, jsonb);
 DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, uuid, jsonb);
 DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, jsonb);
 
@@ -9,7 +10,8 @@ CREATE FUNCTION public.send_message(
   p_client_id uuid,
   p_body text,
   p_reply_to_message_id uuid DEFAULT NULL,
-  p_attachments jsonb DEFAULT '[]'::jsonb
+  p_attachments jsonb DEFAULT '[]'::jsonb,
+  p_metadata jsonb DEFAULT '{}'::jsonb
 )
 RETURNS TABLE (
   id uuid,
@@ -65,9 +67,15 @@ BEGIN
     p_attachments := '[]'::jsonb;
   END IF;
 
+  IF p_metadata IS NULL THEN
+    p_metadata := '{}'::jsonb;
+  END IF;
+
   IF jsonb_typeof(p_attachments) <> 'array' THEN
     RAISE EXCEPTION 'Attachments must be a JSON array';
   END IF;
+
+  PERFORM public.assert_message_metadata_validity(p_metadata);
 
   SELECT m.id
   INTO v_existing_message_id
@@ -97,8 +105,8 @@ BEGIN
   INTO v_attachment_count
   FROM jsonb_array_elements(p_attachments);
 
-  IF v_attachment_count = 0 AND v_normalized_body IS NULL THEN
-    RAISE EXCEPTION 'A message must include text or at least one attachment';
+  IF NOT public.message_has_renderable_content(v_normalized_body, p_attachments, p_metadata) THEN
+    RAISE EXCEPTION 'A message must include text, at least one attachment, or supported rich content';
   END IF;
 
   IF v_attachment_count > 4 THEN
@@ -183,7 +191,8 @@ BEGIN
     message_type,
     body,
     client_id,
-    reply_to_message_id
+    reply_to_message_id,
+    metadata
   )
   VALUES (
     p_thread_id,
@@ -191,7 +200,8 @@ BEGIN
     'user',
     v_normalized_body,
     p_client_id,
-    p_reply_to_message_id
+    p_reply_to_message_id,
+    p_metadata
   )
   RETURNING messages.id INTO v_message_id;
 
@@ -237,6 +247,6 @@ BEGIN
 END;
 $function$;
 
-REVOKE EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb) FROM public;
-REVOKE EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb) FROM anon;
-GRANT EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb, jsonb) FROM public;
+REVOKE EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb, jsonb) FROM anon;
+GRANT EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb, jsonb) TO authenticated;
