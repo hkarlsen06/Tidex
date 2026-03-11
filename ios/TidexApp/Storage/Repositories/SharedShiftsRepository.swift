@@ -12,6 +12,11 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsR
 final class SharedShiftsRepository: ObservableObject {
   static let shared = SharedShiftsRepository()
 
+  struct CachedFriendsSnapshot {
+    let sharers: [SharedUser]
+    let chatOnlyUserIds: Set<String>
+  }
+
   private let localStore: LocalStore
 
   private init(localStore: LocalStore? = nil) {
@@ -29,6 +34,12 @@ final class SharedShiftsRepository: ObservableObject {
 
   /// Get cached sharers for a viewer, optionally including hidden rows.
   func getSharers(for viewerId: String, includeHidden: Bool) -> [SharedUser] {
+    let snapshot = getCachedFriends(for: viewerId, includeHidden: includeHidden)
+    return snapshot.sharers.filter { !snapshot.chatOnlyUserIds.contains($0.id) }
+  }
+
+  /// Get cached friend rows for a viewer, including chat-only entries.
+  func getCachedFriends(for viewerId: String, includeHidden: Bool) -> CachedFriendsSnapshot {
     let context = localStore.mainContext
 
     let descriptor: FetchDescriptor<LocalSharer>
@@ -50,20 +61,36 @@ final class SharedShiftsRepository: ObservableObject {
 
     do {
       let localSharers = try context.fetch(descriptor)
-      return localSharers.map { $0.toSharedUser() }
+      return CachedFriendsSnapshot(
+        sharers: localSharers.map { $0.toSharedUser() },
+        chatOnlyUserIds: Set(
+          localSharers
+            .filter { !$0.canViewSharedShifts }
+            .map(\.sharerId)
+        )
+      )
     } catch {
       logger.error("Failed to fetch cached sharers: \(error.localizedDescription)")
-      return []
+      return CachedFriendsSnapshot(sharers: [], chatOnlyUserIds: [])
     }
   }
 
-  /// Save sharers to local cache, replacing existing entries
+  /// Save friend rows to local cache, replacing existing entries
   /// - Parameters:
-  ///   - sharers: Array of SharedUser from API
+  ///   - sharers: Array of friend rows shown in the Friends tab
+  ///   - chatOnlyUserIds: IDs that should open chat directly instead of shift details
   ///   - viewerId: The current user's ID
-  func saveSharers(_ sharers: [SharedUser], for viewerId: String) async {
+  func saveSharers(
+    _ sharers: [SharedUser],
+    chatOnlyUserIds: Set<String> = [],
+    for viewerId: String
+  ) async {
     do {
-      try await localStore.storeActor.saveSharers(sharers, for: viewerId)
+      try await localStore.storeActor.saveSharers(
+        sharers,
+        chatOnlyUserIds: chatOnlyUserIds,
+        for: viewerId
+      )
       logger.info("Saved \(sharers.count) sharers to cache")
     } catch {
       logger.error("Failed to save sharers: \(error.localizedDescription)")

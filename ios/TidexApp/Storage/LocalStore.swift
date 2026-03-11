@@ -3408,8 +3408,12 @@ actor LocalStoreActor {
 
   // MARK: - Shared Shifts Operations
 
-  /// Save sharers to cache, replacing existing entries for this viewer
-  func saveSharers(_ sharers: [SharedUser], for viewerId: String) throws {
+  /// Save friend rows to cache, replacing existing entries for this viewer
+  func saveSharers(
+    _ sharers: [SharedUser],
+    chatOnlyUserIds: Set<String> = [],
+    for viewerId: String
+  ) throws {
     // Delete existing sharers for this viewer
     let descriptor = FetchDescriptor<LocalSharer>(
       predicate: #Predicate { $0.viewerId == viewerId }
@@ -3420,7 +3424,11 @@ actor LocalStoreActor {
 
     // Insert new sharers
     for sharer in sharers {
-      let localSharer = LocalSharer.from(sharedUser: sharer, viewerId: viewerId)
+      let localSharer = LocalSharer.from(
+        sharedUser: sharer,
+        viewerId: viewerId,
+        canViewSharedShifts: !chatOnlyUserIds.contains(sharer.id)
+      )
       modelContext.insert(localSharer)
     }
 

@@ -241,10 +241,11 @@ extension LocalSharedShift {
   }
 }
 
-// MARK: - Local Sharer Cache
+// MARK: - Local Friend Cache
 
-/// SwiftData model for caching sharer information
-/// Allows offline display of sharers list
+/// SwiftData model for caching friend rows shown in the Friends tab.
+/// This stores both shift-sharing friends and outgoing chat-only friends so
+/// the local source matches what the tab renders.
 @Model
 final class LocalSharer {
   // MARK: - Primary Key
@@ -280,6 +281,10 @@ final class LocalSharer {
   /// Whether the viewer has hidden this sharer
   @Attribute(originalName: "blocked")
   var hidden: Bool
+
+  /// Whether this relationship includes incoming shift access for the viewer.
+  /// Outgoing-only chat friends are cached with this set to false.
+  var canViewSharedShifts: Bool = true
 
   // MARK: - Cache Metadata
 
@@ -328,6 +333,7 @@ final class LocalSharer {
     sharedAt: String,
     showEarnings: Bool,
     hidden: Bool,
+    canViewSharedShifts: Bool = true,
     cachedAt: Date = Date()
   ) {
     self.compositeKey = "\(viewerId):\(sharerId)"
@@ -341,11 +347,16 @@ final class LocalSharer {
     self.sharedAt = sharedAt
     self.showEarnings = showEarnings
     self.hidden = hidden
+    self.canViewSharedShifts = canViewSharedShifts
     self.cachedAt = cachedAt
   }
 
   /// Create from API response
-  static func from(sharedUser: SharedUser, viewerId: String) -> LocalSharer {
+  static func from(
+    sharedUser: SharedUser,
+    viewerId: String,
+    canViewSharedShifts: Bool = true
+  ) -> LocalSharer {
     LocalSharer(
       sharerId: sharedUser.id,
       viewerId: viewerId,
@@ -356,7 +367,8 @@ final class LocalSharer {
       oauthAvatarUrl: sharedUser.oauthAvatarUrl,
       sharedAt: sharedUser.sharedAt,
       showEarnings: sharedUser.showEarnings,
-      hidden: sharedUser.hidden
+      hidden: sharedUser.hidden,
+      canViewSharedShifts: canViewSharedShifts
     )
   }
 
