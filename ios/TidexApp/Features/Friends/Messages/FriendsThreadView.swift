@@ -78,6 +78,20 @@ struct FriendsThreadView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
+        CompactFriendShiftPreviewHeader(
+          sharer: counterpartProfileUser,
+          preview: counterpartShiftPreview,
+          label: LocalizedStringResource(
+            "friends.chat.counterpart_header.title",
+            table: "Localizable"
+          )
+        )
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.xs)
+      }
+
       ZStack(alignment: .bottom) {
         FriendsThreadSurfaceView(
           timelineConfiguration: FriendsChatTimelineConfiguration(
@@ -318,6 +332,13 @@ struct FriendsThreadView: View {
       dismissMessageActionMenu()
       Task {
         await viewModel.handleExternalThreadUpdate(shouldMarkRead: isPinnedToBottom)
+      }
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
+    ) { _ in
+      Task {
+        await viewModel.refreshCounterpartShiftPreview()
       }
     }
     .onReceive(
