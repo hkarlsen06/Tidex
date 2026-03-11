@@ -37,7 +37,7 @@ final class ShareViewController: UIViewController {
 @MainActor
 private final class ShareExtensionViewModel: ObservableObject {
   @Published var recipients: [ShareRecipient] = []
-  @Published var selectedRecipientID: String?
+  @Published var recipientSelection = ShareRecipientSelectionState()
   @Published var messageText = ""
   @Published var previewImage: UIImage?
   @Published var isLoading = true
@@ -52,7 +52,7 @@ private final class ShareExtensionViewModel: ObservableObject {
   }
 
   var selectedRecipient: ShareRecipient? {
-    recipients.first(where: { $0.id == selectedRecipientID })
+    recipientSelection.selectedRecipient(in: recipients)
   }
 
   func configure(extensionContext: NSExtensionContext?) {
@@ -69,7 +69,7 @@ private final class ShareExtensionViewModel: ObservableObject {
 
       let (recipients, imagePayload) = try await (recipientsTask, imageTask)
       self.recipients = recipients
-      self.selectedRecipientID = nil
+      recipientSelection = ShareRecipientSelectionState()
       self.previewImage = imagePayload.image
       self.sharedImageData = imagePayload.data
 
@@ -171,26 +171,13 @@ private struct ShareRootView: View {
               .frame(maxWidth: .infinity, alignment: .leading)
           }
 
-          ScrollView {
-            LazyVStack(spacing: 10) {
-              ForEach(viewModel.recipients) { recipient in
-                ShareRecipientCard(
-                  recipient: recipient,
-                  isSelected: viewModel.selectedRecipientID == recipient.id
-                )
-                .onTapGesture {
-                  withAnimation(.easeInOut(duration: 0.16)) {
-                    if viewModel.selectedRecipientID == recipient.id {
-                      viewModel.selectedRecipientID = nil
-                    } else {
-                      viewModel.selectedRecipientID = recipient.id
-                    }
-                  }
-                }
-              }
-            }
-            .padding(.bottom, 12)
-          }
+          ShareRecipientPickerList(
+            recipients: viewModel.recipients,
+            selectionState: Binding(
+              get: { viewModel.recipientSelection },
+              set: { viewModel.recipientSelection = $0 }
+            )
+          )
         }
       }
       .padding(.horizontal, 16)
@@ -279,88 +266,6 @@ private struct ShareRootView: View {
     .onTapGesture {
       isMessageFieldFocused = true
     }
-  }
-}
-
-private struct ShareRecipientCard: View {
-  let recipient: ShareRecipient
-  let isSelected: Bool
-
-  var body: some View {
-    HStack(spacing: 12) {
-      avatarView
-
-      VStack(alignment: .leading, spacing: 4) {
-        Text(recipient.displayName)
-          .font(.body.weight(.medium))
-          .foregroundStyle(.primary)
-
-        if let statusText = recipient.statusText {
-          Text(statusText)
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-        }
-      }
-
-      Spacer()
-
-      Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-        .font(.system(size: 24, weight: .semibold))
-        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-    }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 12)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(Color(.secondarySystemGroupedBackground))
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(
-          isSelected ? Color.accentColor.opacity(0.85) : Color(.separator).opacity(0.35),
-          lineWidth: 1)
-    )
-  }
-
-  @ViewBuilder
-  private var avatarView: some View {
-    if let avatarURL = recipient.avatarURL {
-      AsyncImage(url: avatarURL) { phase in
-        switch phase {
-        case .success(let image):
-          image
-            .resizable()
-            .scaledToFill()
-        default:
-          initialsAvatar
-        }
-      }
-      .frame(width: 48, height: 48)
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    } else {
-      initialsAvatar
-        .frame(width: 48, height: 48)
-    }
-  }
-
-  private var initialsAvatar: some View {
-    ZStack {
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .fill(Color.accentColor.opacity(0.16))
-
-      Text(initials(from: recipient.displayName))
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(Color.accentColor)
-    }
-  }
-
-  private func initials(from name: String) -> String {
-    let components = name.split(separator: " ")
-    if components.count >= 2 {
-      return components[0].prefix(1).uppercased() + components[1].prefix(1).uppercased()
-    }
-
-    return String(name.prefix(2)).uppercased()
   }
 }
 
