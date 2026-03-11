@@ -130,6 +130,10 @@ struct FriendsChatViewportAnchor {
 
 @MainActor
 final class FriendsChatTimelineViewController: UIViewController, UIGestureRecognizerDelegate {
+  private enum Pagination {
+    static let topTriggerDistance: CGFloat = 120
+  }
+
   var onBackgroundTap: (() -> Void)?
   var onPinnedToBottomChanged: ((Bool) -> Void)?
   var onReachedTopMessage: ((String) -> Void)?
@@ -164,6 +168,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   private var lastScrollToBottomTrigger = 0
   private var lastRestoreTargetMessageId: String?
   private var lastReplyTargetMessageId: String?
+  private var lastRequestedTopPaginationMessageId: String?
   private var didInitialScroll = false
   private var hasUserAdjustedViewport = false
   private var lastKnownCollectionViewBoundsHeight: CGFloat = 0
@@ -330,6 +335,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       nextState: nextState,
       wasPinnedToBottom: wasPinnedToBottom
     )
+    let previousFirstMessageId = self.messages.first?.id
 
     self.messages = config.messages
     self.quotedMessagesById = config.quotedMessagesById
@@ -341,6 +347,9 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     self.counterpartAvatarUrl = config.counterpartAvatarUrl
     self.highlightedMessageId = config.highlightedMessageId
     self.showTypingIndicator = config.showTypingIndicator
+    if previousFirstMessageId != config.messages.first?.id {
+      lastRequestedTopPaginationMessageId = nil
+    }
     baseBottomContentInset = config.bottomContentInset
     updateInsets(
       maintainingBottomAnchor: shouldMaintainBottomAnchor(
@@ -386,6 +395,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       lastReplyTargetMessageId =
         consumedReplyScrollTarget ? nil : config.replyScrollTargetMessageId
       updatePinnedState()
+      requestOlderMessagesIfNeeded()
     }
   }
 
@@ -780,6 +790,20 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
       hasPendingTargetedScroll: hasPendingTargetedScroll
     )
   }
+
+  private func requestOlderMessagesIfNeeded(force: Bool = false) {
+    guard let firstMessageId = messages.first?.id else { return }
+
+    let distanceFromTop = collectionView.contentOffset.y + collectionView.adjustedContentInset.top
+    if !force, distanceFromTop > Pagination.topTriggerDistance {
+      lastRequestedTopPaginationMessageId = nil
+      return
+    }
+
+    guard lastRequestedTopPaginationMessageId != firstMessageId else { return }
+    lastRequestedTopPaginationMessageId = firstMessageId
+    onReachedTopMessage?(firstMessageId)
+  }
 }
 
 extension FriendsChatTimelineViewController: UICollectionViewDataSource {
@@ -911,6 +935,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDelegate {
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     updatePinnedState()
+    requestOlderMessagesIfNeeded()
   }
 
   func collectionView(
@@ -919,7 +944,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDelegate {
     forItemAt indexPath: IndexPath
   ) {
     guard indexPath.item == 0, messages.indices.contains(indexPath.item) else { return }
-    onReachedTopMessage?(messages[indexPath.item].id)
+    requestOlderMessagesIfNeeded(force: true)
   }
 }
 

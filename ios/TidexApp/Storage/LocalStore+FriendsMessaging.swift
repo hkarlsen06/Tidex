@@ -108,6 +108,11 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
+  func deleteMessage(id: String, viewerUserId: String) throws {
+    try deleteStoredMessage(id: id, viewerUserId: viewerUserId)
+    try modelContext.save()
+  }
+
   func updateMessageSendState(
     messageId: String,
     viewerUserId: String,
@@ -267,36 +272,12 @@ extension LocalStoreActor {
     viewerUserId: String
   ) throws -> LocalMessage? {
     let normalizedClientId = message.clientId.lowercased()
-    if !normalizedClientId.isEmpty,
-      let byClientId = try fetchMessage(
-        clientId: normalizedClientId,
-        threadId: threadId,
-        viewerUserId: viewerUserId
-      )
-    {
-      return byClientId
-    }
-
-    let descriptor = FetchDescriptor<LocalMessage>(
-      predicate: #Predicate { localMessage in
-        localMessage.threadId == threadId
-          && localMessage.viewerUserId == viewerUserId
-          && localMessage.senderUserId == viewerUserId
-      },
-      sortBy: [
-        SortDescriptor(\LocalMessage.createdAt, order: .reverse),
-        SortDescriptor(\LocalMessage.updatedAt, order: .reverse),
-      ]
+    guard !normalizedClientId.isEmpty else { return nil }
+    return try fetchMessage(
+      clientId: normalizedClientId,
+      threadId: threadId,
+      viewerUserId: viewerUserId
     )
-
-    let candidates = try modelContext.fetch(descriptor).filter { candidate in
-      candidate.sendStateRaw != FriendMessageSendState.sent.rawValue
-        && candidate.body == message.body
-        && candidate.replyToMessageId == message.replyToMessageId
-        && abs(candidate.createdAt.timeIntervalSince(message.createdAt)) < 180
-    }
-
-    return candidates.first
   }
 
   private func insertMessage(
@@ -345,7 +326,7 @@ extension LocalStoreActor {
     }
   }
 
-  private func deleteMessage(id: String, viewerUserId: String) throws {
+  private func deleteStoredMessage(id: String, viewerUserId: String) throws {
     guard let message = try fetchMessage(id: id, viewerUserId: viewerUserId) else { return }
     try deleteAttachments(messageId: id, viewerUserId: viewerUserId)
     try deleteReactions(messageId: id, viewerUserId: viewerUserId)
@@ -391,7 +372,7 @@ extension LocalStoreActor {
     )
     let messageIds = try modelContext.fetch(messageDescriptor).map(\.id)
     for messageId in messageIds {
-      try deleteMessage(id: messageId, viewerUserId: viewerUserId)
+      try deleteStoredMessage(id: messageId, viewerUserId: viewerUserId)
     }
   }
 }

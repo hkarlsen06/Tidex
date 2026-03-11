@@ -6,13 +6,28 @@ iOS-specific development guidance for the Tidex native app.
 
 **Current iOS version: iOS 26** (released September 2025). Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
 
-You may run `xcodebuild` and prefer a simulator destination with a reasonable timeout. If a build is long or hangs, stop and report.
+Run commands from the repository root unless explicitly stated otherwise.
 
-### Build Command
+Use the repository build wrapper for any iOS build. Do not run `xcodebuild` directly. If the wrapper hangs or takes unusually long, stop and report.
+
+### Build Wrapper
 
 ```bash
-cd /Users/hjalmarsamuelkristensen-karlsen/Lokalt/Cloned-Repos/tidex/ios && xcodebuild -project Tidex.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' build
+./scripts/xcode-build-agent.sh
 ```
+
+Do NOT run `xcodebuild` directly.
+
+JSON output is available with:
+
+```bash
+./scripts/xcode-build-agent.sh --json
+```
+
+Interpretation rules:
+- Exit code `0` + `STATUS: SUCCESS` -> build succeeded
+- Non-zero exit code or `STATUS: FAILURE` -> build failed
+- If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
 
 **ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
 - API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)

@@ -12,6 +12,7 @@ protocol FriendsMessagesRepositoryProviding: AnyObject {
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
     async
   func saveThreadState(_ state: FriendThreadState) async
+  func deleteMessage(id: String, viewerUserId: String) async
 }
 
 @MainActor
@@ -123,7 +124,8 @@ final class FriendsMessagesRepository: ObservableObject {
           reactions: reactionsByMessageId[message.id] ?? []
         )
       }
-      return deduplicateMessages(friendMessages, viewerUserId: viewerUserId)
+      let visibleMessages = friendMessages.filter { $0.deletedAt == nil }
+      return deduplicateMessages(visibleMessages, viewerUserId: viewerUserId)
     } catch {
       logger.error("Failed to fetch messages: \(error.localizedDescription)")
       return []
@@ -160,7 +162,8 @@ final class FriendsMessagesRepository: ObservableObject {
       guard let message = try context.fetch(messageDescriptor).first else { return nil }
       let attachments = try context.fetch(attachmentDescriptor)
       let reactions = try context.fetch(reactionDescriptor)
-      return message.toFriendMessage(attachments: attachments, reactions: reactions)
+      let friendMessage = message.toFriendMessage(attachments: attachments, reactions: reactions)
+      return friendMessage.deletedAt == nil ? friendMessage : nil
     } catch {
       logger.error("Failed to fetch message: \(error.localizedDescription)")
       return nil
@@ -254,6 +257,15 @@ final class FriendsMessagesRepository: ObservableObject {
       logger.info("Saved thread state for \(state.threadId, privacy: .private)")
     } catch {
       logger.error("Failed to save thread state: \(error.localizedDescription)")
+    }
+  }
+
+  func deleteMessage(id: String, viewerUserId: String) async {
+    do {
+      try await storeActor.deleteMessage(id: id, viewerUserId: viewerUserId)
+      logger.info("Deleted message \(id, privacy: .private)")
+    } catch {
+      logger.error("Failed to delete message: \(error.localizedDescription)")
     }
   }
 }
