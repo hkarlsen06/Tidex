@@ -17,25 +17,33 @@ struct FriendCard: View {
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
-      Button(action: onChatTap) {
-        VStack(spacing: 0) {
-          HStack(spacing: Spacing.sm) {
+      VStack(spacing: 0) {
+        HStack(spacing: Spacing.sm) {
+          Button(action: onChatTap) {
             CompactFriendIdentityRow(
               sharer: sharer,
               unreadMessageCount: unreadMessageCount
             )
-
-            if isCalendarAvailable {
-              Color.clear
-                .frame(width: actionButtonSize, height: actionButtonSize)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
           }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.md)
-          .padding(.top, Spacing.sm)
-          .padding(.bottom, Spacing.sm + 2)
+          .buttonStyle(.plain)
+          .allowsHitTesting(!isOpeningMessage)
+          .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
+          .accessibilityHint(Text(.friendsChatMessageAction))
 
-          if let preview = preview, let shift = preview.shift, let status = preview.status {
+          if isCalendarAvailable {
+            Color.clear
+              .frame(width: actionButtonSize, height: actionButtonSize)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.sm + 2)
+
+        if let preview = preview, let shift = preview.shift, let status = preview.status {
+          VStack(spacing: 0) {
             Rectangle()
               .fill(Color.tidexBorderSubtle.opacity(0.7))
               .frame(height: 1)
@@ -52,14 +60,12 @@ struct FriendCard: View {
             .padding(.horizontal, Spacing.sm)
             .padding(.bottom, Spacing.xxs)
           }
+          .contentShape(Rectangle())
+          .onTapGesture(perform: onChatTap)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
       }
-      .buttonStyle(.plain)
-      .disabled(isOpeningMessage)
-      .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
-      .accessibilityHint(Text(.friendsChatMessageAction))
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .allowsHitTesting(!isOpeningMessage)
 
       if isCalendarAvailable {
         Button(action: onCalendarTap) {
@@ -75,7 +81,7 @@ struct FriendCard: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(isOpeningMessage)
+        .allowsHitTesting(!isOpeningMessage)
         .padding(.top, Spacing.sm)
         .padding(.trailing, Spacing.md)
         .accessibilityLabel(Text(.tabsShifts))

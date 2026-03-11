@@ -848,6 +848,7 @@ private struct FriendsChatMessageActionMenuOverlay: View {
   let onAddCustomReaction: () -> Void
 
   @State private var hasPresented = false
+  @State private var measuredPreviewHeight: CGFloat = 0
 
   private var isCurrentUser: Bool {
     message.senderUserId == viewerUserId
@@ -938,6 +939,8 @@ private struct FriendsChatMessageActionMenuOverlay: View {
         FriendsChatMessageActionLayout.actionMenuWidth(for: localSourceFrame.width),
         maxContentWidth
       )
+      let previewContentHeight =
+        measuredPreviewHeight > 0 ? measuredPreviewHeight : previewHeightEstimate
       let previewX =
         isCurrentUser
         ? min(
@@ -957,7 +960,7 @@ private struct FriendsChatMessageActionMenuOverlay: View {
       let estimatedHeight =
         CGFloat(actionRows.count) * 56
         + (message.canReact ? 66 : 0)
-        + previewHeightEstimate
+        + previewContentHeight
       let previewY = min(
         max(safeTop, localSourceFrame.minY - 84),
         geometry.size.height - estimatedHeight - safeBottom
@@ -973,7 +976,7 @@ private struct FriendsChatMessageActionMenuOverlay: View {
         max(safeTop, localSourceFrame.minY),
         geometry.size.height - localSourceFrame.height - safeBottom
       )
-      let actionMenuY = previewY + localSourceFrame.height + Spacing.xs
+      let actionMenuY = previewY + previewContentHeight + Spacing.xs
 
       ZStack(alignment: .topLeading) {
         Color.black.opacity(hasPresented ? 0.3 : 0)
@@ -1041,6 +1044,14 @@ private struct FriendsChatMessageActionMenuOverlay: View {
           if !isCurrentUser { Spacer(minLength: 0) }
         }
         .frame(width: previewWidth)
+        .background {
+          GeometryReader { previewGeometry in
+            Color.clear.preference(
+              key: FriendsChatActionPreviewHeightPreferenceKey.self,
+              value: previewGeometry.size.height
+            )
+          }
+        }
         .offset(
           x: hasPresented ? previewX : previewStartX,
           y: hasPresented ? previewY : previewStartY
@@ -1088,6 +1099,10 @@ private struct FriendsChatMessageActionMenuOverlay: View {
         guard !hasPresented else { return }
         hasPresented = true
       }
+      .onPreferenceChange(FriendsChatActionPreviewHeightPreferenceKey.self) { height in
+        guard height > 0 else { return }
+        measuredPreviewHeight = height
+      }
     }
   }
 
@@ -1101,16 +1116,34 @@ private struct FriendsChatMessageActionMenuOverlay: View {
   private var previewHeightEstimate: CGFloat {
     let hasMessageText =
       !(message.body?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+    let imageAttachments = message.attachments.filter { $0.kind == .image }
+    var totalHeight: CGFloat = 0
+    var blockCount = 0
 
     if message.shiftSnapshot != nil {
-      return hasMessageText ? 276 : 192
+      totalHeight += 192
+      blockCount += 1
     }
 
-    if message.hasImageAttachment && !hasMessageText {
-      return 172
+    if !imageAttachments.isEmpty {
+      totalHeight += imageAttachments.reduce(CGFloat.zero) { partialResult, attachment in
+        partialResult + attachment.friendsChatImageFrameSize().height
+      }
+      blockCount += imageAttachments.count
     }
 
-    return 108
+    if hasMessageText
+      || (!message.hasImageAttachment && message.shiftSnapshot == nil && message.previewText != nil)
+    {
+      totalHeight += 108
+      blockCount += 1
+    }
+
+    if blockCount > 1 {
+      totalHeight += CGFloat(blockCount - 1) * Spacing.xs
+    }
+
+    return max(totalHeight, 108)
   }
 }
 
@@ -1118,7 +1151,7 @@ private struct FriendsChatMessageActionMenuOverlay: View {
 final class FriendsChatReactionPaletteStore: ObservableObject {
   private enum Constants {
     static let defaults = ["❤️", "👍", "😂", "🔥", "😮", "😢"]
-    static let maxVisible = 6
+    static let maxVisible = 5
     static let maxRecents = 12
     static let recentsKey = "friends.chat.reaction.recents"
   }
@@ -1272,6 +1305,14 @@ extension Character {
   }
 }
 
+private struct FriendsChatActionPreviewHeightPreferenceKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = max(value, nextValue())
+  }
+}
+
 private struct FriendsChatActionMessagePreview: View {
   let message: FriendMessage
   let isCurrentUser: Bool
@@ -1288,19 +1329,11 @@ private struct FriendsChatActionMessagePreview: View {
         ChatShiftSnapshotCard(snapshot: shiftSnapshot, isCurrentUser: isCurrentUser)
       }
 
-      if message.hasImageAttachment {
-        RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-          .fill(isCurrentUser ? Color.tidexBrandPrimary.opacity(0.9) : Color.tidexSurfacePrimary)
-          .frame(width: 200, height: 144)
-          .overlay {
-            Image(systemName: "photo")
-              .font(.system(size: 28, weight: .semibold))
-              .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-          }
-          .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-              .stroke(isCurrentUser ? Color.white.opacity(0.18) : Color.tidexBorder, lineWidth: 1)
-          )
+      ForEach(imageAttachments, id: \.id) { attachment in
+        FriendsChatImageAttachmentCard(
+          attachment: attachment,
+          isCurrentUser: isCurrentUser
+        )
       }
 
       if let messageText {
@@ -1339,6 +1372,10 @@ private struct FriendsChatActionMessagePreview: View {
         }
       }
     }
+  }
+
+  private var imageAttachments: [FriendMessageAttachment] {
+    message.attachments.filter { $0.kind == .image }
   }
 }
 

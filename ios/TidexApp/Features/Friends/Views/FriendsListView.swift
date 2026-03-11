@@ -21,6 +21,7 @@ struct SharerListView: View {
   let onSelectSharer: (SharedUser) -> Void
   let onSelectHiddenSharer: (SharedUser) -> Void
   let onMessageTap: (SharedUser) -> Void
+  var highlightedChatUserId: String? = nil
   var openingThreadUserId: String? = nil
   var onAddFriend: (() -> Void)?
 
@@ -235,8 +236,11 @@ struct SharerListView: View {
   @ViewBuilder
   private func sharerCard(for sharer: SharedUser) -> some View {
     let preview = shiftPreviews[sharer.id]
-    let isSelected = selectedSharer?.id == sharer.id
     let isOpeningMessage = openingThreadUserId == sharer.id
+    let isSelected =
+      selectedSharer?.id == sharer.id
+      || highlightedChatUserId == sharer.id
+      || isOpeningMessage
     let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
 
     FriendCard(
@@ -262,8 +266,11 @@ struct SharerListView: View {
   @ViewBuilder
   private func hiddenSharerCard(for sharer: SharedUser) -> some View {
     let preview = shiftPreviews[sharer.id]
-    let isSelected = selectedSharer?.id == sharer.id
     let isOpeningMessage = openingThreadUserId == sharer.id
+    let isSelected =
+      selectedSharer?.id == sharer.id
+      || highlightedChatUserId == sharer.id
+      || isOpeningMessage
     let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
 
     FriendCard(
