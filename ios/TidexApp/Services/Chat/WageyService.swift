@@ -4,6 +4,15 @@ import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyService")
 
+private struct WageyStreamRequestContext {
+  let messages: [ChatMessage]
+  let userId: String
+  let userName: String?
+  let compaction: String?
+  let clientCapabilities: [String]
+  let appVersion: String?
+}
+
 // MARK: - API Request Types
 
 /// Request body for the chat API endpoint
@@ -146,6 +155,7 @@ final class WageyService: ObservableObject {
     config.timeoutIntervalForResource = 300
     return URLSession(configuration: config)
   }()
+  private lazy var streamWorker = WageyStreamWorker(urlSession: urlSession)
 
   private init() {}
 
@@ -170,11 +180,22 @@ final class WageyService: ObservableObject {
   ) -> AsyncThrowingStream<ChatChunk, Error> {
     AsyncThrowingStream { continuation in
       let task = Task {
-        await self.performStreamRequest(
-          messages: messages,
-          userId: userId,
-          userName: userName,
-          compaction: compaction,
+        self.setStreamingState(isStreaming: true, error: nil)
+        defer {
+          Task { @MainActor in
+            self.isStreaming = false
+          }
+        }
+
+        await streamWorker.performStreamRequest(
+          WageyStreamRequestContext(
+            messages: messages,
+            userId: userId,
+            userName: userName,
+            compaction: compaction,
+            clientCapabilities: Self.clientCapabilities,
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+          ),
           continuation: continuation
         )
       }
@@ -186,177 +207,68 @@ final class WageyService: ObservableObject {
     }
   }
 
-  // MARK: - Private Implementation
+  private func setStreamingState(isStreaming: Bool, error: Error?) {
+    self.isStreaming = isStreaming
+    self.error = error
+  }
 
-  /// Performs the actual streaming request
-  private func performStreamRequest(
-    messages: [ChatMessage],
-    userId: String,
-    userName: String?,
-    compaction: String?,
-    continuation: AsyncThrowingStream<ChatChunk, Error>.Continuation
-  ) async {
-    isStreaming = true
-    error = nil
-
-    defer {
-      Task { @MainActor in
-        self.isStreaming = false
-      }
+  fileprivate func handleWorkerError(
+    _ error: Error, continuation: AsyncThrowingStream<ChatChunk, Error>.Continuation
+  ) {
+    if let serviceError = error as? WageyServiceError {
+      logger.error("Chat stream service error: \(serviceError.localizedDescription)")
+      self.error = serviceError
+      continuation.finish(throwing: serviceError)
+      return
     }
 
+    logger.error("Chat stream error: \(error.localizedDescription)")
+    let wrappedError = WageyServiceError.networkError(underlying: error)
+    self.error = wrappedError
+    continuation.finish(throwing: wrappedError)
+  }
+}
+
+private actor WageyStreamWorker {
+  private let urlSession: URLSession
+
+  init(urlSession: URLSession) {
+    self.urlSession = urlSession
+  }
+
+  func performStreamRequest(
+    _ context: WageyStreamRequestContext,
+    continuation: AsyncThrowingStream<ChatChunk, Error>.Continuation
+  ) async {
     do {
-      // Check for cancellation
       try Task.checkCancellation()
 
-      // Get the current session token
       let session = try await AuthSessionManager.shared.getSession()
       let accessToken = session.accessToken
 
-      // Build the request
       let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/chat")
       var request = URLRequest(url: url)
       request.httpMethod = "POST"
       request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
       request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-
-      // Build request body - convert ChatMessages to API format
-      // When assistant messages have tool calls, we need to also send tool result messages
-      var apiMessages: [ChatAPIRequest.APIMessage] = []
-
-      for message in messages {
-        // Check if message has images
-        let images = message.imageAttachments
-
-        // Build content - use blocks if there are images, otherwise use plain text
-        let content: ChatAPIRequest.APIMessageContent
-        if !images.isEmpty {
-          // Multimodal message with images
-          var blocks: [ChatAPIRequest.APIContentBlock] = []
-
-          // Add images first to match the chat API's multimodal message ordering.
-          for image in images {
-            blocks.append(
-              .image(
-                mediaType: image.mediaType,
-                base64Data: image.base64String
-              ))
-          }
-
-          // Add text content if present
-          let textContent = message.content
-          if !textContent.isEmpty {
-            blocks.append(.text(textContent))
-          }
-
-          content = .blocks(blocks)
-        } else {
-          // Text-only message
-          content = .text(message.content)
-        }
-
-        // Add the main message
-        let functionToolCalls = message.toolCalls?.filter { !$0.isBuiltIn }
-
-        let apiMessage = ChatAPIRequest.APIMessage(
-          role: message.role.rawValue,
-          content: content,
-          toolCalls: functionToolCalls?.map { toolCall in
-            ChatAPIRequest.APIToolCall(
-              id: toolCall.id,
-              type: "function",
-              function: ChatAPIRequest.APIToolCall.APIFunction(
-                name: toolCall.name,
-                arguments: toolCall.arguments ?? "{}"
-              )
-            )
-          },
-          toolCallId: nil,
-          name: nil
-        )
-        apiMessages.append(apiMessage)
-
-        // If this assistant message had tool calls, add tool result messages
-        // IMPORTANT: We must send a tool_result for every prior tool_use item.
-        // If a tool call has no result (timed out), send a synthetic failure result
-        if message.role == .assistant, let toolCalls = functionToolCalls {
-          for toolCall in toolCalls {
-            let resultContent: String
-            if let result = toolCall.result {
-              resultContent = result
-            } else {
-              // Tool call never got a result (timeout, connection lost, etc.)
-              // Send a synthetic failure result so the model sees that the call failed.
-              resultContent =
-                "{\"success\":false,\"message\":\"Tool call timed out or was interrupted\"}"
-            }
-            let toolResultMessage = ChatAPIRequest.APIMessage(
-              role: "tool",
-              content: .text(resultContent),
-              toolCalls: nil,
-              toolCallId: toolCall.id,
-              name: toolCall.name
-            )
-            apiMessages.append(toolResultMessage)
-          }
-        }
-      }
-
-      // Debug log the messages being sent
-      logger.debug("Sending \(apiMessages.count) messages to chat API")
-      for (index, msg) in apiMessages.enumerated() {
-        let contentInfo: String
-        switch msg.content {
-        case .text(let text):
-          contentInfo = "text(\(text.count) chars)"
-        case .blocks(let blocks):
-          let imageCount = blocks.filter {
-            if case .image = $0 { return true } else { return false }
-          }.count
-          let textCount = blocks.filter { if case .text = $0 { return true } else { return false } }
-            .count
-          contentInfo = "blocks(\(imageCount) images, \(textCount) texts)"
-        }
-        logger.debug(
-          "  [\(index)] role=\(msg.role), content=\(contentInfo), toolCalls=\(msg.toolCalls?.count ?? 0), toolCallId=\(msg.toolCallId ?? "nil")"
-        )
-      }
-
-      let requestBody = ChatAPIRequest(
-        routerStreamKey: "wagey",
-        input: ChatAPIRequest.ChatInput(
-          messages: apiMessages,
-          userId: userId,
-          userName: userName,
-          compaction: compaction,
-          client: ChatAPIRequest.ClientContext(
-            platform: "ios",
-            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
-            capabilities: Self.clientCapabilities
-          )
-        )
-      )
-
-      let encoder = JSONEncoder()
-      request.httpBody = try encoder.encode(requestBody)
+      request.httpBody = try JSONEncoder().encode(
+        makeRequestBody(
+          context: context
+        ))
 
       logger.info("Starting chat stream to \(url.absoluteString)")
-
-      // Execute streaming request
       let (bytes, response) = try await urlSession.bytes(for: request)
 
-      // Check HTTP response
       guard let httpResponse = response as? HTTPURLResponse else {
         throw WageyServiceError.networkError(underlying: URLError(.badServerResponse))
       }
 
       logger.info("Chat stream response status: \(httpResponse.statusCode)")
 
-      // Handle HTTP errors
       switch httpResponse.statusCode {
       case 200:
-        break  // Success, continue to stream
+        break
       case 401:
         throw WageyServiceError.notAuthenticated
       default:
@@ -366,20 +278,16 @@ final class WageyService: ObservableObject {
         )
       }
 
-      // Parse the SSE stream
       for try await wrapper in SSEStreamParser.parse(bytes, as: WageyChunkWrapper.self) {
         try Task.checkCancellation()
 
-        // Only process "chunk" type events, skip "special" events
         guard wrapper.type == "chunk", let rawChunk = wrapper.chunk else {
           continue
         }
 
-        // Map the API chunk to our ChatChunk type
-        if let chatChunk = mapToChatChunk(rawChunk) {
+        if let chatChunk = Self.mapToChatChunk(rawChunk) {
           continuation.yield(chatChunk)
 
-          // If we got a done or error chunk, finish the stream
           if case .done = chatChunk {
             break
           }
@@ -391,42 +299,102 @@ final class WageyService: ObservableObject {
 
       logger.info("Chat stream completed successfully")
       continuation.finish()
-
     } catch is CancellationError {
       logger.info("Chat stream was cancelled")
       continuation.finish(throwing: WageyServiceError.cancelled)
-    } catch let serviceError as WageyServiceError {
-      logger.error("Chat stream service error: \(serviceError.localizedDescription)")
-      self.error = serviceError
-      continuation.finish(throwing: serviceError)
     } catch {
-      logger.error("Chat stream error: \(error.localizedDescription)")
-      let wrappedError = WageyServiceError.networkError(underlying: error)
-      self.error = wrappedError
-      continuation.finish(throwing: wrappedError)
+      await MainActor.run {
+        WageyService.shared.handleWorkerError(error, continuation: continuation)
+      }
     }
   }
 
-  /// Maps the raw API chunk to our ChatChunk type
-  private func mapToChatChunk(_ raw: RawChatChunk) -> ChatChunk? {
+  private func makeRequestBody(
+    context: WageyStreamRequestContext
+  ) -> ChatAPIRequest {
+    var apiMessages: [ChatAPIRequest.APIMessage] = []
+
+    for message in context.messages {
+      let content: ChatAPIRequest.APIMessageContent
+      if !message.imageAttachments.isEmpty {
+        var blocks: [ChatAPIRequest.APIContentBlock] = message.imageAttachments.map { image in
+          .image(mediaType: image.mediaType, base64Data: image.base64String)
+        }
+
+        if !message.content.isEmpty {
+          blocks.append(.text(message.content))
+        }
+
+        content = .blocks(blocks)
+      } else {
+        content = .text(message.content)
+      }
+
+      let functionToolCalls = message.toolCalls?.filter { !$0.isBuiltIn }
+      let apiMessage = ChatAPIRequest.APIMessage(
+        role: message.role.rawValue,
+        content: content,
+        toolCalls: functionToolCalls?.map { toolCall in
+          ChatAPIRequest.APIToolCall(
+            id: toolCall.id,
+            type: "function",
+            function: ChatAPIRequest.APIToolCall.APIFunction(
+              name: toolCall.name,
+              arguments: toolCall.arguments ?? "{}"
+            )
+          )
+        },
+        toolCallId: nil,
+        name: nil
+      )
+      apiMessages.append(apiMessage)
+
+      if message.role == .assistant, let toolCalls = functionToolCalls {
+        for toolCall in toolCalls {
+          let resultContent =
+            toolCall.result
+            ?? "{\"success\":false,\"message\":\"Tool call timed out or was interrupted\"}"
+          apiMessages.append(
+            ChatAPIRequest.APIMessage(
+              role: "tool",
+              content: .text(resultContent),
+              toolCalls: nil,
+              toolCallId: toolCall.id,
+              name: toolCall.name
+            ))
+        }
+      }
+    }
+
+    logger.debug("Sending \(apiMessages.count) messages to chat API")
+
+    return ChatAPIRequest(
+      routerStreamKey: "wagey",
+      input: ChatAPIRequest.ChatInput(
+        messages: apiMessages,
+        userId: context.userId,
+        userName: context.userName,
+        compaction: context.compaction,
+        client: ChatAPIRequest.ClientContext(
+          platform: "ios",
+          appVersion: context.appVersion,
+          capabilities: context.clientCapabilities
+        )
+      )
+    )
+  }
+
+  private static func mapToChatChunk(_ raw: RawChatChunk) -> ChatChunk? {
     switch raw.type {
     case "status":
       return .status(thinking: raw.status == "thinking")
-
     case "text":
       guard let content = raw.content else { return nil }
       return .text(content: content)
-
     case "tool_start":
-      guard let toolName = raw.toolName,
-        let toolCallId = raw.toolCallId
-      else { return nil }
+      guard let toolName = raw.toolName, let toolCallId = raw.toolCallId else { return nil }
       return .toolStart(
-        toolName: toolName,
-        toolCallId: toolCallId,
-        toolArguments: raw.toolArguments
-      )
-
+        toolName: toolName, toolCallId: toolCallId, toolArguments: raw.toolArguments)
     case "tool_result":
       guard let toolName = raw.toolName,
         let toolCallId = raw.toolCallId,
@@ -438,13 +406,9 @@ final class WageyService: ObservableObject {
         result: result,
         success: raw.success ?? true
       )
-
     case "wagey_built_in_tool_start":
-      guard let toolName = raw.toolName,
-        let toolCallId = raw.toolCallId
-      else { return nil }
+      guard let toolName = raw.toolName, let toolCallId = raw.toolCallId else { return nil }
       return .builtInToolStart(toolName: toolName, toolCallId: toolCallId)
-
     case "wagey_built_in_tool_result":
       guard let toolName = raw.toolName,
         let toolCallId = raw.toolCallId,
@@ -456,27 +420,22 @@ final class WageyService: ObservableObject {
         result: result,
         success: raw.success ?? true
       )
-
     case "wagey_limit":
-      guard let remaining = raw.remaining,
-        let resetDays = raw.resetDays
-      else { return nil }
+      guard let remaining = raw.remaining, let resetDays = raw.resetDays else { return nil }
       return .wageyLimit(
-        remaining: remaining, resetDays: resetDays, exceeded: raw.exceeded ?? false,
-        bonus: raw.bonus ?? 0)
-
+        remaining: remaining,
+        resetDays: resetDays,
+        exceeded: raw.exceeded ?? false,
+        bonus: raw.bonus ?? 0
+      )
     case "wagey_no_access":
       return .wageyNoAccess
-
     case "wagey_sources":
       return .sources(items: raw.items ?? [])
-
     case "done":
       return .done
-
     case "error":
       return .error(message: raw.error ?? "Unknown error")
-
     default:
       logger.warning("Unknown chunk type: \(raw.type)")
       return nil

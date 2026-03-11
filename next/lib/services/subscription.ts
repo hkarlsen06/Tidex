@@ -100,7 +100,8 @@ export class SubscriptionService extends Context.Tag("SubscriptionService")<
      * Returns null values for missing data (graceful degradation)
      */
     readonly getUserSubscriptionData: (
-      userId: string
+      userId: string,
+      options?: { skipAuthCheck?: boolean }
     ) => Effect.Effect<
       SubscriptionData,
       DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
@@ -160,10 +161,14 @@ export const SubscriptionServiceLive = Layer.effect(
      * Get combined subscription and profile data
      * Fetches both in parallel for efficiency
      */
-    const getUserSubscriptionData = (userId: string) =>
+    const getUserSubscriptionData = (
+      userId: string,
+      options?: { skipAuthCheck?: boolean }
+    ) =>
       Effect.gen(function* () {
-        // Verify user is authenticated
-        yield* auth.verifyUserId(userId);
+        if (!options?.skipAuthCheck) {
+          yield* auth.verifyUserId(userId);
+        }
 
         // Fetch subscription with graceful handling of not found
         const subscriptionEffect = supabase
@@ -171,7 +176,32 @@ export const SubscriptionServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("subscriptions")
-                .select("*")
+                .select(`
+                  id,
+                  user_id,
+                  provider,
+                  provider_subscription_id,
+                  stripe_customer_id,
+                  stripe_subscription_id,
+                  status,
+                  product_id,
+                  current_period_start,
+                  current_period_end,
+                  created_at,
+                  updated_at,
+                  price_id,
+                  cancel_at_period_end,
+                  canceled_at,
+                  cancel_at,
+                  cancellation_reason,
+                  cancellation_feedback,
+                  cancellation_comment,
+                  apple_original_transaction_id,
+                  apple_last_transaction_id,
+                  apple_environment,
+                  app_account_token,
+                  price_display
+                `)
                 .eq("user_id", userId)
                 .single(),
             { retries: 1 }
@@ -195,7 +225,11 @@ export const SubscriptionServiceLive = Layer.effect(
         const profileEffect = supabase
           .query(
             async (client) =>
-              await client.from("profiles").select("*").eq("id", userId).single(),
+              await client
+                .from("profiles")
+                .select("id, before_paywall, wagey_invocations, created_at, updated_at")
+                .eq("id", userId)
+                .single(),
             { retries: 1 }
           )
           .pipe(

@@ -73,6 +73,9 @@ final class WageyViewModel {
   /// Maximum number of older messages to include in the deterministic summary
   private static let compactionMessageLimit = 12
 
+  /// Coalescing window for streamed chunks before mutating UI state.
+  private static let streamFlushInterval: TimeInterval = 0.05
+
   // MARK: - Published State
 
   /// All conversations for the current user
@@ -217,6 +220,9 @@ final class WageyViewModel {
   /// Whether any tool calls succeeded during the current stream (triggers sync)
   private var hadSuccessfulToolCalls: Bool = false
 
+  /// Tables that need a follow-up sync after successful mutating tool calls.
+  private var pendingSyncTables: Set<SyncTable> = []
+
   /// Current streaming task (for cancellation)
   private var streamTask: Task<Void, Never>?
 
@@ -345,6 +351,7 @@ final class WageyViewModel {
     isSidebarVisible = false
     cachedUserId = nil
     hadSuccessfulToolCalls = false
+    pendingSyncTables = []
     currentAssistantMessageId = nil
   }
 
@@ -442,21 +449,18 @@ final class WageyViewModel {
     activeContentBlocks = []
     activeSources = []
     error = nil
-
-    // Reload conversations list
-    loadConversations()
   }
 
   /// Delete a conversation
   /// - Parameter id: Conversation ID to delete
   func deleteConversation(id: String) {
-    conversationsRepository.deleteConversation(id: id)
+    _ = conversationsRepository.deleteConversation(id: id)
+    conversations.removeAll { $0.id == id }
 
     // If deleting the current conversation, start a new one
     if id == currentConversationId {
+      currentConversationId = nil
       startNewConversation()
-    } else {
-      loadConversations()
     }
   }
 
@@ -514,11 +518,10 @@ final class WageyViewModel {
 
     // Create conversation if this is the first message
     if currentConversationId == nil {
-      createNewConversation()
+      createNewConversation(with: messages)
+    } else {
+      saveCurrentConversation()
     }
-
-    // Save after adding user message
-    saveCurrentConversation()
 
     // Start streaming
     isStreaming = true
@@ -526,13 +529,14 @@ final class WageyViewModel {
     activeContentBlocks = []
     activeSources = []
     hadSuccessfulToolCalls = false
+    pendingSyncTables = []
     currentAssistantMessageId = UUID().uuidString
 
     // Prepare haptics for token streaming
     Haptics.prepareStreamingHaptics()
 
     // Create streaming task
-    streamTask = Task {
+    streamTask = Task { @MainActor in
       do {
         // Get user info from AppCoordinator
         let coordinator = AppCoordinator.shared
@@ -551,12 +555,31 @@ final class WageyViewModel {
           compaction: apiPayload.compaction
         )
 
+        var bufferedChunks: [ChatChunk] = []
+        var lastFlushAt = Date()
+        let flushInterval = Self.streamFlushInterval
+
         // Process chunks
         for try await chunk in stream {
           // Check for cancellation
           if Task.isCancelled { break }
+          bufferedChunks.append(chunk)
+          let shouldFlush =
+            !bufferedChunks.isEmpty
+            && (!chunk.isDeferrableStreamChunk
+              || Date().timeIntervalSince(lastFlushAt) >= flushInterval)
+          if shouldFlush {
+            let batch = bufferedChunks
+            bufferedChunks.removeAll(keepingCapacity: true)
+            processChunkBatch(batch)
+            lastFlushAt = Date()
+          }
+        }
 
-          processChunk(chunk)
+        if !bufferedChunks.isEmpty {
+          let batch = bufferedChunks
+          bufferedChunks.removeAll(keepingCapacity: true)
+          processChunkBatch(batch)
         }
 
         // Finalize the message if not cancelled
@@ -743,14 +766,7 @@ final class WageyViewModel {
 
   /// Create a new conversation in the database
   private func createNewConversation() {
-    guard let userId = cachedUserId ?? AppCoordinator.shared.userId else { return }
-
-    let conversation = conversationsRepository.createConversation(
-      for: userId,
-      title: "New Conversation"
-    )
-    currentConversationId = conversation.id
-    loadConversations()
+    createNewConversation(with: [])
   }
 
   /// Save the current conversation to the database
@@ -758,11 +774,16 @@ final class WageyViewModel {
     guard let conversationId = currentConversationId else { return }
 
     let storedMessages = messages.map { StoredChatMessage(from: $0) }
-    conversationsRepository.updateMessages(
-      conversationId: conversationId,
-      messages: storedMessages
-    )
-    loadConversations()
+    guard
+      let conversation = conversationsRepository.updateMessages(
+        conversationId: conversationId,
+        messages: storedMessages
+      )
+    else {
+      return
+    }
+
+    upsertConversation(conversation)
   }
 
   /// Process a single chunk from the stream
@@ -784,7 +805,7 @@ final class WageyViewModel {
         activeContentBlocks.append(.text(content))
       }
 
-      // Light haptic for each token
+      // Light haptic for each token chunk
       Haptics.playStreamingToken()
 
     case .toolStart(let toolName, let toolCallId, let toolArguments):
@@ -818,6 +839,7 @@ final class WageyViewModel {
       // Track successful tool calls for sync
       if success == true {
         hadSuccessfulToolCalls = true
+        pendingSyncTables.formUnion(syncTables(for: toolName))
       }
 
     case .builtInToolStart(let toolName, let toolCallId):
@@ -920,8 +942,9 @@ final class WageyViewModel {
 
     // Trigger sync if any tool calls succeeded (shifts may have changed server-side)
     if hadSuccessfulToolCalls, let userId = cachedUserId ?? AppCoordinator.shared.userId {
+      let tablesToSync = Array(pendingSyncTables)
       Task {
-        await syncAndNotifyShiftChanges(userId: userId)
+        await syncAndNotifyShiftChanges(userId: userId, tables: tablesToSync)
       }
     }
 
@@ -929,6 +952,7 @@ final class WageyViewModel {
     activeContentBlocks = []
     activeSources = []
     hadSuccessfulToolCalls = false
+    pendingSyncTables = []
     isStreaming = false
     isModelThinking = false
     currentAssistantMessageId = nil
@@ -937,14 +961,20 @@ final class WageyViewModel {
 
   /// Ensures Wagey-created shift changes are pulled locally before notifying UI observers.
   /// Retries when another sync is already in progress to avoid stale reloads.
-  private func syncAndNotifyShiftChanges(userId: String) async {
+  private func syncAndNotifyShiftChanges(userId: String, tables: [SyncTable]) async {
+    guard !tables.isEmpty else { return }
+
     let alreadySyncingError = "Sync already in progress"
     let retryIntervalNanoseconds: UInt64 = 250_000_000
     let retryDeadline = Date().addingTimeInterval(30)
     var syncResult: SyncResult
 
     while true {
-      syncResult = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
+      syncResult = await SyncCoordinator.shared.sync(
+        reason: .localChange,
+        userId: userId,
+        tables: tables
+      )
 
       if syncResult.success {
         break
@@ -977,6 +1007,61 @@ final class WageyViewModel {
     }
 
     NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+  }
+
+  private func processChunkBatch(_ chunks: [ChatChunk]) {
+    for chunk in chunks {
+      processChunk(chunk)
+    }
+  }
+
+  private func createNewConversation(with messages: [ChatMessage]) {
+    guard let userId = cachedUserId ?? AppCoordinator.shared.userId else { return }
+
+    let conversation = conversationsRepository.createConversation(
+      for: userId,
+      title: "New Conversation",
+      messages: messages.map { StoredChatMessage(from: $0) }
+    )
+    currentConversationId = conversation.id
+    upsertConversation(conversation)
+  }
+
+  private func upsertConversation(_ conversation: LocalConversation) {
+    conversations.removeAll { $0.id == conversation.id }
+    conversations.insert(conversation, at: 0)
+    conversations.sort { $0.updatedAt > $1.updatedAt }
+  }
+
+  private func syncTables(for toolName: String) -> Set<SyncTable> {
+    switch toolName {
+    case "manage_shift":
+      return [.userShifts]
+    case "confirm_recurring_shift", "manage_recurring_shift", "manage_recurring_exclusion":
+      return [.recurringShifts]
+    case "manage_shift_advanced":
+      return [.userShifts, .recurringShifts]
+    case "manage_workplace":
+      return [.jobs, .wageSnapshots]
+    case "manage_wage_snapshots":
+      return [.wageSnapshots]
+    case "manage_settings":
+      return [.userSettings]
+    default:
+      return []
+    }
+  }
+}
+
+extension ChatChunk {
+  fileprivate var isDeferrableStreamChunk: Bool {
+    switch self {
+    case .status, .text:
+      return true
+    case .toolStart, .toolResult, .builtInToolStart, .builtInToolResult, .done, .error,
+      .wageyLimit, .wageyNoAccess, .sources, .unknown:
+      return false
+    }
   }
 }
 

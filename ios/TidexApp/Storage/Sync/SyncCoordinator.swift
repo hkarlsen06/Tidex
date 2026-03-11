@@ -163,6 +163,37 @@ final class SyncCoordinator: ObservableObject {
   /// - Returns: Sync result
   @discardableResult
   func sync(reason: SyncReason, userId: String) async -> SyncResult {
+    await sync(
+      reason: reason,
+      userId: userId,
+      tables: SyncTable.allCases,
+      updateWidgetStorage: true
+    )
+  }
+
+  @discardableResult
+  func sync(
+    reason: SyncReason,
+    userId: String,
+    tables: [SyncTable],
+    updateWidgetStorage: Bool = true
+  ) async -> SyncResult {
+    var seenTables = Set<SyncTable>()
+    let uniqueTables = tables.filter { seenTables.insert($0).inserted }
+    guard !uniqueTables.isEmpty else {
+      return SyncResult(
+        success: true,
+        tableResults: [],
+        pushResults: [],
+        totalRowsProcessed: 0,
+        totalRowsPushed: 0,
+        totalConflicts: 0,
+        totalAutoMerged: 0,
+        duration: 0,
+        error: nil
+      )
+    }
+
     var decision: SyncStartDecision = .alreadySyncing
     var waitAttempts = 0
     let maxWaitAttempts = 48  // 12s at 250ms intervals
@@ -259,7 +290,12 @@ final class SyncCoordinator: ObservableObject {
     // from holding the syncing lock indefinitely.
     let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
       group.addTask {
-        await self.performSyncWork(userId: userId, startTime: startTime)
+        await self.performSyncWork(
+          userId: userId,
+          startTime: startTime,
+          tables: uniqueTables,
+          updateWidgetStorage: updateWidgetStorage
+        )
       }
       group.addTask {
         try? await Task.sleep(nanoseconds: Self.syncTimeout)
@@ -298,7 +334,12 @@ final class SyncCoordinator: ObservableObject {
 
   /// Performs the actual sync work (locale update, pull, push, widget update).
   /// Extracted so it can be raced against a timeout in `sync()`.
-  private func performSyncWork(userId: String, startTime: Date) async -> SyncResult {
+  private func performSyncWork(
+    userId: String,
+    startTime: Date,
+    tables: [SyncTable],
+    updateWidgetStorage: Bool
+  ) async -> SyncResult {
     // Keep locale metadata aligned with the app locale.
     await updateAppLocaleMetadataIfNeeded()
 
@@ -315,7 +356,7 @@ final class SyncCoordinator: ObservableObject {
       // Phase 1: Pull all tables (get latest server state)
       var tableResults: [TablePullResult] = []
 
-      for table in SyncTable.allCases {
+      for table in tables {
         try Task.checkCancellation()
         let result = try await pullTable(table, userId: userId, syncState: syncState)
         tableResults.append(result)
@@ -325,7 +366,7 @@ final class SyncCoordinator: ObservableObject {
       // Phase 2: Push dirty records to server
       var pushResults: [TablePushResult] = []
 
-      for table in SyncTable.allCases {
+      for table in tables {
         try Task.checkCancellation()
         let result = try await pushTable(table, userId: userId)
         pushResults.append(result)
@@ -366,8 +407,10 @@ final class SyncCoordinator: ObservableObject {
       }
 
       // Update widget storage with latest shift data
-      await MainActor.run {
-        NativeWidgetStorage.updateWidgetStorage(for: userId)
+      if updateWidgetStorage {
+        await MainActor.run {
+          NativeWidgetStorage.updateWidgetStorage(for: userId)
+        }
       }
 
       return SyncResult(

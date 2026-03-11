@@ -64,49 +64,35 @@ enum SSEStreamParser {
   ) -> AsyncThrowingStream<T, Error> {
     AsyncThrowingStream { continuation in
       let task = Task {
-        var buffer = ""
-        var byteBuffer = Data()
+        var eventLines: [String] = []
         let decoder = JSONDecoder()
 
         do {
-          for try await byte in bytes {
+          for try await line in bytes.lines {
             // Check for task cancellation
             try Task.checkCancellation()
 
-            // Accumulate bytes and decode as UTF-8 when we have valid data
-            byteBuffer.append(byte)
+            if line.isEmpty {
+              if !eventLines.isEmpty {
+                let eventData = eventLines.joined(separator: "\n")
+                eventLines.removeAll(keepingCapacity: true)
 
-            // Try to decode the byte buffer as UTF-8
-            // This handles multi-byte UTF-8 characters correctly
-            if let string = String(data: byteBuffer, encoding: .utf8) {
-              buffer.append(string)
-              byteBuffer.removeAll()
-            } else if byteBuffer.count > 4 {
-              // UTF-8 uses at most 4 bytes per character. If we've accumulated
-              // more than 4 bytes without valid UTF-8, the data is corrupt.
-              logger.error(
-                "Invalid UTF-8 sequence after \(byteBuffer.count) bytes, resetting buffer")
-              byteBuffer.removeAll()
-            }
-
-            // Process complete events in the buffer
-            while let eventRange = buffer.range(of: eventTerminator) {
-              let eventData = String(buffer[..<eventRange.lowerBound])
-              buffer = String(buffer[eventRange.upperBound...])
-
-              // Parse the event
-              if let decoded = try parseEvent(eventData, as: type, decoder: decoder) {
-                continuation.yield(decoded)
+                if let decoded = try parseEvent(eventData, as: type, decoder: decoder) {
+                  continuation.yield(decoded)
+                }
               }
+              continue
             }
+
+            eventLines.append(line)
           }
 
           // Process any remaining data in buffer (incomplete event without terminator)
-          if !buffer.isEmpty {
-            let trimmed = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+          if !eventLines.isEmpty {
+            let eventData = eventLines.joined(separator: "\n")
+            let trimmed = eventData.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {
               logger.debug("Stream ended with incomplete buffer: \(trimmed.prefix(100))")
-              // Try to parse it anyway
               if let decoded = try parseEvent(trimmed, as: type, decoder: decoder) {
                 continuation.yield(decoded)
               }
