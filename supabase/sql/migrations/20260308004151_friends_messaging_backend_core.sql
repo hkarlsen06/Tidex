@@ -1151,6 +1151,7 @@ DECLARE
   v_thread_kind text;
   v_recipient record;
   v_body_preview text;
+  v_rich_content_kind text;
 BEGIN
   SELECT COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', email, 'Someone')
   INTO v_sender_name
@@ -1170,6 +1171,7 @@ BEGIN
     left(regexp_replace(COALESCE(NEW.body, ''), '\s+', ' ', 'g'), 120),
     ''
   );
+  v_rich_content_kind := NULLIF(btrim(COALESCE(NEW.metadata->'content'->>'kind', '')), '');
 
   FOR v_recipient IN
     SELECT
@@ -1209,6 +1211,11 @@ BEGIN
       COALESCE(
         v_body_preview,
         CASE
+          WHEN v_rich_content_kind = 'shift_snapshot' THEN
+            CASE
+              WHEN v_recipient.locale IN ('no', 'nb', 'nn') THEN v_sender_name || ' delte en vakt'
+              ELSE v_sender_name || ' shared a shift'
+            END
           WHEN v_recipient.locale IN ('no', 'nb', 'nn') THEN v_sender_name || ' sendte et bilde'
           ELSE v_sender_name || ' sent a photo'
         END

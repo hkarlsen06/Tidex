@@ -117,7 +117,53 @@ final class FriendsMessagingRichContentTests: XCTestCase {
     let preview = FriendsChatReplyPreviewModel(senderName: "Friend", message: message)
 
     XCTAssertEqual(preview.previewKind, .image)
+    XCTAssertEqual(preview.iconPreviewKind, .image)
     XCTAssertEqual(preview.snippet, "Photo")
+  }
+
+  func testReplyPreviewModelKeepsImageIconForCaptionedPhoto() {
+    let message = FriendMessage(
+      id: "message-captioned-image",
+      threadId: "thread-1",
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Look at this",
+      clientId: "client-captioned-image",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_301),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [makeImageAttachment()]
+    )
+
+    let preview = FriendsChatReplyPreviewModel(senderName: "Friend", message: message)
+
+    XCTAssertEqual(preview.previewKind, .text)
+    XCTAssertEqual(preview.iconPreviewKind, .image)
+    XCTAssertEqual(preview.snippet, "Look at this")
+  }
+
+  func testReplyPreviewModelKeepsShiftIconForCaptionedShiftSnapshot() {
+    let message = FriendMessage(
+      id: "message-captioned-shift",
+      threadId: "thread-1",
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Can you cover this?",
+      clientId: "client-captioned-shift",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_302),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: makeShiftSnapshotMetadataData()
+    )
+
+    let preview = FriendsChatReplyPreviewModel(senderName: "Friend", message: message)
+
+    XCTAssertEqual(preview.previewKind, .text)
+    XCTAssertEqual(preview.iconPreviewKind, .shiftSnapshot)
+    XCTAssertEqual(preview.snippet, "Can you cover this?")
   }
 }
 

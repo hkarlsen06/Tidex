@@ -400,6 +400,18 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     return snapshot
   }
 
+  var replyIconPreviewKind: FriendLastMessagePreviewKind? {
+    if shiftSnapshot != nil {
+      return .shiftSnapshot
+    }
+
+    if hasImageAttachment {
+      return .image
+    }
+
+    return nil
+  }
+
   var previewKind: FriendLastMessagePreviewKind {
     FriendMessagePreviewPolicy.resolvedPreviewKind(
       body: body,
