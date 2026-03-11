@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum FriendShiftPreviewStatusCardStyle {
   case card
+  case embedded
   case toolbarExtension
 }
 
@@ -72,6 +73,13 @@ struct FriendShiftPreviewStatusCard: View {
     schedule = Self.makeSchedule(for: shift)
   }
 
+  init(shift: SharedShiftData, status: ShiftPreviewStatus, embedded: Bool) {
+    self.shift = shift
+    self.status = status
+    style = embedded ? .embedded : .card
+    schedule = Self.makeSchedule(for: shift)
+  }
+
   fileprivate init(
     shift: SharedShiftData,
     status: ShiftPreviewStatus,
@@ -121,7 +129,8 @@ struct FriendShiftPreviewStatusCard: View {
           .layoutPriority(1)
       }
       .padding(.horizontal, style == .toolbarExtension ? Spacing.md : Spacing.sm)
-      .padding(.vertical, Spacing.sm)
+      .padding(.top, style == .embedded ? Spacing.xxs : Spacing.sm)
+      .padding(.bottom, style == .embedded ? Spacing.xs : Spacing.sm)
       .background(backgroundShape)
       .overlay(alignment: .leading) {
         if computed.status == .active {
@@ -145,6 +154,9 @@ struct FriendShiftPreviewStatusCard: View {
     case .card:
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .fill(Color.tidexSurfacePrimary)
+    case .embedded:
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .fill(Color.clear)
     case .toolbarExtension:
       RoundedRectangle(cornerRadius: 22, style: .continuous)
         .fill(Color.tidexSurfacePrimary.opacity(0.94))
@@ -159,6 +171,9 @@ struct FriendShiftPreviewStatusCard: View {
   private var borderShape: some View {
     switch style {
     case .card:
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .stroke(Color.clear, lineWidth: 0)
+    case .embedded:
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(Color.clear, lineWidth: 0)
     case .toolbarExtension:
@@ -475,6 +490,8 @@ private struct FriendShiftPreviewShadowModifier: ViewModifier {
     switch style {
     case .card:
       content.tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
+    case .embedded:
+      content
     case .toolbarExtension:
       content
     }

@@ -12,6 +12,10 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsR
 final class SharedShiftsRepository: ObservableObject {
   static let shared = SharedShiftsRepository()
 
+  /// Keep persistent preview cache aligned with the in-memory preview cache so
+  /// launch-time sorting doesn't reuse arbitrarily old active/upcoming/past state.
+  private static let previewCacheValiditySeconds: TimeInterval = 5 * 60
+
   struct CachedFriendsSnapshot {
     let sharers: [SharedUser]
     let chatOnlyUserIds: Set<String>
@@ -284,10 +288,27 @@ final class SharedShiftsRepository: ObservableObject {
 
     do {
       let localPreviews = try context.fetch(descriptor)
+      let now = Date()
+      let freshPreviews = localPreviews.filter { preview in
+        now.timeIntervalSince(preview.cachedAt) < Self.previewCacheValiditySeconds
+      }
+      let expiredPreviews = localPreviews.filter { preview in
+        now.timeIntervalSince(preview.cachedAt) >= Self.previewCacheValiditySeconds
+      }
+
+      if !expiredPreviews.isEmpty {
+        for preview in expiredPreviews {
+          context.delete(preview)
+        }
+        try context.save()
+        logger.info("Removed \(expiredPreviews.count) expired cached shift previews")
+      }
+
       logger.info(
-        "📦 Found \(localPreviews.count) cached shift previews for viewer \(viewerId.prefix(8))...")
+        "📦 Found \(freshPreviews.count) fresh cached shift previews for viewer \(viewerId.prefix(8))..."
+      )
       var previewMap: [String: SharerShiftPreview] = [:]
-      for localPreview in localPreviews {
+      for localPreview in freshPreviews {
         previewMap[localPreview.sharerId] = localPreview.toSharerShiftPreview()
       }
       return previewMap
