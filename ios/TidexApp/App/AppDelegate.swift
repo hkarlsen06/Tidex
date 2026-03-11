@@ -848,6 +848,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
       let senderUserId = userInfo["sender_user_id"] as? String
 
       Task { @MainActor in
+        await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
         AppCoordinator.shared.pendingDeepLink = .friendChat(
           threadId: threadId,
           messageId: messageId,

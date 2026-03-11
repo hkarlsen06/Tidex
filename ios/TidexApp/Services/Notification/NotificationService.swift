@@ -65,4 +65,46 @@ final class NotificationService {
   private func registerForRemoteNotifications() {
     UIApplication.shared.registerForRemoteNotifications()
   }
+
+  /// Remove delivered friend-chat notifications for a thread after the user opens it.
+  func clearDeliveredFriendChatNotifications(for threadId: String) async {
+    guard !threadId.isEmpty else { return }
+
+    let center = UNUserNotificationCenter.current()
+    let identifiers = await deliveredFriendChatNotificationIdentifiers(
+      for: threadId,
+      center: center
+    )
+    guard !identifiers.isEmpty else { return }
+
+    center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    center.removePendingNotificationRequests(withIdentifiers: identifiers)
+  }
+
+  private func deliveredFriendChatNotificationIdentifiers(
+    for threadId: String,
+    center: UNUserNotificationCenter
+  ) async -> [String] {
+    await withCheckedContinuation { continuation in
+      center.getDeliveredNotifications { notifications in
+        let identifiers = notifications.compactMap { notification -> String? in
+          let userInfo = notification.request.content.userInfo
+          let type = userInfo["type"] as? String ?? ""
+          guard type == "thread_message" || type == "thread_screenshot" else {
+            return nil
+          }
+
+          guard let notificationThreadId = userInfo["thread_id"] as? String,
+            notificationThreadId == threadId
+          else {
+            return nil
+          }
+
+          return notification.request.identifier
+        }
+
+        continuation.resume(returning: identifiers)
+      }
+    }
+  }
 }

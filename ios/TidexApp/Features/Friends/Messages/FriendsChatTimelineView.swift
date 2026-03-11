@@ -134,6 +134,12 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     static let topTriggerDistance: CGFloat = 120
   }
 
+  private enum LayoutMetrics {
+    static let baseTopInset = Spacing.sm
+    static let horizontalInset = Spacing.md
+    static let baseBottomInset = Spacing.sm
+  }
+
   var onBackgroundTap: (() -> Void)?
   var onPinnedToBottomChanged: ((Bool) -> Void)?
   var onReachedTopMessage: ((String) -> Void)?
@@ -221,10 +227,10 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
     chatLayout.settings.interItemSpacing = Spacing.sm
     chatLayout.settings.estimatedItemSize = CGSize(width: 320, height: 88)
     chatLayout.settings.additionalInsets = UIEdgeInsets(
-      top: Spacing.sm,
-      left: Spacing.md,
-      bottom: Spacing.sm,
-      right: Spacing.md
+      top: LayoutMetrics.baseTopInset,
+      left: LayoutMetrics.horizontalInset,
+      bottom: LayoutMetrics.baseBottomInset,
+      right: LayoutMetrics.horizontalInset
     )
     chatLayout.keepContentOffsetAtBottomOnBatchUpdates = true
     chatLayout.keepContentAtBottomOfVisibleArea = true
@@ -407,11 +413,22 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   private func updateInsets(maintainingBottomAnchor: Bool = false) {
     let bottomContentInset = baseBottomContentInset
     guard lastAppliedBottomInset != bottomContentInset else { return }
+
     let bottomSnapshot =
       maintainingBottomAnchor ? chatLayout.getContentOffsetSnapshot(from: .bottom) : nil
     lastAppliedBottomInset = bottomContentInset
+    chatLayout.settings.additionalInsets = UIEdgeInsets(
+      top: LayoutMetrics.baseTopInset,
+      left: LayoutMetrics.horizontalInset,
+      bottom: LayoutMetrics.baseBottomInset,
+      right: LayoutMetrics.horizontalInset
+    )
+    collectionView.contentInset.top = 0
     collectionView.contentInset.bottom = bottomContentInset
+    collectionView.verticalScrollIndicatorInsets.top = 0
     collectionView.verticalScrollIndicatorInsets.bottom = bottomContentInset
+    collectionView.collectionViewLayout.invalidateLayout()
+    collectionView.layoutIfNeeded()
 
     if let bottomSnapshot {
       chatLayout.restoreContentOffset(with: bottomSnapshot)

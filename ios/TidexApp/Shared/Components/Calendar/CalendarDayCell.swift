@@ -2,12 +2,6 @@ import SwiftUI
 
 // MARK: - Calendar Cell Style
 
-enum CalendarDayIndicatorPlacement: Equatable {
-  case none
-  case leadingMarker
-  case todayBadge
-}
-
 /// Styling configuration for a calendar day cell
 struct CalendarCellStyle {
   let backgroundColor: Color
@@ -149,51 +143,18 @@ struct CalendarDayCell<Content: View>: View {
     .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
   }
 
-  private var indicatorPlacement: CalendarDayIndicatorPlacement {
-    Self.indicatorPlacement(
-      showsTodayBadge: style.showsTodayBadge,
-      showOverlapIndicator: showOverlapIndicator,
-      showSingleUserIndicator: showSingleUserIndicator
-    )
-  }
-
-  static func indicatorPlacement(
-    showsTodayBadge: Bool,
-    showOverlapIndicator: Bool,
-    showSingleUserIndicator: Bool
-  ) -> CalendarDayIndicatorPlacement {
-    guard showOverlapIndicator || showSingleUserIndicator else { return .none }
-    return showsTodayBadge ? .todayBadge : .leadingMarker
-  }
-
-  private var indicatorSystemName: String? {
-    if showOverlapIndicator {
-      return "person.2.fill"
-    }
-    if showSingleUserIndicator {
-      return "person.fill"
-    }
-    return nil
-  }
-
-  private var indicatorColor: Color {
-    showOverlapIndicator ? .tidexBlue : singleUserIndicatorColor
-  }
-
-  @ViewBuilder
-  private var indicatorView: some View {
-    if let indicatorSystemName {
-      Image(systemName: indicatorSystemName)
-        .font(.tidexMicro)
-        .imageScale(.small)
-        .foregroundColor(indicatorColor)
-    }
-  }
-
   @ViewBuilder
   private var leadingMarkerContent: some View {
-    if indicatorPlacement == .leadingMarker {
-      indicatorView
+    if showOverlapIndicator {
+      Image(systemName: "person.2.fill")
+        .font(.tidexMicro)
+        .imageScale(.small)
+        .foregroundColor(.tidexBlue)
+    } else if showSingleUserIndicator {
+      Image(systemName: "person.fill")
+        .font(.tidexMicro)
+        .imageScale(.small)
+        .foregroundColor(singleUserIndicatorColor)
     } else if let weekNum = dayInfo.weekNumber {
       Text("\(weekNum)")
         .font(.tidexMicro)
@@ -214,39 +175,23 @@ struct CalendarDayCell<Content: View>: View {
 
   @ViewBuilder
   private var dayNumberView: some View {
-    if style.showsTodayBadge {
-      HStack(spacing: Spacing.xxxs) {
-        if indicatorPlacement == .todayBadge {
-          indicatorView
-        }
-
-        dayNumberText(color: .tidexTextOnBrand)
-      }
-      .background {
-        todayBadgeBackground
-      }
-    } else {
-      dayNumberText(color: style.dayNumberColor)
-    }
-  }
-
-  private func dayNumberText(color: Color) -> some View {
     Text("\(dayInfo.dayNumber)")
       .font(.tidexBodyMedium)
       .fixedSize(horizontal: true, vertical: false)
       .monospacedDigit()
-      .foregroundColor(color)
-  }
-
-  private var todayBadgeBackground: some View {
-    RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
-      .fill(Color.tidexBrandPrimary)
-      .overlay {
-        RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
-          .fill(Color.black.opacity(0.15))
+      .foregroundColor(style.showsTodayBadge ? .tidexTextOnBrand : style.dayNumberColor)
+      .background {
+        if style.showsTodayBadge {
+          RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
+            .fill(Color.tidexBrandPrimary)
+            .overlay {
+              RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
+                .fill(Color.black.opacity(0.15))
+            }
+            .padding(.horizontal, -(horizontalCornerInset - topCornerInset - 1))
+            .padding(.vertical, 1)
+        }
       }
-      .padding(.horizontal, -(horizontalCornerInset - topCornerInset - 1))
-      .padding(.vertical, 1)
   }
 
   @ViewBuilder

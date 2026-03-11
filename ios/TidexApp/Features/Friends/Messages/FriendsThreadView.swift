@@ -88,6 +88,8 @@ struct FriendsThreadView: View {
 
   private var threadContent: some View {
     VStack(spacing: 0) {
+      counterpartShiftPreviewHeader
+
       ZStack(alignment: .bottom) {
         FriendsThreadSurfaceView(
           timelineConfiguration: FriendsChatTimelineConfiguration(
@@ -320,6 +322,11 @@ struct FriendsThreadView: View {
     }
     .onAppear {
       FriendsChatPresentationState.shared.setActiveThreadId(viewModel.route.threadId)
+      Task {
+        await NotificationService.shared.clearDeliveredFriendChatNotifications(
+          for: viewModel.route.threadId
+        )
+      }
     }
     .onChange(of: isPinnedToBottom) { _, isPinnedToBottom in
       if isPinnedToBottom {
@@ -460,19 +467,20 @@ struct FriendsThreadView: View {
       .opacity(0.01)
       .accessibilityHidden(true)
     )
-    .overlay(alignment: .top) {
-      if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
-        CompactFriendShiftPreviewHeader(
-          preview: counterpartShiftPreview
-        )
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.xxs)
-        .padding(.bottom, Spacing.xxs)
-        .frame(maxWidth: .infinity)
-        .background(Color.tidexBackground)
-        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
-        .zIndex(1)
-      }
+  }
+
+  @ViewBuilder
+  private var counterpartShiftPreviewHeader: some View {
+    if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
+      CompactFriendShiftPreviewHeader(
+        preview: counterpartShiftPreview
+      )
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.xxs)
+      .padding(.bottom, Spacing.xxs)
+      .frame(maxWidth: .infinity)
+      .background(Color.tidexBackground)
+      .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
     }
   }
 

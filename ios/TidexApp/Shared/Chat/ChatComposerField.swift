@@ -15,6 +15,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let focusTrigger: Int
   private let onFocusChanged: ((Bool) -> Void)?
   private let horizontalPadding: CGFloat
+  private let focusedHorizontalPadding: CGFloat?
   private let topPadding: CGFloat
   private let bottomPadding: CGFloat
   private let onSend: () -> Void
@@ -33,6 +34,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     focusTrigger: Int = 0,
     onFocusChanged: ((Bool) -> Void)? = nil,
     horizontalPadding: CGFloat = Spacing.md,
+    focusedHorizontalPadding: CGFloat? = nil,
     topPadding: CGFloat = Spacing.xs,
     bottomPadding: CGFloat = Spacing.md,
     onSend: @escaping () -> Void,
@@ -48,6 +50,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     self.focusTrigger = focusTrigger
     self.onFocusChanged = onFocusChanged
     self.horizontalPadding = horizontalPadding
+    self.focusedHorizontalPadding = focusedHorizontalPadding
     self.topPadding = topPadding
     self.bottomPadding = bottomPadding
     self.onSend = onSend
@@ -59,7 +62,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
       leadingAccessory
       composerField
     }
-    .padding(.horizontal, horizontalPadding)
+    .padding(.horizontal, effectiveHorizontalPadding)
     .padding(.top, topPadding)
     .padding(.bottom, bottomPadding)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
@@ -71,6 +74,11 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .onChange(of: isFocused) { _, newValue in
       onFocusChanged?(newValue)
     }
+  }
+
+  private var effectiveHorizontalPadding: CGFloat {
+    guard isFocused, let focusedHorizontalPadding else { return horizontalPadding }
+    return focusedHorizontalPadding
   }
 
   private var composerField: some View {
@@ -160,6 +168,7 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
     focusTrigger: Int = 0,
     onFocusChanged: ((Bool) -> Void)? = nil,
     horizontalPadding: CGFloat = Spacing.md,
+    focusedHorizontalPadding: CGFloat? = nil,
     topPadding: CGFloat = Spacing.xs,
     bottomPadding: CGFloat = Spacing.md,
     onSend: @escaping () -> Void
@@ -175,6 +184,7 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
       focusTrigger: focusTrigger,
       onFocusChanged: onFocusChanged,
       horizontalPadding: horizontalPadding,
+      focusedHorizontalPadding: focusedHorizontalPadding,
       topPadding: topPadding,
       bottomPadding: bottomPadding,
       onSend: onSend
