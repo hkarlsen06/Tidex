@@ -13,59 +13,72 @@ struct FriendCard: View {
   var isOpeningMessage = false
   var unreadMessageCount = 0
 
+  private let actionButtonSize: CGFloat = 44
+
   var body: some View {
-    VStack(spacing: 0) {
-      HStack(spacing: Spacing.sm) {
-        Button(action: primaryCardTapAction) {
-          CompactFriendIdentityRow(
-            sharer: sharer,
-            unreadMessageCount: unreadMessageCount
-          )
-          .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(isOpeningMessage)
+    ZStack(alignment: .topTrailing) {
+      Button(action: onChatTap) {
+        VStack(spacing: 0) {
+          HStack(spacing: Spacing.sm) {
+            CompactFriendIdentityRow(
+              sharer: sharer,
+              unreadMessageCount: unreadMessageCount
+            )
 
-        Button(action: onChatTap) {
-          Group {
-            if isOpeningMessage {
-              ProgressView()
-                .progressViewStyle(.circular)
-                .tint(.tidexTextOnBrand)
-            } else {
-              Image(systemName: "message")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.tidexTextOnBrand)
+            if isCalendarAvailable {
+              Color.clear
+                .frame(width: actionButtonSize, height: actionButtonSize)
             }
           }
-          .frame(width: 44, height: 44)
-          .tidexGlass(
-            shape: .circle,
-            tint: .tidexBlue.opacity(0.26),
-            interactive: true
-          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, Spacing.md)
+          .padding(.top, Spacing.sm)
+          .padding(.bottom, Spacing.sm + 2)
+
+          if let preview = preview, let shift = preview.shift, let status = preview.status {
+            Rectangle()
+              .fill(Color.tidexBorderSubtle.opacity(0.7))
+              .frame(height: 1)
+              .padding(.horizontal, Spacing.md)
+              .padding(.bottom, Spacing.xxs)
+
+            Group {
+              if isRefreshing {
+                shiftPreviewSkeleton
+              } else {
+                FriendShiftPreviewStatusCard(shift: shift, status: status, embedded: true)
+              }
+            }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.bottom, Spacing.xxs)
+          }
         }
-        .buttonStyle(.plain)
-        .disabled(isOpeningMessage)
-        .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
+      .buttonStyle(.plain)
+      .disabled(isOpeningMessage)
+      .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
+      .accessibilityHint(Text(.friendsChatMessageAction))
 
-      if let preview = preview, let shift = preview.shift, let status = preview.status {
+      if isCalendarAvailable {
         Button(action: onCalendarTap) {
-          Group {
-            if isRefreshing {
-              shiftPreviewSkeleton
-            } else {
-              FriendShiftPreviewStatusCard(shift: shift, status: status)
-            }
-          }
+          Image(systemName: "calendar")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.tidexBlue)
+            .frame(width: actionButtonSize, height: actionButtonSize)
+            .tidexGlass(
+              shape: .circle,
+              tint: .tidexBlue.opacity(0.14),
+              interactive: true,
+              disabled: isOpeningMessage
+            )
         }
         .buttonStyle(.plain)
-        .disabled(!isCalendarAvailable)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.bottom, Spacing.sm)
+        .disabled(isOpeningMessage)
+        .padding(.top, Spacing.sm)
+        .padding(.trailing, Spacing.md)
+        .accessibilityLabel(Text(.tabsShifts))
       }
     }
     .background(
@@ -80,10 +93,6 @@ struct FriendCard: View {
         )
     )
     .tidexCardShadow()
-  }
-
-  private var primaryCardTapAction: () -> Void {
-    isCalendarAvailable ? onCalendarTap : onChatTap
   }
 
   /// Skeleton placeholder for shift preview while refreshing
@@ -108,12 +117,7 @@ struct FriendCard: View {
         .frame(width: 70, height: 24)
     }
     .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
+    .padding(.vertical, Spacing.xs)
     .shimmer(duration: 1.2)
   }
 }
