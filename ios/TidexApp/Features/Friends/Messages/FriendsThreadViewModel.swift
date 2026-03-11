@@ -55,6 +55,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
   let viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
+  private let capabilities: any FriendsMessagingCapabilityProviding
   private let repository: FriendsMessagesRepository
   private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
@@ -70,6 +71,7 @@ final class FriendsThreadViewModel: ObservableObject {
     route: FriendChatRoute,
     viewerUserId: String,
     service: (any FriendsMessagingServiceProviding)? = nil,
+    capabilities: (any FriendsMessagingCapabilityProviding)? = nil,
     repository: FriendsMessagesRepository? = nil,
     composerDraftStore: FriendsComposerDraftStore? = nil,
     realtimeCoordinator: FriendsMessagingRealtimeCoordinator? = nil
@@ -77,6 +79,7 @@ final class FriendsThreadViewModel: ObservableObject {
     self.route = route
     self.viewerUserId = viewerUserId
     self.service = service ?? FriendsMessagingService.shared
+    self.capabilities = capabilities ?? FriendsMessagingCapabilities.shared
     self.repository = repository ?? .shared
     self.composerDraftStore = composerDraftStore ?? .shared
     self.realtimeCoordinator = realtimeCoordinator ?? .shared
@@ -274,6 +277,10 @@ final class FriendsThreadViewModel: ObservableObject {
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     let composerAttachment = stagedComposerAttachment
     guard !normalizedContent.isEmpty || composerAttachment != nil else { return false }
+    guard canSendShiftSnapshotAttachment(composerAttachment) else {
+      sendErrorMessage = shiftSnapshotSendUnavailableMessage
+      return false
+    }
 
     let previousReplyTarget = draftReplyTarget
     sendErrorMessage = nil
@@ -322,6 +329,10 @@ final class FriendsThreadViewModel: ObservableObject {
       message.senderUserId == viewerUserId,
       message.canRetrySend
     else {
+      return
+    }
+    guard canSendShiftSnapshotMessage(message) else {
+      sendErrorMessage = shiftSnapshotSendUnavailableMessage
       return
     }
 
@@ -597,6 +608,17 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func sendMessageInBackground(_ message: FriendMessage) {
     Task { @MainActor in
+      guard canSendShiftSnapshotMessage(message) else {
+        await repository.updateMessageSendState(
+          messageId: message.id,
+          viewerUserId: viewerUserId,
+          sendState: .failed,
+          failureMessage: shiftSnapshotSendUnavailableMessage
+        )
+        loadFromCache()
+        return
+      }
+
       do {
         let outgoingAttachments = try await makeOutgoingAttachments(for: message)
         let sentMessage = try await service.sendMessage(
@@ -727,5 +749,20 @@ final class FriendsThreadViewModel: ObservableObject {
     components.host = "friends-message-cache.local"
     components.path = "/\(storagePath)"
     return components.url ?? URL(filePath: "/tmp/friends-message-cache-fallback")
+  }
+
+  private var shiftSnapshotSendUnavailableMessage: String {
+    String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+  }
+
+  private func canSendShiftSnapshotAttachment(_ attachment: FriendsComposerAttachmentDraft?) -> Bool
+  {
+    guard attachment?.shiftSnapshot != nil else { return true }
+    return capabilities.canSendShiftSnapshots
+  }
+
+  private func canSendShiftSnapshotMessage(_ message: FriendMessage) -> Bool {
+    guard message.shiftSnapshot != nil else { return true }
+    return capabilities.canSendShiftSnapshots
   }
 }
