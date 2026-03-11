@@ -642,18 +642,8 @@ struct FriendsThreadView: View {
       senderName: message.senderUserId == viewModel.viewerUserId
         ? firstName(from: AppCoordinator.shared.userDisplayName)
         : firstName(from: viewModel.route.displayName),
-      snippet: replySnippet(for: message),
-      hasImageAttachment: message.hasImageAttachment
+      message: message
     )
-  }
-
-  private func replySnippet(for message: FriendMessage) -> String? {
-    let snippet = message.body?
-      .replacingOccurrences(of: "\n", with: " ")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard let snippet, !snippet.isEmpty else { return nil }
-    return snippet
   }
 
   private func firstName(from displayName: String) -> String {
@@ -877,7 +867,7 @@ private struct FriendsChatMessageActionMenuOverlay: View {
       let estimatedHeight =
         CGFloat(actionRows.count) * 56
         + (message.canReact ? 66 : 0)
-        + (message.hasImageAttachment && (message.body?.isEmpty ?? true) ? 172 : 108)
+        + previewHeightEstimate
       let previewY = min(
         max(safeTop, localSourceFrame.minY - 84),
         geometry.size.height - estimatedHeight - safeBottom
@@ -1015,6 +1005,21 @@ private struct FriendsChatMessageActionMenuOverlay: View {
     let title: String
     let systemImage: String
     let action: () -> Void
+  }
+
+  private var previewHeightEstimate: CGFloat {
+    let hasMessageText =
+      !(message.body?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+
+    if message.shiftSnapshot != nil {
+      return hasMessageText ? 276 : 192
+    }
+
+    if message.hasImageAttachment && !hasMessageText {
+      return 172
+    }
+
+    return 108
   }
 }
 
@@ -1187,31 +1192,61 @@ private struct FriendsChatActionMessagePreview: View {
   }
 
   var body: some View {
-    if let messageText {
-      ChatBubbleCard(
-        isCurrentUser: isCurrentUser,
-        minWidth: 120,
-        maxWidth: 280
-      ) {
-        Text(messageText)
-          .font(.tidexBody)
-          .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-          .multilineTextAlignment(.leading)
-          .fixedSize(horizontal: false, vertical: true)
+    VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xs) {
+      if let shiftSnapshot = message.shiftSnapshot {
+        ChatShiftSnapshotCard(snapshot: shiftSnapshot, isCurrentUser: isCurrentUser)
       }
-    } else if message.hasImageAttachment {
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(isCurrentUser ? Color.tidexBrandPrimary.opacity(0.9) : Color.tidexSurfacePrimary)
-        .frame(width: 200, height: 144)
-        .overlay {
-          Image(systemName: "photo")
-            .font(.system(size: 28, weight: .semibold))
+
+      if message.hasImageAttachment {
+        RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+          .fill(isCurrentUser ? Color.tidexBrandPrimary.opacity(0.9) : Color.tidexSurfacePrimary)
+          .frame(width: 200, height: 144)
+          .overlay {
+            Image(systemName: "photo")
+              .font(.system(size: 28, weight: .semibold))
+              .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+          }
+          .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+              .stroke(isCurrentUser ? Color.white.opacity(0.18) : Color.tidexBorder, lineWidth: 1)
+          )
+      }
+
+      if let messageText {
+        ChatBubbleCard(
+          isCurrentUser: isCurrentUser,
+          minWidth: 120,
+          maxWidth: 280
+        ) {
+          Text(messageText)
+            .font(.tidexBody)
             .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .overlay(
-          RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-            .stroke(isCurrentUser ? Color.white.opacity(0.18) : Color.tidexBorder, lineWidth: 1)
-        )
+      } else if !message.hasImageAttachment, message.shiftSnapshot == nil,
+        let previewText = message.previewText
+      {
+        ChatBubbleCard(
+          isCurrentUser: isCurrentUser,
+          minWidth: 120,
+          maxWidth: 280
+        ) {
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
+            if let iconSystemName = message.previewKind.friendsChatReplyIconSystemName {
+              Image(systemName: iconSystemName)
+                .font(.tidexCaptionRegular)
+                .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextMuted)
+            }
+
+            Text(previewText)
+              .font(.tidexBody)
+              .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+              .multilineTextAlignment(.leading)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+      }
     }
   }
 }
@@ -1232,14 +1267,14 @@ private struct DraftReplyBanner: View {
             .font(.tidexCaptionStrong)
             .foregroundColor(.tidexBlue)
 
-          if preview.hasImageAttachment {
-            Image(systemName: "photo")
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
+            if let iconSystemName = preview.previewKind.friendsChatReplyIconSystemName {
+              Image(systemName: iconSystemName)
+                .font(.tidexCaptionRegular)
+                .foregroundColor(.tidexTextMuted)
+            }
 
-          if let snippet = preview.snippet {
-            Text(snippet)
+            Text(preview.snippet)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
               .lineLimit(1)
