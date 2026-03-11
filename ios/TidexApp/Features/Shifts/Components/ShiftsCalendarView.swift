@@ -26,6 +26,7 @@ struct ShiftsCalendarView: View {
   let currency: String
   let showEarnings: Bool
   let jobs: [Job]
+  let showsActionBar: Bool
 
   /// Transition phase for header text animations
   var phase: MonthTransitionPhase?
@@ -121,6 +122,86 @@ struct ShiftsCalendarView: View {
   private let warningHaptic = UINotificationFeedbackGenerator()
 
   private let calendar = Calendar.current
+
+  init(
+    shifts: [ShiftWithComputations],
+    month: Date,
+    year: Int,
+    monthNumber: Int,
+    currency: String,
+    showEarnings: Bool,
+    jobs: [Job],
+    showsActionBar: Bool = true,
+    phase: MonthTransitionPhase? = nil,
+    onDayTapped: ((String, [ShiftWithComputations]) -> Void)? = nil,
+    selectedDates: Binding<Set<String>>,
+    confirmingDelete: Bool,
+    isDeleting: Bool,
+    selectedEarnings: (net: Double, gross: Double)?,
+    selectedCurrencyAggregate: JobCurrencyAggregateResolution?,
+    selectedHasTaxEnabled: Bool,
+    onDelete: (() -> Void)? = nil,
+    onConfirmDelete: (() -> Void)? = nil,
+    onCancelDelete: (() -> Void)? = nil,
+    onCopy: (() -> Void)? = nil,
+    onDetails: (() -> Void)? = nil,
+    onEdit: (() -> Void)? = nil,
+    onMove: (() -> Void)? = nil,
+    onClearSelection: (() -> Void)? = nil,
+    onSelectDateRange: (([String]) -> Void)? = nil,
+    onEmptyDayTapped: ((_ dateISO: String?) -> Void)? = nil,
+    isCopyMode: Bool,
+    isMoveMode: Bool,
+    isCopying: Bool,
+    isMoving: Bool,
+    onCopyToDate: ((String) -> Void)? = nil,
+    onMoveToDate: ((String) -> Void)? = nil,
+    onCancelCopyMove: (() -> Void)? = nil,
+    isSelectionModeEnabled: Binding<Bool>,
+    newlyAddedDates: Set<String> = [],
+    deepLinkHighlightDate: String? = nil,
+    conflictDates: Set<String> = [],
+    excludedFromTotalIds: Set<String> = []
+  ) {
+    self.shifts = shifts
+    self.month = month
+    self.year = year
+    self.monthNumber = monthNumber
+    self.currency = currency
+    self.showEarnings = showEarnings
+    self.jobs = jobs
+    self.showsActionBar = showsActionBar
+    self.phase = phase
+    self.onDayTapped = onDayTapped
+    _selectedDates = selectedDates
+    self.confirmingDelete = confirmingDelete
+    self.isDeleting = isDeleting
+    self.selectedEarnings = selectedEarnings
+    self.selectedCurrencyAggregate = selectedCurrencyAggregate
+    self.selectedHasTaxEnabled = selectedHasTaxEnabled
+    self.onDelete = onDelete
+    self.onConfirmDelete = onConfirmDelete
+    self.onCancelDelete = onCancelDelete
+    self.onCopy = onCopy
+    self.onDetails = onDetails
+    self.onEdit = onEdit
+    self.onMove = onMove
+    self.onClearSelection = onClearSelection
+    self.onSelectDateRange = onSelectDateRange
+    self.onEmptyDayTapped = onEmptyDayTapped
+    self.isCopyMode = isCopyMode
+    self.isMoveMode = isMoveMode
+    self.isCopying = isCopying
+    self.isMoving = isMoving
+    self.onCopyToDate = onCopyToDate
+    self.onMoveToDate = onMoveToDate
+    self.onCancelCopyMove = onCancelCopyMove
+    _isSelectionModeEnabled = isSelectionModeEnabled
+    self.newlyAddedDates = newlyAddedDates
+    self.deepLinkHighlightDate = deepLinkHighlightDate
+    self.conflictDates = conflictDates
+    self.excludedFromTotalIds = excludedFromTotalIds
+  }
 
   // MARK: - Computed Data
 
@@ -290,8 +371,10 @@ struct ShiftsCalendarView: View {
         calendarGrid
       }
 
-      actionBar
-        .padding(.top, Spacing.sm)
+      if showsActionBar {
+        actionBar
+          .padding(.top, Spacing.sm)
+      }
     }
     .onChange(of: selectedDates) { _, _ in
       showMixedCurrencyBreakdownPopover = false

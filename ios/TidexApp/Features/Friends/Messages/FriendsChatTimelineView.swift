@@ -793,6 +793,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
 
   private func requestOlderMessagesIfNeeded(force: Bool = false) {
     guard let firstMessageId = messages.first?.id else { return }
+    guard force || hasUserAdjustedViewport else { return }
 
     let distanceFromTop = collectionView.contentOffset.y + collectionView.adjustedContentInset.top
     if !force, distanceFromTop > Pagination.topTriggerDistance {
@@ -941,6 +942,7 @@ extension FriendsChatTimelineViewController: UICollectionViewDelegate {
     forItemAt indexPath: IndexPath
   ) {
     guard indexPath.item == 0, messages.indices.contains(indexPath.item) else { return }
+    guard hasUserAdjustedViewport else { return }
     requestOlderMessagesIfNeeded(force: true)
   }
 }

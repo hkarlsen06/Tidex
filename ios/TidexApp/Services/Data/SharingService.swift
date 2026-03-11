@@ -14,6 +14,7 @@ struct SharerShiftPreview: Equatable {
   let shift: SharedShiftData?
   let status: ShiftPreviewStatus?
   let showEarnings: Bool
+  let currency: String?
 }
 
 // Note: ShiftPreviewStatus is now defined in Shared/ShiftPreviewStatus.swift
@@ -544,7 +545,8 @@ final class SharingService: ObservableObject {
             sharerId: sharerId,
             shift: nil,
             status: nil,
-            showEarnings: false
+            showEarnings: false,
+            currency: nil
           )
         }
 
@@ -566,12 +568,17 @@ final class SharingService: ObservableObject {
           showEarnings: payloadRow.showEarnings,
           now: now
         )
+        let previewCurrency =
+          preview.shift.flatMap { shift in
+            payloadRow.jobs.first(where: { $0.id == shift.jobId })?.currency
+          } ?? payloadRow.settings.currency
 
         return SharerShiftPreview(
           sharerId: sharerId,
           shift: preview.shift.map(Self.mapComputedShiftToSharedShiftData),
           status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0.rawValue) },
-          showEarnings: preview.showEarnings
+          showEarnings: preview.showEarnings,
+          currency: previewCurrency
         )
       }
     }.value

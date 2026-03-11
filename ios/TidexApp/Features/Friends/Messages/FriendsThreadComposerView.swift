@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -8,6 +9,7 @@ struct FriendsThreadComposerConfiguration: Equatable {
   let isThreadReadOnly: Bool
   let sendErrorMessage: String?
   let placeholder: String
+  let canSendShiftSnapshots: Bool
 }
 
 @MainActor
@@ -18,12 +20,19 @@ final class FriendsThreadComposerBridge: ObservableObject {
   @Published private(set) var isThreadReadOnly = false
   @Published private(set) var sendErrorMessage: String?
   @Published private(set) var placeholder: String = ""
+  @Published private(set) var canSendShiftSnapshots = false
 
   var onDraftChanged: ((String) -> Void)?
   var onStagedAttachmentChanged: ((FriendsComposerAttachmentDraft?) -> Void)?
   var onCancelReply: (() -> Void)?
   var onSend: ((String) async -> Bool)?
+  var onPrepareShiftSnapshotAttachment:
+    (
+      (ShiftWithComputations) async
+        -> FriendsComposerAttachmentDraft?
+    )?
   var onHeightChanged: ((CGFloat) -> Void)?
+  var onAttachmentDrawerOpenChanged: ((Bool) -> Void)?
 
   private var isApplyingExternalDraft = false
   private var isApplyingExternalAttachment = false
@@ -37,28 +46,12 @@ final class FriendsThreadComposerBridge: ObservableObject {
     )
   }
 
-  var stagedImageBinding: Binding<ImageAttachment?> {
-    Binding(
-      get: { self.stagedAttachment?.imageAttachment },
-      set: { [weak self] newValue in
-        self?.updateStagedImage(newValue)
-      }
-    )
-  }
-
-  var hasSupplementalSendContent: Bool {
-    stagedAttachment?.shiftSnapshot != nil
-  }
-
-  var allowsImageSelection: Bool {
-    stagedAttachment == nil
-  }
-
   func apply(configuration: FriendsThreadComposerConfiguration) {
     replyPreview = configuration.replyPreview
     isThreadReadOnly = configuration.isThreadReadOnly
     sendErrorMessage = configuration.sendErrorMessage
     placeholder = configuration.placeholder
+    canSendShiftSnapshots = configuration.canSendShiftSnapshots
 
     if draftText != configuration.draftText {
       isApplyingExternalDraft = true
@@ -86,19 +79,30 @@ final class FriendsThreadComposerBridge: ObservableObject {
     onHeightChanged?(height)
   }
 
-  private func updateDraftText(_ newValue: String) {
-    guard draftText != newValue else { return }
-    draftText = newValue
-    guard !isApplyingExternalDraft else { return }
-    onDraftChanged?(newValue)
+  func reportAttachmentDrawerOpen(_ isOpen: Bool) {
+    onAttachmentDrawerOpenChanged?(isOpen)
+  }
+
+  func stageImageAttachment(_ image: ImageAttachment) {
+    updateStagedAttachment(.image(image))
+  }
+
+  func prepareAndStageShiftAttachment(from shift: ShiftWithComputations) async -> Bool {
+    guard let onPrepareShiftSnapshotAttachment else { return false }
+    guard let attachment = await onPrepareShiftSnapshotAttachment(shift) else { return false }
+    updateStagedAttachment(attachment)
+    return true
   }
 
   func removeStagedAttachment() {
     updateStagedAttachment(nil)
   }
 
-  private func updateStagedImage(_ newValue: ImageAttachment?) {
-    updateStagedAttachment(newValue.map(FriendsComposerAttachmentDraft.image))
+  private func updateDraftText(_ newValue: String) {
+    guard draftText != newValue else { return }
+    draftText = newValue
+    guard !isApplyingExternalDraft else { return }
+    onDraftChanged?(newValue)
   }
 
   private func updateStagedAttachment(_ newValue: FriendsComposerAttachmentDraft?) {
@@ -111,8 +115,23 @@ final class FriendsThreadComposerBridge: ObservableObject {
 
 struct FriendsThreadComposerHostedView: View {
   @ObservedObject var bridge: FriendsThreadComposerBridge
+  @StateObject private var attachmentController = FriendsComposerAttachmentController()
+  @State private var selectedPhotoItem: PhotosPickerItem?
+  @State private var isSubmitting = false
+  @State private var composerFocusTrigger = 0
+  @State private var isComposerFocused = false
 
-  private let attachmentCollapseCharacterThreshold = 18
+  private var canSend: Bool {
+    let normalizedDraft = bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+    return (!normalizedDraft.isEmpty || bridge.stagedAttachment != nil)
+      && !bridge.isThreadReadOnly
+      && !isSubmitting
+      && !attachmentController.isProcessingAttachment
+  }
+
+  private var isPreparingAttachmentDrawer: Bool {
+    attachmentController.isPreparingDrawer
+  }
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
@@ -157,29 +176,38 @@ struct FriendsThreadComposerHostedView: View {
         .padding(.horizontal, Spacing.md)
       }
 
-      ChatInputField(
-        inputText: bridge.draftBinding,
-        placeholder: bridge.placeholder,
-        horizontalPadding: MonthPickerLayout.horizontalPadding,
-        focusedHorizontalPadding: Spacing.xs,
-        bottomPadding: MonthPickerLayout.bottomPadding,
-        showsCameraShortcut: true,
-        attachedImage: bridge.stagedImageBinding,
-        showsImagePreview: false,
-        hasSupplementalSendContent: bridge.hasSupplementalSendContent,
-        showsAttachmentPicker: bridge.allowsImageSelection,
-        collapsesAttachmentButtonForLongDrafts: true,
-        attachmentCollapseCharacterThreshold: attachmentCollapseCharacterThreshold,
-        dismissKeyboardOnSend: false,
-        onSend: { message in
-          await bridge.send(content: message)
-        },
-        onSendWithImage: { message, _ in
-          await bridge.send(content: message)
-        },
-        disabled: bridge.isThreadReadOnly
-      )
+      composerField
+
+      if attachmentController.isDrawerOpen {
+        FriendsThreadComposerAttachmentDrawer(
+          recentPhotosState: attachmentController.recentPhotosState,
+          recentPhotos: attachmentController.recentPhotos,
+          isProcessingAttachment: attachmentController.isProcessingAttachment,
+          showsShiftCalendarAction: bridge.canSendShiftSnapshots,
+          stagedAttachment: bridge.stagedAttachment,
+          onOpenPhotoLibrary: {
+            attachmentController.isShowingPhotoLibrary = true
+          },
+          onOpenCamera: {
+            attachmentController.isShowingCamera = true
+          },
+          onOpenShiftCalendar: {
+            attachmentController.openShiftCalendar()
+          },
+          onSelectRecentPhoto: { photo in
+            Task {
+              await handleRecentPhotoSelection(photo)
+            }
+          }
+        )
+        .padding(.horizontal, Spacing.md)
+        .padding(.bottom, Spacing.sm)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+      }
     }
+    .animation(
+      .spring(response: 0.26, dampingFraction: 0.86), value: attachmentController.isDrawerOpen
+    )
     .fixedSize(horizontal: false, vertical: true)
     .frame(maxWidth: .infinity, alignment: .bottom)
     .background(Color.tidexBackground)
@@ -194,6 +222,342 @@ struct FriendsThreadComposerHostedView: View {
     .onPreferenceChange(FriendsThreadComposerHeightPreferenceKey.self) { height in
       bridge.reportHeight(height)
     }
+    .onChange(of: attachmentController.isDrawerOpen) { _, isOpen in
+      bridge.reportAttachmentDrawerOpen(isOpen)
+    }
+    .onChange(of: selectedPhotoItem) { _, newItem in
+      Task {
+        await handleSelectedPhotoItem(newItem)
+      }
+    }
+    .photosPicker(
+      isPresented: $attachmentController.isShowingPhotoLibrary,
+      selection: $selectedPhotoItem,
+      matching: .images,
+      photoLibrary: .shared()
+    )
+    .fullScreenCover(isPresented: $attachmentController.isShowingCamera) {
+      CameraPicker { image in
+        Task {
+          await handleCapturedImage(image)
+        }
+      }
+      .ignoresSafeArea()
+    }
+    .sheet(isPresented: $attachmentController.isShowingShiftCalendar) {
+      FriendsComposerShiftCalendarPicker { shift in
+        await handleShiftSelection(shift)
+      }
+    }
+  }
+
+  private var composerField: some View {
+    ChatComposerField(
+      text: bridge.draftBinding,
+      placeholder: bridge.placeholder,
+      disabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment,
+      isSending: isSubmitting,
+      canSend: canSend,
+      sendAccessibilityLabel: String(localized: "Send message"),
+      focusTrigger: composerFocusTrigger,
+      onFocusChanged: { isComposerFocused = $0 },
+      horizontalPadding: MonthPickerLayout.horizontalPadding,
+      topPadding: Spacing.xs,
+      bottomPadding: MonthPickerLayout.bottomPadding,
+      onSend: sendMessage
+    ) {
+      FriendsThreadComposerPlusButton(
+        isOpen: attachmentController.isDrawerOpen,
+        isDisabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment
+          || isPreparingAttachmentDrawer,
+        isPreparing: isPreparingAttachmentDrawer,
+        action: toggleAttachmentDrawer
+      )
+    }
+  }
+
+  private func sendMessage() {
+    guard canSend else { return }
+    isSubmitting = true
+
+    Task {
+      let didSend = await bridge.send(
+        content: bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+      )
+      await MainActor.run {
+        isSubmitting = false
+        if didSend {
+          attachmentController.closeDrawer()
+        }
+      }
+    }
+  }
+
+  private func handleSelectedPhotoItem(_ item: PhotosPickerItem?) async {
+    let shouldRestoreFocus = isComposerFocused
+    guard let imageAttachment = await attachmentController.makeImageAttachment(from: item) else {
+      await MainActor.run {
+        selectedPhotoItem = nil
+      }
+      return
+    }
+
+    bridge.stageImageAttachment(imageAttachment)
+    await MainActor.run {
+      selectedPhotoItem = nil
+      attachmentController.completeAttachmentSelection()
+      restoreComposerFocusIfNeeded(shouldRestoreFocus)
+    }
+  }
+
+  private func handleRecentPhotoSelection(_ photo: FriendsComposerRecentPhoto) async {
+    let shouldRestoreFocus = isComposerFocused
+    guard let imageAttachment = await attachmentController.makeImageAttachment(from: photo) else {
+      return
+    }
+
+    bridge.stageImageAttachment(imageAttachment)
+    attachmentController.completeAttachmentSelection()
+    restoreComposerFocusIfNeeded(shouldRestoreFocus)
+  }
+
+  private func handleCapturedImage(_ image: UIImage) async {
+    let shouldRestoreFocus = isComposerFocused
+    guard let imageAttachment = await attachmentController.makeImageAttachment(from: image) else {
+      return
+    }
+
+    bridge.stageImageAttachment(imageAttachment)
+    attachmentController.completeAttachmentSelection()
+    restoreComposerFocusIfNeeded(shouldRestoreFocus)
+  }
+
+  private func handleShiftSelection(_ shift: ShiftWithComputations) async -> Bool {
+    let shouldRestoreFocus = isComposerFocused
+    let didStageAttachment = await bridge.prepareAndStageShiftAttachment(from: shift)
+    if didStageAttachment {
+      attachmentController.completeAttachmentSelection()
+      restoreComposerFocusIfNeeded(shouldRestoreFocus)
+    }
+    return didStageAttachment
+  }
+
+  private func restoreComposerFocusIfNeeded(_ shouldRestoreFocus: Bool) {
+    guard shouldRestoreFocus else { return }
+    DispatchQueue.main.async {
+      composerFocusTrigger += 1
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+      composerFocusTrigger += 1
+    }
+  }
+
+  private func toggleAttachmentDrawer() {
+    let shouldRestoreFocus = isComposerFocused
+    Task {
+      await attachmentController.toggleDrawer()
+      await MainActor.run {
+        restoreComposerFocusIfNeeded(shouldRestoreFocus)
+      }
+    }
+  }
+}
+
+private struct FriendsThreadComposerPlusButton: View {
+  let isOpen: Bool
+  let isDisabled: Bool
+  let isPreparing: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Group {
+      if isPreparing {
+        ProgressView()
+          .progressViewStyle(.circular)
+          .tint(.tidexBlue)
+      } else {
+        Image(systemName: "plus")
+          .font(.system(size: 20, weight: .semibold))
+          .foregroundColor(isDisabled ? .tidexTextMuted : .tidexBlue)
+          .rotationEffect(.degrees(isOpen ? 45 : 0))
+      }
+    }
+    .frame(width: 44, height: 44)
+    .background(
+      Circle()
+        .fill(isOpen ? Color.tidexBlue.opacity(0.18) : Color.tidexBlue.opacity(0.12))
+    )
+    .contentShape(Circle())
+    .onTapGesture {
+      guard !isDisabled else { return }
+      action()
+    }
+    .accessibilityAddTraits(.isButton)
+    .accessibilityRespondsToUserInteraction(!isDisabled)
+    .accessibilityLabel(
+      Text(
+        LocalizedStringResource(
+          isOpen
+            ? "friends.chat.composer.close_attachments"
+            : "friends.chat.composer.open_attachments",
+          table: "Localizable"
+        )
+      )
+    )
+  }
+}
+
+private struct FriendsThreadComposerAttachmentDrawer: View {
+  private enum Layout {
+    static let previewWidth: CGFloat = 144
+    static let previewHeight: CGFloat = 192
+  }
+
+  let recentPhotosState: FriendsComposerRecentPhotosState
+  let recentPhotos: [FriendsComposerRecentPhoto]
+  let isProcessingAttachment: Bool
+  let showsShiftCalendarAction: Bool
+  let stagedAttachment: FriendsComposerAttachmentDraft?
+  let onOpenPhotoLibrary: () -> Void
+  let onOpenCamera: () -> Void
+  let onOpenShiftCalendar: () -> Void
+  let onSelectRecentPhoto: (FriendsComposerRecentPhoto) -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      HStack(spacing: Spacing.sm) {
+        actionButton(
+          systemName: "photo.on.rectangle.angled",
+          isActive: stagedAttachment?.imageAttachment != nil,
+          accessibilityLabel: String(
+            localized: "friends.chat.composer.photo_library",
+            table: "Localizable"
+          ),
+          action: onOpenPhotoLibrary
+        )
+
+        actionButton(
+          systemName: "camera",
+          isActive: false,
+          accessibilityLabel: String(
+            localized: "friends.chat.composer.camera",
+            table: "Localizable"
+          ),
+          action: onOpenCamera
+        )
+
+        if showsShiftCalendarAction {
+          actionButton(
+            systemName: "calendar",
+            isActive: stagedAttachment?.shiftSnapshot != nil,
+            accessibilityLabel: String(
+              localized: "friends.chat.composer.shift_calendar",
+              table: "Localizable"
+            ),
+            action: onOpenShiftCalendar
+          )
+        }
+      }
+
+      Group {
+        switch recentPhotosState {
+        case .idle, .loading:
+          HStack {
+            Spacer()
+            ProgressView()
+              .padding(.vertical, Spacing.md)
+            Spacer()
+          }
+        case .loaded:
+          ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.sm) {
+              ForEach(recentPhotos) { photo in
+                Button {
+                  onSelectRecentPhoto(photo)
+                } label: {
+                  Image(uiImage: photo.thumbnail)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: Layout.previewWidth, height: Layout.previewHeight)
+                    .clipShape(
+                      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isProcessingAttachment)
+              }
+            }
+            .padding(.horizontal, Spacing.md)
+          }
+          .frame(height: Layout.previewHeight)
+          .scrollBounceBehavior(.always, axes: .horizontal)
+          .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+          .padding(.horizontal, -Spacing.md)
+        case .empty:
+          drawerMessage(
+            String(
+              localized: "friends.chat.composer.recent_photos.empty",
+              table: "Localizable"
+            )
+          )
+        case .denied:
+          drawerMessage(
+            String(
+              localized: "friends.chat.composer.recent_photos.denied",
+              table: "Localizable"
+            )
+          )
+        case .failed:
+          drawerMessage(
+            String(
+              localized: "friends.chat.composer.recent_photos.empty",
+              table: "Localizable"
+            )
+          )
+        }
+      }
+    }
+    .padding(Spacing.md)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+    )
+  }
+
+  @ViewBuilder
+  private func drawerMessage(_ message: String) -> some View {
+    HStack {
+      Text(message)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextMuted)
+      Spacer()
+    }
+    .padding(.vertical, Spacing.sm)
+  }
+
+  private func actionButton(
+    systemName: String,
+    isActive: Bool,
+    accessibilityLabel: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: systemName)
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundColor(isActive ? .tidexBlue : .tidexTextPrimary)
+        .frame(width: 40, height: 40)
+        .background(
+          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+            .fill(isActive ? Color.tidexBlue.opacity(0.14) : Color.tidexSurfaceSecondary)
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(isProcessingAttachment)
+    .accessibilityLabel(Text(accessibilityLabel))
   }
 }
 
@@ -202,7 +566,7 @@ private struct FriendsThreadComposerAttachmentPreview: View {
   let onRemove: () -> Void
 
   var body: some View {
-    ZStack(alignment: .topTrailing) {
+    HStack(alignment: .top, spacing: Spacing.sm) {
       Group {
         switch attachment {
         case .image(let image):
@@ -213,24 +577,27 @@ private struct FriendsThreadComposerAttachmentPreview: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
 
-      Button(action: onRemove) {
-        Image(systemName: "xmark")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 32, height: 32)
-          .background(
-            Circle()
-              .fill(Color.tidexSurfacePrimary.opacity(0.96))
-          )
-          .overlay(
-            Circle()
-              .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
-          )
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(.friendsChatComposerRemoveAttachment))
-      .padding(Spacing.xxxs)
+      removeButton
     }
+  }
+
+  private var removeButton: some View {
+    Button(action: onRemove) {
+      Image(systemName: "xmark")
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextMuted)
+        .frame(width: 32, height: 32)
+        .background(
+          Circle()
+            .fill(Color.tidexSurfacePrimary.opacity(0.96))
+        )
+        .overlay(
+          Circle()
+            .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+        )
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(.friendsChatComposerRemoveAttachment))
   }
 }
 

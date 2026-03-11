@@ -1,0 +1,198 @@
+import SwiftUI
+
+private struct FriendsComposerShiftDaySelection: Identifiable {
+  let id = UUID()
+  let dateISO: String
+  let shifts: [ShiftWithComputations]
+}
+
+struct FriendsComposerShiftCalendarPicker: View {
+  let onSelectShift: (ShiftWithComputations) async -> Bool
+
+  @Environment(\.dismiss) private var dismiss
+  @StateObject private var viewModel = ShiftsViewModel()
+  @State private var selectedDates: Set<String> = []
+  @State private var isSelectionModeEnabled = false
+  @State private var selectedDayForSheet: FriendsComposerShiftDaySelection?
+
+  private var transitionPhase: MonthTransitionPhase {
+    MonthTransitionPhase(
+      year: viewModel.committedYear,
+      month: viewModel.committedMonth,
+      direction: viewModel.navigationDirection
+    )
+  }
+
+  private var displayedMonthDate: Date {
+    var components = DateComponents()
+    components.year = viewModel.committedYear
+    components.month = viewModel.committedMonth
+    components.day = 1
+    return Calendar.current.date(from: components) ?? .now
+  }
+
+  private var isIPhone: Bool {
+    UIDevice.current.userInterfaceIdiom == .phone
+  }
+
+  var body: some View {
+    NavigationStack {
+      GeometryReader { geometry in
+        ZStack {
+          Color.tidexBackground
+            .ignoresSafeArea()
+
+          VStack {
+            Spacer()
+
+            ShiftsCalendarView(
+              shifts: viewModel.shifts,
+              month: displayedMonthDate,
+              year: viewModel.committedYear,
+              monthNumber: viewModel.committedMonth,
+              currency: viewModel.currency,
+              showEarnings: true,
+              jobs: viewModel.activeJobs,
+              showsActionBar: false,
+              phase: transitionPhase,
+              onDayTapped: handleDayTapped(dateISO:shiftsOnDay:),
+              selectedDates: $selectedDates,
+              confirmingDelete: false,
+              isDeleting: false,
+              selectedEarnings: nil,
+              selectedCurrencyAggregate: nil,
+              selectedHasTaxEnabled: false,
+              onDelete: nil,
+              onConfirmDelete: nil,
+              onCancelDelete: nil,
+              onCopy: nil,
+              onDetails: nil,
+              onEdit: nil,
+              onMove: nil,
+              onClearSelection: nil,
+              onSelectDateRange: nil,
+              onEmptyDayTapped: nil,
+              isCopyMode: false,
+              isMoveMode: false,
+              isCopying: false,
+              isMoving: false,
+              onCopyToDate: nil,
+              onMoveToDate: nil,
+              onCancelCopyMove: nil,
+              isSelectionModeEnabled: $isSelectionModeEnabled,
+              newlyAddedDates: [],
+              deepLinkHighlightDate: nil,
+              conflictDates: viewModel.conflictDates,
+              excludedFromTotalIds: viewModel.excludedFromTotalIds
+            )
+            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+            .padding(.bottom, MonthPickerLayout.totalBottomInset)
+
+            Spacer()
+          }
+        }
+        .frame(width: geometry.size.width, height: geometry.size.height)
+        .contentShape(Rectangle())
+        .monthSwipeGesture(
+          onSwipeLeft: {
+            AppearanceTracker.shared.reset()
+            viewModel.goToNextMonth()
+          },
+          onSwipeRight: {
+            AppearanceTracker.shared.reset()
+            viewModel.goToPreviousMonth()
+          },
+          isEnabled: true
+        )
+      }
+      .navigationTitle(
+        LocalizedStringResource("friends.chat.composer.shift_picker.title", table: "Localizable")
+      )
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button(String(localized: .commonCancel)) {
+            dismiss()
+          }
+          .foregroundColor(.tidexBlue)
+        }
+      }
+      .safeAreaInset(edge: .bottom, spacing: 0) {
+        bottomMonthPicker
+      }
+    }
+    .task {
+      await viewModel.loadShifts()
+    }
+    .sheet(item: $selectedDayForSheet) { daySelection in
+      DayShiftsSheet(
+        dateISO: daySelection.dateISO,
+        shifts: daySelection.shifts,
+        onShiftTapped: { shift in
+          Task {
+            if await onSelectShift(shift) {
+              selectedDayForSheet = nil
+              dismiss()
+            }
+          }
+        },
+        excludedFromTotalIds: viewModel.excludedFromTotalIds
+      )
+      .presentationDetents([.medium])
+      .presentationDragIndicator(.visible)
+    }
+  }
+
+  private func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) {
+    if shiftsOnDay.count == 1, let shift = shiftsOnDay.first {
+      Task {
+        if await onSelectShift(shift) {
+          dismiss()
+        }
+      }
+    } else if !shiftsOnDay.isEmpty {
+      selectedDayForSheet = FriendsComposerShiftDaySelection(
+        dateISO: dateISO,
+        shifts: shiftsOnDay
+      )
+    }
+  }
+
+  private var bottomMonthPicker: some View {
+    AnimatedMonthHeader(
+      monthName: viewModel.displayMonthName,
+      year: viewModel.displayYear,
+      phase: transitionPhase,
+      config: .default,
+      onPrevious: {
+        AppearanceTracker.shared.reset()
+        viewModel.goToPreviousMonth()
+      },
+      onNext: {
+        AppearanceTracker.shared.reset()
+        viewModel.goToNextMonth()
+      },
+      onNavigateToMonth: { year, month in
+        AppearanceTracker.shared.reset()
+        SharedMonthContext.shared.navigateTo(year: year, month: month)
+      },
+      isLoading: false
+    )
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .frame(maxWidth: .infinity)
+    .frame(height: MonthPickerLayout.height)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      clear: true,
+      interactive: true
+    )
+    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+    .padding(.top, Spacing.xs)
+    .padding(.bottom, MonthPickerLayout.bottomPadding)
+    .background {
+      Color.tidexBackground
+        .ignoresSafeArea(edges: .bottom)
+    }
+  }
+}

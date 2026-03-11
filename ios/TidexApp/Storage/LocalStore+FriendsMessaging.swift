@@ -134,6 +134,12 @@ extension LocalStoreActor {
       insertMessage(message, in: threadId, for: viewerUserId)
     }
 
+    try deleteConflictingMessages(
+      matchingClientId: message.clientId,
+      threadId: threadId,
+      viewerUserId: viewerUserId,
+      keepingMessageId: message.id
+    )
     try replaceAttachments(for: message, viewerUserId: viewerUserId)
     try replaceReactions(for: message, viewerUserId: viewerUserId)
     try updateThreadPreviewIfNeeded(for: message, viewerUserId: viewerUserId)
@@ -318,6 +324,21 @@ extension LocalStoreActor {
     return try modelContext.fetch(descriptor).first
   }
 
+  private func fetchMessages(
+    clientId: String,
+    threadId: String,
+    viewerUserId: String
+  ) throws -> [LocalMessage] {
+    let descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.clientId == clientId
+          && localMessage.threadId == threadId
+          && localMessage.viewerUserId == viewerUserId
+      }
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
   private func findReplaceableLocalMessage(
     for message: FriendMessage,
     in threadId: String,
@@ -330,6 +351,26 @@ extension LocalStoreActor {
       threadId: threadId,
       viewerUserId: viewerUserId
     )
+  }
+
+  private func deleteConflictingMessages(
+    matchingClientId clientId: String,
+    threadId: String,
+    viewerUserId: String,
+    keepingMessageId: String
+  ) throws {
+    let normalizedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard !normalizedClientId.isEmpty else { return }
+
+    let conflictingMessages = try fetchMessages(
+      clientId: normalizedClientId,
+      threadId: threadId,
+      viewerUserId: viewerUserId
+    )
+
+    for conflictingMessage in conflictingMessages where conflictingMessage.id != keepingMessageId {
+      try deleteStoredMessage(id: conflictingMessage.id, viewerUserId: viewerUserId)
+    }
   }
 
   private func insertMessage(

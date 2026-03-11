@@ -427,6 +427,7 @@ final class LocalShiftPreview {
   var basePay: Double?
   var supplementPay: Double?
   var gross: Double?
+  var currency: String?
   var taxEnabled: Bool?
   var taxPercentage: Double?
   var recurringId: String?
@@ -452,6 +453,7 @@ final class LocalShiftPreview {
     basePay: Double? = nil,
     supplementPay: Double? = nil,
     gross: Double? = nil,
+    currency: String? = nil,
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
     recurringId: String? = nil,
@@ -472,6 +474,7 @@ final class LocalShiftPreview {
     self.basePay = basePay
     self.supplementPay = supplementPay
     self.gross = gross
+    self.currency = currency
     self.taxEnabled = taxEnabled
     self.taxPercentage = taxPercentage
     self.recurringId = recurringId
@@ -498,6 +501,7 @@ final class LocalShiftPreview {
       basePay: preview.shift?.computed.basePay,
       supplementPay: preview.shift?.computed.supplementPay,
       gross: preview.shift?.computed.gross,
+      currency: preview.currency,
       taxEnabled: preview.shift?.tax_enabled,
       taxPercentage: preview.shift?.tax_percentage,
       recurringId: preview.shift?.recurring_id,
@@ -514,7 +518,8 @@ final class LocalShiftPreview {
       sharerId: sharerId,
       shift: shiftData,
       status: previewStatus,
-      showEarnings: showEarnings
+      showEarnings: showEarnings,
+      currency: currency
     )
   }
 

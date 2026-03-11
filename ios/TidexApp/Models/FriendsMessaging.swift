@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 // MARK: - Friends Messaging Domain Models
@@ -124,6 +125,139 @@ struct FriendShiftSnapshot: Codable, Equatable {
   var isSupportedSchemaVersion: Bool {
     schemaVersion == 1
   }
+
+  var ownerFirstName: String {
+    let trimmed = ownerDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "?" }
+    return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
+  }
+
+  var ownerInitials: String {
+    let letters =
+      ownerFirstName
+      .split(whereSeparator: \.isWhitespace)
+      .compactMap(\.first)
+      .prefix(2)
+    let initials = letters.map(String.init).joined()
+    return initials.isEmpty ? "?" : initials.uppercased()
+  }
+
+  var normalizedForTransport: FriendShiftSnapshot {
+    FriendShiftSnapshot(
+      schemaVersion: schemaVersion,
+      ownerUserId: SnapshotRichContentIdentifier.normalizedUUIDString(
+        primary: ownerUserId,
+        fallbackSeed: "owner:\(ownerUserId)"
+      ),
+      ownerDisplayName: ownerDisplayName,
+      ownerAvatarUrl: ownerAvatarUrl,
+      shiftId: SnapshotRichContentIdentifier.normalizedUUIDString(
+        primary: shiftId,
+        fallbackSeed: "shift:\(shiftId):\(shiftDate):\(startTime):\(endTime)"
+      ),
+      jobName: jobName,
+      jobColorHex: jobColorHex,
+      shiftDate: shiftDate,
+      startTime: startTime,
+      endTime: endTime,
+      paidHours: paidHours,
+      currency: currency,
+      includesEarnings: includesEarnings,
+      grossPay: grossPay,
+      netPay: netPay,
+      taxEnabled: taxEnabled,
+      source: source
+    )
+  }
+
+  var renderableShift: ShiftWithComputations {
+    let gross = grossPay ?? netPay ?? 0
+    let resolvedTaxEnabled = includesEarnings ? taxEnabled : false
+    let resolvedTaxPercentage: Double
+
+    if resolvedTaxEnabled, gross > 0, let netPay {
+      resolvedTaxPercentage = max(0, min((1 - (netPay / gross)) * 100, 100))
+    } else {
+      resolvedTaxPercentage = 0
+    }
+
+    return ShiftWithComputations(
+      shift: ShiftRow(
+        id: shiftId,
+        user_id: ownerUserId,
+        job_id: nil,
+        shift_date: shiftDate,
+        start_time: startTime,
+        end_time: endTime,
+        custom_supplements: nil
+      ),
+      computed: ShiftComputed(
+        id: shiftId,
+        durationHours: paidHours,
+        paidHours: paidHours,
+        basePay: gross,
+        supplementPay: 0,
+        gross: gross,
+        wagePeriods: [],
+        originalWagePeriods: [],
+        breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
+      ),
+      taxEnabled: resolvedTaxEnabled,
+      taxPercentage: resolvedTaxPercentage
+    )
+  }
+}
+
+enum SnapshotRichContentIdentifier {
+  private static let uuidPattern =
+    "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+
+  static func normalizedUUIDString(primary: String, fallbackSeed: String) -> String {
+    if let valid = validUUIDString(from: primary) {
+      return valid
+    }
+
+    return deterministicUUID(seed: fallbackSeed)
+  }
+
+  static func normalizedUUIDString(primary: String?, secondary: String?, fallbackSeed: String)
+    -> String
+  {
+    if let primary, let valid = validUUIDString(from: primary) {
+      return valid
+    }
+
+    if let secondary, let valid = validUUIDString(from: secondary) {
+      return valid
+    }
+
+    return deterministicUUID(seed: fallbackSeed)
+  }
+
+  private static func validUUIDString(from rawValue: String) -> String? {
+    let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed.range(of: uuidPattern, options: .regularExpression) != nil
+    else {
+      return nil
+    }
+    return trimmed.lowercased()
+  }
+
+  private static func deterministicUUID(seed: String) -> String {
+    let digest = SHA256.hash(data: Data(seed.utf8))
+    var bytes = Array(digest.prefix(16))
+    bytes[6] = (bytes[6] & 0x0F) | 0x50
+    bytes[8] = (bytes[8] & 0x3F) | 0x80
+
+    let uuid = UUID(
+      uuid: (
+        bytes[0], bytes[1], bytes[2], bytes[3],
+        bytes[4], bytes[5], bytes[6], bytes[7],
+        bytes[8], bytes[9], bytes[10], bytes[11],
+        bytes[12], bytes[13], bytes[14], bytes[15]
+      ))
+    return uuid.uuidString.lowercased()
+  }
 }
 
 struct ComposerShiftSnapshotDraft: Codable, Equatable {
@@ -205,7 +339,7 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
       FriendRichContentEnvelope(
         content: FriendRichContentEnvelope.Content(
           kind: FriendLastMessagePreviewKind.shiftSnapshot.rawValue,
-          shiftSnapshot: shiftSnapshot
+          shiftSnapshot: shiftSnapshot.normalizedForTransport
         )
       )
     )
@@ -398,6 +532,18 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   var shiftSnapshot: FriendShiftSnapshot? {
     guard case .shiftSnapshot(let snapshot) = richContent else { return nil }
     return snapshot
+  }
+
+  var sendableMetadataData: Data? {
+    guard let shiftSnapshot else { return metadataData }
+    return try? JSONEncoder().encode(
+      FriendRichContentEnvelope(
+        content: FriendRichContentEnvelope.Content(
+          kind: FriendLastMessagePreviewKind.shiftSnapshot.rawValue,
+          shiftSnapshot: shiftSnapshot.normalizedForTransport
+        )
+      )
+    )
   }
 
   var replyIconPreviewKind: FriendLastMessagePreviewKind? {

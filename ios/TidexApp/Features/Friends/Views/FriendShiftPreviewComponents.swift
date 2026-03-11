@@ -1,5 +1,10 @@
 import SwiftUI
 
+private enum FriendShiftPreviewStatusCardStyle {
+  case card
+  case toolbarExtension
+}
+
 struct CompactFriendIdentityRow: View {
   let sharer: SharedUser
   var unreadMessageCount = 0
@@ -57,12 +62,25 @@ struct CompactFriendIdentityRow: View {
 struct FriendShiftPreviewStatusCard: View {
   let shift: SharedShiftData
   let status: ShiftPreviewStatus
+  private let style: FriendShiftPreviewStatusCardStyle
   private let schedule: ShiftSchedule?
 
   init(shift: SharedShiftData, status: ShiftPreviewStatus) {
     self.shift = shift
     self.status = status
-    self.schedule = Self.makeSchedule(for: shift)
+    style = .card
+    schedule = Self.makeSchedule(for: shift)
+  }
+
+  fileprivate init(
+    shift: SharedShiftData,
+    status: ShiftPreviewStatus,
+    style: FriendShiftPreviewStatusCardStyle
+  ) {
+    self.shift = shift
+    self.status = status
+    self.style = style
+    schedule = Self.makeSchedule(for: shift)
   }
 
   private var formattedDate: String {
@@ -102,24 +120,58 @@ struct FriendShiftPreviewStatusCard: View {
           .fixedSize(horizontal: true, vertical: false)
           .layoutPriority(1)
       }
-      .padding(.horizontal, Spacing.sm)
+      .padding(.horizontal, style == .toolbarExtension ? Spacing.md : Spacing.sm)
       .padding(.vertical, Spacing.sm)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        GeometryReader { geometry in
-          if computed.status == .active {
-            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+      .background(backgroundShape)
+      .overlay(alignment: .leading) {
+        if computed.status == .active {
+          GeometryReader { geometry in
+            progressShape
               .fill(Color.green.opacity(0.1))
               .frame(width: geometry.size.width * computed.progress / 100)
               .animation(.linear(duration: 1), value: computed.progress)
           }
+          .clipShape(progressShape)
         }
-      )
-      .tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
+      }
+      .overlay(borderShape)
+      .modifier(FriendShiftPreviewShadowModifier(style: style))
     }
+  }
+
+  @ViewBuilder
+  private var backgroundShape: some View {
+    switch style {
+    case .card:
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    case .toolbarExtension:
+      RoundedRectangle(cornerRadius: 22, style: .continuous)
+        .fill(Color.tidexSurfacePrimary.opacity(0.94))
+        .overlay(
+          RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(Color.tidexBlue.opacity(0.04))
+        )
+    }
+  }
+
+  @ViewBuilder
+  private var borderShape: some View {
+    switch style {
+    case .card:
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .stroke(Color.clear, lineWidth: 0)
+    case .toolbarExtension:
+      RoundedRectangle(cornerRadius: 22, style: .continuous)
+        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+    }
+  }
+
+  private var progressShape: RoundedRectangle {
+    RoundedRectangle(
+      cornerRadius: style == .toolbarExtension ? 22 : CornerRadius.lg,
+      style: .continuous
+    )
   }
 
   private struct ComputedStatus {
@@ -243,37 +295,188 @@ struct FriendShiftPreviewStatusCard: View {
 }
 
 struct CompactFriendShiftPreviewHeader: View {
-  let sharer: SharedUser
   let preview: SharerShiftPreview
-  let label: LocalizedStringResource
 
   var body: some View {
     if let shift = preview.shift, let status = preview.status {
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(label)
-          .font(.tidexMicro)
-          .foregroundColor(.tidexTextMuted)
-          .textCase(.uppercase)
+      CompactFriendShiftPreviewTextRow(
+        shift: shift,
+        status: status,
+        showEarnings: preview.showEarnings,
+        currency: preview.currency
+      )
+    }
+  }
+}
 
-        CompactFriendIdentityRow(
-          sharer: sharer,
-          showsContactInfo: false,
-          avatarSize: AvatarView.Size.medium
-        )
+private struct CompactFriendShiftPreviewTextRow: View {
+  let shift: SharedShiftData
+  let status: ShiftPreviewStatus
+  let showEarnings: Bool
+  let currency: String?
 
-        FriendShiftPreviewStatusCard(shift: shift, status: status)
+  private struct ShiftSchedule {
+    let start: Date
+    let end: Date
+  }
+
+  private struct ComputedStatus {
+    let status: ShiftPreviewStatus
+    let secondsUntilEnd: Int
+    let relativeText: String
+  }
+
+  private var formattedDate: String {
+    guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
+    return date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated)).sentenceCased()
+  }
+
+  private var formattedTimeRange: String {
+    ShiftCardFormatter.localizedTimeRange(
+      start: shift.start_time,
+      end: shift.end_time,
+      locale: Locale.appLocale,
+      separator: " – "
+    )
+  }
+
+  private var formattedEarnings: String {
+    CurrencyConfig.format(shift.computed.gross, currency: currency ?? "kr")
+  }
+
+  private var schedule: ShiftSchedule? {
+    guard let shiftDate = Date.fromISODateString(shift.shift_date) else {
+      return nil
+    }
+
+    let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
+    let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
+    guard startComponents.count >= 2, endComponents.count >= 2 else {
+      return nil
+    }
+
+    let calendar = Calendar.current
+    let start =
+      calendar.date(
+        bySettingHour: startComponents[0],
+        minute: startComponents[1],
+        second: 0,
+        of: shiftDate
+      ) ?? shiftDate
+    var end =
+      calendar.date(
+        bySettingHour: endComponents[0],
+        minute: endComponents[1],
+        second: 0,
+        of: shiftDate
+      ) ?? shiftDate
+
+    if end <= start {
+      end = calendar.date(byAdding: .day, value: 1, to: end) ?? end
+    }
+
+    return ShiftSchedule(start: start, end: end)
+  }
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      let computed = computeStatus(at: context.date)
+
+      HStack(alignment: .top, spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
+          Text(formattedDate)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+
+          Text(formattedTimeRange)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+            .lineLimit(1)
+            .environment(\.layoutDirection, .leftToRight)
+        }
+
+        Spacer(minLength: Spacing.xs)
+
+        VStack(alignment: .trailing, spacing: Spacing.micro) {
+          Text(statusText(computed: computed))
+            .font(.tidexLabel)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+
+          if previewShowsEarnings {
+            Text(formattedEarnings)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextMuted)
+              .lineLimit(1)
+              .fixedSize(horizontal: true, vertical: false)
+          }
+        }
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-          .strokeBorder(Color.tidexBorderSubtle, lineWidth: 1)
-      )
-      .tidexCardShadow(.subtle, cornerRadius: CornerRadius.card)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, Spacing.xxs)
+    }
+  }
+
+  private var previewShowsEarnings: Bool {
+    showEarnings
+  }
+
+  private func computeStatus(at now: Date) -> ComputedStatus {
+    guard let schedule else {
+      return ComputedStatus(status: status, secondsUntilEnd: 0, relativeText: "")
+    }
+
+    let start = schedule.start
+    let end = schedule.end
+    let currentStatus: ShiftPreviewStatus
+    let secondsUntilEnd: Int
+
+    if now >= start && now <= end {
+      currentStatus = .active
+      secondsUntilEnd = Int(ceil(end.timeIntervalSince(now)))
+    } else if now < start {
+      currentStatus = .upcoming
+      secondsUntilEnd = 0
+    } else {
+      currentStatus = .past
+      secondsUntilEnd = 0
+    }
+
+    let referenceTime = now > end ? end : start
+    let relativeText = CountdownFormatter.formatRelativeCountdown(
+      referenceDate: referenceTime,
+      dayBoundaryReferenceDate: start,
+      now: now
+    )
+
+    return ComputedStatus(
+      status: currentStatus,
+      secondsUntilEnd: secondsUntilEnd,
+      relativeText: relativeText
+    )
+  }
+
+  private func statusText(computed: ComputedStatus) -> String {
+    switch computed.status {
+    case .active:
+      return String(localized: .sharingStatusActive)
+    case .upcoming, .past:
+      return computed.relativeText
+    }
+  }
+}
+
+private struct FriendShiftPreviewShadowModifier: ViewModifier {
+  let style: FriendShiftPreviewStatusCardStyle
+
+  func body(content: Content) -> some View {
+    switch style {
+    case .card:
+      content.tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
+    case .toolbarExtension:
+      content
     }
   }
 }

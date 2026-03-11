@@ -320,6 +320,7 @@ struct MonthYearPickerSheet: View {
           }
           .pickerStyle(.wheel)
           .frame(maxWidth: .infinity)
+          .clipped()
 
           // Year picker
           Picker("Year", selection: $selectedYear) {
@@ -330,11 +331,19 @@ struct MonthYearPickerSheet: View {
           }
           .pickerStyle(.wheel)
           .frame(width: 100)
+          .clipped()
         }
+        .frame(height: 180)
         .padding(.horizontal)
+        .padding(.vertical, Spacing.xs)
+        .background(Color.tidexSurfacePrimary)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .compositingGroup()
+        .tidexCardShadow(cornerRadius: CornerRadius.lg)
 
         Spacer()
       }
+      .padding(.horizontal)
       .background(Color.tidexBackground)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

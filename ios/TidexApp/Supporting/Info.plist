@@ -19,9 +19,9 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>FRIENDS_SHIFT_SNAPSHOTS_ENABLED</key>
-	<false/>
+	<true/>
 	<key>FRIENDS_SHIFT_SNAPSHOTS_MINIMUM_APP_VERSION</key>
-	<string>999.0</string>
+	<string>2.4.1</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -59,6 +59,8 @@
 	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tidex needs photo library access to show recent images you can attach in chat.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>

@@ -41,13 +41,9 @@ struct SharedShiftRow: View {
         // Time range and hours
         HStack(spacing: Spacing.xs) {
           if isRTL {
-            hoursLabel
-            arrowLabel
             timeRangeLabel
           } else {
             timeRangeLabel
-            arrowLabel
-            hoursLabel
           }
         }
         .environment(\.layoutDirection, .leftToRight)
@@ -86,18 +82,24 @@ struct SharedShiftRow: View {
         .font(.tidexTitle)
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
 
       // Show gross - tax breakdown if tax enabled
       if shift.taxEnabled && shift.taxAmount > 0 {
         HStack(spacing: Spacing.xxs) {
-          Text(formatCurrency(shift.grossPay))
+          Text(formatPlainAmount(shift.grossPay))
           Text("−")
-          Text(formatCurrency(shift.taxAmount))
+          Text(formatPlainAmount(shift.taxAmount))
         }
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
       }
     }
+    .fixedSize(horizontal: true, vertical: false)
+    .layoutPriority(2)
   }
 
   private var hiddenEarningsIndicator: some View {
@@ -114,6 +116,10 @@ struct SharedShiftRow: View {
 
   private func formatCurrency(_ amount: Double) -> String {
     CurrencyConfig.format(amount, currency: currency)
+  }
+
+  private func formatPlainAmount(_ amount: Double) -> String {
+    CurrencyConfig.formatPlain(amount)
   }
 
   private var isRTL: Bool {
@@ -145,7 +151,7 @@ struct SharedShiftRow: View {
       .font(.tidexSubheadline)
       .foregroundColor(.tidexTextPrimary)
       .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
+      .minimumScaleFactor(0.85)
       .environment(\.layoutDirection, .leftToRight)
   }
 
@@ -155,21 +161,6 @@ struct SharedShiftRow: View {
       .foregroundColor(.tidexTextMuted)
   }
 
-  private var hoursLabel: some View {
-    Text(formattedHours)
-      .font(.tidexLabel)
-      .foregroundColor(.tidexTextMuted)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-  }
-
-  private var arrowLabel: some View {
-    Text(isRTL ? "←" : "→")
-      .font(.tidexLabel)
-      .foregroundColor(.tidexTextMuted)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-  }
 }
 
 #Preview {

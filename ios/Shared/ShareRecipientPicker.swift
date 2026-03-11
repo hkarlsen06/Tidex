@@ -21,6 +21,7 @@ import SwiftUI
   struct ShareRecipientPickerList: View {
     let recipients: [ShareRecipient]
     @Binding var selectionState: ShareRecipientSelectionState
+    var onRecipientTap: ((ShareRecipient) -> Void)? = nil
 
     var body: some View {
       ScrollView {
@@ -32,8 +33,14 @@ import SwiftUI
             )
             .onTapGesture {
               withAnimation(.easeInOut(duration: 0.16)) {
-                selectionState.toggleSelection(recipientID: recipient.id)
+                if onRecipientTap == nil {
+                  selectionState.toggleSelection(recipientID: recipient.id)
+                } else {
+                  selectionState.selectedRecipientID = recipient.id
+                }
               }
+
+              onRecipientTap?(recipient)
             }
           }
         }
