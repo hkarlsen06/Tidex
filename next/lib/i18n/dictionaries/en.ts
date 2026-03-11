@@ -66,6 +66,11 @@ export const en: Dictionary = {
   },
   header: {
     goToTidex: 'Go to tidex.no',
+    webAppSunset: {
+      title: 'The web app is no longer maintained',
+      description: 'Tidex for web will shut down on April 1, 2026. Please use the iOS app going forward.',
+      dismiss: 'Dismiss',
+    },
   },
   footer: {
     product: {

@@ -65,6 +65,11 @@ export const no = {
   },
   header: {
     goToTidex: 'Gå til tidex.no',
+    webAppSunset: {
+      title: 'Nettappen vedlikeholdes ikke lenger',
+      description: 'Tidex for web blir stengt 1. april 2026. Bruk iOS-appen videre.',
+      dismiss: 'Lukk',
+    },
   },
   footer: {
     product: {

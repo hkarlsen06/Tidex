@@ -14,6 +14,7 @@ import { AddShiftFormProvider } from "@/lib/contexts/AddShiftFormContext";
 import { RouteVisibilityProvider } from "./RouteVisibilityContext";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
+import { WebAppSunsetBanner } from "./WebAppSunsetBanner";
 
 type AppLayoutClientProps = {
   children: ReactNode;
@@ -85,6 +86,7 @@ function LayoutContent({
 
   return (
     <div className="flex flex-col h-dvh">
+      <WebAppSunsetBanner />
       <TopHeader userName={userName} />
       <main className="flex-1 min-h-0 overflow-hidden">
         {isTabRoute ? (
