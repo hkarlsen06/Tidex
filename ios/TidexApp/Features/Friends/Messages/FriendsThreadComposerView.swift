@@ -1,8 +1,10 @@
 import SwiftUI
+import UIKit
 
 struct FriendsThreadComposerConfiguration: Equatable {
   let draftText: String
   let replyPreview: FriendsChatReplyPreviewModel?
+  let stagedAttachment: FriendsComposerAttachmentDraft?
   let isThreadReadOnly: Bool
   let sendErrorMessage: String?
   let placeholder: String
@@ -12,16 +14,19 @@ struct FriendsThreadComposerConfiguration: Equatable {
 final class FriendsThreadComposerBridge: ObservableObject {
   @Published private(set) var draftText: String = ""
   @Published private(set) var replyPreview: FriendsChatReplyPreviewModel?
+  @Published private(set) var stagedAttachment: FriendsComposerAttachmentDraft?
   @Published private(set) var isThreadReadOnly = false
   @Published private(set) var sendErrorMessage: String?
   @Published private(set) var placeholder: String = ""
 
   var onDraftChanged: ((String) -> Void)?
+  var onStagedAttachmentChanged: ((FriendsComposerAttachmentDraft?) -> Void)?
   var onCancelReply: (() -> Void)?
-  var onSend: ((String, ImageAttachment?) async -> Bool)?
+  var onSend: ((String) async -> Bool)?
   var onHeightChanged: ((CGFloat) -> Void)?
 
   private var isApplyingExternalDraft = false
+  private var isApplyingExternalAttachment = false
 
   var draftBinding: Binding<String> {
     Binding(
@@ -32,25 +37,49 @@ final class FriendsThreadComposerBridge: ObservableObject {
     )
   }
 
+  var stagedImageBinding: Binding<ImageAttachment?> {
+    Binding(
+      get: { self.stagedAttachment?.imageAttachment },
+      set: { [weak self] newValue in
+        self?.updateStagedImage(newValue)
+      }
+    )
+  }
+
+  var hasSupplementalSendContent: Bool {
+    stagedAttachment?.shiftSnapshot != nil
+  }
+
+  var allowsImageSelection: Bool {
+    stagedAttachment == nil
+  }
+
   func apply(configuration: FriendsThreadComposerConfiguration) {
     replyPreview = configuration.replyPreview
     isThreadReadOnly = configuration.isThreadReadOnly
     sendErrorMessage = configuration.sendErrorMessage
     placeholder = configuration.placeholder
 
-    guard draftText != configuration.draftText else { return }
-    isApplyingExternalDraft = true
-    draftText = configuration.draftText
-    isApplyingExternalDraft = false
+    if draftText != configuration.draftText {
+      isApplyingExternalDraft = true
+      draftText = configuration.draftText
+      isApplyingExternalDraft = false
+    }
+
+    if stagedAttachment != configuration.stagedAttachment {
+      isApplyingExternalAttachment = true
+      stagedAttachment = configuration.stagedAttachment
+      isApplyingExternalAttachment = false
+    }
   }
 
   func cancelReply() {
     onCancelReply?()
   }
 
-  func send(content: String, image: ImageAttachment?) async -> Bool {
+  func send(content: String) async -> Bool {
     guard let onSend else { return false }
-    return await onSend(content, image)
+    return await onSend(content)
   }
 
   func reportHeight(_ height: CGFloat) {
@@ -62,6 +91,21 @@ final class FriendsThreadComposerBridge: ObservableObject {
     draftText = newValue
     guard !isApplyingExternalDraft else { return }
     onDraftChanged?(newValue)
+  }
+
+  func removeStagedAttachment() {
+    updateStagedAttachment(nil)
+  }
+
+  private func updateStagedImage(_ newValue: ImageAttachment?) {
+    updateStagedAttachment(newValue.map(FriendsComposerAttachmentDraft.image))
+  }
+
+  private func updateStagedAttachment(_ newValue: FriendsComposerAttachmentDraft?) {
+    guard stagedAttachment != newValue else { return }
+    stagedAttachment = newValue
+    guard !isApplyingExternalAttachment else { return }
+    onStagedAttachmentChanged?(newValue)
   }
 }
 
@@ -76,6 +120,14 @@ struct FriendsThreadComposerHostedView: View {
         FriendsThreadComposerReplyBanner(
           preview: replyPreview,
           onCancel: bridge.cancelReply
+        )
+        .padding(.horizontal, Spacing.md)
+      }
+
+      if let stagedAttachment = bridge.stagedAttachment {
+        FriendsThreadComposerAttachmentPreview(
+          attachment: stagedAttachment,
+          onRemove: bridge.removeStagedAttachment
         )
         .padding(.horizontal, Spacing.md)
       }
@@ -112,14 +164,18 @@ struct FriendsThreadComposerHostedView: View {
         focusedHorizontalPadding: Spacing.xs,
         bottomPadding: MonthPickerLayout.bottomPadding,
         showsCameraShortcut: true,
+        attachedImage: bridge.stagedImageBinding,
+        showsImagePreview: false,
+        hasSupplementalSendContent: bridge.hasSupplementalSendContent,
+        showsAttachmentPicker: bridge.allowsImageSelection,
         collapsesAttachmentButtonForLongDrafts: true,
         attachmentCollapseCharacterThreshold: attachmentCollapseCharacterThreshold,
         dismissKeyboardOnSend: false,
         onSend: { message in
-          await bridge.send(content: message, image: nil)
+          await bridge.send(content: message)
         },
-        onSendWithImage: { message, image in
-          await bridge.send(content: message, image: image)
+        onSendWithImage: { message, _ in
+          await bridge.send(content: message)
         },
         disabled: bridge.isThreadReadOnly
       )
@@ -138,6 +194,90 @@ struct FriendsThreadComposerHostedView: View {
     .onPreferenceChange(FriendsThreadComposerHeightPreferenceKey.self) { height in
       bridge.reportHeight(height)
     }
+  }
+}
+
+private struct FriendsThreadComposerAttachmentPreview: View {
+  let attachment: FriendsComposerAttachmentDraft
+  let onRemove: () -> Void
+
+  var body: some View {
+    ZStack(alignment: .topTrailing) {
+      Group {
+        switch attachment {
+        case .image(let image):
+          FriendsThreadComposerImageAttachmentCard(image: image)
+        case .shiftSnapshot(let draft):
+          ChatShiftSnapshotCard(snapshot: draft.snapshot, isCurrentUser: false)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+
+      Button(action: onRemove) {
+        Image(systemName: "xmark")
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextMuted)
+          .frame(width: 32, height: 32)
+          .background(
+            Circle()
+              .fill(Color.tidexSurfacePrimary.opacity(0.96))
+          )
+          .overlay(
+            Circle()
+              .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+          )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(.friendsChatComposerRemoveAttachment))
+      .padding(Spacing.xxxs)
+    }
+  }
+}
+
+private struct FriendsThreadComposerImageAttachmentCard: View {
+  let image: ImageAttachment
+
+  var body: some View {
+    HStack(spacing: Spacing.sm) {
+      if let uiImage = UIImage(data: image.data) {
+        Image(uiImage: uiImage)
+          .resizable()
+          .scaledToFill()
+          .frame(width: 72, height: 72)
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      } else {
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .fill(Color.tidexSurfaceSecondary)
+          .frame(width: 72, height: 72)
+          .overlay {
+            Image(systemName: "photo")
+              .font(.tidexTitle2)
+              .foregroundColor(.tidexTextMuted)
+          }
+      }
+
+      VStack(alignment: .leading, spacing: 4) {
+        Text(.friendsChatPreviewImage)
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextPrimary)
+
+        Text(ByteCountFormatter.string(fromByteCount: Int64(image.data.count), countStyle: .file))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+      }
+
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.sm)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+    )
   }
 }
 

@@ -101,6 +101,7 @@ struct FriendsThreadView: View {
           composerConfiguration: FriendsThreadComposerConfiguration(
             draftText: viewModel.draft,
             replyPreview: viewModel.draftReplyTarget.map { replyPreviewModel(for: $0) },
+            stagedAttachment: viewModel.stagedComposerAttachment,
             isThreadReadOnly: viewModel.isThreadReadOnly,
             sendErrorMessage: viewModel.sendErrorMessage,
             placeholder: String(localized: .friendsChatPlaceholder)
@@ -151,12 +152,17 @@ struct FriendsThreadView: View {
                 await viewModel.handleDraftChanged(to: draft)
               }
             },
+            onComposerAttachmentChanged: { attachment in
+              Task {
+                await viewModel.setComposerAttachment(attachment)
+              }
+            },
             onComposerCancelReply: {
               viewModel.clearReplyTarget()
             },
-            onComposerSend: { content, image in
+            onComposerSend: { content in
               let wasPinnedToBottom = isPinnedToBottom
-              let didSend = await viewModel.sendMessage(content: content, image: image)
+              let didSend = await viewModel.sendMessage(content: content)
               if didSend {
                 await MainActor.run {
                   unreadIncomingCount = 0

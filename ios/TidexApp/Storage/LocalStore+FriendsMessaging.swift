@@ -2,6 +2,56 @@ import Foundation
 import SwiftData
 
 extension LocalStoreActor {
+  func savePendingFriendComposerDraft(
+    attachmentData: Data,
+    threadId: String,
+    viewerUserId: String
+  ) throws {
+    let compositeKey = "\(viewerUserId):\(threadId)"
+    let descriptor = FetchDescriptor<LocalPendingFriendComposerDraft>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    if let existing = try modelContext.fetch(descriptor).first {
+      existing.attachmentData = attachmentData
+      existing.updatedAt = Date()
+    } else {
+      modelContext.insert(
+        LocalPendingFriendComposerDraft(
+          viewerUserId: viewerUserId,
+          threadId: threadId,
+          attachmentData: attachmentData
+        ))
+    }
+
+    try modelContext.save()
+  }
+
+  func clearPendingFriendComposerDraft(threadId: String, viewerUserId: String) throws {
+    let compositeKey = "\(viewerUserId):\(threadId)"
+    let descriptor = FetchDescriptor<LocalPendingFriendComposerDraft>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    for existing in try modelContext.fetch(descriptor) {
+      modelContext.delete(existing)
+    }
+
+    try modelContext.save()
+  }
+
+  func clearExpiredPendingFriendComposerDrafts(olderThan cutoffDate: Date) throws {
+    let descriptor = FetchDescriptor<LocalPendingFriendComposerDraft>(
+      predicate: #Predicate { $0.updatedAt < cutoffDate }
+    )
+
+    for existing in try modelContext.fetch(descriptor) {
+      modelContext.delete(existing)
+    }
+
+    try modelContext.save()
+  }
+
   func saveThreadSummaries(_ threads: [FriendThread], for viewerUserId: String) throws {
     try reconcileMissingThreads(keeping: threads.map(\.id), for: viewerUserId)
     for thread in threads {

@@ -59,6 +59,29 @@ enum FriendRichContent: Equatable {
   case shiftSnapshot(FriendShiftSnapshot)
 }
 
+extension ImageAttachment: Codable {
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case data
+    case mediaType
+  }
+
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let id = try container.decode(String.self, forKey: .id)
+    let data = try container.decode(Data.self, forKey: .data)
+    let mediaType = try container.decode(String.self, forKey: .mediaType)
+    self.init(id: id, data: data, mediaType: mediaType)
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(id, forKey: .id)
+    try container.encode(data, forKey: .data)
+    try container.encode(mediaType, forKey: .mediaType)
+  }
+}
+
 struct FriendShiftSnapshot: Codable, Equatable {
   let schemaVersion: Int
   let ownerUserId: String
@@ -100,6 +123,92 @@ struct FriendShiftSnapshot: Codable, Equatable {
 
   var isSupportedSchemaVersion: Bool {
     schemaVersion == 1
+  }
+}
+
+struct ComposerShiftSnapshotDraft: Codable, Equatable {
+  let snapshot: FriendShiftSnapshot
+
+  var ownerDisplayName: String {
+    snapshot.ownerDisplayName
+  }
+}
+
+enum FriendsComposerAttachmentDraft: Codable, Equatable {
+  case image(ImageAttachment)
+  case shiftSnapshot(ComposerShiftSnapshotDraft)
+
+  private enum CodingKeys: String, CodingKey {
+    case type
+    case image
+    case shiftSnapshot = "shift_snapshot"
+  }
+
+  private enum DraftType: String, Codable {
+    case image
+    case shiftSnapshot = "shift_snapshot"
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let type = try container.decode(DraftType.self, forKey: .type)
+
+    switch type {
+    case .image:
+      self = .image(try container.decode(ImageAttachment.self, forKey: .image))
+    case .shiftSnapshot:
+      self = .shiftSnapshot(
+        try container.decode(ComposerShiftSnapshotDraft.self, forKey: .shiftSnapshot)
+      )
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+
+    switch self {
+    case .image(let image):
+      try container.encode(DraftType.image, forKey: .type)
+      try container.encode(image, forKey: .image)
+    case .shiftSnapshot(let draft):
+      try container.encode(DraftType.shiftSnapshot, forKey: .type)
+      try container.encode(draft, forKey: .shiftSnapshot)
+    }
+  }
+
+  var imageAttachment: ImageAttachment? {
+    guard case .image(let image) = self else { return nil }
+    return image
+  }
+
+  var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
+    guard case .shiftSnapshot(let draft) = self else { return nil }
+    return draft
+  }
+
+  var shiftSnapshot: FriendShiftSnapshot? {
+    shiftSnapshotDraft?.snapshot
+  }
+
+  var previewKind: FriendLastMessagePreviewKind {
+    switch self {
+    case .image:
+      return .image
+    case .shiftSnapshot:
+      return .shiftSnapshot
+    }
+  }
+
+  var metadataData: Data? {
+    guard let shiftSnapshot else { return nil }
+    return try? JSONEncoder().encode(
+      FriendRichContentEnvelope(
+        content: FriendRichContentEnvelope.Content(
+          kind: FriendLastMessagePreviewKind.shiftSnapshot.rawValue,
+          shiftSnapshot: shiftSnapshot
+        )
+      )
+    )
   }
 }
 
@@ -430,10 +539,10 @@ struct FriendOutgoingAttachment: Codable, Equatable {
   }
 }
 
-private struct FriendRichContentEnvelope: Decodable {
+private struct FriendRichContentEnvelope: Codable {
   let content: Content?
 
-  struct Content: Decodable {
+  struct Content: Codable {
     let kind: String?
     let shiftSnapshot: FriendShiftSnapshot?
 

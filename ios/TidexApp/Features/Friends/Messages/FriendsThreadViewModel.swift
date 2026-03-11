@@ -48,6 +48,7 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
   @Published var draftReplyTarget: FriendMessage?
   @Published var draft = ""
+  @Published var stagedComposerAttachment: FriendsComposerAttachmentDraft?
   @Published var sendErrorMessage: String?
 
   let route: FriendChatRoute
@@ -55,6 +56,7 @@ final class FriendsThreadViewModel: ObservableObject {
   let viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
   private let repository: FriendsMessagesRepository
+  private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
   private var hasLoaded = false
   private var loadingQuotedMessageIds: Set<String> = []
@@ -69,12 +71,14 @@ final class FriendsThreadViewModel: ObservableObject {
     viewerUserId: String,
     service: (any FriendsMessagingServiceProviding)? = nil,
     repository: FriendsMessagesRepository? = nil,
+    composerDraftStore: FriendsComposerDraftStore? = nil,
     realtimeCoordinator: FriendsMessagingRealtimeCoordinator? = nil
   ) {
     self.route = route
     self.viewerUserId = viewerUserId
     self.service = service ?? FriendsMessagingService.shared
     self.repository = repository ?? .shared
+    self.composerDraftStore = composerDraftStore ?? .shared
     self.realtimeCoordinator = realtimeCoordinator ?? .shared
     self.thread = FriendThread(
       id: route.threadId,
@@ -107,6 +111,7 @@ final class FriendsThreadViewModel: ObservableObject {
     guard !isLoading else { return }
     isLoading = true
     loadFromCache()
+    await loadPendingComposerAttachment()
 
     async let realtimeSubscription: Void = realtimeCoordinator.startThreadSubscription(
       threadId: route.threadId,
@@ -165,6 +170,23 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func clearReplyTarget() {
     draftReplyTarget = nil
+  }
+
+  func setComposerAttachment(_ attachment: FriendsComposerAttachmentDraft?) async {
+    stagedComposerAttachment = attachment
+
+    if let attachment {
+      await composerDraftStore.saveAttachmentDraft(
+        attachment,
+        threadId: route.threadId,
+        viewerUserId: viewerUserId
+      )
+    } else {
+      await composerDraftStore.clearAttachmentDraft(
+        threadId: route.threadId,
+        viewerUserId: viewerUserId
+      )
+    }
   }
 
   func quotedMessage(for message: FriendMessage) -> FriendMessage? {
@@ -241,22 +263,26 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func sendDraft() async -> Bool {
-    await sendMessage(content: draft, image: nil)
+    await sendMessage(content: draft)
   }
 
-  func sendMessage(content: String, image: ImageAttachment?) async -> Bool {
+  func sendMessage(content: String) async -> Bool {
     guard !isThreadReadOnly else {
       return false
     }
 
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalizedContent.isEmpty || image != nil else { return false }
+    let composerAttachment = stagedComposerAttachment
+    guard !normalizedContent.isEmpty || composerAttachment != nil else { return false }
 
     let previousReplyTarget = draftReplyTarget
     sendErrorMessage = nil
 
     let clientId = UUID().uuidString.lowercased()
-    let optimisticAttachments = image.map { [makeOptimisticAttachment(from: $0)] } ?? []
+    let optimisticAttachments =
+      composerAttachment?.imageAttachment.map {
+        [makeOptimisticAttachment(from: $0)]
+      } ?? []
     let optimisticMessage = FriendMessage(
       id: "local-\(clientId)",
       threadId: route.threadId,
@@ -268,7 +294,7 @@ final class FriendsThreadViewModel: ObservableObject {
       createdAt: Date(),
       editedAt: nil,
       deletedAt: nil,
-      metadataData: nil,
+      metadataData: composerAttachment?.metadataData,
       attachments: optimisticAttachments,
       reactions: [],
       sendState: .sending,
@@ -277,6 +303,9 @@ final class FriendsThreadViewModel: ObservableObject {
 
     draft = ""
     draftReplyTarget = nil
+    stagedComposerAttachment = nil
+    await composerDraftStore.clearAttachmentDraft(
+      threadId: route.threadId, viewerUserId: viewerUserId)
     await repository.saveOptimisticMessage(
       optimisticMessage,
       in: route.threadId,
@@ -365,6 +394,9 @@ final class FriendsThreadViewModel: ObservableObject {
     try await service.blockUserPair(otherUserId: counterpartUserId)
     draft = ""
     draftReplyTarget = nil
+    stagedComposerAttachment = nil
+    await composerDraftStore.clearAttachmentDraft(
+      threadId: route.threadId, viewerUserId: viewerUserId)
     sendErrorMessage = nil
     isThreadReadOnly = true
     NotificationCenter.default.post(
@@ -447,6 +479,13 @@ final class FriendsThreadViewModel: ObservableObject {
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
     prefetchQuotedMessagesIfNeeded()
+  }
+
+  private func loadPendingComposerAttachment() async {
+    stagedComposerAttachment = await composerDraftStore.loadAttachmentDraft(
+      threadId: route.threadId,
+      viewerUserId: viewerUserId
+    )
   }
 
   private func sendTypingStartIfNeeded() async {
@@ -565,7 +604,8 @@ final class FriendsThreadViewModel: ObservableObject {
           clientId: message.clientId,
           body: message.body,
           replyToMessageId: message.replyToMessageId,
-          attachments: outgoingAttachments
+          attachments: outgoingAttachments,
+          metadataData: message.metadataData
         )
 
         await repository.saveConfirmedMessage(
