@@ -24,7 +24,7 @@ struct FriendsChatTimelineView: UIViewControllerRepresentable {
   let onRetryMessage: (String) -> Void
   let onReportMessage: (String) -> Void
   let onToggleReaction: (FriendMessage, String) -> Void
-  let onOpenMessageActions: (FriendMessage, CGRect) -> Void
+  let onOpenMessageActions: (FriendMessage, CGRect?) -> Void
   let onTapQuotedMessage: (FriendMessage) -> Void
   let onConsumeRestoreScrollTarget: () -> Void
   let onConsumeReplyScrollTarget: (String) -> Void
@@ -141,7 +141,7 @@ final class FriendsChatTimelineViewController: UIViewController, UIGestureRecogn
   var onRetryMessage: ((String) -> Void)?
   var onReportMessage: ((String) -> Void)?
   var onToggleReaction: ((FriendMessage, String) -> Void)?
-  var onOpenMessageActions: ((FriendMessage, CGRect) -> Void)?
+  var onOpenMessageActions: ((FriendMessage, CGRect?) -> Void)?
   var onTapQuotedMessage: ((FriendMessage) -> Void)?
 
   private let chatLayout = CollectionViewChatLayout()
@@ -915,8 +915,8 @@ extension FriendsChatTimelineViewController: UICollectionViewDataSource {
         onToggleReaction: { [weak self] emoji in
           self?.onToggleReaction?(message, emoji)
         },
-        onOpenActions: { [weak self] in
-          self?.openMessageActions(for: message)
+        onOpenActions: { [weak self] sourceFrame in
+          self?.openMessageActions(for: message, sourceFrame: sourceFrame)
         },
         onTapQuotedMessage: { [weak self] in
           self?.onTapQuotedMessage?(message)
@@ -1056,12 +1056,16 @@ extension FriendsChatTimelineViewController: ChatLayoutDelegate {
     })?.id
   }
 
-  private func openMessageActions(for message: FriendMessage) {
+  private func openMessageActions(
+    for message: FriendMessage, sourceFrame preferredSourceFrame: CGRect?
+  ) {
     guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
     let indexPath = IndexPath(item: index, section: 0)
 
     let sourceFrame: CGRect
-    if let cell = collectionView.cellForItem(at: indexPath) {
+    if let preferredSourceFrame, preferredSourceFrame != .zero {
+      sourceFrame = preferredSourceFrame
+    } else if let cell = collectionView.cellForItem(at: indexPath) {
       sourceFrame = cell.convert(cell.bounds, to: view)
     } else if let attributes = collectionView.layoutAttributesForItem(at: indexPath) {
       sourceFrame = collectionView.convert(attributes.frame, to: view)

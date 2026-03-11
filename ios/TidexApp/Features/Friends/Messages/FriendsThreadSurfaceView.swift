@@ -9,7 +9,7 @@ struct FriendsThreadSurfaceCallbacks {
   let onRetryMessage: (String) -> Void
   let onReportMessage: (String) -> Void
   let onToggleReaction: (FriendMessage, String) -> Void
-  let onOpenMessageActions: (FriendMessage, CGRect) -> Void
+  let onOpenMessageActions: (FriendMessage, CGRect?) -> Void
   let onTapQuotedMessage: (FriendMessage) -> Void
   let onConsumeRestoreScrollTarget: () -> Void
   let onConsumeReplyScrollTarget: (String) -> Void

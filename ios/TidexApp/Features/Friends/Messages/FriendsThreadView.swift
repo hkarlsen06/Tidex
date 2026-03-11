@@ -673,8 +673,15 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func presentMessageActionMenu(for message: FriendMessage, sourceFrame: CGRect) {
-    messageActionMenu = MessageActionMenuState(message: message, sourceFrame: sourceFrame)
+  private func presentMessageActionMenu(for message: FriendMessage, sourceFrame: CGRect?) {
+    let resolvedSourceFrame =
+      if let sourceFrame, sourceFrame != .zero {
+        sourceFrame
+      } else {
+        CGRect(x: Spacing.md, y: Spacing.huge, width: 280, height: 88)
+      }
+
+    messageActionMenu = MessageActionMenuState(message: message, sourceFrame: resolvedSourceFrame)
   }
 
   private func dismissMessageActionMenu() {
@@ -759,6 +766,26 @@ struct FriendsThreadView: View {
   }
 }
 
+struct FriendsChatMessageActionLayout {
+  static func previewWidth(for bubbleWidth: CGFloat) -> CGFloat {
+    min(296, max(160, bubbleWidth))
+  }
+
+  static func actionMenuWidth(for bubbleWidth: CGFloat) -> CGFloat {
+    min(240, max(176, bubbleWidth + (Spacing.md * 2)))
+  }
+
+  static func localSourceFrame(_ globalSourceFrame: CGRect, in overlayGlobalFrame: CGRect) -> CGRect
+  {
+    CGRect(
+      x: globalSourceFrame.minX - overlayGlobalFrame.minX,
+      y: globalSourceFrame.minY - overlayGlobalFrame.minY,
+      width: globalSourceFrame.width,
+      height: globalSourceFrame.height
+    )
+  }
+}
+
 private struct FriendsChatMessageActionMenuOverlay: View {
   let message: FriendMessage
   let viewerUserId: String
@@ -771,16 +798,10 @@ private struct FriendsChatMessageActionMenuOverlay: View {
   let reactionEmojis: [String]
   let onAddCustomReaction: () -> Void
 
+  @State private var hasPresented = false
+
   private var isCurrentUser: Bool {
     message.senderUserId == viewerUserId
-  }
-
-  private var previewWidth: CGFloat {
-    min(296, max(160, sourceFrame.width - (Spacing.md * 2)))
-  }
-
-  private var actionMenuWidth: CGFloat {
-    min(320, max(208, sourceFrame.width - (Spacing.md * 2)))
   }
 
   private var actionRows: [ActionRow] {
@@ -823,119 +844,169 @@ private struct FriendsChatMessageActionMenuOverlay: View {
       let horizontalMargin = Spacing.md
       let safeTop = geometry.safeAreaInsets.top + Spacing.md
       let safeBottom = geometry.safeAreaInsets.bottom + Spacing.md
-      let contentWidth = min(
-        max(previewWidth, actionMenuWidth), geometry.size.width - (horizontalMargin * 2))
-      let alignedX =
+      let overlayGlobalFrame = geometry.frame(in: .global)
+      let localSourceFrame = FriendsChatMessageActionLayout.localSourceFrame(
+        sourceFrame,
+        in: overlayGlobalFrame
+      )
+      let maxContentWidth = geometry.size.width - (horizontalMargin * 2)
+      let previewWidth = min(
+        FriendsChatMessageActionLayout.previewWidth(for: localSourceFrame.width),
+        maxContentWidth
+      )
+      let actionMenuWidth = min(
+        FriendsChatMessageActionLayout.actionMenuWidth(for: localSourceFrame.width),
+        maxContentWidth
+      )
+      let previewX =
         isCurrentUser
         ? min(
-          max(horizontalMargin, sourceFrame.maxX - contentWidth),
-          geometry.size.width - contentWidth - horizontalMargin)
+          max(horizontalMargin, localSourceFrame.maxX - previewWidth),
+          geometry.size.width - previewWidth - horizontalMargin)
         : min(
-          max(horizontalMargin, sourceFrame.minX),
-          geometry.size.width - contentWidth - horizontalMargin)
+          max(horizontalMargin, localSourceFrame.minX),
+          geometry.size.width - previewWidth - horizontalMargin)
+      let actionMenuX =
+        isCurrentUser
+        ? min(
+          max(horizontalMargin, localSourceFrame.maxX - actionMenuWidth),
+          geometry.size.width - actionMenuWidth - horizontalMargin)
+        : min(
+          max(horizontalMargin, localSourceFrame.minX),
+          geometry.size.width - actionMenuWidth - horizontalMargin)
       let estimatedHeight =
         CGFloat(actionRows.count) * 56
         + (message.canReact ? 66 : 0)
         + (message.hasImageAttachment && (message.body?.isEmpty ?? true) ? 172 : 108)
-      let alignedY = min(
-        max(safeTop, sourceFrame.minY - 84),
+      let previewY = min(
+        max(safeTop, localSourceFrame.minY - 84),
         geometry.size.height - estimatedHeight - safeBottom
       )
+      let previewStartX = min(
+        max(
+          horizontalMargin,
+          isCurrentUser ? localSourceFrame.maxX - previewWidth : localSourceFrame.minX
+        ),
+        geometry.size.width - previewWidth - horizontalMargin
+      )
+      let previewStartY = min(
+        max(safeTop, localSourceFrame.minY),
+        geometry.size.height - localSourceFrame.height - safeBottom
+      )
+      let actionMenuY = previewY + localSourceFrame.height + Spacing.xs
 
       ZStack(alignment: .topLeading) {
-        Color.black.opacity(0.3)
+        Color.black.opacity(hasPresented ? 0.3 : 0)
           .ignoresSafeArea()
           .onTapGesture {
             onDismiss()
           }
+          .animation(.easeOut(duration: 0.18), value: hasPresented)
 
-        VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.sm) {
-          if message.canReact {
-            HStack(spacing: Spacing.xs) {
-              ForEach(reactionEmojis, id: \.self) { emoji in
-                let isSelected = message.reactions.contains {
-                  $0.emoji == emoji && $0.viewerHasReacted
-                }
-
-                Button {
-                  onToggleReaction(emoji)
-                } label: {
-                  FriendsChatEmojiGlyph(emoji: emoji, size: 28)
-                    .frame(width: 42, height: 42)
-                    .background(
-                      Circle()
-                        .fill(isSelected ? Color.tidexBlue.opacity(0.14) : Color.clear)
-                    )
-                }
-                .buttonStyle(.plain)
+        if message.canReact {
+          HStack(spacing: Spacing.xs) {
+            ForEach(reactionEmojis, id: \.self) { emoji in
+              let isSelected = message.reactions.contains {
+                $0.emoji == emoji && $0.viewerHasReacted
               }
 
               Button {
-                onAddCustomReaction()
+                onToggleReaction(emoji)
               } label: {
-                Image(systemName: "plus")
-                  .font(.system(size: 18, weight: .semibold))
-                  .foregroundColor(.tidexTextPrimary)
+                FriendsChatEmojiGlyph(emoji: emoji, size: 28)
                   .frame(width: 42, height: 42)
                   .background(
                     Circle()
-                      .fill(Color.tidexSurfacePrimary.opacity(0.72))
-                  )
-                  .overlay(
-                    Circle()
-                      .stroke(Color.tidexBorder, lineWidth: 1)
+                      .fill(isSelected ? Color.tidexBlue.opacity(0.14) : Color.clear)
                   )
               }
               .buttonStyle(.plain)
-              .accessibilityLabel(Text("friends.chat.customReaction.title"))
             }
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xs)
-            .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.08), interactive: true)
-            .frame(width: contentWidth, alignment: isCurrentUser ? .trailing : .leading)
-          }
 
-          HStack {
-            if isCurrentUser { Spacer(minLength: 0) }
-            FriendsChatActionMessagePreview(
-              message: message,
-              isCurrentUser: isCurrentUser
-            )
-            if !isCurrentUser { Spacer(minLength: 0) }
-          }
-          .frame(width: contentWidth)
-
-          VStack(spacing: 0) {
-            ForEach(Array(actionRows.enumerated()), id: \.offset) { index, row in
-              Button(action: row.action) {
-                HStack(spacing: Spacing.sm) {
-                  Image(systemName: row.systemImage)
-                    .font(.system(size: 18, weight: .medium))
-                    .frame(width: 24, height: 24)
-                    .foregroundColor(.tidexBlue)
-
-                  Text(row.title)
-                    .font(.tidexBody)
-                    .foregroundColor(.tidexTextPrimary)
-
-                  Spacer()
-                }
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.md)
-              }
-              .buttonStyle(.plain)
-
-              if index < actionRows.count - 1 {
-                Divider()
-                  .overlay(Color.tidexBorderSubtle)
-                  .padding(.horizontal, Spacing.md)
-              }
+            Button {
+              onAddCustomReaction()
+            } label: {
+              Image(systemName: "plus")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+                .frame(width: 42, height: 42)
+                .background(
+                  Circle()
+                    .fill(Color.tidexSurfacePrimary.opacity(0.72))
+                )
+                .overlay(
+                  Circle()
+                    .stroke(Color.tidexBorder, lineWidth: 1)
+                )
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("friends.chat.customReaction.title"))
           }
-          .frame(width: contentWidth)
-          .tidexGlass(shape: .rect(cornerRadius: CornerRadius.xl), tint: .tidexBlue.opacity(0.06))
+          .padding(.horizontal, Spacing.sm)
+          .padding(.vertical, Spacing.xs)
+          .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.08), interactive: true)
+          .frame(width: previewWidth, alignment: isCurrentUser ? .trailing : .leading)
+          .offset(x: previewX, y: previewY - 74)
+          .opacity(hasPresented ? 1 : 0)
+          .offset(y: hasPresented ? 0 : 10)
+          .animation(.spring(response: 0.26, dampingFraction: 0.84), value: hasPresented)
         }
-        .offset(x: alignedX, y: alignedY)
+
+        HStack {
+          if isCurrentUser { Spacer(minLength: 0) }
+          FriendsChatActionMessagePreview(
+            message: message,
+            isCurrentUser: isCurrentUser
+          )
+          if !isCurrentUser { Spacer(minLength: 0) }
+        }
+        .frame(width: previewWidth)
+        .offset(
+          x: hasPresented ? previewX : previewStartX,
+          y: hasPresented ? previewY : previewStartY
+        )
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: hasPresented)
+
+        VStack(spacing: 0) {
+          ForEach(Array(actionRows.enumerated()), id: \.offset) { index, row in
+            Button(action: row.action) {
+              HStack(spacing: Spacing.sm) {
+                Image(systemName: row.systemImage)
+                  .font(.system(size: 18, weight: .medium))
+                  .frame(width: 24, height: 24)
+                  .foregroundColor(.tidexBlue)
+
+                Text(row.title)
+                  .font(.tidexBody)
+                  .foregroundColor(.tidexTextPrimary)
+
+                Spacer(minLength: 0)
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(.horizontal, Spacing.md)
+              .padding(.vertical, Spacing.md)
+              .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if index < actionRows.count - 1 {
+              Divider()
+                .overlay(Color.tidexBorderSubtle)
+                .padding(.horizontal, Spacing.md)
+            }
+          }
+        }
+        .frame(width: actionMenuWidth)
+        .fixedSize(horizontal: true, vertical: false)
+        .tidexGlass(shape: .rect(cornerRadius: CornerRadius.xl), tint: .tidexBlue.opacity(0.06))
+        .offset(x: actionMenuX, y: actionMenuY)
+        .opacity(hasPresented ? 1 : 0)
+        .offset(y: hasPresented ? 0 : 14)
+        .animation(.spring(response: 0.3, dampingFraction: 0.88), value: hasPresented)
+      }
+      .onAppear {
+        guard !hasPresented else { return }
+        hasPresented = true
       }
     }
   }
