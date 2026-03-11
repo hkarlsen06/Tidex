@@ -15,8 +15,11 @@ struct FriendsThreadSurfaceCallbacks {
   let onConsumeReplyScrollTarget: (String) -> Void
   let onComposerDraftChanged: (String) -> Void
   let onComposerAttachmentChanged: (FriendsComposerAttachmentDraft?) -> Void
+  let onComposerPrepareShiftSnapshot:
+    (ShiftWithComputations) async -> FriendsComposerAttachmentDraft?
   let onComposerCancelReply: () -> Void
   let onComposerSend: (String) async -> Bool
+  let onComposerAttachmentDrawerOpenChanged: (Bool) -> Void
   let onBottomAccessoryInsetChanged: (CGFloat) -> Void
 }
 
@@ -78,7 +81,8 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     stagedAttachment: nil,
     isThreadReadOnly: false,
     sendErrorMessage: nil,
-    placeholder: ""
+    placeholder: "",
+    canSendShiftSnapshots: false
   )
 
   private var lastReportedComposerHeight: CGFloat = 0
@@ -162,8 +166,10 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     baseTimelineBottomInset = timelineConfiguration.bottomContentInset
     composerBridge.onDraftChanged = callbacks.onComposerDraftChanged
     composerBridge.onStagedAttachmentChanged = callbacks.onComposerAttachmentChanged
+    composerBridge.onPrepareShiftSnapshotAttachment = callbacks.onComposerPrepareShiftSnapshot
     composerBridge.onCancelReply = callbacks.onComposerCancelReply
     composerBridge.onSend = callbacks.onComposerSend
+    composerBridge.onAttachmentDrawerOpenChanged = callbacks.onComposerAttachmentDrawerOpenChanged
 
     timelineController.onBackgroundTap = { [weak self] in
       self?.view.endEditing(true)

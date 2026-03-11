@@ -25,6 +25,7 @@ struct FriendsThreadView: View {
   @State private var customReactionTarget: FriendMessage?
   @State private var customReactionDraft = ""
   @State private var isCustomReactionInputActive = false
+  @State private var isComposerAttachmentDrawerOpen = false
   @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
 
   private struct ScrollState: Equatable {
@@ -77,19 +78,27 @@ struct FriendsThreadView: View {
   }
 
   var body: some View {
+    threadContent
+      .refreshable {
+        guard !isComposerAttachmentDrawerOpen else { return }
+        dismissMessageActionMenu()
+        await viewModel.refresh()
+      }
+  }
+
+  private var threadContent: some View {
     VStack(spacing: 0) {
       if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
         CompactFriendShiftPreviewHeader(
-          sharer: counterpartProfileUser,
-          preview: counterpartShiftPreview,
-          label: LocalizedStringResource(
-            "friends.chat.counterpart_header.title",
-            table: "Localizable"
-          )
+          preview: counterpartShiftPreview
         )
         .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.xs)
+        .padding(.top, Spacing.xxs)
+        .padding(.bottom, Spacing.xxs)
+        .frame(maxWidth: .infinity)
+        .background(Color.tidexBackground)
+        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
+        .zIndex(1)
       }
 
       ZStack(alignment: .bottom) {
@@ -118,7 +127,8 @@ struct FriendsThreadView: View {
             stagedAttachment: viewModel.stagedComposerAttachment,
             isThreadReadOnly: viewModel.isThreadReadOnly,
             sendErrorMessage: viewModel.sendErrorMessage,
-            placeholder: String(localized: .friendsChatPlaceholder)
+            placeholder: String(localized: .friendsChatPlaceholder),
+            canSendShiftSnapshots: viewModel.canSendShiftSnapshots
           ),
           callbacks: FriendsThreadSurfaceCallbacks(
             onBackgroundTap: dismissComposer,
@@ -172,6 +182,9 @@ struct FriendsThreadView: View {
                 await viewModel.setComposerAttachment(attachment)
               }
             },
+            onComposerPrepareShiftSnapshot: { shift in
+              await viewModel.prepareShiftSnapshotAttachment(for: shift)
+            },
             onComposerCancelReply: {
               viewModel.clearReplyTarget()
             },
@@ -189,6 +202,9 @@ struct FriendsThreadView: View {
                 }
               }
               return didSend
+            },
+            onComposerAttachmentDrawerOpenChanged: { isOpen in
+              isComposerAttachmentDrawerOpen = isOpen
             },
             onBottomAccessoryInsetChanged: { inset in
               bottomAccessoryInset = inset
@@ -310,10 +326,6 @@ struct FriendsThreadView: View {
           await viewModel.markVisibleMessagesReadIfNeeded()
         }
       }
-    }
-    .refreshable {
-      dismissMessageActionMenu()
-      await viewModel.refresh()
     }
     .onDisappear {
       dismissMessageActionMenu()

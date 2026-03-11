@@ -15,14 +15,18 @@ struct OwnShiftSnapshotBuilder {
   let ownerAvatarUrl: String?
 
   func build(for recipient: ShareRecipient) -> ComposerShiftSnapshotDraft {
-    let includesEarnings = recipient.canSeeOwnerEarnings
+    build(canSeeOwnerEarnings: recipient.canSeeOwnerEarnings)
+  }
+
+  func build(canSeeOwnerEarnings: Bool) -> ComposerShiftSnapshotDraft {
+    let includesEarnings = canSeeOwnerEarnings
     return ComposerShiftSnapshotDraft(
       snapshot: FriendShiftSnapshot(
         schemaVersion: 1,
-        ownerUserId: ownerUserId,
+        ownerUserId: normalizedOwnerUserId,
         ownerDisplayName: normalizedOwnerDisplayName,
         ownerAvatarUrl: ownerAvatarUrl,
-        shiftId: shift.id,
+        shiftId: normalizedShiftId,
         jobName: normalizedJobName,
         jobColorHex: normalizedJobColorHex,
         shiftDate: shift.shiftDate,
@@ -42,6 +46,22 @@ struct OwnShiftSnapshotBuilder {
   private var normalizedOwnerDisplayName: String {
     let trimmed = ownerDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? "User" : trimmed
+  }
+
+  private var normalizedOwnerUserId: String {
+    SnapshotRichContentIdentifier.normalizedUUIDString(
+      primary: ownerUserId,
+      fallbackSeed: "owner:\(ownerUserId)"
+    )
+  }
+
+  private var normalizedShiftId: String {
+    SnapshotRichContentIdentifier.normalizedUUIDString(
+      primary: shift.id,
+      secondary: shift.shift.recurring_id,
+      fallbackSeed:
+        "shift:\(ownerUserId):\(shift.id):\(shift.shiftDate):\(shift.startTime):\(shift.endTime)"
+    )
   }
 
   private var normalizedJobName: String? {
@@ -67,10 +87,10 @@ struct SharedShiftSnapshotBuilder {
     return ComposerShiftSnapshotDraft(
       snapshot: FriendShiftSnapshot(
         schemaVersion: 1,
-        ownerUserId: owner.id,
+        ownerUserId: normalizedOwnerUserId,
         ownerDisplayName: owner.displayName,
         ownerAvatarUrl: owner.avatarUrl,
-        shiftId: shift.id,
+        shiftId: normalizedShiftId,
         jobName: normalizedJobName,
         jobColorHex: normalizedJobColorHex,
         shiftDate: shift.shiftDate,
@@ -90,6 +110,22 @@ struct SharedShiftSnapshotBuilder {
   private var normalizedJobName: String? {
     let trimmed = jobName?.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed?.isEmpty == true ? nil : trimmed
+  }
+
+  private var normalizedOwnerUserId: String {
+    SnapshotRichContentIdentifier.normalizedUUIDString(
+      primary: owner.id,
+      fallbackSeed: "owner:\(owner.id)"
+    )
+  }
+
+  private var normalizedShiftId: String {
+    SnapshotRichContentIdentifier.normalizedUUIDString(
+      primary: shift.id,
+      secondary: shift.shift.recurring_id,
+      fallbackSeed:
+        "shift:\(owner.id):\(shift.id):\(shift.shiftDate):\(shift.startTime):\(shift.endTime)"
+    )
   }
 
   private var normalizedJobColorHex: String? {

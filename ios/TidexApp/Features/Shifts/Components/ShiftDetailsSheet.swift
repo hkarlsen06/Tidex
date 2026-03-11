@@ -69,8 +69,11 @@ struct ShiftDetailsSheet: View {
   /// Whether showing the supplements editor sheet
   @State private var showingSupplementsEditor = false
 
-  /// Whether showing the share options dialog
-  @State private var showingShareOptions = false
+  /// Whether showing the share destination picker
+  @State private var showingShareDestinationPicker = false
+
+  /// Whether showing the image share options dialog
+  @State private var showingImageShareOptions = false
 
   /// Whether showing the send-to-chat recipient picker
   @State private var showingSendToChatSheet = false
@@ -285,7 +288,11 @@ struct ShiftDetailsSheet: View {
           } else {
             Button {
               impactHaptic.impactOccurred()
-              showingShareOptions = true
+              if canSendShiftSnapshots {
+                showingShareDestinationPicker = true
+              } else {
+                showingImageShareOptions = true
+              }
             } label: {
               Image(systemName: "square.and.arrow.up")
                 .font(.tidexBodyMedium)
@@ -319,8 +326,22 @@ struct ShiftDetailsSheet: View {
       }
     }
     .interactiveDismissDisabled(isEditing && hasChanges)
+    .sheet(isPresented: $showingShareDestinationPicker) {
+      ShiftShareDestinationSheet(
+        onShareAsImage: {
+          showingShareDestinationPicker = false
+          showingImageShareOptions = true
+        },
+        onShareInChat: {
+          showingShareDestinationPicker = false
+          showingSendToChatSheet = true
+        }
+      )
+      .presentationDetents([.height(250)])
+      .presentationDragIndicator(.visible)
+    }
     .sheet(
-      isPresented: $showingShareOptions,
+      isPresented: $showingImageShareOptions,
       onDismiss: {
         // Check if we have a pending share action
         if let url = shareImageURL {
@@ -334,12 +355,12 @@ struct ShiftDetailsSheet: View {
         onShowEarnings: {
           // Prepare the image first, then dismiss - share sheet shows on dismiss
           prepareShiftImage(includeEarnings: true)
-          showingShareOptions = false
+          showingImageShareOptions = false
         },
         onHideEarnings: {
           // Prepare the image first, then dismiss - share sheet shows on dismiss
           prepareShiftImage(includeEarnings: false)
-          showingShareOptions = false
+          showingImageShareOptions = false
         }
       )
       .presentationDetents([.height(260)])
@@ -820,25 +841,6 @@ struct ShiftDetailsSheet: View {
         }
       }
 
-      if viewerUserId != nil, canSendShiftSnapshots {
-        Button {
-          impactHaptic.impactOccurred()
-          showingSendToChatSheet = true
-        } label: {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "bubble.left.and.text.bubble.right")
-              .font(.tidexLabel)
-            Text(LocalizedStringResource("friends.chat.send_to_chat", table: "Localizable"))
-              .font(.tidexLabelStrong)
-          }
-          .foregroundColor(.tidexBlue)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(CornerRadius.lg)
-        }
-      }
-
       // Delete button
       if let onDelete = onDelete {
         deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
@@ -1217,6 +1219,67 @@ private struct ShareOptionsSheet: View {
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
             Text(.shiftsShareHideEarnings)
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
+            Spacer()
+          }
+          .padding(.horizontal, Spacing.mlg)
+          .padding(.vertical, 18)
+          .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
+              .fill(Color.tidexSurfacePrimary)
+          )
+        }
+        .buttonStyle(.plain)
+      }
+      .padding(.horizontal, Spacing.mlg)
+
+      Spacer()
+    }
+    .frame(maxWidth: .infinity)
+    .background(Color.tidexBackground)
+  }
+}
+
+private struct ShiftShareDestinationSheet: View {
+  let onShareAsImage: () -> Void
+  let onShareInChat: () -> Void
+
+  var body: some View {
+    VStack(spacing: Spacing.mlg) {
+      Text(.shiftsShareTitle)
+        .font(.tidexHeadline)
+        .foregroundColor(.tidexTextPrimary)
+        .padding(.top, Spacing.md)
+
+      VStack(spacing: Spacing.sm) {
+        Button(action: onShareInChat) {
+          HStack(spacing: Spacing.msm) {
+            Image(systemName: "bubble.left.and.text.bubble.right")
+              .font(.tidexTitle2)
+              .foregroundColor(.tidexBlue)
+              .frame(width: 28)
+            Text(LocalizedStringResource("friends.chat.send_to_chat", table: "Localizable"))
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
+            Spacer()
+          }
+          .padding(.horizontal, Spacing.mlg)
+          .padding(.vertical, 18)
+          .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
+              .fill(Color.tidexSurfacePrimary)
+          )
+        }
+        .buttonStyle(.plain)
+
+        Button(action: onShareAsImage) {
+          HStack(spacing: Spacing.msm) {
+            Image(systemName: "photo.on.rectangle")
+              .font(.tidexTitle2)
+              .foregroundColor(.tidexBlue)
+              .frame(width: 28)
+            Text(LocalizedStringResource("shifts.share_as_image", table: "Localizable"))
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()

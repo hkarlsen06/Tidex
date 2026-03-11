@@ -77,8 +77,11 @@ final class FriendsThreadViewModel: ObservableObject {
   let viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
   private let capabilities: any FriendsMessagingCapabilityProviding
+  private let shareVisibilityResolver: any FriendsThreadShareVisibilityResolving
   private let sharingPreviewService: any SharingPreviewProviding
   private let sharedShiftsCache: any SharedShiftsCaching
+  private let jobsRepository: JobsRepository
+  private let settingsRepository: SettingsRepository
   private let repository: FriendsMessagesRepository
   private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
@@ -95,8 +98,11 @@ final class FriendsThreadViewModel: ObservableObject {
     viewerUserId: String,
     service: (any FriendsMessagingServiceProviding)? = nil,
     capabilities: (any FriendsMessagingCapabilityProviding)? = nil,
+    shareVisibilityResolver: (any FriendsThreadShareVisibilityResolving)? = nil,
     sharingPreviewService: (any SharingPreviewProviding)? = nil,
     sharedShiftsCache: (any SharedShiftsCaching)? = nil,
+    jobsRepository: JobsRepository? = nil,
+    settingsRepository: SettingsRepository? = nil,
     repository: FriendsMessagesRepository? = nil,
     composerDraftStore: FriendsComposerDraftStore? = nil,
     realtimeCoordinator: FriendsMessagingRealtimeCoordinator? = nil
@@ -105,8 +111,11 @@ final class FriendsThreadViewModel: ObservableObject {
     self.viewerUserId = viewerUserId
     self.service = service ?? FriendsMessagingService.shared
     self.capabilities = capabilities ?? FriendsMessagingCapabilities.shared
+    self.shareVisibilityResolver = shareVisibilityResolver ?? FriendsThreadShareVisibilityResolver()
     self.sharingPreviewService = sharingPreviewService ?? SharingService.shared
     self.sharedShiftsCache = sharedShiftsCache ?? SharedShiftsRepository.shared
+    self.jobsRepository = jobsRepository ?? .shared
+    self.settingsRepository = settingsRepository ?? .shared
     self.repository = repository ?? .shared
     self.composerDraftStore = composerDraftStore ?? .shared
     self.realtimeCoordinator = realtimeCoordinator ?? .shared
@@ -174,6 +183,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func refreshCounterpartShiftPreview() async {
+    shareVisibilityResolver.invalidateCachedVisibility(counterpartUserId: route.counterpartUserId)
     await loadCounterpartShiftPreview(forceRefresh: true)
   }
 
@@ -223,6 +233,52 @@ final class FriendsThreadViewModel: ObservableObject {
         threadId: route.threadId,
         viewerUserId: viewerUserId
       )
+    }
+  }
+
+  var canSendShiftSnapshots: Bool {
+    capabilities.canSendShiftSnapshots
+  }
+
+  func prepareShiftSnapshotAttachment(for shift: ShiftWithComputations) async
+    -> FriendsComposerAttachmentDraft?
+  {
+    guard capabilities.canSendShiftSnapshots else {
+      sendErrorMessage = shiftSnapshotSendUnavailableMessage
+      return nil
+    }
+
+    do {
+      let canSeeOwnerEarnings = try await shareVisibilityResolver.canCounterpartSeeOwnerEarnings(
+        counterpartUserId: route.counterpartUserId
+      )
+      let activeJobs = jobsRepository.getNonDeletedJobs(for: viewerUserId)
+      let defaultJobId = activeJobs.first(where: \.is_default)?.id
+      let effectiveJobId = shift.shift.job_id ?? defaultJobId
+      let job = effectiveJobId.flatMap { jobId in
+        activeJobs.first(where: { $0.id == jobId })
+      }
+      let currency =
+        settingsRepository.getSettings(for: viewerUserId)?.currency
+        ?? job?.currency
+        ?? "kr"
+
+      let draft = OwnShiftSnapshotBuilder(
+        shift: shift,
+        jobName: job?.name,
+        jobColorHex: job?.color,
+        currency: currency,
+        ownerUserId: viewerUserId,
+        ownerDisplayName: AppCoordinator.shared.userDisplayName,
+        ownerAvatarUrl: AppCoordinator.shared.userAvatarUrl
+      )
+      .build(canSeeOwnerEarnings: canSeeOwnerEarnings)
+
+      sendErrorMessage = nil
+      return .shiftSnapshot(draft)
+    } catch {
+      sendErrorMessage = error.localizedDescription
+      return nil
     }
   }
 
@@ -686,7 +742,7 @@ final class FriendsThreadViewModel: ObservableObject {
           body: message.body,
           replyToMessageId: message.replyToMessageId,
           attachments: outgoingAttachments,
-          metadataData: message.metadataData
+          metadataData: message.sendableMetadataData
         )
 
         await repository.saveConfirmedMessage(

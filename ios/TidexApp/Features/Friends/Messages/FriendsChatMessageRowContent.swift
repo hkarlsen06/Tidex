@@ -707,147 +707,38 @@ struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
 
-  private static let cardWidth: CGFloat = 280
-
-  private var ownerInitials: String {
-    let words = snapshot.ownerDisplayName
-      .split(whereSeparator: \.isWhitespace)
-      .prefix(2)
-      .compactMap(\.first)
-    let initials = words.map(String.init).joined()
-    return initials.isEmpty ? "?" : initials.uppercased()
-  }
-
-  private var dateParts: ShiftCardDateParts {
-    ShiftCardFormatter.dateParts(for: snapshot.shiftDate)
-  }
-
-  private var timeRange: String {
-    ShiftCardFormatter.localizedTimeRange(
-      start: snapshot.startTime,
-      end: snapshot.endTime,
-      locale: Locale.appLocale
-    )
-  }
-
-  private var formattedHours: String {
-    ShiftCardFormatter.formattedHours(snapshot.paidHours, locale: Locale.appLocale)
-  }
-
-  private var displayAmount: String? {
-    guard snapshot.includesEarnings else { return nil }
-    let amount =
-      if snapshot.taxEnabled {
-        snapshot.netPay ?? snapshot.grossPay
-      } else {
-        snapshot.grossPay ?? snapshot.netPay
-      }
-    guard let amount else { return nil }
-    return CurrencyConfig.format(amount, currency: snapshot.currency)
-  }
-
-  private var cardBackgroundColor: Color {
-    isCurrentUser ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary
-  }
-
-  private var borderColor: Color {
-    isCurrentUser ? Color.white.opacity(0.18) : Color.tidexBorderSubtle
-  }
-
-  private var primaryTextColor: Color {
-    isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary
-  }
-
-  private var secondaryTextColor: Color {
-    isCurrentUser ? Color.tidexTextOnBrand.opacity(0.78) : .tidexTextMuted
+  private var ownerPrimaryTextColor: Color {
+    .tidexTextMuted
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack(alignment: .center, spacing: Spacing.xs) {
         AvatarView(
           url: snapshot.ownerAvatarUrl,
-          initials: ownerInitials,
+          initials: snapshot.ownerInitials,
           size: AvatarView.Size.small,
-          cornerRadius: CornerRadius.md
+          cornerRadius: CornerRadius.sm
         )
 
-        VStack(alignment: .leading, spacing: 2) {
-          Text(snapshot.ownerDisplayName)
-            .font(.tidexCaptionStrong)
-            .foregroundColor(primaryTextColor)
-            .lineLimit(1)
-
-          HStack(spacing: Spacing.xxxs) {
-            Text(dateParts.weekday)
-            Text("·")
-            Text(dateParts.dayMonth)
-          }
-          .font(.tidexCaptionRegular)
-          .foregroundColor(secondaryTextColor)
+        Text(snapshot.ownerFirstName)
+          .font(.tidexCaptionStrong)
+          .foregroundColor(ownerPrimaryTextColor)
           .lineLimit(1)
-        }
 
         Spacer(minLength: 0)
-
-        if let jobName = snapshot.jobName, !jobName.isEmpty {
-          WorkplaceNameText(
-            name: jobName,
-            colorHex: snapshot.jobColorHex,
-            font: .tidexCaptionStrong,
-            lineLimit: 1,
-            badgeCornerRadius: CornerRadius.pill,
-            badgeHorizontalPadding: Spacing.xs,
-            badgeVerticalPadding: Spacing.xxxs
-          )
-        }
       }
+      .padding(.horizontal, Spacing.sm)
+      .frame(maxWidth: .infinity, alignment: .leading)
 
-      HStack(alignment: .bottom, spacing: Spacing.md) {
-        VStack(alignment: .leading, spacing: 4) {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "clock")
-              .font(.tidexCaptionRegular)
-            Text(timeRange)
-              .environment(\.layoutDirection, .leftToRight)
-          }
-          .font(.tidexFootnote)
-          .foregroundColor(primaryTextColor)
-
-          Text(formattedHours)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(secondaryTextColor)
-        }
-
-        Spacer(minLength: 0)
-
-        if let displayAmount {
-          Text(displayAmount)
-            .font(.tidexBodyMedium)
-            .foregroundColor(primaryTextColor)
-            .multilineTextAlignment(.trailing)
-        } else {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "eye.slash.fill")
-              .font(.tidexCaptionRegular)
-            Text(.sharingHidden)
-          }
-          .font(.tidexCaptionRegular)
-          .foregroundColor(secondaryTextColor)
-        }
-      }
+      SharedShiftRow(
+        shift: snapshot.renderableShift,
+        isToday: snapshot.shiftDate == todayISO(),
+        showEarnings: snapshot.includesEarnings,
+        currency: snapshot.currency
+      )
     }
-    .padding(.horizontal, Spacing.md)
-    .padding(.vertical, Spacing.sm)
-    .frame(maxWidth: Self.cardWidth, alignment: .leading)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(cardBackgroundColor)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(borderColor, lineWidth: 1)
-    )
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 

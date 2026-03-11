@@ -41,6 +41,13 @@ private final class SendShiftToChatViewModel: ObservableObject {
     recipientSelection.selectedRecipient(in: recipients)
   }
 
+  func beginSubmitting() -> Bool {
+    guard !isSubmitting else { return false }
+    isSubmitting = true
+    errorMessage = nil
+    return true
+  }
+
   func loadIfNeeded() async {
     guard !hasLoaded else { return }
     hasLoaded = true
@@ -63,9 +70,16 @@ private final class SendShiftToChatViewModel: ObservableObject {
 
   func continueToChat() async -> SendShiftToChatResult? {
     guard let recipient = selectedRecipient else { return nil }
+    guard beginSubmitting() else { return nil }
+    return await continueToChat(recipient: recipient, beganSubmission: true)
+  }
 
-    isSubmitting = true
-    errorMessage = nil
+  func continueToChat(recipient: ShareRecipient, beganSubmission: Bool = false) async
+    -> SendShiftToChatResult?
+  {
+    if !beganSubmission, !beginSubmitting() {
+      return nil
+    }
     defer { isSubmitting = false }
 
     do {
@@ -141,15 +155,6 @@ struct SendShiftToChatSheet: View {
         ToolbarItem(placement: .topBarTrailing) {
           if viewModel.isSubmitting {
             ProgressView()
-          } else {
-            Button(String(localized: .commonContinue)) {
-              Task {
-                guard let result = await viewModel.continueToChat() else { return }
-                onCompleted(result)
-              }
-            }
-            .foregroundColor(.tidexBlue)
-            .disabled(!viewModel.canContinue)
           }
         }
       }
@@ -204,8 +209,22 @@ struct SendShiftToChatSheet: View {
           selectionState: Binding(
             get: { viewModel.recipientSelection },
             set: { viewModel.recipientSelection = $0 }
-          )
+          ),
+          onRecipientTap: { recipient in
+            guard viewModel.beginSubmitting() else { return }
+
+            Task {
+              guard
+                let result = await viewModel.continueToChat(
+                  recipient: recipient,
+                  beganSubmission: true
+                )
+              else { return }
+              onCompleted(result)
+            }
+          }
         )
+        .disabled(viewModel.isSubmitting)
       }
     }
   }
