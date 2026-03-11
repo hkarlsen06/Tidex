@@ -164,6 +164,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Must be set before any notifications arrive
     UNUserNotificationCenter.current().delegate = self
+    NotificationService.shared.registerNotificationCategories()
 
     // Apple recommends activating WCSession early in launch
     WatchConnectivityManager.shared.activateSession()
@@ -761,6 +762,39 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
   ) {
     let userInfo = response.notification.request.content.userInfo
     let type = userInfo["type"] as? String ?? ""
+
+    if type == "thread_message",
+      let threadId = userInfo["thread_id"] as? String
+    {
+      let messageId = userInfo["message_id"] as? String
+
+      switch response.actionIdentifier {
+      case NotificationService.threadMessageMarkReadActionIdentifier:
+        Task { @MainActor in
+          if let messageId, !messageId.isEmpty {
+            await NotificationService.shared.handleThreadMessageMarkRead(
+              threadId: threadId,
+              messageId: messageId
+            )
+          }
+          completionHandler()
+        }
+        return
+      case NotificationService.threadMessageReplyActionIdentifier:
+        let replyText = (response as? UNTextInputNotificationResponse)?.userText ?? ""
+        Task { @MainActor in
+          await NotificationService.shared.handleThreadMessageReply(
+            threadId: threadId,
+            messageId: messageId,
+            body: replyText
+          )
+          completionHandler()
+        }
+        return
+      default:
+        break
+      }
+    }
 
     // Handle smart notification taps (prompt to add shift)
     if type == "smart_prompt",

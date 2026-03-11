@@ -322,6 +322,7 @@ struct MainTabView: View {
   private func refreshUnreadFriendsCount() {
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
       unreadFriendsCount = 0
+      NotificationService.shared.setApplicationBadgeCount(0)
       return
     }
 
@@ -330,6 +331,9 @@ struct MainTabView: View {
       .getThreads(for: viewerUserId)
       .filter { $0.kind == .direct }
       .reduce(0) { $0 + $1.unreadCount }
+    Task { @MainActor in
+      await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: viewerUserId)
+    }
   }
 
   private func scheduleUnreadFriendsCountRefresh() {

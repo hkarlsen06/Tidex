@@ -1,6 +1,6 @@
 -- Function: internal.trigger_push_notifications_after_outbox_insert
--- Description: Trigger function that calls send-push-notifications edge function after notification insert
--- Used by: AFTER INSERT trigger on internal.notifications_outbox
+-- Description: Trigger function that calls send-push-notifications after outbox inserts or delivery updates
+-- Used by: AFTER INSERT / targeted UPDATE trigger on internal.notifications_outbox
 -- Schema: internal (to match the trigger table)
 
 CREATE OR REPLACE FUNCTION internal.trigger_push_notifications_after_outbox_insert()
@@ -37,11 +37,11 @@ BEGIN
 END;
 $function$;
 
--- Create the AFTER INSERT trigger on notifications_outbox
+-- Create the AFTER INSERT / targeted UPDATE trigger on notifications_outbox
 DROP TRIGGER IF EXISTS trigger_send_push_after_insert ON internal.notifications_outbox;
 
 CREATE TRIGGER trigger_send_push_after_insert
-  AFTER INSERT ON internal.notifications_outbox
+  AFTER INSERT OR UPDATE OF due_at, title, body, data_payload ON internal.notifications_outbox
   FOR EACH STATEMENT
   EXECUTE FUNCTION internal.trigger_push_notifications_after_outbox_insert();
 

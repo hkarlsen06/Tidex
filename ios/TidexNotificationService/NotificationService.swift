@@ -55,6 +55,9 @@ final class NotificationService: UNNotificationServiceExtension {
     }
 
     content.threadIdentifier = payload.threadId
+    if #available(iOS 15.0, *) {
+      content.targetContentIdentifier = payload.targetContentIdentifier
+    }
 
     let senderImage = await fetchSenderImage(from: payload.senderAvatarUrl)
     let sender = INPerson(
@@ -83,7 +86,20 @@ final class NotificationService: UNNotificationServiceExtension {
 
     do {
       try await donate(interaction)
-      return try content.updating(from: intent)
+      let updatedContent = try content.updating(from: intent)
+      guard
+        let mutableUpdatedContent = updatedContent.mutableCopy() as? UNMutableNotificationContent
+      else {
+        return updatedContent
+      }
+
+      mutableUpdatedContent.threadIdentifier = payload.threadId
+
+      if #available(iOS 15.0, *) {
+        mutableUpdatedContent.targetContentIdentifier = payload.targetContentIdentifier
+      }
+
+      return mutableUpdatedContent
     } catch {
       logger.error(
         "Failed to enrich communication notification: \(error.localizedDescription, privacy: .public)"
@@ -137,6 +153,7 @@ private struct CommunicationNotificationPayload {
   let senderUserId: String
   let senderDisplayName: String
   let senderAvatarUrl: URL?
+  let targetContentIdentifier: String
 
   init?(userInfo: [AnyHashable: Any], fallbackSenderDisplayName: String) {
     guard let type = userInfo["type"] as? String else { return nil }
@@ -169,6 +186,8 @@ private struct CommunicationNotificationPayload {
     } else {
       self.senderAvatarUrl = nil
     }
+
+    self.targetContentIdentifier = "friend-chat:\(threadId)"
   }
 
   private static let supportedTypes: Set<String> = [

@@ -10,6 +10,9 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "Notifications"
 @MainActor
 final class NotificationService {
   static let shared = NotificationService()
+  static let threadMessageCategoryIdentifier = "THREAD_MESSAGE"
+  static let threadMessageReplyActionIdentifier = "THREAD_MESSAGE_REPLY"
+  static let threadMessageMarkReadActionIdentifier = "THREAD_MESSAGE_MARK_READ"
 
   private init() {}
 
@@ -64,6 +67,129 @@ final class NotificationService {
   /// This triggers `didRegisterForRemoteNotificationsWithDeviceToken` in AppDelegate
   private func registerForRemoteNotifications() {
     UIApplication.shared.registerForRemoteNotifications()
+  }
+
+  func registerNotificationCategories() {
+    let center = UNUserNotificationCenter.current()
+    let replyTitle = String(localized: "friends.chat.action.reply", table: "Localizable")
+    let replyPlaceholder = String(
+      localized: "notifications.chat.action.reply_placeholder",
+      table: "Localizable"
+    )
+    let markReadTitle = String(
+      localized: "notifications.chat.action.mark_read",
+      table: "Localizable"
+    )
+
+    let categories: Set<UNNotificationCategory> = [
+      UNNotificationCategory(
+        identifier: Self.threadMessageCategoryIdentifier,
+        actions: [
+          UNTextInputNotificationAction(
+            identifier: Self.threadMessageReplyActionIdentifier,
+            title: replyTitle,
+            options: [],
+            textInputButtonTitle: replyTitle,
+            textInputPlaceholder: replyPlaceholder
+          ),
+          UNNotificationAction(
+            identifier: Self.threadMessageMarkReadActionIdentifier,
+            title: markReadTitle,
+            options: []
+          ),
+        ],
+        intentIdentifiers: [],
+        options: [.customDismissAction]
+      ),
+      UNNotificationCategory(
+        identifier: "SHIFT_REMINDER",
+        actions: [],
+        intentIdentifiers: [],
+        options: [.customDismissAction]
+      ),
+      UNNotificationCategory(
+        identifier: "SMART_PROMPT",
+        actions: [],
+        intentIdentifiers: [],
+        options: [.customDismissAction]
+      ),
+    ]
+
+    center.setNotificationCategories(categories)
+  }
+
+  func setApplicationBadgeCount(_ count: Int) {
+    let sanitizedCount = max(0, count)
+
+    if #available(iOS 17.0, *) {
+      UNUserNotificationCenter.current().setBadgeCount(sanitizedCount) { error in
+        if let error {
+          logger.error("Failed to update app badge count: \(error.localizedDescription)")
+        }
+      }
+    } else {
+      UIApplication.shared.applicationIconBadgeNumber = sanitizedCount
+    }
+  }
+
+  func refreshApplicationBadgeCount(viewerUserId: String?) async {
+    guard let viewerUserId, !viewerUserId.isEmpty else {
+      setApplicationBadgeCount(0)
+      return
+    }
+
+    do {
+      let unreadCount = try await FriendsMessagingService.shared.fetchUnreadDirectMessageCount(
+        userId: viewerUserId
+      )
+      setApplicationBadgeCount(unreadCount)
+    } catch {
+      logger.error("Failed to refresh app badge count: \(error.localizedDescription)")
+    }
+  }
+
+  func handleThreadMessageMarkRead(threadId: String, messageId: String) async {
+    guard !threadId.isEmpty, !messageId.isEmpty else { return }
+
+    do {
+      let state = try await FriendsMessagingService.shared.markThreadRead(
+        threadId: threadId,
+        throughMessageId: messageId
+      )
+      await FriendsMessagesRepository.shared.saveThreadState(state)
+      await refreshApplicationBadgeCount(viewerUserId: AppCoordinator.shared.getCurrentUserId())
+      await clearDeliveredFriendChatNotifications(for: threadId)
+    } catch {
+      logger.error("Failed to mark notification thread as read: \(error.localizedDescription)")
+    }
+  }
+
+  func handleThreadMessageReply(threadId: String, messageId: String?, body: String) async {
+    let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !threadId.isEmpty, !trimmedBody.isEmpty else { return }
+
+    do {
+      if let messageId, !messageId.isEmpty {
+        let state = try await FriendsMessagingService.shared.markThreadRead(
+          threadId: threadId,
+          throughMessageId: messageId
+        )
+        await FriendsMessagesRepository.shared.saveThreadState(state)
+      }
+
+      _ = try await FriendsMessagingService.shared.sendMessage(
+        threadId: threadId,
+        clientId: UUID().uuidString.lowercased(),
+        body: trimmedBody,
+        replyToMessageId: nil,
+        attachments: [],
+        metadataData: nil
+      )
+      await refreshApplicationBadgeCount(viewerUserId: AppCoordinator.shared.getCurrentUserId())
+      await clearDeliveredFriendChatNotifications(for: threadId)
+    } catch {
+      logger.error("Failed to send quick reply from notification: \(error.localizedDescription)")
+    }
   }
 
   /// Remove delivered friend-chat notifications for a thread after the user opens it.

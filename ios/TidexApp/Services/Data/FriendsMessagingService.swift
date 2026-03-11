@@ -25,6 +25,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func deleteMessage(messageId: String) async throws -> FriendThread
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
+  func fetchUnreadDirectMessageCount(userId: String) async throws -> Int
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
   func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage
@@ -321,6 +322,32 @@ final class FriendsMessagingService: ObservableObject {
         .value
 
       return row.toFriendThreadState()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func fetchUnreadDirectMessageCount(userId: String) async throws -> Int {
+    let params: [String: AnyJSON] = [
+      "p_user_id": .string(userId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let count: Int =
+        try await supabase
+        .rpc("get_unread_direct_message_count", params: params)
+        .execute()
+        .value
+
+      return max(0, count)
     } catch let error as PostgrestError {
       throw mapRPCError(error)
     } catch let error as AuthError {
