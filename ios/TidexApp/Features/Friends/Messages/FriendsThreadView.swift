@@ -167,6 +167,7 @@ struct FriendsThreadView: View {
               }
             },
             onComposerAttachmentChanged: { attachment in
+              viewModel.stagedComposerAttachment = attachment
               Task {
                 await viewModel.setComposerAttachment(attachment)
               }
