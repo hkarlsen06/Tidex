@@ -16,18 +16,21 @@ private final class SendShiftToChatViewModel: ObservableObject {
   private let buildDraft: (ShareRecipient) throws -> ComposerShiftSnapshotDraft
   private let service: FriendsMessagingServiceProviding
   private let composerDraftStore: FriendsComposerDraftStore
+  private let capabilities: any FriendsMessagingCapabilityProviding
   private var hasLoaded = false
 
   init(
     viewerUserId: String,
     buildDraft: @escaping (ShareRecipient) throws -> ComposerShiftSnapshotDraft,
     service: FriendsMessagingServiceProviding,
-    composerDraftStore: FriendsComposerDraftStore
+    composerDraftStore: FriendsComposerDraftStore,
+    capabilities: any FriendsMessagingCapabilityProviding
   ) {
     self.viewerUserId = viewerUserId
     self.buildDraft = buildDraft
     self.service = service
     self.composerDraftStore = composerDraftStore
+    self.capabilities = capabilities
   }
 
   var canContinue: Bool {
@@ -66,6 +69,12 @@ private final class SendShiftToChatViewModel: ObservableObject {
     defer { isSubmitting = false }
 
     do {
+      guard capabilities.canSendShiftSnapshots else {
+        errorMessage = String(
+          localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+        return nil
+      }
+
       let thread = try await service.getOrCreateDirectThread(otherUserId: recipient.id)
       let draft = try buildDraft(recipient)
       await composerDraftStore.saveAttachmentDraft(
@@ -103,7 +112,8 @@ struct SendShiftToChatSheet: View {
         viewerUserId: viewerUserId,
         buildDraft: buildDraft,
         service: FriendsMessagingService.shared,
-        composerDraftStore: .shared
+        composerDraftStore: .shared,
+        capabilities: FriendsMessagingCapabilities.shared
       )
     )
   }

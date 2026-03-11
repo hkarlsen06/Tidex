@@ -514,6 +514,102 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(mockService.lastSentMetadataData, metadataData)
   }
 
+  func testSendDraftWithDisabledShiftSnapshotGateKeepsDraftAndShowsError() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let snapshotDraft = FriendsComposerAttachmentDraft.shiftSnapshot(
+      ComposerShiftSnapshotDraft(snapshot: makeShiftSnapshot())
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      capabilities: MockFriendsMessagingCapabilities(canSendShiftSnapshots: false),
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.setComposerAttachment(snapshotDraft)
+    let didSend = await viewModel.sendDraft()
+
+    XCTAssertFalse(didSend)
+    XCTAssertEqual(viewModel.stagedComposerAttachment, snapshotDraft)
+    XCTAssertEqual(
+      viewModel.sendErrorMessage,
+      String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+    )
+    XCTAssertNil(mockService.lastSentMetadataData)
+  }
+
+  func testRetryMessageWithDisabledShiftSnapshotGateDoesNotRetry() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let metadataData = FriendsComposerAttachmentDraft.shiftSnapshot(
+      ComposerShiftSnapshotDraft(snapshot: makeShiftSnapshot())
+    ).metadataData
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-failed",
+          threadId: route.threadId,
+          senderUserId: "viewer-1",
+          messageType: .user,
+          body: nil,
+          clientId: "client-failed",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_030),
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: metadataData,
+          attachments: [],
+          reactions: [],
+          sendState: .failed,
+          failureMessage: "Failed"
+        )
+      ],
+      in: route.threadId,
+      for: "viewer-1"
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      capabilities: MockFriendsMessagingCapabilities(canSendShiftSnapshots: false),
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.retryMessage(messageId: "message-failed")
+
+    XCTAssertEqual(
+      viewModel.sendErrorMessage,
+      String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+    )
+    XCTAssertNil(mockService.lastSentMetadataData)
+    XCTAssertEqual(
+      repository.getMessage(id: "message-failed", viewerUserId: "viewer-1")?.sendState,
+      .failed
+    )
+  }
+
   private func makeRepository() throws -> FriendsMessagesRepository {
     let schema = Schema([
       LocalPendingFriendComposerDraft.self,
@@ -606,6 +702,10 @@ private func makeShiftSnapshot() -> FriendShiftSnapshot {
 
 private enum TestError: Error {
   case failed
+}
+
+private struct MockFriendsMessagingCapabilities: FriendsMessagingCapabilityProviding {
+  let canSendShiftSnapshots: Bool
 }
 
 @MainActor

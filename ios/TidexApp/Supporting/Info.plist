@@ -18,6 +18,10 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>FRIENDS_SHIFT_SNAPSHOTS_ENABLED</key>
+	<false/>
+	<key>FRIENDS_SHIFT_SNAPSHOTS_MINIMUM_APP_VERSION</key>
+	<string>999.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

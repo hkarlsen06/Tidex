@@ -379,7 +379,7 @@ struct ShiftDetailsSheet: View {
       )
     }
     .sheet(isPresented: $showingSendToChatSheet) {
-      if let viewerUserId {
+      if let viewerUserId, canSendShiftSnapshots {
         SendShiftToChatSheet(
           viewerUserId: viewerUserId,
           buildDraft: makeShiftSnapshotDraft(for:),
@@ -820,7 +820,7 @@ struct ShiftDetailsSheet: View {
         }
       }
 
-      if viewerUserId != nil {
+      if viewerUserId != nil, canSendShiftSnapshots {
         Button {
           impactHaptic.impactOccurred()
           showingSendToChatSheet = true
@@ -1129,6 +1129,10 @@ struct ShiftDetailsSheet: View {
 
   private var viewerUserId: String? {
     coordinator.getCurrentUserId()
+  }
+
+  private var canSendShiftSnapshots: Bool {
+    FriendsMessagingCapabilities.shared.canSendShiftSnapshots
   }
 
   private func makeShiftSnapshotDraft(for recipient: ShareRecipient) throws
