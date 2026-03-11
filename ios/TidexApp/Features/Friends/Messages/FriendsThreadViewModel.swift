@@ -185,6 +185,8 @@ final class FriendsThreadViewModel: ObservableObject {
       muted: false,
       createdAt: Date()
     )
+
+    syncCounterpartShiftPreviewFromCache()
   }
 
   func loadIfNeeded() async {
@@ -702,6 +704,7 @@ final class FriendsThreadViewModel: ObservableObject {
       )
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+    syncCounterpartShiftPreviewFromCache()
     syncComposerStateWithCachedMessages()
     prefetchQuotedMessagesIfNeeded()
   }
@@ -812,9 +815,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     if !forceRefresh {
-      let cachedPreview = sharedShiftsCache.getShiftPreviews(for: viewerUserId)[
-        route.counterpartUserId]
-      counterpartShiftPreview = renderablePreview(from: cachedPreview)
+      syncCounterpartShiftPreviewFromCache()
     }
 
     do {
@@ -823,7 +824,10 @@ final class FriendsThreadViewModel: ObservableObject {
         forceRefresh: forceRefresh
       )
       await sharedShiftsCache.saveShiftPreviews(previews, for: viewerUserId)
-      counterpartShiftPreview = renderablePreview(from: previews.first)
+      let resolvedPreview = renderablePreview(from: previews.first)
+      if counterpartShiftPreview != resolvedPreview {
+        counterpartShiftPreview = resolvedPreview
+      }
     } catch {
       threadLogger.error(
         "Failed to load counterpart shift preview: \(error.localizedDescription)")
@@ -1164,6 +1168,21 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     return !counterpart.hidden && !cachedFriends.chatOnlyUserIds.contains(counterpart.id)
+  }
+
+  private func syncCounterpartShiftPreviewFromCache() {
+    let resolvedPreview: SharerShiftPreview?
+    if let cachedCounterpartCanViewSharedShift, !cachedCounterpartCanViewSharedShift {
+      resolvedPreview = nil
+    } else {
+      let cachedPreview = sharedShiftsCache.getShiftPreviews(for: viewerUserId)[
+        route.counterpartUserId]
+      resolvedPreview = renderablePreview(from: cachedPreview)
+    }
+
+    if counterpartShiftPreview != resolvedPreview {
+      counterpartShiftPreview = resolvedPreview
+    }
   }
 
   private func renderablePreview(from preview: SharerShiftPreview?) -> SharerShiftPreview? {

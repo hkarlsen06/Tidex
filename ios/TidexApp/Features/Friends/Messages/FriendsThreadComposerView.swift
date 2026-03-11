@@ -126,12 +126,15 @@ final class FriendsThreadComposerBridge: ObservableObject {
 }
 
 struct FriendsThreadComposerHostedView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject var bridge: FriendsThreadComposerBridge
   @StateObject private var attachmentController = FriendsComposerAttachmentController()
   @State private var selectedPhotoItem: PhotosPickerItem?
   @State private var isSubmitting = false
   @State private var composerFocusTrigger = 0
   @State private var isComposerFocused = false
+
+  private let attachmentCollapseCharacterThreshold = 18
 
   private var canSend: Bool {
     let normalizedDraft = bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -143,6 +146,16 @@ struct FriendsThreadComposerHostedView: View {
 
   private var isPreparingAttachmentDrawer: Bool {
     attachmentController.isPreparingDrawer
+  }
+
+  private var shouldHidePlusButton: Bool {
+    guard !attachmentController.isDrawerOpen else { return false }
+    guard bridge.stagedAttachment == nil else { return false }
+    guard isComposerFocused else { return false }
+
+    let draftLength = bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines).count
+    return draftLength >= attachmentCollapseCharacterThreshold
+      || bridge.draftText.contains("\n")
   }
 
   var body: some View {
@@ -287,19 +300,27 @@ struct FriendsThreadComposerHostedView: View {
       focusTrigger: composerFocusTrigger,
       onFocusChanged: { isComposerFocused = $0 },
       horizontalPadding: MonthPickerLayout.horizontalPadding,
+      focusedHorizontalPadding: Spacing.xs,
       topPadding: Spacing.xs,
       bottomPadding: MonthPickerLayout.bottomPadding,
       onSend: sendMessage
     ) {
-      FriendsThreadComposerPlusButton(
-        isOpen: attachmentController.isDrawerOpen,
-        isDisabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment
-          || isPreparingAttachmentDrawer
-          || bridge.mode == .edit,
-        isPreparing: isPreparingAttachmentDrawer,
-        action: toggleAttachmentDrawer
-      )
+      if !shouldHidePlusButton {
+        FriendsThreadComposerPlusButton(
+          isOpen: attachmentController.isDrawerOpen,
+          isDisabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment
+            || isPreparingAttachmentDrawer
+            || bridge.mode == .edit,
+          isPreparing: isPreparingAttachmentDrawer,
+          action: toggleAttachmentDrawer
+        )
+        .transition(.move(edge: .leading).combined(with: .opacity))
+      }
     }
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.9),
+      value: shouldHidePlusButton
+    )
   }
 
   private func sendMessage() {

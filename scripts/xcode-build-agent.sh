@@ -6,16 +6,58 @@ if [ "${1:-}" = "--json" ]; then
   MODE="json"
 fi
 
+DEFAULT_HEARTBEAT_INTERVAL=20
+MIN_HEARTBEAT_INTERVAL=15
+HEARTBEAT_INTERVAL="${XCODE_BUILD_AGENT_HEARTBEAT_INTERVAL:-$DEFAULT_HEARTBEAT_INTERVAL}"
 RESULT_BUNDLE="${TMPDIR:-/tmp}/tidex-build-$(date +%s)-$$.xcresult"
 LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-log.XXXXXX")"
 JSON_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-json.XXXXXX")"
 PARSED_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-parsed.XXXXXX")"
+XCODEBUILD_PID=""
+HEARTBEAT_PID=""
+
+if ! [[ "$HEARTBEAT_INTERVAL" =~ ^[0-9]+$ ]]; then
+  HEARTBEAT_INTERVAL="$DEFAULT_HEARTBEAT_INTERVAL"
+elif [ "$HEARTBEAT_INTERVAL" -lt "$MIN_HEARTBEAT_INTERVAL" ]; then
+  HEARTBEAT_INTERVAL="$MIN_HEARTBEAT_INTERVAL"
+fi
 
 cleanup() {
+  if [ -n "${HEARTBEAT_PID:-}" ]; then
+    kill "$HEARTBEAT_PID" 2>/dev/null || true
+    wait "$HEARTBEAT_PID" 2>/dev/null || true
+  fi
   rm -f "$LOG_FILE" "$JSON_FILE" "$PARSED_FILE"
   rm -rf "$RESULT_BUNDLE"
 }
 trap cleanup EXIT
+
+start_heartbeat() {
+  local start_time
+  start_time="$(date +%s)"
+  echo "[xcode-build-agent] build started; heartbeat every ${HEARTBEAT_INTERVAL}s" >&2
+
+  (
+    while kill -0 "$XCODEBUILD_PID" 2>/dev/null; do
+      sleep "$HEARTBEAT_INTERVAL"
+      kill -0 "$XCODEBUILD_PID" 2>/dev/null || exit 0
+
+      local now elapsed
+      now="$(date +%s)"
+      elapsed=$((now - start_time))
+      echo "[xcode-build-agent] alive: build still running (${elapsed}s elapsed)" >&2
+    done
+  ) &
+  HEARTBEAT_PID=$!
+}
+
+stop_heartbeat() {
+  if [ -n "${HEARTBEAT_PID:-}" ]; then
+    kill "$HEARTBEAT_PID" 2>/dev/null || true
+    wait "$HEARTBEAT_PID" 2>/dev/null || true
+    HEARTBEAT_PID=""
+  fi
+}
 
 set +e
 xcodebuild \
@@ -24,8 +66,12 @@ xcodebuild \
   -project ios/Tidex.xcodeproj \
   -scheme App \
   -destination 'generic/platform=iOS Simulator' \
-  build >"$LOG_FILE" 2>&1
+  build >"$LOG_FILE" 2>&1 &
+XCODEBUILD_PID=$!
+start_heartbeat
+wait "$XCODEBUILD_PID"
 EXIT_CODE=$?
+stop_heartbeat
 set -e
 
 STATUS="SUCCESS"
