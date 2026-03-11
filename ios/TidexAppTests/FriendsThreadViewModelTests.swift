@@ -733,6 +733,70 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertTrue(previewService.requestedSharerIds.isEmpty)
   }
 
+  func testLoadFetchesCounterpartShiftPreviewWhenSharerCacheIsCold() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let thread = makeThread()
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+
+    let preview = SharerShiftPreview(
+      sharerId: route.counterpartUserId,
+      shift: SharedShiftData(
+        id: "shared-shift-cold",
+        user_id: route.counterpartUserId,
+        job_id: "job-1",
+        job_name: "Cafe",
+        job_color: "#FFAA00",
+        shift_date: "2026-03-12",
+        start_time: "10:00",
+        end_time: "18:00",
+        computed: SharedShiftComputed(
+          id: "shared-shift-cold",
+          durationHours: 8,
+          paidHours: 7.5,
+          basePay: 1000,
+          supplementPay: 200,
+          gross: 1200
+        ),
+        tax_enabled: true,
+        tax_percentage: 12.5,
+        custom_supplements: nil,
+        recurring_id: nil,
+        recurring_anchor_weekday: nil
+      ),
+      status: .upcoming,
+      showEarnings: true
+    )
+
+    let previewService = MockSharingPreviewService(previews: [preview])
+    let sharedShiftsCache = MockSharedShiftsCache(
+      cachedFriends: .init(
+        sharers: [],
+        chatOnlyUserIds: []
+      )
+    )
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      sharingPreviewService: previewService,
+      sharedShiftsCache: sharedShiftsCache,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.load()
+
+    XCTAssertEqual(viewModel.counterpartShiftPreview, preview)
+    XCTAssertEqual(previewService.requestedSharerIds, [[route.counterpartUserId]])
+  }
+
   private func makeRepository() throws -> FriendsMessagesRepository {
     let schema = Schema([
       LocalPendingFriendComposerDraft.self,

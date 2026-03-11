@@ -101,8 +101,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  IF NOT (v_snapshot ? 'owner_avatar_url')
-     OR COALESCE(jsonb_typeof(v_snapshot->'owner_avatar_url'), '') NOT IN ('string', 'null')
+  IF COALESCE(jsonb_typeof(v_snapshot->'owner_avatar_url'), 'null') NOT IN ('string', 'null')
   THEN
     RETURN NULL;
   END IF;
@@ -115,14 +114,12 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  IF NOT (v_snapshot ? 'job_name')
-     OR COALESCE(jsonb_typeof(v_snapshot->'job_name'), '') NOT IN ('string', 'null')
+  IF COALESCE(jsonb_typeof(v_snapshot->'job_name'), 'null') NOT IN ('string', 'null')
   THEN
     RETURN NULL;
   END IF;
 
-  IF NOT (v_snapshot ? 'job_color_hex')
-     OR COALESCE(jsonb_typeof(v_snapshot->'job_color_hex'), '') NOT IN ('string', 'null')
+  IF COALESCE(jsonb_typeof(v_snapshot->'job_color_hex'), 'null') NOT IN ('string', 'null')
   THEN
     RETURN NULL;
   END IF;
@@ -176,27 +173,25 @@ BEGIN
 
   v_includes_earnings := (v_snapshot->>'includes_earnings')::boolean;
 
-  IF NOT (v_snapshot ? 'gross_pay')
-     OR COALESCE(jsonb_typeof(v_snapshot->'gross_pay'), '') NOT IN ('number', 'null')
+  IF COALESCE(jsonb_typeof(v_snapshot->'gross_pay'), 'null') NOT IN ('number', 'null')
   THEN
     RETURN NULL;
   END IF;
 
-  IF NOT (v_snapshot ? 'net_pay')
-     OR COALESCE(jsonb_typeof(v_snapshot->'net_pay'), '') NOT IN ('number', 'null')
+  IF COALESCE(jsonb_typeof(v_snapshot->'net_pay'), 'null') NOT IN ('number', 'null')
   THEN
     RETURN NULL;
   END IF;
 
   IF v_includes_earnings THEN
-    IF COALESCE(jsonb_typeof(v_snapshot->'gross_pay'), '') <> 'number'
-       OR COALESCE(jsonb_typeof(v_snapshot->'net_pay'), '') <> 'number'
+    IF COALESCE(jsonb_typeof(v_snapshot->'gross_pay'), 'null') <> 'number'
+       OR COALESCE(jsonb_typeof(v_snapshot->'net_pay'), 'null') <> 'number'
     THEN
       RETURN NULL;
     END IF;
   ELSE
-    IF COALESCE(jsonb_typeof(v_snapshot->'gross_pay'), '') <> 'null'
-       OR COALESCE(jsonb_typeof(v_snapshot->'net_pay'), '') <> 'null'
+    IF COALESCE(jsonb_typeof(v_snapshot->'gross_pay'), 'null') <> 'null'
+       OR COALESCE(jsonb_typeof(v_snapshot->'net_pay'), 'null') <> 'null'
     THEN
       RETURN NULL;
     END IF;
@@ -557,6 +552,10 @@ BEGIN
   RETURN COALESCE(NEW, OLD);
 END;
 $function$;
+
+DROP FUNCTION IF EXISTS public.get_or_create_direct_thread(uuid);
+DROP FUNCTION IF EXISTS public.list_my_threads(integer, timestamptz, uuid);
+DROP FUNCTION IF EXISTS public.get_thread_summary(uuid);
 
 CREATE OR REPLACE FUNCTION public.get_thread_summary(p_thread_id uuid)
 RETURNS TABLE (

@@ -534,7 +534,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private func loadCounterpartShiftPreview(forceRefresh: Bool) async {
-    guard canViewCounterpartSharedShift else {
+    if let cachedCounterpartCanViewSharedShift, !cachedCounterpartCanViewSharedShift {
       counterpartShiftPreview = nil
       return
     }
@@ -825,11 +825,11 @@ final class FriendsThreadViewModel: ObservableObject {
     return capabilities.canSendShiftSnapshots
   }
 
-  private var canViewCounterpartSharedShift: Bool {
+  private var cachedCounterpartCanViewSharedShift: Bool? {
     let cachedFriends = sharedShiftsCache.getCachedFriends(for: viewerUserId, includeHidden: true)
     guard let counterpart = cachedFriends.sharers.first(where: { $0.id == route.counterpartUserId })
     else {
-      return false
+      return nil
     }
 
     return !counterpart.hidden && !cachedFriends.chatOnlyUserIds.contains(counterpart.id)
