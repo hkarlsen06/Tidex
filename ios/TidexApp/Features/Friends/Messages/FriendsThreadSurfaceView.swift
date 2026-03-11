@@ -48,6 +48,17 @@ struct FriendsThreadSurfaceView: UIViewControllerRepresentable {
   }
 }
 
+struct FriendsThreadComposerKeyboardLayout {
+  static func shouldAttachComposerToKeyboard(
+    keyboardTop: CGFloat,
+    viewBottom: CGFloat,
+    bottomSafeAreaInset: CGFloat
+  ) -> Bool {
+    let keyboardOverlap = max(0, viewBottom - keyboardTop)
+    return keyboardOverlap > (bottomSafeAreaInset + 0.5)
+  }
+}
+
 @MainActor
 final class FriendsThreadSurfaceViewController: UIViewController {
   private let timelineController = FriendsChatTimelineViewController()
@@ -74,6 +85,7 @@ final class FriendsThreadSurfaceViewController: UIViewController {
   private var lastAppliedTimelineBottomInset: CGFloat = 0
   private var baseTimelineBottomInset: CGFloat = 0
   private var latestMeasuredComposerHeight: CGFloat = 0
+  private var keyboardObservers: [NSObjectProtocol] = []
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -104,6 +116,8 @@ final class FriendsThreadSurfaceViewController: UIViewController {
       self?.handleComposerPreferredHeightChange(height: height)
     }
 
+    startObservingKeyboardTransitions()
+
     NSLayoutConstraint.activate([
       timelineController.view.topAnchor.constraint(equalTo: view.topAnchor),
       timelineController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -114,6 +128,19 @@ final class FriendsThreadSurfaceViewController: UIViewController {
       composerController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       composerController.view.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor),
     ])
+  }
+
+  override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    synchronizeComposerLayoutForCurrentKeyboardState()
+    DispatchQueue.main.async { [weak self] in
+      self?.synchronizeComposerLayoutForCurrentKeyboardState()
+    }
+  }
+
+  deinit {
+    let notificationCenter = NotificationCenter.default
+    keyboardObservers.forEach { notificationCenter.removeObserver($0) }
   }
 
   override func viewDidLayoutSubviews() {
@@ -215,10 +242,51 @@ final class FriendsThreadSurfaceViewController: UIViewController {
     return max(0, resolvedSize.height)
   }
 
+  private func startObservingKeyboardTransitions() {
+    let notificationCenter = NotificationCenter.default
+    let keyboardNotifications: [NSNotification.Name] = [
+      UIResponder.keyboardWillChangeFrameNotification,
+      UIResponder.keyboardDidChangeFrameNotification,
+      UIResponder.keyboardWillHideNotification,
+      UIResponder.keyboardDidHideNotification,
+    ]
+
+    keyboardObservers = keyboardNotifications.map { name in
+      notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+        Task { @MainActor [weak self] in
+          self?.synchronizeComposerLayoutForCurrentKeyboardState()
+        }
+      }
+    }
+  }
+
+  private func synchronizeComposerLayoutForCurrentKeyboardState() {
+    guard isViewLoaded else { return }
+
+    view.setNeedsLayout()
+    if view.window != nil {
+      view.layoutIfNeeded()
+    }
+
+    updateComposerBottomConstraintForCurrentKeyboardState()
+
+    if view.window != nil {
+      view.layoutIfNeeded()
+    }
+
+    updateTimelineBottomInsetIfNeeded()
+    reportBottomAccessoryInsetIfNeeded()
+  }
+
   private func updateComposerBottomConstraintForCurrentKeyboardState() {
     let keyboardTop = view.keyboardLayoutGuide.layoutFrame.minY
-    let safeAreaBottom = view.safeAreaLayoutGuide.layoutFrame.maxY
-    let isKeyboardPresented = keyboardTop < (safeAreaBottom - 0.5)
+    let isKeyboardPresented =
+      FriendsThreadComposerKeyboardLayout
+      .shouldAttachComposerToKeyboard(
+        keyboardTop: keyboardTop,
+        viewBottom: view.bounds.maxY,
+        bottomSafeAreaInset: view.safeAreaInsets.bottom
+      )
 
     if isKeyboardPresented {
       guard
