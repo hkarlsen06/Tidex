@@ -251,7 +251,13 @@ final class ShiftReminderScheduler {
       "shift_date": shift.shiftDate,
     ]
 
-    // Category for potential future actions
+    content.threadIdentifier = "shift-reminders"
+    if #available(iOS 15.0, *) {
+      content.targetContentIdentifier = "shift-reminder:\(shift.shiftId)"
+      content.interruptionLevel = .active
+      content.relevanceScore = minutesBefore <= 60 ? 0.85 : 0.7
+    }
+
     content.categoryIdentifier = "SHIFT_REMINDER"
 
     return content

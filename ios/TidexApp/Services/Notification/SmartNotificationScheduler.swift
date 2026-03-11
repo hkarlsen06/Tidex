@@ -251,6 +251,14 @@ final class SmartNotificationScheduler {
       "date": date.toISODateString(),
       "prompt_type": "morning",
     ]
+    content.threadIdentifier = "smart-prompts"
+
+    if #available(iOS 15.0, *) {
+      content.targetContentIdentifier = "smart-prompt:morning:\(date.toISODateString())"
+      content.interruptionLevel = .passive
+      content.relevanceScore = 0.35
+    }
+
     content.categoryIdentifier = "SMART_PROMPT"
 
     return content
@@ -267,6 +275,14 @@ final class SmartNotificationScheduler {
       "date": dateISO,
       "prompt_type": "evening",
     ]
+    content.threadIdentifier = "smart-prompts"
+
+    if #available(iOS 15.0, *) {
+      content.targetContentIdentifier = "smart-prompt:evening:\(dateISO)"
+      content.interruptionLevel = .passive
+      content.relevanceScore = 0.4
+    }
+
     content.categoryIdentifier = "SMART_PROMPT"
 
     return content

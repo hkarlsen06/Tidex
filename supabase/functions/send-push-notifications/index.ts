@@ -11,21 +11,29 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 // ---------- Env ----------
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
 
 // FCM HTTP v1 credentials (from Google service account JSON)
 const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") ?? "";
 const FCM_CLIENT_EMAIL = Deno.env.get("FCM_CLIENT_EMAIL") ?? "";
-const FCM_PRIVATE_KEY = (Deno.env.get("FCM_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
+const FCM_PRIVATE_KEY = (Deno.env.get("FCM_PRIVATE_KEY") ?? "").replace(
+  /\\n/g,
+  "\n",
+);
 
 // APNs credentials (from Apple Developer Portal)
 // Production credentials (for App Store builds)
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";
 const APNS_TEAM_ID = Deno.env.get("APNS_TEAM_ID") ?? "";
-const APNS_PRIVATE_KEY = (Deno.env.get("APNS_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
+const APNS_PRIVATE_KEY = (Deno.env.get("APNS_PRIVATE_KEY") ?? "").replace(
+  /\\n/g,
+  "\n",
+);
 // Sandbox credentials (for TestFlight/debug builds) - falls back to production if not set
 const APNS_SANDBOX_KEY_ID = Deno.env.get("APNS_SANDBOX_KEY_ID") ?? "";
-const APNS_SANDBOX_PRIVATE_KEY = (Deno.env.get("APNS_SANDBOX_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
+const APNS_SANDBOX_PRIVATE_KEY =
+  (Deno.env.get("APNS_SANDBOX_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
 const APNS_BUNDLE_ID = Deno.env.get("APNS_BUNDLE_ID") ?? "no.tidex.app";
 
 // Cache access tokens (valid for 1 hour)
@@ -55,9 +63,17 @@ interface PushDevice {
   apns_token: string | null;
 }
 
+interface NotificationDeliveryJob {
+  notifications: OutboxNotification[];
+  notification: OutboxNotification;
+}
+
 // ---------- Helpers ----------
 function res(body: string, status: number) {
-  return new Response(body, { status, headers: { "Content-Type": "text/plain" } });
+  return new Response(body, {
+    status,
+    headers: { "Content-Type": "text/plain" },
+  });
 }
 
 function json(data: unknown, status = 200) {
@@ -65,6 +81,211 @@ function json(data: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function notificationDataString(
+  notification: OutboxNotification,
+  key: string,
+): string | null {
+  return asNonEmptyString(notification.data_payload[key]);
+}
+
+function notificationMessageCount(notification: OutboxNotification): number {
+  const rawCount = notification.data_payload.message_count;
+  const count = typeof rawCount === "number"
+    ? rawCount
+    : typeof rawCount === "string"
+    ? Number.parseInt(rawCount, 10)
+    : Number.NaN;
+
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 1;
+}
+
+function notificationThreadId(notification: OutboxNotification): string | null {
+  return notification.notification_type === "thread_message"
+    ? notificationDataString(notification, "thread_id")
+    : null;
+}
+
+function notificationCollapseId(
+  notification: OutboxNotification,
+): string | null {
+  const threadId = notificationThreadId(notification);
+  if (!threadId) return null;
+  if (notificationMessageCount(notification) < 4) return null;
+  return `thread-message:${threadId}`;
+}
+
+function isNewerNotification(
+  lhs: OutboxNotification,
+  rhs: OutboxNotification,
+): boolean {
+  return lhs.created_at > rhs.created_at ||
+    (lhs.created_at === rhs.created_at && lhs.id > rhs.id);
+}
+
+function coalesceNotifications(
+  notifications: OutboxNotification[],
+): NotificationDeliveryJob[] {
+  const jobsByKey = new Map<string, NotificationDeliveryJob>();
+
+  for (const notification of notifications) {
+    const threadId = notificationThreadId(notification);
+    const key = threadId
+      ? `thread_message:${notification.recipient_id}:${threadId}`
+      : notification.id;
+
+    const existing = jobsByKey.get(key);
+    if (!existing) {
+      jobsByKey.set(key, {
+        notifications: [notification],
+        notification,
+      });
+      continue;
+    }
+
+    existing.notifications.push(notification);
+    if (isNewerNotification(notification, existing.notification)) {
+      existing.notification = notification;
+    }
+  }
+
+  return Array.from(jobsByKey.values()).map((job) => {
+    if (job.notifications.length == 1) {
+      return job;
+    }
+
+    const latestMessageCount = job.notifications.reduce(
+      (maxCount, notification) =>
+        Math.max(maxCount, notificationMessageCount(notification)),
+      0,
+    );
+
+    return {
+      notifications: job.notifications,
+      notification: {
+        ...job.notification,
+        data_payload: {
+          ...job.notification.data_payload,
+          message_count: latestMessageCount,
+        },
+      },
+    };
+  });
+}
+
+function buildApsPayload(
+  notification: OutboxNotification,
+  badgeCount: number,
+): Record<string, unknown> {
+  const aps: Record<string, unknown> = {
+    alert: { title: notification.title, body: notification.body },
+    sound: "tidex_notification.caf",
+    badge: Math.max(0, badgeCount),
+    "mutable-content": 1,
+  };
+
+  const threadId = notificationThreadId(notification);
+  if (threadId) {
+    aps["category"] = "THREAD_MESSAGE";
+    aps["thread-id"] = threadId;
+    aps["target-content-id"] = `friend-chat:${threadId}`;
+    aps["interruption-level"] = "active";
+    aps["relevance-score"] = notificationMessageCount(notification) > 1
+      ? 0.95
+      : 0.9;
+    return aps;
+  }
+
+  switch (notification.notification_type) {
+    case "share_started":
+      aps["thread-id"] = "sharing";
+      aps["target-content-id"] = "sharing";
+      aps["interruption-level"] = "active";
+      aps["relevance-score"] = 0.65;
+      break;
+    case "feedback_responded":
+      aps["thread-id"] = "feedback";
+      aps["target-content-id"] = "feedback";
+      aps["interruption-level"] = "active";
+      aps["relevance-score"] = 0.55;
+      break;
+    case "feedback_submitted":
+      aps["thread-id"] = "admin-feedback";
+      aps["target-content-id"] = "admin-feedback";
+      aps["interruption-level"] = "active";
+      aps["relevance-score"] = 0.55;
+      break;
+    case "abuse_report_submitted":
+      aps["thread-id"] = "admin-reports";
+      aps["target-content-id"] = "admin-reports";
+      aps["interruption-level"] = "active";
+      aps["relevance-score"] = 0.7;
+      break;
+    default:
+      aps["thread-id"] = notification.notification_type;
+      aps["target-content-id"] = notification.notification_type;
+      aps["interruption-level"] = "active";
+      aps["relevance-score"] = 0.5;
+      break;
+  }
+
+  return aps;
+}
+
+function buildApnsHeaders(
+  notification: OutboxNotification,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    "apns-push-type": "alert",
+    "apns-priority": "10",
+  };
+
+  const collapseId = notificationCollapseId(notification);
+  if (collapseId) {
+    headers["apns-collapse-id"] = collapseId;
+  }
+
+  return headers;
+}
+
+async function getUnreadBadgeCount(
+  supabase: ReturnType<typeof createClient>,
+  recipientId: string,
+  cache: Map<string, number>,
+): Promise<number> {
+  const cached = cache.get(recipientId);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const { data, error } = await supabase.rpc(
+    "get_unread_direct_message_count",
+    {
+      p_user_id: recipientId,
+    },
+  );
+
+  if (error) {
+    console.error(
+      `Failed to fetch unread badge count for ${recipientId}:`,
+      error,
+    );
+    cache.set(recipientId, 0);
+    return 0;
+  }
+
+  const badgeCount = typeof data === "number"
+    ? data
+    : Number.parseInt(String(data ?? 0), 10) || 0;
+  cache.set(recipientId, Math.max(0, badgeCount));
+  return Math.max(0, badgeCount);
 }
 
 function base64UrlEncode(input: string | ArrayBuffer): string {
@@ -93,7 +314,10 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 /**
  * Create JWT with RS256 algorithm (for FCM/Google OAuth)
  */
-async function createJwtRs256(payload: object, privateKey: string): Promise<string> {
+async function createJwtRs256(
+  payload: object,
+  privateKey: string,
+): Promise<string> {
   const header = { alg: "RS256", typ: "JWT" };
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
@@ -106,13 +330,13 @@ async function createJwtRs256(payload: object, privateKey: string): Promise<stri
     pemToArrayBuffer(privateKey),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
     key,
-    new TextEncoder().encode(signingInput)
+    new TextEncoder().encode(signingInput),
   );
 
   return `${signingInput}.${base64UrlEncode(signature)}`;
@@ -122,7 +346,11 @@ async function createJwtRs256(payload: object, privateKey: string): Promise<stri
  * Create JWT with ES256 algorithm (for APNs)
  * APNs requires ECDSA with P-256 curve
  */
-async function createJwtEs256(payload: object, privateKey: string, keyId: string): Promise<string> {
+async function createJwtEs256(
+  payload: object,
+  privateKey: string,
+  keyId: string,
+): Promise<string> {
   const header = { alg: "ES256", typ: "JWT", kid: keyId };
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
@@ -135,13 +363,13 @@ async function createJwtEs256(payload: object, privateKey: string, keyId: string
     pemToArrayBuffer(privateKey),
     { name: "ECDSA", namedCurve: "P-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     key,
-    new TextEncoder().encode(signingInput)
+    new TextEncoder().encode(signingInput),
   );
 
   // Convert signature to raw r||s format (APNs expects raw format)
@@ -167,14 +395,22 @@ function signatureToRaw(sig: Uint8Array): Uint8Array {
   // Otherwise, parse as DER format
   // DER format starts with 0x30 (SEQUENCE tag)
   if (sig[0] !== 0x30) {
-    throw new Error(`Unexpected signature format: first byte is ${sig[0]}, length is ${sig.length}`);
+    throw new Error(
+      `Unexpected signature format: first byte is ${
+        sig[0]
+      }, length is ${sig.length}`,
+    );
   }
 
   let offset = 2; // Skip 0x30 and total length
 
   // Read r
   if (sig[offset] !== 0x02) {
-    throw new Error(`Invalid DER signature: expected 0x02 at offset ${offset}, got ${sig[offset]}`);
+    throw new Error(
+      `Invalid DER signature: expected 0x02 at offset ${offset}, got ${
+        sig[offset]
+      }`,
+    );
   }
   offset++;
   const rLength = sig[offset];
@@ -184,7 +420,11 @@ function signatureToRaw(sig: Uint8Array): Uint8Array {
 
   // Read s
   if (sig[offset] !== 0x02) {
-    throw new Error(`Invalid DER signature: expected 0x02 at offset ${offset}, got ${sig[offset]}`);
+    throw new Error(
+      `Invalid DER signature: expected 0x02 at offset ${offset}, got ${
+        sig[offset]
+      }`,
+    );
   }
   offset++;
   const sLength = sig[offset];
@@ -222,7 +462,9 @@ function normalizeToLength(bytes: Uint8Array, length: number): Uint8Array {
 
 async function getFcmAccessToken(): Promise<string> {
   // Return cached token if still valid (with 1 minute buffer)
-  if (cachedFcmAccessToken && Date.now() < cachedFcmAccessToken.expiresAt - 60000) {
+  if (
+    cachedFcmAccessToken && Date.now() < cachedFcmAccessToken.expiresAt - 60000
+  ) {
     return cachedFcmAccessToken.token;
   }
 
@@ -277,13 +519,15 @@ async function getApnsToken(sandbox: boolean): Promise<string> {
 
   // Select credentials based on environment
   const keyId = sandbox ? (APNS_SANDBOX_KEY_ID || APNS_KEY_ID) : APNS_KEY_ID;
-  const privateKey = sandbox ? (APNS_SANDBOX_PRIVATE_KEY || APNS_PRIVATE_KEY) : APNS_PRIVATE_KEY;
+  const privateKey = sandbox
+    ? (APNS_SANDBOX_PRIVATE_KEY || APNS_PRIVATE_KEY)
+    : APNS_PRIVATE_KEY;
 
   const now = Math.floor(Date.now() / 1000);
   const token = await createJwtEs256(
     { iss: APNS_TEAM_ID, iat: now },
     privateKey,
-    keyId
+    keyId,
   );
 
   const cacheEntry = {
@@ -307,7 +551,8 @@ async function getApnsToken(sandbox: boolean): Promise<string> {
 async function sendToFcm(
   accessToken: string,
   fcmToken: string,
-  notification: OutboxNotification
+  notification: OutboxNotification,
+  badgeCount: number,
 ): Promise<{ success: boolean; invalidToken?: boolean }> {
   const { title, body, data_payload, notification_type } = notification;
 
@@ -329,6 +574,9 @@ async function sendToFcm(
     }
   }
 
+  const aps = buildApsPayload(notification, badgeCount);
+  const apnsHeaders = buildApnsHeaders(notification);
+
   // FCM HTTP v1 message format
   const message = {
     message: {
@@ -339,12 +587,9 @@ async function sendToFcm(
       },
       data: dataPayload,
       apns: {
+        headers: apnsHeaders,
         payload: {
-          aps: {
-            alert: { title, body },
-            sound: "tidex_notification.caf",
-            "mutable-content": 1,
-          },
+          aps,
         },
       },
       android: {
@@ -365,7 +610,7 @@ async function sendToFcm(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(message),
-    }
+    },
   );
 
   if (response.ok) {
@@ -373,7 +618,10 @@ async function sendToFcm(
   }
 
   const errorBody = await response.text();
-  console.error(`FCM error for token ${fcmToken.substring(0, 20)}...:`, errorBody);
+  console.error(
+    `FCM error for token ${fcmToken.substring(0, 20)}...:`,
+    errorBody,
+  );
 
   // Check for invalid token errors
   if (
@@ -394,7 +642,8 @@ async function sendToFcm(
  */
 async function sendToApns(
   apnsToken: string,
-  notification: OutboxNotification
+  notification: OutboxNotification,
+  badgeCount: number,
 ): Promise<{ success: boolean; invalidToken?: boolean }> {
   const { title, body, data_payload, notification_type } = notification;
 
@@ -404,13 +653,12 @@ async function sendToApns(
     ...data_payload,
   };
 
+  const aps = buildApsPayload(notification, badgeCount);
+  const apnsHeaders = buildApnsHeaders(notification);
+
   // APNs payload format
   const payload = {
-    aps: {
-      alert: { title, body },
-      sound: "tidex_notification.caf",
-      "mutable-content": 1,
-    },
+    aps,
     ...customData,
   };
 
@@ -440,8 +688,7 @@ async function sendToApns(
       headers: {
         Authorization: `bearer ${jwtToken}`,
         "apns-topic": APNS_BUNDLE_ID,
-        "apns-push-type": "alert",
-        "apns-priority": "10",
+        ...apnsHeaders,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
@@ -454,10 +701,17 @@ async function sendToApns(
 
     const status = response.status;
     const errorBody = await response.text();
-    console.error(`APNs error (${status}) via ${env.host} for token ${apnsToken.substring(0, 20)}...:`, errorBody);
+    console.error(
+      `APNs error (${status}) via ${env.host} for token ${
+        apnsToken.substring(0, 20)
+      }...:`,
+      errorBody,
+    );
 
     // If BadDeviceToken on production, try sandbox (device might be from TestFlight)
-    if (status === 400 && errorBody.includes("BadDeviceToken") && !env.sandbox) {
+    if (
+      status === 400 && errorBody.includes("BadDeviceToken") && !env.sandbox
+    ) {
       console.log("[APNs] BadDeviceToken on production, trying sandbox...");
       continue;
     }
@@ -494,7 +748,8 @@ serve(async (req: Request) => {
     }
 
     // Check if at least one push provider is configured
-    const fcmConfigured = !!(FCM_PROJECT_ID && FCM_CLIENT_EMAIL && FCM_PRIVATE_KEY);
+    const fcmConfigured =
+      !!(FCM_PROJECT_ID && FCM_CLIENT_EMAIL && FCM_PRIVATE_KEY);
     const apnsConfigured = !!(APNS_KEY_ID && APNS_TEAM_ID && APNS_PRIVATE_KEY);
 
     if (!fcmConfigured && !apnsConfigured) {
@@ -530,8 +785,14 @@ serve(async (req: Request) => {
     let processed = 0;
     let failed = 0;
     const invalidTokens: string[] = [];
+    const unreadBadgeCountByRecipient = new Map<string, number>();
+    const deliveryJobs = coalesceNotifications(
+      notifications as OutboxNotification[],
+    );
 
-    for (const notification of notifications as OutboxNotification[]) {
+    for (const job of deliveryJobs) {
+      const notification = job.notification;
+      const notificationIds = job.notifications.map((entry) => entry.id);
       try {
         // Get recipient's push tokens (both APNs and FCM)
         const { data: devices } = await supabase
@@ -549,9 +810,15 @@ serve(async (req: Request) => {
               status: "skipped",
               processed_at: new Date().toISOString(),
             })
-            .eq("id", notification.id);
+            .in("id", notificationIds);
           continue;
         }
+
+        const badgeCount = await getUnreadBadgeCount(
+          supabase,
+          notification.recipient_id,
+          unreadBadgeCountByRecipient,
+        );
 
         // Send to each device
         // Priority: APNs (native iOS) > FCM (hybrid/Android)
@@ -561,7 +828,11 @@ serve(async (req: Request) => {
 
           // Prefer APNs if token exists and APNs is configured
           if (device.apns_token && apnsConfigured) {
-            result = await sendToApns(device.apns_token, notification);
+            result = await sendToApns(
+              device.apns_token,
+              notification,
+              badgeCount,
+            );
             if (result.invalidToken) {
               // Clear invalid APNs token but don't delete device (may have FCM)
               await supabase
@@ -570,10 +841,14 @@ serve(async (req: Request) => {
                 .update({ apns_token: null })
                 .eq("id", device.id);
             }
-          }
-          // Fall back to FCM if APNs not available/failed
+          } // Fall back to FCM if APNs not available/failed
           else if (device.fcm_token && fcmAccessToken) {
-            result = await sendToFcm(fcmAccessToken, device.fcm_token, notification);
+            result = await sendToFcm(
+              fcmAccessToken,
+              device.fcm_token,
+              notification,
+              badgeCount,
+            );
             if (result.invalidToken) {
               // Token is invalid, queue device for deletion
               invalidTokens.push(device.id);
@@ -597,30 +872,38 @@ serve(async (req: Request) => {
             error_message: anySuccess ? null : "All devices failed",
             processed_at: new Date().toISOString(),
           })
-          .eq("id", notification.id);
+          .in("id", notificationIds);
 
-        if (anySuccess) processed++;
-        else failed++;
+        if (anySuccess) processed += notificationIds.length;
+        else failed += notificationIds.length;
       } catch (error) {
-        console.error(`Error processing notification ${notification.id}:`, error);
+        console.error(
+          `Error processing notification ${notification.id}:`,
+          error,
+        );
 
         await supabase
           .schema("internal")
           .from("notifications_outbox")
           .update({
             status: "failed",
-            error_message: error instanceof Error ? error.message : "Unknown error",
+            error_message: error instanceof Error
+              ? error.message
+              : "Unknown error",
             processed_at: new Date().toISOString(),
           })
-          .eq("id", notification.id);
+          .in("id", notificationIds);
 
-        failed++;
+        failed += notificationIds.length;
       }
     }
 
     // Clean up invalid tokens
     if (invalidTokens.length > 0) {
-      await supabase.schema("internal").from("push_devices").delete().in("id", invalidTokens);
+      await supabase.schema("internal").from("push_devices").delete().in(
+        "id",
+        invalidTokens,
+      );
       console.log(`Deleted ${invalidTokens.length} invalid tokens`);
     }
 
@@ -663,7 +946,7 @@ serve(async (req: Request) => {
     console.error("Edge function error:", error);
     return json(
       { error: error instanceof Error ? error.message : "Unknown error" },
-      500
+      500,
     );
   }
 });

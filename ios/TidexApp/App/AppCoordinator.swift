@@ -860,6 +860,9 @@ final class AppCoordinator: ObservableObject {
           return
         }
         await Task { @MainActor in
+          await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: userId)
+        }.value
+        await Task { @MainActor in
           WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         }.value
 
@@ -1035,6 +1038,7 @@ final class AppCoordinator: ObservableObject {
 
     // Clear image cache
     ImageCache.shared.clearAll()
+    NotificationService.shared.setApplicationBadgeCount(0)
 
     if let bundleId = Bundle.main.bundleIdentifier {
       let seenPreAuthOnboarding = UserDefaults.standard.bool(
@@ -1063,6 +1067,7 @@ final class AppCoordinator: ObservableObject {
     hasFinishedOnboardingRemotely = false
     postAuthOnboardingPresentation = .none
     initialSyncComplete = false
+    NotificationService.shared.setApplicationBadgeCount(0)
   }
 
   /// Force a session check (useful for debugging or manual refresh)
