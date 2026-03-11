@@ -141,7 +141,9 @@ export const WageyServiceLive = Layer.effect(
         yield* auth.verifyUserId(userId);
 
         // Get subscription and profile data
-        const subData = yield* subscription.getUserSubscriptionData(userId);
+        const subData = yield* subscription.getUserSubscriptionData(userId, {
+          skipAuthCheck: true,
+        });
         return buildAccessResult(subData);
       });
 
@@ -155,7 +157,9 @@ export const WageyServiceLive = Layer.effect(
         yield* auth.verifyUserId(userId);
 
         // Get subscription data to determine limit
-        const subData = yield* subscription.getUserSubscriptionData(userId);
+        const subData = yield* subscription.getUserSubscriptionData(userId, {
+          skipAuthCheck: true,
+        });
         const access = buildAccessResult(subData);
         const limit = access.limit ?? 0;
         const result = yield* runInvocationRpc(userId, limit);
@@ -188,7 +192,9 @@ export const WageyServiceLive = Layer.effect(
       Effect.gen(function* () {
         yield* auth.verifyUserId(userId);
 
-        const subData = yield* subscription.getUserSubscriptionData(userId);
+        const subData = yield* subscription.getUserSubscriptionData(userId, {
+          skipAuthCheck: true,
+        });
         const access = buildAccessResult(subData);
         const limit = access.limit ?? 0;
         const invocation = yield* runInvocationRpc(userId, limit);

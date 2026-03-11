@@ -7,7 +7,7 @@
 import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
-import { getComputedShiftsForApi } from "@/data-access/shifts";
+import { getComputedShiftsForApi, getShiftIdentityRowsForApi } from "@/data-access/shifts";
 import { archiveJob, createJob, deleteJob, getUserJobs, updateJob } from "@/data-access/jobs";
 import { draftRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/draftRecurringShift";
 import { createRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/createRecurringShift";
@@ -602,8 +602,8 @@ async function executeManageShift(
         }
 
         // Fetch shifts once for both ID resolution and getting shift details
-        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
-        const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
+        const shifts = await getShiftIdentityRowsForApi(userId, { limit: 1000 });
+        const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts);
         if (!fullShiftId) {
           return {
             success: false,
@@ -611,7 +611,7 @@ async function executeManageShift(
           };
         }
 
-        const shift = shiftsResult.shifts.find((s) => s.id === fullShiftId);
+        const shift = shifts.find((s) => s.id === fullShiftId);
         if (!shift) {
           return {
             success: false,
@@ -636,12 +636,12 @@ async function executeManageShift(
 
       case "delete": {
         // Fetch shifts once for ID resolution and display info
-        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
+        const shifts = await getShiftIdentityRowsForApi(userId, { limit: 1000 });
 
         // Support both single and bulk delete
         if (input.shiftIds && input.shiftIds.length > 0) {
           // Resolve short IDs to full UUIDs
-          const fullShiftIds = resolveShortIdsFromShifts(input.shiftIds, shiftsResult.shifts);
+          const fullShiftIds = resolveShortIdsFromShifts(input.shiftIds, shifts);
           if (fullShiftIds.length === 0) {
             return {
               success: false,
@@ -659,7 +659,7 @@ async function executeManageShift(
           };
         } else if (input.shiftId) {
           // Resolve short ID to full UUID
-          const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
+          const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts);
           if (!fullShiftId) {
             return {
               success: false,
@@ -667,7 +667,7 @@ async function executeManageShift(
             };
           }
 
-          const shift = shiftsResult.shifts.find((s) => s.id === fullShiftId);
+          const shift = shifts.find((s) => s.id === fullShiftId);
           await deleteShift(fullShiftId);
 
           return {
@@ -2271,8 +2271,8 @@ async function executeManageShiftAdvanced(
           };
         }
 
-        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
-        const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
+        const shifts = await getShiftIdentityRowsForApi(userId, { limit: 1000 });
+        const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts);
         if (!fullShiftId) {
           return {
             success: false,

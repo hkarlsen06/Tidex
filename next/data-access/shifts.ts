@@ -13,7 +13,7 @@ import { cacheTag } from "next/cache";
 import { cookies } from "next/headers";
 import { Effect } from "effect";
 import { ShiftsService, type ShiftsAggregates, type PayoutTaxSettings } from "@/lib/services/shifts";
-import { ShiftsLive } from "@/lib/layers/app";
+import { ShiftsLive, SupabaseLive } from "@/lib/layers/app";
 import { logger } from "@/lib/logger";
 import {
   type ShiftWithComputations,
@@ -22,6 +22,7 @@ import {
   PRESET_SUPPLEMENT_RULES,
 } from "@/lib/payroll";
 import { verifySession } from "@/data-access/auth";
+import { SupabaseService } from "@/lib/services/supabase";
 
 export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
 
@@ -45,6 +46,14 @@ export type ShiftLoadOptions = {
    * the tax settings from the payout month's snapshot.
    */
   month?: number;
+};
+
+export type ShiftIdentityRow = {
+  id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  job_id: string | null;
 };
 
 /**
@@ -114,6 +123,56 @@ async function getComputedShiftsInternal(
   }
 }
 
+async function getShiftIdentityRowsInternal(
+  userId: string,
+  options: Pick<ShiftLoadOptions, "startDate" | "endDate" | "limit" | "jobId"> = {}
+): Promise<ShiftIdentityRow[]> {
+  "use cache: private";
+  cacheTag(`user-${userId}`, "user-shifts");
+
+  const program = Effect.gen(function* () {
+    const supabase = yield* SupabaseService;
+    const rows = yield* supabase.query(
+      async (client) => {
+        let query = client
+          .from("user_shifts")
+          .select("id, shift_date, start_time, end_time, job_id")
+          .eq("user_id", userId)
+          .is("deleted_at", null)
+          .order("shift_date", { ascending: false });
+
+        if (options.jobId) {
+          query = query.eq("job_id", options.jobId);
+        }
+        if (options.startDate) {
+          query = query.gte("shift_date", options.startDate);
+        }
+        if (options.endDate) {
+          query = query.lte("shift_date", options.endDate);
+        }
+        if (options.limit) {
+          query = query.limit(options.limit);
+        }
+
+        return await query;
+      },
+      { retries: 2 }
+    );
+
+    return (rows ?? []) as ShiftIdentityRow[];
+  }).pipe(
+    Effect.provide(SupabaseLive),
+    Effect.scoped
+  );
+
+  try {
+    return await Effect.runPromise(program);
+  } catch (error: any) {
+    logger.error("Failed to fetch shift identity rows:", error);
+    return [];
+  }
+}
+
 /**
  * Get computed shifts with pagination and caching
  * - Uses React cache() for request deduplication within a single request
@@ -170,5 +229,14 @@ export const getComputedShiftsForApi = cache(
     currentPayoutTaxSettings: PayoutTaxSettings;
   }> => {
     return getComputedShiftsInternal(userId, options);
+  }
+);
+
+export const getShiftIdentityRowsForApi = cache(
+  async (
+    userId: string,
+    options: Pick<ShiftLoadOptions, "startDate" | "endDate" | "limit" | "jobId"> = {}
+  ): Promise<ShiftIdentityRow[]> => {
+    return getShiftIdentityRowsInternal(userId, options);
   }
 );
