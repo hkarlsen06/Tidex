@@ -400,7 +400,7 @@ private struct CompactFriendShiftPreviewTextRow: View {
 
         VStack(alignment: .trailing, spacing: Spacing.micro) {
           Text(statusText(computed: computed))
-            .font(.tidexLabel)
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)

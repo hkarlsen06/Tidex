@@ -2,7 +2,14 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
+enum FriendsThreadComposerMode: Equatable {
+  case normal
+  case reply
+  case edit
+}
+
 struct FriendsThreadComposerConfiguration: Equatable {
+  let mode: FriendsThreadComposerMode
   let draftText: String
   let replyPreview: FriendsChatReplyPreviewModel?
   let stagedAttachment: FriendsComposerAttachmentDraft?
@@ -10,10 +17,12 @@ struct FriendsThreadComposerConfiguration: Equatable {
   let sendErrorMessage: String?
   let placeholder: String
   let canSendShiftSnapshots: Bool
+  let focusRequestToken: Int
 }
 
 @MainActor
 final class FriendsThreadComposerBridge: ObservableObject {
+  @Published private(set) var mode: FriendsThreadComposerMode = .normal
   @Published private(set) var draftText: String = ""
   @Published private(set) var replyPreview: FriendsChatReplyPreviewModel?
   @Published private(set) var stagedAttachment: FriendsComposerAttachmentDraft?
@@ -21,10 +30,11 @@ final class FriendsThreadComposerBridge: ObservableObject {
   @Published private(set) var sendErrorMessage: String?
   @Published private(set) var placeholder: String = ""
   @Published private(set) var canSendShiftSnapshots = false
+  @Published private(set) var focusRequestToken = 0
 
   var onDraftChanged: ((String) -> Void)?
   var onStagedAttachmentChanged: ((FriendsComposerAttachmentDraft?) -> Void)?
-  var onCancelReply: (() -> Void)?
+  var onCancelMode: (() -> Void)?
   var onSend: ((String) async -> Bool)?
   var onPrepareShiftSnapshotAttachment:
     (
@@ -47,11 +57,13 @@ final class FriendsThreadComposerBridge: ObservableObject {
   }
 
   func apply(configuration: FriendsThreadComposerConfiguration) {
+    mode = configuration.mode
     replyPreview = configuration.replyPreview
     isThreadReadOnly = configuration.isThreadReadOnly
     sendErrorMessage = configuration.sendErrorMessage
     placeholder = configuration.placeholder
     canSendShiftSnapshots = configuration.canSendShiftSnapshots
+    focusRequestToken = configuration.focusRequestToken
 
     if draftText != configuration.draftText {
       isApplyingExternalDraft = true
@@ -66,8 +78,8 @@ final class FriendsThreadComposerBridge: ObservableObject {
     }
   }
 
-  func cancelReply() {
-    onCancelReply?()
+  func cancelMode() {
+    onCancelMode?()
   }
 
   func send(content: String) async -> Bool {
@@ -135,12 +147,15 @@ struct FriendsThreadComposerHostedView: View {
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
-      if let replyPreview = bridge.replyPreview {
+      if bridge.mode == .reply, let replyPreview = bridge.replyPreview {
         FriendsThreadComposerReplyBanner(
           preview: replyPreview,
-          onCancel: bridge.cancelReply
+          onCancel: bridge.cancelMode
         )
         .padding(.horizontal, Spacing.md)
+      } else if bridge.mode == .edit {
+        FriendsThreadComposerEditBanner(onCancel: bridge.cancelMode)
+          .padding(.horizontal, Spacing.md)
       }
 
       if let stagedAttachment = bridge.stagedAttachment {
@@ -225,6 +240,14 @@ struct FriendsThreadComposerHostedView: View {
     .onChange(of: attachmentController.isDrawerOpen) { _, isOpen in
       bridge.reportAttachmentDrawerOpen(isOpen)
     }
+    .onChange(of: bridge.focusRequestToken) { _, _ in
+      composerFocusTrigger += 1
+    }
+    .onChange(of: bridge.mode) { _, newMode in
+      if newMode == .edit {
+        attachmentController.closeDrawer()
+      }
+    }
     .onChange(of: selectedPhotoItem) { _, newItem in
       Task {
         await handleSelectedPhotoItem(newItem)
@@ -258,7 +281,9 @@ struct FriendsThreadComposerHostedView: View {
       disabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment,
       isSending: isSubmitting,
       canSend: canSend,
-      sendAccessibilityLabel: String(localized: "Send message"),
+      sendAccessibilityLabel: bridge.mode == .edit
+        ? String(localized: "friends.chat.composer.save_edit", table: "Localizable")
+        : String(localized: "Send message"),
       focusTrigger: composerFocusTrigger,
       onFocusChanged: { isComposerFocused = $0 },
       horizontalPadding: MonthPickerLayout.horizontalPadding,
@@ -269,7 +294,8 @@ struct FriendsThreadComposerHostedView: View {
       FriendsThreadComposerPlusButton(
         isOpen: attachmentController.isDrawerOpen,
         isDisabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment
-          || isPreparingAttachmentDrawer,
+          || isPreparingAttachmentDrawer
+          || bridge.mode == .edit,
         isPreparing: isPreparingAttachmentDrawer,
         action: toggleAttachmentDrawer
       )
@@ -703,6 +729,63 @@ private struct FriendsThreadComposerReplyBanner: View {
       }
       .buttonStyle(.plain)
       .accessibilityLabel(Text(String(localized: .commonCancel)))
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.sm)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+        .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+    )
+  }
+}
+
+private struct FriendsThreadComposerEditBanner: View {
+  let onCancel: () -> Void
+
+  var body: some View {
+    HStack(alignment: .center, spacing: Spacing.sm) {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "pencil")
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexBlue)
+
+        Text(
+          String(localized: "friends.chat.composer.editing_message", table: "Localizable")
+        )
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextPrimary)
+
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.sm)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .fill(Color.tidexSurfaceSecondary.opacity(0.72))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+      )
+
+      Button(action: onCancel) {
+        Image(systemName: "xmark")
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextMuted)
+          .frame(width: 32, height: 32)
+          .background(
+            Circle()
+              .fill(Color.tidexSurfaceSecondary)
+          )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(
+        Text(String(localized: "friends.chat.composer.cancel_edit", table: "Localizable"))
+      )
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.sm)

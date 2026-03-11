@@ -263,6 +263,142 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(state?.muted, true)
   }
 
+  func testSaveMessagesUpdatesLastMessageBodyWhenLatestMessageIsEdited() async throws {
+    let repository = try makeRepository()
+    let thread = FriendThread(
+      id: "thread-1",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: "message-1",
+      lastMessageSenderId: "viewer-1",
+      lastMessageAt: Date(timeIntervalSince1970: 1_700_000_000),
+      lastMessageBody: "Original body",
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_699_999_000)
+    )
+
+    await repository.saveThread(thread, for: viewerUserId)
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-1",
+          threadId: "thread-1",
+          senderUserId: "viewer-1",
+          messageType: .user,
+          body: "Original body",
+          clientId: "client-1",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: nil,
+          attachments: []
+        )
+      ],
+      in: "thread-1",
+      for: viewerUserId
+    )
+
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-1",
+          threadId: "thread-1",
+          senderUserId: "viewer-1",
+          messageType: .user,
+          body: "Edited body",
+          clientId: "client-1",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+          editedAt: Date(timeIntervalSince1970: 1_700_000_100),
+          deletedAt: nil,
+          metadataData: nil,
+          attachments: []
+        )
+      ],
+      in: "thread-1",
+      for: viewerUserId
+    )
+
+    let storedThread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(storedThread?.lastMessageBody, "Edited body")
+  }
+
+  func testGetMessagesFiltersDeletedMessages() async throws {
+    let repository = try makeRepository()
+
+    await repository.saveThread(
+      FriendThread(
+        id: "thread-1",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "friend-1",
+        counterpartDisplayName: "Friend",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-visible",
+        lastMessageSenderId: "friend-1",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_010),
+        lastMessageBody: "Visible",
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_699_999_000)
+      ),
+      for: viewerUserId
+    )
+
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-deleted",
+          threadId: "thread-1",
+          senderUserId: "friend-1",
+          messageType: .user,
+          body: "Deleted",
+          clientId: "client-deleted",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+          editedAt: nil,
+          deletedAt: Date(timeIntervalSince1970: 1_700_000_005),
+          metadataData: nil,
+          attachments: []
+        ),
+        FriendMessage(
+          id: "message-visible",
+          threadId: "thread-1",
+          senderUserId: "friend-1",
+          messageType: .user,
+          body: "Visible",
+          clientId: "client-visible",
+          replyToMessageId: nil,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_010),
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: nil,
+          attachments: []
+        ),
+      ],
+      in: "thread-1",
+      for: viewerUserId
+    )
+
+    XCTAssertEqual(
+      repository.getMessages(threadId: "thread-1", viewerUserId: viewerUserId).map(\.id),
+      ["message-visible"]
+    )
+  }
+
   func testSaveThreadsRemovesThreadsMissingFromLatestRefresh() async throws {
     let repository = try makeRepository()
 

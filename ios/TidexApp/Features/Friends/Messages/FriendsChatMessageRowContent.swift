@@ -58,12 +58,13 @@ struct FriendsChatMessageRowContent: View {
     let showsFallbackBubble =
       !hasMessageText && imageAttachments.isEmpty && shiftSnapshot == nil
       && fallbackPreviewText != nil
+    let showsMetadataRow = showsTimestamp || messageStatus != nil || message.editedAt != nil
     let topPadding =
       message.reactions.isEmpty
       ? (groupContext.joinsPrevious ? CGFloat.zero : Spacing.xxs)
       : Spacing.md
     let bottomPadding =
-      if showsTimestamp || messageStatus != nil {
+      if showsMetadataRow {
         Spacing.xxxs
       } else if groupContext.joinsNext {
         CGFloat.zero
@@ -203,11 +204,17 @@ struct FriendsChatMessageRowContent: View {
                 }
             )
 
-            if showsTimestamp || messageStatus != nil {
+            if showsMetadataRow {
               HStack(spacing: Spacing.xxs) {
                 if isCurrentUser {
                   if let messageStatus {
                     statusView(messageStatus)
+                  }
+
+                  if message.editedAt != nil {
+                    Text(String(localized: "friends.chat.edited", table: "Localizable"))
+                      .lineLimit(1)
+                      .fixedSize(horizontal: true, vertical: false)
                   }
 
                   if showsTimestamp {
@@ -216,6 +223,12 @@ struct FriendsChatMessageRowContent: View {
                       .fixedSize(horizontal: true, vertical: false)
                   }
                 } else {
+                  if message.editedAt != nil {
+                    Text(String(localized: "friends.chat.edited", table: "Localizable"))
+                      .lineLimit(1)
+                      .fixedSize(horizontal: true, vertical: false)
+                  }
+
                   if showsTimestamp {
                     Text(message.createdAt.formatted(.dateTime.hour().minute()))
                       .lineLimit(1)
