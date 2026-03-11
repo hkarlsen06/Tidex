@@ -78,9 +78,25 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 ## Supabase SQL Functions & Cron Jobs
 
-**Location:** `supabase/sql/functions/<category>/*.sql` and `supabase/sql/cron/*.md`
+**Locations:**
 
-**CRITICAL:** Keep local files in sync with remote database when making changes.
+- SQL function source files: `supabase/sql/functions/<category>/*.sql`
+- Cron job docs: `supabase/sql/cron/*.md`
+- CLI migration files: `supabase/migrations/*.sql`
+
+**CRITICAL:**
+
+- Write migrations that will be applied by the Supabase CLI to `supabase/migrations/`.
+- Use `supabase db pull` only when intentionally baselining or capturing remote-first schema changes back into `supabase/migrations/`.
+- Do not treat `supabase/sql/migrations/` as the CLI-applied migration directory.
+- Keep the SQL source files in `supabase/sql/functions/` in sync with the actual database definitions when making changes.
+
+**Recommended workflow:**
+
+1. Edit function/trigger source files in `supabase/sql/functions/` as needed.
+2. Add or update the corresponding migration in `supabase/migrations/`.
+3. Apply it with `supabase db push`.
+4. If the remote database was changed outside the CLI workflow, reconcile with `supabase db pull` before continuing.
 
 **Current Cron Jobs:**
 
