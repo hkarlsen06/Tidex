@@ -2,6 +2,8 @@
 
 Next.js-specific development guidance for the Tidex web application.
 
+Run commands from the repository root unless explicitly stated otherwise.
+
 ## CRITICAL: Cache Invalidation (Next.js 16)
 
 **ALWAYS use `revalidateTag(tag, "max")` - NEVER use `updateTag()`**
@@ -45,6 +47,27 @@ pnpm build       # Production build
 pnpm start       # Run production server
 pnpm lint        # Run ESLint
 ```
+
+## iOS Build Wrapper
+
+When building the iOS app, always run:
+
+```bash
+./scripts/xcode-build-agent.sh
+```
+
+Do NOT run `xcodebuild` directly.
+
+JSON output is available with:
+
+```bash
+./scripts/xcode-build-agent.sh --json
+```
+
+Interpretation rules:
+- Exit code `0` + `STATUS: SUCCESS` -> build succeeded
+- Non-zero exit code or `STATUS: FAILURE` -> build failed
+- If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
 
 ## Architecture
 

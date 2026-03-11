@@ -97,5 +97,24 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 **NEVER push to git automatically** - commit when requested, but wait for user approval before pushing.
 
+Run commands from the repository root unless explicitly stated otherwise.
+
 **iOS Builds:**
-- To check for Swift errors, run `swiftlint`(fast, catches common issues)
+- To check for Swift errors, run `swiftlint` (fast, catches common issues)
+- When building the iOS app, always run:
+
+```bash
+./scripts/xcode-build-agent.sh
+```
+
+- Do NOT run `xcodebuild` directly.
+- JSON output is available with:
+
+```bash
+./scripts/xcode-build-agent.sh --json
+```
+
+- Interpretation rules:
+  - Exit code `0` + `STATUS: SUCCESS` -> build succeeded
+  - Non-zero exit code or `STATUS: FAILURE` -> build failed
+  - If present, read the `WARNINGS` and `ERRORS` sections for diagnostics

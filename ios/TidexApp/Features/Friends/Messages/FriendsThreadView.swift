@@ -176,7 +176,9 @@ struct FriendsThreadView: View {
         )
         .background(Color.tidexBackground)
         .overlay(alignment: .top) {
-          if viewModel.isLoadingOlderMessages && !viewModel.messages.isEmpty {
+          if (viewModel.isLoading || viewModel.isLoadingOlderMessages)
+            && !viewModel.messages.isEmpty
+          {
             olderMessagesLoadingState
               .padding(.top, Spacing.md)
           }

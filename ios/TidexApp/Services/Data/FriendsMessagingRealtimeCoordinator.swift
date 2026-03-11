@@ -70,7 +70,11 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       threadListChannel = channel
 
       threadListTasks = [
-        makeStatusTask(for: channel, viewerUserId: viewerUserId),
+        makeStatusTask(
+          for: channel,
+          viewerUserId: viewerUserId,
+          skipInitialSubscribedRefresh: true
+        ),
         Task { [weak self] in
           guard let self else { return }
           for await action in threadChanges {
@@ -157,7 +161,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           event: TypingEvent.stop,
           isTyping: false
         ),
-        makeThreadStatusTask(for: channel, threadId: threadId, viewerUserId: viewerUserId),
+        makeThreadStatusTask(
+          for: channel,
+          threadId: threadId,
+          viewerUserId: viewerUserId,
+          skipInitialSubscribedRefresh: true
+        ),
         Task { [weak self] in
           guard let self else { return }
           for await action in threadChanges {
@@ -187,8 +196,6 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           }
         },
       ]
-
-      await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
     } catch {
       realtimeLogger.error(
         "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
@@ -261,6 +268,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private func refreshMessage(messageId: String, viewerUserId: String) async {
     do {
       let message = try await service.fetchMessagePayload(messageId: messageId)
+      if message.deletedAt != nil {
+        await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
+        await refreshThreadSummary(threadId: message.threadId, viewerUserId: viewerUserId)
+        notifyThreadUpdated(threadId: message.threadId)
+        return
+      }
       await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
       await refreshThreadSummary(threadId: message.threadId, viewerUserId: viewerUserId)
       notifyThreadUpdated(threadId: message.threadId)
@@ -276,6 +289,15 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func handleThreadListMessageAction(_ action: AnyAction, viewerUserId: String) async {
+    if case .delete = action,
+      let messageId = Self.extractMessageId(from: action),
+      let threadId = Self.extractThreadId(from: action)
+    {
+      await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
+      await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+      return
+    }
+
     if let messageId = Self.extractMessageId(from: action) {
       await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
       return
@@ -308,6 +330,13 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     viewerUserId: String
   ) async {
     guard Self.extractThreadId(from: action) == threadId else { return }
+
+    if case .delete = action, let messageId = Self.extractMessageId(from: action) {
+      await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
+      await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+      notifyThreadUpdated(threadId: threadId)
+      return
+    }
 
     if let messageId = Self.extractMessageId(from: action) {
       await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
@@ -381,12 +410,19 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
-  private func makeStatusTask(for channel: RealtimeChannelV2, viewerUserId: String) -> Task<
-    Void, Never
-  > {
+  private func makeStatusTask(
+    for channel: RealtimeChannelV2,
+    viewerUserId: String,
+    skipInitialSubscribedRefresh: Bool
+  ) -> Task<Void, Never> {
     Task { [weak self] in
       guard let self else { return }
+      var hasSkippedInitialSubscribedRefresh = false
       for await status in channel.statusChange where status == .subscribed {
+        if skipInitialSubscribedRefresh, !hasSkippedInitialSubscribedRefresh {
+          hasSkippedInitialSubscribedRefresh = true
+          continue
+        }
         await self.refreshThreadList(viewerUserId: viewerUserId)
       }
     }
@@ -395,11 +431,17 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private func makeThreadStatusTask(
     for channel: RealtimeChannelV2,
     threadId: String,
-    viewerUserId: String
+    viewerUserId: String,
+    skipInitialSubscribedRefresh: Bool
   ) -> Task<Void, Never> {
     Task { [weak self] in
       guard let self else { return }
+      var hasSkippedInitialSubscribedRefresh = false
       for await status in channel.statusChange where status == .subscribed {
+        if skipInitialSubscribedRefresh, !hasSkippedInitialSubscribedRefresh {
+          hasSkippedInitialSubscribedRefresh = true
+          continue
+        }
         await self.refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
       }
     }

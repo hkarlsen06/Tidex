@@ -62,7 +62,6 @@ final class FriendsThreadViewModel: ObservableObject {
   private var lastTypingStartSentAt: Date?
   private var localTypingStopTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
-  private var reconcilingOptimisticMessageIds: Set<String> = []
   private var togglingReactionKeys: Set<String> = []
 
   init(
@@ -105,17 +104,19 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func load() async {
+    guard !isLoading else { return }
     isLoading = true
     loadFromCache()
 
-    await realtimeCoordinator.startThreadSubscription(
+    async let realtimeSubscription: Void = realtimeCoordinator.startThreadSubscription(
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
-
-    await refreshFromServer()
-    await markLatestIncomingAsRead()
+    async let serverRefresh: Void = refreshFromServer()
+    _ = await (realtimeSubscription, serverRefresh)
     isLoading = false
+
+    await markLatestIncomingAsRead()
   }
 
   func refresh() async {
@@ -139,7 +140,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func loadOlderMessagesIfNeeded(currentFirstMessageId: String) async {
-    guard !isLoading, !isLoadingOlderMessages, hasMoreHistoricalMessages,
+    guard !isLoadingOlderMessages, hasMoreHistoricalMessages,
       let oldestLoadedMessage = messages.first,
       oldestLoadedMessage.id == currentFirstMessageId
     else {
@@ -375,19 +376,18 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func refreshFromServer() async {
     do {
-      let refreshedThread = try await service.fetchThreadSummary(threadId: route.threadId)
-      let refreshedMessages = try await service.listThreadMessages(
+      async let refreshedThreadTask: FriendThread = service.fetchThreadSummary(
+        threadId: route.threadId)
+      async let refreshedMessagesTask: [FriendMessage] = service.listThreadMessages(
         threadId: route.threadId,
         limit: Pagination.pageSize,
         before: nil
       )
-      let refreshedCounterpartState =
-        route.counterpartUserId.isEmpty
-        ? nil
-        : try await service.fetchThreadState(
-          threadId: route.threadId,
-          userId: route.counterpartUserId
-        )
+      async let refreshedCounterpartStateTask: FriendThreadState? = fetchCounterpartStateIfNeeded()
+
+      let refreshedThread = try await refreshedThreadTask
+      let refreshedMessages = try await refreshedMessagesTask
+      let refreshedCounterpartState = try await refreshedCounterpartStateTask
 
       hasMoreHistoricalMessages = refreshedMessages.count == Pagination.pageSize
       await repository.saveThread(refreshedThread, for: viewerUserId)
@@ -399,6 +399,15 @@ final class FriendsThreadViewModel: ObservableObject {
     } catch {
       threadLogger.error("Failed to refresh thread: \(error.localizedDescription)")
     }
+  }
+
+  private func fetchCounterpartStateIfNeeded() async throws -> FriendThreadState? {
+    guard !route.counterpartUserId.isEmpty else { return nil }
+
+    return try await service.fetchThreadState(
+      threadId: route.threadId,
+      userId: route.counterpartUserId
+    )
   }
 
   private func markLatestIncomingAsRead() async {
@@ -437,7 +446,6 @@ final class FriendsThreadViewModel: ObservableObject {
       )
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
-    reconcileOptimisticMessagesIfNeeded()
     prefetchQuotedMessagesIfNeeded()
   }
 
@@ -535,6 +543,10 @@ final class FriendsThreadViewModel: ObservableObject {
         do {
           let quotedMessage = try await self.service.fetchMessagePayload(messageId: messageId)
           guard quotedMessage.threadId == self.route.threadId else { return }
+          guard quotedMessage.deletedAt == nil else {
+            self.quotedMessagesById.removeValue(forKey: messageId)
+            return
+          }
           self.quotedMessagesById[messageId] = quotedMessage
         } catch {
           threadLogger.error(
@@ -642,75 +654,38 @@ final class FriendsThreadViewModel: ObservableObject {
   private func pendingImageAttachment(for attachment: FriendMessageAttachment) async
     -> ImageAttachment?
   {
-    let cacheURL = imageCacheURL(for: attachment.storagePath)
+    let attachmentId = attachment.id
+    let storagePath = attachment.storagePath
 
-    if let cachedImage = ImageCache.shared.get(for: cacheURL),
-      let data = cachedImage.jpegData(compressionQuality: 0.9)
-    {
-      return ImageAttachment(id: attachment.id, data: data, mediaType: attachment.mimeType)
-    }
+    return await Task.detached(priority: .userInitiated) {
+      let cacheURL = Self.imageCacheURL(for: storagePath)
 
-    if let cachedImage = await ImageCache.shared.getFromDisk(for: cacheURL),
-      let data = cachedImage.jpegData(compressionQuality: 0.9)
-    {
-      return ImageAttachment(id: attachment.id, data: data, mediaType: attachment.mimeType)
-    }
+      if let cachedImage = ImageCache.shared.get(for: cacheURL),
+        let data = cachedImage.jpegData(compressionQuality: 0.9)
+      {
+        return ImageAttachment(id: attachmentId, data: data, mediaType: "image/jpeg")
+      }
 
-    return nil
+      if let cachedImage = await ImageCache.shared.getFromDisk(for: cacheURL),
+        let data = cachedImage.jpegData(compressionQuality: 0.9)
+      {
+        return ImageAttachment(id: attachmentId, data: data, mediaType: "image/jpeg")
+      }
+
+      return nil
+    }.value
   }
 
   private func cacheImage(_ image: ImageAttachment, for storagePath: String) {
     guard let uiImage = UIImage(data: image.data) else { return }
-    ImageCache.shared.set(uiImage, for: imageCacheURL(for: storagePath))
+    ImageCache.shared.set(uiImage, for: Self.imageCacheURL(for: storagePath))
   }
 
-  private func imageCacheURL(for storagePath: String) -> URL {
+  private nonisolated static func imageCacheURL(for storagePath: String) -> URL {
     var components = URLComponents()
     components.scheme = "https"
     components.host = "friends-message-cache.local"
     components.path = "/\(storagePath)"
     return components.url ?? URL(filePath: "/tmp/friends-message-cache-fallback")
-  }
-
-  private func reconcileOptimisticMessagesIfNeeded() {
-    guard thread.lastMessageSenderId == viewerUserId else { return }
-
-    let pendingMessages = messages.filter {
-      $0.senderUserId == viewerUserId && $0.sendState == .sending
-    }
-
-    for message in pendingMessages where shouldPromoteOptimisticMessage(message) {
-      guard !reconcilingOptimisticMessageIds.contains(message.id) else { continue }
-      reconcilingOptimisticMessageIds.insert(message.id)
-
-      Task { @MainActor [weak self] in
-        guard let self else { return }
-
-        await repository.updateMessageSendState(
-          messageId: message.id,
-          viewerUserId: viewerUserId,
-          sendState: .sent,
-          failureMessage: nil
-        )
-        reconcilingOptimisticMessageIds.remove(message.id)
-        loadFromCache()
-      }
-    }
-  }
-
-  private func shouldPromoteOptimisticMessage(_ message: FriendMessage) -> Bool {
-    guard let lastMessageAt = thread.lastMessageAt else { return false }
-    guard lastMessageAt >= message.createdAt else { return false }
-    guard lastMessageAt.timeIntervalSince(message.createdAt) < 300 else { return false }
-
-    let normalizedMessageBody = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
-    let normalizedThreadBody = thread.lastMessageBody?.trimmingCharacters(
-      in: .whitespacesAndNewlines)
-
-    if normalizedMessageBody != normalizedThreadBody {
-      return false
-    }
-
-    return message.hasImageAttachment == thread.lastMessageHasImage
   }
 }
