@@ -298,7 +298,7 @@ private struct FriendsThreadComposerReplyBanner: View {
             .foregroundColor(.tidexBlue)
 
           HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
-            if let iconSystemName = preview.previewKind.friendsChatReplyIconSystemName {
+            if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
               Image(systemName: iconSystemName)
                 .font(.tidexCaptionRegular)
                 .foregroundColor(.tidexTextMuted)

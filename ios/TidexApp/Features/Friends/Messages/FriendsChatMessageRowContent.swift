@@ -4,11 +4,13 @@ import UIKit
 struct FriendsChatReplyPreviewModel: Equatable {
   let senderName: String
   let previewKind: FriendLastMessagePreviewKind
+  let iconPreviewKind: FriendLastMessagePreviewKind?
   let snippet: String
 
   init(senderName: String, message: FriendMessage) {
     self.senderName = senderName
     previewKind = message.previewKind
+    iconPreviewKind = message.replyIconPreviewKind
     snippet = message.previewText ?? String(localized: .friendsChatPreviewUnsupported)
   }
 }
@@ -640,7 +642,7 @@ private struct FriendsChatMessageReplyPreview: View {
             .foregroundColor(accentColor)
 
           HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
-            if let iconSystemName = preview.previewKind.friendsChatReplyIconSystemName {
+            if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
               Image(systemName: iconSystemName)
                 .font(.tidexCaptionRegular)
                 .foregroundColor(textColor)
