@@ -25,9 +25,11 @@ struct ShiftDetailsSheet: View {
   let onDelete: (() -> Void)?
   let onUpdate: ((ShiftEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
+  let snapshotShareContext: ShiftSnapshotShareContext
   /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
   let tariffRules: [SupplementRule]
 
+  @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.dismiss) private var dismiss
@@ -70,6 +72,9 @@ struct ShiftDetailsSheet: View {
   /// Whether showing the share options dialog
   @State private var showingShareOptions = false
 
+  /// Whether showing the send-to-chat recipient picker
+  @State private var showingSendToChatSheet = false
+
   /// Image to share (rendered from ShareableShiftCard)
   @State private var shareImage: UIImage?
 
@@ -99,6 +104,7 @@ struct ShiftDetailsSheet: View {
     onDelete: (() -> Void)? = nil,
     onUpdate: ((ShiftEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
+    snapshotShareContext: ShiftSnapshotShareContext = .own,
     startInEditMode: Bool = false,
     tariffRules: [SupplementRule] = []
   ) {
@@ -108,6 +114,7 @@ struct ShiftDetailsSheet: View {
     self.onDelete = onDelete
     self.onUpdate = onUpdate
     self.onEditRecurring = onEditRecurring
+    self.snapshotShareContext = snapshotShareContext
     self.startInEditMode = startInEditMode
     self.tariffRules = tariffRules
   }
@@ -370,6 +377,23 @@ struct ShiftDetailsSheet: View {
           showingSupplementsEditor = false
         }
       )
+    }
+    .sheet(isPresented: $showingSendToChatSheet) {
+      if let viewerUserId {
+        SendShiftToChatSheet(
+          viewerUserId: viewerUserId,
+          buildDraft: makeShiftSnapshotDraft(for:),
+          onCompleted: { result in
+            coordinator.pendingDeepLink = .friendChat(
+              threadId: result.threadId,
+              messageId: nil,
+              senderUserId: nil
+            )
+            showingSendToChatSheet = false
+            dismiss()
+          }
+        )
+      }
     }
   }
 
@@ -796,6 +820,25 @@ struct ShiftDetailsSheet: View {
         }
       }
 
+      if viewerUserId != nil {
+        Button {
+          impactHaptic.impactOccurred()
+          showingSendToChatSheet = true
+        } label: {
+          HStack(spacing: Spacing.xs) {
+            Image(systemName: "bubble.left.and.text.bubble.right")
+              .font(.tidexLabel)
+            Text(LocalizedStringResource("friends.chat.send_to_chat", table: "Localizable"))
+              .font(.tidexLabelStrong)
+          }
+          .foregroundColor(.tidexBlue)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.sm)
+          .background(Color.tidexBlue.opacity(0.1))
+          .cornerRadius(CornerRadius.lg)
+        }
+      }
+
       // Delete button
       if let onDelete = onDelete {
         deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
@@ -1082,6 +1125,40 @@ struct ShiftDetailsSheet: View {
 
   private func formatCurrency(_ amount: Double) -> String {
     CurrencyConfig.format(amount, currency: currency)
+  }
+
+  private var viewerUserId: String? {
+    coordinator.getCurrentUserId()
+  }
+
+  private func makeShiftSnapshotDraft(for recipient: ShareRecipient) throws
+    -> ComposerShiftSnapshotDraft
+  {
+    switch snapshotShareContext {
+    case .own:
+      guard let viewerUserId else {
+        throw FriendsMessagingServiceError.notAuthenticated
+      }
+      return OwnShiftSnapshotBuilder(
+        shift: shift,
+        jobName: jobName,
+        jobColorHex: jobColorHex,
+        currency: currency,
+        ownerUserId: viewerUserId,
+        ownerDisplayName: coordinator.userDisplayName,
+        ownerAvatarUrl: coordinator.userAvatarUrl
+      )
+      .build(for: recipient)
+    case .shared(let owner):
+      return SharedShiftSnapshotBuilder(
+        shift: shift,
+        jobName: jobName,
+        jobColorHex: jobColorHex,
+        currency: currency,
+        owner: owner
+      )
+      .build()
+    }
   }
 }
 

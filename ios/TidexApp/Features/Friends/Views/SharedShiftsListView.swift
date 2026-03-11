@@ -116,7 +116,8 @@ struct SharedShiftsListView: View {
         shift: shift,
         jobName: shiftJob?.name,
         jobColorHex: shiftJob?.color,
-        onDelete: nil
+        onDelete: nil,
+        snapshotShareContext: .shared(owner: sharer)
       )
       .userCurrency(shiftJob?.currency ?? currency)
       .presentationDetents([.medium, .large])

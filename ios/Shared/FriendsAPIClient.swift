@@ -1959,6 +1959,7 @@ enum FriendsAPIClient {
     let displayName: String
     let avatarURL: URL?
     let statusText: String?
+    let canSeeOwnerEarnings: Bool
   }
 
   enum ShareExtensionMessagingClient {
@@ -2275,7 +2276,8 @@ enum FriendsAPIClient {
           id: id,
           displayName: displayName,
           avatarURL: effectiveAvatarURL,
-          statusText: contactInfo
+          statusText: contactInfo,
+          canSeeOwnerEarnings: iShareWith?.showEarningsToThem ?? false
         )
       }
 
@@ -2318,7 +2320,13 @@ enum FriendsAPIClient {
       }
     }
 
-    private struct ShareDirection: Decodable {}
+    private struct ShareDirection: Decodable {
+      let showEarningsToThem: Bool?
+
+      private enum CodingKeys: String, CodingKey {
+        case showEarningsToThem
+      }
+    }
   }
 
 #endif
