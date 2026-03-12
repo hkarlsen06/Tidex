@@ -12,6 +12,7 @@ struct SharerListView: View {
   let chatOnlyUserIds: Set<String>
   let unreadChatUserIds: Set<String>
   let unreadChatCountsByUserId: [String: Int]
+  let chatPreviewsByUserId: [String: FriendCardMessagePreview]
   let selectedSharer: SharedUser?
   let shiftPreviews: [String: SharerShiftPreview]
   let isLoading: Bool
@@ -246,6 +247,7 @@ struct SharerListView: View {
     FriendCard(
       sharer: sharer,
       preview: preview,
+      messagePreview: chatPreviewsByUserId[sharer.id],
       isSelected: isSelected,
       isRefreshing: isRefreshing,
       onChatTap: {
@@ -276,6 +278,7 @@ struct SharerListView: View {
     FriendCard(
       sharer: sharer,
       preview: preview,
+      messagePreview: chatPreviewsByUserId[sharer.id],
       isSelected: isSelected,
       isRefreshing: isRefreshing,
       onChatTap: {
@@ -325,6 +328,7 @@ struct SharerListView: View {
     chatOnlyUserIds: [],
     unreadChatUserIds: [],
     unreadChatCountsByUserId: [:],
+    chatPreviewsByUserId: [:],
     selectedSharer: nil,
     shiftPreviews: [:],
     isLoading: false,
