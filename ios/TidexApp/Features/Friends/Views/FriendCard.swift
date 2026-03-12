@@ -1,10 +1,26 @@
 import SwiftUI
 
+enum FriendCardMessageState: Equatable {
+  case outgoingSending
+  case outgoingSent
+  case outgoingOpened
+  case outgoingFailed
+  case incomingUnread
+  case incomingOpened
+}
+
+struct FriendCardMessagePreview: Equatable {
+  let text: String
+  let timestamp: Date
+  let state: FriendCardMessageState
+}
+
 /// A card displaying a friend who shares their shifts with the current user
 /// Shows their name, avatar, and a preview of their next/active/past shift
 struct FriendCard: View {
   let sharer: SharedUser
   let preview: SharerShiftPreview?
+  let messagePreview: FriendCardMessagePreview?
   let isSelected: Bool
   let isRefreshing: Bool
   let onChatTap: () -> Void
@@ -22,7 +38,8 @@ struct FriendCard: View {
           Button(action: onChatTap) {
             CompactFriendIdentityRow(
               sharer: sharer,
-              unreadMessageCount: unreadMessageCount
+              unreadMessageCount: unreadMessageCount,
+              messagePreview: messagePreview
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -189,6 +206,11 @@ struct FriendsListEmptyState: View {
         hidden: false
       ),
       preview: nil,
+      messagePreview: FriendCardMessagePreview(
+        text: "Can you cover Friday?",
+        timestamp: Date().addingTimeInterval(-900),
+        state: .incomingUnread
+      ),
       isSelected: false,
       isRefreshing: false,
       onChatTap: {},
@@ -208,6 +230,11 @@ struct FriendsListEmptyState: View {
         hidden: false
       ),
       preview: nil,
+      messagePreview: FriendCardMessagePreview(
+        text: "I opened the shift snapshot",
+        timestamp: Date().addingTimeInterval(-7200),
+        state: .outgoingOpened
+      ),
       isSelected: true,
       isRefreshing: false,
       onChatTap: {},

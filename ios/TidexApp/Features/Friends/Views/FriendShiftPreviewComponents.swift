@@ -9,6 +9,7 @@ private enum FriendShiftPreviewStatusCardStyle {
 struct CompactFriendIdentityRow: View {
   let sharer: SharedUser
   var unreadMessageCount = 0
+  var messagePreview: FriendCardMessagePreview? = nil
   var showsContactInfo = true
   var avatarSize: CGFloat = AvatarView.Size.large
 
@@ -21,7 +22,9 @@ struct CompactFriendIdentityRow: View {
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
 
-        if showsContactInfo, let contactInfo = sharer.contactInfo {
+        if let messagePreview {
+          FriendCardMessagePreviewRow(messagePreview: messagePreview)
+        } else if showsContactInfo, let contactInfo = sharer.contactInfo {
           Text(contactInfo)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
@@ -57,6 +60,87 @@ struct CompactFriendIdentityRow: View {
           .offset(x: 8, y: -8)
       }
     }
+  }
+}
+
+private struct FriendCardMessagePreviewRow: View {
+  let messagePreview: FriendCardMessagePreview
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 60)) { context in
+      HStack(alignment: .center, spacing: Spacing.xs) {
+        Text(messagePreview.text)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+          .lineLimit(1)
+          .truncationMode(.tail)
+
+        Spacer(minLength: 0)
+
+        HStack(spacing: 4) {
+          statusIcon
+
+          Text(relativeTimestamp(referenceDate: context.date))
+            .font(.tidexCaptionRegular)
+            .monospacedDigit()
+        }
+        .foregroundColor(statusColor)
+        .fixedSize(horizontal: true, vertical: false)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var statusIcon: some View {
+    switch messagePreview.state {
+    case .outgoingSending:
+      ProgressView()
+        .controlSize(.mini)
+
+    case .outgoingSent:
+      Image(systemName: "arrowtriangle.right.fill")
+        .font(.system(size: 9, weight: .semibold))
+
+    case .outgoingOpened:
+      Image(systemName: "arrowtriangle.right")
+        .font(.system(size: 9, weight: .semibold))
+
+    case .outgoingFailed:
+      Image(systemName: "exclamationmark.circle.fill")
+        .font(.system(size: 10, weight: .semibold))
+
+    case .incomingUnread:
+      Image(systemName: "message.fill")
+        .font(.system(size: 10, weight: .semibold))
+
+    case .incomingOpened:
+      Image(systemName: "message")
+        .font(.system(size: 10, weight: .semibold))
+    }
+  }
+
+  private var statusColor: Color {
+    switch messagePreview.state {
+    case .outgoingSending, .outgoingSent, .incomingUnread:
+      .tidexBlue
+    case .outgoingOpened, .incomingOpened:
+      .tidexTextMuted
+    case .outgoingFailed:
+      .tidexError
+    }
+  }
+
+  private func relativeTimestamp(referenceDate: Date) -> String {
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = [.year, .month, .weekOfMonth, .day, .hour, .minute]
+    formatter.unitsStyle = .abbreviated
+    formatter.maximumUnitCount = 1
+    formatter.zeroFormattingBehavior = .dropAll
+
+    let elapsed = max(referenceDate.timeIntervalSince(messagePreview.timestamp), 60)
+    return formatter.string(from: elapsed)?
+      .replacingOccurrences(of: " ", with: "")
+      ?? "1m"
   }
 }
 

@@ -40,6 +40,7 @@ struct SharingView: View {
   @State private var chatOpenErrorMessage: String?
   @State private var unreadChatUserIds: Set<String> = []
   @State private var unreadChatCountsByUserId: [String: Int] = [:]
+  @State private var chatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
   @State private var unreadRefreshTask: Task<Void, Never>?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
@@ -108,7 +109,7 @@ struct SharingView: View {
     }
     .task {
       await viewModel.loadSharers()
-      scheduleUnreadChatRefresh()
+      scheduleChatMetadataRefresh()
     }
     .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
       // Handle tab reselection - if sharing tab is tapped again while viewing a sharer,
@@ -161,7 +162,7 @@ struct SharingView: View {
       }
     }
     .onChange(of: coordinator.userId) { _, _ in
-      scheduleUnreadChatRefresh()
+      scheduleChatMetadataRefresh()
     }
     .onReceive(
       NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
@@ -172,13 +173,13 @@ struct SharingView: View {
       if let unblockedUserId = notification.userInfo?["unblockedUserId"] as? String {
         viewModel.handleUnblockedUser(unblockedUserId)
       }
-      scheduleUnreadChatRefresh()
+      scheduleChatMetadataRefresh()
       Task {
         await viewModel.loadSharers(forceRefreshPreviews: true)
       }
     }
     .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
-      scheduleUnreadChatRefresh()
+      scheduleChatMetadataRefresh()
     }
     .onDisappear {
       deepLinkNavigationTask?.cancel()
@@ -343,6 +344,7 @@ struct SharingView: View {
           chatOnlyUserIds: viewModel.chatOnlyUserIds,
           unreadChatUserIds: unreadChatUserIds,
           unreadChatCountsByUserId: unreadChatCountsByUserId,
+          chatPreviewsByUserId: chatPreviewsByUserId,
           selectedSharer: viewModel.selectedSharer,
           shiftPreviews: viewModel.shiftPreviews,
           isLoading: viewModel.isLoadingSharers,
@@ -401,7 +403,7 @@ struct SharingView: View {
     {
       activeChatHighlightUserId = nil
       viewModel.handleBlockedUser(sharedUser.id)
-      scheduleUnreadChatRefresh()
+      scheduleChatMetadataRefresh()
       Task {
         await viewModel.loadSharers(forceRefreshPreviews: true)
       }
@@ -470,40 +472,147 @@ struct SharingView: View {
     return statusCode == 400 && normalizedMessage.contains("not allowed for this user pair")
   }
 
-  private func refreshUnreadChatUserIds() {
+  private func refreshChatMetadata() {
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
       withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
         unreadChatUserIds = []
         unreadChatCountsByUserId = [:]
+        chatPreviewsByUserId = [:]
       }
       return
     }
 
-    let unreadThreads =
+    let directThreads =
       friendsMessagesRepository
       .getThreads(for: viewerUserId)
-      .filter { $0.kind == .direct && $0.unreadCount > 0 }
+      .filter { $0.kind == .direct }
 
-    let nextUnreadChatCountsByUserId: [String: Int] = Dictionary(
-      uniqueKeysWithValues: unreadThreads.compactMap { thread in
-        guard let counterpartUserId = thread.counterpartUserId else { return nil }
-        return (counterpartUserId, thread.unreadCount)
+    var nextUnreadChatCountsByUserId: [String: Int] = [:]
+    var nextChatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
+
+    for thread in directThreads {
+      guard let counterpartUserId = thread.counterpartUserId, !counterpartUserId.isEmpty else {
+        continue
       }
-    )
+
+      if thread.unreadCount > 0 {
+        nextUnreadChatCountsByUserId[counterpartUserId] = thread.unreadCount
+      }
+
+      if nextChatPreviewsByUserId[counterpartUserId] == nil,
+        let preview = makeChatPreview(from: thread, viewerUserId: viewerUserId)
+      {
+        nextChatPreviewsByUserId[counterpartUserId] = preview
+      }
+    }
 
     withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
       unreadChatCountsByUserId = nextUnreadChatCountsByUserId
       unreadChatUserIds = Set(nextUnreadChatCountsByUserId.keys)
+      chatPreviewsByUserId = nextChatPreviewsByUserId
     }
   }
 
-  private func scheduleUnreadChatRefresh() {
+  private func scheduleChatMetadataRefresh() {
     unreadRefreshTask?.cancel()
     unreadRefreshTask = Task { @MainActor in
       try? await Task.sleep(for: .milliseconds(120))
       guard !Task.isCancelled else { return }
-      refreshUnreadChatUserIds()
+      refreshChatMetadata()
     }
+  }
+
+  private func makeChatPreview(from thread: FriendThread, viewerUserId: String)
+    -> FriendCardMessagePreview?
+  {
+    guard let lastMessageId = thread.lastMessageId else { return nil }
+
+    let lastMessage = friendsMessagesRepository.getMessage(
+      id: lastMessageId, viewerUserId: viewerUserId)
+    let previewText = (lastMessage?.previewText ?? thread.lastMessagePreviewText)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard let previewText, !previewText.isEmpty else { return nil }
+
+    let previewTimestamp = lastMessage?.createdAt ?? thread.lastMessageAt ?? thread.createdAt
+
+    return FriendCardMessagePreview(
+      text: previewText,
+      timestamp: previewTimestamp,
+      state: makeChatPreviewState(
+        thread: thread,
+        viewerUserId: viewerUserId,
+        lastMessage: lastMessage,
+        lastMessageTimestamp: previewTimestamp
+      )
+    )
+  }
+
+  private func makeChatPreviewState(
+    thread: FriendThread,
+    viewerUserId: String,
+    lastMessage: FriendMessage?,
+    lastMessageTimestamp: Date
+  ) -> FriendCardMessageState {
+    let isOutgoing =
+      lastMessage?.senderUserId == viewerUserId
+      || (lastMessage == nil && thread.lastMessageSenderId == viewerUserId)
+
+    if isOutgoing {
+      switch lastMessage?.sendState {
+      case .sending:
+        return .outgoingSending
+      case .failed:
+        return .outgoingFailed
+      case .sent, .none:
+        break
+      }
+
+      let counterpartState =
+        thread.counterpartUserId.flatMap {
+          friendsMessagesRepository.getThreadState(threadId: thread.id, viewerUserId: $0)
+        }
+
+      return hasOpenedLastMessage(
+        lastMessageId: thread.lastMessageId,
+        lastMessageTimestamp: lastMessageTimestamp,
+        state: counterpartState
+      )
+        ? .outgoingOpened
+        : .outgoingSent
+    }
+
+    if thread.unreadCount > 0 {
+      return .incomingUnread
+    }
+
+    let viewerState = friendsMessagesRepository.getThreadState(
+      threadId: thread.id,
+      viewerUserId: viewerUserId
+    )
+
+    return hasOpenedLastMessage(
+      lastMessageId: thread.lastMessageId,
+      lastMessageTimestamp: lastMessageTimestamp,
+      state: viewerState
+    )
+      ? .incomingOpened
+      : .incomingUnread
+  }
+
+  private func hasOpenedLastMessage(
+    lastMessageId: String?,
+    lastMessageTimestamp: Date,
+    state: FriendThreadState?
+  ) -> Bool {
+    guard let state else { return false }
+
+    if let lastMessageId, state.lastReadMessageId == lastMessageId {
+      return true
+    }
+
+    guard let lastReadAt = state.lastReadAt else { return false }
+    return lastReadAt >= lastMessageTimestamp
   }
 
 }
