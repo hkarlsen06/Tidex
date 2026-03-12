@@ -134,13 +134,7 @@ struct FriendShiftPreviewStatusCard: View {
       .background(backgroundShape)
       .overlay(alignment: .leading) {
         if computed.status == .active {
-          GeometryReader { geometry in
-            progressShape
-              .fill(Color.green.opacity(0.1))
-              .frame(width: geometry.size.width * computed.progress / 100)
-              .animation(.linear(duration: 1), value: computed.progress)
-          }
-          .clipShape(progressShape)
+          activeProgressOverlay(progress: computed.progress)
         }
       }
       .overlay(borderShape)
@@ -187,6 +181,17 @@ struct FriendShiftPreviewStatusCard: View {
       cornerRadius: style == .toolbarExtension ? 22 : CornerRadius.lg,
       style: .continuous
     )
+  }
+
+  @ViewBuilder
+  private func activeProgressOverlay(progress: Double) -> some View {
+    GeometryReader { geometry in
+      progressShape
+        .fill(Color.green.opacity(0.1))
+        .frame(width: geometry.size.width * progress / 100)
+        .animation(.linear(duration: 1), value: progress)
+    }
+    .clipShape(progressShape)
   }
 
   private struct ComputedStatus {

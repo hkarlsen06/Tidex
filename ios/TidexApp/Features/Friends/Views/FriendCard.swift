@@ -58,7 +58,7 @@ struct FriendCard: View {
               }
             }
             .padding(.horizontal, Spacing.sm)
-            .padding(.bottom, Spacing.xxs)
+            .padding(.bottom, Spacing.sm)
           }
           .contentShape(Rectangle())
           .onTapGesture(perform: onChatTap)
@@ -98,6 +98,7 @@ struct FriendCard: View {
           lineWidth: 2
         )
     )
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
     .tidexCardShadow()
   }
 
