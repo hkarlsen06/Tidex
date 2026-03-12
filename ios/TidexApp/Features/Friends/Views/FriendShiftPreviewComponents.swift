@@ -21,6 +21,8 @@ struct CompactFriendIdentityRow: View {
         Text(sharer.displayName)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
+          .truncationMode(.tail)
 
         if let messagePreview {
           FriendCardMessagePreviewRow(messagePreview: messagePreview)
@@ -68,7 +70,21 @@ private struct FriendCardMessagePreviewRow: View {
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 60)) { context in
-      HStack(alignment: .center, spacing: Spacing.xs) {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
+          Text(stateLabel)
+            .font(.tidexFootnote.weight(.semibold))
+            .foregroundColor(statusColor)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+
+          Text(relativeTimestamp(referenceDate: context.date))
+            .font(.tidexCaptionRegular)
+            .foregroundColor(statusColor)
+            .monospacedDigit()
+            .fixedSize(horizontal: true, vertical: false)
+        }
+
         Text(messagePreview.text)
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
@@ -76,46 +92,7 @@ private struct FriendCardMessagePreviewRow: View {
           .truncationMode(.tail)
 
         Spacer(minLength: 0)
-
-        HStack(spacing: 4) {
-          statusIcon
-
-          Text(relativeTimestamp(referenceDate: context.date))
-            .font(.tidexCaptionRegular)
-            .monospacedDigit()
-        }
-        .foregroundColor(statusColor)
-        .fixedSize(horizontal: true, vertical: false)
       }
-    }
-  }
-
-  @ViewBuilder
-  private var statusIcon: some View {
-    switch messagePreview.state {
-    case .outgoingSending:
-      ProgressView()
-        .controlSize(.mini)
-
-    case .outgoingSent:
-      Image(systemName: "arrowtriangle.right.fill")
-        .font(.system(size: 9, weight: .semibold))
-
-    case .outgoingOpened:
-      Image(systemName: "arrowtriangle.right")
-        .font(.system(size: 9, weight: .semibold))
-
-    case .outgoingFailed:
-      Image(systemName: "exclamationmark.circle.fill")
-        .font(.system(size: 10, weight: .semibold))
-
-    case .incomingUnread:
-      Image(systemName: "message.fill")
-        .font(.system(size: 10, weight: .semibold))
-
-    case .incomingOpened:
-      Image(systemName: "message")
-        .font(.system(size: 10, weight: .semibold))
     }
   }
 
@@ -127,6 +104,21 @@ private struct FriendCardMessagePreviewRow: View {
       .tidexTextMuted
     case .outgoingFailed:
       .tidexError
+    }
+  }
+
+  private var stateLabel: LocalizedStringResource {
+    switch messagePreview.state {
+    case .outgoingSending:
+      .friendsChatStatusSending
+    case .outgoingSent:
+      LocalizedStringResource("friends.chat.preview_label.sent", table: "Localizable")
+    case .outgoingOpened, .incomingOpened:
+      LocalizedStringResource("friends.chat.preview_label.opened", table: "Localizable")
+    case .outgoingFailed:
+      .friendsChatStatusFailed
+    case .incomingUnread:
+      LocalizedStringResource("friends.chat.preview_label.received", table: "Localizable")
     }
   }
 
