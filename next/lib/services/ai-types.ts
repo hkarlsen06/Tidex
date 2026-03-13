@@ -99,6 +99,11 @@ export type StreamChunk =
       content: string;
     }
   | {
+      type: "tool_start";
+      id: string;
+      name: string;
+    }
+  | {
       type: "tool_use";
       id: string;
       name: string;

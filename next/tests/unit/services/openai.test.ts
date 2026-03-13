@@ -544,6 +544,11 @@ describe("OpenAIService WebSocket mode", () => {
     const completion = await response.completed;
 
     expect(chunks[0]).toEqual({
+      type: "tool_start",
+      id: "call_1",
+      name: "manage_shift",
+    });
+    expect(chunks[1]).toEqual({
       type: "tool_use",
       id: "call_1",
       name: "manage_shift",
@@ -709,7 +714,12 @@ describe("OpenAIService WebSocket mode", () => {
       chunks.push(chunk as { type: string; [key: string]: unknown });
     }
 
-    expect((chunks[0].input as Record<string, unknown>).INVALID_JSON).toContain(
+    expect(chunks[0]).toEqual({
+      type: "tool_start",
+      id: "call_2",
+      name: "manage_shift",
+    });
+    expect((chunks[1].input as Record<string, unknown>).INVALID_JSON).toContain(
       "{\"action\":"
     );
     await session.close();

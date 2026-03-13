@@ -105,6 +105,7 @@ describe("/api/chat route", () => {
         createStream(
           [
             { type: "text", content: "Checking your shifts. " },
+            { type: "tool_start", id: "call_1", name: "manage_shift" },
             {
               type: "tool_use",
               id: "call_1",
@@ -157,6 +158,12 @@ describe("/api/chat route", () => {
     const body = await response.text();
     const chunkItems = parseChunkItems(body);
     const chunks = chunkItems.map((item) => item?.chunk);
+    const toolStartChunks = chunks.filter(
+      (chunk) =>
+        chunk?.type === "tool_start" &&
+        chunk.toolName === "manage_shift" &&
+        chunk.toolCallId === "call_1"
+    );
 
     expect(chunks).toEqual(
       expect.arrayContaining([
@@ -166,7 +173,6 @@ describe("/api/chat route", () => {
           type: "tool_start",
           toolName: "manage_shift",
           toolCallId: "call_1",
-          toolArguments: "{\"action\":\"create\",\"dates\":[\"2026-03-08\"]}",
         },
         {
           type: "tool_result",
@@ -187,6 +193,7 @@ describe("/api/chat route", () => {
         { type: "done" },
       ])
     );
+    expect(toolStartChunks).toHaveLength(1);
 
     expect(mockSession.createResponse).toHaveBeenCalledTimes(2);
     expect(mockSession.createResponse.mock.calls[1][0].previousResponseId).toBe("resp_1");
