@@ -4,6 +4,63 @@ import UserNotifications
 import os
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "NotificationServiceExtension")
+private let avatarFetchBudget = Duration.seconds(2)
+
+private enum SenderAvatarLoader {
+  static let inMemoryCache = NSCache<NSURL, INImage>()
+  static let urlCache = URLCache(
+    memoryCapacity: 4 * 1024 * 1024,
+    diskCapacity: 20 * 1024 * 1024,
+    diskPath: "TidexNotificationAvatarCache"
+  )
+  static let session: URLSession = {
+    let configuration = URLSessionConfiguration.default
+    configuration.requestCachePolicy = .useProtocolCachePolicy
+    configuration.timeoutIntervalForRequest = 3
+    configuration.timeoutIntervalForResource = 4
+    configuration.waitsForConnectivity = false
+    configuration.urlCache = urlCache
+    return URLSession(configuration: configuration)
+  }()
+
+  static func cachedImage(for request: URLRequest, url: URL) -> INImage? {
+    if let image = inMemoryCache.object(forKey: url as NSURL) {
+      return image
+    }
+
+    guard let response = urlCache.cachedResponse(for: request) else {
+      return nil
+    }
+
+    return makeImage(from: response.data, url: url)
+  }
+
+  static func fetchImage(for request: URLRequest, url: URL) async -> INImage? {
+    do {
+      let (data, response) = try await session.data(for: request)
+      guard let httpResponse = response as? HTTPURLResponse,
+        (200..<300).contains(httpResponse.statusCode)
+      else {
+        return nil
+      }
+
+      return makeImage(from: data, url: url)
+    } catch is CancellationError {
+      return nil
+    } catch {
+      logger.error(
+        "Failed to download sender avatar: \(error.localizedDescription, privacy: .public)")
+      return nil
+    }
+  }
+
+  private static func makeImage(from data: Data, url: URL) -> INImage? {
+    guard !data.isEmpty else { return nil }
+    let image = INImage(imageData: data)
+    inMemoryCache.setObject(image, forKey: url as NSURL)
+    return image
+  }
+}
 
 final class NotificationService: UNNotificationServiceExtension {
   private var contentHandler: ((UNNotificationContent) -> Void)?
@@ -111,25 +168,28 @@ final class NotificationService: UNNotificationServiceExtension {
   private func fetchSenderImage(from url: URL?) async -> INImage? {
     guard let url else { return nil }
 
-    do {
-      let config = URLSessionConfiguration.ephemeral
-      config.timeoutIntervalForRequest = 10
-      config.timeoutIntervalForResource = 15
-      let session = URLSession(configuration: config)
-      defer { session.finishTasksAndInvalidate() }
+    let request = URLRequest(
+      url: url,
+      cachePolicy: .returnCacheDataElseLoad,
+      timeoutInterval: 3
+    )
 
-      let (data, response) = try await session.data(from: url)
-      guard let httpResponse = response as? HTTPURLResponse,
-        (200..<300).contains(httpResponse.statusCode)
-      else {
+    if let cachedImage = SenderAvatarLoader.cachedImage(for: request, url: url) {
+      return cachedImage
+    }
+
+    return await withTaskGroup(of: INImage?.self, returning: INImage?.self) { group in
+      group.addTask {
+        await SenderAvatarLoader.fetchImage(for: request, url: url)
+      }
+      group.addTask {
+        try? await Task.sleep(for: avatarFetchBudget)
         return nil
       }
-      guard !data.isEmpty else { return nil }
-      return INImage(imageData: data)
-    } catch {
-      logger.error(
-        "Failed to download sender avatar: \(error.localizedDescription, privacy: .public)")
-      return nil
+
+      let result = await group.next() ?? nil
+      group.cancelAll()
+      return result
     }
   }
 
