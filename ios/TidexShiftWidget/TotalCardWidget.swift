@@ -215,11 +215,11 @@ struct TotalCardWidgetView: View {
       : Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
   }
 
-  /// tidexSurfacePrimary - matches Color.tidexSurfacePrimary
-  private var tidexSurfacePrimary: Color {
+  /// Matches the background used by the small home screen widgets.
+  private var tidexWidgetBackground: Color {
     isLightMode
-      ? .white
-      : Color(red: 0x14 / 255, green: 0x21 / 255, blue: 0x33 / 255)
+      ? Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
+      : Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
   }
 
   /// Adaptive colors for widget rendering modes
@@ -257,7 +257,7 @@ struct TotalCardWidgetView: View {
     case .vibrant:
       return Color.black.opacity(0.4)
     default:
-      return tidexSurfacePrimary
+      return tidexWidgetBackground
     }
   }
 
