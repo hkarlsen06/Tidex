@@ -87,7 +87,7 @@ private struct FriendCardMessagePreviewRow: View {
 
         Text(messagePreview.text)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundColor(.tidexTextMuted.opacity(0.75))
           .lineLimit(1)
           .truncationMode(.tail)
 
@@ -98,9 +98,9 @@ private struct FriendCardMessagePreviewRow: View {
 
   private var statusColor: Color {
     switch messagePreview.state {
-    case .outgoingSending, .outgoingSent, .incomingUnread:
+    case .incomingUnread:
       .tidexBlue
-    case .outgoingOpened, .incomingOpened:
+    case .outgoingSending, .outgoingSent, .outgoingOpened, .incomingOpened:
       .tidexTextMuted
     case .outgoingFailed:
       .tidexError

@@ -900,7 +900,10 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private func loadCounterpartShiftPreview(forceRefresh: Bool) async {
-    if let cachedCounterpartCanViewSharedShift, !cachedCounterpartCanViewSharedShift {
+    if !forceRefresh,
+      let cachedCounterpartCanViewSharedShift,
+      !cachedCounterpartCanViewSharedShift
+    {
       counterpartShiftPreview = nil
       return
     }

@@ -15,12 +15,13 @@ struct FriendsThreadView: View {
   @State private var safariURL: URL?
   @State private var alertState: AlertState?
   @State private var highlightedMessageId: String?
+  @State private var unreadIncomingCount = 0
+  @State private var showsNewMessagesPill = false
   @State private var showScreenshotBubble = false
   @State private var showScreenshotNotifiedIcon = false
   @State private var screenshotBellShakeTrigger = false
   @State private var showProfile = false
-  @State private var isComposerAttachmentDrawerOpen = false
-  @State private var isPinnedToBottom = false
+  @State private var isPinnedToBottom = true
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -164,6 +165,8 @@ struct FriendsThreadView: View {
       }
       .onChange(of: isPinnedToBottom) { _, newValue in
         guard newValue else { return }
+        unreadIncomingCount = 0
+        showsNewMessagesPill = false
         Task {
           await viewModel.markVisibleMessagesReadIfNeeded()
         }
@@ -251,6 +254,7 @@ struct FriendsThreadView: View {
         } else if viewModel.messages.isEmpty {
           emptyState
         }
+
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -374,16 +378,7 @@ struct FriendsThreadView: View {
       FriendsThreadDateSeparator(date: date)
     }
     .betweenListAndInputViewBuilder {
-      Group {
-        if viewModel.counterpartIsTyping {
-          FriendsChatTypingAccessory(
-            counterpartAvatarUrl: counterpartAvatarUrl,
-            counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName)
-          )
-        } else {
-          EmptyView()
-        }
-      }
+      chatFooterAccessory
     }
     .showMessageTimeView(false)
     .showMessageMenuOnLongPress(true)
@@ -420,6 +415,32 @@ struct FriendsThreadView: View {
         onDidHandleScrollRequest: handleViewportScrollRequest
       )
       .allowsHitTesting(false)
+    }
+  }
+
+  @ViewBuilder
+  private var chatFooterAccessory: some View {
+    if showsNewMessagesPill || viewModel.counterpartIsTyping {
+      VStack(spacing: 0) {
+        if showsNewMessagesPill, !viewModel.messages.isEmpty {
+          HStack {
+            Spacer(minLength: 0)
+            scrollToLatestButton
+            Spacer(minLength: 0)
+          }
+          .padding(.top, Spacing.xs)
+          .padding(.bottom, viewModel.counterpartIsTyping ? 0 : Spacing.xs)
+          .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+
+        if viewModel.counterpartIsTyping {
+          FriendsChatTypingAccessory(
+            counterpartAvatarUrl: counterpartAvatarUrl,
+            counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName)
+          )
+        }
+      }
+      .background(Color.tidexBackground)
     }
   }
 
@@ -494,13 +515,20 @@ struct FriendsThreadView: View {
   @ViewBuilder
   private var counterpartShiftPreviewHeader: some View {
     if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
-      CompactFriendShiftPreviewHeader(preview: counterpartShiftPreview)
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.xxs)
-        .padding(.bottom, Spacing.xxs)
-        .frame(maxWidth: .infinity)
-        .background(Color.tidexBackground)
-        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
+      Button {
+        openCounterpartShiftPreview(preview: counterpartShiftPreview)
+      } label: {
+        CompactFriendShiftPreviewHeader(preview: counterpartShiftPreview)
+          .frame(maxWidth: .infinity)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.xxs)
+      .padding(.bottom, Spacing.xxs)
+      .frame(maxWidth: .infinity)
+      .background(Color.tidexBackground)
+      .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
     }
   }
 
@@ -557,6 +585,38 @@ struct FriendsThreadView: View {
       showNotifiedIcon: showScreenshotNotifiedIcon,
       bellShakeTrigger: screenshotBellShakeTrigger
     )
+  }
+
+  private var scrollToLatestButton: some View {
+    Button {
+      unreadIncomingCount = 0
+      showsNewMessagesPill = false
+      Haptics.play(.light)
+      SoundManager.shared.play("tap")
+      requestScrollToBottom()
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "arrow.down")
+          .font(.system(size: 14, weight: .semibold))
+
+        Text(.friendsChatNewMessages)
+          .font(.tidexFootnoteMedium)
+
+        if unreadIncomingCount > 0 {
+          Text("\(min(unreadIncomingCount, 99))")
+            .font(.tidexMicro.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.tidexBrandPrimary))
+        }
+      }
+      .foregroundColor(.tidexTextPrimary)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+      .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
+    }
+    .buttonStyle(.plain)
   }
 
   private var actionsMenu: some View {
@@ -693,14 +753,23 @@ struct FriendsThreadView: View {
       }
     }
     composerBridge.onSend = { content in
-      await viewModel.sendMessage(content: content)
+      let wasPinnedToBottom = isPinnedToBottom
+      let didSend = await viewModel.sendMessage(content: content)
+      guard didSend else { return false }
+
+      await MainActor.run {
+        unreadIncomingCount = 0
+        showsNewMessagesPill = false
+        if !wasPinnedToBottom {
+          requestScrollToBottom()
+        }
+      }
+      return true
     }
     composerBridge.onSaveEdit = { content in
       await viewModel.sendMessage(content: content)
     }
-    composerBridge.onAttachmentDrawerOpenChanged = { isOpen in
-      isComposerAttachmentDrawerOpen = isOpen
-    }
+    composerBridge.onAttachmentDrawerOpenChanged = nil
     composerBridge.onHeightChanged = nil
     composerBridge.apply(configuration: composerConfiguration)
   }
@@ -745,9 +814,29 @@ struct FriendsThreadView: View {
 
     guard appendedMessage, !prependedMessages else { return }
     if lastMessage.senderUserId == viewModel.viewerUserId {
-      scheduleBottomScrollAfterOutgoingAppend()
+      unreadIncomingCount = 0
+      showsNewMessagesPill = false
+      if !isPinnedToBottom {
+        requestScrollToBottom()
+      }
       return
     }
+
+    let appendOutcome = FriendsThreadIncomingAppendResolver.resolve(
+      previousMessageCount: oldValue.count,
+      unreadIncomingCount: unreadIncomingCount,
+      isIncoming: true,
+      isPinnedToBottom: isPinnedToBottom
+    )
+    unreadIncomingCount = appendOutcome.unreadIncomingCount
+    showsNewMessagesPill = appendOutcome.showsNewMessagesPill
+
+    if appendOutcome.shouldPlayFeedback {
+      Haptics.play(.light)
+      SoundManager.shared.play("tap")
+      return
+    }
+
     guard isPinnedToBottom else { return }
 
     Task {
@@ -755,13 +844,22 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func scheduleBottomScrollAfterOutgoingAppend() {
+  private func requestScrollToBottom() {
     NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
 
     Task { @MainActor in
       try? await Task.sleep(for: .milliseconds(120))
       NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
     }
+  }
+
+  private func openCounterpartShiftPreview(preview: SharerShiftPreview) {
+    guard let deepLink = FriendsThreadCounterpartPreviewNavigationResolver.deepLink(for: preview)
+    else {
+      return
+    }
+
+    AppCoordinator.shared.pendingDeepLink = deepLink
   }
 
   private func handleReactionSelection(_ emoji: String, forMessageId messageId: String) {

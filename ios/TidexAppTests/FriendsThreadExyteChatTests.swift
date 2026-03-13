@@ -183,6 +183,97 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testIncomingAppendResolverShowsNewMessagesPillWhenUserIsScrolledUp() {
+    XCTAssertEqual(
+      FriendsThreadIncomingAppendResolver.resolve(
+        previousMessageCount: 3,
+        unreadIncomingCount: 0,
+        isIncoming: true,
+        isPinnedToBottom: false
+      ),
+      FriendsThreadIncomingAppendOutcome(
+        unreadIncomingCount: 1,
+        showsNewMessagesPill: true,
+        shouldPlayFeedback: true
+      )
+    )
+  }
+
+  func testIncomingAppendResolverClearsPendingIndicatorWhenThreadIsPinnedToBottom() {
+    XCTAssertEqual(
+      FriendsThreadIncomingAppendResolver.resolve(
+        previousMessageCount: 3,
+        unreadIncomingCount: 2,
+        isIncoming: true,
+        isPinnedToBottom: true
+      ),
+      FriendsThreadIncomingAppendOutcome(
+        unreadIncomingCount: 0,
+        showsNewMessagesPill: false,
+        shouldPlayFeedback: false
+      )
+    )
+  }
+
+  func testCounterpartPreviewNavigationResolverBuildsSharingDeepLink() {
+    let preview = SharerShiftPreview(
+      sharerId: "friend-1",
+      shift: SharedShiftData(
+        id: "shift-1",
+        user_id: "friend-1",
+        job_id: "job-1",
+        job_name: "ER",
+        job_color: "#4A90E2",
+        shift_date: "2026-03-13",
+        start_time: "08:00",
+        end_time: "16:00",
+        computed: SharedShiftComputed(
+          id: "shift-1",
+          durationHours: 8,
+          paidHours: 8,
+          basePay: 1200,
+          supplementPay: 0,
+          gross: 1200
+        ),
+        tax_enabled: false,
+        tax_percentage: 0,
+        custom_supplements: nil,
+        recurring_id: nil,
+        recurring_anchor_weekday: nil
+      ),
+      status: .upcoming,
+      showEarnings: true,
+      currency: "NOK"
+    )
+
+    XCTAssertEqual(
+      FriendsThreadCounterpartPreviewNavigationResolver.deepLink(for: preview),
+      .sharing(
+        sharerId: "friend-1",
+        highlightDates: ["2026-03-13"],
+        changes: [
+          AppCoordinator.ShiftChange(
+            shiftId: "shift-1",
+            date: "2026-03-13",
+            op: "updated"
+          )
+        ]
+      )
+    )
+  }
+
+  func testCounterpartPreviewNavigationResolverReturnsNilWithoutShift() {
+    let preview = SharerShiftPreview(
+      sharerId: "friend-1",
+      shift: nil,
+      status: nil,
+      showEarnings: false,
+      currency: nil
+    )
+
+    XCTAssertNil(FriendsThreadCounterpartPreviewNavigationResolver.deepLink(for: preview))
+  }
+
   func testViewportResolverMapsReplyTargetAcrossDateSections() {
     let calendar = Calendar.current
     let firstDay = Date(timeIntervalSince1970: 1_731_000_000)
