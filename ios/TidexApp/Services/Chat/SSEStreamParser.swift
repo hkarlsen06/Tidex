@@ -72,7 +72,9 @@ enum SSEStreamParser {
             // Check for task cancellation
             try Task.checkCancellation()
 
-            if line.isEmpty {
+            let normalizedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if normalizedLine.isEmpty {
               if !eventLines.isEmpty {
                 let eventData = eventLines.joined(separator: "\n")
                 eventLines.removeAll(keepingCapacity: true)
@@ -84,7 +86,7 @@ enum SSEStreamParser {
               continue
             }
 
-            eventLines.append(line)
+            eventLines.append(normalizedLine)
           }
 
           // Process any remaining data in buffer (incomplete event without terminator)

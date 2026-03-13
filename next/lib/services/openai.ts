@@ -874,6 +874,34 @@ function parseToolUseChunk(
   }
 }
 
+function parseFunctionToolStartChunk(
+  accumulators: Map<string, FunctionCallAccumulator>,
+  event: OpenAIEvent
+): StreamChunk | null {
+  const item = event.item;
+  if (!item || typeof item !== "object") return null;
+
+  const parsedItem = item as Record<string, unknown>;
+  if (parsedItem.type !== "function_call") return null;
+
+  const itemId = getStringField(parsedItem, "id");
+  if (!itemId) return null;
+
+  const accumulator: FunctionCallAccumulator = {
+    itemId,
+    callId: getStringField(parsedItem, "call_id"),
+    name: getStringField(parsedItem, "name"),
+    arguments: getStringField(parsedItem, "arguments") ?? "",
+  };
+  accumulators.set(itemId, accumulator);
+
+  return {
+    type: "tool_start",
+    id: accumulator.callId ?? itemId,
+    name: accumulator.name ?? "unknown_tool",
+  };
+}
+
 function parseBuiltInToolStartChunk(
   accumulators: Map<string, BuiltInToolCallAccumulator>,
   event: OpenAIEvent
@@ -1149,20 +1177,12 @@ class WebSocketResponsesSession implements OpenAIResponseSession {
         return;
       }
 
-      const item = event.item;
-      if (item && typeof item === "object") {
-        const parsedItem = item as Record<string, unknown>;
-        if (parsedItem.type === "function_call") {
-          const itemId = getStringField(parsedItem, "id");
-          if (itemId) {
-            state.functionCalls.set(itemId, {
-              itemId,
-              callId: getStringField(parsedItem, "call_id"),
-              name: getStringField(parsedItem, "name"),
-              arguments: getStringField(parsedItem, "arguments") ?? "",
-            });
-          }
-        }
+      const functionToolStartChunk = parseFunctionToolStartChunk(
+        state.functionCalls,
+        event
+      );
+      if (functionToolStartChunk) {
+        state.push(functionToolStartChunk);
       }
       return;
     }

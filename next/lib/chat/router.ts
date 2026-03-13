@@ -618,6 +618,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     let previousResponseId: string | undefined;
     let pendingInput = toOpenAIInput(modelMessages);
     const collectedSources = new Map<string, Source>();
+    const announcedToolCallIds = new Set<string>();
     const session = await openOpenAISession(abortSignal);
 
     try {
@@ -653,6 +654,14 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
             await stream.appendChunk({
               type: "text",
               content: chunk.content,
+            });
+          } else if (chunk.type === "tool_start") {
+            hasUserVisibleAssistantOutput = true;
+            announcedToolCallIds.add(chunk.id);
+            await stream.appendChunk({
+              type: "tool_start",
+              toolName: chunk.name,
+              toolCallId: chunk.id,
             });
           } else if (chunk.type === "built_in_tool_start") {
             if (supportsRichBuiltInToolEvents) {
@@ -694,13 +703,17 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
               });
               hasUserVisibleAssistantOutput = true;
 
-              // Send tool_start chunk to frontend
-              await stream.appendChunk({
-                type: "tool_start",
-                toolName: chunk.name,
-                toolCallId: chunk.id,
-                toolArguments: JSON.stringify(chunk.input),
-              });
+              // Send tool_start chunk to frontend unless an early start signal
+              // has already been forwarded for this call.
+              if (!announcedToolCallIds.has(chunk.id)) {
+                announcedToolCallIds.add(chunk.id);
+                await stream.appendChunk({
+                  type: "tool_start",
+                  toolName: chunk.name,
+                  toolCallId: chunk.id,
+                  toolArguments: JSON.stringify(chunk.input),
+                });
+              }
             }
           }
         }
