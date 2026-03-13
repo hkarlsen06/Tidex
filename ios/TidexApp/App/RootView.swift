@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import UIKit
 import os
@@ -20,18 +21,38 @@ extension Notification.Name {
 struct RootView: View {
   @State private var isReady = false
 
+  #if DEBUG
+    private let uiTestingConfiguration = UITestingConfiguration.current
+  #endif
+
   var body: some View {
-    if isReady {
-      RootContent()
-    } else {
-      LoadingView()
-        .task {
-          // The .task fires after the view has appeared on screen.
-          // Flipping isReady triggers RootContent creation (with singletons)
-          // while LoadingView is already visible — no black gap.
-          isReady = true
-        }
-    }
+    #if DEBUG
+      if let uiTestingConfiguration {
+        UITestingRootView(configuration: uiTestingConfiguration)
+      } else if isReady {
+        RootContent()
+      } else {
+        LoadingView()
+          .task {
+            // The .task fires after the view has appeared on screen.
+            // Flipping isReady triggers RootContent creation (with singletons)
+            // while LoadingView is already visible — no black gap.
+            isReady = true
+          }
+      }
+    #else
+      if isReady {
+        RootContent()
+      } else {
+        LoadingView()
+          .task {
+            // The .task fires after the view has appeared on screen.
+            // Flipping isReady triggers RootContent creation (with singletons)
+            // while LoadingView is already visible — no black gap.
+            isReady = true
+          }
+      }
+    #endif
   }
 }
 
@@ -317,3 +338,461 @@ struct LoadingView: View {
     LoadingView()
   }
 }
+
+#if DEBUG
+  private struct UITestingConfiguration {
+    enum Scenario: String {
+      case friendsChat = "friends-chat"
+      case friendsChatReply = "friends-chat-reply"
+    }
+
+    let scenario: Scenario
+
+    static var current: UITestingConfiguration? {
+      let processInfo = ProcessInfo.processInfo
+      guard processInfo.arguments.contains("-ui-testing") else { return nil }
+
+      let rawScenario =
+        processInfo.environment["TIDEX_UI_TEST_SCENARIO"] ?? Scenario.friendsChat.rawValue
+      let scenario = Scenario(rawValue: rawScenario) ?? .friendsChat
+      return UITestingConfiguration(scenario: scenario)
+    }
+  }
+
+  private struct UITestingRootView: View {
+    let configuration: UITestingConfiguration
+
+    var body: some View {
+      switch configuration.scenario {
+      case .friendsChat, .friendsChatReply:
+        FriendsThreadUITestHostView(configuration: configuration)
+      }
+    }
+  }
+
+  private struct FriendsThreadUITestHostView: View {
+    let configuration: UITestingConfiguration
+
+    @State private var viewModel: FriendsThreadViewModel?
+    @State private var errorMessage: String?
+
+    var body: some View {
+      Group {
+        if let viewModel {
+          NavigationStack {
+            FriendsThreadView(viewModel: viewModel)
+          }
+        } else if let errorMessage {
+          Text(errorMessage)
+            .accessibilityIdentifier("ui-testing.error")
+        } else {
+          ProgressView()
+            .accessibilityIdentifier("ui-testing.loading")
+        }
+      }
+      .task {
+        guard viewModel == nil, errorMessage == nil else { return }
+
+        do {
+          viewModel = try await makeViewModel(for: configuration.scenario)
+        } catch {
+          errorMessage = error.localizedDescription
+        }
+      }
+    }
+
+    private func makeViewModel(
+      for scenario: UITestingConfiguration.Scenario
+    ) async throws -> FriendsThreadViewModel {
+      let storage = try FriendsThreadUITestStorage.make()
+      let thread = FriendsThreadUITestFixtures.thread
+      let service = FriendsThreadUITestService(
+        threadSummary: thread,
+        messages: FriendsThreadUITestFixtures.messages
+      )
+
+      await storage.repository.saveThread(thread, for: FriendsThreadUITestFixtures.viewerUserId)
+      await storage.repository.saveMessages(
+        FriendsThreadUITestFixtures.messages,
+        in: thread.id,
+        for: FriendsThreadUITestFixtures.viewerUserId
+      )
+
+      AppCoordinator.shared.configureForUITesting(
+        userId: FriendsThreadUITestFixtures.viewerUserId,
+        displayName: FriendsThreadUITestFixtures.viewerDisplayName
+      )
+
+      let viewModel = FriendsThreadViewModel(
+        route: FriendsThreadUITestFixtures.route,
+        viewerUserId: FriendsThreadUITestFixtures.viewerUserId,
+        service: service,
+        capabilities: FriendsThreadUITestCapabilities(),
+        shareVisibilityResolver: FriendsThreadUITestShareVisibilityResolver(),
+        sharingPreviewService: FriendsThreadUITestSharingPreviewService(),
+        sharedShiftsCache: FriendsThreadUITestSharedShiftsCache(),
+        repository: storage.repository,
+        composerDraftStore: storage.draftStore,
+        realtimeCoordinator: FriendsThreadUITestRealtimeCoordinator()
+      )
+
+      if scenario == .friendsChatReply,
+        let replyTarget = FriendsThreadUITestFixtures.messages.first
+      {
+        viewModel.setReplyTarget(replyTarget)
+      }
+
+      return viewModel
+    }
+  }
+
+  private enum FriendsThreadUITestFixtures {
+    static let viewerUserId = "ui-test-viewer"
+    static let viewerDisplayName = "UITest Viewer"
+    static let counterpartUserId = "ui-test-friend"
+
+    static let thread = FriendThread(
+      id: "ui-test-thread",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: counterpartUserId,
+      counterpartDisplayName: "UITest Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: "ui-test-outgoing-1",
+      lastMessageSenderId: viewerUserId,
+      lastMessageAt: Date(timeIntervalSince1970: 1_762_000_120),
+      lastMessageBody: "Earlier outgoing message",
+      lastMessageHasImage: false,
+      unreadCount: 1,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_762_000_000)
+    )
+
+    static let route = FriendChatRoute(
+      thread: thread,
+      fallbackDisplayName: "UITest Friend",
+      fallbackAvatarUrl: nil
+    )
+
+    static let messages: [FriendMessage] = [
+      FriendMessage(
+        id: "ui-test-incoming-1",
+        threadId: thread.id,
+        senderUserId: counterpartUserId,
+        messageType: .user,
+        body: "Initial incoming message",
+        clientId: "",
+        replyToMessageId: nil,
+        createdAt: Date(timeIntervalSince1970: 1_762_000_060),
+        editedAt: nil,
+        deletedAt: nil,
+        metadataData: nil,
+        attachments: [],
+        reactions: [],
+        sendState: .sent,
+        failureMessage: nil
+      ),
+      FriendMessage(
+        id: "ui-test-outgoing-1",
+        threadId: thread.id,
+        senderUserId: viewerUserId,
+        messageType: .user,
+        body: "Earlier outgoing message",
+        clientId: "ui-test-outgoing-client-1",
+        replyToMessageId: nil,
+        createdAt: Date(timeIntervalSince1970: 1_762_000_120),
+        editedAt: nil,
+        deletedAt: nil,
+        metadataData: nil,
+        attachments: [],
+        reactions: [],
+        sendState: .sent,
+        failureMessage: nil
+      ),
+    ]
+  }
+
+  private struct FriendsThreadUITestStorage {
+    let repository: FriendsMessagesRepository
+    let draftStore: FriendsComposerDraftStore
+
+    @MainActor
+    static func make() throws -> FriendsThreadUITestStorage {
+      let schema = Schema([
+        LocalPendingFriendComposerDraft.self,
+        LocalThread.self,
+        LocalThreadState.self,
+        LocalMessage.self,
+        LocalMessageAttachment.self,
+        LocalMessageReaction.self,
+      ])
+
+      let configuration = ModelConfiguration(
+        schema: schema,
+        isStoredInMemoryOnly: true,
+        allowsSave: true
+      )
+
+      let container = try ModelContainer(for: schema, configurations: [configuration])
+      let storeActor = LocalStoreActor(modelContainer: container)
+
+      return FriendsThreadUITestStorage(
+        repository: FriendsMessagesRepository(container: container, storeActor: storeActor),
+        draftStore: FriendsComposerDraftStore(container: container, storeActor: storeActor)
+      )
+    }
+  }
+
+  private struct FriendsThreadUITestCapabilities: FriendsMessagingCapabilityProviding {
+    let canSendShiftSnapshots = false
+  }
+
+  @MainActor
+  private final class FriendsThreadUITestShareVisibilityResolver:
+    FriendsThreadShareVisibilityResolving
+  {
+    func canCounterpartSeeOwnerEarnings(counterpartUserId _: String) async throws -> Bool {
+      await Task.yield()
+      return false
+    }
+
+    func invalidateCachedVisibility(counterpartUserId _: String?) {}
+  }
+
+  @MainActor
+  private final class FriendsThreadUITestSharingPreviewService: SharingPreviewProviding {
+    func fetchShiftPreviews(sharerIds _: [String], forceRefresh _: Bool) async throws
+      -> [SharerShiftPreview]
+    {
+      await Task.yield()
+      return []
+    }
+  }
+
+  @MainActor
+  private final class FriendsThreadUITestSharedShiftsCache: SharedShiftsCaching {
+    func getCachedFriends(
+      for _: String,
+      includeHidden _: Bool
+    ) -> SharedShiftsRepository.CachedFriendsSnapshot {
+      .init(sharers: [], chatOnlyUserIds: [])
+    }
+
+    func getShiftPreviews(for _: String) -> [String: SharerShiftPreview] {
+      [:]
+    }
+
+    func saveShiftPreviews(_: [SharerShiftPreview], for _: String) async {
+      await Task.yield()
+    }
+  }
+
+  @MainActor
+  private final class FriendsThreadUITestRealtimeCoordinator: FriendsMessagingRealtimeCoordinating {
+    func startThreadListSubscription(viewerUserId _: String) async { await Task.yield() }
+    func stopThreadListSubscription() async { await Task.yield() }
+    func startThreadSubscription(threadId _: String, viewerUserId _: String) async {
+      await Task.yield()
+    }
+    func stopThreadSubscription(threadId _: String) async { await Task.yield() }
+    func sendTypingStart(threadId _: String, userId _: String) async { await Task.yield() }
+    func sendTypingStop(threadId _: String, userId _: String) async { await Task.yield() }
+  }
+
+  @MainActor
+  private final class FriendsThreadUITestService: FriendsMessagingServiceProviding {
+    private var threadSummary: FriendThread
+    private var messages: [FriendMessage]
+    private var sentMessageCount = 0
+
+    init(threadSummary: FriendThread, messages: [FriendMessage]) {
+      self.threadSummary = threadSummary
+      self.messages = messages
+    }
+
+    func getOrCreateDirectThread(otherUserId _: String) async throws -> FriendThread {
+      await Task.yield()
+      return threadSummary
+    }
+
+    func listMyThreads(limit _: Int, before _: FriendThreadCursor?) async throws -> [FriendThread] {
+      await Task.yield()
+      return [threadSummary]
+    }
+
+    func listThreadMessages(
+      threadId _: String,
+      limit _: Int,
+      before _: FriendMessageCursor?
+    ) async throws -> [FriendMessage] {
+      await Task.yield()
+      return messages
+    }
+
+    func sendMessage(
+      threadId: String,
+      clientId: String,
+      body: String?,
+      replyToMessageId: String?,
+      attachments _: [FriendOutgoingAttachment],
+      metadataData: Data?
+    ) async throws -> FriendMessage {
+      await Task.yield()
+      sentMessageCount += 1
+
+      let message = FriendMessage(
+        id: "ui-test-sent-\(sentMessageCount)",
+        threadId: threadId,
+        senderUserId: FriendsThreadUITestFixtures.viewerUserId,
+        messageType: .user,
+        body: body,
+        clientId: clientId,
+        replyToMessageId: replyToMessageId,
+        createdAt: Date(timeIntervalSince1970: 1_762_000_200 + Double(sentMessageCount)),
+        editedAt: nil,
+        deletedAt: nil,
+        metadataData: metadataData,
+        attachments: [],
+        reactions: [],
+        sendState: .sent,
+        failureMessage: nil
+      )
+
+      messages.append(message)
+      threadSummary = FriendThread(
+        id: threadSummary.id,
+        kind: threadSummary.kind,
+        title: threadSummary.title,
+        avatarUrl: threadSummary.avatarUrl,
+        metadataData: threadSummary.metadataData,
+        counterpartUserId: threadSummary.counterpartUserId,
+        counterpartDisplayName: threadSummary.counterpartDisplayName,
+        counterpartProfilePictureUrl: threadSummary.counterpartProfilePictureUrl,
+        counterpartOAuthAvatarUrl: threadSummary.counterpartOAuthAvatarUrl,
+        lastMessageId: message.id,
+        lastMessageSenderId: message.senderUserId,
+        lastMessageAt: message.createdAt,
+        lastMessageBody: message.body,
+        lastMessageHasImage: message.attachments.contains(where: { $0.kind == .image }),
+        unreadCount: 0,
+        muted: threadSummary.muted,
+        createdAt: threadSummary.createdAt
+      )
+
+      return message
+    }
+
+    func editMessage(messageId: String, body: String) async throws -> FriendMessage {
+      await Task.yield()
+      guard let index = messages.firstIndex(where: { $0.id == messageId }) else {
+        throw FriendsMessagingServiceError.httpError(statusCode: 404, message: "Message not found")
+      }
+
+      let updated = messages[index].withEditedBody(body, editedAt: Date())
+      messages[index] = updated
+      return updated
+    }
+
+    func deleteMessage(messageId: String) async throws -> FriendThread {
+      await Task.yield()
+      messages.removeAll { $0.id == messageId }
+      return threadSummary
+    }
+
+    func markThreadRead(threadId: String, throughMessageId: String) async throws
+      -> FriendThreadState
+    {
+      await Task.yield()
+      return FriendThreadState(
+        threadId: threadId,
+        userId: FriendsThreadUITestFixtures.viewerUserId,
+        lastReadMessageId: throughMessageId,
+        lastReadAt: Date(),
+        muted: false,
+        updatedAt: Date()
+      )
+    }
+
+    func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState {
+      await Task.yield()
+      return FriendThreadState(
+        threadId: threadId,
+        userId: FriendsThreadUITestFixtures.viewerUserId,
+        lastReadMessageId: nil,
+        lastReadAt: nil,
+        muted: muted,
+        updatedAt: Date()
+      )
+    }
+
+    func fetchUnreadDirectMessageCount(userId _: String) async throws -> Int {
+      await Task.yield()
+      return 0
+    }
+
+    func fetchThreadSummary(threadId _: String) async throws -> FriendThread {
+      await Task.yield()
+      return threadSummary
+    }
+
+    func fetchThreadState(threadId _: String, userId _: String) async throws -> FriendThreadState? {
+      await Task.yield()
+      return nil
+    }
+
+    func fetchMessagePayload(messageId: String) async throws -> FriendMessage {
+      await Task.yield()
+      guard let message = messages.first(where: { $0.id == messageId }) else {
+        throw FriendsMessagingServiceError.httpError(statusCode: 404, message: "Message not found")
+      }
+      return message
+    }
+
+    func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
+      await Task.yield()
+      guard let index = messages.firstIndex(where: { $0.id == messageId }) else {
+        throw FriendsMessagingServiceError.httpError(statusCode: 404, message: "Message not found")
+      }
+
+      let message = messages[index]
+      let updated = message.toggledReaction(emoji: emoji)
+      messages[index] = updated
+      return updated
+    }
+
+    func createAbuseReport(
+      threadId _: String,
+      reportedUserId _: String,
+      messageId _: String?,
+      reason _: FriendAbuseReportReason
+    ) async throws {
+      await Task.yield()
+    }
+
+    func blockUserPair(otherUserId _: String) async throws {
+      await Task.yield()
+    }
+
+    func uploadImageAttachment(threadId _: String, image _: ImageAttachment) async throws
+      -> FriendOutgoingAttachment
+    {
+      await Task.yield()
+      return FriendOutgoingAttachment(
+        attachmentId: "ui-test-upload",
+        storagePath: "ui-testing/image.jpg",
+        mimeType: "image/jpeg",
+        byteSize: 0,
+        width: nil,
+        height: nil
+      )
+    }
+
+    func downloadAttachmentData(path _: String) async throws -> Data {
+      await Task.yield()
+      return Data()
+    }
+  }
+#endif

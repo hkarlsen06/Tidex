@@ -12,6 +12,16 @@ extension Notification.Name {
 }
 
 @MainActor
+protocol FriendsMessagingRealtimeCoordinating: AnyObject {
+  func startThreadListSubscription(viewerUserId: String) async
+  func stopThreadListSubscription() async
+  func startThreadSubscription(threadId: String, viewerUserId: String) async
+  func stopThreadSubscription(threadId: String) async
+  func sendTypingStart(threadId: String, userId: String) async
+  func sendTypingStop(threadId: String, userId: String) async
+}
+
+@MainActor
 final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private enum Pagination {
     static let pageSize = 50
@@ -527,3 +537,5 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 }
+
+extension FriendsMessagingRealtimeCoordinator: FriendsMessagingRealtimeCoordinating {}

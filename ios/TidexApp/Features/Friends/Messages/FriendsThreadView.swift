@@ -3,6 +3,11 @@ import SwiftUI
 import UIKit
 
 struct FriendsThreadView: View {
+  private enum AccessibilityID {
+    static let threadView = "friends-thread.view"
+    static let unreadPill = "friends-thread.unread-pill"
+  }
+
   @Environment(\.openURL) private var openURL
 
   @StateObject private var viewModel: FriendsThreadViewModel
@@ -28,6 +33,10 @@ struct FriendsThreadView: View {
     _viewModel = StateObject(
       wrappedValue: FriendsThreadViewModel(route: route, viewerUserId: viewerUserId)
     )
+  }
+
+  init(viewModel: FriendsThreadViewModel) {
+    _viewModel = StateObject(wrappedValue: viewModel)
   }
 
   private var currentUserDisplayName: String {
@@ -261,6 +270,7 @@ struct FriendsThreadView: View {
 
       }
     }
+    .accessibilityIdentifier(AccessibilityID.threadView)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(Color.tidexBackground.ignoresSafeArea())
     .navigationBarTitleDisplayMode(.inline)
@@ -621,6 +631,7 @@ struct FriendsThreadView: View {
       .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier(AccessibilityID.unreadPill)
   }
 
   private var actionsMenu: some View {

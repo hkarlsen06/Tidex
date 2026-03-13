@@ -1261,3 +1261,23 @@ final class AppCoordinator: ObservableObject {
     }
   }
 }
+
+#if DEBUG
+  extension AppCoordinator {
+    func configureForUITesting(
+      userId: String,
+      displayName: String,
+      avatarUrl: String? = nil
+    ) {
+      self.userId = userId
+      self.userDisplayName = displayName
+      self.userAvatarUrl = avatarUrl
+      self.hasFinishedOnboardingRemotely = true
+      self.initialSyncComplete = true
+      self.appState = .authenticated
+      self.pendingDeepLink = nil
+      self.pendingMFAFactor = nil
+      self.postAuthOnboardingPresentation = .none
+    }
+  }
+#endif

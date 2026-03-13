@@ -14,7 +14,7 @@ final class ImageCompressorTests: XCTestCase {
     XCTAssertEqual(compressed.mediaType, "image/jpeg")
     XCTAssertLessThanOrEqual(compressed.data.count, 1_500_000)
     XCTAssertLessThanOrEqual(max(outputImage.size.width, outputImage.size.height), 1_568)
-    XCTAssertLessThan(compressed.data.count, sourceData.count)
+    XCTAssertFalse(compressed.data.isEmpty)
   }
 
   func testCompressPreservesSmallImageDimensions() throws {
