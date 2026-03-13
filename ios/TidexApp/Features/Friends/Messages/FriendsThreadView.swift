@@ -22,6 +22,7 @@ struct FriendsThreadView: View {
   @State private var screenshotBellShakeTrigger = false
   @State private var showProfile = false
   @State private var isPinnedToBottom = true
+  @State private var lastHandledNavigationRequestId: UUID?
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -150,6 +151,9 @@ struct FriendsThreadView: View {
       .task {
         syncComposerBridge()
         await viewModel.loadIfNeeded()
+      }
+      .task(id: viewModel.route.navigationRequestId) {
+        await handleRouteNavigationIfNeeded()
       }
       .onAppear {
         syncComposerBridge()
@@ -1006,6 +1010,20 @@ struct FriendsThreadView: View {
         return messageId
       }
     }
+  }
+
+  private func handleRouteNavigationIfNeeded() async {
+    guard let navigationRequestId = viewModel.route.navigationRequestId,
+      lastHandledNavigationRequestId != navigationRequestId
+    else {
+      return
+    }
+
+    lastHandledNavigationRequestId = navigationRequestId
+    await viewModel.handleNotificationOpen(
+      targetMessageId: viewModel.route.initialMessageId,
+      forceRefresh: true
+    )
   }
 }
 

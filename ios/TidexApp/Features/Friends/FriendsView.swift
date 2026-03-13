@@ -266,10 +266,14 @@ struct SharingView: View {
       showManageSheet = true
       coordinator.clearPendingDeepLink()
 
-    case .friendChat(let threadId, _, _):
+    case .friendChat(let threadId, let messageId, let senderUserId):
       deepLinkNavigationTask?.cancel()
       deepLinkNavigationTask = Task { @MainActor in
-        await openChat(threadId: threadId)
+        await openChat(
+          threadId: threadId,
+          initialMessageId: messageId,
+          notificationSenderUserId: senderUserId
+        )
       }
       coordinator.clearPendingDeepLink()
 
@@ -416,7 +420,11 @@ struct SharingView: View {
     }
   }
 
-  private func openChat(threadId: String) async {
+  private func openChat(
+    threadId: String,
+    initialMessageId: String? = nil,
+    notificationSenderUserId: String? = nil
+  ) async {
     guard openingThreadId == nil else { return }
 
     openingThreadId = threadId
@@ -444,7 +452,9 @@ struct SharingView: View {
         thread: thread,
         fallbackDisplayName: thread.counterpartDisplayName
           ?? String(localized: .sharingFriendsTitle),
-        fallbackAvatarUrl: thread.counterpartAvatarUrl
+        fallbackAvatarUrl: thread.counterpartAvatarUrl,
+        initialMessageId: initialMessageId,
+        notificationSenderUserId: notificationSenderUserId
       )
 
       activeChatHighlightUserId = thread.counterpartUserId

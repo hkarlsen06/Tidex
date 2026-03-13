@@ -431,6 +431,18 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
+  func handleNotificationOpen(targetMessageId: String?, forceRefresh: Bool) async {
+    if forceRefresh {
+      await refresh()
+    }
+
+    guard let targetMessageId = normalizedMessageId(targetMessageId) else {
+      return
+    }
+
+    await focusMessage(messageId: targetMessageId)
+  }
+
   func stopRealtime() async {
     if FriendsChatPresentationState.shared.activeThreadId == route.threadId {
       return
@@ -1084,6 +1096,49 @@ final class FriendsThreadViewModel: ObservableObject {
         }
       }
     }
+  }
+
+  private func focusMessage(messageId: String) async {
+    if messages.contains(where: { $0.id == messageId }) {
+      restoreScrollTargetMessageId = nil
+      replyScrollTargetMessageId = messageId
+      return
+    }
+
+    while hasMoreHistoricalMessages, let oldestLoadedMessage = messages.first {
+      let didLoadPage = await loadOlderMessages(
+        before: oldestLoadedMessage,
+        preserveScrollTargetMessageId: oldestLoadedMessage.id
+      )
+
+      if messages.contains(where: { $0.id == messageId }) {
+        restoreScrollTargetMessageId = nil
+        replyScrollTargetMessageId = messageId
+        return
+      }
+
+      if !didLoadPage {
+        break
+      }
+    }
+
+    do {
+      let message = try await service.fetchMessagePayload(messageId: messageId)
+      guard message.threadId == route.threadId, message.deletedAt == nil else { return }
+      await repository.saveMessages([message], in: route.threadId, for: viewerUserId)
+      loadFromCache()
+      restoreScrollTargetMessageId = nil
+      replyScrollTargetMessageId = messageId
+    } catch {
+      threadLogger.error("Failed to focus message \(messageId): \(error.localizedDescription)")
+    }
+  }
+
+  private func normalizedMessageId(_ messageId: String?) -> String? {
+    guard let messageId else { return nil }
+
+    let normalizedMessageId = messageId.trimmingCharacters(in: .whitespacesAndNewlines)
+    return normalizedMessageId.isEmpty ? nil : normalizedMessageId
   }
 
   private func sendMessageInBackground(
