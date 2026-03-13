@@ -542,8 +542,7 @@ struct SharingView: View {
       state: makeChatPreviewState(
         thread: thread,
         viewerUserId: viewerUserId,
-        lastMessage: lastMessage,
-        lastMessageTimestamp: previewTimestamp
+        lastMessage: lastMessage
       )
     )
   }
@@ -551,8 +550,7 @@ struct SharingView: View {
   private func makeChatPreviewState(
     thread: FriendThread,
     viewerUserId: String,
-    lastMessage: FriendMessage?,
-    lastMessageTimestamp: Date
+    lastMessage: FriendMessage?
   ) -> FriendCardMessageState {
     let isOutgoing =
       lastMessage?.senderUserId == viewerUserId
@@ -575,7 +573,7 @@ struct SharingView: View {
 
       return hasOpenedLastMessage(
         lastMessageId: thread.lastMessageId,
-        lastMessageTimestamp: lastMessageTimestamp,
+        lastMessageTimestamp: thread.lastMessageAt ?? thread.createdAt,
         state: counterpartState
       )
         ? .outgoingOpened
@@ -586,18 +584,7 @@ struct SharingView: View {
       return .incomingUnread
     }
 
-    let viewerState = friendsMessagesRepository.getThreadState(
-      threadId: thread.id,
-      viewerUserId: viewerUserId
-    )
-
-    return hasOpenedLastMessage(
-      lastMessageId: thread.lastMessageId,
-      lastMessageTimestamp: lastMessageTimestamp,
-      state: viewerState
-    )
-      ? .incomingOpened
-      : .incomingUnread
+    return .incomingOpened
   }
 
   private func hasOpenedLastMessage(

@@ -1500,6 +1500,81 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(previewService.requestedSharerIds, [[route.counterpartUserId]])
   }
 
+  func testRefreshCounterpartShiftPreviewBypassesStaleHiddenCache() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    let preview = SharerShiftPreview(
+      sharerId: route.counterpartUserId,
+      shift: SharedShiftData(
+        id: "shared-shift-refresh",
+        user_id: route.counterpartUserId,
+        job_id: "job-1",
+        job_name: "Cafe",
+        job_color: "#FFAA00",
+        shift_date: "2026-03-12",
+        start_time: "10:00",
+        end_time: "18:00",
+        computed: SharedShiftComputed(
+          id: "shared-shift-refresh",
+          durationHours: 8,
+          paidHours: 7.5,
+          basePay: 1000,
+          supplementPay: 200,
+          gross: 1200
+        ),
+        tax_enabled: true,
+        tax_percentage: 12.5,
+        custom_supplements: nil,
+        recurring_id: nil,
+        recurring_anchor_weekday: nil
+      ),
+      status: .upcoming,
+      showEarnings: true
+    )
+    let previewService = MockSharingPreviewService(previews: [preview])
+    let sharedShiftsCache = MockSharedShiftsCache(
+      cachedFriends: .init(
+        sharers: [
+          SharedUser(
+            id: route.counterpartUserId,
+            email: "friend@example.com",
+            phone: nil,
+            firstName: "Friend",
+            profilePictureUrl: nil,
+            oauthAvatarUrl: nil,
+            sharedAt: "2026-03-11T10:00:00Z",
+            showEarnings: true,
+            hidden: true
+          )
+        ],
+        chatOnlyUserIds: []
+      )
+    )
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      sharingPreviewService: previewService,
+      sharedShiftsCache: sharedShiftsCache,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    XCTAssertNil(viewModel.counterpartShiftPreview)
+
+    await viewModel.refreshCounterpartShiftPreview()
+
+    XCTAssertEqual(viewModel.counterpartShiftPreview, preview)
+    XCTAssertEqual(previewService.requestedSharerIds, [[route.counterpartUserId]])
+    XCTAssertEqual(previewService.requestedForceRefreshValues, [true])
+  }
+
   private func makeRepository() throws -> FriendsMessagesRepository {
     let schema = Schema([
       LocalPendingFriendComposerDraft.self,
@@ -1602,16 +1677,18 @@ private struct MockFriendsMessagingCapabilities: FriendsMessagingCapabilityProvi
 private final class MockSharingPreviewService: SharingPreviewProviding {
   let previews: [SharerShiftPreview]
   var requestedSharerIds: [[String]] = []
+  var requestedForceRefreshValues: [Bool] = []
 
   init(previews: [SharerShiftPreview]) {
     self.previews = previews
   }
 
-  func fetchShiftPreviews(sharerIds: [String], forceRefresh _: Bool) async throws
+  func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool) async throws
     -> [SharerShiftPreview]
   {
     await Task.yield()
     requestedSharerIds.append(sharerIds)
+    requestedForceRefreshValues.append(forceRefresh)
     return previews
   }
 }

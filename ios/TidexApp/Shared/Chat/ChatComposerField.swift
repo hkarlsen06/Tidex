@@ -20,6 +20,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let bottomPadding: CGFloat
   private let onSend: () -> Void
   private let leadingAccessory: LeadingAccessory
+  private let composerCornerRadius: CGFloat = 24
 
   @FocusState private var isFocused: Bool
 
@@ -107,14 +108,19 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .padding(.vertical, Spacing.sm)
     .frame(minHeight: composerControlHeight)
     .tidexGlass(
-      shape: .rect(cornerRadius: 24),
+      shape: .rect(cornerRadius: composerCornerRadius),
       tint: composerTint,
       interactive: isFocused,
       disabled: disabled,
       fallbackOpacity: 0.9
     )
     .overlay(composerBorder)
-    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous))
+    .onTapGesture {
+      guard !disabled else { return }
+      isFocused = true
+    }
     .shadow(color: Color.tidexBlue.opacity(isFocused ? 0.12 : 0.05), radius: 18, y: 6)
   }
 
@@ -148,7 +154,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   }
 
   private var composerBorder: some View {
-    RoundedRectangle(cornerRadius: 24, style: .continuous)
+    RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous)
       .stroke(
         isFocused ? Color.tidexBlue.opacity(0.4) : Color.tidexBorder.opacity(0.38),
         lineWidth: 1

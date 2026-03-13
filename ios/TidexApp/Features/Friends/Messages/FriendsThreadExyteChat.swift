@@ -142,6 +142,69 @@ enum FriendsThreadMessageListChangeResolver {
   }
 }
 
+struct FriendsThreadIncomingAppendOutcome: Equatable {
+  let unreadIncomingCount: Int
+  let showsNewMessagesPill: Bool
+  let shouldPlayFeedback: Bool
+}
+
+enum FriendsThreadIncomingAppendResolver {
+  static func resolve(
+    previousMessageCount: Int,
+    unreadIncomingCount: Int,
+    isIncoming: Bool,
+    isPinnedToBottom: Bool
+  ) -> FriendsThreadIncomingAppendOutcome {
+    guard previousMessageCount > 0 else {
+      return FriendsThreadIncomingAppendOutcome(
+        unreadIncomingCount: 0,
+        showsNewMessagesPill: false,
+        shouldPlayFeedback: false
+      )
+    }
+
+    guard !isPinnedToBottom else {
+      return FriendsThreadIncomingAppendOutcome(
+        unreadIncomingCount: 0,
+        showsNewMessagesPill: false,
+        shouldPlayFeedback: false
+      )
+    }
+
+    guard isIncoming else {
+      return FriendsThreadIncomingAppendOutcome(
+        unreadIncomingCount: unreadIncomingCount,
+        showsNewMessagesPill: unreadIncomingCount > 0,
+        shouldPlayFeedback: false
+      )
+    }
+
+    return FriendsThreadIncomingAppendOutcome(
+      unreadIncomingCount: unreadIncomingCount + 1,
+      showsNewMessagesPill: true,
+      shouldPlayFeedback: true
+    )
+  }
+}
+
+enum FriendsThreadCounterpartPreviewNavigationResolver {
+  static func deepLink(for preview: SharerShiftPreview) -> AppCoordinator.DeepLink? {
+    guard let shift = preview.shift else { return nil }
+
+    return .sharing(
+      sharerId: preview.sharerId,
+      highlightDates: [shift.shift_date],
+      changes: [
+        AppCoordinator.ShiftChange(
+          shiftId: shift.id,
+          date: shift.shift_date,
+          op: "updated"
+        )
+      ]
+    )
+  }
+}
+
 struct FriendsThreadChatViewportScrollRequest: Equatable {
   enum Kind: Equatable {
     case reply
