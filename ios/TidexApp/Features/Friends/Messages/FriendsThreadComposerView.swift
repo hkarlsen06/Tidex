@@ -3,6 +3,13 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
+private enum FriendsThreadComposerAccessibilityID {
+  static let textField = "friends-thread-composer.text-field"
+  static let sendButton = "friends-thread-composer.send-button"
+  static let replyBanner = "friends-thread-composer.reply-banner"
+  static let replyCancelButton = "friends-thread-composer.reply-cancel"
+}
+
 enum FriendsThreadComposerMode: Equatable {
   case normal
   case reply
@@ -316,6 +323,8 @@ struct FriendsThreadComposerHostedView: View {
       actionAccessibilityLabel: bridge.mode == .edit
         ? String(localized: "friends.chat.composer.save_edit", table: "Localizable")
         : String(localized: "Send message"),
+      textFieldAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.textField,
+      actionButtonAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.sendButton,
       focusTrigger: composerFocusTrigger,
       onFocusChanged: { isComposerFocused = $0 },
       horizontalPadding: MonthPickerLayout.horizontalPadding,
@@ -803,6 +812,7 @@ private struct FriendsThreadComposerReplyBanner: View {
       }
       .buttonStyle(.plain)
       .accessibilityLabel(Text(String(localized: .commonCancel)))
+      .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.sm)
@@ -814,6 +824,7 @@ private struct FriendsThreadComposerReplyBanner: View {
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
     )
+    .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyBanner)
   }
 }
 

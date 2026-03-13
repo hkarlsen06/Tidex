@@ -14,6 +14,8 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let actionSystemImage: String
   private let actionForegroundColor: Color
   private let actionBackgroundColor: Color
+  private let textFieldAccessibilityIdentifier: String?
+  private let actionButtonAccessibilityIdentifier: String?
   private let submitLabel: SubmitLabel
   private let triggersSubmit: Bool
   private let focusTrigger: Int
@@ -38,6 +40,8 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     actionSystemImage: String = "arrow.up",
     actionForegroundColor: Color = .tidexTextOnBrand,
     actionBackgroundColor: Color = .tidexBrandPrimary,
+    textFieldAccessibilityIdentifier: String? = nil,
+    actionButtonAccessibilityIdentifier: String? = nil,
     submitLabel: SubmitLabel = .send,
     triggersSubmit: Bool = true,
     focusTrigger: Int = 0,
@@ -58,6 +62,8 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     self.actionSystemImage = actionSystemImage
     self.actionForegroundColor = actionForegroundColor
     self.actionBackgroundColor = actionBackgroundColor
+    self.textFieldAccessibilityIdentifier = textFieldAccessibilityIdentifier
+    self.actionButtonAccessibilityIdentifier = actionButtonAccessibilityIdentifier
     self.submitLabel = submitLabel
     self.triggersSubmit = triggersSubmit
     self.focusTrigger = focusTrigger
@@ -107,6 +113,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
       .lineLimit(1...7)
       .focused($isFocused)
       .disabled(disabled)
+      .chatComposerAccessibilityIdentifier(textFieldAccessibilityIdentifier)
       .submitLabel(submitLabel)
       .onSubmit {
         guard triggersSubmit, canPerformAction else { return }
@@ -158,6 +165,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     }
     .disabled(!canPerformAction)
     .accessibilityLabel(Text(actionAccessibilityLabel))
+    .chatComposerAccessibilityIdentifier(actionButtonAccessibilityIdentifier)
     .opacity((disabled && !canPerformAction) ? 0.6 : 1)
   }
 
@@ -174,6 +182,17 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   }
 }
 
+extension View {
+  @ViewBuilder
+  fileprivate func chatComposerAccessibilityIdentifier(_ identifier: String?) -> some View {
+    if let identifier {
+      accessibilityIdentifier(identifier)
+    } else {
+      self
+    }
+  }
+}
+
 extension ChatComposerField where LeadingAccessory == EmptyView {
   init(
     text: Binding<String>,
@@ -185,6 +204,8 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
     actionSystemImage: String = "arrow.up",
     actionForegroundColor: Color = .tidexTextOnBrand,
     actionBackgroundColor: Color = .tidexBrandPrimary,
+    textFieldAccessibilityIdentifier: String? = nil,
+    actionButtonAccessibilityIdentifier: String? = nil,
     submitLabel: SubmitLabel = .send,
     triggersSubmit: Bool = true,
     focusTrigger: Int = 0,
@@ -205,6 +226,8 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
       actionSystemImage: actionSystemImage,
       actionForegroundColor: actionForegroundColor,
       actionBackgroundColor: actionBackgroundColor,
+      textFieldAccessibilityIdentifier: textFieldAccessibilityIdentifier,
+      actionButtonAccessibilityIdentifier: actionButtonAccessibilityIdentifier,
       submitLabel: submitLabel,
       triggersSubmit: triggersSubmit,
       focusTrigger: focusTrigger,

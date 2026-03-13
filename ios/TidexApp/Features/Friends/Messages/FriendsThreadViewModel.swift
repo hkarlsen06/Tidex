@@ -153,7 +153,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private let settingsRepository: SettingsRepository
   private let repository: FriendsMessagesRepository
   private let composerDraftStore: FriendsComposerDraftStore
-  private let realtimeCoordinator: FriendsMessagingRealtimeCoordinator
+  private let realtimeCoordinator: any FriendsMessagingRealtimeCoordinating
   private var hasLoaded = false
   private var loadingQuotedMessageIds: Set<String> = []
   private var didSendTypingStart = false
@@ -188,7 +188,7 @@ final class FriendsThreadViewModel: ObservableObject {
     settingsRepository: SettingsRepository? = nil,
     repository: FriendsMessagesRepository? = nil,
     composerDraftStore: FriendsComposerDraftStore? = nil,
-    realtimeCoordinator: FriendsMessagingRealtimeCoordinator? = nil
+    realtimeCoordinator: (any FriendsMessagingRealtimeCoordinating)? = nil
   ) {
     self.route = route
     self.viewerUserId = viewerUserId
@@ -201,7 +201,7 @@ final class FriendsThreadViewModel: ObservableObject {
     self.settingsRepository = settingsRepository ?? .shared
     self.repository = repository ?? .shared
     self.composerDraftStore = composerDraftStore ?? .shared
-    self.realtimeCoordinator = realtimeCoordinator ?? .shared
+    self.realtimeCoordinator = realtimeCoordinator ?? FriendsMessagingRealtimeCoordinator.shared
     self.thread = FriendThread(
       id: route.threadId,
       kind: .direct,
