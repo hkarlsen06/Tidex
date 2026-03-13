@@ -150,7 +150,7 @@ struct WageyView: View {
     .alert(
       String(localized: .wageyErrorUnknown),
       isPresented: .init(
-        get: { viewModel.error != nil },
+        get: { viewModel.presentedAlertError != nil },
         set: { if !$0 { viewModel.dismissError() } }
       )
     ) {
@@ -158,7 +158,7 @@ struct WageyView: View {
         viewModel.dismissError()
       }
     } message: {
-      if let error = viewModel.error {
+      if let error = viewModel.presentedAlertError {
         Text(error.localizedDescription)
       }
     }
@@ -261,7 +261,7 @@ struct WageyView: View {
           viewModel.cancelStream()
         },
         isStreaming: viewModel.isStreaming,
-        disabled: viewModel.isStreaming
+        disabled: viewModel.limitReached
       )
     }
     .background(

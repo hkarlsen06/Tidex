@@ -24,6 +24,10 @@ final class LocalConversation {
   /// Messages stored as JSON Data
   var messagesData: Data
 
+  /// Latest server-authored conversation compaction summary, if available.
+  /// Optional so lightweight migration can populate legacy rows.
+  var compaction: String?
+
   /// When the conversation was created
   var createdAt: Date
 
@@ -65,6 +69,7 @@ final class LocalConversation {
     userId: String,
     title: String,
     messages: [StoredChatMessage] = [],
+    compaction: String? = nil,
     createdAt: Date = Date(),
     updatedAt: Date = Date()
   ) {
@@ -72,6 +77,7 @@ final class LocalConversation {
     self.userId = userId
     self.title = title
     self.messagesData = (try? JSONEncoder().encode(messages)) ?? Data()
+    self.compaction = compaction
     self.createdAt = createdAt
     self.updatedAt = updatedAt
   }

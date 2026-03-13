@@ -67,6 +67,24 @@ final class WageyChatChunkDecodingTests: XCTestCase {
     )
   }
 
+  func testDecodesCompactionChunk() throws {
+    let data = Data(
+      """
+      {
+        "type": "wagey_compaction",
+        "content": "<summary>Keep only the recent context.</summary>"
+      }
+      """.utf8
+    )
+
+    let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+
+    XCTAssertEqual(
+      chunk,
+      .compaction(content: "<summary>Keep only the recent context.</summary>")
+    )
+  }
+
   func testDecodesBuiltInToolChunks() throws {
     let startData = Data(
       """

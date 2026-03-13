@@ -73,4 +73,15 @@ final class WageyConversationPersistenceTests: XCTestCase {
     XCTAssertEqual(roundTrip.toolCalls?.first?.kind, .builtIn)
     XCTAssertTrue(roundTrip.toolCalls?.first?.isBuiltIn == true)
   }
+
+  func testLocalConversationStoresCompactionSummary() {
+    let conversation = LocalConversation(
+      userId: "USER",
+      title: "New Conversation",
+      messages: [],
+      compaction: "<summary>Condensed history</summary>"
+    )
+
+    XCTAssertEqual(conversation.compaction, "<summary>Condensed history</summary>")
+  }
 }

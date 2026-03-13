@@ -15,6 +15,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let actionForegroundColor: Color
   private let actionBackgroundColor: Color
   private let submitLabel: SubmitLabel
+  private let triggersSubmit: Bool
   private let focusTrigger: Int
   private let onFocusChanged: ((Bool) -> Void)?
   private let horizontalPadding: CGFloat
@@ -38,6 +39,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     actionForegroundColor: Color = .tidexTextOnBrand,
     actionBackgroundColor: Color = .tidexBrandPrimary,
     submitLabel: SubmitLabel = .send,
+    triggersSubmit: Bool = true,
     focusTrigger: Int = 0,
     onFocusChanged: ((Bool) -> Void)? = nil,
     horizontalPadding: CGFloat = Spacing.md,
@@ -57,6 +59,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     self.actionForegroundColor = actionForegroundColor
     self.actionBackgroundColor = actionBackgroundColor
     self.submitLabel = submitLabel
+    self.triggersSubmit = triggersSubmit
     self.focusTrigger = focusTrigger
     self.onFocusChanged = onFocusChanged
     self.horizontalPadding = horizontalPadding
@@ -106,7 +109,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
       .disabled(disabled)
       .submitLabel(submitLabel)
       .onSubmit {
-        guard canPerformAction else { return }
+        guard triggersSubmit, canPerformAction else { return }
         onAction()
       }
       .padding(.vertical, Spacing.xs)
@@ -183,6 +186,7 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
     actionForegroundColor: Color = .tidexTextOnBrand,
     actionBackgroundColor: Color = .tidexBrandPrimary,
     submitLabel: SubmitLabel = .send,
+    triggersSubmit: Bool = true,
     focusTrigger: Int = 0,
     onFocusChanged: ((Bool) -> Void)? = nil,
     horizontalPadding: CGFloat = Spacing.md,
@@ -202,6 +206,7 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
       actionForegroundColor: actionForegroundColor,
       actionBackgroundColor: actionBackgroundColor,
       submitLabel: submitLabel,
+      triggersSubmit: triggersSubmit,
       focusTrigger: focusTrigger,
       onFocusChanged: onFocusChanged,
       horizontalPadding: horizontalPadding,

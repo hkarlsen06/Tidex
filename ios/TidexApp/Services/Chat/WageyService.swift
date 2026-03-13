@@ -447,6 +447,9 @@ private actor WageyStreamWorker {
       return .wageyNoAccess
     case "wagey_sources":
       return .sources(items: raw.items ?? [])
+    case "wagey_compaction":
+      guard let content = raw.content else { return nil }
+      return .compaction(content: content)
     case "done":
       return .done
     case "error":

@@ -71,7 +71,8 @@ final class ConversationsRepository: ObservableObject {
   func createConversation(
     for userId: String,
     title: String,
-    messages: [StoredChatMessage] = []
+    messages: [StoredChatMessage] = [],
+    compaction: String? = nil
   ) -> LocalConversation {
     let context = localStore.mainContext
     let normalizedUserId = userId.uppercased()
@@ -79,7 +80,8 @@ final class ConversationsRepository: ObservableObject {
     let conversation = LocalConversation(
       userId: normalizedUserId,
       title: title,
-      messages: messages
+      messages: messages,
+      compaction: compaction
     )
 
     context.insert(conversation)
@@ -102,7 +104,8 @@ final class ConversationsRepository: ObservableObject {
   @discardableResult
   func updateMessages(
     conversationId id: String,
-    messages: [StoredChatMessage]
+    messages: [StoredChatMessage],
+    compaction: String? = nil
   ) -> LocalConversation? {
     guard let conversation = getConversation(id: id) else {
       logger.warning("Conversation not found for update: \(id)")
@@ -110,6 +113,7 @@ final class ConversationsRepository: ObservableObject {
     }
 
     conversation.messages = messages
+    conversation.compaction = compaction
     conversation.updatedAt = Date()
 
     // Auto-update title from first user message if it was the default
