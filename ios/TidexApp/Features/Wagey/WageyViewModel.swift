@@ -99,6 +99,9 @@ final class WageyViewModel {
   /// Whether the backend has reported that the model is currently thinking
   private(set) var isModelThinking: Bool = false
 
+  /// Latest server-authored compaction summary for the active conversation.
+  private(set) var currentCompaction: String?
+
   /// Whether the user has reached their message limit
   private(set) var limitReached: Bool = false
 
@@ -215,6 +218,11 @@ final class WageyViewModel {
   /// Whether the sidebar is visible
   var isSidebarVisible: Bool = false
 
+  var presentedAlertError: Error? {
+    guard shouldPresentAlert(for: error) else { return nil }
+    return error
+  }
+
   // MARK: - Private State
 
   /// Whether any tool calls succeeded during the current stream (triggers sync)
@@ -228,6 +236,9 @@ final class WageyViewModel {
 
   /// ID of the message currently being streamed
   private var currentAssistantMessageId: String?
+
+  /// Compaction summary emitted during the current stream, committed on finalize.
+  private var pendingCompactionContent: String?
 
   /// Repository for conversation persistence
   private let conversationsRepository = ConversationsRepository.shared
@@ -338,6 +349,7 @@ final class WageyViewModel {
     messages = []
     activeContentBlocks = []
     activeSources = []
+    currentCompaction = nil
     limitReached = false
     localMessagesSent = 0
     resetDays = 0
@@ -353,6 +365,7 @@ final class WageyViewModel {
     hadSuccessfulToolCalls = false
     pendingSyncTables = []
     currentAssistantMessageId = nil
+    pendingCompactionContent = nil
   }
 
   /// Refresh the user-scoped showcase and consent state.
@@ -432,6 +445,7 @@ final class WageyViewModel {
     // Load the conversation
     currentConversationId = id
     messages = conversation.messages.map { $0.toChatMessage() }
+    currentCompaction = conversation.compaction
     error = nil
   }
 
@@ -448,6 +462,7 @@ final class WageyViewModel {
     messages = []
     activeContentBlocks = []
     activeSources = []
+    currentCompaction = nil
     error = nil
   }
 
@@ -513,9 +528,6 @@ final class WageyViewModel {
     }
     messages.append(userMessage)
 
-    // Increment local message counter for progress bar
-    localMessagesSent += 1
-
     // Create conversation if this is the first message
     if currentConversationId == nil {
       createNewConversation(with: messages)
@@ -531,6 +543,7 @@ final class WageyViewModel {
     hadSuccessfulToolCalls = false
     pendingSyncTables = []
     currentAssistantMessageId = UUID().uuidString
+    pendingCompactionContent = nil
 
     // Prepare haptics for token streaming
     Haptics.prepareStreamingHaptics()
@@ -628,8 +641,10 @@ final class WageyViewModel {
   /// Returns messages to send to the API, compacting older messages when the
   /// conversation exceeds the max character threshold.
   private func messagesForAPI() -> (messages: [ChatMessage], compaction: String?) {
+    let baseCompaction = currentCompaction
+
     guard estimatedConversationCharacters > Self.conversationMaxCharacters else {
-      return (messages, nil)
+      return (messages, baseCompaction)
     }
 
     var truncated: [ChatMessage] = []
@@ -652,10 +667,11 @@ final class WageyViewModel {
     let omittedCount = max(0, messages.count - recentMessages.count)
     let omittedMessages = omittedCount > 0 ? Array(messages.prefix(omittedCount)) : []
 
-    return (
-      Array(recentMessages),
-      buildCompactionSummary(for: omittedMessages)
-    )
+    let localCompaction = buildCompactionSummary(for: omittedMessages)
+    let combinedCompaction = combinedCompactionSummary(
+      base: baseCompaction, appended: localCompaction)
+
+    return (Array(recentMessages), combinedCompaction)
   }
 
   private func messageCharacterCount(_ message: ChatMessage) -> Int {
@@ -724,6 +740,22 @@ final class WageyViewModel {
     return String(normalized[..<endIndex]) + "..."
   }
 
+  private func combinedCompactionSummary(base: String?, appended: String?) -> String? {
+    switch (
+      base?.trimmingCharacters(in: .whitespacesAndNewlines),
+      appended?.trimmingCharacters(in: .whitespacesAndNewlines)
+    ) {
+    case (let base?, let appended?) where !base.isEmpty && !appended.isEmpty:
+      return "\(base)\n\n\(appended)"
+    case (let base?, _) where !base.isEmpty:
+      return base
+    case (_, let appended?) where !appended.isEmpty:
+      return appended
+    default:
+      return nil
+    }
+  }
+
   /// Trigger a background entitlement sync when server/StoreKit mismatch is detected
   /// This uploads the StoreKit subscription to the server to fix the mismatch
   private func triggerEntitlementSync() async {
@@ -777,7 +809,8 @@ final class WageyViewModel {
     guard
       let conversation = conversationsRepository.updateMessages(
         conversationId: conversationId,
-        messages: storedMessages
+        messages: storedMessages,
+        compaction: currentCompaction
       )
     else {
       return
@@ -909,6 +942,9 @@ final class WageyViewModel {
     case .sources(let items):
       activeSources = items
 
+    case .compaction(let content):
+      pendingCompactionContent = content
+
     case .unknown:
       break
 
@@ -925,23 +961,25 @@ final class WageyViewModel {
 
   /// Finalize the streaming text into a message
   private func finalizeStreamingText(wasCancelled: Bool = false) {
+    let finalizedBlocks = finalizedContentBlocks(wasCancelled: wasCancelled)
     let fallbackMessage = Self.fallbackAssistantMessage(
       error: error,
       limitReached: limitReached,
       wasCancelled: wasCancelled || (streamTask?.isCancelled ?? false),
-      hasAssistantContent: !activeContentBlocks.isEmpty
+      hasAssistantContent: !finalizedBlocks.isEmpty
     )
 
     // Only create a message if we have content blocks
-    if !activeContentBlocks.isEmpty {
+    if !finalizedBlocks.isEmpty {
       let assistantMessage = ChatMessage(
         id: currentAssistantMessageId ?? UUID().uuidString,
         role: .assistant,
-        contentBlocks: activeContentBlocks,
+        contentBlocks: finalizedBlocks,
         sources: activeSources.isEmpty ? nil : activeSources,
         timestamp: Date()
       )
       messages.append(assistantMessage)
+      applyPendingCompaction(keepingMessageId: assistantMessage.id)
 
       // Save after assistant responds
       saveCurrentConversation()
@@ -955,8 +993,11 @@ final class WageyViewModel {
         ))
 
       // Surface stream failures inline instead of silently dismissing the typing indicator.
+      applyPendingCompaction(keepingMessageId: messages.last?.id)
       saveCurrentConversation()
-      error = nil
+    } else if let pendingCompactionContent {
+      currentCompaction = pendingCompactionContent
+      saveCurrentConversation()
     }
 
     // Trigger sync if any tool calls succeeded (shifts may have changed server-side)
@@ -970,12 +1011,16 @@ final class WageyViewModel {
     // Reset streaming state
     activeContentBlocks = []
     activeSources = []
+    pendingCompactionContent = nil
     hadSuccessfulToolCalls = false
     pendingSyncTables = []
     isStreaming = false
     isModelThinking = false
     currentAssistantMessageId = nil
     streamTask = nil
+    if !shouldPresentAlert(for: error) {
+      error = nil
+    }
   }
 
   /// Ensures Wagey-created shift changes are pulled locally before notifying UI observers.
@@ -1040,7 +1085,8 @@ final class WageyViewModel {
     let conversation = conversationsRepository.createConversation(
       for: userId,
       title: "New Conversation",
-      messages: messages.map { StoredChatMessage(from: $0) }
+      messages: messages.map { StoredChatMessage(from: $0) },
+      compaction: currentCompaction
     )
     currentConversationId = conversation.id
     upsertConversation(conversation)
@@ -1068,6 +1114,48 @@ final class WageyViewModel {
       return [.userSettings]
     default:
       return []
+    }
+  }
+
+  private func applyPendingCompaction(keepingMessageId: String?) {
+    guard let pendingCompactionContent else { return }
+    currentCompaction = pendingCompactionContent
+
+    guard let keepingMessageId,
+      let index = messages.firstIndex(where: { $0.id == keepingMessageId })
+    else {
+      return
+    }
+
+    messages = Array(messages.suffix(from: index))
+  }
+
+  private func finalizedContentBlocks(wasCancelled: Bool) -> [ContentBlock] {
+    guard wasCancelled else { return activeContentBlocks }
+
+    return activeContentBlocks.compactMap { block in
+      switch block {
+      case .text(let text):
+        return text.isEmpty ? nil : .text(text)
+      case .toolCall(let toolCall):
+        guard toolCall.result != nil else { return nil }
+        return .toolCall(toolCall)
+      case .image(let attachment):
+        return .image(attachment)
+      }
+    }
+  }
+
+  private func shouldPresentAlert(for error: Error?) -> Bool {
+    guard let error else { return false }
+
+    switch error {
+    case is WageyServiceError:
+      return false
+    case WageyError.serverError(_), WageyError.noAccess:
+      return false
+    default:
+      return true
     }
   }
 
@@ -1101,7 +1189,7 @@ extension ChatChunk {
     case .status, .text:
       return true
     case .toolStart, .toolResult, .builtInToolStart, .builtInToolResult, .done, .error,
-      .wageyLimit, .wageyNoAccess, .sources, .unknown:
+      .wageyLimit, .wageyNoAccess, .sources, .compaction, .unknown:
       return false
     }
   }

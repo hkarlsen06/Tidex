@@ -11,7 +11,7 @@ import type {
 } from "./ai-types.ts";
 import { DEFAULT_CLAUDE_MODEL, streamClaudeChat } from "./claude.ts";
 import type { WageyRequestContext } from "./context.ts";
-import { beginWageyTurn } from "./data.ts";
+import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
 import { maxIterationsReached } from "./i18n.ts";
 import { getSystemPrompt, type SystemPromptContext } from "./system-prompt.ts";
@@ -392,26 +392,44 @@ export async function handleWageyRequest(
           return;
         }
 
-        const turn = await beginWageyTurn(ctx);
-        const remaining = Math.max(0, Number(turn.invocation.remaining) || 0);
-        const bonus = Math.max(0, Number(turn.invocation.bonus) || 0);
-        const limitExceeded = !turn.invocation.allowed && remaining + bonus <= 0;
+        const access = await getWageyAccess(ctx);
+        const availableBeforeTurn = Math.max(0, Number(access.remaining) || 0)
+          + Math.max(0, Number(access.bonus) || 0);
+        const limitExceeded = availableBeforeTurn <= 0;
 
         if (limitExceeded) {
           sendChunk({
             type: "wagey_limit",
-            remaining,
-            resetDays: getResetDays(turn.access.resetDate),
+            remaining: Math.max(0, Number(access.remaining) || 0),
+            resetDays: getResetDays(access.resetDate),
             exceeded: true,
-            bonus,
+            bonus: Math.max(0, Number(access.bonus) || 0),
           });
+          sendChunk({ type: "done" });
+          closeStream("limit_exceeded");
+          return;
         }
 
+        const projectedRemaining = Math.max(
+          0,
+          Math.max(0, Number(access.remaining) || 0) - 1,
+        );
+        const projectedBonus = Math.max(
+          0,
+          projectedRemaining === 0
+            ? Math.max(0, Number(access.bonus) || 0) - (Math.max(0, Number(access.remaining) || 0) > 0 ? 0 : 1)
+            : Math.max(0, Number(access.bonus) || 0),
+        );
+        const projectedUsed = Math.max(
+          0,
+          Number(access.used) || 0,
+        ) + (Math.max(0, Number(access.remaining) || 0) > 0 ? 1 : 0);
+
         const systemContext: SystemPromptContext = {
-          accessLevel: turn.access.level,
-          used: turn.invocation.count,
-          remaining,
-          bonus,
+          accessLevel: access.level,
+          used: projectedUsed,
+          remaining: projectedRemaining,
+          bonus: projectedBonus,
           userName: input.userName,
         };
 
@@ -428,6 +446,37 @@ export async function handleWageyRequest(
         let hasUserVisibleAssistantOutput = false;
         let latestCompactionContent: string | undefined;
         let conversationMessages = [...messages];
+        let invocationConsumed = false;
+        let finalRemaining = projectedRemaining;
+        let finalBonus = projectedBonus;
+
+        const ensureInvocationConsumed = async (): Promise<boolean> => {
+          if (invocationConsumed) {
+            return true;
+          }
+
+          const invocation = await consumeWageyInvocation(ctx, access.limit ?? 0);
+          const consumedRemaining = Math.max(0, Number(invocation.remaining) || 0);
+          const consumedBonus = Math.max(0, Number(invocation.bonus) || 0);
+
+          if (!invocation.allowed && consumedRemaining + consumedBonus <= 0) {
+            sendChunk({
+              type: "wagey_limit",
+              remaining: consumedRemaining,
+              resetDays: getResetDays(access.resetDate),
+              exceeded: true,
+              bonus: consumedBonus,
+            });
+            sendChunk({ type: "done" });
+            closeStream("limit_race_lost");
+            return false;
+          }
+
+          invocationConsumed = true;
+          finalRemaining = consumedRemaining;
+          finalBonus = consumedBonus;
+          return true;
+        };
 
         try {
           while (iterationCount < MAX_ITERATIONS) {
@@ -451,10 +500,16 @@ export async function handleWageyRequest(
               if (req.signal.aborted) break;
 
               if (chunk.type === "text") {
+                if (!(await ensureInvocationConsumed())) {
+                  return;
+                }
                 hasUserVisibleAssistantOutput = true;
                 currentTextContent += chunk.content;
                 sendChunk({ type: "text", content: chunk.content });
               } else if (chunk.type === "tool_use") {
+                if (!(await ensureInvocationConsumed())) {
+                  return;
+                }
                 const duplicate = toolUses.some((use) => use.name === chunk.name && JSON.stringify(use.input) === JSON.stringify(chunk.input));
                 if (!duplicate) {
                   toolUses.push({ id: chunk.id, name: chunk.name, input: chunk.input });
@@ -558,15 +613,26 @@ export async function handleWageyRequest(
 
         if (iterationCount >= MAX_ITERATIONS) {
           log("warn", requestId, "Max iterations reached", { iterationCount });
+          if (!invocationConsumed) {
+            const didConsume = await ensureInvocationConsumed();
+            if (!didConsume) {
+              return;
+            }
+          }
           sendChunk({ type: "text", content: `\n\n${maxIterationsReached}` });
+        }
+
+        if (!invocationConsumed) {
+          finalRemaining = Math.max(0, Number(access.remaining) || 0);
+          finalBonus = Math.max(0, Number(access.bonus) || 0);
         }
 
         sendChunk({
           type: "wagey_limit",
-          remaining,
-          resetDays: getResetDays(turn.access.resetDate),
-          exceeded: limitExceeded,
-          bonus,
+          remaining: finalRemaining,
+          resetDays: getResetDays(access.resetDate),
+          exceeded: finalRemaining + finalBonus <= 0,
+          bonus: finalBonus,
         });
 
         if (latestCompactionContent) {

@@ -276,6 +276,9 @@ enum ChatChunk: Equatable {
   /// Rich source metadata for capable clients
   case sources(items: [MessageSource])
 
+  /// Latest server-authored compaction summary for reuse on subsequent turns.
+  case compaction(content: String)
+
   /// Future-compatible fallback for chunk types this app version does not understand.
   case unknown(type: String)
 }
@@ -361,6 +364,10 @@ extension ChatChunk: Decodable {
     case "wagey_sources":
       let items = try container.decode([MessageSource].self, forKey: .items)
       self = .sources(items: items)
+
+    case "wagey_compaction":
+      let content = try container.decode(String.self, forKey: .content)
+      self = .compaction(content: content)
 
     default:
       self = .unknown(type: type)

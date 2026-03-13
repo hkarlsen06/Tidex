@@ -248,9 +248,9 @@ async function getProfileAndSubscription(
   };
 }
 
-export async function beginWageyTurn(
+export async function getWageyAccess(
   ctx: WageyRequestContext,
-): Promise<{ access: WageyAccessResult; invocation: WageyInvocationResult }> {
+): Promise<WageyAccessResult> {
   const userId = ctx.user.id;
 
   try {
@@ -264,7 +264,7 @@ export async function beginWageyTurn(
     const bonus = Math.max(0, invocations?.bonus ?? 0);
     const remaining = Math.max(0, limit - used);
 
-    const access: WageyAccessResult = {
+    return {
       level,
       hasAccess,
       limit,
@@ -273,33 +273,45 @@ export async function beginWageyTurn(
       bonus,
       resetDate: getResetDate(),
     };
-
-    const { data, error } = await ctx.supabase.rpc("increment_wagey_invocation", {
-      p_user_id: userId,
-      p_current_month: currentMonth,
-      p_max_invocations: limit,
-    });
-
-    if (error || !data) {
-      throw new Error(error?.message ?? "Failed to initialize Wagey turn");
-    }
-
-    return {
-      access,
-      invocation: data as WageyInvocationResult,
-    };
   } catch (error) {
     console.error(JSON.stringify({
       scope: "wagey-data",
       userId,
-      message: "Falling back after beginWageyTurn failure",
+      message: "Falling back after getWageyAccess failure",
       error: error instanceof Error ? error.message : String(error),
     }));
 
-    return {
-      access: FALLBACK_WAGEY_ACCESS,
-      invocation: FALLBACK_WAGEY_INVOCATION,
-    };
+    return FALLBACK_WAGEY_ACCESS;
+  }
+}
+
+export async function consumeWageyInvocation(
+  ctx: WageyRequestContext,
+  limit: number,
+): Promise<WageyInvocationResult> {
+  const userId = ctx.user.id;
+
+  try {
+    const { data, error } = await ctx.supabase.rpc("increment_wagey_invocation", {
+      p_user_id: userId,
+      p_current_month: getCurrentMonth(),
+      p_max_invocations: limit,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message ?? "Failed to consume Wagey invocation");
+    }
+
+    return data as WageyInvocationResult;
+  } catch (error) {
+    console.error(JSON.stringify({
+      scope: "wagey-data",
+      userId,
+      message: "Falling back after consumeWageyInvocation failure",
+      error: error instanceof Error ? error.message : String(error),
+    }));
+
+    return FALLBACK_WAGEY_INVOCATION;
   }
 }
 
