@@ -229,6 +229,16 @@ final class FriendsComposerAttachmentController: ObservableObject {
     isShowingShiftCalendar = true
   }
 
+  func beginProcessingAttachment() -> Bool {
+    guard !isProcessingAttachment else { return false }
+    isProcessingAttachment = true
+    return true
+  }
+
+  func finishProcessingAttachment() {
+    isProcessingAttachment = false
+  }
+
   func loadRecentPhotosIfNeeded(forceRefresh: Bool = false) async {
     await loadRecentPhotosIfNeeded(
       forceRefresh: forceRefresh,
@@ -332,9 +342,8 @@ final class FriendsComposerAttachmentController: ObservableObject {
   private func processAttachment(_ loader: @escaping () async -> ImageAttachment?) async
     -> ImageAttachment?
   {
-    guard !isProcessingAttachment else { return nil }
-    isProcessingAttachment = true
-    defer { isProcessingAttachment = false }
+    guard beginProcessingAttachment() else { return nil }
+    defer { finishProcessingAttachment() }
     return await loader()
   }
 

@@ -14,6 +14,7 @@ struct FriendsComposerShiftCalendarPicker: View {
   @State private var selectedDates: Set<String> = []
   @State private var isSelectionModeEnabled = false
   @State private var selectedDayForSheet: FriendsComposerShiftDaySelection?
+  @State private var isSelectingShift = false
 
   private var transitionPhase: MonthTransitionPhase {
     MonthTransitionPhase(
@@ -88,8 +89,14 @@ struct FriendsComposerShiftCalendarPicker: View {
             .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
             .padding(.bottom, MonthPickerLayout.totalBottomInset)
+            .allowsHitTesting(!isSelectingShift)
 
             Spacer()
+          }
+
+          if isSelectingShift {
+            ProgressView()
+              .controlSize(.large)
           }
         }
         .frame(width: geometry.size.width, height: geometry.size.height)
@@ -122,6 +129,7 @@ struct FriendsComposerShiftCalendarPicker: View {
         bottomMonthPicker
       }
     }
+    .interactiveDismissDisabled(isSelectingShift)
     .task {
       await viewModel.loadShifts()
     }
@@ -130,32 +138,43 @@ struct FriendsComposerShiftCalendarPicker: View {
         dateISO: daySelection.dateISO,
         shifts: daySelection.shifts,
         onShiftTapped: { shift in
-          Task {
-            if await onSelectShift(shift) {
-              selectedDayForSheet = nil
-              dismiss()
-            }
-          }
+          selectShift(shift, dismissDaySheet: true)
         },
         excludedFromTotalIds: viewModel.excludedFromTotalIds
       )
       .presentationDetents([.medium])
       .presentationDragIndicator(.visible)
+      .interactiveDismissDisabled(isSelectingShift)
     }
   }
 
   private func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) {
+    guard !isSelectingShift else { return }
+
     if shiftsOnDay.count == 1, let shift = shiftsOnDay.first {
-      Task {
-        if await onSelectShift(shift) {
-          dismiss()
-        }
-      }
+      selectShift(shift, dismissDaySheet: false)
     } else if !shiftsOnDay.isEmpty {
       selectedDayForSheet = FriendsComposerShiftDaySelection(
         dateISO: dateISO,
         shifts: shiftsOnDay
       )
+    }
+  }
+
+  private func selectShift(_ shift: ShiftWithComputations, dismissDaySheet: Bool) {
+    guard !isSelectingShift else { return }
+
+    isSelectingShift = true
+    if dismissDaySheet {
+      selectedDayForSheet = nil
+    }
+    dismiss()
+
+    Task {
+      _ = await onSelectShift(shift)
+      await MainActor.run {
+        isSelectingShift = false
+      }
     }
   }
 

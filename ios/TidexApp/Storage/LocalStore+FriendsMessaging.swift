@@ -118,6 +118,8 @@ extension LocalStoreActor {
   }
 
   func saveMessage(_ message: FriendMessage, in threadId: String, for viewerUserId: String) throws {
+    var storedMessage = message
+
     if let existing = try fetchMessage(id: message.id, viewerUserId: viewerUserId) {
       existing.apply(message: message)
     } else if message.senderUserId == viewerUserId,
@@ -127,22 +129,25 @@ extension LocalStoreActor {
         viewerUserId: viewerUserId
       )
     {
-      try deleteAttachments(messageId: existing.id, viewerUserId: viewerUserId)
-      modelContext.delete(existing)
-      insertMessage(message, in: threadId, for: viewerUserId)
+      storedMessage = try confirmStoredMessage(
+        message,
+        replacing: existing,
+        in: threadId,
+        viewerUserId: viewerUserId
+      )
     } else {
       insertMessage(message, in: threadId, for: viewerUserId)
     }
 
     try deleteConflictingMessages(
-      matchingClientId: message.clientId,
+      matchingClientId: storedMessage.clientId,
       threadId: threadId,
       viewerUserId: viewerUserId,
-      keepingMessageId: message.id
+      keepingMessageId: storedMessage.id
     )
-    try replaceAttachments(for: message, viewerUserId: viewerUserId)
-    try replaceReactions(for: message, viewerUserId: viewerUserId)
-    try updateThreadPreviewIfNeeded(for: message, viewerUserId: viewerUserId)
+    try replaceAttachments(for: storedMessage, viewerUserId: viewerUserId)
+    try replaceReactions(for: storedMessage, viewerUserId: viewerUserId)
+    try updateThreadPreviewIfNeeded(for: storedMessage, viewerUserId: viewerUserId)
   }
 
   func saveOptimisticMessage(
@@ -160,7 +165,7 @@ extension LocalStoreActor {
     in threadId: String,
     for viewerUserId: String
   ) throws {
-    try deleteMessage(id: localMessageId, viewerUserId: viewerUserId)
+    _ = localMessageId
     try saveMessage(message, in: threadId, for: viewerUserId)
     try modelContext.save()
   }
@@ -298,6 +303,89 @@ extension LocalStoreActor {
     thread.lastMessageHasImage = message.hasImageAttachment
     thread.sortTimestamp = message.createdAt
     thread.updatedAt = Date()
+  }
+
+  private func confirmStoredMessage(
+    _ message: FriendMessage,
+    replacing localMessage: LocalMessage,
+    in threadId: String,
+    viewerUserId: String
+  ) throws -> FriendMessage {
+    let previousMessageId = localMessage.id
+    let confirmedMessage = FriendMessage(
+      id: message.id,
+      threadId: message.threadId,
+      senderUserId: message.senderUserId,
+      messageType: message.messageType,
+      body: message.body,
+      clientId: message.clientId,
+      replyToMessageId: message.replyToMessageId,
+      createdAt: localMessage.createdAt,
+      editedAt: message.editedAt,
+      deletedAt: message.deletedAt,
+      metadataData: message.metadataData,
+      attachments: message.attachments,
+      reactions: message.reactions,
+      sendState: message.sendState,
+      failureMessage: message.failureMessage
+    )
+
+    if let existingConfirmedMessage = try fetchMessage(id: message.id, viewerUserId: viewerUserId),
+      existingConfirmedMessage !== localMessage
+    {
+      try deleteStoredMessage(id: message.id, viewerUserId: viewerUserId)
+    }
+
+    try deleteAttachments(messageId: previousMessageId, viewerUserId: viewerUserId)
+    try deleteReactions(messageId: previousMessageId, viewerUserId: viewerUserId)
+
+    localMessage.id = confirmedMessage.id
+    localMessage.compositeKey = "\(viewerUserId):\(confirmedMessage.id)"
+    localMessage.apply(message: confirmedMessage)
+
+    try updateThreadMessageReferencesIfNeeded(
+      from: previousMessageId,
+      to: confirmedMessage.id,
+      in: threadId,
+      viewerUserId: viewerUserId
+    )
+
+    return confirmedMessage
+  }
+
+  private func updateThreadMessageReferencesIfNeeded(
+    from previousMessageId: String,
+    to confirmedMessageId: String,
+    in threadId: String,
+    viewerUserId: String
+  ) throws {
+    guard previousMessageId != confirmedMessageId else { return }
+
+    let threadDescriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { localThread in
+        localThread.id == threadId && localThread.viewerUserId == viewerUserId
+      }
+    )
+
+    if let thread = try modelContext.fetch(threadDescriptor).first,
+      thread.lastMessageId == previousMessageId
+    {
+      thread.lastMessageId = confirmedMessageId
+      thread.updatedAt = Date()
+    }
+
+    let stateDescriptor = FetchDescriptor<LocalThreadState>(
+      predicate: #Predicate { localState in
+        localState.threadId == threadId && localState.userId == viewerUserId
+      }
+    )
+
+    if let threadState = try modelContext.fetch(stateDescriptor).first,
+      threadState.lastReadMessageId == previousMessageId
+    {
+      threadState.lastReadMessageId = confirmedMessageId
+      threadState.updatedAt = Date()
+    }
   }
 
   private func fetchMessage(id: String, viewerUserId: String) throws -> LocalMessage? {

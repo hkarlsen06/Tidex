@@ -1,3 +1,4 @@
+import ExyteChat
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -36,6 +37,7 @@ final class FriendsThreadComposerBridge: ObservableObject {
   var onStagedAttachmentChanged: ((FriendsComposerAttachmentDraft?) -> Void)?
   var onCancelMode: (() -> Void)?
   var onSend: ((String) async -> Bool)?
+  var onSaveEdit: ((String) async -> Bool)?
   var onPrepareShiftSnapshotAttachment:
     (
       (ShiftWithComputations) async
@@ -87,6 +89,11 @@ final class FriendsThreadComposerBridge: ObservableObject {
     return await onSend(content)
   }
 
+  func saveEdit(content: String) async -> Bool {
+    guard let onSaveEdit else { return false }
+    return await onSaveEdit(content)
+  }
+
   func reportHeight(_ height: CGFloat) {
     onHeightChanged?(height)
   }
@@ -128,16 +135,18 @@ final class FriendsThreadComposerBridge: ObservableObject {
 struct FriendsThreadComposerHostedView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject var bridge: FriendsThreadComposerBridge
+  let text: Binding<String>
   @StateObject private var attachmentController = FriendsComposerAttachmentController()
   @State private var selectedPhotoItem: PhotosPickerItem?
   @State private var isSubmitting = false
   @State private var composerFocusTrigger = 0
   @State private var isComposerFocused = false
+  @State private var isApplyingExternalDraft = false
 
   private let attachmentCollapseCharacterThreshold = 18
 
   private var canSend: Bool {
-    let normalizedDraft = bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let normalizedDraft = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
     return (!normalizedDraft.isEmpty || bridge.stagedAttachment != nil)
       && !bridge.isThreadReadOnly
       && !isSubmitting
@@ -145,7 +154,7 @@ struct FriendsThreadComposerHostedView: View {
   }
 
   private var isPreparingAttachmentDrawer: Bool {
-    attachmentController.isPreparingDrawer
+    attachmentController.isDrawerOpen && attachmentController.recentPhotosState == .loading
   }
 
   private var shouldHidePlusButton: Bool {
@@ -153,9 +162,9 @@ struct FriendsThreadComposerHostedView: View {
     guard bridge.stagedAttachment == nil else { return false }
     guard isComposerFocused else { return false }
 
-    let draftLength = bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines).count
+    let draftLength = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).count
     return draftLength >= attachmentCollapseCharacterThreshold
-      || bridge.draftText.contains("\n")
+      || text.wrappedValue.contains("\n")
   }
 
   var body: some View {
@@ -250,8 +259,18 @@ struct FriendsThreadComposerHostedView: View {
     .onPreferenceChange(FriendsThreadComposerHeightPreferenceKey.self) { height in
       bridge.reportHeight(height)
     }
+    .onAppear {
+      syncTextFromBridgeIfNeeded()
+    }
     .onChange(of: attachmentController.isDrawerOpen) { _, isOpen in
       bridge.reportAttachmentDrawerOpen(isOpen)
+    }
+    .onChange(of: bridge.draftText) { _, _ in
+      syncTextFromBridgeIfNeeded()
+    }
+    .onChange(of: text.wrappedValue) { _, newValue in
+      guard !isApplyingExternalDraft else { return }
+      bridge.onDraftChanged?(newValue)
     }
     .onChange(of: bridge.focusRequestToken) { _, _ in
       composerFocusTrigger += 1
@@ -289,7 +308,7 @@ struct FriendsThreadComposerHostedView: View {
 
   private var composerField: some View {
     ChatComposerField(
-      text: bridge.draftBinding,
+      text: text,
       placeholder: bridge.placeholder,
       disabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment,
       isSending: isSubmitting,
@@ -325,17 +344,34 @@ struct FriendsThreadComposerHostedView: View {
 
   private func sendMessage() {
     guard canSend else { return }
+
+    if bridge.mode == .edit {
+      isSubmitting = true
+
+      Task {
+        let didSave = await bridge.saveEdit(
+          content: text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        await MainActor.run {
+          isSubmitting = false
+          if didSave {
+            attachmentController.closeDrawer()
+          }
+        }
+      }
+      return
+    }
+
     isSubmitting = true
+    attachmentController.closeDrawer()
 
     Task {
       let didSend = await bridge.send(
-        content: bridge.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        content: text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
       )
       await MainActor.run {
         isSubmitting = false
-        if didSend {
-          attachmentController.closeDrawer()
-        }
+        guard didSend else { return }
       }
     }
   }
@@ -380,7 +416,13 @@ struct FriendsThreadComposerHostedView: View {
   }
 
   private func handleShiftSelection(_ shift: ShiftWithComputations) async -> Bool {
+    guard attachmentController.beginProcessingAttachment() else { return false }
+
     let shouldRestoreFocus = isComposerFocused
+    defer {
+      attachmentController.finishProcessingAttachment()
+    }
+
     let didStageAttachment = await bridge.prepareAndStageShiftAttachment(from: shift)
     if didStageAttachment {
       attachmentController.completeAttachmentSelection()
@@ -407,6 +449,13 @@ struct FriendsThreadComposerHostedView: View {
         restoreComposerFocusIfNeeded(shouldRestoreFocus)
       }
     }
+  }
+
+  private func syncTextFromBridgeIfNeeded() {
+    guard text.wrappedValue != bridge.draftText else { return }
+    isApplyingExternalDraft = true
+    text.wrappedValue = bridge.draftText
+    isApplyingExternalDraft = false
   }
 }
 
@@ -619,7 +668,11 @@ private struct FriendsThreadComposerAttachmentPreview: View {
         case .image(let image):
           FriendsThreadComposerImageAttachmentCard(image: image)
         case .shiftSnapshot(let draft):
-          ChatShiftSnapshotCard(snapshot: draft.snapshot, isCurrentUser: false)
+          ChatShiftSnapshotCard(
+            snapshot: draft.snapshot,
+            isCurrentUser: false,
+            isHighlighted: false
+          )
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

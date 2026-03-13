@@ -25,7 +25,7 @@
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		11DC87CD2F5D2FA60080D9F5 /* ChatLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 11DC87CC2F5D2FA60080D9F5 /* ChatLayout */; };
+		11CD7FA52F63CFC700A987E7 /* ExyteChat in Frameworks */ = {isa = PBXBuildFile; productRef = 11CD7FA42F63CFC700A987E7 /* ExyteChat */; };
 		11DC87DD2F5D35990080D9F5 /* TidexNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		11F0A0043011111100A1B2C3 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 11F0A0033011111100A1B2C3 /* Sentry-Dynamic */; };
 		12B4A0013015000001000001 /* TidexShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12B4A0043015000001000001 /* TidexShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -305,6 +305,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11CD7FA52F63CFC700A987E7 /* ExyteChat in Frameworks */,
 				11923C282F16BB090076AFD6 /* Supabase in Frameworks */,
 				11923C262F16BB090076AFD6 /* Realtime in Frameworks */,
 				11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */,
@@ -315,7 +316,6 @@
 				11923C192F16B94B0076AFD6 /* Auth in Frameworks */,
 				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
 				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
-				11DC87CD2F5D2FA60080D9F5 /* ChatLayout in Frameworks */,
 				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
 				11F0A0043011111100A1B2C3 /* Sentry-Dynamic in Frameworks */,
 			);
@@ -578,7 +578,7 @@
 				11263D3B2F2FF22700233D63 /* CropViewController */,
 				11263D3F2F2FF3F700233D63 /* TOCropViewController */,
 				11F0A0033011111100A1B2C3 /* Sentry-Dynamic */,
-				11DC87CC2F5D2FA60080D9F5 /* ChatLayout */,
+				11CD7FA42F63CFC700A987E7 /* ExyteChat */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -693,7 +693,7 @@
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 				11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
-				11DC87CB2F5D2FA60080D9F5 /* XCRemoteSwiftPackageReference "ChatLayout" */,
+				11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -1649,12 +1649,12 @@
 				minimumVersion = 9.1.0;
 			};
 		};
-		11DC87CB2F5D2FA60080D9F5 /* XCRemoteSwiftPackageReference "ChatLayout" */ = {
+		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ekazaev/ChatLayout";
+			repositoryURL = "https://github.com/exyte/Chat.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.3.2;
+				minimumVersion = 2.7.6;
 			};
 		};
 		11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
@@ -1718,10 +1718,10 @@
 			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
 		};
-		11DC87CC2F5D2FA60080D9F5 /* ChatLayout */ = {
+		11CD7FA42F63CFC700A987E7 /* ExyteChat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 11DC87CB2F5D2FA60080D9F5 /* XCRemoteSwiftPackageReference "ChatLayout" */;
-			productName = ChatLayout;
+			package = 11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */;
+			productName = ExyteChat;
 		};
 		11F0A0033011111100A1B2C3 /* Sentry-Dynamic */ = {
 			isa = XCSwiftPackageProductDependency;

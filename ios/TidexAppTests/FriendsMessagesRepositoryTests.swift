@@ -172,6 +172,117 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       repository.getThread(id: "thread-1", viewerUserId: viewerUserId)?.lastMessageId, "message-2")
   }
 
+  func testSaveConfirmedMessageKeepsSingleMessageAndPreservesOptimisticOrder() async throws {
+    let repository = try makeRepository()
+    let thread = FriendThread(
+      id: "thread-1",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: nil,
+      lastMessageSenderId: nil,
+      lastMessageAt: nil,
+      lastMessageBody: nil,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+    let optimisticCreatedAt = Date(timeIntervalSince1970: 1_700_000_050)
+    let optimisticMessage = FriendMessage(
+      id: "local-client-1",
+      threadId: "thread-1",
+      senderUserId: viewerUserId,
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: optimisticCreatedAt,
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [
+        FriendMessageAttachment(
+          id: "pending-attachment-1",
+          attachmentIndex: 0,
+          kind: .image,
+          storageBucket: "message-attachments",
+          storagePath: "local-pending/pending-attachment-1.jpeg",
+          mimeType: "image/jpeg",
+          byteSize: 128,
+          width: 320,
+          height: 240,
+          createdAt: optimisticCreatedAt
+        )
+      ],
+      reactions: [],
+      sendState: .sending,
+      failureMessage: nil
+    )
+    let confirmedMessage = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: viewerUserId,
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: optimisticCreatedAt.addingTimeInterval(2),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [
+        FriendMessageAttachment(
+          id: "confirmed-attachment-1",
+          attachmentIndex: 0,
+          kind: .image,
+          storageBucket: "message-attachments",
+          storagePath: "thread-1/viewer-1/confirmed-attachment-1.jpeg",
+          mimeType: "image/jpeg",
+          byteSize: 256,
+          width: 640,
+          height: 480,
+          createdAt: optimisticCreatedAt.addingTimeInterval(2)
+        )
+      ],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+
+    await repository.saveThread(thread, for: viewerUserId)
+    await repository.saveOptimisticMessage(
+      optimisticMessage,
+      in: "thread-1",
+      for: viewerUserId
+    )
+    await repository.saveConfirmedMessage(
+      confirmedMessage,
+      replacingLocalMessageId: optimisticMessage.id,
+      in: "thread-1",
+      for: viewerUserId
+    )
+
+    let messages = repository.getMessages(threadId: "thread-1", viewerUserId: viewerUserId)
+    let storedThread = try XCTUnwrap(
+      repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    )
+    let storedMessage = try XCTUnwrap(messages.first)
+
+    XCTAssertEqual(messages.count, 1)
+    XCTAssertEqual(storedMessage.id, "message-1")
+    XCTAssertEqual(storedMessage.sendState, .sent)
+    XCTAssertEqual(storedMessage.createdAt, optimisticCreatedAt)
+    XCTAssertEqual(storedMessage.attachments.map(\.id), ["confirmed-attachment-1"])
+    XCTAssertEqual(storedThread.lastMessageId, "message-1")
+    XCTAssertEqual(storedThread.lastMessageAt, optimisticCreatedAt)
+  }
+
   func testSaveMessagesUpdatesThreadPreviewKindForShiftSnapshot() async throws {
     let repository = try makeRepository()
     let thread = FriendThread(
