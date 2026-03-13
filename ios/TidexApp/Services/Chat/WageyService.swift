@@ -3,6 +3,7 @@ import Foundation
 import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyService")
+private let wageyEdgeFunctionName = "wagey-chat"
 
 private struct WageyStreamRequestContext {
   let messages: [ChatMessage]
@@ -134,8 +135,8 @@ enum WageyServiceError: Error, LocalizedError {
 
 // MARK: - Wagey Service
 
-/// Service for communicating with the Wagey chat API
-/// Handles streaming SSE responses from the chat endpoint
+/// Service for communicating with the Wagey chat edge function.
+/// Handles streaming SSE responses from the Supabase Functions endpoint.
 @MainActor
 final class WageyService: ObservableObject {
   static let shared = WageyService()
@@ -163,7 +164,7 @@ final class WageyService: ObservableObject {
 
   /// Stream chat responses from the Wagey API
   ///
-  /// Sends messages to the `/api/chat` endpoint and returns a stream of chunks.
+  /// Sends messages to the Wagey edge function and returns a stream of chunks.
   /// The stream will emit text content, tool execution events, and completion/error events.
   ///
   /// - Parameters:
@@ -246,10 +247,14 @@ private actor WageyStreamWorker {
       let session = try await AuthSessionManager.shared.getSession()
       let accessToken = session.accessToken
 
-      let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/chat")
+      let url = APIConfiguration.supabaseURL
+        .appendingPathComponent("functions")
+        .appendingPathComponent("v1")
+        .appendingPathComponent(wageyEdgeFunctionName)
       var request = URLRequest(url: url)
       request.httpMethod = "POST"
       request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+      request.setValue(APIConfiguration.supabaseAnonKey, forHTTPHeaderField: "apikey")
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
       request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
       request.httpBody = try JSONEncoder().encode(
@@ -257,14 +262,11 @@ private actor WageyStreamWorker {
           context: context
         ))
 
-      logger.info("Starting chat stream to \(url.absoluteString)")
       let (bytes, response) = try await urlSession.bytes(for: request)
 
       guard let httpResponse = response as? HTTPURLResponse else {
         throw WageyServiceError.networkError(underlying: URLError(.badServerResponse))
       }
-
-      logger.info("Chat stream response status: \(httpResponse.statusCode)")
 
       switch httpResponse.statusCode {
       case 200:
@@ -278,6 +280,9 @@ private actor WageyStreamWorker {
         )
       }
 
+      var chunkCount = 0
+      var receivedRenderableChunk = false
+
       for try await wrapper in SSEStreamParser.parse(bytes, as: WageyChunkWrapper.self) {
         try Task.checkCancellation()
 
@@ -285,7 +290,16 @@ private actor WageyStreamWorker {
           continue
         }
 
+        chunkCount += 1
+
         if let chatChunk = Self.mapToChatChunk(rawChunk) {
+          switch chatChunk {
+          case .status, .done:
+            break
+          default:
+            receivedRenderableChunk = true
+          }
+
           continuation.yield(chatChunk)
 
           if case .done = chatChunk {
@@ -297,10 +311,11 @@ private actor WageyStreamWorker {
         }
       }
 
-      logger.info("Chat stream completed successfully")
+      if !receivedRenderableChunk {
+        throw WageyServiceError.streamError(message: "Empty Wagey stream response")
+      }
       continuation.finish()
     } catch is CancellationError {
-      logger.info("Chat stream was cancelled")
       continuation.finish(throwing: WageyServiceError.cancelled)
     } catch {
       await MainActor.run {

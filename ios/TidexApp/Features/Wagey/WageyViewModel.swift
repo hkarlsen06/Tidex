@@ -602,7 +602,7 @@ final class WageyViewModel {
 
     // Finalize any partial message
     if isStreaming {
-      finalizeStreamingText()
+      finalizeStreamingText(wasCancelled: true)
     }
   }
 
@@ -924,7 +924,14 @@ final class WageyViewModel {
   }
 
   /// Finalize the streaming text into a message
-  private func finalizeStreamingText() {
+  private func finalizeStreamingText(wasCancelled: Bool = false) {
+    let fallbackMessage = Self.fallbackAssistantMessage(
+      error: error,
+      limitReached: limitReached,
+      wasCancelled: wasCancelled || (streamTask?.isCancelled ?? false),
+      hasAssistantContent: !activeContentBlocks.isEmpty
+    )
+
     // Only create a message if we have content blocks
     if !activeContentBlocks.isEmpty {
       let assistantMessage = ChatMessage(
@@ -938,6 +945,18 @@ final class WageyViewModel {
 
       // Save after assistant responds
       saveCurrentConversation()
+    } else if let fallbackMessage {
+      messages.append(
+        ChatMessage(
+          id: currentAssistantMessageId ?? UUID().uuidString,
+          role: .assistant,
+          contentBlocks: [.text(fallbackMessage)],
+          timestamp: Date()
+        ))
+
+      // Surface stream failures inline instead of silently dismissing the typing indicator.
+      saveCurrentConversation()
+      error = nil
     }
 
     // Trigger sync if any tool calls succeeded (shifts may have changed server-side)
@@ -1050,6 +1069,29 @@ final class WageyViewModel {
     default:
       return []
     }
+  }
+
+  static func fallbackAssistantMessage(
+    error: Error?,
+    limitReached: Bool,
+    wasCancelled: Bool,
+    hasAssistantContent: Bool
+  ) -> String? {
+    guard !hasAssistantContent, !wasCancelled, !limitReached else {
+      return nil
+    }
+
+    if let serviceError = error as? WageyServiceError, case .cancelled = serviceError {
+      return nil
+    }
+
+    if let message = error?.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+      !message.isEmpty
+    {
+      return message
+    }
+
+    return String(localized: .wageyErrorUnknown)
   }
 }
 

@@ -47,10 +47,7 @@ enum SSEParseError: Error, LocalizedError {
 /// ```
 enum SSEStreamParser {
   /// The prefix for SSE data events
-  private static let dataPrefix = "data: "
-
-  /// The event terminator (double newline)
-  private static let eventTerminator = "\n\n"
+  private static let dataField = "data"
 
   /// Parse SSE events from URLSession async bytes into decoded objects.
   ///
@@ -64,40 +61,37 @@ enum SSEStreamParser {
   ) -> AsyncThrowingStream<T, Error> {
     AsyncThrowingStream { continuation in
       let task = Task {
-        var eventLines: [String] = []
+        var buffer = Data()
         let decoder = JSONDecoder()
 
         do {
-          for try await line in bytes.lines {
+          for try await byte in bytes {
             // Check for task cancellation
             try Task.checkCancellation()
+            buffer.append(byte)
 
-            let normalizedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let range = eventBoundaryRange(in: buffer) {
+              let eventData = buffer.subdata(in: 0..<range.lowerBound)
+              buffer.removeSubrange(0..<range.upperBound)
 
-            if normalizedLine.isEmpty {
-              if !eventLines.isEmpty {
-                let eventData = eventLines.joined(separator: "\n")
-                eventLines.removeAll(keepingCapacity: true)
-
-                if let decoded = try parseEvent(eventData, as: type, decoder: decoder) {
-                  continuation.yield(decoded)
-                }
+              if let decoded = try parseEventData(eventData, as: type, decoder: decoder) {
+                continuation.yield(decoded)
               }
-              continue
             }
-
-            eventLines.append(normalizedLine)
           }
 
           // Process any remaining data in buffer (incomplete event without terminator)
-          if !eventLines.isEmpty {
-            let eventData = eventLines.joined(separator: "\n")
-            let trimmed = eventData.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-              logger.debug("Stream ended with incomplete buffer: \(trimmed.prefix(100))")
-              if let decoded = try parseEvent(trimmed, as: type, decoder: decoder) {
-                continuation.yield(decoded)
+          if !buffer.isEmpty {
+            if let eventText = String(data: buffer, encoding: .utf8) {
+              let trimmed = eventText.trimmingCharacters(in: .whitespacesAndNewlines)
+              if !trimmed.isEmpty {
+                logger.debug("Stream ended with incomplete buffer: \(trimmed.prefix(100))")
+                if let decoded = try parseEvent(trimmed, as: type, decoder: decoder) {
+                  continuation.yield(decoded)
+                }
               }
+            } else {
+              throw SSEParseError.invalidUTF8Data
             }
           }
 
@@ -119,6 +113,53 @@ enum SSEStreamParser {
     }
   }
 
+  private static func eventBoundaryRange(in buffer: Data) -> Range<Int>? {
+    let bytes = [UInt8](buffer)
+
+    var index = 0
+    while index < bytes.count {
+      if bytes[index] == 10 {
+        if index + 1 < bytes.count, bytes[index + 1] == 10 {
+          return index..<(index + 2)
+        }
+      }
+
+      if bytes[index] == 13 {
+        if index + 3 < bytes.count,
+          bytes[index + 1] == 10,
+          bytes[index + 2] == 13,
+          bytes[index + 3] == 10
+        {
+          return index..<(index + 4)
+        }
+
+        if index + 1 < bytes.count, bytes[index + 1] == 13 {
+          return index..<(index + 2)
+        }
+      }
+
+      index += 1
+    }
+
+    return nil
+  }
+
+  private static func parseEventData<T: Decodable>(
+    _ eventData: Data,
+    as type: T.Type,
+    decoder: JSONDecoder
+  ) throws -> T? {
+    guard let eventText = String(data: eventData, encoding: .utf8) else {
+      throw SSEParseError.invalidUTF8Data
+    }
+
+    let normalized =
+      eventText
+      .replacingOccurrences(of: "\r\n", with: "\n")
+      .replacingOccurrences(of: "\r", with: "\n")
+    return try parseEvent(normalized, as: type, decoder: decoder)
+  }
+
   /// Parse a single SSE event string into a decoded object.
   ///
   /// - Parameters:
@@ -133,6 +174,7 @@ enum SSEStreamParser {
   ) throws -> T? {
     // Handle multiple lines within an event
     let lines = eventData.components(separatedBy: "\n")
+    var dataLines: [String] = []
 
     for line in lines {
       let trimmedLine = line.trimmingCharacters(in: .whitespaces)
@@ -142,16 +184,25 @@ enum SSEStreamParser {
         continue
       }
 
-      // Handle data lines
-      if trimmedLine.hasPrefix(dataPrefix) {
-        let jsonString = String(trimmedLine.dropFirst(dataPrefix.count))
-        return try decodeJSON(jsonString, as: type, decoder: decoder)
+      if trimmedLine.hasPrefix("\(dataField):") {
+        let fieldValue = String(trimmedLine.dropFirst(dataField.count + 1))
+        dataLines.append(fieldValue.hasPrefix(" ") ? String(fieldValue.dropFirst()) : fieldValue)
+        continue
+      }
+
+      if trimmedLine == dataField {
+        dataLines.append("")
+        continue
       }
 
       // Handle lines that are just JSON (some SSE implementations)
-      if trimmedLine.hasPrefix("{") {
+      if dataLines.isEmpty, trimmedLine.hasPrefix("{") {
         return try decodeJSON(trimmedLine, as: type, decoder: decoder)
       }
+    }
+
+    if !dataLines.isEmpty {
+      return try decodeJSON(dataLines.joined(separator: "\n"), as: type, decoder: decoder)
     }
 
     return nil

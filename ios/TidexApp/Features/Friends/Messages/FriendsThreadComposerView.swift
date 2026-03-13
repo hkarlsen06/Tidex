@@ -312,8 +312,8 @@ struct FriendsThreadComposerHostedView: View {
       placeholder: bridge.placeholder,
       disabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment,
       isSending: isSubmitting,
-      canSend: canSend,
-      sendAccessibilityLabel: bridge.mode == .edit
+      canPerformAction: canSend,
+      actionAccessibilityLabel: bridge.mode == .edit
         ? String(localized: "friends.chat.composer.save_edit", table: "Localizable")
         : String(localized: "Send message"),
       focusTrigger: composerFocusTrigger,
@@ -322,7 +322,7 @@ struct FriendsThreadComposerHostedView: View {
       focusedHorizontalPadding: Spacing.xs,
       topPadding: Spacing.xs,
       bottomPadding: MonthPickerLayout.bottomPadding,
-      onSend: sendMessage
+      onAction: sendMessage
     ) {
       if !shouldHidePlusButton {
         FriendsThreadComposerPlusButton(

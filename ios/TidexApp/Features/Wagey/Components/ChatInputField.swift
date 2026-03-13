@@ -17,8 +17,12 @@ struct ChatInputField: View {
   /// Callback when user sends a message with an image
   let onSendWithImage: ((String, ImageAttachment) async -> Bool)?
 
+  /// Callback when the user cancels an in-flight stream
+  let onCancel: (() -> Void)?
+
   /// Whether the input should be disabled
   let disabled: Bool
+  let isStreaming: Bool
   let placeholder: String
   let horizontalPadding: CGFloat
   let focusedHorizontalPadding: CGFloat?
@@ -69,6 +73,8 @@ struct ChatInputField: View {
       .defaultAttachmentCollapseCharacterThreshold,
     dismissKeyboardOnSend: Bool = true,
     onSend: @escaping (String) async -> Bool,
+    onCancel: (() -> Void)? = nil,
+    isStreaming: Bool = false,
     disabled: Bool
   ) {
     self._inputText = inputText
@@ -86,6 +92,8 @@ struct ChatInputField: View {
     self.dismissKeyboardOnSend = dismissKeyboardOnSend
     self.onSend = onSend
     self.onSendWithImage = nil
+    self.onCancel = onCancel
+    self.isStreaming = isStreaming
     self.disabled = disabled
   }
 
@@ -107,6 +115,8 @@ struct ChatInputField: View {
     dismissKeyboardOnSend: Bool = true,
     onSend: @escaping (String) async -> Bool,
     onSendWithImage: @escaping (String, ImageAttachment) async -> Bool,
+    onCancel: (() -> Void)? = nil,
+    isStreaming: Bool = false,
     disabled: Bool
   ) {
     self._inputText = inputText
@@ -124,7 +134,59 @@ struct ChatInputField: View {
     self.dismissKeyboardOnSend = dismissKeyboardOnSend
     self.onSend = onSend
     self.onSendWithImage = onSendWithImage
+    self.onCancel = onCancel
+    self.isStreaming = isStreaming
     self.disabled = disabled
+  }
+
+  private var canPerformPrimaryAction: Bool {
+    if isStreaming {
+      return onCancel != nil
+    }
+
+    return canSend
+  }
+
+  private var actionAccessibilityLabel: String {
+    if isStreaming {
+      return String(localized: .commonCancel)
+    }
+
+    return String(localized: "Send message")
+  }
+
+  private var actionSystemImage: String {
+    isStreaming ? "stop.fill" : "arrow.up"
+  }
+
+  private var actionForegroundColor: Color {
+    .tidexTextOnBrand
+  }
+
+  private var actionBackgroundColor: Color {
+    isStreaming ? .tidexWarning : .tidexBrandPrimary
+  }
+
+  private var composerTextDisabled: Bool {
+    disabled
+  }
+
+  private var attachmentControlsDisabled: Bool {
+    effectiveDisabled || isStreaming
+  }
+
+  private var allowsImageRemoval: Bool {
+    !isSubmitting && !isStreaming
+  }
+
+  private func handlePrimaryAction() {
+    if isStreaming {
+      Haptics.play(.light)
+      onCancel?()
+      return
+    }
+
+    sendMessage()
   }
 
   /// Whether the send button can be tapped
@@ -182,15 +244,18 @@ struct ChatInputField: View {
       ChatComposerField(
         text: $inputText,
         placeholder: placeholder,
-        disabled: disabled,
+        disabled: composerTextDisabled,
         isSending: isSubmitting,
-        canSend: canSend,
-        sendAccessibilityLabel: String(localized: "Send message"),
+        canPerformAction: canPerformPrimaryAction,
+        actionAccessibilityLabel: actionAccessibilityLabel,
+        actionSystemImage: actionSystemImage,
+        actionForegroundColor: actionForegroundColor,
+        actionBackgroundColor: actionBackgroundColor,
         onFocusChanged: { isComposerFocused = $0 },
         horizontalPadding: effectiveHorizontalPadding,
         topPadding: Spacing.xs,
         bottomPadding: bottomPadding,
-        onSend: sendMessage
+        onAction: handlePrimaryAction
       ) {
         if onSendWithImage != nil && showsAttachmentPicker && !shouldHideAttachmentButton {
           attachmentPickerButton
@@ -244,7 +309,7 @@ struct ChatInputField: View {
 
   private var attachmentPickerButton: some View {
     Button {
-      guard !effectiveDisabled, !isProcessingImage else { return }
+      guard !attachmentControlsDisabled, !isProcessingImage else { return }
       showAttachmentSourcePicker = true
     } label: {
       ZStack {
@@ -262,14 +327,14 @@ struct ChatInputField: View {
       .tidexGlass(
         shape: .circle,
         tint: attachmentButtonTint,
-        interactive: !effectiveDisabled && !isProcessingImage,
-        disabled: effectiveDisabled || isProcessingImage,
+        interactive: !attachmentControlsDisabled && !isProcessingImage,
+        disabled: attachmentControlsDisabled || isProcessingImage,
         fallbackOpacity: 0.9
       )
       .shadow(color: Color.tidexBlue.opacity(0.05), radius: 12, y: 4)
     }
     .buttonStyle(.plain)
-    .disabled(effectiveDisabled || isProcessingImage)
+    .disabled(attachmentControlsDisabled || isProcessingImage)
     .frame(width: 50, height: 50)
     .contentShape(Rectangle())
     .accessibilityLabel(Text(String(localized: "profile.personalInfo.uploadImage")))
@@ -288,7 +353,7 @@ struct ChatInputField: View {
 
         // Remove button
         Button {
-          guard !isSubmitting else { return }
+          guard allowsImageRemoval else { return }
           if reduceMotion {
             currentAttachedImage = nil
             selectedPhotoItem = nil
