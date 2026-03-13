@@ -42,7 +42,7 @@ final class FriendsComposerAttachmentControllerTests: XCTestCase {
     XCTAssertFalse(controller.isShowingShiftCalendar)
   }
 
-  func testToggleDrawerWaitsForInitialRecentPhotosBeforeOpening() async {
+  func testToggleDrawerOpensImmediatelyWhileInitialPhotosLoad() async {
     let provider = MockRecentPhotoProvider(
       authorizationState: .authorized,
       photos: [FriendsComposerRecentPhoto(id: "photo-1", thumbnail: makeImage())],
@@ -56,12 +56,11 @@ final class FriendsComposerAttachmentControllerTests: XCTestCase {
 
     await Task.yield()
 
-    XCTAssertTrue(controller.isPreparingDrawer)
-    XCTAssertFalse(controller.isDrawerOpen)
+    XCTAssertTrue(controller.isDrawerOpen)
+    XCTAssertEqual(controller.recentPhotosState, .loading)
 
     await toggleTask.value
 
-    XCTAssertFalse(controller.isPreparingDrawer)
     XCTAssertTrue(controller.isDrawerOpen)
     XCTAssertEqual(controller.recentPhotosState, .loaded)
     XCTAssertEqual(controller.recentPhotos.count, 1)
@@ -77,7 +76,6 @@ final class FriendsComposerAttachmentControllerTests: XCTestCase {
     await controller.loadRecentPhotosIfNeeded()
     await controller.toggleDrawer()
 
-    XCTAssertFalse(controller.isPreparingDrawer)
     XCTAssertTrue(controller.isDrawerOpen)
   }
 

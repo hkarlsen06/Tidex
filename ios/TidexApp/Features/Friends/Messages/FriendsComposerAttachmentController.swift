@@ -2,6 +2,7 @@ import Photos
 import PhotosUI
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct FriendsComposerRecentPhoto: Identifiable {
   let id: String
@@ -23,6 +24,15 @@ enum FriendsComposerRecentPhotosState: Equatable {
   case empty
   case denied
   case failed
+
+  var canReuseWithoutReload: Bool {
+    switch self {
+    case .loaded, .empty:
+      return true
+    case .idle, .loading, .denied, .failed:
+      return false
+    }
+  }
 }
 
 protocol FriendsComposerRecentPhotoProviding: AnyObject {
@@ -56,33 +66,23 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
       let assets = PHAsset.fetchAssets(with: options)
       guard assets.firstObject != nil else { return [] }
 
-      let requestOptions = PHImageRequestOptions()
-      requestOptions.deliveryMode = .highQualityFormat
-      requestOptions.resizeMode = .exact
-      requestOptions.isNetworkAccessAllowed = true
-      requestOptions.isSynchronous = true
-
       var photos: [FriendsComposerRecentPhoto] = []
       photos.reserveCapacity(min(limit, assets.count))
 
-      assets.enumerateObjects { asset, _, stop in
-        var thumbnail: UIImage?
-        imageManager.requestImage(
-          for: asset,
-          targetSize: targetSize,
-          contentMode: .aspectFill,
-          options: requestOptions
-        ) { image, _ in
-          thumbnail = image
+      let assetCount = min(limit, assets.count)
+      for index in 0..<assetCount {
+        let asset = assets.object(at: index)
+        guard
+          let thumbnail = await Self.loadThumbnail(
+            for: asset,
+            targetSize: targetSize,
+            imageManager: imageManager
+          )
+        else {
+          continue
         }
 
-        if let thumbnail {
-          photos.append(FriendsComposerRecentPhoto(id: asset.localIdentifier, thumbnail: thumbnail))
-        }
-
-        if photos.count >= limit {
-          stop.pointee = true
-        }
+        photos.append(FriendsComposerRecentPhoto(id: asset.localIdentifier, thumbnail: thumbnail))
       }
 
       return photos
@@ -127,6 +127,63 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
       return .denied
     }
   }
+
+  private static func loadThumbnail(
+    for asset: PHAsset,
+    targetSize: CGSize,
+    imageManager: PHCachingImageManager
+  ) async -> UIImage? {
+    let requestOptions = PHImageRequestOptions()
+    requestOptions.deliveryMode = .highQualityFormat
+    requestOptions.resizeMode = .exact
+    requestOptions.isNetworkAccessAllowed = false
+
+    return await withCheckedContinuation { continuation in
+      var didResume = false
+      var degradedFallbackImage: UIImage?
+
+      imageManager.requestImage(
+        for: asset,
+        targetSize: targetSize,
+        contentMode: .aspectFit,
+        options: requestOptions
+      ) { image, info in
+        guard !didResume else { return }
+
+        let wasCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
+        if wasCancelled {
+          didResume = true
+          continuation.resume(returning: degradedFallbackImage)
+          return
+        }
+
+        if let error = info?[PHImageErrorKey] as? Error {
+          debugPrint("FriendsComposerRecentPhotoProvider thumbnail load failed:", error)
+          didResume = true
+          continuation.resume(returning: degradedFallbackImage)
+          return
+        }
+
+        let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+
+        if let image {
+          if isDegraded {
+            degradedFallbackImage = degradedFallbackImage ?? image
+            return
+          }
+
+          didResume = true
+          continuation.resume(returning: image)
+          return
+        }
+
+        if !isDegraded {
+          didResume = true
+          continuation.resume(returning: degradedFallbackImage)
+        }
+      }
+    }
+  }
 }
 
 @MainActor
@@ -135,14 +192,13 @@ final class FriendsComposerAttachmentController: ObservableObject {
   @Published var isShowingPhotoLibrary = false
   @Published var isShowingCamera = false
   @Published var isShowingShiftCalendar = false
-  @Published private(set) var isPreparingDrawer = false
   @Published private(set) var recentPhotosState: FriendsComposerRecentPhotosState = .idle
   @Published private(set) var recentPhotos: [FriendsComposerRecentPhoto] = []
   @Published private(set) var isProcessingAttachment = false
 
   private let recentPhotoProvider: any FriendsComposerRecentPhotoProviding
-  private let recentPhotoLimit = 18
-  private let thumbnailDisplaySize = CGSize(width: 144, height: 192)
+  private let recentPhotoLimit = 12
+  private let thumbnailDisplaySize = CGSize(width: 280, height: 500)
 
   init(
     recentPhotoProvider: any FriendsComposerRecentPhotoProviding =
@@ -155,18 +211,13 @@ final class FriendsComposerAttachmentController: ObservableObject {
     if isDrawerOpen {
       closeDrawer()
     } else {
-      guard !isPreparingDrawer else { return }
-      let hasCachedRecentPhotos =
-        recentPhotosState == .loaded || recentPhotosState == .empty
-        || recentPhotosState == .failed
-      guard hasCachedRecentPhotos else {
-        isPreparingDrawer = true
-        defer { isPreparingDrawer = false }
-        await loadRecentPhotosIfNeeded()
-        isDrawerOpen = true
+      isDrawerOpen = true
+
+      guard !recentPhotosState.canReuseWithoutReload, recentPhotosState != .loading else {
         return
       }
-      isDrawerOpen = true
+
+      await loadRecentPhotosIfNeeded()
     }
   }
 
@@ -179,20 +230,38 @@ final class FriendsComposerAttachmentController: ObservableObject {
   }
 
   func loadRecentPhotosIfNeeded(forceRefresh: Bool = false) async {
-    let hasCachedRecentPhotos = recentPhotosState == .loaded || recentPhotosState == .empty
-    if !forceRefresh, hasCachedRecentPhotos {
+    await loadRecentPhotosIfNeeded(
+      forceRefresh: forceRefresh,
+      requestAuthorizationIfNeeded: true
+    )
+  }
+
+  func preloadRecentPhotosIfPossible() async {
+    await loadRecentPhotosIfNeeded(forceRefresh: false, requestAuthorizationIfNeeded: false)
+  }
+
+  private func loadRecentPhotosIfNeeded(
+    forceRefresh: Bool,
+    requestAuthorizationIfNeeded: Bool
+  ) async {
+    if !forceRefresh, recentPhotosState.canReuseWithoutReload || recentPhotosState == .loading {
       return
     }
 
-    recentPhotosState = .loading
-
-    let authState = await resolvedAuthorizationState()
+    let authState = await resolvedAuthorizationState(
+      requestingIfNeeded: requestAuthorizationIfNeeded
+    )
     guard authState == .authorized || authState == .limited else {
+      if authState == .notDetermined, !requestAuthorizationIfNeeded {
+        return
+      }
+
       recentPhotos = []
       recentPhotosState = .denied
       return
     }
 
+    recentPhotosState = .loading
     let photos = await recentPhotoProvider.loadRecentPhotos(
       limit: recentPhotoLimit,
       targetSize: thumbnailTargetSize
@@ -205,6 +274,24 @@ final class FriendsComposerAttachmentController: ObservableObject {
     guard let photoItem else { return nil }
     return await processAttachment {
       guard let data = try? await photoItem.loadTransferable(type: Data.self) else { return nil }
+      return await Self.compressedImageAttachment(from: data)
+    }
+  }
+
+  func makeImageAttachment(from pickerResult: PHPickerResult) async -> ImageAttachment? {
+    await processAttachment {
+      let itemProvider = pickerResult.itemProvider
+      guard itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) else {
+        return nil
+      }
+
+      let data = await withCheckedContinuation { continuation in
+        itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
+          continuation.resume(returning: data)
+        }
+      }
+
+      guard let data else { return nil }
       return await Self.compressedImageAttachment(from: data)
     }
   }
@@ -233,9 +320,12 @@ final class FriendsComposerAttachmentController: ObservableObject {
     closeDrawer()
   }
 
-  private func resolvedAuthorizationState() async -> FriendsComposerPhotoAuthorizationState {
+  private func resolvedAuthorizationState(requestingIfNeeded: Bool)
+    async -> FriendsComposerPhotoAuthorizationState
+  {
     let currentStatus = recentPhotoProvider.authorizationState()
     guard currentStatus == .notDetermined else { return currentStatus }
+    guard requestingIfNeeded else { return currentStatus }
     return await recentPhotoProvider.requestAuthorization()
   }
 
