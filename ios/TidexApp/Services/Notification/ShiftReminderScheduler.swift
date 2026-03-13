@@ -192,6 +192,7 @@ final class ShiftReminderScheduler {
     // Build notification content
     let content = buildNotificationContent(
       shift: shift,
+      referenceDate: fireDate,
       minutesBefore: minutesBefore
     )
 
@@ -225,6 +226,7 @@ final class ShiftReminderScheduler {
   /// Build notification content
   private func buildNotificationContent(
     shift: StoredShift,
+    referenceDate: Date,
     minutesBefore: Int
   ) -> UNMutableNotificationContent {
     let content = UNMutableNotificationContent()
@@ -237,7 +239,7 @@ final class ShiftReminderScheduler {
     content.title = "\(timeText) \(untilNextShift)"
 
     // Body: "Today/Tomorrow at {start}-{end}"
-    let dayText = formatDayText(for: shift.shiftDate)
+    let dayText = formatDayText(for: shift.shiftDate, relativeTo: referenceDate)
     let atTime = String(localized: .notificationAtTime)
     content.body = "\(dayText) \(atTime) \(shift.startTime)-\(shift.endTime)"
 
@@ -264,7 +266,8 @@ final class ShiftReminderScheduler {
   }
 
   /// Format day text (Today/Tomorrow/Date)
-  private func formatDayText(for shiftDateString: String) -> String {
+  private func formatDayText(for shiftDateString: String, relativeTo referenceDate: Date) -> String
+  {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
 
@@ -273,7 +276,7 @@ final class ShiftReminderScheduler {
     }
 
     let calendar = Calendar.current
-    let today = calendar.startOfDay(for: Date())
+    let today = calendar.startOfDay(for: referenceDate)
     let shiftDay = calendar.startOfDay(for: shiftDate)
 
     if calendar.isDate(shiftDay, inSameDayAs: today) {
