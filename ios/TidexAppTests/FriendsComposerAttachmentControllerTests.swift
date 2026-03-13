@@ -42,6 +42,19 @@ final class FriendsComposerAttachmentControllerTests: XCTestCase {
     XCTAssertFalse(controller.isShowingShiftCalendar)
   }
 
+  func testProcessingAttachmentGateAllowsOnlyOneActiveSelection() {
+    let controller = FriendsComposerAttachmentController(
+      recentPhotoProvider: MockRecentPhotoProvider(authorizationState: .authorized, photos: [])
+    )
+
+    XCTAssertTrue(controller.beginProcessingAttachment())
+    XCTAssertFalse(controller.beginProcessingAttachment())
+
+    controller.finishProcessingAttachment()
+
+    XCTAssertTrue(controller.beginProcessingAttachment())
+  }
+
   func testToggleDrawerOpensImmediatelyWhileInitialPhotosLoad() async {
     let provider = MockRecentPhotoProvider(
       authorizationState: .authorized,

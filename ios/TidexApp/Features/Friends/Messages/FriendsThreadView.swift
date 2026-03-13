@@ -1,44 +1,26 @@
+import ExyteChat
 import SwiftUI
 import UIKit
 
 struct FriendsThreadView: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.openURL) private var openURL
 
   @StateObject private var viewModel: FriendsThreadViewModel
+  @StateObject private var composerBridge = FriendsThreadComposerBridge()
+  @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
+
   @State private var pendingReportTarget: ReportTarget?
   @State private var showBlockConfirmation = false
   @State private var showSafetySupport = false
   @State private var safariURL: URL?
   @State private var alertState: AlertState?
   @State private var highlightedMessageId: String?
-  @State private var isPinnedToBottom = true
-  @State private var bottomAccessoryInset: CGFloat = 0
-  @State private var unreadIncomingCount = 0
-  @State private var showsNewMessagesPill = false
-  @State private var scrollToBottomTrigger = 0
   @State private var showScreenshotBubble = false
   @State private var showScreenshotNotifiedIcon = false
   @State private var screenshotBellShakeTrigger = false
   @State private var showProfile = false
-  @State private var messageActionMenu: MessageActionMenuState?
-  @State private var customReactionTarget: FriendMessage?
-  @State private var customReactionDraft = ""
-  @State private var isCustomReactionInputActive = false
   @State private var isComposerAttachmentDrawerOpen = false
-  @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
-
-  private struct ScrollState: Equatable {
-    let messageCount: Int
-    let firstMessageID: String?
-    let lastMessageID: String?
-  }
-
-  private struct MessageActionMenuState: Identifiable {
-    let id = UUID()
-    let message: FriendMessage
-    let sourceFrame: CGRect
-  }
+  @State private var isPinnedToBottom = false
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -46,30 +28,25 @@ struct FriendsThreadView: View {
     )
   }
 
-  private var scrollState: ScrollState {
-    ScrollState(
-      messageCount: viewModel.messages.count,
-      firstMessageID: viewModel.messages.first?.id,
-      lastMessageID: viewModel.messages.last?.id
-    )
+  private var currentUserDisplayName: String {
+    AppCoordinator.shared.userDisplayName
   }
 
-  private let timelineBottomContentInset = Spacing.lg
+  private var counterpartDisplayName: String {
+    viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName
+  }
 
-  private var scrollToLatestBottomPadding: CGFloat {
-    max(bottomAccessoryInset, 0) + Spacing.sm
+  private var counterpartAvatarUrl: String? {
+    viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl
   }
 
   private var counterpartProfileUser: SharedUser {
-    let displayName = viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName
-    let avatarUrl = viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl
-
-    return SharedUser(
+    SharedUser(
       id: viewModel.route.counterpartUserId,
       email: nil,
       phone: nil,
-      firstName: displayName,
-      profilePictureUrl: avatarUrl,
+      firstName: counterpartDisplayName,
+      profilePictureUrl: counterpartAvatarUrl,
       oauthAvatarUrl: nil,
       sharedAt: "",
       showEarnings: false,
@@ -77,12 +54,169 @@ struct FriendsThreadView: View {
     )
   }
 
+  private var composerConfiguration: FriendsThreadComposerConfiguration {
+    FriendsThreadComposerConfiguration(
+      mode: viewModel.composerMode,
+      draftText: viewModel.draft,
+      replyPreview: viewModel.draftReplyTarget.map { replyPreviewModel(for: $0) },
+      stagedAttachment: viewModel.stagedComposerAttachment,
+      isThreadReadOnly: viewModel.isThreadReadOnly,
+      sendErrorMessage: viewModel.sendErrorMessage,
+      placeholder: String(localized: .friendsChatPlaceholder),
+      canSendShiftSnapshots: viewModel.canSendShiftSnapshots,
+      focusRequestToken: viewModel.composerFocusRequestToken
+    )
+  }
+
+  private var latestOutgoingMessageId: String? {
+    FriendsThreadMessageStatusResolver.latestOutgoingMessageId(
+      messages: viewModel.messages,
+      viewerUserId: viewModel.viewerUserId
+    )
+  }
+
+  private var readReceiptMessageId: String? {
+    FriendsThreadMessageStatusResolver.readReceiptMessageId(
+      messages: viewModel.messages,
+      viewerUserId: viewModel.viewerUserId,
+      counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
+      counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt
+    )
+  }
+
+  private var presentedMessageLookup: [String: FriendMessage] {
+    Dictionary(
+      uniqueKeysWithValues: viewModel.messages.map {
+        (
+          FriendsThreadMessagePresentationID.make(
+            for: $0,
+            viewerUserId: viewModel.viewerUserId
+          ),
+          $0
+        )
+      }
+    )
+  }
+
+  private var presentedMessageIDs: [String] {
+    viewModel.messages.map {
+      FriendsThreadMessagePresentationID.make(for: $0, viewerUserId: viewModel.viewerUserId)
+    }
+  }
+
+  private var exyteMessages: [ExyteChat.Message] {
+    FriendsThreadExyteHighlightRedrawResolver.applyingHighlightMarker(
+      to: FriendsThreadExyteMessageFactory.makeMessages(
+        messages: viewModel.messages,
+        conversation: .init(
+          viewerUserId: viewModel.viewerUserId,
+          currentUserDisplayName: currentUserDisplayName,
+          counterpartDisplayName: counterpartDisplayName,
+          counterpartAvatarUrl: counterpartAvatarUrl,
+          quotedMessagesById: viewModel.quotedMessagesById,
+          counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
+          counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt
+        )
+      ),
+      highlightedPresentedMessageID: highlightedPresentedMessageID
+    )
+  }
+
+  private var viewportScrollRequest: FriendsThreadChatViewportScrollRequest? {
+    FriendsThreadChatViewportRequestResolver.request(
+      replyTargetMessageId: viewModel.replyScrollTargetMessageId,
+      restoreTargetMessageId: viewModel.restoreScrollTargetMessageId,
+      messages: viewModel.messages,
+      viewerUserId: viewModel.viewerUserId
+    )
+  }
+
+  private var highlightedPresentedMessageID: String? {
+    FriendsThreadChatViewportRequestResolver.presentedMessageID(
+      for: highlightedMessageId,
+      messages: viewModel.messages,
+      viewerUserId: viewModel.viewerUserId
+    )
+  }
+
+  private func messageID(for presentedMessageID: String) -> String {
+    presentedMessageLookup[presentedMessageID]?.id
+      ?? presentedMessageID.replacingOccurrences(of: "message:", with: "")
+  }
+
   var body: some View {
     threadContent
-      .refreshable {
-        guard !isComposerAttachmentDrawerOpen else { return }
-        dismissMessageActionMenu()
-        await viewModel.refresh()
+      .task {
+        syncComposerBridge()
+        await viewModel.loadIfNeeded()
+      }
+      .onAppear {
+        syncComposerBridge()
+        FriendsChatPresentationState.shared.setActiveThreadId(viewModel.route.threadId)
+        Task {
+          await NotificationService.shared.clearDeliveredFriendChatNotifications(
+            for: viewModel.route.threadId
+          )
+        }
+      }
+      .onChange(of: composerConfiguration) { _, _ in
+        syncComposerBridge()
+      }
+      .onChange(of: isPinnedToBottom) { _, newValue in
+        guard newValue else { return }
+        Task {
+          await viewModel.markVisibleMessagesReadIfNeeded()
+        }
+      }
+      .onChange(of: presentedMessageIDs) { oldValue, newValue in
+        handleMessageIDsChange(from: oldValue, to: newValue)
+      }
+      .onDisappear {
+        FriendsThreadMessageHighlightRegistry.setHighlightedMessageID(
+          nil, in: viewModel.route.threadId)
+        FriendsChatPresentationState.shared.setActiveThreadId(nil)
+        Task {
+          await viewModel.stopRealtime()
+        }
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) {
+        notification in
+        guard let threadId = notification.userInfo?["threadId"] as? String,
+          threadId == viewModel.route.threadId
+        else {
+          return
+        }
+
+        Task {
+          await viewModel.handleExternalThreadUpdate(shouldMarkRead: isPinnedToBottom)
+        }
+      }
+      .onReceive(
+        NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
+      ) { _ in
+        Task {
+          await viewModel.refreshCounterpartShiftPreview()
+        }
+      }
+      .onReceive(
+        NotificationCenter.default.publisher(for: .friendsThreadTypingDidChange)
+      ) { notification in
+        guard let threadId = notification.userInfo?["threadId"] as? String,
+          threadId == viewModel.route.threadId,
+          let userId = notification.userInfo?["userId"] as? String,
+          let isTyping = notification.userInfo?["isTyping"] as? Bool
+        else {
+          return
+        }
+
+        viewModel.handleCounterpartTypingChange(userId: userId, isTyping: isTyping)
+      }
+      .onReceive(
+        NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
+      ) { _ in
+        Task {
+          await reportScreenshot()
+        }
       }
   }
 
@@ -90,193 +224,26 @@ struct FriendsThreadView: View {
     VStack(spacing: 0) {
       counterpartShiftPreviewHeader
 
-      ZStack(alignment: .bottom) {
-        FriendsThreadSurfaceView(
-          timelineConfiguration: FriendsChatTimelineConfiguration(
-            messages: viewModel.messages,
-            quotedMessagesById: viewModel.quotedMessagesById,
-            viewerUserId: viewModel.viewerUserId,
-            counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
-            counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
-            currentUserDisplayName: AppCoordinator.shared.userDisplayName,
-            counterpartDisplayName: viewModel.thread.counterpartDisplayName
-              ?? viewModel.route.displayName,
-            counterpartAvatarUrl: viewModel.thread.counterpartAvatarUrl
-              ?? viewModel.route.avatarUrl,
-            highlightedMessageId: highlightedMessageId,
-            showTypingIndicator: viewModel.counterpartIsTyping,
-            bottomContentInset: timelineBottomContentInset,
-            scrollToBottomTrigger: scrollToBottomTrigger,
-            restoreScrollTargetMessageId: viewModel.restoreScrollTargetMessageId,
-            replyScrollTargetMessageId: viewModel.replyScrollTargetMessageId
-          ),
-          composerConfiguration: FriendsThreadComposerConfiguration(
-            mode: viewModel.composerMode,
-            draftText: viewModel.draft,
-            replyPreview: viewModel.draftReplyTarget.map { replyPreviewModel(for: $0) },
-            stagedAttachment: viewModel.stagedComposerAttachment,
-            isThreadReadOnly: viewModel.isThreadReadOnly,
-            sendErrorMessage: viewModel.sendErrorMessage,
-            placeholder: String(localized: .friendsChatPlaceholder),
-            canSendShiftSnapshots: viewModel.canSendShiftSnapshots,
-            focusRequestToken: viewModel.composerFocusRequestToken
-          ),
-          callbacks: FriendsThreadSurfaceCallbacks(
-            onBackgroundTap: dismissComposer,
-            onPinnedToBottomChanged: { isPinnedToBottom in
-              self.isPinnedToBottom = isPinnedToBottom
-            },
-            onReachedTopMessage: { currentFirstMessageId in
-              Task {
-                await viewModel.loadOlderMessagesIfNeeded(
-                  currentFirstMessageId: currentFirstMessageId)
-              }
-            },
-            onReply: { message in
-              viewModel.setReplyTarget(message)
-            },
-            onRetryMessage: { messageId in
-              Task {
-                await viewModel.retryMessage(messageId: messageId)
-              }
-            },
-            onReportMessage: { messageId in
-              pendingReportTarget = .message(messageId: messageId)
-            },
-            onToggleReaction: { message, emoji in
-              handleReactionSelection(emoji, for: message)
-            },
-            onOpenMessageActions: { message, sourceFrame in
-              presentMessageActionMenu(for: message, sourceFrame: sourceFrame)
-            },
-            onTapQuotedMessage: { message in
-              Task {
-                await viewModel.scrollToReplyTarget(for: message)
-              }
-            },
-            onConsumeRestoreScrollTarget: {
-              viewModel.consumeRestoreScrollTarget()
-            },
-            onConsumeReplyScrollTarget: { messageId in
-              flashHighlightedMessage(messageId)
-              viewModel.consumeReplyScrollTarget()
-            },
-            onComposerDraftChanged: { draft in
-              viewModel.draft = draft
-              Task {
-                await viewModel.handleDraftChanged(to: draft)
-              }
-            },
-            onComposerAttachmentChanged: { attachment in
-              viewModel.stagedComposerAttachment = attachment
-              Task {
-                await viewModel.setComposerAttachment(attachment)
-              }
-            },
-            onComposerPrepareShiftSnapshot: { shift in
-              await viewModel.prepareShiftSnapshotAttachment(for: shift)
-            },
-            onComposerCancelMode: {
-              Task {
-                await viewModel.cancelComposerMode()
-              }
-            },
-            onComposerSend: { content in
-              let wasPinnedToBottom = isPinnedToBottom
-              let didSend = await viewModel.sendMessage(content: content)
-              if didSend {
-                await MainActor.run {
-                  unreadIncomingCount = 0
-                  showsNewMessagesPill = false
-                  isPinnedToBottom = true
-                  if !wasPinnedToBottom {
-                    scrollToBottomTrigger += 1
-                  }
-                }
-              }
-              return didSend
-            },
-            onComposerAttachmentDrawerOpenChanged: { isOpen in
-              isComposerAttachmentDrawerOpen = isOpen
-            },
-            onBottomAccessoryInsetChanged: { inset in
-              bottomAccessoryInset = inset
-            }
-          )
-        )
-        .background(Color.tidexBackground)
-        .overlay(alignment: .top) {
-          if (viewModel.isLoading || viewModel.isLoadingOlderMessages)
-            && !viewModel.messages.isEmpty
-          {
-            olderMessagesLoadingState
-              .padding(.top, Spacing.md)
-          }
-        }
-        .overlay(alignment: .top) {
-          if showScreenshotBubble {
-            screenshotBubble
-              .padding(.top, Spacing.md)
-              .onTapGesture {
-                dismissScreenshotBubble()
-              }
-              .transition(
-                .asymmetric(
-                  insertion: .scale.combined(with: .opacity),
-                  removal: .opacity
-                ))
-          }
-        }
-        .overlay(alignment: .bottom) {
-          if showsNewMessagesPill, !viewModel.messages.isEmpty {
-            scrollToLatestButton
-              .padding(.bottom, scrollToLatestBottomPadding)
-              .transition(.move(edge: .bottom).combined(with: .opacity))
-          }
+      ZStack(alignment: .top) {
+        chatView
+
+        if viewModel.isLoadingOlderMessages && !viewModel.messages.isEmpty {
+          olderMessagesLoadingState
+            .padding(.top, Spacing.md)
         }
 
-        if let messageActionMenu {
-          FriendsChatMessageActionMenuOverlay(
-            message: messageActionMenu.message,
-            viewerUserId: viewModel.viewerUserId,
-            sourceFrame: messageActionMenu.sourceFrame,
-            onDismiss: dismissMessageActionMenu,
-            onReply: {
-              viewModel.setReplyTarget(messageActionMenu.message)
-              dismissMessageActionMenu()
-            },
-            onEdit: {
-              Task {
-                await viewModel.startEditing(messageActionMenu.message)
-              }
-              dismissMessageActionMenu()
-            },
-            onDelete: {
-              Task {
-                await viewModel.deleteMessage(messageId: messageActionMenu.message.id)
-              }
-              dismissMessageActionMenu()
-            },
-            onCopy: {
-              UIPasteboard.general.string = messageActionMenu.message.body
-              dismissMessageActionMenu()
-            },
-            onReport: {
-              pendingReportTarget = .message(messageId: messageActionMenu.message.id)
-              dismissMessageActionMenu()
-            },
-            onToggleReaction: { emoji in
-              handleReactionSelection(emoji, for: messageActionMenu.message)
-              dismissMessageActionMenu()
-            },
-            reactionEmojis: reactionPaletteStore.displayEmojis,
-            onAddCustomReaction: {
-              startCustomReactionInput(for: messageActionMenu.message)
-              dismissMessageActionMenu()
+        if showScreenshotBubble {
+          screenshotBubble
+            .padding(.top, Spacing.md)
+            .onTapGesture {
+              dismissScreenshotBubble()
             }
-          )
-          .transition(.opacity)
-          .zIndex(10)
+            .transition(
+              .asymmetric(
+                insertion: .scale.combined(with: .opacity),
+                removal: .opacity
+              )
+            )
         }
 
         if viewModel.isLoading && viewModel.messages.isEmpty {
@@ -286,104 +253,16 @@ struct FriendsThreadView: View {
         }
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(Color.tidexBackground.ignoresSafeArea())
     .navigationBarTitleDisplayMode(.inline)
     .iPadToolbarBackground()
-    .toolbarBackground(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         actionsMenu
       }
     }
     .iPadToolbarTransaction()
-    .task {
-      await viewModel.loadIfNeeded()
-    }
-    .onChange(of: scrollState) { oldValue, newValue in
-      handleScrollStateChange(from: oldValue, to: newValue)
-    }
-    .onChange(of: customReactionDraft) { _, newValue in
-      guard
-        let message = customReactionTarget,
-        let normalizedEmoji = FriendsChatReactionPaletteStore.normalizedEmoji(from: newValue)
-      else {
-        return
-      }
-
-      handleReactionSelection(normalizedEmoji, for: message)
-      customReactionDraft = ""
-      customReactionTarget = nil
-      isCustomReactionInputActive = false
-    }
-    .onChange(of: isCustomReactionInputActive) { _, isActive in
-      guard !isActive, customReactionTarget != nil else { return }
-      customReactionDraft = ""
-      customReactionTarget = nil
-    }
-    .onAppear {
-      FriendsChatPresentationState.shared.setActiveThreadId(viewModel.route.threadId)
-      Task {
-        await NotificationService.shared.clearDeliveredFriendChatNotifications(
-          for: viewModel.route.threadId
-        )
-      }
-    }
-    .onChange(of: isPinnedToBottom) { _, isPinnedToBottom in
-      if isPinnedToBottom {
-        unreadIncomingCount = 0
-        showsNewMessagesPill = false
-        Task {
-          await viewModel.markVisibleMessagesReadIfNeeded()
-        }
-      }
-    }
-    .onDisappear {
-      dismissMessageActionMenu()
-      isCustomReactionInputActive = false
-      FriendsChatPresentationState.shared.setActiveThreadId(nil)
-      Task {
-        await viewModel.stopRealtime()
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { notification in
-      guard let threadId = notification.userInfo?["threadId"] as? String,
-        threadId == viewModel.route.threadId
-      else {
-        return
-      }
-
-      dismissMessageActionMenu()
-      Task {
-        await viewModel.handleExternalThreadUpdate(shouldMarkRead: isPinnedToBottom)
-      }
-    }
-    .onReceive(
-      NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
-    ) { _ in
-      Task {
-        await viewModel.refreshCounterpartShiftPreview()
-      }
-    }
-    .onReceive(
-      NotificationCenter.default.publisher(for: .friendsThreadTypingDidChange)
-    ) { notification in
-      guard let threadId = notification.userInfo?["threadId"] as? String,
-        threadId == viewModel.route.threadId,
-        let userId = notification.userInfo?["userId"] as? String,
-        let isTyping = notification.userInfo?["isTyping"] as? Bool
-      else {
-        return
-      }
-
-      viewModel.handleCounterpartTypingChange(userId: userId, isTyping: isTyping)
-    }
-    .onReceive(
-      NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
-    ) { _ in
-      Task {
-        await reportScreenshot()
-      }
-    }
     .confirmationDialog(
       reportDialogTitle,
       isPresented: .init(
@@ -394,10 +273,18 @@ struct FriendsThreadView: View {
       ),
       titleVisibility: .visible
     ) {
-      ForEach(reportReasons, id: \.self) { reason in
-        Button(reason.localizedTitle) {
-          submitReport(reason: reason)
-        }
+      if pendingReportTarget == .user {
+        reportButton(.harassmentOrBullying)
+        reportButton(.spam)
+        reportButton(.inappropriateProfileOrConduct)
+        reportButton(.other)
+      } else if pendingReportTarget?.messageId != nil {
+        reportButton(.harassmentOrBullying)
+        reportButton(.sexualContent)
+        reportButton(.hateOrDiscriminatoryContent)
+        reportButton(.violenceOrThreats)
+        reportButton(.spam)
+        reportButton(.other)
       }
 
       Button(String(localized: .commonCancel), role: .cancel) {
@@ -458,29 +345,162 @@ struct FriendsThreadView: View {
         dismissButton: .default(Text(.commonDone))
       )
     }
-    .background(
-      FriendsChatSystemEmojiInputHost(
-        text: $customReactionDraft,
-        isActive: $isCustomReactionInputActive
-      )
-      .frame(width: 1, height: 1)
-      .opacity(0.01)
-      .accessibilityHidden(true)
+  }
+
+  private var chatView: some View {
+    ChatView(
+      messages: exyteMessages,
+      chatType: .conversation,
+      replyMode: .quote,
+      messageBuilder: { message, _, _, _, _, _, _ in
+        chatRow(for: message)
+      },
+      inputViewBuilder: { text, _, _, _, _, _ in
+        FriendsThreadComposerHostedView(
+          bridge: composerBridge,
+          text: text
+        )
+      },
+      messageMenuAction: handleMessageMenuAction,
+      localization: chatLocalization,
+      didSendMessage: { draft in
+        Task { @MainActor in
+          _ = await viewModel.sendMessage(content: draft.text)
+        }
+      }
     )
+    .showDateHeaders(true)
+    .headerBuilder { date in
+      FriendsThreadDateSeparator(date: date)
+    }
+    .betweenListAndInputViewBuilder {
+      Group {
+        if viewModel.counterpartIsTyping {
+          FriendsChatTypingAccessory(
+            counterpartAvatarUrl: counterpartAvatarUrl,
+            counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName)
+          )
+        } else {
+          EmptyView()
+        }
+      }
+    }
+    .showMessageTimeView(false)
+    .showMessageMenuOnLongPress(true)
+    .setAvailableInputs([.text])
+    .keyboardDismissMode(.interactive)
+    .enableLoadMore(pageSize: 50) { message in
+      await viewModel.loadOlderMessagesIfNeeded(currentFirstMessageId: messageID(for: message.id))
+    }
+    .onMessageReaction(
+      didReactTo: { message, draftReaction in
+        guard case .emoji(let emoji) = draftReaction.type else { return }
+        guard let friendMessage = presentedMessageLookup[message.id] else { return }
+        handleReactionSelection(emoji, forMessageId: friendMessage.id)
+      },
+      canReactTo: { message in
+        presentedMessageLookup[message.id]?.canReact ?? false
+      },
+      availableReactionsFor: { _ in
+        reactionPaletteStore.displayEmojis.map(ReactionType.emoji)
+      },
+      allowEmojiSearchFor: { message in
+        presentedMessageLookup[message.id]?.canReact ?? false
+      },
+      shouldShowOverviewFor: { _ in false }
+    )
+    .chatTheme(chatTheme)
+    .background(Color.tidexBackground)
+    .overlay {
+      FriendsThreadChatViewportBridge(
+        messages: exyteMessages,
+        scrollRequest: viewportScrollRequest,
+        highlightedPresentedMessageID: highlightedPresentedMessageID,
+        onPinnedToBottomChanged: { isPinnedToBottom = $0 },
+        onDidHandleScrollRequest: handleViewportScrollRequest
+      )
+      .allowsHitTesting(false)
+    }
+  }
+
+  @ViewBuilder
+  private func chatRow(for exyteMessage: ExyteChat.Message) -> some View {
+    if let message = presentedMessageLookup[exyteMessage.id] {
+      let isCurrentUser = message.senderUserId == viewModel.viewerUserId
+      let index = viewModel.messages.firstIndex(where: { $0.id == message.id })
+      let previousMessage = index.flatMap { $0 > 0 ? viewModel.messages[$0 - 1] : nil }
+      let nextMessage = index.flatMap {
+        $0 < (viewModel.messages.count - 1) ? viewModel.messages[$0 + 1] : nil
+      }
+      let groupContext = FriendsChatMessageGrouping.context(
+        for: message,
+        previous: previousMessage,
+        next: nextMessage,
+        viewerUserId: viewModel.viewerUserId
+      )
+      let messageStatus = FriendsThreadMessageStatusResolver.status(
+        for: message,
+        viewerUserId: viewModel.viewerUserId,
+        latestOutgoingMessageId: latestOutgoingMessageId,
+        readReceiptMessageId: readReceiptMessageId
+      )
+      let shouldShowTimestamp = FriendsThreadMessageStatusResolver.shouldShowTimestamp(
+        for: message,
+        isCurrentUser: isCurrentUser,
+        groupContext: groupContext,
+        messageStatus: messageStatus
+      )
+
+      FriendsChatMessageRowContent(
+        message: message,
+        quotedPreview: viewModel.quotedMessage(for: message).map(replyPreviewModel(for:)),
+        isCurrentUser: isCurrentUser,
+        groupContext: groupContext,
+        counterpartAvatarUrl: counterpartAvatarUrl,
+        counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
+          from: counterpartDisplayName),
+        isHighlighted: FriendsThreadMessageHighlightRegistry.isHighlighted(
+          messageID: message.id,
+          in: viewModel.route.threadId
+        ),
+        senderFirstName: firstName(
+          from: isCurrentUser ? currentUserDisplayName : counterpartDisplayName
+        ),
+        separatorDate: nil,
+        showsSenderLabel: false,
+        showsTimestamp: shouldShowTimestamp,
+        messageStatus: messageStatus,
+        onReply: {
+          viewModel.setReplyTarget(message)
+        },
+        onRetry: {
+          Task {
+            await viewModel.retryMessage(messageId: message.id)
+          }
+        },
+        onToggleReaction: { emoji in
+          handleReactionSelection(emoji, forMessageId: message.id)
+        },
+        onTapQuotedMessage: {
+          handleQuotedMessageTap(for: message)
+        }
+      )
+      .id(exyteMessage.id)
+    } else {
+      EmptyView()
+    }
   }
 
   @ViewBuilder
   private var counterpartShiftPreviewHeader: some View {
     if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
-      CompactFriendShiftPreviewHeader(
-        preview: counterpartShiftPreview
-      )
-      .padding(.horizontal, Spacing.md)
-      .padding(.top, Spacing.xxs)
-      .padding(.bottom, Spacing.xxs)
-      .frame(maxWidth: .infinity)
-      .background(Color.tidexBackground)
-      .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
+      CompactFriendShiftPreviewHeader(preview: counterpartShiftPreview)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.xxs)
+        .padding(.bottom, Spacing.xxs)
+        .frame(maxWidth: .infinity)
+        .background(Color.tidexBackground)
+        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
     }
   }
 
@@ -493,7 +513,6 @@ struct FriendsThreadView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     .padding(.horizontal, Spacing.lg)
-    .padding(.bottom, bottomAccessoryInset)
   }
 
   private var emptyState: some View {
@@ -518,7 +537,6 @@ struct FriendsThreadView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     .padding(.horizontal, Spacing.lg)
-    .padding(.bottom, bottomAccessoryInset)
   }
 
   private var olderMessagesLoadingState: some View {
@@ -532,38 +550,6 @@ struct FriendsThreadView: View {
     }
     .frame(maxWidth: .infinity)
     .padding(.bottom, Spacing.xs)
-  }
-
-  private var scrollToLatestButton: some View {
-    Button {
-      unreadIncomingCount = 0
-      showsNewMessagesPill = false
-      Haptics.play(.light)
-      SoundManager.shared.play("tap")
-      scrollToBottomTrigger += 1
-    } label: {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "arrow.down")
-          .font(.system(size: 14, weight: .semibold))
-
-        Text(.friendsChatNewMessages)
-          .font(.tidexFootnoteMedium)
-
-        if unreadIncomingCount > 0 {
-          Text("\(min(unreadIncomingCount, 99))")
-            .font(.tidexMicro.weight(.semibold))
-            .foregroundColor(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.tidexBrandPrimary))
-        }
-      }
-      .foregroundColor(.tidexTextPrimary)
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
-      .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
-    }
-    .buttonStyle(.plain)
   }
 
   private var screenshotBubble: some View {
@@ -592,8 +578,8 @@ struct FriendsThreadView: View {
       }
     } label: {
       UserMenuButton(
-        displayName: viewModel.thread.counterpartDisplayName ?? viewModel.route.displayName,
-        avatarUrl: viewModel.thread.counterpartAvatarUrl ?? viewModel.route.avatarUrl,
+        displayName: counterpartDisplayName,
+        avatarUrl: counterpartAvatarUrl,
         interactive: false
       )
       .fixedSize(horizontal: true, vertical: false)
@@ -633,6 +619,210 @@ struct FriendsThreadView: View {
     }
   }
 
+  private func reportButton(_ reason: FriendAbuseReportReason) -> some View {
+    Button(reason.localizedTitle) {
+      submitReport(reason: reason)
+    }
+  }
+
+  private var chatLocalization: ChatLocalization {
+    ChatLocalization(
+      inputPlaceholder: String(localized: .friendsChatPlaceholder),
+      signatureText: String(localized: "friends.chat.signatureText", table: "Localizable"),
+      cancelButtonText: String(localized: .commonCancel),
+      recentToggleText: String(localized: "friends.chat.recentToggle", table: "Localizable"),
+      waitingForNetwork: String(localized: "friends.chat.waitingForNetwork", table: "Localizable"),
+      recordingText: String(localized: "friends.chat.recording", table: "Localizable"),
+      replyToText: String(localized: "friends.chat.replyTo", table: "Localizable")
+    )
+  }
+
+  private var chatTheme: ChatTheme {
+    ChatTheme(
+      colors: .init(
+        mainBG: .tidexBackground,
+        mainTint: .tidexBlue,
+        mainText: .tidexTextPrimary,
+        mainCaptionText: .tidexTextSecondary,
+        messageMyBG: .tidexBrandPrimary,
+        messageReadStatus: .tidexBlue,
+        messageMyText: .tidexTextOnBrand,
+        messageMyTimeText: .tidexTextOnBrand.opacity(0.72),
+        messageFriendBG: .tidexSurfacePrimary,
+        messageFriendText: .tidexTextPrimary,
+        messageFriendTimeText: .tidexTextMuted,
+        messageSystemBG: .tidexSurfaceSecondary,
+        messageSystemText: .tidexTextPrimary,
+        messageSystemTimeText: .tidexTextMuted,
+        inputBG: .tidexBackground,
+        inputText: .tidexTextPrimary,
+        inputPlaceholderText: .tidexTextMuted,
+        inputSignatureBG: .tidexBackground,
+        inputSignatureText: .tidexTextPrimary,
+        inputSignaturePlaceholderText: .tidexTextMuted,
+        menuBG: .tidexSurfacePrimary,
+        menuText: .tidexTextPrimary,
+        menuTextDelete: .tidexError,
+        statusError: .tidexError,
+        statusGray: .tidexTextMuted,
+        sendButtonBackground: .tidexBrandPrimary,
+        recordDot: .tidexError
+      )
+    )
+  }
+
+  private func syncComposerBridge() {
+    composerBridge.onDraftChanged = { draft in
+      viewModel.draft = draft
+      Task {
+        await viewModel.handleDraftChanged(to: draft)
+      }
+    }
+    composerBridge.onStagedAttachmentChanged = { attachment in
+      viewModel.stagedComposerAttachment = attachment
+      Task {
+        await viewModel.setComposerAttachment(attachment)
+      }
+    }
+    composerBridge.onPrepareShiftSnapshotAttachment = { shift in
+      await viewModel.prepareShiftSnapshotAttachment(for: shift)
+    }
+    composerBridge.onCancelMode = {
+      Task {
+        await viewModel.cancelComposerMode()
+      }
+    }
+    composerBridge.onSend = { content in
+      await viewModel.sendMessage(content: content)
+    }
+    composerBridge.onSaveEdit = { content in
+      await viewModel.sendMessage(content: content)
+    }
+    composerBridge.onAttachmentDrawerOpenChanged = { isOpen in
+      isComposerAttachmentDrawerOpen = isOpen
+    }
+    composerBridge.onHeightChanged = nil
+    composerBridge.apply(configuration: composerConfiguration)
+  }
+
+  private func handleMessageMenuAction(
+    _ action: FriendsThreadMessageMenuAction,
+    _ defaultActionClosure: @escaping (ExyteChat.Message, DefaultMessageMenuAction) -> Void,
+    _ message: ExyteChat.Message
+  ) {
+    guard let friendMessage = presentedMessageLookup[message.id] else { return }
+
+    switch action {
+    case .reply:
+      viewModel.setReplyTarget(friendMessage)
+    case .copy:
+      UIPasteboard.general.string = friendMessage.body
+    case .edit:
+      Task {
+        await viewModel.startEditing(friendMessage)
+      }
+    case .delete:
+      Task {
+        await viewModel.deleteMessage(messageId: friendMessage.id)
+      }
+    case .report:
+      pendingReportTarget = .message(messageId: friendMessage.id)
+    }
+  }
+
+  private func handleMessageIDsChange(from oldValue: [String], to newValue: [String]) {
+    guard !newValue.isEmpty, newValue != oldValue else { return }
+    guard let lastMessage = viewModel.messages.last else { return }
+
+    let prependedMessages = FriendsThreadMessageListChangeResolver.isPrependedMessage(
+      oldMessageIDs: oldValue,
+      newMessageIDs: newValue
+    )
+    let appendedMessage = FriendsThreadMessageListChangeResolver.isAppendedMessage(
+      oldMessageIDs: oldValue,
+      newMessageIDs: newValue
+    )
+
+    guard appendedMessage, !prependedMessages else { return }
+    if lastMessage.senderUserId == viewModel.viewerUserId {
+      scheduleBottomScrollAfterOutgoingAppend()
+      return
+    }
+    guard isPinnedToBottom else { return }
+
+    Task {
+      await viewModel.markVisibleMessagesReadIfNeeded()
+    }
+  }
+
+  private func scheduleBottomScrollAfterOutgoingAppend() {
+    NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
+
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(120))
+      NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
+    }
+  }
+
+  private func handleReactionSelection(_ emoji: String, forMessageId messageId: String) {
+    reactionPaletteStore.recordSelection(emoji)
+
+    Task {
+      await viewModel.toggleReaction(messageId: messageId, emoji: emoji)
+    }
+  }
+
+  private func handleQuotedMessageTap(for message: FriendMessage) {
+    Task {
+      await viewModel.scrollToReplyTarget(for: message)
+    }
+  }
+
+  private func handleViewportScrollRequest(_ request: FriendsThreadChatViewportScrollRequest) {
+    switch request.kind {
+    case .reply:
+      flashHighlightedMessage(request.messageID)
+      viewModel.consumeReplyScrollTarget()
+      viewModel.consumeRestoreScrollTarget()
+    case .restore:
+      viewModel.consumeRestoreScrollTarget()
+    }
+  }
+
+  private func replyPreviewModel(for message: FriendMessage) -> FriendsChatReplyPreviewModel {
+    FriendsChatReplyPreviewModel(
+      senderName: message.senderUserId == viewModel.viewerUserId
+        ? firstName(from: currentUserDisplayName)
+        : firstName(from: counterpartDisplayName),
+      message: message
+    )
+  }
+
+  private func firstName(from displayName: String) -> String {
+    let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "?" }
+    return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
+  }
+
+  private func flashHighlightedMessage(_ messageId: String) {
+    highlightedMessageId = messageId
+    FriendsThreadMessageHighlightRegistry.setHighlightedMessageID(
+      messageId,
+      in: viewModel.route.threadId
+    )
+
+    Task { @MainActor in
+      try? await Task.sleep(nanoseconds: 1_200_000_000)
+      if highlightedMessageId == messageId {
+        highlightedMessageId = nil
+        FriendsThreadMessageHighlightRegistry.setHighlightedMessageID(
+          nil,
+          in: viewModel.route.threadId
+        )
+      }
+    }
+  }
+
   private func submitReport(reason: FriendAbuseReportReason) {
     guard let pendingReportTarget else { return }
 
@@ -664,97 +854,6 @@ struct FriendsThreadView: View {
         )
       }
     }
-  }
-
-  private func handleScrollStateChange(
-    from oldValue: ScrollState,
-    to newValue: ScrollState
-  ) {
-    guard newValue != oldValue, let lastMessage = viewModel.messages.last else { return }
-
-    let prependedMessages =
-      newValue.messageCount > oldValue.messageCount
-      && newValue.firstMessageID != oldValue.firstMessageID
-      && newValue.lastMessageID == oldValue.lastMessageID
-    let appendedMessage =
-      newValue.lastMessageID != oldValue.lastMessageID
-      || (newValue.messageCount > oldValue.messageCount
-        && newValue.firstMessageID == oldValue.firstMessageID)
-
-    guard appendedMessage, !prependedMessages else { return }
-
-    let isIncoming = lastMessage.senderUserId != AppCoordinator.shared.getCurrentUserId()
-
-    if oldValue.messageCount == 0 || isPinnedToBottom {
-      unreadIncomingCount = 0
-      showsNewMessagesPill = false
-      return
-    }
-
-    if !isIncoming {
-      return
-    }
-
-    unreadIncomingCount += 1
-    showsNewMessagesPill = true
-    isPinnedToBottom = false
-    Haptics.play(.light)
-    SoundManager.shared.play("tap")
-  }
-
-  private func replyPreviewModel(for message: FriendMessage) -> FriendsChatReplyPreviewModel {
-    FriendsChatReplyPreviewModel(
-      senderName: message.senderUserId == viewModel.viewerUserId
-        ? firstName(from: AppCoordinator.shared.userDisplayName)
-        : firstName(from: viewModel.route.displayName),
-      message: message
-    )
-  }
-
-  private func firstName(from displayName: String) -> String {
-    let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return "?" }
-    return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
-  }
-
-  private func flashHighlightedMessage(_ messageId: String) {
-    highlightedMessageId = messageId
-
-    Task { @MainActor in
-      try? await Task.sleep(nanoseconds: 1_200_000_000)
-      if highlightedMessageId == messageId {
-        highlightedMessageId = nil
-      }
-    }
-  }
-
-  private func presentMessageActionMenu(for message: FriendMessage, sourceFrame: CGRect?) {
-    let resolvedSourceFrame =
-      if let sourceFrame, sourceFrame != .zero {
-        sourceFrame
-      } else {
-        CGRect(x: Spacing.md, y: Spacing.huge, width: 280, height: 88)
-      }
-
-    messageActionMenu = MessageActionMenuState(message: message, sourceFrame: resolvedSourceFrame)
-  }
-
-  private func dismissMessageActionMenu() {
-    messageActionMenu = nil
-  }
-
-  private func handleReactionSelection(_ emoji: String, for message: FriendMessage) {
-    reactionPaletteStore.recordSelection(emoji)
-
-    Task {
-      await viewModel.toggleReaction(messageId: message.id, emoji: emoji)
-    }
-  }
-
-  private func startCustomReactionInput(for message: FriendMessage) {
-    customReactionTarget = message
-    customReactionDraft = ""
-    isCustomReactionInputActive = true
   }
 
   private func reportScreenshot() async {
@@ -791,15 +890,6 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func dismissComposer() {
-    UIApplication.shared.sendAction(
-      #selector(UIResponder.resignFirstResponder),
-      to: nil,
-      from: nil,
-      for: nil
-    )
-  }
-
   private struct AlertState: Identifiable {
     let id = UUID()
     let title: String
@@ -821,337 +911,27 @@ struct FriendsThreadView: View {
   }
 }
 
-struct FriendsChatMessageActionLayout {
-  static func previewWidth(for bubbleWidth: CGFloat) -> CGFloat {
-    min(296, max(160, bubbleWidth))
-  }
-
-  static func actionMenuWidth(for bubbleWidth: CGFloat) -> CGFloat {
-    min(240, max(176, bubbleWidth + (Spacing.md * 2)))
-  }
-
-  static func localSourceFrame(_ globalSourceFrame: CGRect, in overlayGlobalFrame: CGRect) -> CGRect
-  {
-    CGRect(
-      x: globalSourceFrame.minX - overlayGlobalFrame.minX,
-      y: globalSourceFrame.minY - overlayGlobalFrame.minY,
-      width: globalSourceFrame.width,
-      height: globalSourceFrame.height
-    )
-  }
-}
-
-private struct FriendsChatMessageActionMenuOverlay: View {
-  let message: FriendMessage
-  let viewerUserId: String
-  let sourceFrame: CGRect
-  let onDismiss: () -> Void
-  let onReply: () -> Void
-  let onEdit: () -> Void
-  let onDelete: () -> Void
-  let onCopy: () -> Void
-  let onReport: () -> Void
-  let onToggleReaction: (String) -> Void
-  let reactionEmojis: [String]
-  let onAddCustomReaction: () -> Void
-
-  @State private var hasPresented = false
-  @State private var measuredPreviewHeight: CGFloat = 0
-
-  private var isCurrentUser: Bool {
-    message.senderUserId == viewerUserId
-  }
-
-  private var canEditMessage: Bool {
-    message.canEdit(viewerUserId: viewerUserId)
-  }
-
-  private var canDeleteMessage: Bool {
-    message.canDelete(viewerUserId: viewerUserId)
-  }
-
-  private var actionRows: [ActionRow] {
-    var rows: [ActionRow] = [
-      ActionRow(
-        title: String(localized: .friendsChatActionReply),
-        systemImage: "arrowshape.turn.up.left"
-      ) {
-        onReply()
-      }
-    ]
-
-    if let body = message.body?.trimmingCharacters(in: .whitespacesAndNewlines), !body.isEmpty {
-      rows.append(
-        ActionRow(
-          title: String(localized: .commonCopy),
-          systemImage: "doc.on.doc"
-        ) {
-          onCopy()
-        }
-      )
-    }
-
-    if isCurrentUser {
-      if canEditMessage {
-        rows.append(
-          ActionRow(
-            title: String(localized: "friends.chat.action.edit", table: "Localizable"),
-            systemImage: "pencil"
-          ) {
-            onEdit()
-          }
-        )
-      }
-
-      if canDeleteMessage {
-        rows.append(
-          ActionRow(
-            title: String(localized: "friends.chat.action.delete", table: "Localizable"),
-            systemImage: "trash",
-            role: .destructive
-          ) {
-            onDelete()
-          }
-        )
-      }
-    } else {
-      rows.append(
-        ActionRow(
-          title: String(localized: .friendsChatReportMessage),
-          systemImage: "flag"
-        ) {
-          onReport()
-        }
-      )
-    }
-
-    return rows
-  }
+private struct FriendsChatTypingAccessory: View {
+  let counterpartAvatarUrl: String?
+  let counterpartInitials: String
 
   var body: some View {
-    GeometryReader { geometry in
-      let horizontalMargin = Spacing.md
-      let safeTop = geometry.safeAreaInsets.top + Spacing.md
-      let safeBottom = geometry.safeAreaInsets.bottom + Spacing.md
-      let overlayGlobalFrame = geometry.frame(in: .global)
-      let localSourceFrame = FriendsChatMessageActionLayout.localSourceFrame(
-        sourceFrame,
-        in: overlayGlobalFrame
+    HStack(spacing: Spacing.xs) {
+      AvatarView(
+        url: counterpartAvatarUrl,
+        initials: counterpartInitials,
+        size: AvatarView.Size.small,
+        cornerRadius: CornerRadius.md
       )
-      let maxContentWidth = geometry.size.width - (horizontalMargin * 2)
-      let previewWidth = min(
-        FriendsChatMessageActionLayout.previewWidth(for: localSourceFrame.width),
-        maxContentWidth
-      )
-      let actionMenuWidth = min(
-        FriendsChatMessageActionLayout.actionMenuWidth(for: localSourceFrame.width),
-        maxContentWidth
-      )
-      let previewContentHeight =
-        measuredPreviewHeight > 0 ? measuredPreviewHeight : previewHeightEstimate
-      let previewX =
-        isCurrentUser
-        ? min(
-          max(horizontalMargin, localSourceFrame.maxX - previewWidth),
-          geometry.size.width - previewWidth - horizontalMargin)
-        : min(
-          max(horizontalMargin, localSourceFrame.minX),
-          geometry.size.width - previewWidth - horizontalMargin)
-      let actionMenuX =
-        isCurrentUser
-        ? min(
-          max(horizontalMargin, localSourceFrame.maxX - actionMenuWidth),
-          geometry.size.width - actionMenuWidth - horizontalMargin)
-        : min(
-          max(horizontalMargin, localSourceFrame.minX),
-          geometry.size.width - actionMenuWidth - horizontalMargin)
-      let estimatedHeight =
-        CGFloat(actionRows.count) * 56
-        + (message.canReact ? 66 : 0)
-        + previewContentHeight
-      let previewY = min(
-        max(safeTop, localSourceFrame.minY - 84),
-        geometry.size.height - estimatedHeight - safeBottom
-      )
-      let previewStartX = min(
-        max(
-          horizontalMargin,
-          isCurrentUser ? localSourceFrame.maxX - previewWidth : localSourceFrame.minX
-        ),
-        geometry.size.width - previewWidth - horizontalMargin
-      )
-      let previewStartY = min(
-        max(safeTop, localSourceFrame.minY),
-        geometry.size.height - localSourceFrame.height - safeBottom
-      )
-      let actionMenuY = previewY + previewContentHeight + Spacing.xs
 
-      ZStack(alignment: .topLeading) {
-        Color.black.opacity(hasPresented ? 0.3 : 0)
-          .ignoresSafeArea()
-          .onTapGesture {
-            onDismiss()
-          }
-          .animation(.easeOut(duration: 0.18), value: hasPresented)
+      TypingIndicatorView()
 
-        if message.canReact {
-          HStack(spacing: Spacing.xs) {
-            ForEach(reactionEmojis, id: \.self) { emoji in
-              let isSelected = message.reactions.contains {
-                $0.emoji == emoji && $0.viewerHasReacted
-              }
-
-              Button {
-                onToggleReaction(emoji)
-              } label: {
-                FriendsChatEmojiGlyph(emoji: emoji, size: 28)
-                  .frame(width: 42, height: 42)
-                  .background(
-                    Circle()
-                      .fill(isSelected ? Color.tidexBlue.opacity(0.14) : Color.clear)
-                  )
-              }
-              .buttonStyle(.plain)
-            }
-
-            Button {
-              onAddCustomReaction()
-            } label: {
-              Image(systemName: "plus")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.tidexTextPrimary)
-                .frame(width: 42, height: 42)
-                .background(
-                  Circle()
-                    .fill(Color.tidexSurfacePrimary.opacity(0.72))
-                )
-                .overlay(
-                  Circle()
-                    .stroke(Color.tidexBorder, lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("friends.chat.customReaction.title"))
-          }
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xs)
-          .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.08), interactive: true)
-          .frame(width: previewWidth, alignment: isCurrentUser ? .trailing : .leading)
-          .offset(x: previewX, y: previewY - 74)
-          .opacity(hasPresented ? 1 : 0)
-          .offset(y: hasPresented ? 0 : 10)
-          .animation(.spring(response: 0.26, dampingFraction: 0.84), value: hasPresented)
-        }
-
-        HStack {
-          if isCurrentUser { Spacer(minLength: 0) }
-          FriendsChatActionMessagePreview(
-            message: message,
-            isCurrentUser: isCurrentUser
-          )
-          if !isCurrentUser { Spacer(minLength: 0) }
-        }
-        .frame(width: previewWidth)
-        .background {
-          GeometryReader { previewGeometry in
-            Color.clear.preference(
-              key: FriendsChatActionPreviewHeightPreferenceKey.self,
-              value: previewGeometry.size.height
-            )
-          }
-        }
-        .offset(
-          x: hasPresented ? previewX : previewStartX,
-          y: hasPresented ? previewY : previewStartY
-        )
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: hasPresented)
-
-        VStack(spacing: 0) {
-          ForEach(Array(actionRows.enumerated()), id: \.offset) { index, row in
-            Button(action: row.action) {
-              HStack(spacing: Spacing.sm) {
-                Image(systemName: row.systemImage)
-                  .font(.system(size: 18, weight: .medium))
-                  .frame(width: 24, height: 24)
-                  .foregroundColor(row.role == .destructive ? .tidexError : .tidexBlue)
-
-                Text(row.title)
-                  .font(.tidexBody)
-                  .foregroundColor(row.role == .destructive ? .tidexError : .tidexTextPrimary)
-
-                Spacer(minLength: 0)
-              }
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.horizontal, Spacing.md)
-              .padding(.vertical, Spacing.md)
-              .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if index < actionRows.count - 1 {
-              Divider()
-                .overlay(Color.tidexBorderSubtle)
-                .padding(.horizontal, Spacing.md)
-            }
-          }
-        }
-        .frame(width: actionMenuWidth)
-        .fixedSize(horizontal: true, vertical: false)
-        .tidexGlass(shape: .rect(cornerRadius: CornerRadius.xl), tint: .tidexBlue.opacity(0.06))
-        .offset(x: actionMenuX, y: actionMenuY)
-        .opacity(hasPresented ? 1 : 0)
-        .offset(y: hasPresented ? 0 : 14)
-        .animation(.spring(response: 0.3, dampingFraction: 0.88), value: hasPresented)
-      }
-      .onAppear {
-        guard !hasPresented else { return }
-        hasPresented = true
-      }
-      .onPreferenceChange(FriendsChatActionPreviewHeightPreferenceKey.self) { height in
-        guard height > 0 else { return }
-        measuredPreviewHeight = height
-      }
+      Spacer(minLength: 0)
     }
-  }
-
-  private struct ActionRow {
-    let title: String
-    let systemImage: String
-    var role: ButtonRole? = nil
-    let action: () -> Void
-  }
-
-  private var previewHeightEstimate: CGFloat {
-    let hasMessageText =
-      !(message.body?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-    let imageAttachments = message.attachments.filter { $0.kind == .image }
-    var totalHeight: CGFloat = 0
-    var blockCount = 0
-
-    if message.shiftSnapshot != nil {
-      totalHeight += 192
-      blockCount += 1
-    }
-
-    if !imageAttachments.isEmpty {
-      totalHeight += imageAttachments.reduce(CGFloat.zero) { partialResult, attachment in
-        partialResult + attachment.friendsChatImageFrameSize().height
-      }
-      blockCount += imageAttachments.count
-    }
-
-    if hasMessageText
-      || (!message.hasImageAttachment && message.shiftSnapshot == nil && message.previewText != nil)
-    {
-      totalHeight += 108
-      blockCount += 1
-    }
-
-    if blockCount > 1 {
-      totalHeight += CGFloat(blockCount - 1) * Spacing.xs
-    }
-
-    return max(totalHeight, 108)
+    .padding(.horizontal, Spacing.md)
+    .padding(.top, Spacing.xxs)
+    .padding(.bottom, Spacing.xs)
+    .background(Color.tidexBackground)
   }
 }
 
@@ -1190,7 +970,7 @@ final class FriendsChatReactionPaletteStore: ObservableObject {
 
   static func normalizedEmoji(from rawValue: String) -> String? {
     let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let firstCharacter = trimmed.first, firstCharacter.isEmojiLike else { return nil }
+    guard let firstCharacter = trimmed.first, firstCharacter.tidexIsEmojiLike else { return nil }
     return String(firstCharacter)
   }
 
@@ -1212,247 +992,75 @@ final class FriendsChatReactionPaletteStore: ObservableObject {
   }
 }
 
-private struct FriendsChatSystemEmojiInputHost: UIViewRepresentable {
-  @Binding var text: String
-  @Binding var isActive: Bool
+private struct FriendsThreadDateSeparator: View {
+  let date: Date
 
-  func makeCoordinator() -> Coordinator {
-    Coordinator(text: $text, isActive: $isActive)
+  var body: some View {
+    HStack(spacing: Spacing.sm) {
+      Rectangle()
+        .fill(Color.tidexBorderSubtle)
+        .frame(height: 1)
+
+      Text(separatorText)
+        .font(.tidexMicro)
+        .foregroundColor(.tidexTextMuted)
+        .fixedSize(horizontal: true, vertical: false)
+
+      Rectangle()
+        .fill(Color.tidexBorderSubtle)
+        .frame(height: 1)
+    }
+    .frame(width: separatorWidth)
+    .padding(.vertical, Spacing.xs)
   }
 
-  func makeUIView(context: Context) -> FriendsChatSystemEmojiTextField {
-    let textField = FriendsChatSystemEmojiTextField(frame: .zero)
-    textField.delegate = context.coordinator
-    textField.autocorrectionType = .no
-    textField.spellCheckingType = .no
-    textField.autocapitalizationType = .none
-    textField.keyboardType = .default
-    textField.returnKeyType = .done
-    textField.textColor = .clear
-    textField.tintColor = .clear
-    textField.backgroundColor = .clear
-    textField.isAccessibilityElement = false
-    textField.addTarget(
-      context.coordinator,
-      action: #selector(Coordinator.textDidChange(_:)),
-      for: .editingChanged
+  private var separatorWidth: CGFloat {
+    let screenWidth =
+      UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first?
+      .screen
+      .bounds
+      .width
+      ?? 390
+
+    return screenWidth - (Spacing.md * 2)
+  }
+
+  private var separatorText: String {
+    let calendar = Calendar.current
+    if calendar.isDateInToday(date) {
+      return String(localized: .commonToday)
+    }
+    if calendar.isDateInYesterday(date) {
+      return String(localized: .commonYesterday)
+    }
+
+    if calendar.isDate(date, equalTo: Date(), toGranularity: .year) {
+      return date.formatted(
+        .dateTime
+          .weekday(.wide)
+          .day()
+          .month(.wide)
+      )
+    }
+
+    return date.formatted(
+      .dateTime
+        .weekday(.wide)
+        .day()
+        .month(.wide)
+        .year()
     )
-    return textField
-  }
-
-  func updateUIView(_ uiView: FriendsChatSystemEmojiTextField, context: Context) {
-    if uiView.text != text {
-      uiView.text = text
-    }
-
-    if isActive {
-      guard !uiView.isFirstResponder else { return }
-
-      DispatchQueue.main.async {
-        guard isActive else { return }
-        uiView.becomeFirstResponder()
-      }
-      return
-    }
-
-    if uiView.isFirstResponder {
-      uiView.resignFirstResponder()
-    }
-  }
-
-  final class Coordinator: NSObject, UITextFieldDelegate {
-    @Binding private var text: String
-    @Binding private var isActive: Bool
-
-    init(text: Binding<String>, isActive: Binding<Bool>) {
-      _text = text
-      _isActive = isActive
-    }
-
-    @objc
-    func textDidChange(_ textField: UITextField) {
-      text = textField.text ?? ""
-    }
-
-    func textFieldDidBeginEditing(_ textField: UITextField) {
-      isActive = true
-    }
-
-    func textFieldDidEndEditing(_ textField: UITextField) {
-      isActive = false
-    }
-
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-      textField.resignFirstResponder()
-      return false
-    }
-  }
-}
-
-private final class FriendsChatSystemEmojiTextField: UITextField {
-  override var textInputContextIdentifier: String? {
-    ""
-  }
-
-  override var textInputMode: UITextInputMode? {
-    if let emojiInputMode = UITextInputMode.activeInputModes.first(where: {
-      $0.primaryLanguage == "emoji"
-    }) {
-      return emojiInputMode
-    }
-
-    return super.textInputMode
   }
 }
 
 extension Character {
-  fileprivate var isEmojiLike: Bool {
-    unicodeScalars.contains {
-      $0.properties.isEmojiPresentation || $0.properties.isEmoji
+  fileprivate var tidexIsEmojiLike: Bool {
+    unicodeScalars.contains { scalar in
+      scalar.properties.isEmojiPresentation
+        || scalar.properties.generalCategory == .otherSymbol
     }
-  }
-}
-
-private struct FriendsChatActionPreviewHeightPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = max(value, nextValue())
-  }
-}
-
-private struct FriendsChatActionMessagePreview: View {
-  let message: FriendMessage
-  let isCurrentUser: Bool
-
-  private var messageText: String? {
-    let trimmed = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let trimmed, !trimmed.isEmpty else { return nil }
-    return trimmed
-  }
-
-  var body: some View {
-    VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xs) {
-      if let shiftSnapshot = message.shiftSnapshot {
-        ChatShiftSnapshotCard(snapshot: shiftSnapshot, isCurrentUser: isCurrentUser)
-      }
-
-      ForEach(imageAttachments, id: \.id) { attachment in
-        FriendsChatImageAttachmentCard(
-          attachment: attachment,
-          isCurrentUser: isCurrentUser
-        )
-      }
-
-      if let messageText {
-        ChatBubbleCard(
-          isCurrentUser: isCurrentUser,
-          minWidth: 120,
-          maxWidth: 280
-        ) {
-          Text(messageText)
-            .font(.tidexBody)
-            .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-      } else if !message.hasImageAttachment, message.shiftSnapshot == nil,
-        let previewText = message.previewText
-      {
-        ChatBubbleCard(
-          isCurrentUser: isCurrentUser,
-          minWidth: 120,
-          maxWidth: 280
-        ) {
-          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
-            if let iconSystemName = message.previewKind.friendsChatReplyIconSystemName {
-              Image(systemName: iconSystemName)
-                .font(.tidexCaptionRegular)
-                .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextMuted)
-            }
-
-            Text(previewText)
-              .font(.tidexBody)
-              .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-              .multilineTextAlignment(.leading)
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-      }
-    }
-  }
-
-  private var imageAttachments: [FriendMessageAttachment] {
-    message.attachments.filter { $0.kind == .image }
-  }
-}
-
-private struct DraftReplyBanner: View {
-  let preview: FriendsChatReplyPreviewModel
-  let onCancel: () -> Void
-
-  var body: some View {
-    HStack(alignment: .top, spacing: Spacing.sm) {
-      HStack(alignment: .top, spacing: Spacing.xs) {
-        RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
-          .fill(Color.tidexBlue.opacity(0.7))
-          .frame(width: 3, height: 30)
-
-        VStack(alignment: .leading, spacing: 3) {
-          Text(preview.senderName)
-            .font(.tidexCaptionStrong)
-            .foregroundColor(.tidexBlue)
-
-          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
-            if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
-              Image(systemName: iconSystemName)
-                .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexTextMuted)
-            }
-
-            Text(preview.snippet)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-              .lineLimit(1)
-          }
-        }
-
-        Spacer(minLength: 0)
-      }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfaceSecondary.opacity(0.72))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
-      )
-
-      Button(action: onCancel) {
-        Image(systemName: "xmark")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 32, height: 32)
-          .background(
-            Circle()
-              .fill(Color.tidexSurfaceSecondary)
-          )
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(String(localized: .commonCancel)))
-    }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.35), lineWidth: 1)
-    )
   }
 }
 
@@ -1460,19 +1068,19 @@ extension FriendAbuseReportReason {
   fileprivate var localizedTitle: String {
     switch self {
     case .harassmentOrBullying:
-      return String(localized: .friendsChatReasonHarassment)
+      return String(localized: "friends.chat.reason.harassment", table: "Localizable")
     case .sexualContent:
-      return String(localized: .friendsChatReasonSexual)
+      return String(localized: "friends.chat.reason.sexual", table: "Localizable")
     case .hateOrDiscriminatoryContent:
-      return String(localized: .friendsChatReasonHate)
+      return String(localized: "friends.chat.reason.hate", table: "Localizable")
     case .violenceOrThreats:
-      return String(localized: .friendsChatReasonViolence)
+      return String(localized: "friends.chat.reason.violence", table: "Localizable")
     case .spam:
-      return String(localized: .friendsChatReasonSpam)
+      return String(localized: "friends.chat.reason.spam", table: "Localizable")
     case .inappropriateProfileOrConduct:
-      return String(localized: .friendsChatReasonInappropriateProfile)
+      return String(localized: "friends.chat.reason.inappropriateProfile", table: "Localizable")
     case .other:
-      return String(localized: .friendsChatReasonOther)
+      return String(localized: "friends.chat.reason.other", table: "Localizable")
     }
   }
 }

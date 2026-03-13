@@ -41,6 +41,11 @@ final class FriendsThreadViewModel: ObservableObject {
     static let remoteTimeout: Duration = .seconds(5)
   }
 
+  private enum OptimisticSend {
+    // Let the composer collapse before inserting into Exyte's list.
+    static let insertionDelay: Duration = .milliseconds(120)
+  }
+
   private enum ComposerState: Equatable {
     case normal
     case reply(FriendMessage)
@@ -72,6 +77,36 @@ final class FriendsThreadViewModel: ObservableObject {
     let state: ComposerState
     let draft: String
     let stagedAttachment: FriendsComposerAttachmentDraft?
+  }
+
+  private actor SendTaskHandle {
+    private var result: Result<FriendMessage, Error>?
+    private var continuations: [CheckedContinuation<Result<FriendMessage, Error>, Never>] = []
+
+    func complete(with result: Result<FriendMessage, Error>) {
+      guard self.result == nil else { return }
+      self.result = result
+
+      let continuations = continuations
+      self.continuations.removeAll()
+      for continuation in continuations {
+        continuation.resume(returning: result)
+      }
+    }
+
+    func peekResult() -> Result<FriendMessage, Error>? {
+      result
+    }
+
+    func waitForResult() async -> Result<FriendMessage, Error> {
+      if let result {
+        return result
+      }
+
+      return await withCheckedContinuation { continuation in
+        continuations.append(continuation)
+      }
+    }
   }
 
   enum ActionError: LocalizedError {
@@ -125,6 +160,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private var lastTypingStartSentAt: Date?
   private var localTypingStopTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
+  private var counterpartStateRefreshTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
   private var suspendedComposerSnapshot: ComposerSnapshot?
 
@@ -205,15 +241,17 @@ final class FriendsThreadViewModel: ObservableObject {
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
-    async let serverRefresh: Void = refreshFromServer()
     async let counterpartPreviewRefresh: Void = loadCounterpartShiftPreview(forceRefresh: false)
-    _ = await (realtimeSubscription, serverRefresh, counterpartPreviewRefresh)
+    refreshCounterpartStateInBackground()
+    await refreshFromServer()
+    _ = await (realtimeSubscription, counterpartPreviewRefresh)
     isLoading = false
 
     await markLatestIncomingAsRead()
   }
 
   func refresh() async {
+    refreshCounterpartStateInBackground()
     await refreshFromServer()
     await loadCounterpartShiftPreview(forceRefresh: true)
     await markLatestIncomingAsRead()
@@ -370,6 +408,7 @@ final class FriendsThreadViewModel: ObservableObject {
     guard let replyToMessageId = message.replyToMessageId else { return }
 
     if messages.contains(where: { $0.id == replyToMessageId }) {
+      restoreScrollTargetMessageId = nil
       replyScrollTargetMessageId = replyToMessageId
       return
     }
@@ -381,6 +420,7 @@ final class FriendsThreadViewModel: ObservableObject {
       )
 
       if messages.contains(where: { $0.id == replyToMessageId }) {
+        restoreScrollTargetMessageId = nil
         replyScrollTargetMessageId = replyToMessageId
         return
       }
@@ -466,6 +506,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     let previousReplyTarget = draftReplyTarget
+    let composerSnapshot = currentComposerSnapshot()
     sendErrorMessage = nil
 
     let clientId = UUID().uuidString.lowercased()
@@ -496,14 +537,35 @@ final class FriendsThreadViewModel: ObservableObject {
     stagedComposerAttachment = nil
     await composerDraftStore.clearAttachmentDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
+    await stopTypingIfNeeded()
+
+    let sendTask = startSendTask(for: optimisticMessage)
+    if let earlyResult = await peekSendResultWithinOptimisticWindow(sendTask) {
+      switch earlyResult {
+      case .success(let sentMessage):
+        await repository.saveConfirmedMessage(
+          sentMessage,
+          replacingLocalMessageId: optimisticMessage.id,
+          in: route.threadId,
+          for: viewerUserId
+        )
+        loadFromCache()
+        return true
+      case .failure(let error):
+        await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
+        sendErrorMessage = sendMessageFailedMessage
+        threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
+        return false
+      }
+    }
+
     await repository.saveOptimisticMessage(
       optimisticMessage,
       in: route.threadId,
       for: viewerUserId
     )
     loadFromCache()
-    await stopTypingIfNeeded()
-    sendMessageInBackground(optimisticMessage)
+    sendMessageInBackground(optimisticMessage, sendTask: sendTask)
     return true
   }
 
@@ -640,29 +702,51 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private func refreshFromServer() async {
+    async let threadRefresh: Void = refreshThreadSummaryFromServer()
+    async let messagesRefresh: Void = refreshLatestMessagesFromServer()
+    _ = await (threadRefresh, messagesRefresh)
+  }
+
+  private func refreshThreadSummaryFromServer() async {
     do {
-      async let refreshedThreadTask: FriendThread = service.fetchThreadSummary(
-        threadId: route.threadId)
-      async let refreshedMessagesTask: [FriendMessage] = service.listThreadMessages(
+      let refreshedThread = try await service.fetchThreadSummary(threadId: route.threadId)
+      await repository.saveThread(refreshedThread, for: viewerUserId)
+      loadFromCache()
+    } catch {
+      threadLogger.error("Failed to refresh thread summary: \(error.localizedDescription)")
+    }
+  }
+
+  private func refreshLatestMessagesFromServer() async {
+    do {
+      let refreshedMessages = try await service.listThreadMessages(
         threadId: route.threadId,
         limit: Pagination.pageSize,
         before: nil
       )
-      async let refreshedCounterpartStateTask: FriendThreadState? = fetchCounterpartStateIfNeeded()
-
-      let refreshedThread = try await refreshedThreadTask
-      let refreshedMessages = try await refreshedMessagesTask
-      let refreshedCounterpartState = try await refreshedCounterpartStateTask
-
       hasMoreHistoricalMessages = refreshedMessages.count == Pagination.pageSize
-      await repository.saveThread(refreshedThread, for: viewerUserId)
       await repository.saveMessages(refreshedMessages, in: route.threadId, for: viewerUserId)
-      if let refreshedCounterpartState {
-        await repository.saveThreadState(refreshedCounterpartState)
-      }
       loadFromCache()
     } catch {
-      threadLogger.error("Failed to refresh thread: \(error.localizedDescription)")
+      threadLogger.error("Failed to refresh thread messages: \(error.localizedDescription)")
+    }
+  }
+
+  private func refreshCounterpartStateInBackground() {
+    counterpartStateRefreshTask?.cancel()
+    counterpartStateRefreshTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+
+      do {
+        if let refreshedCounterpartState = try await self.fetchCounterpartStateIfNeeded() {
+          await self.repository.saveThreadState(refreshedCounterpartState)
+          self.loadFromCache()
+        }
+      } catch is CancellationError {
+        return
+      } catch {
+        threadLogger.error("Failed to refresh counterpart state: \(error.localizedDescription)")
+      }
     }
   }
 
@@ -999,30 +1083,14 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  private func sendMessageInBackground(_ message: FriendMessage) {
+  private func sendMessageInBackground(
+    _ message: FriendMessage,
+    sendTask: SendTaskHandle? = nil
+  ) {
+    let sendTask = sendTask ?? startSendTask(for: message)
     Task { @MainActor in
-      guard canSendShiftSnapshotMessage(message) else {
-        await repository.updateMessageSendState(
-          messageId: message.id,
-          viewerUserId: viewerUserId,
-          sendState: .failed,
-          failureMessage: shiftSnapshotSendUnavailableMessage
-        )
-        loadFromCache()
-        return
-      }
-
-      do {
-        let outgoingAttachments = try await makeOutgoingAttachments(for: message)
-        let sentMessage = try await service.sendMessage(
-          threadId: route.threadId,
-          clientId: message.clientId,
-          body: message.body,
-          replyToMessageId: message.replyToMessageId,
-          attachments: outgoingAttachments,
-          metadataData: message.sendableMetadataData
-        )
-
+      switch await sendTask.waitForResult() {
+      case .success(let sentMessage):
         await repository.saveConfirmedMessage(
           sentMessage,
           replacingLocalMessageId: message.id,
@@ -1030,7 +1098,7 @@ final class FriendsThreadViewModel: ObservableObject {
           for: viewerUserId
         )
         loadFromCache()
-      } catch {
+      case .failure(let error):
         await repository.updateMessageSendState(
           messageId: message.id,
           viewerUserId: viewerUserId,
@@ -1041,6 +1109,44 @@ final class FriendsThreadViewModel: ObservableObject {
         threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
       }
     }
+  }
+
+  private func startSendTask(for message: FriendMessage) -> SendTaskHandle {
+    let handle = SendTaskHandle()
+
+    Task { @MainActor in
+      do {
+        let sentMessage = try await sendMessageToService(message)
+        await handle.complete(with: .success(sentMessage))
+      } catch {
+        await handle.complete(with: .failure(error))
+      }
+    }
+
+    return handle
+  }
+
+  private func peekSendResultWithinOptimisticWindow(
+    _ sendTask: SendTaskHandle
+  ) async -> Result<FriendMessage, Error>? {
+    if let result = await sendTask.peekResult() {
+      return result
+    }
+
+    try? await Task.sleep(for: OptimisticSend.insertionDelay)
+    return await sendTask.peekResult()
+  }
+
+  private func sendMessageToService(_ message: FriendMessage) async throws -> FriendMessage {
+    let outgoingAttachments = try await makeOutgoingAttachments(for: message)
+    return try await service.sendMessage(
+      threadId: route.threadId,
+      clientId: message.clientId,
+      body: message.body,
+      replyToMessageId: message.replyToMessageId,
+      attachments: outgoingAttachments,
+      metadataData: message.sendableMetadataData
+    )
   }
 
   private func makeOptimisticAttachment(from image: ImageAttachment) -> FriendMessageAttachment {
@@ -1146,6 +1252,10 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private var shiftSnapshotSendUnavailableMessage: String {
     String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+  }
+
+  private var sendMessageFailedMessage: String {
+    String(localized: .friendsChatSendFailed)
   }
 
   private var editMessageFailedMessage: String {

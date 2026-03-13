@@ -42,15 +42,8 @@ struct FriendsChatMessageRowContent: View {
   let messageStatus: FriendsChatMessageStatus?
   let onReply: () -> Void
   let onRetry: () -> Void
-  let onReportMessage: () -> Void
   let onToggleReaction: (String) -> Void
-  let onOpenActions: (CGRect) -> Void
   let onTapQuotedMessage: () -> Void
-
-  @State private var actionSourceFrame: CGRect = .zero
-  @State private var longPressTriggerTask: Task<Void, Never>?
-  @State private var didTriggerLongPress = false
-  @State private var suppressNextImageTap = false
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,13 +57,13 @@ struct FriendsChatMessageRowContent: View {
     let showsMetadataRow = showsTimestamp || messageStatus != nil || message.editedAt != nil
     let topPadding =
       message.reactions.isEmpty
-      ? (groupContext.joinsPrevious ? CGFloat.zero : Spacing.xxs)
+      ? (groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs)
       : Spacing.md
     let bottomPadding =
       if showsMetadataRow {
         Spacing.xxxs
       } else if groupContext.joinsNext {
-        CGFloat.zero
+        Spacing.micro
       } else {
         Spacing.xxs
       }
@@ -80,7 +73,12 @@ struct FriendsChatMessageRowContent: View {
         FriendsChatDateSeparator(date: separatorDate)
       }
 
-      ChatMessageRow(isCurrentUser: isCurrentUser, minSpacer: 48, spacing: Spacing.xxs) {
+      ChatMessageRow(
+        isCurrentUser: isCurrentUser,
+        minSpacer: Spacing.xxxl,
+        spacing: Spacing.xxs,
+        horizontalInset: Spacing.sm
+      ) {
         HStack(alignment: .top, spacing: Spacing.xs) {
           if !isCurrentUser {
             avatarSlot
@@ -96,6 +94,7 @@ struct FriendsChatMessageRowContent: View {
 
             FriendsChatReplySwipeContainer(
               isCurrentUser: isCurrentUser,
+              isEnabled: message.messageType == .user && message.deletedAt == nil,
               onReply: onReply
             ) {
               VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
@@ -106,6 +105,10 @@ struct FriendsChatMessageRowContent: View {
                     isHighlighted: false,
                     onTap: onTapQuotedMessage
                   )
+                  .friendsChatFocusedBackground(
+                    isHighlighted: false,
+                    cornerRadius: CornerRadius.lg
+                  )
                 }
 
                 ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
@@ -114,10 +117,7 @@ struct FriendsChatMessageRowContent: View {
                     FriendsChatImageView(
                       attachment: attachment,
                       isCurrentUser: isCurrentUser,
-                      suppressTap: suppressNextImageTap,
-                      onConsumeSuppressedTap: {
-                        suppressNextImageTap = false
-                      }
+                      isHighlighted: isHighlighted
                     )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
@@ -132,7 +132,8 @@ struct FriendsChatMessageRowContent: View {
                 if let shiftSnapshot {
                   ChatShiftSnapshotCard(
                     snapshot: shiftSnapshot,
-                    isCurrentUser: isCurrentUser
+                    isCurrentUser: isCurrentUser,
+                    isHighlighted: isHighlighted
                   )
                   .overlay(alignment: reactionAlignment) {
                     if !hasMessageText, imageAttachments.isEmpty {
@@ -145,6 +146,7 @@ struct FriendsChatMessageRowContent: View {
                   FriendsChatReactionAnchoredBubbleCard(
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
+                    isHighlighted: isHighlighted,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
                     maxWidth: 280
                   ) {
@@ -162,6 +164,7 @@ struct FriendsChatMessageRowContent: View {
                   FriendsChatReactionAnchoredBubbleCard(
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
+                    isHighlighted: isHighlighted,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
                     maxWidth: 280
                   ) {
@@ -186,30 +189,6 @@ struct FriendsChatMessageRowContent: View {
                   }
                 }
               }
-              .background {
-                GeometryReader { geometry in
-                  Color.clear
-                    .preference(
-                      key: FriendsChatActionSourceFramePreferenceKey.self,
-                      value: geometry.frame(in: .global)
-                    )
-                }
-              }
-            }
-            .onPreferenceChange(FriendsChatActionSourceFramePreferenceKey.self) { frame in
-              guard frame.integral != .zero else { return }
-              actionSourceFrame = frame
-            }
-            .onLongPressGesture(
-              minimumDuration: 0.28,
-              maximumDistance: 16,
-              perform: {}
-            ) { isPressing in
-              handleLongPressStateChange(isPressing)
-            }
-            .onDisappear {
-              cancelLongPressTrigger()
-              didTriggerLongPress = false
             }
 
             if showsMetadataRow {
@@ -256,37 +235,13 @@ struct FriendsChatMessageRowContent: View {
           }
         }
       }
+      .padding(.top, topPadding)
+      .padding(.bottom, bottomPadding)
+      .background(
+        Rectangle()
+          .fill(isHighlighted ? Color.tidexBlue.opacity(0.12) : Color.clear)
+      )
     }
-    .padding(.top, topPadding)
-    .padding(.bottom, bottomPadding)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(isHighlighted ? Color.tidexBlue.opacity(0.08) : Color.clear)
-    )
-  }
-
-  private func handleLongPressStateChange(_ isPressing: Bool) {
-    if isPressing {
-      guard longPressTriggerTask == nil else { return }
-      didTriggerLongPress = false
-      longPressTriggerTask = Task { @MainActor in
-        try? await Task.sleep(nanoseconds: 280_000_000)
-        guard !Task.isCancelled, !didTriggerLongPress else { return }
-        didTriggerLongPress = true
-        suppressNextImageTap = true
-        Haptics.play(.medium)
-        onOpenActions(actionSourceFrame)
-      }
-      return
-    }
-
-    cancelLongPressTrigger()
-    didTriggerLongPress = false
-  }
-
-  private func cancelLongPressTrigger() {
-    longPressTriggerTask?.cancel()
-    longPressTriggerTask = nil
   }
 
   @ViewBuilder
@@ -412,14 +367,90 @@ extension FriendLastMessagePreviewKind {
   }
 }
 
-private struct FriendsChatActionSourceFramePreferenceKey: PreferenceKey {
-  static var defaultValue: CGRect = .zero
+private struct FriendsChatReplySwipeContainer<Content: View>: View {
+  let isCurrentUser: Bool
+  let isEnabled: Bool
+  let onReply: () -> Void
+  @ViewBuilder let content: () -> Content
 
-  static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-    let next = nextValue()
-    if next != .zero {
-      value = next
+  @GestureState private var dragTranslation: CGFloat = 0
+
+  private let horizontalDominanceRatio: CGFloat = 1.75
+
+  private var activationDistance: CGFloat { Spacing.huge + Spacing.md }
+  private var recognitionDistance: CGFloat { Spacing.mlg + Spacing.micro }
+  private var indicatorSize: CGFloat { Spacing.xl }
+  private var indicatorHorizontalInset: CGFloat { Spacing.xs }
+  private var indicatorFontSize: CGFloat { Spacing.iconSizeSmall }
+  private var visualTravelLimit: CGFloat { Spacing.xxl }
+
+  var body: some View {
+    if isEnabled {
+      content()
+        .offset(x: limitedVisualOffset)
+        .overlay(alignment: isCurrentUser ? .trailing : .leading) {
+          replyIndicator
+            .padding(.horizontal, indicatorHorizontalInset)
+        }
+        .contentShape(Rectangle())
+        .simultaneousGesture(replyGesture)
+        .animation(.easeOut(duration: 0.16), value: limitedVisualOffset)
+    } else {
+      content()
     }
+  }
+
+  private var directionalTranslation: CGFloat {
+    if isCurrentUser {
+      return max(0, -dragTranslation)
+    }
+    return max(0, dragTranslation)
+  }
+
+  private var limitedVisualOffset: CGFloat {
+    let offset = min(directionalTranslation, visualTravelLimit)
+    return isCurrentUser ? -offset : offset
+  }
+
+  private var replyIndicator: some View {
+    Image(systemName: "arrowshape.turn.up.left.fill")
+      .font(.system(size: indicatorFontSize, weight: .semibold))
+      .foregroundColor(.tidexBlue)
+      .frame(width: indicatorSize, height: indicatorSize)
+      .background(
+        Circle()
+          .fill(Color.tidexBlue.opacity(0.14))
+      )
+      .opacity(min(directionalTranslation / activationDistance, 1))
+      .scaleEffect(0.85 + (min(directionalTranslation / activationDistance, 1) * 0.15))
+  }
+
+  private var replyGesture: some Gesture {
+    DragGesture(minimumDistance: recognitionDistance, coordinateSpace: .local)
+      .updating($dragTranslation) { value, state, _ in
+        let horizontalTravel = abs(value.translation.width)
+        let verticalTravel = abs(value.translation.height)
+        guard horizontalTravel >= recognitionDistance,
+          horizontalTravel > verticalTravel * horizontalDominanceRatio
+        else {
+          state = 0
+          return
+        }
+        state = value.translation.width
+      }
+      .onEnded { value in
+        let horizontalTravel = abs(value.translation.width)
+        let verticalTravel = abs(value.translation.height)
+        guard horizontalTravel >= recognitionDistance,
+          horizontalTravel > verticalTravel * horizontalDominanceRatio
+        else { return }
+
+        let directionalTravel = isCurrentUser ? -value.translation.width : value.translation.width
+        guard directionalTravel >= activationDistance else { return }
+
+        Haptics.play(.medium)
+        onReply()
+      }
   }
 }
 
@@ -466,6 +497,7 @@ extension FriendMessageAttachment {
 private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
   let isCurrentUser: Bool
   let groupContext: FriendsChatMessageGroupContext
+  let isHighlighted: Bool
   var minWidth: CGFloat? = nil
   var maxWidth: CGFloat? = nil
   @ViewBuilder let content: () -> Content
@@ -510,6 +542,10 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
       .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
         reaction()
       }
+      .friendsChatFocusedBackground(
+        isHighlighted: isHighlighted,
+        cornerRadius: CornerRadius.bubble
+      )
   }
 
   private var bubbleShape: some InsettableShape {
@@ -616,84 +652,6 @@ private struct FriendsChatDateSeparator: View {
   }
 }
 
-private struct FriendsChatReplySwipeContainer<Content: View>: View {
-  let isCurrentUser: Bool
-  let onReply: () -> Void
-  @ViewBuilder let content: () -> Content
-
-  @GestureState private var dragTranslation: CGFloat = 0
-
-  private let activationDistance: CGFloat = 72
-  private let recognitionDistance: CGFloat = 22
-  private let horizontalDominanceRatio: CGFloat = 1.75
-  private let visualTravelLimit: CGFloat = 26
-
-  var body: some View {
-    content()
-      .offset(x: limitedVisualOffset)
-      .overlay(alignment: isCurrentUser ? .trailing : .leading) {
-        replyIndicator
-          .padding(.horizontal, Spacing.sm)
-      }
-      .contentShape(Rectangle())
-      .simultaneousGesture(replyGesture)
-      .animation(.easeOut(duration: 0.16), value: limitedVisualOffset)
-  }
-
-  private var directionalTranslation: CGFloat {
-    if isCurrentUser {
-      return max(0, -dragTranslation)
-    }
-    return max(0, dragTranslation)
-  }
-
-  private var limitedVisualOffset: CGFloat {
-    let offset = min(directionalTranslation, visualTravelLimit)
-    return isCurrentUser ? -offset : offset
-  }
-
-  private var replyIndicator: some View {
-    Image(systemName: "arrowshape.turn.up.left.fill")
-      .font(.system(size: 15, weight: .semibold))
-      .foregroundColor(.tidexBlue)
-      .frame(width: 28, height: 28)
-      .background(
-        Circle()
-          .fill(Color.tidexBlue.opacity(0.14))
-      )
-      .opacity(min(directionalTranslation / activationDistance, 1))
-      .scaleEffect(0.85 + (min(directionalTranslation / activationDistance, 1) * 0.15))
-  }
-
-  private var replyGesture: some Gesture {
-    DragGesture(minimumDistance: recognitionDistance, coordinateSpace: .local)
-      .updating($dragTranslation) { value, state, _ in
-        let horizontalTravel = abs(value.translation.width)
-        let verticalTravel = abs(value.translation.height)
-        guard horizontalTravel >= recognitionDistance,
-          horizontalTravel > verticalTravel * horizontalDominanceRatio
-        else {
-          state = 0
-          return
-        }
-        state = value.translation.width
-      }
-      .onEnded { value in
-        let horizontalTravel = abs(value.translation.width)
-        let verticalTravel = abs(value.translation.height)
-        guard horizontalTravel >= recognitionDistance,
-          horizontalTravel > verticalTravel * horizontalDominanceRatio
-        else { return }
-
-        let directionalTravel = isCurrentUser ? -value.translation.width : value.translation.width
-        guard directionalTravel >= activationDistance else { return }
-
-        Haptics.play(.medium)
-        onReply()
-      }
-  }
-}
-
 private struct FriendsChatMessageReplyPreview: View {
   let preview: FriendsChatReplyPreviewModel
   let isCurrentUser: Bool
@@ -777,6 +735,7 @@ private struct FriendsChatMessageReplyPreview: View {
 struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
+  let isHighlighted: Bool
 
   private var ownerPrimaryTextColor: Color {
     .tidexTextMuted
@@ -810,38 +769,26 @@ struct ChatShiftSnapshotCard: View {
       )
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+    .friendsChatFocusedBackground(
+      isHighlighted: isHighlighted,
+      cornerRadius: CornerRadius.xl
+    )
   }
 }
 
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
-  let suppressTap: Bool
-  let onConsumeSuppressedTap: () -> Void
+  let isHighlighted: Bool
 
   @State private var selectedImageViewer: FriendsChatSelectedImageViewer?
-
-  init(
-    attachment: FriendMessageAttachment,
-    isCurrentUser: Bool,
-    suppressTap: Bool = false,
-    onConsumeSuppressedTap: @escaping () -> Void = {}
-  ) {
-    self.attachment = attachment
-    self.isCurrentUser = isCurrentUser
-    self.suppressTap = suppressTap
-    self.onConsumeSuppressedTap = onConsumeSuppressedTap
-  }
 
   var body: some View {
     FriendsChatImageAttachmentCard(
       attachment: attachment,
-      isCurrentUser: isCurrentUser
+      isCurrentUser: isCurrentUser,
+      isHighlighted: isHighlighted
     ) { image in
-      if suppressTap {
-        onConsumeSuppressedTap()
-        return
-      }
       selectedImageViewer = FriendsChatSelectedImageViewer(image: image)
     }
     .fullScreenCover(item: $selectedImageViewer) { viewer in
@@ -915,6 +862,7 @@ final class FriendsChatImageLoader: ObservableObject {
 struct FriendsChatImageAttachmentCard: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let isHighlighted: Bool
   var onTap: ((UIImage) -> Void)? = nil
 
   @StateObject private var loader: FriendsChatImageLoader
@@ -922,10 +870,12 @@ struct FriendsChatImageAttachmentCard: View {
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
+    isHighlighted: Bool,
     onTap: ((UIImage) -> Void)? = nil
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
+    self.isHighlighted = isHighlighted
     self.onTap = onTap
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL)
@@ -968,6 +918,10 @@ struct FriendsChatImageAttachmentCard: View {
     .task(id: attachment.id) {
       await loader.loadIfNeeded(attachment: attachment)
     }
+    .friendsChatFocusedBackground(
+      isHighlighted: isHighlighted,
+      cornerRadius: CornerRadius.lg
+    )
   }
 
   private var imageFrameSize: CGSize {
@@ -999,4 +953,26 @@ struct FriendsChatImageAttachmentCard: View {
 private struct FriendsChatSelectedImageViewer: Identifiable {
   let id = UUID()
   let image: UIImage
+}
+
+private struct FriendsChatFocusedBackgroundModifier: ViewModifier {
+  let isHighlighted: Bool
+  let cornerRadius: CGFloat
+
+  func body(content: Content) -> some View {
+    content
+  }
+}
+
+extension View {
+  fileprivate func friendsChatFocusedBackground(isHighlighted: Bool, cornerRadius: CGFloat)
+    -> some View
+  {
+    modifier(
+      FriendsChatFocusedBackgroundModifier(
+        isHighlighted: isHighlighted,
+        cornerRadius: cornerRadius
+      )
+    )
+  }
 }
