@@ -9,8 +9,11 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let placeholder: String
   private let disabled: Bool
   private let isSending: Bool
-  private let canSend: Bool
-  private let sendAccessibilityLabel: String
+  private let canPerformAction: Bool
+  private let actionAccessibilityLabel: String
+  private let actionSystemImage: String
+  private let actionForegroundColor: Color
+  private let actionBackgroundColor: Color
   private let submitLabel: SubmitLabel
   private let focusTrigger: Int
   private let onFocusChanged: ((Bool) -> Void)?
@@ -18,7 +21,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   private let focusedHorizontalPadding: CGFloat?
   private let topPadding: CGFloat
   private let bottomPadding: CGFloat
-  private let onSend: () -> Void
+  private let onAction: () -> Void
   private let leadingAccessory: LeadingAccessory
   private let composerCornerRadius: CGFloat = 24
 
@@ -29,8 +32,11 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     placeholder: String,
     disabled: Bool,
     isSending: Bool = false,
-    canSend: Bool,
-    sendAccessibilityLabel: String,
+    canPerformAction: Bool,
+    actionAccessibilityLabel: String,
+    actionSystemImage: String = "arrow.up",
+    actionForegroundColor: Color = .tidexTextOnBrand,
+    actionBackgroundColor: Color = .tidexBrandPrimary,
     submitLabel: SubmitLabel = .send,
     focusTrigger: Int = 0,
     onFocusChanged: ((Bool) -> Void)? = nil,
@@ -38,15 +44,18 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     focusedHorizontalPadding: CGFloat? = nil,
     topPadding: CGFloat = Spacing.xs,
     bottomPadding: CGFloat = Spacing.md,
-    onSend: @escaping () -> Void,
+    onAction: @escaping () -> Void,
     @ViewBuilder leadingAccessory: () -> LeadingAccessory
   ) {
     _text = text
     self.placeholder = placeholder
     self.disabled = disabled
     self.isSending = isSending
-    self.canSend = canSend
-    self.sendAccessibilityLabel = sendAccessibilityLabel
+    self.canPerformAction = canPerformAction
+    self.actionAccessibilityLabel = actionAccessibilityLabel
+    self.actionSystemImage = actionSystemImage
+    self.actionForegroundColor = actionForegroundColor
+    self.actionBackgroundColor = actionBackgroundColor
     self.submitLabel = submitLabel
     self.focusTrigger = focusTrigger
     self.onFocusChanged = onFocusChanged
@@ -54,7 +63,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     self.focusedHorizontalPadding = focusedHorizontalPadding
     self.topPadding = topPadding
     self.bottomPadding = bottomPadding
-    self.onSend = onSend
+    self.onAction = onAction
     self.leadingAccessory = leadingAccessory()
   }
 
@@ -66,7 +75,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .padding(.horizontal, effectiveHorizontalPadding)
     .padding(.top, topPadding)
     .padding(.bottom, bottomPadding)
-    .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canSend)
+    .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: canPerformAction)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isFocused)
     .onChange(of: focusTrigger) { _, _ in
       guard !disabled else { return }
@@ -97,8 +106,8 @@ struct ChatComposerField<LeadingAccessory: View>: View {
       .disabled(disabled)
       .submitLabel(submitLabel)
       .onSubmit {
-        guard canSend else { return }
-        onSend()
+        guard canPerformAction else { return }
+        onAction()
       }
       .padding(.vertical, Spacing.xs)
 
@@ -125,28 +134,28 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   }
 
   private var sendButton: some View {
-    Button(action: onSend) {
+    Button(action: onAction) {
       Group {
         if isSending {
           ProgressView()
             .progressViewStyle(.circular)
             .tint(.tidexTextOnBrand)
         } else {
-          Image(systemName: "arrow.up")
+          Image(systemName: actionSystemImage)
             .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(canSend ? .tidexTextOnBrand : .tidexTextMuted)
+            .foregroundColor(canPerformAction ? actionForegroundColor : .tidexTextMuted)
         }
       }
       .frame(width: 38, height: 38)
       .background(
         Circle()
-          .fill(canSend ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
+          .fill(canPerformAction ? actionBackgroundColor : Color.tidexSurfaceSecondary)
       )
       .contentShape(Circle())
     }
-    .disabled(!canSend)
-    .accessibilityLabel(Text(sendAccessibilityLabel))
-    .opacity(disabled ? 0.6 : 1)
+    .disabled(!canPerformAction)
+    .accessibilityLabel(Text(actionAccessibilityLabel))
+    .opacity((disabled && !canPerformAction) ? 0.6 : 1)
   }
 
   private var composerTint: Color {
@@ -168,8 +177,11 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
     placeholder: String,
     disabled: Bool,
     isSending: Bool = false,
-    canSend: Bool,
-    sendAccessibilityLabel: String,
+    canPerformAction: Bool,
+    actionAccessibilityLabel: String,
+    actionSystemImage: String = "arrow.up",
+    actionForegroundColor: Color = .tidexTextOnBrand,
+    actionBackgroundColor: Color = .tidexBrandPrimary,
     submitLabel: SubmitLabel = .send,
     focusTrigger: Int = 0,
     onFocusChanged: ((Bool) -> Void)? = nil,
@@ -177,15 +189,18 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
     focusedHorizontalPadding: CGFloat? = nil,
     topPadding: CGFloat = Spacing.xs,
     bottomPadding: CGFloat = Spacing.md,
-    onSend: @escaping () -> Void
+    onAction: @escaping () -> Void
   ) {
     self.init(
       text: text,
       placeholder: placeholder,
       disabled: disabled,
       isSending: isSending,
-      canSend: canSend,
-      sendAccessibilityLabel: sendAccessibilityLabel,
+      canPerformAction: canPerformAction,
+      actionAccessibilityLabel: actionAccessibilityLabel,
+      actionSystemImage: actionSystemImage,
+      actionForegroundColor: actionForegroundColor,
+      actionBackgroundColor: actionBackgroundColor,
       submitLabel: submitLabel,
       focusTrigger: focusTrigger,
       onFocusChanged: onFocusChanged,
@@ -193,7 +208,7 @@ extension ChatComposerField where LeadingAccessory == EmptyView {
       focusedHorizontalPadding: focusedHorizontalPadding,
       topPadding: topPadding,
       bottomPadding: bottomPadding,
-      onSend: onSend
+      onAction: onAction
     ) {
       EmptyView()
     }

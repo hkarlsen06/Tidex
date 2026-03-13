@@ -63,6 +63,7 @@ pnpm ios:l10n:validate
 - **Location**: `supabase/functions/<function-name>/index.ts`
 - **Shared code**: `supabase/functions/_shared/`
 - **Deployment**: `supabase functions deploy <name> --no-verify-jwt`
+- **CLI rule**: Always include `--no-verify-jwt` when deploying edge functions with the Supabase CLI
 
 **`verify_jwt` settings:**
 

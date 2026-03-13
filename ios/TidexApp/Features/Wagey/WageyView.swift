@@ -257,6 +257,10 @@ struct WageyView: View {
         onSendWithImage: { content, image in
           await handleSendMessageWithImage(content, image: image)
         },
+        onCancel: {
+          viewModel.cancelStream()
+        },
+        isStreaming: viewModel.isStreaming,
         disabled: viewModel.isStreaming
       )
     }

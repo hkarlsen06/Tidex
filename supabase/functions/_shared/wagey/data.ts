@@ -1,0 +1,1708 @@
+import type { User } from "npm:@supabase/supabase-js@2";
+
+import type { WageyRequestContext } from "./context.ts";
+import { getCurrentYearMonth, getMonthEnd, getMonthStart, parseDateAsUTC } from "./date-utils.ts";
+import { getUserTier } from "./get-user-tier.ts";
+import {
+  computeShift,
+  PRESET_SUPPLEMENT_RULES,
+  type CustomSupplementsData,
+  type Job,
+  type ShiftRow,
+  type ShiftWithComputations,
+  type UserSettings,
+  type WageSnapshot,
+} from "./payroll/index.ts";
+import { detectAllRecurringConflicts, type ExistingShift } from "./recurring/conflicts.ts";
+import { generateVirtualShiftsForMonth, resolveEndWindow } from "./recurring/utils.ts";
+import { cleanTime } from "./time-utils.ts";
+import { getCurrentMonth, getResetDate, type WageyAccessResult, type WageyInvocationResult } from "./wagey-types.ts";
+
+export type ShiftLoadOptions = {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  jobId?: string;
+};
+
+export type ShiftIdentityRow = {
+  id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  job_id: string | null;
+  recurring_id?: string | null;
+};
+
+type SubscriptionRow = {
+  id: string;
+  user_id: string;
+  provider: "stripe" | "apple" | "admin_trial";
+  status: string;
+  product_id: string | null;
+  current_period_end: string | null;
+  price_id: string | null;
+};
+
+type ProfileRow = {
+  id: string;
+  before_paywall: boolean;
+  wagey_invocations?: { count: number; month: string | null; bonus: number } | null;
+};
+
+type DbRecurringShift = {
+  id: string;
+  user_id: string;
+  job_id?: string | null;
+  start_time: string;
+  end_time: string;
+  repeat_interval_weeks: number;
+  selected_days: Record<"0" | "1" | "2" | "3" | "4" | "5" | "6", string>;
+  end_condition: unknown;
+  exclusions: string[];
+  date_specific_supplements?: Record<string, CustomSupplementsData> | null;
+  created_at?: string;
+  deleted_at?: string | null;
+};
+
+type SnapshotBucket = {
+  dated: Array<WageSnapshot & { from_date: string }>;
+  baseline: WageSnapshot | null;
+};
+
+export type LoadedShiftData = {
+  shifts: ShiftWithComputations[];
+  settings: UserSettings;
+  jobs: Job[];
+  showEarnings?: boolean;
+};
+
+type FriendEntry = {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  firstName: string | null;
+  profilePictureUrl: string | null;
+  oauthAvatarUrl: string | null;
+  sharesWithMe: {
+    blocked: boolean;
+    showEarningsToMe: boolean;
+    sharedAt: string;
+    notificationFrequency: "instant" | "muted";
+  } | null;
+  iShareWith: {
+    showEarningsToThem: boolean;
+    sharedAt: string;
+    ownerMuted: boolean;
+  } | null;
+};
+
+const LEGACY_SNAPSHOT_KEY = "__legacy__";
+const WAGEY_LIMITS = {
+  free: 3,
+  pro: 40,
+  max: 90,
+} as const;
+const SHARE_LIMITS = {
+  free: 1,
+  pro: 10,
+  max: 20,
+} as const;
+const FALLBACK_WAGEY_ACCESS: WageyAccessResult = {
+  level: "free",
+  hasAccess: false,
+  limit: 0,
+  used: 0,
+  remaining: 0,
+  bonus: 0,
+  resetDate: null,
+};
+const FALLBACK_WAGEY_INVOCATION: WageyInvocationResult = {
+  allowed: false,
+  count: 0,
+  remaining: 0,
+  bonus: 0,
+};
+
+function snapshotKeyForJob(jobId?: string | null): string {
+  return jobId ?? LEGACY_SNAPSHOT_KEY;
+}
+
+function buildSnapshotBuckets(snapshots: readonly WageSnapshot[]): ReadonlyMap<string, SnapshotBucket> {
+  const buckets = new Map<string, SnapshotBucket>();
+
+  for (const snapshot of snapshots) {
+    const key = snapshotKeyForJob(snapshot.job_id ?? null);
+    const bucket = buckets.get(key) ?? { dated: [], baseline: null };
+
+    if (snapshot.from_date === null) {
+      bucket.baseline = snapshot;
+    } else {
+      bucket.dated.push(snapshot as WageSnapshot & { from_date: string });
+    }
+
+    buckets.set(key, bucket);
+  }
+
+  for (const bucket of buckets.values()) {
+    bucket.dated.sort((a, b) => b.from_date.localeCompare(a.from_date));
+  }
+
+  return buckets;
+}
+
+function resolveSnapshotForDate(
+  buckets: ReadonlyMap<string, SnapshotBucket>,
+  snapshots: readonly WageSnapshot[],
+  date: string,
+  jobId?: string | null,
+): WageSnapshot | null {
+  const preferredKeys = [snapshotKeyForJob(jobId), LEGACY_SNAPSHOT_KEY];
+
+  for (const key of preferredKeys) {
+    const bucket = buckets.get(key);
+    if (!bucket) continue;
+    const dated = bucket.dated.find((snapshot) => snapshot.from_date <= date);
+    if (dated) return dated;
+  }
+
+  for (const key of preferredKeys) {
+    const baseline = buckets.get(key)?.baseline ?? null;
+    if (baseline) return baseline;
+  }
+
+  return snapshots.find((snapshot) => snapshot.from_date === null) ?? null;
+}
+
+function getDefaultStartDate(): string {
+  const { year, month } = getCurrentYearMonth();
+  return getMonthStart(year, month);
+}
+
+function getDefaultEndDate(): string {
+  const { year, month } = getCurrentYearMonth();
+  return getMonthEnd(year, month);
+}
+
+function calculatePayoutDate(earningsDate: string, payrollDay: number): string {
+  const [earningsYear, earningsMonth] = earningsDate.split("-").map(Number);
+  let payoutYear = earningsYear;
+  let payoutMonth = earningsMonth + 1;
+  if (payoutMonth > 12) {
+    payoutMonth = 1;
+    payoutYear += 1;
+  }
+
+  const daysInPayoutMonth = new Date(Date.UTC(payoutYear, payoutMonth, 0)).getUTCDate();
+  const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+  return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${String(effectivePayrollDay).padStart(2, "0")}`;
+}
+
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = cleanTime(time).split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function calculateNetPay(
+  gross: number,
+  taxSettings: { tax_enabled?: boolean; tax_percentage?: number },
+  halfTaxMonth: number | null | undefined,
+  shiftDate: string,
+): number {
+  if (!taxSettings.tax_enabled || !taxSettings.tax_percentage) {
+    return gross;
+  }
+
+  let taxRate = taxSettings.tax_percentage / 100;
+  if (halfTaxMonth) {
+    const shiftMonth = parseDateAsUTC(shiftDate).getUTCMonth() + 1;
+    const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
+    if (payoutMonth === halfTaxMonth) {
+      taxRate = taxRate / 2;
+    }
+  }
+
+  return gross - gross * taxRate;
+}
+
+async function getProfileAndSubscription(
+  ctx: WageyRequestContext,
+  userId: string,
+): Promise<{ profile: ProfileRow | null; subscription: SubscriptionRow | null }> {
+  const [{ data: profile }, { data: subscription }] = await Promise.all([
+    ctx.supabaseAdmin
+      .from("profiles")
+      .select("id, before_paywall, wagey_invocations")
+      .eq("id", userId)
+      .maybeSingle(),
+    ctx.supabaseAdmin
+      .from("subscriptions")
+      .select("id, user_id, provider, status, product_id, current_period_end, price_id")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  return {
+    profile: (profile as ProfileRow | null) ?? null,
+    subscription: (subscription as SubscriptionRow | null) ?? null,
+  };
+}
+
+export async function beginWageyTurn(
+  ctx: WageyRequestContext,
+): Promise<{ access: WageyAccessResult; invocation: WageyInvocationResult }> {
+  const userId = ctx.user.id;
+
+  try {
+    const { profile, subscription } = await getProfileAndSubscription(ctx, userId);
+    const level = getUserTier(subscription, profile);
+    const limit = WAGEY_LIMITS[level];
+    const hasAccess = level !== "free";
+    const currentMonth = getCurrentMonth();
+    const invocations = profile?.wagey_invocations;
+    const used = invocations?.month === currentMonth ? invocations.count : 0;
+    const bonus = Math.max(0, invocations?.bonus ?? 0);
+    const remaining = Math.max(0, limit - used);
+
+    const access: WageyAccessResult = {
+      level,
+      hasAccess,
+      limit,
+      used,
+      remaining,
+      bonus,
+      resetDate: getResetDate(),
+    };
+
+    const { data, error } = await ctx.supabase.rpc("increment_wagey_invocation", {
+      p_user_id: userId,
+      p_current_month: currentMonth,
+      p_max_invocations: limit,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message ?? "Failed to initialize Wagey turn");
+    }
+
+    return {
+      access,
+      invocation: data as WageyInvocationResult,
+    };
+  } catch (error) {
+    console.error(JSON.stringify({
+      scope: "wagey-data",
+      userId,
+      message: "Falling back after beginWageyTurn failure",
+      error: error instanceof Error ? error.message : String(error),
+    }));
+
+    return {
+      access: FALLBACK_WAGEY_ACCESS,
+      invocation: FALLBACK_WAGEY_INVOCATION,
+    };
+  }
+}
+
+export async function getUserSettings(ctx: WageyRequestContext, userId = ctx.user.id): Promise<UserSettings> {
+  const { data } = await ctx.supabase
+    .from("user_settings")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return ((data ?? {}) as UserSettings) ?? {};
+}
+
+export async function getUserCurrency(ctx: WageyRequestContext, userId = ctx.user.id): Promise<string> {
+  const settings = await getUserSettings(ctx, userId);
+  return settings.currency || "NOK";
+}
+
+export async function getUserJobs(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  options?: { includeArchived?: boolean },
+): Promise<Job[]> {
+  let query = ctx.supabase
+    .from("jobs")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (!options?.includeArchived) {
+    query = query.is("archived_at", null);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Job[];
+}
+
+async function getWageSnapshots(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  jobId?: string,
+): Promise<WageSnapshot[]> {
+  let query = ctx.supabase
+    .from("wage_snapshots")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("from_date", { ascending: false, nullsFirst: false });
+
+  if (jobId) {
+    query = query.eq("job_id", jobId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as WageSnapshot[];
+}
+
+async function getRawUserShifts(
+  ctx: WageyRequestContext,
+  userId: string,
+  options: ShiftLoadOptions = {},
+): Promise<ShiftIdentityRow[]> {
+  let query = ctx.supabase
+    .from("user_shifts")
+    .select("id, shift_date, start_time, end_time, job_id, recurring_id")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("shift_date", { ascending: false });
+
+  if (options.jobId) query = query.eq("job_id", options.jobId);
+  if (options.startDate) query = query.gte("shift_date", options.startDate);
+  if (options.endDate) query = query.lte("shift_date", options.endDate);
+  if (options.limit) query = query.limit(options.limit);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ShiftIdentityRow[];
+}
+
+async function getRawRecurringShifts(
+  client: WageyRequestContext["supabase"] | WageyRequestContext["supabaseAdmin"],
+  userId: string,
+  jobId?: string,
+): Promise<DbRecurringShift[]> {
+  let query = client
+    .from("recurring_shifts")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+
+  if (jobId) query = query.eq("job_id", jobId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DbRecurringShift[];
+}
+
+function buildComputedShiftData(params: {
+  userId: string;
+  settings: UserSettings;
+  jobs: Job[];
+  snapshots: WageSnapshot[];
+  shifts: ShiftRow[];
+  recurringShifts: DbRecurringShift[];
+  startDate: string;
+  endDate: string;
+}): LoadedShiftData {
+  const { userId, settings, jobs, snapshots, shifts, recurringShifts, startDate, endDate } = params;
+  const normalizedJobs = jobs.filter((job) => job.deleted_at == null);
+  const jobsById = new Map(normalizedJobs.map((job) => [job.id, job] as const));
+  const defaultJob =
+    normalizedJobs.find((job) => job.is_default && job.archived_at == null) ??
+    normalizedJobs.find((job) => job.is_default) ??
+    normalizedJobs[0] ??
+    null;
+  const defaultJobId = defaultJob?.id ?? null;
+  const buckets = buildSnapshotBuckets(snapshots);
+  const fallbackPayrollDay = settings.payroll_day ?? 1;
+  const payrollDayForJob = (jobId?: string | null): number =>
+    jobsById.get(jobId ?? "")?.payroll_day ?? defaultJob?.payroll_day ?? fallbackPayrollDay;
+
+  const computedStandalone: ShiftWithComputations[] = shifts.map((shift) => {
+    const shiftJobId = shift.job_id ?? defaultJobId;
+    const snapshot = resolveSnapshotForDate(buckets, snapshots, shift.shift_date, shiftJobId);
+    const payoutSnapshot = resolveSnapshotForDate(
+      buckets,
+      snapshots,
+      calculatePayoutDate(shift.shift_date, payrollDayForJob(shiftJobId)),
+      shiftJobId,
+    );
+
+    return {
+      ...shift,
+      job_id: shiftJobId,
+      supplement_rules_snapshot: snapshot?.supplements ?? null,
+      computed: computeShift(
+        shift,
+        settings,
+        PRESET_SUPPLEMENT_RULES,
+        snapshot,
+        shiftJobId ? jobsById.get(shiftJobId) ?? null : null,
+      ),
+      tax_enabled: payoutSnapshot?.tax_enabled ?? false,
+      tax_percentage: payoutSnapshot?.tax_percentage ?? 0,
+    };
+  });
+
+  const start = parseDateAsUTC(startDate);
+  const end = parseDateAsUTC(endDate);
+  const virtuals: ShiftWithComputations[] = [];
+
+  for (const recurring of recurringShifts) {
+    let currentYear = start.getUTCFullYear();
+    let currentMonth = start.getUTCMonth() + 1;
+
+    while (
+      currentYear < end.getUTCFullYear() ||
+      (currentYear === end.getUTCFullYear() && currentMonth <= end.getUTCMonth() + 1)
+    ) {
+      const generated = generateVirtualShiftsForMonth(
+        { year: currentYear, month: currentMonth },
+        {
+          start_time: cleanTime(recurring.start_time),
+          end_time: cleanTime(recurring.end_time),
+          repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          selected_days: recurring.selected_days,
+          end_condition: recurring.end_condition as never,
+          exclusions: recurring.exclusions || [],
+        },
+      );
+
+      for (const generatedShift of generated) {
+        if (generatedShift.date < startDate || generatedShift.date > endDate) continue;
+
+        const jobId = recurring.job_id ?? defaultJobId;
+        const snapshot = resolveSnapshotForDate(buckets, snapshots, generatedShift.date, jobId);
+        const payoutSnapshot = resolveSnapshotForDate(
+          buckets,
+          snapshots,
+          calculatePayoutDate(generatedShift.date, payrollDayForJob(jobId)),
+          jobId,
+        );
+        const syntheticShift: ShiftRow = {
+          id: `virtual-${recurring.id}-${generatedShift.date}`,
+          user_id: userId,
+          job_id: jobId,
+          shift_date: generatedShift.date,
+          start_time: cleanTime(recurring.start_time),
+          end_time: cleanTime(recurring.end_time),
+          custom_supplements: recurring.date_specific_supplements?.[generatedShift.date] ?? null,
+          recurring_id: recurring.id,
+          recurring_anchor_weekday: generatedShift.weekday,
+        };
+
+        virtuals.push({
+          ...syntheticShift,
+          supplement_rules_snapshot: snapshot?.supplements ?? null,
+          computed: computeShift(
+            syntheticShift,
+            settings,
+            PRESET_SUPPLEMENT_RULES,
+            snapshot,
+            jobId ? jobsById.get(jobId) ?? null : null,
+          ),
+          tax_enabled: payoutSnapshot?.tax_enabled ?? false,
+          tax_percentage: payoutSnapshot?.tax_percentage ?? 0,
+        });
+      }
+
+      currentMonth += 1;
+      if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear += 1;
+      }
+    }
+  }
+
+  return {
+    shifts: [...computedStandalone, ...virtuals].sort((a, b) => {
+      const dateDiff = a.shift_date.localeCompare(b.shift_date);
+      if (dateDiff !== 0) return dateDiff;
+      return a.start_time.localeCompare(b.start_time);
+    }),
+    settings,
+    jobs: normalizedJobs,
+  };
+}
+
+export async function getComputedShiftsForApi(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  options: ShiftLoadOptions = {},
+): Promise<LoadedShiftData> {
+  const startDate = options.startDate ?? getDefaultStartDate();
+  const endDate = options.endDate ?? getDefaultEndDate();
+
+  const [settings, jobs, snapshots, rawShifts, recurringShifts] = await Promise.all([
+    getUserSettings(ctx, userId),
+    getUserJobs(ctx, userId, { includeArchived: true }),
+    getWageSnapshots(ctx, userId, options.jobId),
+    (async () => {
+      let query = ctx.supabase
+        .from("user_shifts")
+        .select("*")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .gte("shift_date", startDate)
+        .lte("shift_date", endDate)
+        .order("shift_date", { ascending: false });
+      if (options.jobId) query = query.eq("job_id", options.jobId);
+      if (options.limit) query = query.limit(options.limit);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ShiftRow[];
+    })(),
+    getRawRecurringShifts(ctx.supabase, userId, options.jobId),
+  ]);
+
+  return buildComputedShiftData({
+    userId,
+    settings,
+    jobs,
+    snapshots,
+    shifts: rawShifts,
+    recurringShifts,
+    startDate,
+    endDate,
+  });
+}
+
+export async function getShiftIdentityRowsForApi(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  options: ShiftLoadOptions = {},
+): Promise<ShiftIdentityRow[]> {
+  return await getRawUserShifts(ctx, userId, options);
+}
+
+export async function createShifts(
+  ctx: WageyRequestContext,
+  input: { dates: string[]; start: string; end: string; recurringId?: string; jobId?: string },
+): Promise<{ inserted: number; shiftIds: string[]; dates: string[] }> {
+  const rows = input.dates.map((shift_date) => ({
+    user_id: ctx.user.id,
+    ...(input.jobId ? { job_id: input.jobId } : {}),
+    shift_date,
+    start_time: input.start,
+    end_time: input.end,
+    ...(input.recurringId ? { recurring_id: input.recurringId } : {}),
+  }));
+
+  const { data, error } = await ctx.supabase
+    .from("user_shifts")
+    .insert(rows)
+    .select("id, shift_date");
+  if (error) throw new Error(error.message);
+
+  return {
+    inserted: rows.length,
+    shiftIds: (data ?? []).map((row) => row.id),
+    dates: (data ?? []).map((row) => row.shift_date),
+  };
+}
+
+export async function updateShift(
+  ctx: WageyRequestContext,
+  input: { id: string; job_id?: string; shift_date: string; start: string; end: string; recurring_id?: string },
+): Promise<{ updated: number }> {
+  if (input.recurring_id) {
+    await convertRecurringShiftToStandalone(ctx, {
+      recurringId: input.recurring_id,
+      shiftDate: input.shift_date,
+      startTime: input.start,
+      endTime: input.end,
+    });
+    return { updated: 1 };
+  }
+
+  const { error } = await ctx.supabase
+    .from("user_shifts")
+    .update({
+      shift_date: input.shift_date,
+      start_time: input.start,
+      end_time: input.end,
+      ...(input.job_id !== undefined ? { job_id: input.job_id } : {}),
+    })
+    .eq("id", input.id)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+  return { updated: 1 };
+}
+
+export async function deleteShift(
+  ctx: WageyRequestContext,
+  input: string | { shiftId: string; recurringId?: string; shiftDate?: string },
+): Promise<{ deleted: number }> {
+  const shiftId = typeof input === "string" ? input : input.shiftId;
+  const recurringId = typeof input === "string" ? undefined : input.recurringId;
+  const shiftDate = typeof input === "string" ? undefined : input.shiftDate;
+
+  if (recurringId && shiftDate) {
+    const { data: recurring, error } = await ctx.supabase
+      .from("recurring_shifts")
+      .select("exclusions")
+      .eq("id", recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null)
+      .single();
+    if (error || !recurring) throw new Error("Recurring shift not found");
+
+    const exclusions = Array.from(new Set([...(recurring.exclusions ?? []), shiftDate])).sort();
+    const { error: updateError } = await ctx.supabase
+      .from("recurring_shifts")
+      .update({ exclusions })
+      .eq("id", recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null);
+    if (updateError) throw new Error(updateError.message);
+    return { deleted: 1 };
+  }
+
+  const { error } = await ctx.supabase
+    .from("user_shifts")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", shiftId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+
+  return { deleted: 1 };
+}
+
+export async function createJob(
+  ctx: WageyRequestContext,
+  userId: string,
+  input: Partial<Job> & { name: string },
+): Promise<Job> {
+  const { data, error } = await ctx.supabase
+    .from("jobs")
+    .insert({
+      user_id: userId,
+      name: input.name,
+      color: input.color ?? null,
+      is_default: input.is_default ?? false,
+      sort_order: input.sort_order ?? 0,
+      payroll_day: input.payroll_day ?? null,
+      half_tax_month: input.half_tax_month ?? null,
+      monthly_goal: input.monthly_goal ?? null,
+    })
+    .select("*")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to create workplace");
+  return data as Job;
+}
+
+export async function updateJob(
+  ctx: WageyRequestContext,
+  userId: string,
+  jobId: string,
+  input: Partial<Job>,
+): Promise<Job> {
+  const { data, error } = await ctx.supabase
+    .from("jobs")
+    .update(input)
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .select("*")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to update workplace");
+  return data as Job;
+}
+
+export async function archiveJob(ctx: WageyRequestContext, userId: string, jobId: string): Promise<Job> {
+  return await updateJob(ctx, userId, jobId, { archived_at: new Date().toISOString() } as Partial<Job>);
+}
+
+export async function deleteJob(ctx: WageyRequestContext, userId: string, jobId: string): Promise<void> {
+  const { error } = await ctx.supabase
+    .from("jobs")
+    .update({ deleted_at: new Date().toISOString(), is_default: false })
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+}
+
+export async function draftRecurringShift(
+  ctx: WageyRequestContext,
+  draft: {
+    start_time: string;
+    end_time: string;
+    repeat_interval_weeks: number;
+    selected_days: Record<string, string>;
+    end_condition: unknown;
+    exclusions: string[];
+  },
+): Promise<{ conflictDates: string[]; conflictCount: number; projectedShiftCount: number }> {
+  const { data, error } = await ctx.supabase
+    .from("user_shifts")
+    .select("shift_date, start_time, end_time")
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+
+  const existingShifts = (data ?? []) as ExistingShift[];
+  const conflictDates = await detectAllRecurringConflicts(draft as never, existingShifts);
+
+  const window =
+    draft.end_condition !== null
+      ? resolveEndWindow(draft.selected_days as never, draft.end_condition as never)
+      : resolveEndWindow(draft.selected_days as never, null, 6);
+
+  let projectedShiftCount = 0;
+  if (window) {
+    const startYear = window.minMonth.getUTCFullYear();
+    const endYear = window.maxMonth.getUTCFullYear();
+
+    for (let year = startYear; year <= endYear; year++) {
+      const startMonth = year === startYear ? window.minMonth.getUTCMonth() + 1 : 1;
+      const endMonth = year === endYear ? window.maxMonth.getUTCMonth() + 1 : 12;
+      for (let month = startMonth; month <= endMonth; month++) {
+        projectedShiftCount += generateVirtualShiftsForMonth({ year, month }, draft as never).length;
+      }
+    }
+  }
+
+  return {
+    conflictDates: conflictDates.sort(),
+    conflictCount: conflictDates.length,
+    projectedShiftCount,
+  };
+}
+
+function currentTimeZoneSuffix(): string {
+  const now = new Date();
+  const offset = -now.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+  const minutes = String(Math.abs(offset) % 60).padStart(2, "0");
+  return `${sign}${hours}:${minutes}`;
+}
+
+export async function createRecurringShift(
+  ctx: WageyRequestContext,
+  draft: {
+    start_time: string;
+    end_time: string;
+    repeat_interval_weeks: number;
+    selected_days: Record<string, string>;
+    end_condition: unknown;
+    exclusions: string[];
+    job_id?: string;
+  },
+  options?: { conflictResolution?: "exclude_conflicts" | "keep_existing" },
+): Promise<{ id: string }> {
+  let exclusions = draft.exclusions || [];
+  if ((options?.conflictResolution ?? "exclude_conflicts") === "exclude_conflicts") {
+    const validation = await draftRecurringShift(ctx, draft);
+    exclusions = Array.from(new Set([...exclusions, ...validation.conflictDates])).sort();
+  }
+
+  const timezoneSuffix = currentTimeZoneSuffix();
+  const { data, error } = await ctx.supabase
+    .from("recurring_shifts")
+    .insert({
+      user_id: ctx.user.id,
+      ...(draft.job_id ? { job_id: draft.job_id } : {}),
+      start_time: `${draft.start_time}${timezoneSuffix}`,
+      end_time: `${draft.end_time}${timezoneSuffix}`,
+      repeat_interval_weeks: draft.repeat_interval_weeks,
+      selected_days: draft.selected_days,
+      end_condition: draft.end_condition,
+      exclusions,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to create recurring shift");
+  return { id: data.id };
+}
+
+export async function updateRecurringShift(
+  ctx: WageyRequestContext,
+  input: {
+    id: string;
+    selected_days: Record<string, string>;
+    start_time: string;
+    end_time: string;
+    repeat_interval_weeks: number;
+    end_condition: unknown;
+    exclusions: string[];
+  },
+): Promise<void> {
+  const { error } = await ctx.supabase
+    .from("recurring_shifts")
+    .update({
+      selected_days: input.selected_days,
+      start_time: `${cleanTime(input.start_time)}${currentTimeZoneSuffix()}`,
+      end_time: `${cleanTime(input.end_time)}${currentTimeZoneSuffix()}`,
+      repeat_interval_weeks: input.repeat_interval_weeks,
+      end_condition: input.end_condition,
+      exclusions: input.exclusions,
+    })
+    .eq("id", input.id)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteRecurringShift(ctx: WageyRequestContext, recurringId: string): Promise<void> {
+  const { error } = await ctx.supabase
+    .from("recurring_shifts")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", recurringId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+}
+
+export async function copyShifts(
+  ctx: WageyRequestContext,
+  input: { shiftIds: string[]; targetDate: string },
+): Promise<{ copied: number }> {
+  const sourceShifts: Array<{ start_time: string; end_time: string; job_id?: string | null }> = [];
+  const virtualIds = input.shiftIds.filter((id) => id.startsWith("virtual-"));
+  const regularIds = input.shiftIds.filter((id) => !id.startsWith("virtual-"));
+
+  if (regularIds.length > 0) {
+    const { data, error } = await ctx.supabase
+      .from("user_shifts")
+      .select("*")
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null)
+      .in("id", regularIds);
+    if (error) throw new Error(error.message);
+    sourceShifts.push(...((data ?? []) as Array<{ start_time: string; end_time: string; job_id?: string | null }>));
+  }
+
+  if (virtualIds.length > 0) {
+    const recurringIds = Array.from(
+      new Set(
+        virtualIds
+          .map((id) => id.match(/^virtual-([a-f0-9-]+)-\d{4}-\d{2}-\d{2}$/)?.[1])
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (recurringIds.length > 0) {
+      const { data, error } = await ctx.supabase
+        .from("recurring_shifts")
+        .select("id, start_time, end_time, job_id")
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null)
+        .in("id", recurringIds);
+      if (error) throw new Error(error.message);
+
+      const recurringMap = new Map((data ?? []).map((row) => [row.id, row]));
+      for (const virtualId of virtualIds) {
+        const recurringId = virtualId.match(/^virtual-([a-f0-9-]+)-\d{4}-\d{2}-\d{2}$/)?.[1];
+        if (!recurringId) continue;
+        const recurring = recurringMap.get(recurringId);
+        if (!recurring) continue;
+        sourceShifts.push({
+          start_time: recurring.start_time,
+          end_time: recurring.end_time,
+          job_id: recurring.job_id ?? null,
+        });
+      }
+    }
+  }
+
+  const rows = sourceShifts.map((shift) => ({
+    user_id: ctx.user.id,
+    ...(shift.job_id ? { job_id: shift.job_id } : {}),
+    shift_date: input.targetDate,
+    start_time: cleanTime(shift.start_time),
+    end_time: cleanTime(shift.end_time),
+  }));
+
+  const { error } = await ctx.supabase.from("user_shifts").insert(rows);
+  if (error) throw new Error(error.message);
+  return { copied: rows.length };
+}
+
+export async function updateCustomSupplements(
+  ctx: WageyRequestContext,
+  input: {
+    shiftId: string;
+    customSupplements: CustomSupplementsData | null;
+    recurringId?: string;
+    shiftDate?: string;
+  },
+): Promise<{ updated: number }> {
+  if (input.recurringId && input.shiftDate) {
+    const { data: recurring, error } = await ctx.supabase
+      .from("recurring_shifts")
+      .select("date_specific_supplements")
+      .eq("id", input.recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null)
+      .single();
+    if (error || !recurring) throw new Error(error?.message ?? "Recurring shift not found");
+
+    const updatedDateSpecific = { ...(recurring.date_specific_supplements ?? {}) };
+    if (input.customSupplements) {
+      updatedDateSpecific[input.shiftDate] = input.customSupplements;
+    } else {
+      delete updatedDateSpecific[input.shiftDate];
+    }
+
+    const { error: updateError } = await ctx.supabase
+      .from("recurring_shifts")
+      .update({
+        date_specific_supplements: Object.keys(updatedDateSpecific).length > 0 ? updatedDateSpecific : null,
+      })
+      .eq("id", input.recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null);
+
+    if (updateError) throw new Error(updateError.message);
+    return { updated: 1 };
+  }
+
+  const { error } = await ctx.supabase
+    .from("user_shifts")
+    .update({ custom_supplements: input.customSupplements })
+    .eq("id", input.shiftId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  return { updated: 1 };
+}
+
+export async function convertRecurringShiftToStandalone(
+  ctx: WageyRequestContext,
+  input: { recurringId: string; shiftDate: string; startTime: string; endTime: string },
+): Promise<void> {
+  const { data: recurring, error } = await ctx.supabase
+    .from("recurring_shifts")
+    .select("exclusions, job_id")
+    .eq("id", input.recurringId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null)
+    .single();
+  if (error || !recurring) throw new Error(error?.message ?? "Recurring shift not found");
+
+  const exclusions = Array.from(new Set([...(recurring.exclusions ?? []), input.shiftDate])).sort();
+  const [{ error: updateError }, { error: insertError }] = await Promise.all([
+    ctx.supabase
+      .from("recurring_shifts")
+      .update({ exclusions })
+      .eq("id", input.recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null),
+    ctx.supabase.from("user_shifts").insert({
+      user_id: ctx.user.id,
+      ...(recurring.job_id ? { job_id: recurring.job_id } : {}),
+      shift_date: input.shiftDate,
+      start_time: input.startTime,
+      end_time: input.endTime,
+    }),
+  ]);
+  if (updateError) throw new Error(updateError.message);
+  if (insertError) throw new Error(insertError.message);
+}
+
+export async function moveRecurringShift(
+  ctx: WageyRequestContext,
+  input: { recurringId: string; sourceDate: string; targetDate: string; startTime: string; endTime: string },
+): Promise<void> {
+  await convertRecurringShiftToStandalone(ctx, {
+    recurringId: input.recurringId,
+    shiftDate: input.sourceDate,
+    startTime: cleanTime(input.startTime),
+    endTime: cleanTime(input.endTime),
+  });
+
+  const { error } = await ctx.supabase
+    .from("user_shifts")
+    .update({ shift_date: input.targetDate })
+    .eq("user_id", ctx.user.id)
+    .eq("shift_date", input.sourceDate)
+    .eq("start_time", cleanTime(input.startTime))
+    .eq("end_time", cleanTime(input.endTime))
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(error.message);
+}
+
+export async function clearShiftSnapshots(
+  ctx: WageyRequestContext,
+  shiftId: string,
+): Promise<{ success: true }> {
+  const { error } = await ctx.supabase
+    .from("user_shifts")
+    .update({
+      hourly_wage_snapshot: null,
+      supplement_rules_snapshot: null,
+    })
+    .eq("id", shiftId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function submitFeedback(ctx: WageyRequestContext, message: string): Promise<void> {
+  const trimmed = message.trim();
+  if (!trimmed) throw new Error("Feedback cannot be empty");
+  const { error } = await ctx.supabase.from("feedback").insert({
+    user_id: ctx.user.id,
+    message: trimmed,
+    user_email: ctx.user.email ?? "unknown",
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function getUserFeedback(ctx: WageyRequestContext): Promise<Array<Record<string, unknown>>> {
+  const { data, error } = await ctx.supabase
+    .from("feedback")
+    .select("id, message, created_at, response, responded_at")
+    .eq("user_id", ctx.user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<Record<string, unknown>>;
+}
+
+export async function updateProfileSettings(
+  ctx: WageyRequestContext,
+  data: { firstName: string; profilePictureUrl?: string | null },
+): Promise<void> {
+  const metadata = ctx.user.user_metadata ?? {};
+  const { error: authError } = await ctx.supabase.auth.updateUser({
+    data: {
+      ...metadata,
+      full_name: data.firstName,
+      name: data.firstName,
+    },
+  });
+  if (authError) throw new Error(authError.message);
+
+  if (data.profilePictureUrl !== undefined) {
+    const { error } = await ctx.supabase
+      .from("user_settings")
+      .update({ profile_picture_url: data.profilePictureUrl })
+      .eq("user_id", ctx.user.id);
+    if (error) throw new Error(error.message);
+  }
+}
+
+export async function updateDisplaySettings(
+  ctx: WageyRequestContext,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await ctx.supabase.from("user_settings").update(data).eq("user_id", ctx.user.id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updatePaySettings(
+  ctx: WageyRequestContext,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const { monthly_goals_by_month: overridePatch, ...scalarData } = data;
+  const updateData: Record<string, unknown> = { ...scalarData };
+
+  if (overridePatch && typeof overridePatch === "object" && !Array.isArray(overridePatch)) {
+    const { data: current, error: fetchError } = await ctx.supabase
+      .from("user_settings")
+      .select("monthly_goals_by_month")
+      .eq("user_id", ctx.user.id)
+      .single();
+    if (fetchError) throw new Error(fetchError.message);
+
+    const merged = { ...((current?.monthly_goals_by_month ?? {}) as Record<string, number>) };
+    for (const [month, value] of Object.entries(overridePatch as Record<string, number | null>)) {
+      if (value === null) {
+        delete merged[month];
+      } else {
+        merged[month] = value;
+      }
+    }
+    updateData.monthly_goals_by_month = merged;
+  }
+
+  const { error } = await ctx.supabase.from("user_settings").update(updateData).eq("user_id", ctx.user.id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updatePreferencesSettings(
+  ctx: WageyRequestContext,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await ctx.supabase.from("user_settings").update(data).eq("user_id", ctx.user.id);
+  if (error) throw new Error(error.message);
+}
+
+export async function getTariffTypes(ctx: WageyRequestContext): Promise<Array<Record<string, unknown>>> {
+  const { data, error } = await ctx.supabase.rpc("get_tariff_types");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<Record<string, unknown>>;
+}
+
+export async function getLatestTariffVersion(
+  ctx: WageyRequestContext,
+  tariffType: string,
+): Promise<Record<string, unknown> | null> {
+  const { data, error } = await ctx.supabase.rpc("get_tariff_versions", {
+    p_tariff_type: tariffType,
+  });
+  if (error) throw new Error(error.message);
+  return (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+}
+
+export async function getTariffVersionForDate(
+  ctx: WageyRequestContext,
+  tariffType: string,
+  targetDate: string,
+): Promise<Record<string, unknown> | null> {
+  const { data, error } = await ctx.supabase.rpc("get_tariff_version_for_date", {
+    p_tariff_type: tariffType,
+    p_target_date: targetDate,
+  });
+  if (error) throw new Error(error.message);
+  return (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+}
+
+async function getUsersByIds(
+  ctx: WageyRequestContext,
+  userIds: string[],
+): Promise<Map<string, { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null }>> {
+  if (userIds.length === 0) return new Map();
+  const { data, error } = await ctx.supabaseAdmin.rpc("get_users_by_ids", {
+    user_ids: userIds,
+  });
+  if (error) throw new Error(error.message);
+
+  return new Map(
+    ((data ?? []) as Array<Record<string, unknown>>).map((row) => [
+      String(row.id),
+      {
+        email: (row.email as string | null) ?? null,
+        phone: (row.phone as string | null) ?? null,
+        firstName: (row.first_name as string | null) ?? null,
+        oauthAvatarUrl: (row.oauth_avatar_url as string | null) ?? null,
+      },
+    ]),
+  );
+}
+
+function normalizeShareIdentifier(identifier: string): { type: "email" | "phone"; value: string } | null {
+  const trimmed = identifier.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes("@")) {
+    return { type: "email", value: trimmed.toLowerCase() };
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  let local = digits;
+  if (digits.length === 12 && digits.startsWith("0047")) local = digits.slice(4);
+  else if (digits.length === 10 && digits.startsWith("47")) local = digits.slice(2);
+  else if (digits.length === 9 && digits.startsWith("0")) local = digits.slice(1);
+  return local.length === 8 ? { type: "phone", value: `+47${local}` } : null;
+}
+
+async function canAddMoreRecipients(ctx: WageyRequestContext): Promise<{ currentCount: number; limit: number }> {
+  const { profile, subscription } = await getProfileAndSubscription(ctx, ctx.user.id);
+  const tier = getUserTier(subscription, profile);
+  const limit = SHARE_LIMITS[tier];
+  const { count, error } = await ctx.supabase
+    .from("shift_shares")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", ctx.user.id);
+  if (error) throw new Error(error.message);
+  return { currentCount: count ?? 0, limit };
+}
+
+export async function createShare(
+  ctx: WageyRequestContext,
+  identifier: string,
+  options?: { showEarnings?: boolean },
+): Promise<{ success: boolean; error?: string }> {
+  const normalized = normalizeShareIdentifier(identifier);
+  if (!normalized) {
+    return { success: false, error: "Vennligst oppgi en gyldig e-post eller telefonnummer" };
+  }
+
+  const { currentCount, limit } = await canAddMoreRecipients(ctx);
+  if (currentCount >= limit) {
+    return { success: false, error: "Du har nådd maksimalt antall delinger for ditt abonnement" };
+  }
+
+  let recipientId: string | null = null;
+  if (normalized.type === "email") {
+    const { data, error } = await ctx.supabaseAdmin.rpc("find_user_by_email", {
+      search_email: normalized.value,
+    });
+    if (error) throw new Error(error.message);
+    recipientId = data as string | null;
+  } else {
+    const { data, error } = await ctx.supabaseAdmin.rpc("find_user_by_phone", {
+      search_phone: normalized.value,
+    });
+    if (error) throw new Error(error.message);
+    recipientId = data as string | null;
+  }
+
+  if (!recipientId) {
+    return { success: false, error: "Fant ingen bruker med denne e-posten eller telefonnummeret" };
+  }
+  if (recipientId === ctx.user.id) {
+    return { success: false, error: "Du kan ikke dele med deg selv" };
+  }
+
+  const { error } = await ctx.supabase.from("shift_shares").insert({
+    owner_id: ctx.user.id,
+    viewer_id: recipientId,
+    show_earnings: options?.showEarnings ?? false,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { success: false, error: "Du deler allerede vaktene dine med denne brukeren" };
+    }
+    throw new Error(error.message);
+  }
+
+  return { success: true };
+}
+
+export async function removeShare(ctx: WageyRequestContext, recipientId: string): Promise<{ success: boolean }> {
+  const { error } = await ctx.supabase
+    .from("shift_shares")
+    .delete()
+    .eq("owner_id", ctx.user.id)
+    .eq("viewer_id", recipientId);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function toggleShareEarnings(
+  ctx: WageyRequestContext,
+  recipientId: string,
+  showEarnings: boolean,
+): Promise<{ success: boolean }> {
+  const { error } = await ctx.supabase
+    .from("shift_shares")
+    .update({ show_earnings: showEarnings })
+    .eq("owner_id", ctx.user.id)
+    .eq("viewer_id", recipientId);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function blockSharer(ctx: WageyRequestContext, ownerId: string): Promise<{ success: boolean }> {
+  const { error } = await ctx.supabase
+    .from("shift_shares")
+    .update({ hidden: true })
+    .eq("viewer_id", ctx.user.id)
+    .eq("owner_id", ownerId);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function unblockSharer(ctx: WageyRequestContext, ownerId: string): Promise<{ success: boolean }> {
+  const { error } = await ctx.supabase
+    .from("shift_shares")
+    .update({ hidden: false })
+    .eq("viewer_id", ctx.user.id)
+    .eq("owner_id", ownerId);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function shareBack(ctx: WageyRequestContext, recipientId: string): Promise<{ success: boolean; error?: string }> {
+  const { currentCount, limit } = await canAddMoreRecipients(ctx);
+  if (currentCount >= limit) {
+    return { success: false, error: "Du har nådd maksimalt antall delinger for ditt abonnement" };
+  }
+
+  const { error } = await ctx.supabase.from("shift_shares").insert({
+    owner_id: ctx.user.id,
+    viewer_id: recipientId,
+    show_earnings: false,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { success: false, error: "Du deler allerede vaktene dine med denne brukeren" };
+    }
+    throw new Error(error.message);
+  }
+  return { success: true };
+}
+
+export async function toggleSharerMuted(
+  ctx: WageyRequestContext,
+  ownerId: string,
+  muted: boolean,
+): Promise<{ success: boolean }> {
+  const { error } = await ctx.supabase
+    .from("shift_shares")
+    .update({ muted })
+    .eq("viewer_id", ctx.user.id)
+    .eq("owner_id", ownerId);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function removeSharer(ctx: WageyRequestContext, ownerId: string): Promise<{ success: boolean }> {
+  const { error } = await ctx.supabase
+    .from("shift_shares")
+    .delete()
+    .eq("viewer_id", ctx.user.id)
+    .eq("owner_id", ownerId);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function getAllFriends(ctx: WageyRequestContext): Promise<FriendEntry[]> {
+  const [{ data: sharersRaw, error: sharersError }, { data: recipientsRaw, error: recipientsError }] = await Promise.all([
+    ctx.supabase.rpc("get_my_sharers"),
+    ctx.supabase
+      .from("shift_shares")
+      .select("viewer_id, created_at, show_earnings, owner_muted")
+      .eq("owner_id", ctx.user.id),
+  ]);
+  if (sharersError) throw new Error(sharersError.message);
+  if (recipientsError) throw new Error(recipientsError.message);
+
+  const sharers = (sharersRaw ?? []) as Array<Record<string, unknown>>;
+  const recipients = (recipientsRaw ?? []) as Array<Record<string, unknown>>;
+  const userIds = Array.from(new Set([...sharers.map((row) => String(row.id)), ...recipients.map((row) => String(row.viewer_id))]));
+  const usersById = await getUsersByIds(ctx, userIds);
+
+  const friends = new Map<string, FriendEntry>();
+  for (const userId of userIds) {
+    const user = usersById.get(userId);
+    friends.set(userId, {
+      id: userId,
+      email: user?.email ?? null,
+      phone: user?.phone ?? null,
+      firstName: user?.firstName ?? null,
+      profilePictureUrl: null,
+      oauthAvatarUrl: user?.oauthAvatarUrl ?? null,
+      sharesWithMe: null,
+      iShareWith: null,
+    });
+  }
+
+  for (const sharer of sharers) {
+    const entry = friends.get(String(sharer.id));
+    if (!entry) continue;
+    entry.profilePictureUrl = (sharer.profile_picture_url as string | null) ?? null;
+    entry.sharesWithMe = {
+      blocked: Boolean(sharer.hidden),
+      showEarningsToMe: Boolean(sharer.show_earnings),
+      sharedAt: String(sharer.shared_at),
+      notificationFrequency: Boolean(sharer.hidden) ? "muted" : "instant",
+    };
+  }
+
+  for (const recipient of recipients) {
+    const id = String(recipient.viewer_id);
+    const entry = friends.get(id);
+    if (!entry) continue;
+    entry.iShareWith = {
+      showEarningsToThem: Boolean(recipient.show_earnings),
+      sharedAt: String(recipient.created_at),
+      ownerMuted: Boolean(recipient.owner_muted),
+    };
+  }
+
+  return Array.from(friends.values());
+}
+
+async function loadSharedOwnerData(
+  ctx: WageyRequestContext,
+  ownerId: string,
+  options: ShiftLoadOptions = {},
+): Promise<LoadedShiftData & { showEarnings: boolean }> {
+  const { data: share, error: shareError } = await ctx.supabase
+    .from("shift_shares")
+    .select("show_earnings, hidden, blocked_by_user_id")
+    .eq("owner_id", ownerId)
+    .eq("viewer_id", ctx.user.id)
+    .maybeSingle();
+  if (shareError) throw new Error(shareError.message);
+  if (!share || share.blocked_by_user_id) {
+    throw new Error("No access to shared shifts");
+  }
+
+  const startDate = options.startDate ?? getDefaultStartDate();
+  const endDate = options.endDate ?? getDefaultEndDate();
+
+  const [settings, jobs, snapshots, shifts, recurringShifts] = await Promise.all([
+    (async () => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", ownerId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return ((data ?? {}) as UserSettings) ?? {};
+    })(),
+    (async () => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("jobs")
+        .select("*")
+        .eq("user_id", ownerId)
+        .is("deleted_at", null)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Job[];
+    })(),
+    (async () => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("wage_snapshots")
+        .select("*")
+        .eq("user_id", ownerId)
+        .is("deleted_at", null)
+        .order("from_date", { ascending: false, nullsFirst: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as WageSnapshot[];
+    })(),
+    (async () => {
+      let query = ctx.supabaseAdmin
+        .from("user_shifts")
+        .select("*")
+        .eq("user_id", ownerId)
+        .is("deleted_at", null)
+        .gte("shift_date", startDate)
+        .lte("shift_date", endDate)
+        .order("shift_date", { ascending: false });
+      if (options.jobId) query = query.eq("job_id", options.jobId);
+      if (options.limit) query = query.limit(options.limit);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ShiftRow[];
+    })(),
+    getRawRecurringShifts(ctx.supabaseAdmin, ownerId, options.jobId),
+  ]);
+
+  const loaded = buildComputedShiftData({
+    userId: ownerId,
+    settings,
+    jobs,
+    snapshots,
+    shifts,
+    recurringShifts,
+    startDate,
+    endDate,
+  });
+
+  return {
+    ...loaded,
+    showEarnings: Boolean(share.show_earnings),
+  };
+}
+
+export async function getSharedUserShifts(
+  ctx: WageyRequestContext,
+  ownerId: string,
+  options: ShiftLoadOptions = {},
+): Promise<LoadedShiftData & { showEarnings: boolean }> {
+  return await loadSharedOwnerData(ctx, ownerId, options);
+}
+
+export async function getSharerShiftPreviews(
+  ctx: WageyRequestContext,
+  sharerIds: string[],
+): Promise<Array<{ sharerId: string; showEarnings: boolean; status: "active" | "upcoming" | "past" | null; shift: ShiftWithComputations | null }>> {
+  const now = new Date();
+  const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 30))
+    .toISOString()
+    .slice(0, 10);
+  const endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 30))
+    .toISOString()
+    .slice(0, 10);
+
+  const previews = await Promise.all(
+    sharerIds.map(async (sharerId) => {
+      try {
+        const shared = await loadSharedOwnerData(ctx, sharerId, { startDate, endDate, limit: 1000 });
+        const shifts = [...shared.shifts].sort((a, b) => {
+          const dateDiff = a.shift_date.localeCompare(b.shift_date);
+          if (dateDiff !== 0) return dateDiff;
+          return a.start_time.localeCompare(b.start_time);
+        });
+
+        const active = shifts.find((shift) => {
+          const start = new Date(`${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`).getTime();
+          let end = new Date(`${shift.shift_date}T${cleanTime(shift.end_time)}:00Z`).getTime();
+          if (timeToMinutes(shift.end_time) <= timeToMinutes(shift.start_time)) {
+            end += 24 * 60 * 60 * 1000;
+          }
+          const current = now.getTime();
+          return current >= start && current <= end;
+        });
+        if (active) {
+          return { sharerId, showEarnings: shared.showEarnings, status: "active" as const, shift: active };
+        }
+
+        const upcoming = shifts.find((shift) => {
+          const start = new Date(`${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`).getTime();
+          return start > now.getTime();
+        });
+        if (upcoming) {
+          return { sharerId, showEarnings: shared.showEarnings, status: "upcoming" as const, shift: upcoming };
+        }
+
+        const past = [...shifts].reverse().find((shift) => {
+          const start = new Date(`${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`).getTime();
+          return start < now.getTime();
+        });
+        return { sharerId, showEarnings: shared.showEarnings, status: past ? "past" as const : null, shift: past ?? null };
+      } catch {
+        return { sharerId, showEarnings: false, status: null, shift: null };
+      }
+    }),
+  );
+
+  return previews;
+}
+
+export async function getStatistics(
+  ctx: WageyRequestContext,
+  options: { year?: number; month?: number; jobId?: string } = {},
+): Promise<{
+  currentMonth: Record<string, unknown>;
+  lastMonth: Record<string, unknown>;
+  yearToDate: Record<string, unknown>;
+  fullYear: Record<string, unknown>;
+  yearlyMonths: Array<Record<string, unknown>>;
+  thisWeek: Array<Record<string, unknown>>;
+  monthlyGoal: Record<string, unknown>;
+  currentMonthBreakdown: Record<string, unknown>;
+}> {
+  const now = new Date();
+  const year = options.year ?? now.getUTCFullYear();
+  const month = options.month ?? now.getUTCMonth() + 1;
+
+  const currentMonthStart = getMonthStart(year, month);
+  const currentMonthEnd = getMonthEnd(year, month);
+  const prevMonthYear = month === 1 ? year - 1 : year;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const lastMonthStart = getMonthStart(prevMonthYear, prevMonth);
+  const lastMonthEnd = getMonthEnd(prevMonthYear, prevMonth);
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const weekStart = new Date(now);
+  const day = weekStart.getUTCDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  weekStart.setUTCDate(weekStart.getUTCDate() + diffToMonday);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+
+  const [currentMonthData, lastMonthData, yearData, weekData, settings] = await Promise.all([
+    getComputedShiftsForApi(ctx, ctx.user.id, { startDate: currentMonthStart, endDate: currentMonthEnd, limit: 2000, jobId: options.jobId }),
+    getComputedShiftsForApi(ctx, ctx.user.id, { startDate: lastMonthStart, endDate: lastMonthEnd, limit: 2000, jobId: options.jobId }),
+    getComputedShiftsForApi(ctx, ctx.user.id, { startDate: yearStart, endDate: yearEnd, limit: 5000, jobId: options.jobId }),
+    getComputedShiftsForApi(ctx, ctx.user.id, {
+      startDate: weekStart.toISOString().slice(0, 10),
+      endDate: weekEnd.toISOString().slice(0, 10),
+      limit: 1000,
+      jobId: options.jobId,
+    }),
+    getUserSettings(ctx),
+  ]);
+
+  const summarize = (loaded: LoadedShiftData) => {
+    const totalEarnings = loaded.shifts.reduce((sum, shift) => sum + shift.computed.gross, 0);
+    const totalEarningsNet = loaded.shifts.reduce(
+      (sum, shift) =>
+        sum + calculateNetPay(
+          shift.computed.gross,
+          { tax_enabled: shift.tax_enabled, tax_percentage: shift.tax_percentage },
+          loaded.settings.half_tax_month,
+          shift.shift_date,
+        ),
+      0,
+    );
+    const totalHours = loaded.shifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0);
+    return {
+      totalEarnings: Number(totalEarnings.toFixed(2)),
+      totalEarningsNet: Number(totalEarningsNet.toFixed(2)),
+      totalHours: Number(totalHours.toFixed(2)),
+      shiftCount: loaded.shifts.length,
+      averageRate: totalHours > 0 ? Number((totalEarnings / totalHours).toFixed(2)) : 0,
+    };
+  };
+
+  const yearlyMonths = Array.from({ length: 12 }, (_, index) => index + 1).map((monthNumber) => {
+    const start = getMonthStart(year, monthNumber);
+    const end = getMonthEnd(year, monthNumber);
+    const monthShifts = yearData.shifts.filter((shift) => shift.shift_date >= start && shift.shift_date <= end);
+    const totalGross = monthShifts.reduce((sum, shift) => sum + shift.computed.gross, 0);
+    const totalHours = monthShifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0);
+    return {
+      monthNumber,
+      totalEarnings: Number(totalGross.toFixed(2)),
+      totalHours: Number(totalHours.toFixed(2)),
+      shiftCount: monthShifts.length,
+    };
+  });
+
+  const thisWeek = weekData.shifts.map((shift) => ({
+    fullDate: shift.shift_date,
+    totalEarnings: Number(shift.computed.gross.toFixed(2)),
+    totalHours: Number(shift.computed.paidHours.toFixed(2)),
+    shiftCount: 1,
+  }));
+
+  const currentMonthBreakdown = {
+    basePay: Number(currentMonthData.shifts.reduce((sum, shift) => sum + shift.computed.basePay, 0).toFixed(2)),
+    supplementPay: Number(currentMonthData.shifts.reduce((sum, shift) => sum + shift.computed.supplementPay, 0).toFixed(2)),
+    basePercentage: 0,
+    supplementPercentage: 0,
+  };
+
+  const totalBreakdown = currentMonthBreakdown.basePay + currentMonthBreakdown.supplementPay;
+  currentMonthBreakdown.basePercentage = totalBreakdown > 0 ? Number(((currentMonthBreakdown.basePay / totalBreakdown) * 100).toFixed(2)) : 0;
+  currentMonthBreakdown.supplementPercentage = totalBreakdown > 0 ? Number(((currentMonthBreakdown.supplementPay / totalBreakdown) * 100).toFixed(2)) : 0;
+
+  const monthlyGoalTarget = settings.monthly_goals_by_month?.[`${year}-${String(month).padStart(2, "0")}`] ?? settings.monthly_goal ?? 0;
+  const currentSummary = summarize(currentMonthData);
+
+  return {
+    currentMonth: currentSummary,
+    lastMonth: summarize(lastMonthData),
+    yearToDate: {
+      totalEarnings: Number(
+        yearData.shifts
+          .filter((shift) => shift.shift_date <= currentMonthEnd)
+          .reduce((sum, shift) => sum + shift.computed.gross, 0)
+          .toFixed(2),
+      ),
+      totalHours: Number(
+        yearData.shifts
+          .filter((shift) => shift.shift_date <= currentMonthEnd)
+          .reduce((sum, shift) => sum + shift.computed.paidHours, 0)
+          .toFixed(2),
+      ),
+      shiftCount: yearData.shifts.filter((shift) => shift.shift_date <= currentMonthEnd).length,
+    },
+    fullYear: {
+      totalEarnings: Number(yearData.shifts.reduce((sum, shift) => sum + shift.computed.gross, 0).toFixed(2)),
+      totalHours: Number(yearData.shifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0).toFixed(2)),
+      shiftCount: yearData.shifts.length,
+    },
+    yearlyMonths,
+    thisWeek,
+    monthlyGoal: {
+      enabled: monthlyGoalTarget > 0,
+      target: monthlyGoalTarget,
+      progress: currentSummary.totalEarnings,
+      percentage: monthlyGoalTarget > 0 ? Number(((currentSummary.totalEarnings / monthlyGoalTarget) * 100).toFixed(2)) : 0,
+      remaining: Math.max(0, Number((monthlyGoalTarget - currentSummary.totalEarnings).toFixed(2))),
+    },
+    currentMonthBreakdown,
+  };
+}
