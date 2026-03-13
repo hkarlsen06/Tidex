@@ -402,6 +402,13 @@ final class FriendsThreadViewModel: ObservableObject {
     await realtimeCoordinator.stopThreadSubscription(threadId: route.threadId)
   }
 
+  func startRealtime() async {
+    await realtimeCoordinator.startThreadSubscription(
+      threadId: route.threadId,
+      viewerUserId: viewerUserId
+    )
+  }
+
   func handleDraftChanged(to draft: String) async {
     guard !isThreadReadOnly, !route.counterpartUserId.isEmpty else { return }
     guard composerMode != .edit else {
