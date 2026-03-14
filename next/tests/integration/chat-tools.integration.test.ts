@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getUserFeedback: vi.fn(),
   createWageSnapshotAction: vi.fn(),
   getComputedShiftsForApi: vi.fn(),
+  getShiftIdentityRowsForApi: vi.fn(),
   verifySession: vi.fn(),
 }));
 
@@ -51,6 +52,7 @@ vi.mock("@/app/[locale]/(app)/settings/feedback/_actions/getUserFeedback", () =>
 
 vi.mock("@/data-access/shifts", () => ({
   getComputedShiftsForApi: mocks.getComputedShiftsForApi,
+  getShiftIdentityRowsForApi: mocks.getShiftIdentityRowsForApi,
 }));
 
 vi.mock("@/data-access/auth", () => ({
@@ -228,6 +230,12 @@ describe("chat tool integration paths", () => {
       settings: {},
       jobs: [],
     });
+    mocks.getShiftIdentityRowsForApi.mockResolvedValue([
+      {
+        id: "aaaaa111-1111-4111-8111-111111111111",
+        shift_date: "2026-03-02",
+      },
+    ]);
     mocks.copyShifts.mockResolvedValue({ copied: 1 });
     mocks.clearShiftSnapshots.mockResolvedValue({ success: true });
 

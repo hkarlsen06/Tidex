@@ -10,7 +10,7 @@ import type {
   ToolResultContent,
 } from "./ai-types.ts";
 import { DEFAULT_CLAUDE_MODEL, streamClaudeChat } from "./claude.ts";
-import type { WageyRequestContext } from "./context.ts";
+import { invalidateWageyCache, type WageyRequestContext } from "./context.ts";
 import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
 import { maxIterationsReached } from "./i18n.ts";
@@ -18,7 +18,7 @@ import { getSystemPrompt, type SystemPromptContext } from "./system-prompt.ts";
 import { tools, type ToolName } from "./tools.ts";
 
 const REQUEST_ID_HEADER = "x-wagey-request-id";
-const SSE_HEARTBEAT_MS = 1_000;
+const SSE_HEARTBEAT_MS = 15_000;
 const SSE_FLUSH_PADDING = ": " + " ".repeat(2048) + "\n\n";
 
 export type ChatChunk =
@@ -257,6 +257,9 @@ async function executeSingleToolUse(
     }
 
     const result = await executeTool(ctx, toolUse.name, JSON.stringify(toolUse.input));
+    if (result.success && !isReadOnlyToolUse(toolUse)) {
+      invalidateWageyCache(ctx);
+    }
     const serialized = JSON.stringify(result);
     return {
       uiChunk: { type: "tool_result", toolName: toolUse.name, toolCallId: toolUse.id, result: serialized, success: result.success },
