@@ -1137,21 +1137,9 @@ private struct FriendsThreadDateSeparator: View {
         .fill(Color.tidexBorderSubtle)
         .frame(height: 1)
     }
-    .frame(width: separatorWidth)
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
-  }
-
-  private var separatorWidth: CGFloat {
-    let screenWidth =
-      UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .first?
-      .screen
-      .bounds
-      .width
-      ?? 390
-
-    return screenWidth - (Spacing.md * 2)
   }
 
   private var separatorText: String {

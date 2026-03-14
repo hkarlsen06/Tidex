@@ -475,30 +475,28 @@ private struct FriendsThreadComposerPlusButton: View {
   let action: () -> Void
 
   var body: some View {
-    Group {
-      if isPreparing {
-        ProgressView()
-          .progressViewStyle(.circular)
-          .tint(.tidexBlue)
-      } else {
-        Image(systemName: "plus")
-          .font(.system(size: 20, weight: .semibold))
-          .foregroundColor(isDisabled ? .tidexTextMuted : .tidexBlue)
-          .rotationEffect(.degrees(isOpen ? 45 : 0))
+    Button(action: action) {
+      Group {
+        if isPreparing {
+          ProgressView()
+            .progressViewStyle(.circular)
+            .tint(.tidexBlue)
+        } else {
+          Image(systemName: "plus")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundColor(isDisabled ? .tidexTextMuted : .tidexBlue)
+            .rotationEffect(.degrees(isOpen ? 45 : 0))
+        }
       }
+      .frame(width: 44, height: 44)
+      .background(
+        Circle()
+          .fill(isOpen ? Color.tidexBlue.opacity(0.18) : Color.tidexBlue.opacity(0.12))
+      )
+      .contentShape(Circle())
     }
-    .frame(width: 44, height: 44)
-    .background(
-      Circle()
-        .fill(isOpen ? Color.tidexBlue.opacity(0.18) : Color.tidexBlue.opacity(0.12))
-    )
-    .contentShape(Circle())
-    .onTapGesture {
-      guard !isDisabled else { return }
-      action()
-    }
-    .accessibilityAddTraits(.isButton)
-    .accessibilityRespondsToUserInteraction(!isDisabled)
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
     .accessibilityLabel(
       Text(
         LocalizedStringResource(
@@ -679,8 +677,7 @@ private struct FriendsThreadComposerAttachmentPreview: View {
         case .shiftSnapshot(let draft):
           ChatShiftSnapshotCard(
             snapshot: draft.snapshot,
-            isCurrentUser: false,
-            isHighlighted: false
+            isCurrentUser: false
           )
         }
       }
