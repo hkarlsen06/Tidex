@@ -110,7 +110,7 @@ final class FriendsMessagingService: ObservableObject {
 
     if let cursor {
       params["p_before_last_message_at"] = .string(
-        ISO8601DateFormatter().string(from: cursor.lastMessageAt))
+        cursor.lastMessageAt.toISO8601String())
       params["p_before_thread_id"] = .string(cursor.threadId)
     }
 
@@ -146,7 +146,7 @@ final class FriendsMessagingService: ObservableObject {
     ]
 
     if let cursor {
-      params["p_before_created_at"] = .string(ISO8601DateFormatter().string(from: cursor.createdAt))
+      params["p_before_created_at"] = .string(cursor.createdAt.toISO8601String())
       params["p_before_message_id"] = .string(cursor.messageId)
     }
 

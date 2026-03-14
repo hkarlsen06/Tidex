@@ -329,17 +329,11 @@ enum WageTimelineProcessor {
 extension ISO8601DateFormatter {
   /// Format date as YYYY-MM-DD (date only, no time)
   static func dateOnlyString(from date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone.current
-    return formatter.string(from: date)
+    date.toISODateString()
   }
 
   /// Parse YYYY-MM-DD string to Date
   static func dateFromDateOnlyString(_ string: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone.current
-    return formatter.date(from: string)
+    Date.fromISODateString(string)
   }
 }

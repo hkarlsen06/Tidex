@@ -29,6 +29,16 @@ extension Date {
     FormatterCache.iso8601DateOnlyUTCFormatter().date(from: string)
   }
 
+  /// Format date as HH:mm in local time.
+  func toHourMinuteString(in timeZone: TimeZone = Date.localTimeZone) -> String {
+    FormatterCache.hourMinuteFormatter(timeZone: timeZone).string(from: self)
+  }
+
+  /// Format date as an ISO8601 internet date-time string.
+  func toISO8601String() -> String {
+    FormatterCache.iso8601Formatter().string(from: self)
+  }
+
   // MARK: - Year/Month Components
 
   /// Get year and month components
