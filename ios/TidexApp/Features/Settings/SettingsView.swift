@@ -122,25 +122,23 @@ struct SettingsView: View {
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
-        // MARK: - Account & Security
+        // MARK: - Account
         Section {
           SettingsMenuItem(
             icon: "lock.shield",
-            title: String(localized: .settingsMenuSecurityLabel),
-            iconBackgroundColor: .green
+            title: String(localized: .settingsMenuSecurityLabel)
           ) {
             navigationPath.append(SettingsDestination.security)
           }
 
           SettingsMenuItem(
             icon: "creditcard",
-            title: String(localized: .settingsMenuSubscriptionLabel),
-            iconBackgroundColor: .orange
+            title: String(localized: .settingsMenuSubscriptionLabel)
           ) {
             navigationPath.append(SettingsDestination.subscription)
           }
         } header: {
-          Text(String(localized: .settingsGroupAccountSecurity))
+          Text(.settingsMenuAccountLabel)
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
@@ -148,16 +146,14 @@ struct SettingsView: View {
         Section {
           SettingsMenuItem(
             icon: "bell",
-            title: String(localized: .settingsMenuNotificationsLabel),
-            iconBackgroundColor: .red
+            title: String(localized: .settingsMenuNotificationsLabel)
           ) {
             navigationPath.append(SettingsDestination.notifications)
           }
 
           SettingsMenuItem(
             icon: "paintpalette",
-            title: String(localized: .settingsMenuAppearanceLabel),
-            iconBackgroundColor: .indigo
+            title: String(localized: .settingsMenuAppearanceLabel)
           ) {
             navigationPath.append(SettingsDestination.appearance)
           }
@@ -166,12 +162,11 @@ struct SettingsView: View {
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
-        // MARK: - App Settings
+        // MARK: - Work
         Section {
           SettingsMenuItem(
             icon: "banknote",
-            title: String(localized: .settingsMenuPayLabel),
-            iconBackgroundColor: .green
+            title: String(localized: .settingsMenuPayLabel)
           ) {
             Task {
               await openPaySettings()
@@ -180,35 +175,32 @@ struct SettingsView: View {
 
           SettingsMenuItem(
             icon: "repeat.circle",
-            title: String(localized: .settingsMenuRecurringShiftsLabel),
-            iconBackgroundColor: .purple
+            title: String(localized: .settingsMenuRecurringShiftsLabel)
           ) {
             navigationPath.append(SettingsDestination.recurringShifts)
           }
         } header: {
-          Text(String(localized: .settingsGroupAppSettings))
+          Text(.settingsGroupWork)
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
-        // MARK: - Data & Support
+        // MARK: - Support & Data
         Section {
           SettingsMenuItem(
-            icon: "externaldrive",
-            title: String(localized: .settingsMenuDataLabel),
-            iconBackgroundColor: .gray
-          ) {
-            navigationPath.append(SettingsDestination.data)
-          }
-
-          SettingsMenuItem(
             icon: "message",
-            title: String(localized: .settingsMenuFeedbackLabel),
-            iconBackgroundColor: .tidexBlue
+            title: String(localized: .settingsMenuFeedbackLabel)
           ) {
             navigationPath.append(SettingsDestination.feedback)
           }
+
+          SettingsMenuItem(
+            icon: "externaldrive",
+            title: String(localized: .settingsMenuDataLabel)
+          ) {
+            navigationPath.append(SettingsDestination.data)
+          }
         } header: {
-          Text(String(localized: .settingsGroupDataSupport))
+          Text(.settingsGroupSupportData)
         }
         .listRowBackground(Color.tidexSurfacePrimary)
 
@@ -217,8 +209,7 @@ struct SettingsView: View {
           Section {
             SettingsMenuItem(
               icon: "shield.lefthalf.filled.badge.checkmark",
-              title: String(localized: .settingsMenuAdminLabel),
-              iconBackgroundColor: .tidexWarning
+              title: String(localized: .settingsMenuAdminLabel)
             ) {
               navigationPath.append(SettingsDestination.admin)
             }
@@ -240,8 +231,7 @@ struct SettingsView: View {
           Section {
             SettingsMenuItem(
               icon: "ladybug",
-              title: "Debug",
-              iconBackgroundColor: .pink
+              title: "Debug"
             ) {
               navigationPath.append(SettingsDestination.debug)
             }
@@ -335,7 +325,11 @@ struct SettingsView: View {
     } label: {
       HStack(spacing: Spacing.sm) {
         SettingsRowIcon(
-          systemName: "rectangle.portrait.and.arrow.right", backgroundColor: .tidexError)
+          systemName: "rectangle.portrait.and.arrow.right",
+          foregroundColor: .tidexError,
+          backgroundColor: .tidexError.opacity(0.12),
+          borderColor: .tidexError.opacity(0.18)
+        )
 
         if isSigningOut {
           ProgressView()
@@ -362,7 +356,9 @@ struct SettingsView: View {
       HStack(spacing: Spacing.sm) {
         SettingsRowIcon(
           systemName: "rectangle.portrait.and.arrow.right.fill",
-          backgroundColor: .tidexTextMuted
+          foregroundColor: .tidexTextSecondary,
+          backgroundColor: .tidexSurfaceSecondary,
+          borderColor: .tidexBorderSubtle
         )
 
         if isSigningOutGlobal {
@@ -1178,15 +1174,20 @@ private struct RecurringShiftsSettingsView: View {
 struct SettingsMenuItem: View {
   let icon: String
   let title: String
-  var iconBackgroundColor: Color = .tidexBlue
   let action: () -> Void
 
   @Environment(\.layoutDirection) private var layoutDirection
+  private let rowHeight: CGFloat = 52
 
   var body: some View {
     Button(action: action) {
       HStack(spacing: Spacing.sm) {
-        SettingsRowIcon(systemName: icon, backgroundColor: iconBackgroundColor)
+        SettingsRowIcon(
+          systemName: icon,
+          foregroundColor: .tidexTextSecondary,
+          backgroundColor: .tidexSurfaceSecondary,
+          borderColor: .tidexBorderSubtle
+        )
 
         Text(title)
           .font(.tidexBody)
@@ -1200,7 +1201,7 @@ struct SettingsMenuItem: View {
           .font(.tidexFootnoteMedium)
           .foregroundStyle(.tertiary)
       }
-      .frame(minHeight: 44)
+      .frame(minHeight: rowHeight)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -1210,23 +1211,26 @@ struct SettingsMenuItem: View {
 
 private struct SettingsRowIcon: View {
   let systemName: String
-  let backgroundColor: Color
+  var foregroundColor: Color = .tidexTextPrimary
+  var backgroundColor: Color = .tidexSurfaceSecondary
+  var borderColor: Color = .tidexBorder
+  private let badgeSize: CGFloat = 38
+  private let glyphBoxSize: CGFloat = 18
 
   var body: some View {
     Image(systemName: systemName)
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundColor(.white)
-      .frame(width: 28, height: 28)
+      .resizable()
+      .scaledToFit()
+      .foregroundColor(foregroundColor)
+      .frame(width: glyphBoxSize, height: glyphBoxSize)
+      .frame(width: badgeSize, height: badgeSize)
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
+        Circle()
           .fill(backgroundColor)
-          .saturation(0.72)
-          .brightness(-0.03)
-          .opacity(0.88)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-          .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        Circle()
+          .stroke(borderColor, lineWidth: 1)
       )
       .accessibilityHidden(true)
   }
