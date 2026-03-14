@@ -325,6 +325,7 @@ struct FriendsThreadComposerHostedView: View {
         : String(localized: "Send message"),
       textFieldAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.textField,
       actionButtonAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.sendButton,
+      submitLabel: .return,
       focusTrigger: composerFocusTrigger,
       onFocusChanged: { isComposerFocused = $0 },
       horizontalPadding: MonthPickerLayout.horizontalPadding,

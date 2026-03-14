@@ -327,7 +327,7 @@ struct ShiftDetailsSheet: View {
     }
     .interactiveDismissDisabled(isEditing && hasChanges)
     .sheet(isPresented: $showingShareDestinationPicker) {
-      ShiftShareDestinationSheet(
+      ShareDestinationSheet(
         onShareAsImage: {
           showingShareDestinationPicker = false
           showingImageShareOptions = true
@@ -1241,7 +1241,7 @@ private struct ShareOptionsSheet: View {
   }
 }
 
-private struct ShiftShareDestinationSheet: View {
+struct ShareDestinationSheet: View {
   let onShareAsImage: () -> Void
   let onShareInChat: () -> Void
 

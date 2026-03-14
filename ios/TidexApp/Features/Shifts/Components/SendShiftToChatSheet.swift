@@ -5,7 +5,7 @@ struct SendShiftToChatResult {
 }
 
 @MainActor
-private final class SendShiftToChatViewModel: ObservableObject {
+private final class SendAttachmentToChatViewModel: ObservableObject {
   @Published var recipients: [ShareRecipient] = []
   @Published var recipientSelection = ShareRecipientSelectionState()
   @Published var isLoading = true
@@ -13,7 +13,7 @@ private final class SendShiftToChatViewModel: ObservableObject {
   @Published var errorMessage: String?
 
   private let viewerUserId: String
-  private let buildDraft: (ShareRecipient) throws -> ComposerShiftSnapshotDraft
+  private let buildAttachment: (ShareRecipient) throws -> FriendsComposerAttachmentDraft
   private let service: FriendsMessagingServiceProviding
   private let composerDraftStore: FriendsComposerDraftStore
   private let capabilities: any FriendsMessagingCapabilityProviding
@@ -21,13 +21,13 @@ private final class SendShiftToChatViewModel: ObservableObject {
 
   init(
     viewerUserId: String,
-    buildDraft: @escaping (ShareRecipient) throws -> ComposerShiftSnapshotDraft,
+    buildAttachment: @escaping (ShareRecipient) throws -> FriendsComposerAttachmentDraft,
     service: FriendsMessagingServiceProviding,
     composerDraftStore: FriendsComposerDraftStore,
     capabilities: any FriendsMessagingCapabilityProviding
   ) {
     self.viewerUserId = viewerUserId
-    self.buildDraft = buildDraft
+    self.buildAttachment = buildAttachment
     self.service = service
     self.composerDraftStore = composerDraftStore
     self.capabilities = capabilities
@@ -83,16 +83,16 @@ private final class SendShiftToChatViewModel: ObservableObject {
     defer { isSubmitting = false }
 
     do {
-      guard capabilities.canSendShiftSnapshots else {
+      let attachment = try buildAttachment(recipient)
+      guard attachment.shiftSnapshot == nil || capabilities.canSendShiftSnapshots else {
         errorMessage = String(
           localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
         return nil
       }
 
       let thread = try await service.getOrCreateDirectThread(otherUserId: recipient.id)
-      let draft = try buildDraft(recipient)
       await composerDraftStore.saveAttachmentDraft(
-        .shiftSnapshot(draft),
+        attachment,
         threadId: thread.id,
         viewerUserId: viewerUserId
       )
@@ -104,27 +104,27 @@ private final class SendShiftToChatViewModel: ObservableObject {
   }
 }
 
-struct SendShiftToChatSheet: View {
+struct SendAttachmentToChatSheet: View {
   let viewerUserId: String
-  let buildDraft: (ShareRecipient) throws -> ComposerShiftSnapshotDraft
+  let buildAttachment: (ShareRecipient) throws -> FriendsComposerAttachmentDraft
   let onCompleted: (SendShiftToChatResult) -> Void
 
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var viewModel: SendShiftToChatViewModel
+  @StateObject private var viewModel: SendAttachmentToChatViewModel
 
   @MainActor
   init(
     viewerUserId: String,
-    buildDraft: @escaping (ShareRecipient) throws -> ComposerShiftSnapshotDraft,
+    buildAttachment: @escaping (ShareRecipient) throws -> FriendsComposerAttachmentDraft,
     onCompleted: @escaping (SendShiftToChatResult) -> Void
   ) {
     self.viewerUserId = viewerUserId
-    self.buildDraft = buildDraft
+    self.buildAttachment = buildAttachment
     self.onCompleted = onCompleted
     _viewModel = StateObject(
-      wrappedValue: SendShiftToChatViewModel(
+      wrappedValue: SendAttachmentToChatViewModel(
         viewerUserId: viewerUserId,
-        buildDraft: buildDraft,
+        buildAttachment: buildAttachment,
         service: FriendsMessagingService.shared,
         composerDraftStore: .shared,
         capabilities: FriendsMessagingCapabilities.shared
@@ -227,5 +227,21 @@ struct SendShiftToChatSheet: View {
         .disabled(viewModel.isSubmitting)
       }
     }
+  }
+}
+
+struct SendShiftToChatSheet: View {
+  let viewerUserId: String
+  let buildDraft: (ShareRecipient) throws -> ComposerShiftSnapshotDraft
+  let onCompleted: (SendShiftToChatResult) -> Void
+
+  var body: some View {
+    SendAttachmentToChatSheet(
+      viewerUserId: viewerUserId,
+      buildAttachment: { recipient in
+        .shiftSnapshot(try buildDraft(recipient))
+      },
+      onCompleted: onCompleted
+    )
   }
 }

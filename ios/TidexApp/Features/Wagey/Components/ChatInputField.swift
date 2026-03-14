@@ -251,6 +251,7 @@ struct ChatInputField: View {
         actionSystemImage: actionSystemImage,
         actionForegroundColor: actionForegroundColor,
         actionBackgroundColor: actionBackgroundColor,
+        submitLabel: .return,
         triggersSubmit: !isStreaming,
         onFocusChanged: { isComposerFocused = $0 },
         horizontalPadding: effectiveHorizontalPadding,
