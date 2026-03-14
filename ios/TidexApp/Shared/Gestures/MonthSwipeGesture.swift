@@ -271,6 +271,7 @@ extension View {
     onSwipeLeft: @escaping () -> Void,
     onSwipeRight: @escaping () -> Void,
     threshold: CGFloat = 50,
+    edgeExclusion: CGFloat = 0,
     isEnabled: Bool = true
   ) -> some View {
     self.modifier(
@@ -278,6 +279,7 @@ extension View {
         onSwipeLeft: onSwipeLeft,
         onSwipeRight: onSwipeRight,
         threshold: threshold,
+        edgeExclusion: edgeExclusion,
         isEnabled: isEnabled
       ))
   }
@@ -295,6 +297,7 @@ private struct MonthSwipeGestureModifier: ViewModifier {
   let onSwipeLeft: () -> Void
   let onSwipeRight: () -> Void
   let threshold: CGFloat
+  let edgeExclusion: CGFloat
   let isEnabled: Bool
   @Environment(\.layoutDirection) private var layoutDirection
 
@@ -305,6 +308,7 @@ private struct MonthSwipeGestureModifier: ViewModifier {
           onSwipeLeft: onSwipeLeft,
           onSwipeRight: onSwipeRight,
           threshold: threshold,
+          edgeExclusion: edgeExclusion,
           isEnabled: isEnabled,
           isRTL: layoutDirection == .rightToLeft
         )
@@ -322,6 +326,7 @@ private struct SwipeGestureView: UIViewRepresentable {
   let onSwipeLeft: () -> Void
   let onSwipeRight: () -> Void
   let threshold: CGFloat
+  let edgeExclusion: CGFloat
   let isEnabled: Bool
   let isRTL: Bool
 
@@ -348,6 +353,7 @@ private struct SwipeGestureView: UIViewRepresentable {
     context.coordinator.onSwipeLeft = onSwipeLeft
     context.coordinator.onSwipeRight = onSwipeRight
     context.coordinator.threshold = threshold
+    context.coordinator.edgeExclusion = edgeExclusion
     context.coordinator.isEnabled = isEnabled
     context.coordinator.isRTL = isRTL
 
@@ -360,6 +366,7 @@ private struct SwipeGestureView: UIViewRepresentable {
       onSwipeLeft: onSwipeLeft,
       onSwipeRight: onSwipeRight,
       threshold: threshold,
+      edgeExclusion: edgeExclusion,
       isEnabled: isEnabled,
       isRTL: isRTL
     )
@@ -369,6 +376,7 @@ private struct SwipeGestureView: UIViewRepresentable {
     var onSwipeLeft: () -> Void
     var onSwipeRight: () -> Void
     var threshold: CGFloat
+    var edgeExclusion: CGFloat
     var isEnabled: Bool
     var isRTL: Bool
 
@@ -380,12 +388,14 @@ private struct SwipeGestureView: UIViewRepresentable {
       onSwipeLeft: @escaping () -> Void,
       onSwipeRight: @escaping () -> Void,
       threshold: CGFloat,
+      edgeExclusion: CGFloat,
       isEnabled: Bool,
       isRTL: Bool
     ) {
       self.onSwipeLeft = onSwipeLeft
       self.onSwipeRight = onSwipeRight
       self.threshold = threshold
+      self.edgeExclusion = edgeExclusion
       self.isEnabled = isEnabled
       self.isRTL = isRTL
       super.init()
@@ -422,6 +432,15 @@ private struct SwipeGestureView: UIViewRepresentable {
       guard isEnabled else { return false }
       guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
       guard let view = pan.view else { return false }
+
+      let location = pan.location(in: view)
+      if edgeExclusion > 0 {
+        let minX = edgeExclusion
+        let maxX = view.bounds.width - edgeExclusion
+        guard location.x > minX, location.x < maxX else {
+          return false
+        }
+      }
 
       let velocity = pan.velocity(in: view)
       let absHorizontal = abs(velocity.x)
