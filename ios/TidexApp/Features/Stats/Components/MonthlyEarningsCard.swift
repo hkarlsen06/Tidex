@@ -58,6 +58,7 @@ struct MonthlyEarningsCard: View {
 
         CurrencyCountUpText(
           amount: mainDisplayValue,
+          animateOnAppear: false,
           animateChanges: false
         )
         .font(.tidexStat)

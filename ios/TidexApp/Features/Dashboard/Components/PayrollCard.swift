@@ -112,7 +112,7 @@ struct PayrollCard: View {
         CurrencyCountUpText(
           amount: primaryAmount,
           duration: 0.8,
-          animateOnAppear: true,
+          animateOnAppear: false,
           animateChanges: true
         )
         .font(.tidexTitle)

@@ -18,8 +18,6 @@ struct TotalCard: View {
   let monthlyGoal: Double?  // Optional monthly goal used for thin progress bar under total
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
-  /// Disable one-time launch animation for contexts that need controlled transitions.
-  var disableLaunchAnimation: Bool = false
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -32,10 +30,7 @@ struct TotalCard: View {
   /// Pending delayed task for activating reached-goal visuals.
   @State private var goalVisualTask: Task<Void, Never>?
 
-  /// Tracks whether the launch count-up animation has already played this session.
-  /// Static so it persists across view recreations but resets on app restart.
-  private static var hasPlayedLaunchAnimation = false
-
+  private let amountAnimationDuration: Double = 0.8
   private let goalFillAnimationDuration: Double = 0.52
   private let goalReachedSweepDuration: Double = 0.4
 
@@ -82,10 +77,6 @@ struct TotalCard: View {
 
   private var showDashes: Bool {
     isLoading || mainDisplayValue == 0
-  }
-
-  private var hasChange: Bool {
-    percentageChange != nil && percentageChange != 0
   }
 
   private var isPositive: Bool {
@@ -276,8 +267,8 @@ struct TotalCard: View {
           .contentTransition(.numericText(value: displayPercentage))
       }
       .foregroundColor(isPositive ? .tidexBlue : .tidexTextSecondary)
-      .animation(.spring(duration: 0.8, bounce: 0), value: displayPercentage)
-      .animation(.spring(duration: 0.8, bounce: 0), value: isPositive)
+      .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: displayPercentage)
+      .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: isPositive)
     }
   }
 
@@ -285,52 +276,24 @@ struct TotalCard: View {
   private var subtitleContent: some View {
     switch subtitleType {
     case .earnedToDate(let amount):
-      HStack(spacing: Spacing.xxs) {
-        CurrencyCountUpText(
-          amount: amount,
-          duration: 0.8,
-          animateOnAppear: true,
-          animateChanges: true
-        )
-        Text(String(localized: .dashboardEarnedToDate))
-      }
-      .font(.tidexBody)
-      .foregroundColor(.tidexTextSecondary)
+      subtitleAmountRow(amount: amount, label: String(localized: .dashboardEarnedToDate))
 
     case .beforeTax(let amount):
-      HStack(spacing: Spacing.xxs) {
-        CurrencyCountUpText(
-          amount: amount,
-          duration: 0.8,
-          animateOnAppear: true,
-          animateChanges: true
-        )
-        Text(String(localized: .dashboardBeforeTax))
-      }
-      .font(.tidexBody)
-      .foregroundColor(.tidexTextSecondary)
+      subtitleAmountRow(amount: amount, label: String(localized: .dashboardBeforeTax))
 
     case .plannedCount(let count):
       let plannedLabel =
         count == 1
         ? String(localized: .dashboardShiftPlanned)
         : String(localized: .dashboardShiftsPlanned)
-      Text("\(count) \(plannedLabel)")
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
-        .contentTransition(.numericText(value: Double(count)))
-        .animation(.spring(duration: 0.8, bounce: 0), value: count)
+      animatedCountLabel(count: count, label: plannedLabel)
 
     case .shiftCount(let count):
       let shiftsLabel =
         count == 1
         ? String(localized: .dashboardShift)
         : String(localized: .dashboardShifts)
-      Text("\(count) \(shiftsLabel)")
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
-        .contentTransition(.numericText(value: Double(count)))
-        .animation(.spring(duration: 0.8, bounce: 0), value: count)
+      animatedCountLabel(count: count, label: shiftsLabel)
 
     case .none:
       if showDashes {
@@ -513,24 +476,39 @@ struct TotalCard: View {
         .fill(Color.tidexBlue.opacity(0.3))
         .frame(width: 200, height: 56)
     } else {
-      // Animate count-up on app launch AND on month changes
-      let shouldAnimateOnAppear = !disableLaunchAnimation && !Self.hasPlayedLaunchAnimation
-      CountUpText(
-        targetValue: mainDisplayValue,
-        duration: 0.8,
-        animateOnAppear: shouldAnimateOnAppear,
-        animateChanges: true,
-        format: { CurrencyConfig.format($0, currency: currency) }
+      CurrencyCountUpText(
+        amount: mainDisplayValue,
+        duration: amountAnimationDuration,
+        animateOnAppear: false,
+        animateChanges: true
       )
       .font(.tidexHeroAmount)
       .foregroundColor(.tidexBlue)
       .minimumScaleFactor(0.4)
       .lineLimit(1)
-      .onAppear {
-        // Mark animation as played once we show the actual amount
-        Self.hasPlayedLaunchAnimation = true
-      }
     }
+  }
+
+  private func subtitleAmountRow(amount: Double, label: String) -> some View {
+    HStack(spacing: Spacing.xxs) {
+      CurrencyCountUpText(
+        amount: amount,
+        duration: amountAnimationDuration,
+        animateOnAppear: false,
+        animateChanges: true
+      )
+      Text(label)
+    }
+    .font(.tidexBody)
+    .foregroundColor(.tidexTextSecondary)
+  }
+
+  private func animatedCountLabel(count: Int, label: String) -> some View {
+    Text("\(count) \(label)")
+      .font(.tidexBody)
+      .foregroundColor(.tidexTextSecondary)
+      .contentTransition(.numericText(value: Double(count)))
+      .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: count)
   }
 
   // MARK: - Formatting
@@ -564,9 +542,6 @@ struct TotalCard: View {
     }
   }
 
-  private func formatCurrency(_ amount: Double) -> String {
-    CurrencyConfig.format(amount, currency: currency)
-  }
 }
 
 #Preview {
