@@ -45,64 +45,62 @@ struct StatsView: View {
   }
 
   var body: some View {
-    NavigationStack {
-      ZStack {
-        // Background
-        Color.tidexBackground
-          .ignoresSafeArea()
+    ZStack {
+      // Background
+      Color.tidexBackground
+        .ignoresSafeArea()
 
-        // Main content - month picker is now in shared overlay
-        Group {
-          if shouldShowWorkSetupRequiredPlaceholder {
-            WorkSetupRequiredPlaceholder()
-          } else if let error = viewModel.error, viewModel.stats == nil {
-            errorView(error: error)
-          } else {
-            statsContent(stats: displayedStats)
-          }
+      // Main content - month picker is now in shared overlay
+      Group {
+        if shouldShowWorkSetupRequiredPlaceholder {
+          WorkSetupRequiredPlaceholder()
+        } else if let error = viewModel.error, viewModel.stats == nil {
+          errorView(error: error)
+        } else {
+          statsContent(stats: displayedStats)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Pass user's currency to all child views
-        .userCurrency(viewModel.currency)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      // Pass user's currency to all child views
+      .userCurrency(viewModel.currency)
 
-        if !shouldShowWorkSetupRequiredPlaceholder {
-          VStack {
-            SyncStatusIndicator {
-              Task {
-                await refreshStatsContent()
-              }
+      if !shouldShowWorkSetupRequiredPlaceholder {
+        VStack {
+          SyncStatusIndicator {
+            Task {
+              await refreshStatsContent()
             }
-            .padding(.top, Spacing.xs)
-            Spacer()
           }
+          .padding(.top, Spacing.xs)
+          Spacer()
         }
       }
-      .navigationBarTitleDisplayMode(.inline)
-      .iPadToolbarBackground()
-      .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          TodayDateLabel()
-        }
-        .sharedBackgroundVisibility(.hidden)
-        ToolbarItem(placement: .topBarTrailing) {
-          UserMenuButton(
-            displayName: coordinator.userDisplayName,
-            avatarUrl: coordinator.userAvatarUrl
-          )
-        }
+    }
+    .navigationBarTitleDisplayMode(.inline)
+    .iPadToolbarBackground()
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        TodayDateLabel()
       }
-      .iPadToolbarTransaction()
-      .sheet(item: $monthlyGoalEditContext) { context in
-        MonthlyGoalEditSheet(
-          monthDate: context.monthDate,
-          baselineGoal: context.baselineGoal,
-          initialGoal: context.initialGoal
-        ) { value in
-          try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
-        }
-        .presentationDetents([.fraction(0.35), .medium])
-        .presentationDragIndicator(.visible)
+      .sharedBackgroundVisibility(.hidden)
+      ToolbarItem(placement: .topBarTrailing) {
+        UserMenuButton(
+          displayName: coordinator.userDisplayName,
+          avatarUrl: coordinator.userAvatarUrl
+        )
       }
+    }
+    .iPadToolbarTransaction()
+    .sheet(item: $monthlyGoalEditContext) { context in
+      MonthlyGoalEditSheet(
+        monthDate: context.monthDate,
+        baselineGoal: context.baselineGoal,
+        initialGoal: context.initialGoal
+      ) { value in
+        try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
+      }
+      .presentationDetents([.fraction(0.35), .medium])
+      .presentationDragIndicator(.visible)
     }
     .task {
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
@@ -220,6 +218,7 @@ struct StatsView: View {
         .monthSwipeGesture(
           onSwipeLeft: { viewModel.goToNextMonth() },
           onSwipeRight: { viewModel.goToPreviousMonth() },
+          edgeExclusion: 24,
           isEnabled: true
         )
       }

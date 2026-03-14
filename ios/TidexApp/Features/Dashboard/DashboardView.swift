@@ -136,7 +136,6 @@ struct DashboardView: View {
       }
       .navigationDestination(isPresented: $showStatsView) {
         StatsView()
-          .navigationBarBackButtonHidden(true)
       }
       .iPadToolbarTransaction()
     }
