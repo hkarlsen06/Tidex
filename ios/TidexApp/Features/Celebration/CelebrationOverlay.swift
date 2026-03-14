@@ -90,10 +90,11 @@ struct CelebrationOverlay: View {
               FeaturedShiftCard(
                 shift: data.featuredShift,
                 isToday: false,
-                isBestShift: true,
+                isBestShift: false,
                 countdownText: nil,
                 progress: nil,
-                showIncreaseHighlight: true
+                showIncreaseHighlight: true,
+                showFooter: false
               )
 
               Text(.celebrationGreatJob)

@@ -80,10 +80,11 @@ struct ShiftCompletionCelebrationView: View {
               FeaturedShiftCard(
                 shift: data.featuredShift,
                 isToday: false,
-                isBestShift: true,
+                isBestShift: false,
                 countdownText: nil,
                 progress: nil,
-                showIncreaseHighlight: true
+                showIncreaseHighlight: true,
+                showFooter: false
               )
               .opacity(showCard ? 1 : 0)
               .offset(y: showCard ? 0 : 24)

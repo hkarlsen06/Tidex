@@ -36,6 +36,7 @@ ios/build/
 
 # Xcode user state
 *.xcuserstate
+*.xcstrings.lock
 
 # Generated at build time — never commit
 ios/BuildNumber.xcconfig
