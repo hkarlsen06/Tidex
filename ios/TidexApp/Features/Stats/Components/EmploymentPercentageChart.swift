@@ -349,7 +349,26 @@ private struct TooltipView: View {
 private struct InfoPopoverButton: View {
   let message: String
 
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @State private var showPopover = false
+
+  private var usesCompactPresentation: Bool {
+    horizontalSizeClass == .compact
+  }
+
+  private var popoverBinding: Binding<Bool> {
+    Binding(
+      get: { showPopover && !usesCompactPresentation },
+      set: { if !$0 { showPopover = false } }
+    )
+  }
+
+  private var alertBinding: Binding<Bool> {
+    Binding(
+      get: { showPopover && usesCompactPresentation },
+      set: { if !$0 { showPopover = false } }
+    )
+  }
 
   var body: some View {
     Button {
@@ -359,7 +378,8 @@ private struct InfoPopoverButton: View {
         .font(.tidexBody)
         .foregroundColor(.tidexTextMuted)
     }
-    .popover(isPresented: $showPopover) {
+    .buttonStyle(.plain)
+    .popover(isPresented: popoverBinding) {
       Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
@@ -367,7 +387,11 @@ private struct InfoPopoverButton: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding()
         .frame(maxWidth: 280)
-        .presentationCompactAdaptation(.popover)
+    }
+    .alert(Text(.statsChartsEmploymentTitle), isPresented: alertBinding) {
+      Button(String(localized: .commonDone), role: .cancel) {}
+    } message: {
+      Text(message)
     }
   }
 }

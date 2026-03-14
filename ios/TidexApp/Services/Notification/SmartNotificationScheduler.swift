@@ -211,7 +211,7 @@ final class SmartNotificationScheduler {
       return false
     }
 
-    let content = buildEveningContent(dateISO: dateISO)
+    let content = buildEveningContent(for: date, dateISO: dateISO, fireDate: fireDate)
     let identifier = "\(Self.eveningIdentifierPrefix)\(dateISO)"
     return await scheduleNotification(identifier: identifier, content: content, fireDate: fireDate)
   }
@@ -264,9 +264,13 @@ final class SmartNotificationScheduler {
     return content
   }
 
-  private func buildEveningContent(dateISO: String) -> UNMutableNotificationContent {
+  private func buildEveningContent(
+    for workDate: Date,
+    dateISO: String,
+    fireDate: Date
+  ) -> UNMutableNotificationContent {
     let content = UNMutableNotificationContent()
-    content.title = String(localized: .notificationsSmartEveningTitle)
+    content.title = eveningPromptTitle(for: workDate, fireDate: fireDate)
     content.body = String(localized: .notificationsSmartEveningBody)
 
     content.sound = UNNotificationSound(named: UNNotificationSoundName("tidex_notification.caf"))
@@ -286,6 +290,22 @@ final class SmartNotificationScheduler {
     content.categoryIdentifier = "SMART_PROMPT"
 
     return content
+  }
+
+  private func eveningPromptTitle(for workDate: Date, fireDate: Date) -> String {
+    let calendar = Calendar.current
+
+    if calendar.isDate(workDate, inSameDayAs: fireDate) {
+      return String(localized: .notificationsSmartEveningTitle)
+    }
+
+    if let yesterday = calendar.date(byAdding: .day, value: -1, to: fireDate),
+      calendar.isDate(workDate, inSameDayAs: yesterday)
+    {
+      return String(localized: .notificationsSmartEveningTitleYesterday)
+    }
+
+    return String(localized: .notificationsSmartEveningTitle)
   }
 
   private func localizedWeekdayName(for date: Date) -> String {
@@ -406,7 +426,7 @@ final class SmartNotificationScheduler {
         content = buildMorningContent(date: now)
         identifier = "smart-test-morning-\(Int(now.timeIntervalSince1970))"
       case .evening:
-        content = buildEveningContent(dateISO: dateISO)
+        content = buildEveningContent(for: now, dateISO: dateISO, fireDate: now)
         identifier = "smart-test-evening-\(Int(now.timeIntervalSince1970))"
       }
 
