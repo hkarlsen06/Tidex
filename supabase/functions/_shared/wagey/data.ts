@@ -14,7 +14,7 @@ import {
   type WageSnapshot,
 } from "./payroll/index.ts";
 import { detectAllRecurringConflicts, type ExistingShift } from "./recurring/conflicts.ts";
-import { generateVirtualShiftsForMonth, resolveEndWindow } from "./recurring/utils.ts";
+import { generateVirtualShiftsForMonth, resolveEndWindow, toISODate } from "./recurring/utils.ts";
 import { cleanTime } from "./time-utils.ts";
 import { getCurrentMonth, getResetDate, type WageyAccessResult, type WageyInvocationResult } from "./wagey-types.ts";
 
@@ -70,6 +70,23 @@ type SnapshotBucket = {
   baseline: WageSnapshot | null;
 };
 
+type ShiftResources = {
+  settings: UserSettings;
+  jobs: Job[];
+  snapshots: WageSnapshot[];
+  recurringShifts: DbRecurringShift[];
+};
+
+type WageyAccessContextRow = {
+  before_paywall: boolean;
+  wagey_invocations: { count: number; month: string | null; bonus: number } | null;
+  status: string | null;
+  product_id: string | null;
+  current_period_end: string | null;
+  price_id: string | null;
+  provider: SubscriptionRow["provider"] | null;
+};
+
 export type LoadedShiftData = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
@@ -123,6 +140,38 @@ const FALLBACK_WAGEY_INVOCATION: WageyInvocationResult = {
   remaining: 0,
   bonus: 0,
 };
+const COMPUTED_SETTINGS_SELECT = "user_id, half_tax_month, payroll_day, monthly_goal, monthly_goals_by_month, currency";
+const COMPUTED_JOB_SELECT =
+  "id, user_id, name, color, is_default, sort_order, payroll_day, half_tax_month, monthly_goal, archived_at, deleted_at, created_at";
+const COMPUTED_SNAPSHOT_SELECT =
+  "id, user_id, job_id, from_date, hourly_wage, wage_level, tariff_type_id, supplements, tax_enabled, tax_percentage, break_enabled, break_method, break_threshold_hours, break_deduction_minutes, created_at";
+const COMPUTED_SHIFT_SELECT =
+  "id, user_id, job_id, shift_date, start_time, end_time, hourly_wage_snapshot, supplement_rules_snapshot, custom_supplements, recurring_id, recurring_anchor_weekday";
+const COMPUTED_RECURRING_SELECT =
+  "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_supplements, created_at, deleted_at";
+const FAR_FUTURE_DATE = "2100-12-31";
+
+function buildCacheKey(scope: string, payload: Record<string, unknown>): string {
+  return `${scope}:${JSON.stringify(payload)}`;
+}
+
+async function getCachedValue<T>(
+  ctx: WageyRequestContext,
+  key: string,
+  loader: () => Promise<T>,
+): Promise<T> {
+  const cached = ctx.cache.get(key);
+  if (cached) {
+    return await (cached as Promise<T>);
+  }
+
+  const pending = loader().catch((error) => {
+    ctx.cache.delete(key);
+    throw error;
+  });
+  ctx.cache.set(key, pending as Promise<unknown>);
+  return await pending;
+}
 
 function snapshotKeyForJob(jobId?: string | null): string {
   return jobId ?? LEGACY_SNAPSHOT_KEY;
@@ -229,23 +278,40 @@ async function getProfileAndSubscription(
   ctx: WageyRequestContext,
   userId: string,
 ): Promise<{ profile: ProfileRow | null; subscription: SubscriptionRow | null }> {
-  const [{ data: profile }, { data: subscription }] = await Promise.all([
-    ctx.supabaseAdmin
-      .from("profiles")
-      .select("id, before_paywall, wagey_invocations")
-      .eq("id", userId)
-      .maybeSingle(),
-    ctx.supabaseAdmin
-      .from("subscriptions")
-      .select("id, user_id, provider, status, product_id, current_period_end, price_id")
-      .eq("user_id", userId)
-      .maybeSingle(),
-  ]);
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("wagey_access_context", { userId }),
+    async () => {
+      const { data, error } = await ctx.supabaseAdmin.rpc("get_wagey_access_context", {
+        p_user_id: userId,
+      });
+      if (error) throw new Error(error.message);
 
-  return {
-    profile: (profile as ProfileRow | null) ?? null,
-    subscription: (subscription as SubscriptionRow | null) ?? null,
-  };
+      const row = (Array.isArray(data) ? data[0] : data) as WageyAccessContextRow | null;
+      if (!row) {
+        return { profile: null, subscription: null };
+      }
+
+      return {
+        profile: {
+          id: userId,
+          before_paywall: Boolean(row.before_paywall),
+          wagey_invocations: row.wagey_invocations ?? null,
+        },
+        subscription: row.status
+          ? {
+              id: `subscription:${userId}`,
+              user_id: userId,
+              provider: row.provider ?? "stripe",
+              status: row.status,
+              product_id: row.product_id,
+              current_period_end: row.current_period_end,
+              price_id: row.price_id,
+            }
+          : null,
+      };
+    },
+  );
 }
 
 export async function getWageyAccess(
@@ -316,12 +382,18 @@ export async function consumeWageyInvocation(
 }
 
 export async function getUserSettings(ctx: WageyRequestContext, userId = ctx.user.id): Promise<UserSettings> {
-  const { data } = await ctx.supabase
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return ((data ?? {}) as UserSettings) ?? {};
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("user_settings", { userId }),
+    async () => {
+      const { data } = await ctx.supabase
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return ((data ?? {}) as UserSettings) ?? {};
+    },
+  );
 }
 
 export async function getUserCurrency(ctx: WageyRequestContext, userId = ctx.user.id): Promise<string> {
@@ -334,21 +406,30 @@ export async function getUserJobs(
   userId = ctx.user.id,
   options?: { includeArchived?: boolean },
 ): Promise<Job[]> {
-  let query = ctx.supabase
-    .from("jobs")
-    .select("*")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("user_jobs", {
+      userId,
+      includeArchived: options?.includeArchived ?? false,
+    }),
+    async () => {
+      let query = ctx.supabase
+        .from("jobs")
+        .select("*")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
 
-  if (!options?.includeArchived) {
-    query = query.is("archived_at", null);
-  }
+      if (!options?.includeArchived) {
+        query = query.is("archived_at", null);
+      }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Job[];
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Job[];
+    },
+  );
 }
 
 async function getWageSnapshots(
@@ -356,20 +437,26 @@ async function getWageSnapshots(
   userId = ctx.user.id,
   jobId?: string,
 ): Promise<WageSnapshot[]> {
-  let query = ctx.supabase
-    .from("wage_snapshots")
-    .select("*")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .order("from_date", { ascending: false, nullsFirst: false });
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("wage_snapshots", { userId, jobId: jobId ?? null }),
+    async () => {
+      let query = ctx.supabase
+        .from("wage_snapshots")
+        .select("*")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("from_date", { ascending: false, nullsFirst: false });
 
-  if (jobId) {
-    query = query.eq("job_id", jobId);
-  }
+      if (jobId) {
+        query = query.eq("job_id", jobId);
+      }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as WageSnapshot[];
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as WageSnapshot[];
+    },
+  );
 }
 
 async function getRawUserShifts(
@@ -410,6 +497,114 @@ async function getRawRecurringShifts(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as DbRecurringShift[];
+}
+
+async function loadShiftResources(
+  ctx: WageyRequestContext,
+  userId: string,
+  options: { jobId?: string; asAdmin?: boolean } = {},
+): Promise<ShiftResources> {
+  const asAdmin = options.asAdmin ?? false;
+  const client = asAdmin ? ctx.supabaseAdmin : ctx.supabase;
+
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("shift_resources", {
+      userId,
+      jobId: options.jobId ?? null,
+      asAdmin,
+    }),
+    async () => {
+      const [settings, jobs, snapshots, recurringShifts] = await Promise.all([
+        (async () => {
+          const { data, error } = await client
+            .from("user_settings")
+            .select(COMPUTED_SETTINGS_SELECT)
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (error) throw new Error(error.message);
+          return ((data ?? {}) as UserSettings) ?? {};
+        })(),
+        (async () => {
+          let query = client
+            .from("jobs")
+            .select(COMPUTED_JOB_SELECT)
+            .eq("user_id", userId)
+            .is("deleted_at", null)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true });
+          const { data, error } = await query;
+          if (error) throw new Error(error.message);
+          return (data ?? []) as Job[];
+        })(),
+        (async () => {
+          let query = client
+            .from("wage_snapshots")
+            .select(COMPUTED_SNAPSHOT_SELECT)
+            .eq("user_id", userId)
+            .is("deleted_at", null)
+            .order("from_date", { ascending: false, nullsFirst: false });
+          if (options.jobId) {
+            query = query.eq("job_id", options.jobId);
+          }
+          const { data, error } = await query;
+          if (error) throw new Error(error.message);
+          return (data ?? []) as WageSnapshot[];
+        })(),
+        (async () => {
+          let query = client
+            .from("recurring_shifts")
+            .select(COMPUTED_RECURRING_SELECT)
+            .eq("user_id", userId)
+            .is("deleted_at", null);
+          if (options.jobId) {
+            query = query.eq("job_id", options.jobId);
+          }
+          const { data, error } = await query;
+          if (error) throw new Error(error.message);
+          return (data ?? []) as DbRecurringShift[];
+        })(),
+      ]);
+
+      return { settings, jobs, snapshots, recurringShifts };
+    },
+  );
+}
+
+async function loadShiftRows(
+  ctx: WageyRequestContext,
+  userId: string,
+  options: ShiftLoadOptions & { asAdmin?: boolean } = {},
+): Promise<ShiftRow[]> {
+  const asAdmin = options.asAdmin ?? false;
+  const client = asAdmin ? ctx.supabaseAdmin : ctx.supabase;
+
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("shift_rows", {
+      userId,
+      startDate: options.startDate ?? null,
+      endDate: options.endDate ?? null,
+      limit: options.limit ?? null,
+      jobId: options.jobId ?? null,
+      asAdmin,
+    }),
+    async () => {
+      let query = client
+        .from("user_shifts")
+        .select(COMPUTED_SHIFT_SELECT)
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .gte("shift_date", options.startDate ?? getDefaultStartDate())
+        .lte("shift_date", options.endDate ?? getDefaultEndDate())
+        .order("shift_date", { ascending: false });
+      if (options.jobId) query = query.eq("job_id", options.jobId);
+      if (options.limit) query = query.limit(options.limit);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ShiftRow[];
+    },
+  );
 }
 
 function buildComputedShiftData(params: {
@@ -543,6 +738,82 @@ function buildComputedShiftData(params: {
   };
 }
 
+function sliceLoadedShiftData(
+  loaded: LoadedShiftData,
+  startDate: string,
+  endDate: string,
+): LoadedShiftData {
+  return {
+    ...loaded,
+    shifts: loaded.shifts.filter((shift) => shift.shift_date >= startDate && shift.shift_date <= endDate),
+  };
+}
+
+function getEarlierDate(...dates: string[]): string {
+  return dates.reduce((earliest, current) => (current < earliest ? current : earliest));
+}
+
+function getLaterDate(...dates: string[]): string {
+  return dates.reduce((latest, current) => (current > latest ? current : latest));
+}
+
+function addDaysToIsoDate(date: string, days: number): string {
+  const next = parseDateAsUTC(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return toISODate(next);
+}
+
+function getRecurringEffectiveEndDate(recurring: DbRecurringShift, fallbackEndDate: string): string {
+  if (recurring.end_condition === null) {
+    return fallbackEndDate;
+  }
+
+  const window = resolveEndWindow(recurring.selected_days, recurring.end_condition as never, 0);
+  if (!window) {
+    return fallbackEndDate;
+  }
+
+  const resolvedEndDate = toISODate(window.maxDate);
+  return resolvedEndDate < fallbackEndDate ? resolvedEndDate : fallbackEndDate;
+}
+
+function countRecurringOccurrencesInRange(
+  recurring: DbRecurringShift,
+  startDate: string,
+  fallbackEndDate: string,
+): number {
+  const effectiveEndDate = getRecurringEffectiveEndDate(recurring, fallbackEndDate);
+  if (effectiveEndDate < startDate) {
+    return 0;
+  }
+
+  const exclusions = new Set(recurring.exclusions ?? []);
+  const stepDays = 7 * (Number(recurring.repeat_interval_weeks) + 1);
+  let count = 0;
+
+  for (const anchorDate of Object.values(recurring.selected_days ?? {})) {
+    if (!anchorDate) continue;
+
+    let currentDate = anchorDate;
+    if (currentDate < startDate) {
+      const diffDays = Math.floor(
+        (parseDateAsUTC(startDate).getTime() - parseDateAsUTC(currentDate).getTime()) / (1000 * 60 * 60 * 24),
+      );
+      const skippedSteps = Math.ceil(diffDays / stepDays);
+      currentDate = addDaysToIsoDate(currentDate, skippedSteps * stepDays);
+    }
+
+    while (currentDate <= effectiveEndDate) {
+      if (!exclusions.has(currentDate)) {
+        count += 1;
+      }
+      currentDate = addDaysToIsoDate(currentDate, stepDays);
+    }
+  }
+
+  return count;
+}
+
 export async function getComputedShiftsForApi(
   ctx: WageyRequestContext,
   userId = ctx.user.id,
@@ -551,38 +822,67 @@ export async function getComputedShiftsForApi(
   const startDate = options.startDate ?? getDefaultStartDate();
   const endDate = options.endDate ?? getDefaultEndDate();
 
-  const [settings, jobs, snapshots, rawShifts, recurringShifts] = await Promise.all([
-    getUserSettings(ctx, userId),
-    getUserJobs(ctx, userId, { includeArchived: true }),
-    getWageSnapshots(ctx, userId, options.jobId),
-    (async () => {
-      let query = ctx.supabase
-        .from("user_shifts")
-        .select("*")
-        .eq("user_id", userId)
-        .is("deleted_at", null)
-        .gte("shift_date", startDate)
-        .lte("shift_date", endDate)
-        .order("shift_date", { ascending: false });
-      if (options.jobId) query = query.eq("job_id", options.jobId);
-      if (options.limit) query = query.limit(options.limit);
-      const { data, error } = await query;
-      if (error) throw new Error(error.message);
-      return (data ?? []) as ShiftRow[];
-    })(),
-    getRawRecurringShifts(ctx.supabase, userId, options.jobId),
-  ]);
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("computed_shifts", {
+      userId,
+      startDate,
+      endDate,
+      limit: options.limit ?? null,
+      jobId: options.jobId ?? null,
+    }),
+    async () => {
+      const [{ settings, jobs, snapshots, recurringShifts }, rawShifts] = await Promise.all([
+        loadShiftResources(ctx, userId, { jobId: options.jobId }),
+        loadShiftRows(ctx, userId, {
+          startDate,
+          endDate,
+          limit: options.limit,
+          jobId: options.jobId,
+        }),
+      ]);
 
-  return buildComputedShiftData({
-    userId,
-    settings,
-    jobs,
-    snapshots,
-    shifts: rawShifts,
-    recurringShifts,
-    startDate,
-    endDate,
-  });
+      return buildComputedShiftData({
+        userId,
+        settings,
+        jobs,
+        snapshots,
+        shifts: rawShifts,
+        recurringShifts,
+        startDate,
+        endDate,
+      });
+    },
+  );
+}
+
+export async function countShiftsAffectedBySnapshot(
+  ctx: WageyRequestContext,
+  options: { startDate: string; jobId?: string; userId?: string },
+): Promise<number> {
+  const userId = options.userId ?? ctx.user.id;
+  let query = ctx.supabase
+    .from("user_shifts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .gte("shift_date", options.startDate);
+  if (options.jobId) {
+    query = query.eq("job_id", options.jobId);
+  }
+
+  const [{ count, error }, { recurringShifts }] = await Promise.all([
+    query,
+    loadShiftResources(ctx, userId, { jobId: options.jobId }),
+  ]);
+  if (error) throw new Error(error.message);
+
+  const recurringCount = recurringShifts.reduce(
+    (sum, recurring) => sum + countRecurringOccurrencesInRange(recurring, options.startDate, FAR_FUTURE_DATE),
+    0,
+  );
+
+  return (count ?? 0) + recurringCount;
 }
 
 export async function getShiftIdentityRowsForApi(
@@ -1184,7 +1484,7 @@ export async function getTariffVersionForDate(
   return (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
 }
 
-async function getUsersByIds(
+export async function getUsersByIds(
   ctx: WageyRequestContext,
   userIds: string[],
 ): Promise<Map<string, { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null }>> {
@@ -1436,84 +1736,59 @@ async function loadSharedOwnerData(
   ownerId: string,
   options: ShiftLoadOptions = {},
 ): Promise<LoadedShiftData & { showEarnings: boolean }> {
-  const { data: share, error: shareError } = await ctx.supabase
-    .from("shift_shares")
-    .select("show_earnings, hidden, blocked_by_user_id")
-    .eq("owner_id", ownerId)
-    .eq("viewer_id", ctx.user.id)
-    .maybeSingle();
-  if (shareError) throw new Error(shareError.message);
-  if (!share || share.blocked_by_user_id) {
-    throw new Error("No access to shared shifts");
-  }
-
   const startDate = options.startDate ?? getDefaultStartDate();
   const endDate = options.endDate ?? getDefaultEndDate();
 
-  const [settings, jobs, snapshots, shifts, recurringShifts] = await Promise.all([
-    (async () => {
-      const { data, error } = await ctx.supabaseAdmin
-        .from("user_settings")
-        .select("*")
-        .eq("user_id", ownerId)
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("shared_owner_data", {
+      ownerId,
+      viewerId: ctx.user.id,
+      startDate,
+      endDate,
+      limit: options.limit ?? null,
+      jobId: options.jobId ?? null,
+    }),
+    async () => {
+      const { data: share, error: shareError } = await ctx.supabase
+        .from("shift_shares")
+        .select("show_earnings, hidden, blocked_by_user_id")
+        .eq("owner_id", ownerId)
+        .eq("viewer_id", ctx.user.id)
         .maybeSingle();
-      if (error) throw new Error(error.message);
-      return ((data ?? {}) as UserSettings) ?? {};
-    })(),
-    (async () => {
-      const { data, error } = await ctx.supabaseAdmin
-        .from("jobs")
-        .select("*")
-        .eq("user_id", ownerId)
-        .is("deleted_at", null)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Job[];
-    })(),
-    (async () => {
-      const { data, error } = await ctx.supabaseAdmin
-        .from("wage_snapshots")
-        .select("*")
-        .eq("user_id", ownerId)
-        .is("deleted_at", null)
-        .order("from_date", { ascending: false, nullsFirst: false });
-      if (error) throw new Error(error.message);
-      return (data ?? []) as WageSnapshot[];
-    })(),
-    (async () => {
-      let query = ctx.supabaseAdmin
-        .from("user_shifts")
-        .select("*")
-        .eq("user_id", ownerId)
-        .is("deleted_at", null)
-        .gte("shift_date", startDate)
-        .lte("shift_date", endDate)
-        .order("shift_date", { ascending: false });
-      if (options.jobId) query = query.eq("job_id", options.jobId);
-      if (options.limit) query = query.limit(options.limit);
-      const { data, error } = await query;
-      if (error) throw new Error(error.message);
-      return (data ?? []) as ShiftRow[];
-    })(),
-    getRawRecurringShifts(ctx.supabaseAdmin, ownerId, options.jobId),
-  ]);
+      if (shareError) throw new Error(shareError.message);
+      if (!share || share.blocked_by_user_id) {
+        throw new Error("No access to shared shifts");
+      }
 
-  const loaded = buildComputedShiftData({
-    userId: ownerId,
-    settings,
-    jobs,
-    snapshots,
-    shifts,
-    recurringShifts,
-    startDate,
-    endDate,
-  });
+      const [{ settings, jobs, snapshots, recurringShifts }, shifts] = await Promise.all([
+        loadShiftResources(ctx, ownerId, { jobId: options.jobId, asAdmin: true }),
+        loadShiftRows(ctx, ownerId, {
+          startDate,
+          endDate,
+          limit: options.limit,
+          jobId: options.jobId,
+          asAdmin: true,
+        }),
+      ]);
 
-  return {
-    ...loaded,
-    showEarnings: Boolean(share.show_earnings),
-  };
+      const loaded = buildComputedShiftData({
+        userId: ownerId,
+        settings,
+        jobs,
+        snapshots,
+        shifts,
+        recurringShifts,
+        startDate,
+        endDate,
+      });
+
+      return {
+        ...loaded,
+        showEarnings: Boolean(share.show_earnings),
+      };
+    },
+  );
 }
 
 export async function getSharedUserShifts(
@@ -1612,19 +1887,20 @@ export async function getStatistics(
   weekStart.setUTCDate(weekStart.getUTCDate() + diffToMonday);
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
-
-  const [currentMonthData, lastMonthData, yearData, weekData, settings] = await Promise.all([
-    getComputedShiftsForApi(ctx, ctx.user.id, { startDate: currentMonthStart, endDate: currentMonthEnd, limit: 2000, jobId: options.jobId }),
-    getComputedShiftsForApi(ctx, ctx.user.id, { startDate: lastMonthStart, endDate: lastMonthEnd, limit: 2000, jobId: options.jobId }),
-    getComputedShiftsForApi(ctx, ctx.user.id, { startDate: yearStart, endDate: yearEnd, limit: 5000, jobId: options.jobId }),
-    getComputedShiftsForApi(ctx, ctx.user.id, {
-      startDate: weekStart.toISOString().slice(0, 10),
-      endDate: weekEnd.toISOString().slice(0, 10),
-      limit: 1000,
-      jobId: options.jobId,
-    }),
-    getUserSettings(ctx),
-  ]);
+  const weekStartDate = weekStart.toISOString().slice(0, 10);
+  const weekEndDate = weekEnd.toISOString().slice(0, 10);
+  const aggregateStart = getEarlierDate(yearStart, lastMonthStart, weekStartDate);
+  const aggregateEnd = getLaterDate(yearEnd, currentMonthEnd, weekEndDate);
+  const aggregateData = await getComputedShiftsForApi(ctx, ctx.user.id, {
+    startDate: aggregateStart,
+    endDate: aggregateEnd,
+    jobId: options.jobId,
+  });
+  const settings = aggregateData.settings;
+  const currentMonthData = sliceLoadedShiftData(aggregateData, currentMonthStart, currentMonthEnd);
+  const lastMonthData = sliceLoadedShiftData(aggregateData, lastMonthStart, lastMonthEnd);
+  const yearData = sliceLoadedShiftData(aggregateData, yearStart, yearEnd);
+  const weekData = sliceLoadedShiftData(aggregateData, weekStartDate, weekEndDate);
 
   const summarize = (loaded: LoadedShiftData) => {
     const totalEarnings = loaded.shifts.reduce((sum, shift) => sum + shift.computed.gross, 0);

@@ -4,6 +4,7 @@ export type WageyRequestContext = {
   supabase: SupabaseClient;
   supabaseAdmin: SupabaseClient;
   user: User;
+  cache: Map<string, Promise<unknown>>;
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -25,12 +26,24 @@ export function createUserClient(accessToken: string): SupabaseClient {
 }
 
 export function createAdminClient(): SupabaseClient {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  if (!globalThis.__wageyAdminClient) {
+    globalThis.__wageyAdminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+  }
+
+  return globalThis.__wageyAdminClient;
+}
+
+declare global {
+  var __wageyAdminClient: SupabaseClient | undefined;
+}
+
+export function invalidateWageyCache(ctx: WageyRequestContext): void {
+  ctx.cache.clear();
 }
 
 export async function createWageyContext(req: Request): Promise<WageyRequestContext> {
@@ -60,5 +73,6 @@ export async function createWageyContext(req: Request): Promise<WageyRequestCont
     supabase,
     supabaseAdmin,
     user,
+    cache: new Map(),
   };
 }

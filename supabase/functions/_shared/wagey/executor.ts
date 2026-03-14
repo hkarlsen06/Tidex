@@ -2,6 +2,7 @@ import type { WageyRequestContext } from "./context.ts";
 import {
   archiveJob,
   blockSharer,
+  countShiftsAffectedBySnapshot,
   clearShiftSnapshots,
   convertRecurringShiftToStandalone,
   copyShifts,
@@ -17,7 +18,6 @@ import {
   getComputedShiftsForApi,
   getSharedUserShifts,
   getSharerShiftPreviews,
-  getShiftIdentityRowsForApi,
   getStatistics,
   getTariffTypes,
   getTariffVersionForDate,
@@ -26,6 +26,7 @@ import {
   getUserFeedback,
   getUserJobs,
   getUserSettings,
+  getUsersByIds,
   moveRecurringShift,
   removeShare,
   removeSharer,
@@ -94,6 +95,7 @@ import {
   tools as toolDefinitions,
 } from "./tools.ts";
 import { computeShift, PRESET_SUPPLEMENT_RULES } from "./payroll/index.ts";
+import { generateVirtualShiftsForMonth } from "./recurring/utils.ts";
 
 type TariffVersion = {
   rates?: Record<string, number> | null;
@@ -143,59 +145,115 @@ function sortShiftsByDateDesc<T extends { shift_date: string; start_time: string
   });
 }
 
-function resolveShortIdFromShifts(shortOrFullId: string, shifts: { id: string }[]): string | null {
-  if (shortOrFullId.startsWith("virtual-")) {
-    if (shortOrFullId.split("-").length === 5) {
-      const [, shortRecurringId, year, month, day] = shortOrFullId.split("-");
-      const targetDate = `${year}-${month}-${day}`;
-      const matches = shifts.filter((shift) => {
-        if (!shift.id.startsWith("virtual-")) return false;
-        const parts = shift.id.split("-");
-        const recurringId = parts.slice(1, 6).join("-");
-        const date = parts.slice(6).join("-");
-        return recurringId.toLowerCase().startsWith(shortRecurringId.toLowerCase()) && date === targetDate;
-      });
-      return matches.length === 1 ? matches[0].id : null;
-    }
+function isNoAccessError(error: unknown): boolean {
+  return error instanceof Error && error.message === "No access to shared shifts";
+}
+
+type ShiftReference = {
+  id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  recurring_id?: string | null;
+  job_id?: string | null;
+};
+
+async function resolveShortIdViaRpc(
+  ctx: WageyRequestContext,
+  functionName: "resolve_user_shift_id" | "resolve_recurring_shift_id" | "resolve_wage_snapshot_id",
+  shortOrFullId: string,
+): Promise<string | null> {
+  if (!isShortId(shortOrFullId)) {
     return shortOrFullId;
   }
 
-  if (!isShortId(shortOrFullId)) return shortOrFullId;
-  const matches = shifts.filter((shift) => shift.id.toLowerCase().startsWith(shortOrFullId.toLowerCase()));
-  return matches.length === 1 ? matches[0].id : null;
-}
-
-function resolveShortIdsFromShifts(ids: string[], shifts: { id: string }[]): string[] {
-  return ids
-    .map((id) => resolveShortIdFromShifts(id, shifts))
-    .filter((id): id is string => Boolean(id));
+  const { data, error } = await ctx.supabase.rpc(functionName, {
+    p_short_or_full_id: shortOrFullId,
+  });
+  if (error) throw new Error(error.message);
+  return typeof data === "string" ? data : null;
 }
 
 async function resolveRecurringId(
   ctx: WageyRequestContext,
   shortOrFullId: string,
 ): Promise<string | null> {
-  if (!isShortId(shortOrFullId)) return shortOrFullId;
-  const { data, error } = await ctx.supabase
-    .from("recurring_shifts")
-    .select("id")
-    .eq("user_id", ctx.user.id)
-    .is("deleted_at", null);
-  if (error) throw new Error(error.message);
-  const matches = (data ?? []).filter((row) => row.id.toLowerCase().startsWith(shortOrFullId.toLowerCase()));
-  return matches.length === 1 ? matches[0].id : null;
+  return await resolveShortIdViaRpc(ctx, "resolve_recurring_shift_id", shortOrFullId);
 }
 
 async function resolveSnapshotId(ctx: WageyRequestContext, shortOrFullId: string): Promise<string | null> {
-  if (!isShortId(shortOrFullId)) return shortOrFullId;
+  return await resolveShortIdViaRpc(ctx, "resolve_wage_snapshot_id", shortOrFullId);
+}
+
+async function resolveStoredShiftId(ctx: WageyRequestContext, shortOrFullId: string): Promise<string | null> {
+  return await resolveShortIdViaRpc(ctx, "resolve_user_shift_id", shortOrFullId);
+}
+
+async function getStoredShiftReference(ctx: WageyRequestContext, shortOrFullId: string): Promise<ShiftReference | null> {
+  const fullShiftId = await resolveStoredShiftId(ctx, shortOrFullId);
+  if (!fullShiftId) return null;
+
   const { data, error } = await ctx.supabase
-    .from("wage_snapshots")
-    .select("id")
+    .from("user_shifts")
+    .select("id, shift_date, start_time, end_time, recurring_id, job_id")
+    .eq("id", fullShiftId)
     .eq("user_id", ctx.user.id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  const matches = (data ?? []).filter((row) => row.id.toLowerCase().startsWith(shortOrFullId.toLowerCase()));
-  return matches.length === 1 ? matches[0].id : null;
+
+  return (data as ShiftReference | null) ?? null;
+}
+
+async function getComputedShiftReference(ctx: WageyRequestContext, shortOrFullId: string): Promise<ShiftReference | null> {
+  if (!shortOrFullId.startsWith("virtual-")) {
+    return await getStoredShiftReference(ctx, shortOrFullId);
+  }
+
+  const compactMatch = shortOrFullId.match(/^virtual-([a-f0-9]{4,8})-(\d{4}-\d{2}-\d{2})$/i);
+  const fullMatch = shortOrFullId.match(/^virtual-([a-f0-9-]{36})-(\d{4}-\d{2}-\d{2})$/i);
+  const match = compactMatch ?? fullMatch;
+  if (!match) {
+    return null;
+  }
+
+  const recurringId = await resolveRecurringId(ctx, match[1]);
+  if (!recurringId) return null;
+  const targetDate = match[2];
+  const { data, error } = await ctx.supabase
+    .from("recurring_shifts")
+    .select("id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions")
+    .eq("id", recurringId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const [year, month] = targetDate.split("-").map(Number);
+  const occurrences = generateVirtualShiftsForMonth(
+    { year, month },
+    {
+      start_time: String(data.start_time).slice(0, 5),
+      end_time: String(data.end_time).slice(0, 5),
+      repeat_interval_weeks: data.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+      selected_days: data.selected_days,
+      end_condition: data.end_condition as never,
+      exclusions: data.exclusions ?? [],
+    },
+  );
+  if (!occurrences.some((occurrence) => occurrence.date === targetDate)) {
+    return null;
+  }
+
+  return {
+    id: `virtual-${data.id}-${targetDate}`,
+    shift_date: targetDate,
+    start_time: String(data.start_time).slice(0, 5),
+    end_time: String(data.end_time).slice(0, 5),
+    recurring_id: data.id,
+    job_id: data.job_id ?? null,
+  };
 }
 
 function getCurrentWeekRange(): { startDate: string; endDate: string } {
@@ -457,13 +515,10 @@ async function executeManageShift(ctx: WageyRequestContext, args: unknown): Prom
     case "update": {
       if (!input.shiftId) return { success: false, message: tr.missingShiftId };
       if (!input.date && !input.start && !input.end) return { success: false, message: tr.mustProvideDateStartEnd };
-      const shifts = await getShiftIdentityRowsForApi(ctx, ctx.user.id, { limit: 1000 });
-      const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts);
-      if (!fullShiftId) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
-      const shift = shifts.find((entry) => entry.id === fullShiftId);
+      const shift = await getStoredShiftReference(ctx, input.shiftId);
       if (!shift) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
       await updateShift(ctx, {
-        id: fullShiftId,
+        id: shift.id,
         shift_date: input.date || shift.shift_date,
         start: input.start || shift.start_time,
         end: input.end || shift.end_time,
@@ -472,17 +527,17 @@ async function executeManageShift(ctx: WageyRequestContext, args: unknown): Prom
       return { success: true, message: t(tr.updatedShift, { date: formatDateCompact(input.date || shift.shift_date) }) };
     }
     case "delete": {
-      const shifts = await getShiftIdentityRowsForApi(ctx, ctx.user.id, { limit: 1000 });
       if (input.shiftIds && input.shiftIds.length > 0) {
-        const fullIds = resolveShortIdsFromShifts(input.shiftIds, shifts);
+        const fullIds = (
+          await Promise.all(input.shiftIds.map((id) => resolveStoredShiftId(ctx, id)))
+        ).filter((id): id is string => Boolean(id));
         await Promise.all(fullIds.map((id) => deleteShift(ctx, id)));
         return { success: true, message: fullIds.length === 1 ? t(tr.deletedShift, { date: "" }).replace(" on ", " ") : t(tr.deletedShifts, { count: fullIds.length }) };
       }
       if (!input.shiftId) return { success: false, message: tr.missingShiftIdOrIds };
-      const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts);
-      if (!fullShiftId) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
-      const shift = shifts.find((entry) => entry.id === fullShiftId);
-      await deleteShift(ctx, fullShiftId);
+      const shift = await getStoredShiftReference(ctx, input.shiftId);
+      if (!shift) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
+      await deleteShift(ctx, shift.id);
       return { success: true, message: t(tr.deletedShift, { date: shift ? formatDateCompact(shift.shift_date) : tr.unknownDate }) };
     }
     default:
@@ -515,7 +570,7 @@ async function executeQueryShifts(ctx: WageyRequestContext, args: unknown): Prom
   else if (input.sortBy === "date_earliest") filtered = filtered.sort((a, b) => a.shift_date.localeCompare(b.shift_date) || a.start_time.localeCompare(b.start_time));
   else filtered = sortShiftsByDateDesc(filtered);
   const limited = filtered.slice(0, input.limit || 30);
-  const currency = await getUserCurrency(ctx);
+  const currency = result.settings.currency || "NOK";
   const hasTaxDeduction = limited.some((shift) => shift.tax_enabled && shift.tax_percentage);
   const data = limited.map((shift) => {
     const base = {
@@ -564,7 +619,7 @@ async function executeCalculateWages(ctx: WageyRequestContext, args: unknown): P
     limit: 1000,
     jobId: input.jobId,
   });
-  const currency = await getUserCurrency(ctx);
+  const currency = result.settings.currency || "NOK";
   if (result.shifts.length === 0) {
     const period = input.startDate === input.endDate ? input.startDate : `${input.startDate} - ${input.endDate}`;
     return {
@@ -737,19 +792,28 @@ async function executeQueryFriendShifts(ctx: WageyRequestContext, args: unknown)
   const parsed = queryFriendShiftsSchema.safeParse(args);
   if (!parsed.success) return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
   const input = parsed.data as QueryFriendShiftsInput;
-  const friends = await getAllFriends(ctx);
-  const friend = friends.find((entry) => entry.id === input.friendId);
-  if (!friend || !friend.sharesWithMe) {
+  const weekRange = getCurrentWeekRange();
+  let shared;
+  try {
+    shared = await getSharedUserShifts(ctx, input.friendId, {
+      startDate: input.startDate ?? weekRange.startDate,
+      endDate: input.endDate ?? weekRange.endDate,
+      limit: 1000,
+      jobId: input.jobId,
+    });
+  } catch (error) {
+    if (!isNoAccessError(error)) {
+      throw error;
+    }
     return { success: true, message: tr.friendNoAccess, data: { access: "no_access", friendId: input.friendId } };
   }
-  const weekRange = getCurrentWeekRange();
-  const shared = await getSharedUserShifts(ctx, input.friendId, {
-    startDate: input.startDate ?? weekRange.startDate,
-    endDate: input.endDate ?? weekRange.endDate,
-    limit: 1000,
-  });
+  const friend = (await getUsersByIds(ctx, [input.friendId])).get(input.friendId) ?? {
+    email: null,
+    phone: null,
+    firstName: null,
+    oauthAvatarUrl: null,
+  };
   let filtered = shared.shifts;
-  if (input.jobId) filtered = filtered.filter((shift) => shift.job_id === input.jobId);
   if (input.minTime) filtered = filtered.filter((shift) => shift.start_time >= input.minTime!);
   if (input.maxTime) filtered = filtered.filter((shift) => shift.start_time <= input.maxTime!);
   if (input.weekdays?.length) filtered = filtered.filter((shift) => input.weekdays!.includes(new Date(`${shift.shift_date}T12:00:00Z`).getUTCDay()));
@@ -758,7 +822,7 @@ async function executeQueryFriendShifts(ctx: WageyRequestContext, args: unknown)
   else if (input.sortBy === "date_earliest") filtered = filtered.sort((a, b) => a.shift_date.localeCompare(b.shift_date) || a.start_time.localeCompare(b.start_time));
   else filtered = sortShiftsByDateDesc(filtered);
   const limited = filtered.slice(0, input.limit || 30);
-  const canShowEarnings = shared.showEarnings && friend.sharesWithMe.showEarningsToMe;
+  const canShowEarnings = shared.showEarnings;
   const jobMap = new Map(shared.jobs.map((job) => [job.id, job.name]));
   const rows = limited.map((shift) => {
     const base = {
@@ -781,7 +845,7 @@ async function executeQueryFriendShifts(ctx: WageyRequestContext, args: unknown)
     success: true,
     message: rows.length === 1 ? t(tr.foundFriendShift, { count: rows.length }) : t(tr.foundFriendShifts, { count: rows.length }),
     data: {
-      friend: { id: friend.id, name: getFriendDisplayName(friend) },
+      friend: { id: input.friendId, name: getFriendDisplayName({ id: input.friendId, ...friend }) },
       showEarningsToMe: canShowEarnings,
       shifts: rows,
       summary: {
@@ -798,37 +862,58 @@ async function executeQueryFriendFeaturedShift(ctx: WageyRequestContext, args: u
   const parsed = queryFriendFeaturedShiftSchema.safeParse(args);
   if (!parsed.success) return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
   const input = parsed.data as QueryFriendFeaturedShiftInput;
-  const friends = await getAllFriends(ctx);
-  const friend = friends.find((entry) => entry.id === input.friendId);
-  if (!friend || !friend.sharesWithMe) {
+  const [{ data: share, error: shareError }, preview, friend] = await Promise.all([
+    ctx.supabase
+      .from("shift_shares")
+      .select("show_earnings, blocked_by_user_id")
+      .eq("owner_id", input.friendId)
+      .eq("viewer_id", ctx.user.id)
+      .maybeSingle(),
+    getSharerShiftPreviews(ctx, [input.friendId]),
+    getUsersByIds(ctx, [input.friendId]),
+  ]);
+  if (shareError) throw new Error(shareError.message);
+  if (!share || share.blocked_by_user_id) {
     return { success: true, message: tr.friendNoAccess, data: { access: "no_access", friendId: input.friendId } };
   }
-  const [preview] = await getSharerShiftPreviews(ctx, [input.friendId]);
-  const canShowEarnings = Boolean(preview?.showEarnings && friend.sharesWithMe.showEarningsToMe);
-  if (!preview?.shift) {
+  const friendInfo = friend.get(input.friendId) ?? {
+    email: null,
+    phone: null,
+    firstName: null,
+    oauthAvatarUrl: null,
+  };
+  const featured = preview[0];
+  const canShowEarnings = Boolean(share.show_earnings && featured?.showEarnings);
+  if (!featured?.shift) {
     return {
       success: true,
       message: tr.noFeaturedFriendShift,
-      data: { access: "ok", friend: { id: friend.id, name: getFriendDisplayName(friend) }, status: preview?.status ?? null, showEarningsToMe: canShowEarnings, featuredShift: null },
+      data: {
+        access: "ok",
+        friend: { id: input.friendId, name: getFriendDisplayName({ id: input.friendId, ...friendInfo }) },
+        status: featured.status ?? null,
+        showEarningsToMe: canShowEarnings,
+        featuredShift: null,
+      },
     };
   }
   const base = {
-    id: toDisplayShiftId(preview.shift.id),
-    date: preview.shift.shift_date,
-    day: getWeekdayAbbr(preview.shift.shift_date),
-    start: preview.shift.start_time,
-    end: preview.shift.end_time,
-    hours: Number(preview.shift.computed.paidHours.toFixed(2)),
+    id: toDisplayShiftId(featured.shift.id),
+    date: featured.shift.shift_date,
+    day: getWeekdayAbbr(featured.shift.shift_date),
+    start: featured.shift.start_time,
+    end: featured.shift.end_time,
+    hours: Number(featured.shift.computed.paidHours.toFixed(2)),
   };
   return {
     success: true,
-    message: t(tr.foundFeaturedFriendShift, { status: preview.status ?? "none" }),
+    message: t(tr.foundFeaturedFriendShift, { status: featured.status ?? "none" }),
     data: {
       access: "ok",
-      friend: { id: friend.id, name: getFriendDisplayName(friend) },
-      status: preview.status,
+      friend: { id: input.friendId, name: getFriendDisplayName({ id: input.friendId, ...friendInfo }) },
+      status: featured.status,
       showEarningsToMe: canShowEarnings,
-      featuredShift: canShowEarnings ? { ...base, gross: Number(preview.shift.computed.gross.toFixed(2)) } : base,
+      featuredShift: canShowEarnings ? { ...base, gross: Number(featured.shift.computed.gross.toFixed(2)) } : base,
     },
   };
 }
@@ -906,25 +991,20 @@ async function executeManageShiftAdvanced(ctx: WageyRequestContext, args: unknow
     }
     case "update_custom_supplements": {
       if (!input.shiftId) return { success: false, message: tr.missingShiftId };
-      const shifts = await getComputedShiftsForApi(ctx, ctx.user.id, { limit: 2000 });
-      const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts.shifts);
-      if (!fullShiftId) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
-      const shift = shifts.shifts.find((entry) => entry.id === fullShiftId);
+      const shift = await getComputedShiftReference(ctx, input.shiftId);
       if (!shift) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
       const result = await updateCustomSupplements(ctx, {
-        shiftId: fullShiftId,
+        shiftId: shift.id,
         customSupplements: input.customSupplements ?? null,
-        recurringId: shift.recurring_id,
+        recurringId: shift.recurring_id ?? undefined,
         shiftDate: shift.shift_date,
       });
       return { success: true, message: tr.updatedCustomSupplements, data: result };
     }
     case "convert_recurring_to_standalone": {
       if (!input.shiftId) return { success: false, message: tr.missingShiftId };
-      const shifts = await getComputedShiftsForApi(ctx, ctx.user.id, { limit: 2000 });
-      const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts.shifts);
-      const shift = shifts.shifts.find((entry) => entry.id === fullShiftId);
-      if (!fullShiftId || !shift || !shift.recurring_id) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
+      const shift = await getComputedShiftReference(ctx, input.shiftId);
+      if (!shift || !shift.recurring_id) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
       await convertRecurringShiftToStandalone(ctx, {
         recurringId: shift.recurring_id,
         shiftDate: shift.shift_date,
@@ -935,10 +1015,8 @@ async function executeManageShiftAdvanced(ctx: WageyRequestContext, args: unknow
     }
     case "move_recurring_occurrence": {
       if (!input.shiftId || !input.targetDate) return { success: false, message: t(tr.missingFields, { fields: "shiftId, targetDate" }) };
-      const shifts = await getComputedShiftsForApi(ctx, ctx.user.id, { limit: 2000 });
-      const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts.shifts);
-      const shift = shifts.shifts.find((entry) => entry.id === fullShiftId);
-      if (!fullShiftId || !shift || !shift.recurring_id) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
+      const shift = await getComputedShiftReference(ctx, input.shiftId);
+      if (!shift || !shift.recurring_id) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
       await moveRecurringShift(ctx, {
         recurringId: shift.recurring_id,
         sourceDate: shift.shift_date,
@@ -950,8 +1028,7 @@ async function executeManageShiftAdvanced(ctx: WageyRequestContext, args: unknow
     }
     case "clear_shift_snapshots": {
       if (!input.shiftId) return { success: false, message: tr.missingShiftId };
-      const shifts = await getShiftIdentityRowsForApi(ctx, ctx.user.id, { limit: 2000 });
-      const fullShiftId = resolveShortIdFromShifts(input.shiftId, shifts);
+      const fullShiftId = await resolveStoredShiftId(ctx, input.shiftId);
       if (!fullShiftId) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
       const result = await clearShiftSnapshots(ctx, fullShiftId);
       return { success: true, message: tr.clearedShiftSnapshots, data: result };
@@ -1461,8 +1538,10 @@ async function executeManageWageSnapshots(ctx: WageyRequestContext, args: unknow
         .is("deleted_at", null)
         .single();
       if (error || !snapshot) return { success: false, message: t(tr.snapshotNotFound, { id: input.snapshot_id }) };
-      const shifts = await getComputedShiftsForApi(ctx, ctx.user.id, { startDate: snapshot.from_date ?? "1900-01-01", endDate: "2100-12-31", limit: 5000, jobId: snapshot.job_id ?? undefined });
-      const affectedShiftCount = shifts.shifts.filter((shift) => shift.shift_date >= (snapshot.from_date ?? "1900-01-01")).length;
+      const affectedShiftCount = await countShiftsAffectedBySnapshot(ctx, {
+        startDate: snapshot.from_date ?? "1900-01-01",
+        jobId: snapshot.job_id ?? undefined,
+      });
       const { error: deleteError } = await ctx.supabase
         .from("wage_snapshots")
         .update({ deleted_at: new Date().toISOString() })
@@ -1481,18 +1560,20 @@ async function executeCalculateEarnings(ctx: WageyRequestContext, args: unknown)
   const parsed = calculateEarningsSchema.safeParse(args);
   if (!parsed.success) return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
   const input = parsed.data as CalculateEarningsInput;
-  const settings = await getUserSettings(ctx);
-  const currency = await getUserCurrency(ctx);
-
-  const computeHypotheticalShift = async (date: string, startTime: string, endTime: string, label?: string) => {
-    const { data: snapshots, error } = await ctx.supabase
+  const [settings, snapshots] = await Promise.all([
+    getUserSettings(ctx),
+    ctx.supabase
       .from("wage_snapshots")
       .select("*")
       .eq("user_id", ctx.user.id)
       .is("deleted_at", null)
-      .order("from_date", { ascending: false, nullsFirst: false });
-    if (error) throw new Error(error.message);
-    const snapshotList = snapshots ?? [];
+      .order("from_date", { ascending: false, nullsFirst: false }),
+  ]);
+  if (snapshots.error) throw new Error(snapshots.error.message);
+  const snapshotList = snapshots.data ?? [];
+  const currency = settings.currency || "NOK";
+
+  const computeHypotheticalShift = async (date: string, startTime: string, endTime: string, label?: string) => {
     const currentSnapshot =
       snapshotList.find((snapshot) => snapshot.from_date !== null && snapshot.from_date <= date) ??
       snapshotList.find((snapshot) => snapshot.from_date === null) ??
@@ -1569,10 +1650,8 @@ async function executeCalculateEarnings(ctx: WageyRequestContext, args: unknown)
   }
 
   if (input.hypothetical_change) {
-    const shifts = await getComputedShiftsForApi(ctx, ctx.user.id, { startDate: "2000-01-01", endDate: "2100-12-31", limit: 5000 });
-    const fullShiftId = resolveShortIdFromShifts(input.hypothetical_change.shift_id, shifts.shifts);
-    const originalShift = shifts.shifts.find((shift) => shift.id === fullShiftId);
-    if (!fullShiftId || !originalShift) return { success: false, message: t(tr.shiftNotFound, { id: input.hypothetical_change.shift_id }) };
+    const originalShift = await getComputedShiftReference(ctx, input.hypothetical_change.shift_id);
+    if (!originalShift) return { success: false, message: t(tr.shiftNotFound, { id: input.hypothetical_change.shift_id }) };
     const original = await computeHypotheticalShift(originalShift.shift_date, originalShift.start_time, originalShift.end_time, "Original");
     const modified = await computeHypotheticalShift(input.hypothetical_change.changes.date || originalShift.shift_date, input.hypothetical_change.changes.start_time || originalShift.start_time, input.hypothetical_change.changes.end_time || originalShift.end_time, "Modified");
     const difference = Number((modified.gross - original.gross).toFixed(2));
