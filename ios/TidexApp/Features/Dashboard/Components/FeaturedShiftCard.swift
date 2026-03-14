@@ -166,7 +166,7 @@ struct FeaturedShiftCard: View {
           CurrencyCountUpText(
             amount: displayAmount,
             duration: 0.8,
-            animateOnAppear: true,
+            animateOnAppear: false,
             animateChanges: true
           )
           .font(.tidexTitle)
