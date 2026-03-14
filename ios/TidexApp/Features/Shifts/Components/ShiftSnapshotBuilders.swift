@@ -19,26 +19,17 @@ struct OwnShiftSnapshotBuilder {
   }
 
   func build(canSeeOwnerEarnings: Bool) -> ComposerShiftSnapshotDraft {
-    let includesEarnings = canSeeOwnerEarnings
-    return ComposerShiftSnapshotDraft(
-      snapshot: FriendShiftSnapshot(
-        schemaVersion: 1,
+    ShiftSnapshotDraftFactory.makeDraft(
+      .init(
+        shift: shift,
+        jobName: normalizedJobName,
+        jobColorHex: normalizedJobColorHex,
+        currency: currency,
         ownerUserId: normalizedOwnerUserId,
         ownerDisplayName: normalizedOwnerDisplayName,
         ownerAvatarUrl: ownerAvatarUrl,
-        shiftId: normalizedShiftId,
-        jobName: normalizedJobName,
-        jobColorHex: normalizedJobColorHex,
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        paidHours: shift.paidHours,
-        currency: currency,
-        includesEarnings: includesEarnings,
-        grossPay: includesEarnings ? shift.grossPay : nil,
-        netPay: includesEarnings ? shift.netPay : nil,
-        taxEnabled: shift.taxEnabled,
-        source: "shift_details_sheet"
+        includesEarnings: canSeeOwnerEarnings,
+        ownerIdSeed: ownerUserId
       )
     )
   }
@@ -52,15 +43,6 @@ struct OwnShiftSnapshotBuilder {
     SnapshotRichContentIdentifier.normalizedUUIDString(
       primary: ownerUserId,
       fallbackSeed: "owner:\(ownerUserId)"
-    )
-  }
-
-  private var normalizedShiftId: String {
-    SnapshotRichContentIdentifier.normalizedUUIDString(
-      primary: shift.id,
-      secondary: shift.shift.recurring_id,
-      fallbackSeed:
-        "shift:\(ownerUserId):\(shift.id):\(shift.shiftDate):\(shift.startTime):\(shift.endTime)"
     )
   }
 
@@ -83,26 +65,17 @@ struct SharedShiftSnapshotBuilder {
   let owner: SharedUser
 
   func build() -> ComposerShiftSnapshotDraft {
-    let includesEarnings = owner.showEarnings
-    return ComposerShiftSnapshotDraft(
-      snapshot: FriendShiftSnapshot(
-        schemaVersion: 1,
+    ShiftSnapshotDraftFactory.makeDraft(
+      .init(
+        shift: shift,
+        jobName: normalizedJobName,
+        jobColorHex: normalizedJobColorHex,
+        currency: currency,
         ownerUserId: normalizedOwnerUserId,
         ownerDisplayName: owner.displayName,
         ownerAvatarUrl: owner.avatarUrl,
-        shiftId: normalizedShiftId,
-        jobName: normalizedJobName,
-        jobColorHex: normalizedJobColorHex,
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        paidHours: shift.paidHours,
-        currency: currency,
-        includesEarnings: includesEarnings,
-        grossPay: includesEarnings ? shift.grossPay : nil,
-        netPay: includesEarnings ? shift.netPay : nil,
-        taxEnabled: shift.taxEnabled,
-        source: "shift_details_sheet"
+        includesEarnings: owner.showEarnings,
+        ownerIdSeed: owner.id
       )
     )
   }
@@ -119,17 +92,60 @@ struct SharedShiftSnapshotBuilder {
     )
   }
 
-  private var normalizedShiftId: String {
+  private var normalizedJobColorHex: String? {
+    let trimmed = jobColorHex?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed?.isEmpty == true ? nil : trimmed
+  }
+}
+
+private enum ShiftSnapshotDraftFactory {
+  struct Configuration {
+    let shift: ShiftWithComputations
+    let jobName: String?
+    let jobColorHex: String?
+    let currency: String
+    let ownerUserId: String
+    let ownerDisplayName: String
+    let ownerAvatarUrl: String?
+    let includesEarnings: Bool
+    let ownerIdSeed: String
+  }
+
+  static func makeDraft(
+    _ configuration: Configuration
+  ) -> ComposerShiftSnapshotDraft {
+    ComposerShiftSnapshotDraft(
+      snapshot: FriendShiftSnapshot(
+        schemaVersion: 1,
+        ownerUserId: configuration.ownerUserId,
+        ownerDisplayName: configuration.ownerDisplayName,
+        ownerAvatarUrl: configuration.ownerAvatarUrl,
+        shiftId: normalizedShiftId(
+          shift: configuration.shift,
+          ownerIdSeed: configuration.ownerIdSeed
+        ),
+        jobName: configuration.jobName,
+        jobColorHex: configuration.jobColorHex,
+        shiftDate: configuration.shift.shiftDate,
+        startTime: configuration.shift.startTime,
+        endTime: configuration.shift.endTime,
+        paidHours: configuration.shift.paidHours,
+        currency: configuration.currency,
+        includesEarnings: configuration.includesEarnings,
+        grossPay: configuration.includesEarnings ? configuration.shift.grossPay : nil,
+        netPay: configuration.includesEarnings ? configuration.shift.netPay : nil,
+        taxEnabled: configuration.shift.taxEnabled,
+        source: "shift_details_sheet"
+      )
+    )
+  }
+
+  static func normalizedShiftId(shift: ShiftWithComputations, ownerIdSeed: String) -> String {
     SnapshotRichContentIdentifier.normalizedUUIDString(
       primary: shift.id,
       secondary: shift.shift.recurring_id,
       fallbackSeed:
-        "shift:\(owner.id):\(shift.id):\(shift.shiftDate):\(shift.startTime):\(shift.endTime)"
+        "shift:\(ownerIdSeed):\(shift.id):\(shift.shiftDate):\(shift.startTime):\(shift.endTime)"
     )
-  }
-
-  private var normalizedJobColorHex: String? {
-    let trimmed = jobColorHex?.trimmingCharacters(in: .whitespacesAndNewlines)
-    return trimmed?.isEmpty == true ? nil : trimmed
   }
 }

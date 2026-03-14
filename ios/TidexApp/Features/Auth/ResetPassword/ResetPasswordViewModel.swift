@@ -38,11 +38,7 @@ final class ResetPasswordViewModel: ObservableObject {
     case success  // Password reset complete
   }
 
-  enum InputType {
-    case email
-    case phone
-    case unknown
-  }
+  typealias InputType = AuthIdentityInputType
 
   struct FieldErrors {
     var emailOrPhone: String?
@@ -66,45 +62,12 @@ final class ResetPasswordViewModel: ObservableObject {
 
   /// Detected input type based on current emailOrPhone value
   var inputType: InputType {
-    let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    // Check for email
-    if trimmed.contains("@") && trimmed.contains(".") {
-      return .email
-    }
-
-    // Check for phone
-    let phoneChars = CharacterSet(charactersIn: "+0123456789 -")
-    if trimmed.hasPrefix("+")
-      || trimmed.allSatisfy({ String($0).rangeOfCharacter(from: phoneChars) != nil })
-    {
-      let digits = trimmed.filter { $0.isNumber }
-      if digits.count >= 8 {
-        return .phone
-      }
-    }
-
-    return .unknown
+    AuthIdentityInput.detectType(emailOrPhone)
   }
 
   /// Normalized phone number in E.164 format
   var normalizedPhone: String {
-    let cleaned = emailOrPhone.filter { $0.isNumber || $0 == "+" }
-
-    if cleaned.hasPrefix("+") {
-      return cleaned
-    }
-
-    if cleaned.hasPrefix("00") {
-      return "+" + cleaned.dropFirst(2)
-    }
-
-    // Assume Norwegian number
-    if cleaned.count == 8 {
-      return "+47" + cleaned
-    }
-
-    return cleaned
+    AuthIdentityInput.normalizedPhone(emailOrPhone)
   }
 
   // MARK: - Initialization

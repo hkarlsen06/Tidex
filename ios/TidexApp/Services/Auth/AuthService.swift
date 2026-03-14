@@ -97,7 +97,7 @@ final class AuthService: ObservableObject {
     let localeCode =
       Locale.autoupdatingCurrent.language.languageCode?.identifier.lowercased() ?? "en"
     var data: [String: AnyJSON] = [
-      "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date())),
+      "terms_accepted_at": .string(Date().toISO8601String()),
       // Keep metadata locale aligned with current iPhone/app language from first write.
       "locale": .string(localeCode),
     ]
@@ -131,7 +131,7 @@ final class AuthService: ObservableObject {
     let localeCode =
       Locale.autoupdatingCurrent.language.languageCode?.identifier.lowercased() ?? "en"
     var data: [String: AnyJSON] = [
-      "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date())),
+      "terms_accepted_at": .string(Date().toISO8601String()),
       // Keep metadata locale aligned with current iPhone/app language from first write.
       "locale": .string(localeCode),
     ]

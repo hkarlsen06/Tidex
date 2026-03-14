@@ -608,7 +608,7 @@ final class AddShiftViewModel: ObservableObject {
       case .recurring:
         var map: [String: CalendarEarningsData] = [:]
         for dateISO in cachedProjectedRecurringDates {
-          let weekday = weekdayFromDate(dateISO)
+          let weekday = RecurringAnchorSelection.weekdayKey(for: dateISO)
           if let earnings = cachedAnchorEarnings[weekday] {
             map[dateISO] = earnings
           }
@@ -648,7 +648,7 @@ final class AddShiftViewModel: ObservableObject {
   /// Get earnings for a recurring date by looking up its anchor's earnings
   /// All dates on the same weekday share the same earnings
   func earningsForRecurringDate(_ dateISO: String) -> CalendarEarningsData? {
-    let weekday = weekdayFromDate(dateISO)
+    let weekday = RecurringAnchorSelection.weekdayKey(for: dateISO)
     return cachedAnchorEarnings[weekday]
   }
 
@@ -918,16 +918,17 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Toggle anchor date for a weekday
   func toggleAnchorDate(_ dateISO: String) {
-    let weekday = weekdayFromDate(dateISO)
+    let weekday = RecurringAnchorSelection.weekdayKey(for: dateISO)
+    let updatedSelectedDays = RecurringAnchorSelection.toggledSelectedDays(
+      selectedDays,
+      dateISO: dateISO,
+      requiresAtLeastOneAnchor: false
+    )
 
-    if selectedDays[weekday] == dateISO {
-      // Remove this anchor
-      selectedDays.removeValue(forKey: weekday)
+    if selectedDays[weekday] == dateISO && updatedSelectedDays[weekday] == nil {
       cachedAnchorEarnings.removeValue(forKey: weekday)
-    } else {
-      // Set or replace anchor for this weekday
-      selectedDays[weekday] = dateISO
     }
+    selectedDays = updatedSelectedDays
 
     // Update projected dates for the new anchor configuration
     updateProjectedRecurringDates()
@@ -1151,19 +1152,7 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Format Date to HH:mm string
   private func formatTimeAsHHmm(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
-  }
-
-  /// Get weekday string ("0"-"6") from ISO date
-  private func weekdayFromDate(_ dateISO: String) -> String {
-    guard let date = Date.fromISODateString(dateISO) else { return "0" }
-    let calendar = Calendar.current
-    let weekday = calendar.component(.weekday, from: date)
-    // Calendar weekday is 1=Sun, 2=Mon, ..., 7=Sat
-    // JavaScript weekday is 0=Sun, 1=Mon, ..., 6=Sat
-    return String((weekday - 1) % 7)
+    date.toHourMinuteString()
   }
 
   /// Compute earnings for a single date (net + gross)

@@ -504,7 +504,7 @@ final class ManageSharingViewModel: ObservableObject {
 
     let newIShareWith = Friend.IShareWith(
       showEarningsToThem: false,
-      sharedAt: ISO8601DateFormatter().string(from: Date())
+      sharedAt: Date().toISO8601String()
     )
 
     friends[index] = friends[index].with(iShareWith: newIShareWith)
