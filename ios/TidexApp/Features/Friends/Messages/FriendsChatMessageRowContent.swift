@@ -105,10 +105,6 @@ struct FriendsChatMessageRowContent: View {
                     isHighlighted: false,
                     onTap: onTapQuotedMessage
                   )
-                  .friendsChatFocusedBackground(
-                    isHighlighted: false,
-                    cornerRadius: CornerRadius.lg
-                  )
                 }
 
                 ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
@@ -116,8 +112,7 @@ struct FriendsChatMessageRowContent: View {
                   if attachment.kind == .image {
                     FriendsChatImageView(
                       attachment: attachment,
-                      isCurrentUser: isCurrentUser,
-                      isHighlighted: isHighlighted
+                      isCurrentUser: isCurrentUser
                     )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
@@ -132,8 +127,7 @@ struct FriendsChatMessageRowContent: View {
                 if let shiftSnapshot {
                   ChatShiftSnapshotCard(
                     snapshot: shiftSnapshot,
-                    isCurrentUser: isCurrentUser,
-                    isHighlighted: isHighlighted
+                    isCurrentUser: isCurrentUser
                   )
                   .overlay(alignment: reactionAlignment) {
                     if !hasMessageText, imageAttachments.isEmpty {
@@ -146,7 +140,6 @@ struct FriendsChatMessageRowContent: View {
                   FriendsChatReactionAnchoredBubbleCard(
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
-                    isHighlighted: isHighlighted,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
                     maxWidth: 280
                   ) {
@@ -164,7 +157,6 @@ struct FriendsChatMessageRowContent: View {
                   FriendsChatReactionAnchoredBubbleCard(
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
-                    isHighlighted: isHighlighted,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
                     maxWidth: 280
                   ) {
@@ -497,7 +489,6 @@ extension FriendMessageAttachment {
 private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
   let isCurrentUser: Bool
   let groupContext: FriendsChatMessageGroupContext
-  let isHighlighted: Bool
   var minWidth: CGFloat? = nil
   var maxWidth: CGFloat? = nil
   @ViewBuilder let content: () -> Content
@@ -542,10 +533,6 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
       .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
         reaction()
       }
-      .friendsChatFocusedBackground(
-        isHighlighted: isHighlighted,
-        cornerRadius: CornerRadius.bubble
-      )
   }
 
   private var bubbleShape: some InsettableShape {
@@ -607,21 +594,9 @@ private struct FriendsChatDateSeparator: View {
         .fill(Color.tidexBorderSubtle)
         .frame(height: 1)
     }
-    .frame(width: separatorWidth)
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
-  }
-
-  private var separatorWidth: CGFloat {
-    let screenWidth =
-      UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .first?
-      .screen
-      .bounds
-      .width
-      ?? 390
-
-    return screenWidth - (Spacing.md * 2)
   }
 
   private var separatorText: String {
@@ -735,7 +710,6 @@ private struct FriendsChatMessageReplyPreview: View {
 struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
-  let isHighlighted: Bool
 
   private var ownerPrimaryTextColor: Color {
     .tidexTextMuted
@@ -769,25 +743,19 @@ struct ChatShiftSnapshotCard: View {
       )
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .friendsChatFocusedBackground(
-      isHighlighted: isHighlighted,
-      cornerRadius: CornerRadius.xl
-    )
   }
 }
 
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
-  let isHighlighted: Bool
 
   @State private var selectedImageViewer: FriendsChatSelectedImageViewer?
 
   var body: some View {
     FriendsChatImageAttachmentCard(
       attachment: attachment,
-      isCurrentUser: isCurrentUser,
-      isHighlighted: isHighlighted
+      isCurrentUser: isCurrentUser
     ) { image in
       selectedImageViewer = FriendsChatSelectedImageViewer(image: image)
     }
@@ -862,7 +830,6 @@ final class FriendsChatImageLoader: ObservableObject {
 struct FriendsChatImageAttachmentCard: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
-  let isHighlighted: Bool
   var onTap: ((UIImage) -> Void)? = nil
 
   @StateObject private var loader: FriendsChatImageLoader
@@ -870,12 +837,10 @@ struct FriendsChatImageAttachmentCard: View {
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
-    isHighlighted: Bool,
     onTap: ((UIImage) -> Void)? = nil
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
-    self.isHighlighted = isHighlighted
     self.onTap = onTap
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL)
@@ -918,10 +883,6 @@ struct FriendsChatImageAttachmentCard: View {
     .task(id: attachment.id) {
       await loader.loadIfNeeded(attachment: attachment)
     }
-    .friendsChatFocusedBackground(
-      isHighlighted: isHighlighted,
-      cornerRadius: CornerRadius.lg
-    )
   }
 
   private var imageFrameSize: CGSize {
@@ -953,26 +914,4 @@ struct FriendsChatImageAttachmentCard: View {
 private struct FriendsChatSelectedImageViewer: Identifiable {
   let id = UUID()
   let image: UIImage
-}
-
-private struct FriendsChatFocusedBackgroundModifier: ViewModifier {
-  let isHighlighted: Bool
-  let cornerRadius: CGFloat
-
-  func body(content: Content) -> some View {
-    content
-  }
-}
-
-extension View {
-  fileprivate func friendsChatFocusedBackground(isHighlighted: Bool, cornerRadius: CGFloat)
-    -> some View
-  {
-    modifier(
-      FriendsChatFocusedBackgroundModifier(
-        isHighlighted: isHighlighted,
-        cornerRadius: cornerRadius
-      )
-    )
-  }
 }
