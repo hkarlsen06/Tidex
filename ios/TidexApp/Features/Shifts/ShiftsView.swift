@@ -81,7 +81,9 @@ struct ShiftsView: View {
   @State private var deepLinkHighlightDate: String?  // Date to visually highlight (for widget deeplinks)
 
   // Share functionality state
+  @State private var showingShareDestinationPicker = false
   @State private var showingShareOptions = false
+  @State private var showingSendToChatSheet = false
   @State private var shareImage: UIImage?
   @State private var shareImageURL: URL?
   @Environment(\.colorScheme) private var colorScheme
@@ -146,8 +148,7 @@ struct ShiftsView: View {
     if !showListView && !shouldShowWorkSetupRequiredPlaceholder {
       ToolbarItem(placement: .topBarLeading) {
         Button {
-          impactHaptic.impactOccurred()
-          showingShareOptions = true
+          startCalendarShare()
         } label: {
           Image(systemName: "square.and.arrow.up")
             .font(.tidexBodyMedium)
@@ -424,7 +425,7 @@ struct ShiftsView: View {
         // Listen for "use share button" from the screenshot prompt overlay (hosted in MainTabView)
         .onReceive(NotificationCenter.default.publisher(for: .screenshotPromptUseShareButton)) {
           _ in
-          showingShareOptions = true
+          startCalendarShare()
         }
         .onChange(of: viewModel.committedMonth) { _, _ in
           // Check if we have a pending deep link for this month
@@ -493,6 +494,20 @@ struct ShiftsView: View {
           .presentationDetents([.large])
           .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingShareDestinationPicker) {
+          ShareDestinationSheet(
+            onShareAsImage: {
+              showingShareDestinationPicker = false
+              showingShareOptions = true
+            },
+            onShareInChat: {
+              showingShareDestinationPicker = false
+              showingSendToChatSheet = true
+            }
+          )
+          .presentationDetents([.height(250)])
+          .presentationDragIndicator(.visible)
+        }
         // Calendar share options sheet
         .sheet(
           isPresented: $showingShareOptions,
@@ -520,15 +535,38 @@ struct ShiftsView: View {
           .presentationDetents([.height(260)])
           .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingSendToChatSheet) {
+          if let viewerUserId = coordinator.getCurrentUserId() {
+            SendAttachmentToChatSheet(
+              viewerUserId: viewerUserId,
+              buildAttachment: makeCalendarImageDraft(for:),
+              onCompleted: { result in
+                coordinator.pendingDeepLink = .friendChat(
+                  threadId: result.threadId,
+                  messageId: nil,
+                  senderUserId: nil
+                )
+                showingSendToChatSheet = false
+              }
+            )
+          }
+        }
     )
   }
 
   // MARK: - Calendar Share
 
-  /// Prepare the calendar image for sharing (called before dismissing options sheet)
-  @MainActor
-  private func prepareCalendarImage(includeEarnings: Bool) {
-    let shareableCalendar = ShareableCalendarView(
+  private func startCalendarShare() {
+    impactHaptic.impactOccurred()
+    if coordinator.getCurrentUserId() != nil {
+      showingShareDestinationPicker = true
+    } else {
+      showingShareOptions = true
+    }
+  }
+
+  private func makeShareableCalendar(includeEarnings: Bool) -> ShareableCalendarView {
+    ShareableCalendarView(
       shifts: viewModel.shifts,
       year: viewModel.committedYear,
       month: viewModel.committedMonth,
@@ -537,9 +575,29 @@ struct ShiftsView: View {
       excludedFromTotalIds: viewModel.excludedFromTotalIds,
       colorScheme: colorScheme
     )
+  }
 
+  private func renderCalendarImage(includeEarnings: Bool) -> UIImage? {
+    makeShareableCalendar(includeEarnings: includeEarnings).renderAsImage()
+  }
+
+  private func makeCalendarImageDraft(for recipient: ShareRecipient) throws
+    -> FriendsComposerAttachmentDraft
+  {
+    guard let image = renderCalendarImage(includeEarnings: recipient.canSeeOwnerEarnings),
+      let compressed = ImageCompressor.compress(image)
+    else {
+      throw CalendarSharePreparationError.unableToPrepareImage
+    }
+
+    return .image(ImageAttachment(data: compressed.data, mediaType: compressed.mediaType))
+  }
+
+  /// Prepare the calendar image for sharing (called before dismissing options sheet)
+  @MainActor
+  private func prepareCalendarImage(includeEarnings: Bool) {
     // Render to image and save to temp file for better share sheet compatibility
-    guard let image = shareableCalendar.renderAsImage(),
+    guard let image = renderCalendarImage(includeEarnings: includeEarnings),
       let pngData = image.pngData()
     else {
       shareImage = nil
@@ -589,6 +647,14 @@ struct ShiftsView: View {
         popover.permittedArrowDirections = .up
       }
       topVC.present(activityVC, animated: true)
+    }
+  }
+
+  private enum CalendarSharePreparationError: LocalizedError {
+    case unableToPrepareImage
+
+    var errorDescription: String? {
+      String(localized: "friends.chat.send_to_chat.prepare_image_failed", table: "Localizable")
     }
   }
 
