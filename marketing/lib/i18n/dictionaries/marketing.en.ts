@@ -64,7 +64,8 @@ export const marketingEn = {
       {
         question: 'Is the web app still available?',
         answers: [
-          'No. The old web app has been retired, and Tidex is now maintained as an iOS-first product.',
+          'No. The old web app has been retired because too few people used it to justify maintaining it alongside the native app.',
+          'Tidex is built by a solo developer, so I need to focus my time where it helps the most. Right now that means the iOS app, which is where the active user base is.',
           'If you have an old website account or billing question, contact support and we will help manually.',
         ],
       },

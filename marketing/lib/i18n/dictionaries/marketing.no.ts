@@ -64,7 +64,8 @@ export const marketingNo = {
       {
         question: 'Er nettappen fortsatt tilgjengelig?',
         answers: [
-          'Nei. Den gamle nettappen er avviklet, og Tidex vedlikeholdes nå som et iOS-først-produkt.',
+          'Nei. Den gamle nettappen er avviklet fordi den ble brukt for lite til at det ga mening å vedlikeholde den ved siden av den native appen.',
+          'Tidex bygges av én utvikler, så jeg må bruke tiden der den hjelper flest. Akkurat nå betyr det iOS-appen, som er der de aktive brukerne er.',
           'Hvis du har en gammel nettkonto eller spørsmål om tidligere webbetalinger, hjelper support deg manuelt.',
         ],
       },
