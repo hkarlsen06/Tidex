@@ -1759,6 +1759,7 @@ final class SyncCoordinator: ObservableObject {
       theme: serverRow.theme,
       calendarAnimationStyle: serverRow.calendar_animation_style,
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
+      aiDataSharingEnabled: serverRow.ai_data_sharing_enabled ?? false,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       defaultStartupTab: serverRow.default_startup_tab,
@@ -3772,6 +3773,9 @@ final class SyncCoordinator: ObservableObject {
       updateData["show_dashboard_clock_buttons"] = .bool(
         settings.effectiveShowDashboardClockButtons)
     }
+    if dirtyFields.contains(.aiDataSharingEnabled) {
+      updateData["ai_data_sharing_enabled"] = .bool(settings.aiDataSharingEnabled ?? false)
+    }
     if dirtyFields.contains(.halfTaxMonth) {
       if let month = settings.halfTaxMonth {
         updateData["half_tax_month"] = .integer(month)
@@ -3865,6 +3869,7 @@ final class SyncCoordinator: ObservableObject {
       "theme": .string(settings.theme),
       "calendar_animation_style": .string(settings.effectiveCalendarAnimationStyle),
       "show_dashboard_clock_buttons": .bool(settings.effectiveShowDashboardClockButtons),
+      "ai_data_sharing_enabled": .bool(settings.aiDataSharingEnabled ?? false),
     ]
 
     let monthlyGoalsByMonthEncoded = try requireEncode(

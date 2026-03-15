@@ -43,6 +43,10 @@ final class LocalUserSettings {
   /// Optional to support migration from older versions without this field
   var showDashboardClockButtons: Bool?
 
+  /// Whether the user has consented to Wagey AI data sharing
+  /// Optional to support migration from older versions without this field
+  var aiDataSharingEnabled: Bool?
+
   /// Month number (11=November, 12=December) for half tax deduction
   var halfTaxMonth: Int?
 
@@ -186,6 +190,7 @@ final class LocalUserSettings {
     theme: String = "system",
     calendarAnimationStyle: String? = "horizontal",
     showDashboardClockButtons: Bool? = true,
+    aiDataSharingEnabled: Bool? = nil,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
     defaultStartupTab: String? = nil,
@@ -208,6 +213,7 @@ final class LocalUserSettings {
     self.theme = theme
     self.calendarAnimationStyle = calendarAnimationStyle
     self.showDashboardClockButtons = showDashboardClockButtons
+    self.aiDataSharingEnabled = aiDataSharingEnabled
     self.halfTaxMonth = halfTaxMonth
     self.currency = currency
     self.defaultStartupTab = defaultStartupTab
@@ -240,6 +246,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   let theme: String
   let calendarAnimationStyle: String
   let showDashboardClockButtons: Bool
+  let aiDataSharingEnabled: Bool
   let halfTaxMonth: Int?
   let currency: String?
   let defaultStartupTab: String?
@@ -256,6 +263,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     case theme
     case calendarAnimationStyle
     case showDashboardClockButtons
+    case aiDataSharingEnabled
     case halfTaxMonth
     case currency
     case defaultStartupTab
@@ -281,6 +289,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
       theme: row.theme,
       calendarAnimationStyle: row.calendar_animation_style,
       showDashboardClockButtons: row.effectiveShowDashboardClockButtons,
+      aiDataSharingEnabled: row.effectiveAIDataSharingEnabled,
       halfTaxMonth: row.half_tax_month,
       currency: row.currency,
       defaultStartupTab: row.default_startup_tab,
@@ -335,6 +344,9 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     if showDashboardClockButtons != other.showDashboardClockButtons {
       changed.insert(.showDashboardClockButtons)
     }
+    if aiDataSharingEnabled != other.aiDataSharingEnabled {
+      changed.insert(.aiDataSharingEnabled)
+    }
     if halfTaxMonth != other.halfTaxMonth {
       changed.insert(.halfTaxMonth)
     }
@@ -367,6 +379,8 @@ extension UserSettingsServerSnapshot {
     calendarAnimationStyle = try container.decode(String.self, forKey: .calendarAnimationStyle)
     showDashboardClockButtons =
       try container.decodeIfPresent(Bool.self, forKey: .showDashboardClockButtons) ?? true
+    aiDataSharingEnabled =
+      try container.decodeIfPresent(Bool.self, forKey: .aiDataSharingEnabled) ?? false
     halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
     currency = try container.decodeIfPresent(String.self, forKey: .currency)
     defaultStartupTab = try container.decodeIfPresent(String.self, forKey: .defaultStartupTab)
@@ -396,6 +410,7 @@ extension LocalUserSettings {
       theme: theme,
       calendar_animation_style: effectiveCalendarAnimationStyle,
       show_dashboard_clock_buttons: effectiveShowDashboardClockButtons,
+      ai_data_sharing_enabled: aiDataSharingEnabled,
       half_tax_month: halfTaxMonth,
       currency: currency,
       default_startup_tab: defaultStartupTab
@@ -432,6 +447,7 @@ extension LocalUserSettings {
       theme: serverRow.theme,
       calendarAnimationStyle: serverRow.calendar_animation_style,
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
+      aiDataSharingEnabled: serverRow.ai_data_sharing_enabled ?? false,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       defaultStartupTab: serverRow.default_startup_tab,

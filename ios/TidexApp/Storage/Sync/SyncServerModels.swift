@@ -205,6 +205,7 @@ struct SyncUserSettingsRow: Codable {
   let theme: String
   let calendar_animation_style: String
   let show_dashboard_clock_buttons: Bool?
+  let ai_data_sharing_enabled: Bool?
   let half_tax_month: Int?
   let currency: String?
   let default_startup_tab: String?
@@ -225,6 +226,7 @@ struct SyncUserSettingsRow: Codable {
       theme: theme,
       calendar_animation_style: calendar_animation_style,
       show_dashboard_clock_buttons: show_dashboard_clock_buttons,
+      ai_data_sharing_enabled: ai_data_sharing_enabled,
       half_tax_month: half_tax_month,
       currency: currency,
       default_startup_tab: default_startup_tab

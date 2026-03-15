@@ -127,6 +127,7 @@ final class SettingsRepository: ObservableObject {
   ///   - theme: New theme (optional)
   ///   - calendarAnimationStyle: New calendar animation style (optional)
   ///   - showDashboardClockButtons: Whether dashboard clock buttons are visible (optional)
+  ///   - aiDataSharingEnabled: Whether Wagey AI data sharing is enabled (optional)
   ///   - halfTaxMonth: New half tax month (optional)
   ///   - currency: New currency (optional)
   ///   - defaultStartupTab: New default startup tab (optional)
@@ -142,6 +143,7 @@ final class SettingsRepository: ObservableObject {
     theme: String? = nil,
     calendarAnimationStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
+    aiDataSharingEnabled: Bool? = nil,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
     defaultStartupTab: String? = nil,
@@ -158,6 +160,7 @@ final class SettingsRepository: ObservableObject {
         theme: theme,
         calendarAnimationStyle: calendarAnimationStyle,
         showDashboardClockButtons: showDashboardClockButtons,
+        aiDataSharingEnabled: aiDataSharingEnabled,
         halfTaxMonth: halfTaxMonth,
         currency: currency,
         defaultStartupTab: defaultStartupTab
@@ -217,6 +220,7 @@ final class SettingsRepository: ObservableObject {
       theme: nil,
       calendarAnimationStyle: nil,
       showDashboardClockButtons: nil,
+      aiDataSharingEnabled: nil,
       halfTaxMonth: nil,
       currency: nil,
       defaultStartupTab: nil

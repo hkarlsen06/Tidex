@@ -247,8 +247,14 @@ final class WageyViewModel {
   /// Repository for conversation persistence
   private let conversationsRepository = ConversationsRepository.shared
 
+  /// Repository for server-synced user settings.
+  private let settingsRepository = SettingsRepository.shared
+
   /// Cached user ID for persistence
   private var cachedUserId: String?
+
+  /// Latest in-flight AI consent persistence task.
+  private var consentPersistenceTask: Task<Void, Never>?
 
   /// Subscription for observing tier changes
   private var tierChangeSubscription: AnyCancellable?
@@ -315,13 +321,36 @@ final class WageyViewModel {
     "wagey.hasConsentedToAISharing.\(userId)"
   }
 
-  /// Load the consent state from UserDefaults
+  /// Load the consent state from synced settings, with a one-time legacy UserDefaults fallback.
   private func loadConsentState() {
     guard let userId = AppCoordinator.shared.userId else {
       hasConsentedToAISharing = false
       return
     }
-    hasConsentedToAISharing = UserDefaults.standard.bool(forKey: consentKey(for: userId))
+
+    let legacyConsent = UserDefaults.standard.object(forKey: consentKey(for: userId)) as? Bool
+    let syncedConsent =
+      settingsRepository.getSettings(for: userId)?.effectiveAIDataSharingEnabled ?? false
+
+    if syncedConsent {
+      hasConsentedToAISharing = true
+      if legacyConsent != nil {
+        UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
+      }
+      return
+    }
+
+    if legacyConsent == true {
+      hasConsentedToAISharing = true
+      scheduleAIConsentPersistence(true, for: userId, removeLegacyOnSuccess: true)
+      return
+    }
+
+    if legacyConsent == false, settingsRepository.getSettings(for: userId) != nil {
+      UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
+    }
+
+    hasConsentedToAISharing = false
   }
 
   /// Mark that the user has consented to AI data sharing
@@ -330,6 +359,7 @@ final class WageyViewModel {
     hasConsentedToAISharing = true
     hasResolvedEntryState = true
     UserDefaults.standard.set(true, forKey: consentKey(for: userId))
+    scheduleAIConsentPersistence(true, for: userId, removeLegacyOnSuccess: true)
   }
 
   /// Revoke consent for AI data sharing (called from Settings)
@@ -338,6 +368,48 @@ final class WageyViewModel {
     hasConsentedToAISharing = false
     hasResolvedEntryState = true
     UserDefaults.standard.set(false, forKey: consentKey(for: userId))
+    scheduleAIConsentPersistence(false, for: userId, removeLegacyOnSuccess: true)
+  }
+
+  private func scheduleAIConsentPersistence(
+    _ isEnabled: Bool,
+    for userId: String,
+    removeLegacyOnSuccess: Bool
+  ) {
+    consentPersistenceTask?.cancel()
+    consentPersistenceTask = Task { @MainActor [weak self] in
+      await self?.persistAIConsentState(
+        isEnabled,
+        for: userId,
+        removeLegacyOnSuccess: removeLegacyOnSuccess
+      )
+    }
+  }
+
+  private func persistAIConsentState(
+    _ isEnabled: Bool,
+    for userId: String,
+    removeLegacyOnSuccess: Bool
+  ) async {
+    do {
+      _ = try await settingsRepository.getOrCreateSettings(for: userId)
+      try Task.checkCancellation()
+
+      _ = try await settingsRepository.updateSettings(
+        for: userId,
+        aiDataSharingEnabled: isEnabled
+      )
+
+      if removeLegacyOnSuccess {
+        UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
+      }
+    } catch is CancellationError {
+      return
+    } catch {
+      logger.error(
+        "Failed to persist AI sharing consent for \(userId, privacy: .private): \(error.localizedDescription)"
+      )
+    }
   }
 
   /// Reset all in-memory user-scoped state.
@@ -371,6 +443,8 @@ final class WageyViewModel {
     pendingSyncTables = []
     currentAssistantMessageId = nil
     pendingCompactionContent = nil
+    consentPersistenceTask?.cancel()
+    consentPersistenceTask = nil
   }
 
   /// Refresh the user-scoped showcase and consent state.
