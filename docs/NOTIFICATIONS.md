@@ -418,7 +418,7 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 - [ ] Create statement-level trigger to fire edge function (use `z_` prefix)
 - [ ] Test with both English and Norwegian users
 - [ ] Update iOS app if custom tap handling needed
-- [ ] Update web app `push-service.ts` if custom handling needed
+- [ ] Update iOS or other active clients if custom tap handling is needed
 - [ ] Document in this file
 
 ---
@@ -449,6 +449,6 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 | `supabase/sql/functions/trigger/queue_share_started_notification.sql` | Share started trigger + notification |
 | `supabase/sql/functions/notification/claim_outbox_notifications.sql` | Atomic queue claiming |
 | `supabase/functions/send-push-notifications/index.ts` | Main delivery edge function |
-| `next/lib/notifications/enqueue.ts` | Direct notification enqueueing (error_report) |
-| `lib/notifications/push-service.ts` | Web app push handling |
-| `ios/TidexApp/Native/Services/NotificationService.swift` | iOS push handling |
+| `supabase/sql/functions/trigger/queue_abuse_report_notification.sql` | Admin abuse-report notification enqueueing |
+| `app-compat/_redirects` | Legacy `app.tidex.no` redirect behavior after web app retirement |
+| `ios/TidexApp/Services/Notification/NotificationService.swift` | iOS push handling |

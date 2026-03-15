@@ -1,7 +1,7 @@
 -- Function: get_my_entitlement
 -- Description: Returns the entitlement status for the CURRENT authenticated user
 -- Security: SECURITY DEFINER ensures auth.uid() is trusted, not user-supplied
--- Used by: iOS app, web app (client-safe entitlement queries)
+-- Used by: iOS app and any active authenticated clients (client-safe entitlement queries)
 --
 -- NOTE: RETURNS TABLE (not jsonb) for clean Supabase client decoding
 -- This allows direct decoding to Swift structs without wrapper handling

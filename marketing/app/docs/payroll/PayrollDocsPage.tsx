@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
-import { PayrollDocsRenderer } from '@root/components/payroll-docs/PayrollDocsRenderer';
+import { PayrollDocsRenderer } from '@/components/payroll-docs/PayrollDocsRenderer';
 
 interface PayrollDocsType {
   badge: string;

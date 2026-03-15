@@ -28,24 +28,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@/lib/*": [
-        "../next/lib/*"
-      ],
-      "@root/*": [
-        "../next/*"
-      ],
-      "@components/*": [
-        "../next/components/*"
-      ],
-      "@ui/*": [
-        "../next/components/ui/*"
-      ],
-      "@appui/*": [
-        "../next/components/app/*"
-      ],
-      "@lib/*": [
-        "../next/lib/*"
       ]
     }
   },

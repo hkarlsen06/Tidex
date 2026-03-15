@@ -50,7 +50,7 @@ BEGIN
       'thread_id', NEW.thread_id,
       'message_id', NEW.message_id,
       'reported_user_id', NEW.reported_user_id,
-      'deeplink', 'https://app.tidex.no/settings/admin?tab=reports&reportId=' || NEW.id::text
+      'deeplink', 'tidex://admin?tab=reports&reportId=' || NEW.id::text
     ),
     'abuse_report:' || NEW.id::text || ':' || admin_user.id::text,
     NOW(),

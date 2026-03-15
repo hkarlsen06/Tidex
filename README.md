@@ -2,18 +2,19 @@
 
 A monorepo for tracking work shifts and calculating wages, containing:
 
-- **next/** - Next.js 16 web application
+- **marketing/** - Next.js 16 public website for `tidex.no`
+- **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
+- **dev-site/** - Developer portfolio site for `kkarlsen.dev`
 - **ios/** - Native iOS application
 
-Both apps share a common Supabase backend for authentication, database, and edge functions.
+The public web surfaces and the iOS app share a common Supabase backend for authentication, database, and edge functions.
 
 ## Tech Stack
 
-### Web (next/)
+### Web (marketing/)
 - **Framework**: Next.js 16 with React 19
 - **Styling**: Tailwind CSS v4 with semantic design tokens
-- **Type Safety**: TypeScript with Effect-TS for services layer
-- **Testing**: Vitest with React Testing Library + Playwright for E2E
+- **Hosting**: Static export for Cloudflare Pages
 
 ### iOS (ios/)
 - **Framework**: SwiftUI with iOS 26
@@ -21,20 +22,16 @@ Both apps share a common Supabase backend for authentication, database, and edge
 
 ### Shared
 - **Database & Auth**: Supabase
-- **Payments**: Stripe (web) + Apple IAP (iOS)
+- **Payments**: Apple IAP (iOS) + legacy Stripe subscriptions handled manually via support
 - **Push Notifications**: Firebase Cloud Messaging
 
 ## Repository Structure
 
 ```
 tidex/
-├── next/               # Next.js web application
-│   ├── app/            # App router pages and API routes
-│   ├── components/     # React components
-│   ├── data-access/    # Data Access Layer (DAL)
-│   ├── lib/            # Utilities, services, payroll calculations
-│   ├── public/         # Static assets
-│   └── docs/           # Web-specific documentation
+├── marketing/          # Public Tidex site (tidex.no)
+├── app-compat/         # Static compatibility host (app.tidex.no)
+├── dev-site/           # Developer portfolio (kkarlsen.dev)
 ├── ios/                # Native iOS application
 │   ├── TidexApp/       # iOS app target (Swift source)
 │   ├── TidexShiftWidget/ # Widget extension
@@ -58,10 +55,9 @@ tidex/
 ### Web Development
 
 ```bash
-cd next
+cd marketing
 pnpm install
-pnpm dev            # Start HTTP dev server (http://localhost:3000)
-pnpm dev:https      # Start HTTPS dev server (https://localhost:3000)
+pnpm dev            # Start the Tidex public site locally (http://localhost:3001)
 ```
 
 ### iOS Development
@@ -70,28 +66,15 @@ Open `ios/Tidex.xcodeproj` in Xcode and build.
 
 ### Environment Variables
 
-Create `next/.env.local` with:
+Create `.env.local` in the repository root when running the iOS localization scripts:
 
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
-
-# Stripe
-NEXT_PUBLIC_PRO_PRICE_ID=your_stripe_pro_price_id
-NEXT_PUBLIC_MAX_PRICE_ID=your_stripe_max_price_id
-
-# Security
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_turnstile_site_key
-
-# AI (Wagey)
-CLAUDE_API_KEY=your_claude_api_key
-CLAUDE_MODEL=your_claude_model
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-5.4
 ```
 
 ## Documentation
 
-- See `next/AGENTS.md` for web development guidelines
 - See `ios/AGENTS.md` for iOS development guidelines
 - See `docs/` for shared documentation (database, notifications, payroll spec)
 

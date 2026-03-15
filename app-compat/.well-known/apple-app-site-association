@@ -1,0 +1,32 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "48ZSLD4RMP.no.tidex.app",
+        "paths": [
+          "/settings/admin",
+          "/en/settings/admin",
+          "/no/settings/admin",
+          "/sharing",
+          "/sharing/*",
+          "/en/sharing",
+          "/en/sharing/*",
+          "/no/sharing",
+          "/no/sharing/*",
+          "/shifts",
+          "/shifts/*",
+          "/en/shifts",
+          "/en/shifts/*",
+          "/no/shifts",
+          "/no/shifts/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "48ZSLD4RMP.no.tidex.app"
+    ]
+  }
+}

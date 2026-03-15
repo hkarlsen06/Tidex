@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tidex.no/sitemap.xml
+Sitemap: https://kkarlsen.dev/sitemap.xml

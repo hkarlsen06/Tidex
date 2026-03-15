@@ -8,19 +8,21 @@ This file provides guidance to coding agents when working with code in this repo
 
 ## Project Overview
 
-A monorepo containing two applications for tracking work shifts and calculating wages:
+A monorepo containing the public Tidex web surfaces and the native iOS application:
 
-- **next/** - Next.js 16 web application with Supabase authentication
+- **marketing/** - Next.js 16 public website for `tidex.no`
+- **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
+- **dev-site/** - Developer portfolio static site
 - **ios/** - Native iOS application
 
-Both apps share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
+The web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
 
 ## Repository Structure
 
 ```
 tidex/
-├── next/           # Next.js web application (see next/AGENTS.md)
 ├── marketing/      # Marketing static site (tidex.no)
+├── app-compat/     # Compatibility redirects + Apple association files (app.tidex.no)
 ├── dev-site/       # Developer portfolio static site (kkarlsen.dev)
 ├── ios/            # Native iOS application (see ios/AGENTS.md)
 ├── supabase/       # Shared backend (edge functions, migrations)

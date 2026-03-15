@@ -612,7 +612,7 @@
 
 - Use the existing public support contact `contact@tidex.no`.
 - Use the existing support page as the canonical public support destination:
-  - `https://app.tidex.no/support`
+  - `https://tidex.no/support`
 - Use the existing public privacy policy as the canonical privacy destination:
   - `https://tidex.no/privacy`
 - Add a visible `Safety and support` or `Report a problem` link in chat-related settings or thread actions that opens the support page or mail composer.
@@ -632,8 +632,8 @@
   - that push notifications may include sender identity and message-preview metadata.
 - Treat the legal copy update as launch-blocking work for messaging, not a post-launch cleanup task.
 - After the legal copy is updated, bump the canonical legal version dates used by:
-  - `next/lib/i18n/dictionaries/legal.*.ts`,
-  - `next/app/api/legal/version/route.ts`,
+  - `marketing/lib/i18n/dictionaries/legal.*.ts`,
+  - `marketing/public/legal/version.json`,
   - iOS `TermsVersion` re-acceptance checks.
 - If the messaging launch materially changes data handling, require re-acceptance of updated Terms/Privacy before or at first app open after release.
 - Make Terms of Service and Privacy Policy reachable from inside the app in a support or legal surface that does not depend on onboarding.

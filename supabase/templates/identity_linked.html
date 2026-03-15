@@ -12,11 +12,18 @@
       table { border-collapse:collapse !important; }
       a { text-decoration:none; }
 
+      /* Dark-mode adaptive text */
       @media (prefers-color-scheme: dark) {
         body { background:#0d1117 !important; }
         .card { background:#161b22 !important; }
+        .surface { background:#21262d !important; }
         .text-main { color:#f0f6fc !important; }
         .text-sub { color:#8b949e !important; }
+        .text-body { color:#c9d1d9 !important; }
+        .text-danger { color:#f85149 !important; }
+        .link { color:#58a6ff !important; }
+        .rule { border-top-color:#30363d !important; }
+        .btn { background:#2563eb !important; color:#ffffff !important; }
       }
 
       @media screen and (max-width:600px) {
@@ -30,44 +37,44 @@
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center">
-          <table class="container card" role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#161b22; border-radius:16px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,0.4);">
+          <table class="container card" role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,0.2);">
             <tr>
               <td style="padding:48px 40px;">
-                <img src="https://app.tidex.no/favicon.ico" alt="Tidex" width="48" height="48" style="border-radius:12px; display:block; margin-bottom:20px;">
+                <img src="https://tidex.no/favicon.ico" alt="Tidex" width="48" height="48" style="border-radius:12px; display:block; margin-bottom:20px;">
 
-                <h1 class="text-main" style="font-size:24px; font-weight:700; color:#f0f6fc; margin:0 0 12px 0;">
+                <h1 class="text-main" style="font-size:24px; font-weight:700; color:#111; margin:0 0 12px 0;">
                   Ny identitet koblet til kontoen
                 </h1>
 
-                <p class="text-sub" style="font-size:16px; line-height:1.6; color:#c9d1d9; margin:0 0 24px 0;">
+                <p class="text-sub" style="font-size:16px; line-height:1.6; color:#333; margin:0 0 24px 0;">
                   En ny innloggingsmetode ble koblet til Tidex-kontoen din.
                 </p>
 
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#21262d; border-radius:8px; margin-bottom:24px;">
+                <table class="surface" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6; border-radius:8px; margin-bottom:24px;">
                   <tr>
                     <td style="padding:16px 20px;">
-                      <p style="font-size:14px; color:#c9d1d9; margin:0 0 4px 0;"><strong>Leverandør:</strong> {{ .Provider }}</p>
-                      <p style="font-size:14px; color:#c9d1d9; margin:0;"><strong>Tidspunkt:</strong> {{ .Timestamp }}</p>
+                      <p class="text-body" style="font-size:14px; color:#333; margin:0 0 4px 0;"><strong>Leverandør:</strong> {{ .Provider }}</p>
+                      <p class="text-body" style="font-size:14px; color:#333; margin:0;"><strong>Tidspunkt:</strong> {{ .Timestamp }}</p>
                     </td>
                   </tr>
                 </table>
 
-                <p class="text-sub" style="font-size:14px; color:#8b949e; line-height:1.6; margin:0 0 24px 0;">
+                <p class="text-sub" style="font-size:14px; color:#555; line-height:1.6; margin:0 0 24px 0;">
                   Hvis du koblet til denne identiteten, trenger du ikke foreta deg noe.
                 </p>
 
-                <p class="text-sub" style="font-size:14px; color:#f85149; line-height:1.6; margin:0 0 8px 0;">
+                <p class="text-danger" style="font-size:14px; color:#b91c1c; line-height:1.6; margin:0 0 8px 0;">
                   <strong>Var ikke dette deg?</strong>
                 </p>
-                <p class="text-sub" style="font-size:14px; color:#8b949e; line-height:1.6; margin:0;">
-                  Hvis du ikke koblet til denne identiteten, kan kontoen din være kompromittert. Kontakt oss umiddelbart på <a href="mailto:support@tidex.no" style="color:#58a6ff;">support@tidex.no</a>.
+                <p class="text-sub" style="font-size:14px; color:#555; line-height:1.6; margin:0;">
+                  Hvis du ikke koblet til denne identiteten, kan kontoen din være kompromittert. Kontakt oss umiddelbart på <a class="link" href="mailto:support@tidex.no" style="color:#2563eb;">support@tidex.no</a>.
                 </p>
 
-                <hr style="border:none; border-top:1px solid #30363d; margin:40px 0;">
+                <hr class="rule" style="border:none; border-top:1px solid #e5e7eb; margin:40px 0;">
 
-                <p style="font-size:13px; color:#8b949e; line-height:1.6; text-align:center;">
+                <p class="text-sub" style="font-size:13px; color:#6b7280; line-height:1.6; text-align:center;">
                   Dette er en sikkerhetsmelding fra Tidex.<br><br>
-                  &copy; 2026 Tidex — <a href="https://tidex.no" style="color:#58a6ff;">Tidex.no</a><br>
+                  &copy; 2026 Tidex — <a class="link" href="https://tidex.no" style="color:#2563eb;">Tidex.no</a><br>
                   Denne meldingen ble sendt automatisk og kan ikke besvares.
                 </p>
               </td>
