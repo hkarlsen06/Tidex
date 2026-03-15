@@ -30,7 +30,6 @@ export async function copyShifts(input: CopyShiftsInput) {
     start_time: string;
     end_time: string;
     job_id?: string | null;
-    recurring_id?: string;
   }> = [];
 
   // Fetch regular shifts from user_shifts table
@@ -83,7 +82,6 @@ export async function copyShifts(input: CopyShiftsInput) {
               start_time: recurring.start_time,
               end_time: recurring.end_time,
               job_id: recurring.job_id ?? null,
-              recurring_id: undefined, // Don't link copied shifts to the recurring shift
             });
           }
         }
@@ -113,7 +111,6 @@ export async function copyShifts(input: CopyShiftsInput) {
     shift_date: input.targetDate,
     start_time: cleanTime(shift.start_time),
     end_time: cleanTime(shift.end_time),
-    ...(shift.recurring_id ? { recurring_id: shift.recurring_id } : {}),
   }));
 
   const { error } = await supabase

@@ -54,7 +54,8 @@ export const toolResults = {
   updatedCustomSupplements: "Updated custom supplements",
   convertedRecurringShift: "Converted recurring occurrence to standalone shift",
   movedRecurringShift: "Moved recurring occurrence",
-  clearedShiftSnapshots: "Reset shift snapshots to current defaults",
+  shiftSnapshotsDeprecated:
+    "Per-shift snapshots are no longer stored. Wagey already resolves pay from wage entries by date and workplace.",
   submittedFeedback: "Submitted feedback",
   listedFeedback: "Found {count} feedback entries",
   retrievedProfile: "Retrieved profile",

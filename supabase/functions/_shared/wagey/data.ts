@@ -31,7 +31,6 @@ export type ShiftIdentityRow = {
   start_time: string;
   end_time: string;
   job_id: string | null;
-  recurring_id?: string | null;
 };
 
 type SubscriptionRow = {
@@ -146,7 +145,7 @@ const COMPUTED_JOB_SELECT =
 const COMPUTED_SNAPSHOT_SELECT =
   "id, user_id, job_id, from_date, hourly_wage, wage_level, tariff_type_id, supplements, tax_enabled, tax_percentage, break_enabled, break_method, break_threshold_hours, break_deduction_minutes, created_at";
 const COMPUTED_SHIFT_SELECT =
-  "id, user_id, job_id, shift_date, start_time, end_time, hourly_wage_snapshot, supplement_rules_snapshot, custom_supplements, recurring_id, recurring_anchor_weekday";
+  "id, user_id, job_id, shift_date, start_time, end_time, custom_supplements";
 const COMPUTED_RECURRING_SELECT =
   "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_supplements, created_at, deleted_at";
 const FAR_FUTURE_DATE = "2100-12-31";
@@ -466,7 +465,7 @@ async function getRawUserShifts(
 ): Promise<ShiftIdentityRow[]> {
   let query = ctx.supabase
     .from("user_shifts")
-    .select("id, shift_date, start_time, end_time, job_id, recurring_id")
+    .select("id, shift_date, start_time, end_time, job_id")
     .eq("user_id", userId)
     .is("deleted_at", null)
     .order("shift_date", { ascending: false });
@@ -895,7 +894,7 @@ export async function getShiftIdentityRowsForApi(
 
 export async function createShifts(
   ctx: WageyRequestContext,
-  input: { dates: string[]; start: string; end: string; recurringId?: string; jobId?: string },
+  input: { dates: string[]; start: string; end: string; jobId?: string },
 ): Promise<{ inserted: number; shiftIds: string[]; dates: string[] }> {
   const rows = input.dates.map((shift_date) => ({
     user_id: ctx.user.id,
@@ -903,7 +902,6 @@ export async function createShifts(
     shift_date,
     start_time: input.start,
     end_time: input.end,
-    ...(input.recurringId ? { recurring_id: input.recurringId } : {}),
   }));
 
   const { data, error } = await ctx.supabase
@@ -1345,23 +1343,6 @@ export async function moveRecurringShift(
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw new Error(error.message);
-}
-
-export async function clearShiftSnapshots(
-  ctx: WageyRequestContext,
-  shiftId: string,
-): Promise<{ success: true }> {
-  const { error } = await ctx.supabase
-    .from("user_shifts")
-    .update({
-      hourly_wage_snapshot: null,
-      supplement_rules_snapshot: null,
-    })
-    .eq("id", shiftId)
-    .eq("user_id", ctx.user.id)
-    .is("deleted_at", null);
-  if (error) throw new Error(error.message);
-  return { success: true };
 }
 
 export async function submitFeedback(ctx: WageyRequestContext, message: string): Promise<void> {
