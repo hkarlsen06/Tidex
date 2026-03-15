@@ -60,10 +60,12 @@ enum APIConfiguration {
   static let googleiOSClientID =
     "496501907923-a0sng8rs2gscdu2fdenlq4j2g8vq9gas.apps.googleusercontent.com"
 
-  // MARK: - Web App Configuration
+  // MARK: - Marketing Configuration
 
-  /// Base URL for the Next.js web app API - used for endpoints that require server-side processing
-  static let webAppBaseURL = URL(string: "https://app.tidex.no")!  // swiftlint:disable:this force_unwrapping
+  /// Public marketing site used for support and legal documents.
+  static let marketingBaseURL = URL(string: "https://tidex.no")!  // swiftlint:disable:this force_unwrapping
+  static let supportURL = marketingBaseURL.appendingPathComponent("support")
+  static let legalVersionURL = marketingBaseURL.appendingPathComponent("legal/version.json")
 
   // MARK: - App Configuration
 

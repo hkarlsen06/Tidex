@@ -11,9 +11,6 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "ScreenshotNot
 final class ScreenshotNotificationService {
   static let shared = ScreenshotNotificationService()
 
-  /// Shared URLSession from factory (quick timeout: 15s request, 30s resource)
-  private let urlSession = URLSessionFactory.quick
-
   /// Cooldown tracking to prevent notification spam
   /// Key: screenshot target, Value: last reported timestamp
   private var lastReportedTimestamps: [String: Date] = [:]
@@ -29,23 +26,23 @@ final class ScreenshotNotificationService {
   func reportScreenshot(sharerId: String) async throws {
     try await reportScreenshot(
       targetKey: "shifts:\(sharerId)",
-      endpointPath: "/api/sharing/screenshot",
-      requestBody: ["sharerId": sharerId]
+      rpcName: "report_sharing_screenshot",
+      params: ["p_sharer_id": .string(sharerId)]
     )
   }
 
   func reportChatScreenshot(threadId: String) async throws {
     try await reportScreenshot(
       targetKey: "thread:\(threadId)",
-      endpointPath: "/api/friends/chat/screenshot",
-      requestBody: ["threadId": threadId]
+      rpcName: "report_thread_screenshot",
+      params: ["p_thread_id": .string(threadId)]
     )
   }
 
   private func reportScreenshot(
     targetKey: String,
-    endpointPath: String,
-    requestBody: [String: Any]
+    rpcName: String,
+    params: [String: AnyJSON]
   ) async throws {
     guard !inFlightRequests.contains(targetKey) else {
       logger.info("Screenshot notification skipped - request already in flight for \(targetKey)")
@@ -67,53 +64,36 @@ final class ScreenshotNotificationService {
 
     lastReportedTimestamps[targetKey] = Date()
 
-    let session: Session
     do {
-      session = try await AuthSessionManager.shared.getSession()
+      _ = try await AuthSessionManager.shared.getSession()
     } catch {
       lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
-    let accessToken = session.accessToken
-
-    let url = APIConfiguration.webAppBaseURL.appendingPathComponent(endpointPath)
-
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
     logger.info("Reporting screenshot notification for \(targetKey)")
-
-    let data: Data
-    let response: URLResponse
     do {
-      (data, response) = try await urlSession.data(for: request)
+      struct ScreenshotRPCResponse: Decodable {
+        let success: Bool
+      }
+
+      let response: ScreenshotRPCResponse =
+        try await supabase
+        .rpc(rpcName, params: params)
+        .single()
+        .execute()
+        .value
+
+      guard response.success else {
+        lastReportedTimestamps.removeValue(forKey: targetKey)
+        throw ScreenshotServiceError.httpError(statusCode: 500)
+      }
     } catch {
       lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
 
-    guard let httpResponse = response as? HTTPURLResponse else {
-      lastReportedTimestamps.removeValue(forKey: targetKey)
-      throw ScreenshotServiceError.networkError
-    }
-
-    switch httpResponse.statusCode {
-    case 200, 201:
-      logger.info("Screenshot reported successfully")
-    case 401:
-      lastReportedTimestamps.removeValue(forKey: targetKey)
-      throw ScreenshotServiceError.notAuthenticated
-    case 429:
-      logger.warning("Screenshot notification rate limited")
-    default:
-      let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-      logger.error("Screenshot report failed: \(httpResponse.statusCode) - \(message)")
-      lastReportedTimestamps.removeValue(forKey: targetKey)
-      throw ScreenshotServiceError.httpError(statusCode: httpResponse.statusCode)
-    }
+    logger.info("Screenshot reported successfully")
   }
 }
 

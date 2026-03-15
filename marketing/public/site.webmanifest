@@ -2,16 +2,16 @@
   "name": "Tidex",
   "short_name": "Tidex",
   "description": "App for å regne ut lønn basert på skiftene dine med tillegg!",
-  "start_url": "https://app.tidex.no/",
-  "scope": "https://app.tidex.no/",
+  "start_url": "https://tidex.no/",
+  "scope": "https://tidex.no/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait",
   "icons": [
-    { "src": "https://app.tidex.no/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
-    { "src": "https://app.tidex.no/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "https://app.tidex.no/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "https://app.tidex.no/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    { "src": "https://tidex.no/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "https://tidex.no/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "https://tidex.no/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "https://tidex.no/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ]
 }

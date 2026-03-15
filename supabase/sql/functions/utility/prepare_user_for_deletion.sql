@@ -28,6 +28,30 @@ BEGIN
     RAISE EXCEPTION 'You can only delete your own account';
   END IF;
 
+  -- Clear report reviewer references, then remove reports that cannot outlive either side.
+  UPDATE public.abuse_reports
+  SET reviewed_by = NULL
+  WHERE reviewed_by = target_user_id;
+
+  DELETE FROM public.abuse_reports
+  WHERE reporter_user_id = target_user_id
+     OR reported_user_id = target_user_id;
+
+  -- Delete direct-message threads involving the user. This cascades memberships,
+  -- thread state, messages, and message_attachments for those threads.
+  DELETE FROM public.threads t
+  USING public.direct_threads dt
+  WHERE t.id = dt.thread_id
+    AND (
+      dt.user_low_id = target_user_id
+      OR dt.user_high_id = target_user_id
+    );
+
+  -- Remove remaining messaging rows in non-direct threads.
+  DELETE FROM public.thread_user_state WHERE user_id = target_user_id;
+  DELETE FROM public.thread_memberships WHERE user_id = target_user_id;
+  DELETE FROM public.messages WHERE sender_user_id = target_user_id;
+
   -- Delete from internal tables that should be cleaned up (not preserved)
   DELETE FROM internal.impersonation_rate_limits WHERE admin_user_id = target_user_id;
   DELETE FROM internal.app_account_tokens WHERE user_id = target_user_id;

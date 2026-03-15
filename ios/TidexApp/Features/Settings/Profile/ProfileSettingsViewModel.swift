@@ -55,11 +55,6 @@ final class ProfileSettingsViewModel: ObservableObject {
   private var originalDisplayName: String = ""
   /// Debounce task for auto-saving name
   private var nameSaveTask: Task<Void, Never>?
-  /// API base URL for web app routes
-  private var apiBaseUrl: String {
-    APIConfiguration.webAppBaseURL.absoluteString
-  }
-
   // MARK: - Initialization
 
   init(
@@ -502,7 +497,7 @@ final class ProfileSettingsViewModel: ObservableObject {
     deleteConfirmText == expectedDeleteConfirmText
   }
 
-  /// Delete the user's account via API route (requires service role)
+  /// Delete the user's account via Edge Function (requires service role)
   func deleteAccount() async {
     // Prevent duplicate taps
     guard !isDeletingAccount else { return }
@@ -516,26 +511,16 @@ final class ProfileSettingsViewModel: ObservableObject {
     errorMessage = nil
 
     do {
-      // Get the current session for auth
-      let session = try await AuthSessionManager.shared.getSession()
-      let accessToken = session.accessToken
-
-      // Call the delete account API route
-      guard let url = URL(string: "\(apiBaseUrl)/api/delete-account") else {
-        throw URLError(.badURL)
+      struct DeleteAccountResponse: Decodable {
+        let success: Bool
       }
 
-      var request = URLRequest(url: url)
-      request.httpMethod = "DELETE"
-      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+      let response: DeleteAccountResponse = try await supabase.functions.invoke(
+        "delete-account",
+        options: FunctionInvokeOptions(body: AnyJSON.object([:]))
+      )
 
-      let (_, response) = try await URLSession.shared.data(for: request)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        throw URLError(.badServerResponse)
-      }
-
-      if httpResponse.statusCode == 200 {
+      if response.success {
         // Account deleted successfully - sign out locally
         Haptics.play(.warning)
         try? await supabase.auth.signOut()

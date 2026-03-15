@@ -328,7 +328,7 @@ struct FriendsThreadView: View {
       titleVisibility: .visible
     ) {
       Button(String(localized: .friendsChatSupportOpenPage)) {
-        safariURL = APIConfiguration.webAppBaseURL.appendingPathComponent("support")
+        safariURL = APIConfiguration.supportURL
       }
 
       Button(String(localized: .friendsChatSupportEmail)) {

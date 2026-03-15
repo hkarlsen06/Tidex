@@ -4,20 +4,14 @@ import os.log
 private let logger = Logger(subsystem: "no.tidex.app", category: "TermsVersion")
 
 /// Terms version management for iOS
-/// Fetches the current terms version from the API, with a hardcoded fallback
+/// Fetches the current terms version manifest from marketing, with a hardcoded fallback.
 enum TermsVersion {
   /// Base URL for user-facing pages (terms, privacy)
-  static let baseURL = "https://www.tidex.no"
-
-  /// Base URL for API endpoints
-  private static let apiBaseURL = "https://app.tidex.no"
-
-  /// API endpoint for terms version
-  private static let versionEndpoint = "\(apiBaseURL)/api/legal/version"
+  static let baseURL = APIConfiguration.marketingBaseURL.absoluteString
 
   /// Fallback terms version date (used when API is unavailable)
-  /// Keep this updated when terms change as a safety net
-  private static let fallbackVersionDate = "2026-03-08"
+  /// Keep this at the latest of terms/privacy as a safety net.
+  private static let fallbackVersionDate = "2026-03-15"
 
   /// Cached version date (fetched from API)
   private static var cachedVersionDate: String?
@@ -44,7 +38,8 @@ enum TermsVersion {
 
     // Fetch from API with timeout
     do {
-      guard let url = URL(string: versionEndpoint) else {
+      let url = APIConfiguration.legalVersionURL
+      guard url.absoluteString.isEmpty == false else {
         logger.error("Invalid endpoint URL")
         return fallbackVersionDate
       }

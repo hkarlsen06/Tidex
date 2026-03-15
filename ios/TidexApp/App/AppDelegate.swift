@@ -1,5 +1,6 @@
 import ActivityKit
 import Sentry
+import Supabase
 import UIKit
 import os
 
@@ -610,8 +611,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     completionHandler(.newData)
   }
 
-  /// Register APNs token via the web app API
-  /// The API uses service role credentials to access the internal.push_devices table
+  /// Register APNs token via authenticated Supabase RPC.
   private func registerAPNsToken(_ token: String) async {
     // Prevent duplicate in-flight registrations
     guard !apnsRegistrationInFlight else { return }
@@ -629,21 +629,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     defer { apnsRegistrationInFlight = false }
 
     do {
+      struct PushDeviceResponse: Decodable {
+        let success: Bool
+      }
+
       // Route session access through AuthSessionManager to avoid refresh races
       // with other startup/foreground tasks that also need auth.
-      let session = try await AuthSessionManager.shared.getSession()
+      _ = try await AuthSessionManager.shared.getSession()
 
-      // Build API request
-      let url = APIConfiguration.webAppBaseURL.appendingPathComponent("api/push-device")
-      var request = URLRequest(url: url)
-      request.httpMethod = "POST"
-      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-
-      // Build payload with device info
-      var payload: [String: Any] = [
-        "apnsToken": token,
-        "platform": "ios",
+      var payload: [String: AnyJSON] = [
+        "p_apns_token": .string(token),
+        "p_platform": .string("ios"),
       ]
 
       // Add device metadata
@@ -651,35 +647,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let device = UIDevice.current
         return (device.model, device.identifierForVendor?.uuidString)
       }
-      payload["deviceModel"] = deviceModel
+      payload["p_device_model"] = .string(deviceModel)
       if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-        payload["appVersion"] = appVersion
+        payload["p_app_version"] = .string(appVersion)
       }
       // Use identifierForVendor as device ID for token rotation detection
       if let deviceId = deviceId {
-        payload["deviceId"] = deviceId
+        payload["p_device_id"] = .string(deviceId)
       }
 
-      request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+      let response: PushDeviceResponse =
+        try await supabase
+        .rpc("register_push_device", params: payload)
+        .single()
+        .execute()
+        .value
 
-      // Make the API call
-      let (data, response) = try await URLSession.shared.data(for: request)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        print("[APNs] Invalid response type")
-        return
-      }
-
-      if httpResponse.statusCode == 200 {
+      if response.success {
         await MainActor.run {
           PushNotificationManager.shared.registrationSucceeded()
         }
       } else {
-        // Log error response
-        let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-        print("[APNs] API error (\(httpResponse.statusCode)): \(errorMessage)")
+        print("[APNs] RPC error: registration did not succeed")
         await MainActor.run {
-          PushNotificationManager.shared.serverRegistrationFailed(errorMessage, underlying: nil)
+          PushNotificationManager.shared.serverRegistrationFailed(
+            "Registration failed", underlying: nil)
         }
       }
     } catch {

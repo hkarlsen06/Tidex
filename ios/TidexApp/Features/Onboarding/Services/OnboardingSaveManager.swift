@@ -15,6 +15,7 @@ enum OnboardingCompletionMode: Equatable {
 @MainActor
 final class OnboardingSaveManager: ObservableObject {
   private static let startupTabCacheKey = "defaultStartupTab"
+  private static let defaultJobName = "Jobb"
 
   // MARK: - Published State
 
@@ -33,6 +34,7 @@ final class OnboardingSaveManager: ObservableObject {
   // MARK: - Dependencies
 
   private let snapshotsRepository: SnapshotsRepository
+  private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let syncCoordinator: SyncCoordinator
   private var lastCompletionMode: OnboardingCompletionMode = .fullSetup
@@ -41,6 +43,7 @@ final class OnboardingSaveManager: ObservableObject {
 
   init() {
     self.snapshotsRepository = SnapshotsRepository.shared
+    self.jobsRepository = JobsRepository.shared
     self.settingsRepository = SettingsRepository.shared
     self.syncCoordinator = SyncCoordinator.shared
   }
@@ -117,9 +120,68 @@ final class OnboardingSaveManager: ObservableObject {
   private func createBaselineSnapshot(userId: String, data: OnboardingData) async throws
     -> WageSnapshot
   {
-    let snapshot = try await snapshotsRepository.createSnapshot(
+    let activeSetupJob =
+      jobsRepository.getDefaultJob(for: userId)
+      ?? jobsRepository.getActiveJobs(for: userId).first
+
+    if let activeSetupJob {
+      return try await ensureBaselineSnapshot(
+        userId: userId,
+        job: activeSetupJob,
+        data: data
+      )
+    }
+
+    // Avoid relying on the server-side lazy default-job trigger here.
+    // Onboarding waits for a single sync cycle, and sync runs pull -> push,
+    // so a job created remotely during snapshot push is not visible locally
+    // until a second sync/pull. Creating the job locally keeps work setup
+    // complete on the first post-onboarding render.
+    let createdJob = try await jobsRepository.createJob(
       userId: userId,
-      fromDate: nil,  // nil = baseline snapshot
+      name: Self.defaultJobName,
+      color: nil,
+      currency: resolvedJobCurrency(for: data),
+      payrollDay: data.payrollDay,
+      halfTaxMonth: nil,
+      monthlyGoal: nil
+    )
+
+    logger.info("Created onboarding default job: \(createdJob.id)")
+
+    return try await ensureBaselineSnapshot(
+      userId: userId,
+      job: createdJob,
+      data: data
+    )
+  }
+
+  private func ensureBaselineSnapshot(
+    userId: String,
+    job: Job,
+    data: OnboardingData
+  ) async throws -> WageSnapshot {
+    if let existingSnapshot = snapshotsRepository.getBaselineSnapshot(for: userId, jobId: job.id) {
+      return existingSnapshot
+    }
+
+    if let legacyBaselineSnapshot = snapshotsRepository.getBaselineSnapshot(for: userId),
+      legacyBaselineSnapshot.job_id == nil,
+      let updatedLegacySnapshot = try await snapshotsRepository.updateSnapshot(
+        id: legacyBaselineSnapshot.id,
+        jobId: job.id
+      )
+    {
+      logger.info(
+        "Attached legacy onboarding baseline snapshot \(legacyBaselineSnapshot.id) to job \(job.id)"
+      )
+      return updatedLegacySnapshot
+    }
+
+    return try await snapshotsRepository.createSnapshot(
+      userId: userId,
+      jobId: job.id,
+      fromDate: nil,
       hourlyWage: data.resolvedHourlyWage,
       wageLevel: data.resolvedWageLevel,
       tariffTypeId: data.resolvedTariffTypeId,
@@ -131,8 +193,14 @@ final class OnboardingSaveManager: ObservableObject {
       breakThresholdHours: 5.5,
       breakDeductionMinutes: 30
     )
+  }
 
-    return snapshot
+  private func resolvedJobCurrency(for data: OnboardingData) -> String {
+    if data.resolvedWageLevel != nil || data.resolvedTariffTypeId != nil {
+      return "kr"
+    }
+
+    return data.currency
   }
 
   private func updateSettings(userId: String, payrollDay: Int, currency: String) async throws {

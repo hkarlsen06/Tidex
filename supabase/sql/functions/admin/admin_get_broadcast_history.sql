@@ -16,12 +16,12 @@ AS $function$
     ab.target_count,
     ab.status,
     ab.created_at,
-    COUNT(*) FILTER (WHERE nq.status = 'sent') AS sent_count,
-    COUNT(*) FILTER (WHERE nq.status = 'failed') AS failed_count,
-    COUNT(*) FILTER (WHERE nq.status = 'skipped') AS skipped_count,
-    COUNT(*) FILTER (WHERE nq.status IN ('pending', 'processing')) AS pending_count
+    COUNT(*) FILTER (WHERE no.status = 'sent') AS sent_count,
+    COUNT(*) FILTER (WHERE no.status = 'failed') AS failed_count,
+    COUNT(*) FILTER (WHERE no.status = 'skipped') AS skipped_count,
+    COUNT(*) FILTER (WHERE no.status IN ('pending', 'sending')) AS pending_count
   FROM internal.admin_broadcasts ab
-  LEFT JOIN internal.notification_queue nq ON nq.broadcast_id = ab.id
+  LEFT JOIN internal.notifications_outbox no ON no.broadcast_id = ab.id
   GROUP BY ab.id, ab.title, ab.body, ab.target, ab.target_count, ab.status, ab.created_at
   ORDER BY ab.created_at DESC
   LIMIT limit_count;

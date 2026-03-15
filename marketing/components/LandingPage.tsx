@@ -37,6 +37,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
   const privacyHref = buildLocalizedMarketingPath(locale, '/privacy');
   const termsHref = buildLocalizedMarketingPath(locale, '/terms');
   const payrollDocsHref = '/docs/payroll'; // English-only route
+  const appStoreHref = 'https://apps.apple.com/app/id6757129790';
   const mailtoHref = `mailto:${dictionary.legal.contactEmail}?subject=${encodeURIComponent(marketing.contact.emailSubject)}&body=${encodeURIComponent(marketing.contact.emailBody)}`;
 
   return (
@@ -86,7 +87,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
                 asChild
                 className="h-14 w-full rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors sm:h-11 sm:w-auto"
               >
-                <a href="https://app.tidex.no">
+                <a href={appStoreHref}>
                   {marketing.hero.primaryCta}
                 </a>
               </Button>
@@ -194,7 +195,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             asChild
             className="h-11 rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors"
           >
-            <a href="https://app.tidex.no">
+            <a href={appStoreHref}>
               {marketing.ctaPrimary.button}
             </a>
           </Button>

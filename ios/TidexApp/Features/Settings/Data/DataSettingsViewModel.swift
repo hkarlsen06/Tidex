@@ -122,8 +122,6 @@ final class DataSettingsViewModel: ObservableObject {
 
   // MARK: - Private Properties
 
-  /// Shared URLSession from factory (long-running timeout: 60s request, 120s resource)
-  private let urlSession = URLSessionFactory.longRunning
   private var userId: String?
 
   // MARK: - Computed Properties
@@ -198,7 +196,7 @@ final class DataSettingsViewModel: ObservableObject {
         return
       }
 
-      // PDF/CSV export still uses API for calculation consistency
+      // PDF/CSV export is generated from local synced data.
       // Sync first to ensure local changes are pushed to the server
       isSyncing = true
       logger.info("Syncing before export...")
@@ -210,7 +208,7 @@ final class DataSettingsViewModel: ObservableObject {
         // Continue with export anyway - user might want old data
       }
 
-      // Fetch export data from API
+      // Build export data from local storage
       let exportData = try await fetchExportData(from: range.from, to: range.to)
 
       // Handle export based on format
@@ -385,60 +383,125 @@ final class DataSettingsViewModel: ObservableObject {
 
   // MARK: - Private Methods
 
-  /// Fetch export data from the API
+  /// Build export data from local storage.
   private func fetchExportData(from: String, to: String) async throws -> ExportResponse {
-    // Get auth token
-    let session = try await AuthSessionManager.shared.getSession()
-    let accessToken = session.accessToken
-
-    // Build URL
-    guard
-      var components = URLComponents(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/settings/data/export"),
-        resolvingAgainstBaseURL: false
-      )
-    else {
-      throw ExportError.invalidURL
-    }
-    components.queryItems = [
-      URLQueryItem(name: "from", value: from),
-      URLQueryItem(name: "to", value: to),
-    ]
-
-    guard let url = components.url else {
-      throw ExportError.invalidURL
-    }
-
-    // Build request with Bearer token auth
-    var request = URLRequest(url: url)
-    request.httpMethod = "GET"
-    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    logger.info("Fetching export data from \(url.absoluteString)")
-
-    // Execute request
-    let (data, response) = try await urlSession.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw ExportError.networkError
-    }
-
-    switch httpResponse.statusCode {
-    case 200:
-      break
-    case 401:
+    guard let userId else {
       throw ExportError.unauthorized
-    default:
-      let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-      throw ExportError.serverError(code: httpResponse.statusCode, message: message)
+    }
+    guard let startDate = parseISODate(from), let endDate = parseISODate(to) else {
+      throw ExportError.invalidDateRange
     }
 
-    // Decode response off main actor to avoid blocking UI with large payloads.
-    return try await Task.detached(priority: .userInitiated) {
-      let decoder = JSONDecoder()
-      return try decoder.decode(ExportResponse.self, from: data)
-    }.value
+    logger.info("Building export data locally for \(from) to \(to)")
+
+    let regularShifts = await ShiftsRepository.shared.getShiftsOffMain(
+      for: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
+    let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
+    let snapshotsRepository = SnapshotsRepository.shared
+
+    var exportedShifts = regularShifts.map { shift in
+      makeExportedShift(
+        from: shift,
+        snapshot: snapshotsRepository.snapshotForDate(
+          shift.shift_date,
+          userId: userId,
+          jobId: shift.job_id
+        )
+      )
+    }
+
+    let calendar = Calendar.current
+    let startYear = calendar.component(.year, from: startDate)
+    let startMonth = calendar.component(.month, from: startDate)
+    let endYear = calendar.component(.year, from: endDate)
+    let endMonth = calendar.component(.month, from: endDate)
+
+    let realShiftKeys = Set(
+      regularShifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" }
+    )
+
+    for recurring in recurringShifts {
+      var currentYear = startYear
+      var currentMonth = startMonth
+
+      while currentYear < endYear || (currentYear == endYear && currentMonth <= endMonth) {
+        let generatedShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+          year: currentYear,
+          month: currentMonth,
+          recurring: recurring
+        )
+
+        for virtualShift in generatedShifts {
+          guard virtualShift.date >= from && virtualShift.date <= to else { continue }
+
+          let key = "\(virtualShift.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
+          guard !realShiftKeys.contains(key) else { continue }
+
+          let virtualRow = ShiftRow(
+            id: "virtual-\(recurring.id)-\(virtualShift.date)",
+            user_id: userId,
+            job_id: recurring.job_id,
+            shift_date: virtualShift.date,
+            start_time: recurring.cleanStartTime,
+            end_time: recurring.cleanEndTime,
+            custom_supplements: recurring.date_specific_supplements?[virtualShift.date],
+            recurring_id: recurring.id,
+            recurring_anchor_weekday: virtualShift.weekday
+          )
+
+          exportedShifts.append(
+            makeExportedShift(
+              from: virtualRow,
+              snapshot: snapshotsRepository.snapshotForDate(
+                virtualShift.date,
+                userId: userId,
+                jobId: recurring.job_id
+              )
+            )
+          )
+        }
+
+        currentMonth += 1
+        if currentMonth > 12 {
+          currentMonth = 1
+          currentYear += 1
+        }
+      }
+    }
+
+    exportedShifts.sort {
+      if $0.date == $1.date {
+        return $0.startTime < $1.startTime
+      }
+      return $0.date < $1.date
+    }
+
+    return ExportResponse(
+      generatedAt: ISO8601DateFormatter().string(from: Date()),
+      shifts: exportedShifts
+    )
+  }
+
+  private func makeExportedShift(from shift: ShiftRow, snapshot: WageSnapshot?) -> ExportedShift {
+    let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+
+    return ExportedShift(
+      id: shift.id,
+      date: shift.shift_date,
+      startTime: shift.start_time,
+      endTime: shift.end_time,
+      type: getShiftType(dateISO: shift.shift_date),
+      recurringId: shift.recurring_id,
+      calc: ExportedShift.ShiftCalculation(
+        hours: computed.paidHours,
+        baseWage: computed.basePay,
+        supplement: computed.supplementPay,
+        total: computed.gross
+      )
+    )
   }
 
   /// Generate PDF from export data in a detached task.
@@ -859,6 +922,7 @@ final class DataSettingsViewModel: ObservableObject {
 
 enum ExportError: LocalizedError {
   case invalidURL
+  case invalidDateRange
   case networkError
   case unauthorized
   case serverError(code: Int, message: String)
@@ -869,6 +933,8 @@ enum ExportError: LocalizedError {
     switch self {
     case .invalidURL:
       return "Invalid URL"
+    case .invalidDateRange:
+      return "Invalid date range"
     case .networkError:
       return "Network error"
     case .unauthorized:
