@@ -47,15 +47,12 @@ export async function createShifts(input: CreateShiftsInput) {
     );
   }
 
-  const sid = input.recurringId && input.recurringId.trim().length > 0 ? input.recurringId : undefined;
-
   const rows = dates.map((shift_date) => ({
     user_id: user.id,
     ...(input.jobId ? { job_id: input.jobId } : {}),
     shift_date,
     start_time: input.start,
     end_time: input.end,
-    ...(sid ? { recurring_id: sid } : {}),
   }));
 
   const { data: insertedShifts, error } = await supabase

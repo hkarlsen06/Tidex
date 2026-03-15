@@ -3,7 +3,6 @@ import {
   archiveJob,
   blockSharer,
   countShiftsAffectedBySnapshot,
-  clearShiftSnapshots,
   convertRecurringShiftToStandalone,
   copyShifts,
   createJob,
@@ -195,7 +194,7 @@ async function getStoredShiftReference(ctx: WageyRequestContext, shortOrFullId: 
 
   const { data, error } = await ctx.supabase
     .from("user_shifts")
-    .select("id, shift_date, start_time, end_time, recurring_id, job_id")
+    .select("id, shift_date, start_time, end_time, job_id")
     .eq("id", fullShiftId)
     .eq("user_id", ctx.user.id)
     .is("deleted_at", null)
@@ -1030,8 +1029,11 @@ async function executeManageShiftAdvanced(ctx: WageyRequestContext, args: unknow
       if (!input.shiftId) return { success: false, message: tr.missingShiftId };
       const fullShiftId = await resolveStoredShiftId(ctx, input.shiftId);
       if (!fullShiftId) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
-      const result = await clearShiftSnapshots(ctx, fullShiftId);
-      return { success: true, message: tr.clearedShiftSnapshots, data: result };
+      return {
+        success: true,
+        message: tr.shiftSnapshotsDeprecated,
+        data: { success: true, shiftId: fullShiftId },
+      };
     }
     default:
       return { success: false, message: t(tr.unknownAction, { action: input.action }) };
