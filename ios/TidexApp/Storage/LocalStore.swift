@@ -1694,6 +1694,7 @@ actor LocalStoreActor {
       existing.theme = settings.theme
       existing.calendarAnimationStyle = settings.calendarAnimationStyle
       existing.showDashboardClockButtons = settings.showDashboardClockButtons
+      existing.aiDataSharingEnabled = settings.aiDataSharingEnabled
       existing.halfTaxMonth = settings.halfTaxMonth
       existing.currency = settings.currency
       existing.defaultStartupTab = settings.defaultStartupTab
@@ -1745,6 +1746,7 @@ actor LocalStoreActor {
     theme: String = "system",
     calendarAnimationStyle: String = "horizontal",
     showDashboardClockButtons: Bool = true,
+    aiDataSharingEnabled: Bool = false,
     monthlyGoal: Int? = nil,
     monthlyGoalsByMonth: [String: Int] = [:],
     defaultShiftsView: String? = nil,
@@ -1763,6 +1765,7 @@ actor LocalStoreActor {
       theme: theme,
       calendarAnimationStyle: calendarAnimationStyle,
       showDashboardClockButtons: showDashboardClockButtons,
+      aiDataSharingEnabled: aiDataSharingEnabled,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
@@ -1775,6 +1778,9 @@ actor LocalStoreActor {
     var dirtyFields: [UserSettingsField] = [
       .theme, .calendarAnimationStyle, .showDashboardClockButtons, .lastActive,
     ]
+    if aiDataSharingEnabled {
+      dirtyFields.append(.aiDataSharingEnabled)
+    }
     if payrollDay != nil { dirtyFields.append(.payrollDay) }
     if currency != nil { dirtyFields.append(.currency) }
     if monthlyGoal != nil { dirtyFields.append(.monthlyGoal) }
@@ -1797,6 +1803,7 @@ actor LocalStoreActor {
       theme: theme,
       calendarAnimationStyle: calendarAnimationStyle,
       showDashboardClockButtons: showDashboardClockButtons,
+      aiDataSharingEnabled: aiDataSharingEnabled,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
@@ -1850,6 +1857,7 @@ actor LocalStoreActor {
     theme: String?,
     calendarAnimationStyle: String?,
     showDashboardClockButtons: Bool? = nil,
+    aiDataSharingEnabled: Bool? = nil,
     halfTaxMonth: Int?,
     currency: String?,
     defaultStartupTab: String?
@@ -1909,6 +1917,11 @@ actor LocalStoreActor {
     if let newShowDashboardClockButtons = showDashboardClockButtons {
       localSettings.showDashboardClockButtons = newShowDashboardClockButtons
       newDirtyFields.insert(.showDashboardClockButtons)
+    }
+
+    if let newAIDataSharingEnabled = aiDataSharingEnabled {
+      localSettings.aiDataSharingEnabled = newAIDataSharingEnabled
+      newDirtyFields.insert(.aiDataSharingEnabled)
     }
 
     if let newHalfTax = halfTaxMonth, newHalfTax != localSettings.halfTaxMonth {
@@ -2037,6 +2050,7 @@ actor LocalStoreActor {
     localSettings.theme = serverSnapshot.theme
     localSettings.calendarAnimationStyle = serverSnapshot.calendarAnimationStyle
     localSettings.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
+    localSettings.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
     localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
     localSettings.currency = serverSnapshot.currency
     localSettings.defaultStartupTab = serverSnapshot.defaultStartupTab
@@ -2603,6 +2617,7 @@ actor LocalStoreActor {
     existing.theme = serverRow.theme
     existing.calendarAnimationStyle = serverRow.calendar_animation_style
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
+    existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.defaultStartupTab = serverRow.default_startup_tab
@@ -2676,6 +2691,9 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.showDashboardClockButtons) {
       existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
+    }
+    if !localDirtyFields.contains(.aiDataSharingEnabled) {
+      existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
     }
     if !localDirtyFields.contains(.halfTaxMonth) {
       existing.halfTaxMonth = serverRow.half_tax_month
@@ -3244,6 +3262,7 @@ actor LocalStoreActor {
     existing.theme = serverRow.theme
     existing.calendarAnimationStyle = serverRow.calendar_animation_style
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
+    existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.defaultStartupTab = serverRow.default_startup_tab
@@ -3305,6 +3324,7 @@ actor LocalStoreActor {
     existing.theme = serverSnapshot.theme
     existing.calendarAnimationStyle = serverSnapshot.calendarAnimationStyle
     existing.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
+    existing.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth
     existing.currency = serverSnapshot.currency
     existing.defaultStartupTab = serverSnapshot.defaultStartupTab

@@ -29,12 +29,50 @@ struct UserSettings: Codable, Equatable {
   let calendar_animation_style: String
   /// Whether dashboard clock in/out buttons are visible
   let show_dashboard_clock_buttons: Bool?
+  /// Whether the user has consented to Wagey AI data sharing
+  let ai_data_sharing_enabled: Bool?
   /// Month number (11=November, 12=December) for half tax deduction
   let half_tax_month: Int?
   /// Currency code
   let currency: String?
   /// Default tab to open when launching the app
   let default_startup_tab: String?
+
+  init(
+    user_id: String,
+    created_at: String?,
+    updated_at: String?,
+    last_active: String?,
+    monthly_goal: Int?,
+    monthly_goals_by_month: [String: Int]?,
+    default_shifts_view: String?,
+    profile_picture_url: String?,
+    payroll_day: Int?,
+    theme: String,
+    calendar_animation_style: String,
+    show_dashboard_clock_buttons: Bool?,
+    ai_data_sharing_enabled: Bool? = nil,
+    half_tax_month: Int?,
+    currency: String?,
+    default_startup_tab: String?
+  ) {
+    self.user_id = user_id
+    self.created_at = created_at
+    self.updated_at = updated_at
+    self.last_active = last_active
+    self.monthly_goal = monthly_goal
+    self.monthly_goals_by_month = monthly_goals_by_month
+    self.default_shifts_view = default_shifts_view
+    self.profile_picture_url = profile_picture_url
+    self.payroll_day = payroll_day
+    self.theme = theme
+    self.calendar_animation_style = calendar_animation_style
+    self.show_dashboard_clock_buttons = show_dashboard_clock_buttons
+    self.ai_data_sharing_enabled = ai_data_sharing_enabled
+    self.half_tax_month = half_tax_month
+    self.currency = currency
+    self.default_startup_tab = default_startup_tab
+  }
 
   /// Effective payroll day (defaults to 1 if not set)
   var effectivePayrollDay: Int {
@@ -49,6 +87,11 @@ struct UserSettings: Codable, Equatable {
   /// Effective dashboard clock button visibility
   var effectiveShowDashboardClockButtons: Bool {
     show_dashboard_clock_buttons ?? true
+  }
+
+  /// Effective Wagey AI data sharing consent state.
+  var effectiveAIDataSharingEnabled: Bool {
+    ai_data_sharing_enabled ?? false
   }
 
   /// Effective startup tab (defaults to home)
@@ -91,6 +134,7 @@ struct UserSettings: Codable, Equatable {
       theme: "system",
       calendar_animation_style: "horizontal",
       show_dashboard_clock_buttons: true,
+      ai_data_sharing_enabled: false,
       half_tax_month: nil,
       currency: nil,
       default_startup_tab: "home"

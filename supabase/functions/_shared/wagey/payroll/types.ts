@@ -42,6 +42,7 @@ export type UserSettings = {
   theme?: string | null;
   default_shifts_view?: string | null;
   show_dashboard_clock_buttons?: boolean | null;
+  ai_data_sharing_enabled?: boolean | null;
 
   // Input preferences
   direct_time_input?: boolean | null;

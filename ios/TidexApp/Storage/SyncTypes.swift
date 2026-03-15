@@ -78,6 +78,7 @@ enum UserSettingsField: String, Codable, CaseIterable {
   case theme = "theme"
   case calendarAnimationStyle = "calendar_animation_style"
   case showDashboardClockButtons = "show_dashboard_clock_buttons"
+  case aiDataSharingEnabled = "ai_data_sharing_enabled"
   case halfTaxMonth = "half_tax_month"
   case currency = "currency"
   case defaultStartupTab = "default_startup_tab"
