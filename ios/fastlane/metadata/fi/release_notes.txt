@@ -1,5 +1,6 @@
-- Lisätty suorat viestit ystävien kanssa — lähetä viestejä, reagoi, vastaa ja jaa sisältöä suoraan sovelluksessa
-- Lisätty turvallisuusominaisuuksia, mukaan lukien mahdollisuus estää käyttäjiä ja poistaa esto
-- Wagey AI -välilehti on uudistettu selkeämmällä asettelulla
-- Lisätty tuki töille, joissa käytetään eri valuuttoja
-- Virheenkorjauksia ja muita parannuksia
+- Muokkaa ja poista viestejä ystäväkeskusteluissa
+- Jaa vuoroja suoraan keskusteluissa monipuolisilla esikatseluilla
+- Lukemattomien viestien määrät ja uusien viestien ilmaisimet keskusteluissa
+- Wagey AI voi nyt hakea verkosta
+- Selaa ja hallinnoi useita Wagey-keskusteluja
+- Virhekorjauksia ja muita parannuksia

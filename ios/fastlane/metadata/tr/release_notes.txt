@@ -1,5 +1,6 @@
-- Arkadaşlarla doğrudan mesajlaşma eklendi — uygulama içinde doğrudan mesaj gönderin, tepki verin, yanıtlayın ve içerik paylaşın
-- Kullanıcıları engelleme ve engeli kaldırma dahil güvenlik özellikleri eklendi
-- Wagey AI sekmesi daha sade bir düzenle yeniden tasarlandı
-- Farklı para birimlerine sahip işler için destek eklendi
+- Arkadaş sohbetlerinde mesajları düzenleyin ve silin
+- Vardiyaları zengin önizlemelerle doğrudan konuşmalarda paylaşın
+- Sohbetlerde okunmamış mesaj sayıları ve yeni mesaj göstergeleri
+- Wagey AI artık web'de arama yapabiliyor
+- Birden fazla Wagey konuşmasına göz atın ve yönetin
 - Hata düzeltmeleri ve diğer iyileştirmeler

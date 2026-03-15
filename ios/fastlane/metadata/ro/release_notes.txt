@@ -1,5 +1,6 @@
-- Am adăugat mesagerie directă cu prietenii — trimite mesaje, reacționează, răspunde și distribuie conținut direct în aplicație
-- Am adăugat funcții de siguranță, inclusiv posibilitatea de a bloca și debloca utilizatori
-- Am redesenat fila Wagey AI cu un aspect mai curat
-- Am adăugat suport pentru joburi cu valute diferite
-- Remedieri de erori și alte îmbunătățiri
+- Editează și șterge mesaje în conversațiile cu prietenii
+- Distribuie ture direct în conversații, cu previzualizări bogate
+- Număr de mesaje necitite și indicatori pentru mesaje noi în chaturi
+- Wagey AI poate acum să caute pe web
+- Răsfoiește și gestionează mai multe conversații Wagey
+- Corecturi de erori și alte îmbunătățiri

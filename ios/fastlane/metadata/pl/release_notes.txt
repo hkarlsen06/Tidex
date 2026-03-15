@@ -1,5 +1,6 @@
-- Dodano wiadomości bezpośrednie ze znajomymi — wysyłaj wiadomości, reaguj, odpowiadaj i udostępniaj treści bezpośrednio w aplikacji
-- Dodano funkcje bezpieczeństwa, w tym możliwość blokowania i odblokowywania użytkowników
-- Przeprojektowano kartę Wagey AI, aby układ był bardziej przejrzysty
-- Dodano obsługę prac z różnymi walutami
+- Edytowanie i usuwanie wiadomości w czatach ze znajomymi
+- Udostępniaj zmiany bezpośrednio w rozmowach z rozbudowanymi podglądami
+- Liczniki nieprzeczytanych wiadomości i wskaźniki nowych wiadomości w czatach
+- Wagey AI może teraz przeszukiwać internet
+- Przeglądaj i zarządzaj wieloma rozmowami Wagey
 - Poprawki błędów i inne ulepszenia

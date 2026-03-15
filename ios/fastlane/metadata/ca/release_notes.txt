@@ -1,5 +1,6 @@
-- S'ha afegit la missatgeria directa amb amics — envia missatges, reacciona, respon i comparteix contingut directament a l'app
-- S'han afegit funcions de seguretat, inclosa la possibilitat de bloquejar i desbloquejar usuaris
-- S'ha redissenyat la pestanya Wagey AI amb una interfície més neta
-- S'ha afegit compatibilitat amb feines amb diferents monedes
-- Correcció d'errors i altres millores
+- Edita i suprimeix missatges als xats amb amics
+- Comparteix torns directament a les converses amb previsualitzacions enriquides
+- Comptadors de missatges no llegits i indicadors de missatges nous als xats
+- Wagey AI ara pot cercar al web
+- Navega i gestiona diverses converses de Wagey
+- Correccions d'errors i altres millores

@@ -1,5 +1,6 @@
-- Dodane su izravne poruke s prijateljima — šaljite poruke, reagirajte, odgovarajte i dijelite sadržaj izravno u aplikaciji
-- Dodane su sigurnosne značajke, uključujući mogućnost blokiranja i deblokiranja korisnika
-- Redizajnirana je kartica Wagey AI s čišćim rasporedom
-- Dodana je podrška za poslove s različitim valutama
-- Ispravci pogrešaka i druga poboljšanja
+- Uređujte i brišite poruke u razgovorima s prijateljima
+- Dijelite smjene izravno u razgovorima uz bogate preglede
+- Brojači nepročitanih poruka i indikatori novih poruka u razgovorima
+- Wagey AI sada može pretraživati web
+- Pregledavajte i upravljajte s više Wagey razgovora
+- Ispravci grešaka i druga poboljšanja

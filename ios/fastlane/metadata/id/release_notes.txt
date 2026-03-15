@@ -1,5 +1,6 @@
-- Menambahkan pesan langsung dengan teman — kirim pesan, beri reaksi, balas, dan bagikan konten langsung di aplikasi
-- Menambahkan fitur keamanan, termasuk kemampuan untuk memblokir dan membuka blokir pengguna
-- Mendesain ulang tab Wagey AI dengan tata letak yang lebih rapi
-- Menambahkan dukungan untuk pekerjaan dengan mata uang yang berbeda
+- Edit dan hapus pesan di obrolan dengan teman
+- Bagikan shift langsung di percakapan dengan pratinjau lengkap
+- Jumlah pesan belum dibaca dan indikator pesan baru di obrolan
+- Wagey AI kini dapat menelusuri web
+- Telusuri dan kelola beberapa percakapan Wagey
 - Perbaikan bug dan peningkatan lainnya

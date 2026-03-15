@@ -1,8 +1,8 @@
-Pratite svoje radne smjene i izračunajte svoju plaću uz Tidex.
+Pratite svoje radne smjene i izračunajte svoju zaradu uz Tidex.
 
 Značajke:
 • Jednostavno bilježenje smjena s vremenom početka i završetka
-• Automatski izračun plaće
+• Automatski izračun zarade
 • Kalendarski prikaz svih smjena
 • Pregled zarade i statistika
 • Widget za brzi pristup

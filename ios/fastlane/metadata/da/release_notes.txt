@@ -1,5 +1,6 @@
-- Tilføjet direkte beskeder med venner — send beskeder, reager, svar og del indhold direkte i appen
-- Tilføjet sikkerhedsfunktioner, herunder mulighed for at blokere og fjerne blokering af brugere
-- Redesignet Wagey AI-fanen med et renere layout
-- Tilføjet understøttelse af job med forskellige valutaer
+- Rediger og slet beskeder i chats med venner
+- Del vagter direkte i samtaler med flotte forhåndsvisninger
+- Tællere for ulæste beskeder og nye beskedindikatorer i chats
+- Wagey AI kan nu søge på nettet
+- Gennemse og administrer flere Wagey-samtaler
 - Fejlrettelser og andre forbedringer
