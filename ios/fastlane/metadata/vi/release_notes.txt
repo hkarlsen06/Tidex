@@ -1,5 +1,6 @@
-- Đã thêm nhắn tin trực tiếp với bạn bè — gửi tin nhắn, thả cảm xúc, trả lời và chia sẻ nội dung trực tiếp trong ứng dụng
-- Đã thêm các tính năng an toàn, bao gồm khả năng chặn và bỏ chặn người dùng
-- Đã thiết kế lại tab Wagey AI với bố cục gọn gàng hơn
-- Đã thêm hỗ trợ cho các công việc với nhiều loại tiền tệ khác nhau
+- Chỉnh sửa và xóa tin nhắn trong cuộc trò chuyện với bạn bè
+- Chia sẻ ca làm trực tiếp trong cuộc trò chuyện với bản xem trước phong phú
+- Số lượng tin nhắn chưa đọc và chỉ báo tin nhắn mới trong trò chuyện
+- Wagey AI giờ đây có thể tìm kiếm trên web
+- Duyệt và quản lý nhiều cuộc trò chuyện Wagey
 - Sửa lỗi và các cải tiến khác

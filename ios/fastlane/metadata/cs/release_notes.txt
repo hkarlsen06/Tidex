@@ -1,5 +1,6 @@
-- Přidány přímé zprávy s přáteli — posílejte zprávy, reagujte, odpovídejte a sdílejte obsah přímo v aplikaci
-- Přidány bezpečnostní funkce včetně možnosti blokovat a odblokovat uživatele
-- Přepracována karta Wagey AI s čistším rozvržením
-- Přidána podpora pro práce s různými měnami
+- Upravujte a mažte zprávy v chatech s přáteli
+- Sdílejte směny přímo v konverzacích s bohatými náhledy
+- Počty nepřečtených zpráv a indikátory nových zpráv v chatech
+- Wagey AI nyní umí vyhledávat na webu
+- Procházejte a spravujte více konverzací ve Wagey
 - Opravy chyb a další vylepšení

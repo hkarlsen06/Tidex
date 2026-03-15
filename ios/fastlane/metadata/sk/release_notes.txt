@@ -1,5 +1,6 @@
-- Pridali sme priame správy s priateľmi — posielajte správy, reagujte, odpovedajte a zdieľajte obsah priamo v aplikácii
-- Pridali sme bezpečnostné funkcie vrátane možnosti blokovať a odblokovať používateľov
-- Prepracovali sme kartu Wagey AI s čistejším rozložením
-- Pridali sme podporu pre práce s rôznymi menami
+- Upravujte a odstraňujte správy v chatoch s priateľmi
+- Zdieľajte zmeny priamo v konverzáciách s bohatými náhľadmi
+- Počty neprečítaných správ a indikátory nových správ v chatoch
+- Wagey AI teraz dokáže vyhľadávať na webe
+- Prechádzajte a spravujte viacero konverzácií vo Wagey
 - Opravy chýb a ďalšie vylepšenia

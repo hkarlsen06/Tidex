@@ -1,5 +1,6 @@
-- Added direct messaging with friends — send messages, react, reply, and share content directly in the app
-- Added safety features including the ability to block and unblock users
-- Redesigned the Wagey AI tab with a cleaner layout
-- Added support for jobs with different currencies
+- Edit and delete messages in friend chats
+- Share shifts directly in conversations with rich previews
+- Unread message counts and new message indicators in chats
+- Wagey AI can now search the web
+- Browse and manage multiple Wagey conversations
 - Bug fixes and other improvements

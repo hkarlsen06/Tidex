@@ -1,5 +1,6 @@
-- Directe berichten met vrienden toegevoegd — stuur berichten, reageer, antwoord en deel content direct in de app
-- Veiligheidsfuncties toegevoegd, waaronder de mogelijkheid om gebruikers te blokkeren en deblokkeren
-- Het tabblad Wagey AI opnieuw ontworpen met een overzichtelijkere indeling
-- Ondersteuning toegevoegd voor banen met verschillende valuta's
+- Bewerk en verwijder berichten in chats met vrienden
+- Deel diensten direct in gesprekken met uitgebreide voorvertoningen
+- Tellers voor ongelezen berichten en indicatoren voor nieuwe berichten in chats
+- Wagey AI kan nu op het web zoeken
+- Blader door en beheer meerdere Wagey-gesprekken
 - Bugfixes en andere verbeteringen

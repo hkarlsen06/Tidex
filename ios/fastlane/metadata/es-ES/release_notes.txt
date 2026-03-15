@@ -1,5 +1,6 @@
-- Añadidos los mensajes directos con amigos: envía mensajes, reacciona, responde y comparte contenido directamente en la app
-- Añadidas funciones de seguridad, incluida la posibilidad de bloquear y desbloquear usuarios
-- Rediseñada la pestaña de Wagey AI con un diseño más limpio
-- Añadida compatibilidad con trabajos con distintas divisas
+- Edita y elimina mensajes en chats con amigos
+- Comparte turnos directamente en las conversaciones con vistas previas enriquecidas
+- Recuentos de mensajes no leídos e indicadores de mensajes nuevos en los chats
+- Wagey AI ahora puede buscar en la web
+- Explora y gestiona varias conversaciones de Wagey
 - Corrección de errores y otras mejoras

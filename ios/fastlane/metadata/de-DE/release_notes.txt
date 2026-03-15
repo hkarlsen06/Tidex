@@ -1,5 +1,6 @@
-- Direktnachrichten mit Freunden hinzugefügt — sende Nachrichten, reagiere, antworte und teile Inhalte direkt in der App
-- Sicherheitsfunktionen hinzugefügt, darunter die Möglichkeit, Nutzer zu blockieren und zu entsperren
-- Den Wagey-AI-Tab mit einem übersichtlicheren Layout neu gestaltet
-- Unterstützung für Jobs mit verschiedenen Währungen hinzugefügt
+- Nachrichten in Freundeschats bearbeiten und löschen
+- Schichten direkt in Unterhaltungen mit umfangreichen Vorschauen teilen
+- Zähler für ungelesene Nachrichten und neue Nachrichtenindikatoren in Chats
+- Wagey AI kann jetzt im Web suchen
+- Mehrere Wagey-Unterhaltungen durchsuchen und verwalten
 - Fehlerbehebungen und weitere Verbesserungen

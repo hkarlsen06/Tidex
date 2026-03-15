@@ -1,5 +1,6 @@
-- Ajout de la messagerie directe avec vos amis — envoyez des messages, réagissez, répondez et partagez du contenu directement dans l’app
-- Ajout de fonctionnalités de sécurité, y compris la possibilité de bloquer et débloquer des utilisateurs
-- Refonte de l’onglet Wagey AI avec une interface plus épurée
-- Ajout de la prise en charge des emplois avec différentes devises
+- Modifiez et supprimez des messages dans les discussions entre amis
+- Partagez des horaires directement dans les conversations avec des aperçus enrichis
+- Compteurs de messages non lus et indicateurs de nouveaux messages dans les discussions
+- Wagey AI peut désormais rechercher sur le web
+- Parcourez et gérez plusieurs conversations Wagey
 - Corrections de bugs et autres améliorations

@@ -1,5 +1,6 @@
-- Lade till direktmeddelanden med vänner — skicka meddelanden, reagera, svara och dela innehåll direkt i appen
-- Lade till säkerhetsfunktioner, inklusive möjligheten att blockera och avblockera användare
-- Gjorde om fliken Wagey AI med en renare layout
-- Lade till stöd för jobb med olika valutor
+- Redigera och ta bort meddelanden i chattar med vänner
+- Dela pass direkt i konversationer med rika förhandsvisningar
+- Antal olästa meddelanden och nya meddelandeindikatorer i chattar
+- Wagey AI kan nu söka på webben
+- Bläddra bland och hantera flera Wagey-konversationer
 - Buggfixar och andra förbättringar

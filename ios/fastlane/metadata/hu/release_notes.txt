@@ -1,5 +1,6 @@
-- Közvetlen üzenetküldés hozzáadva barátokkal — küldj üzeneteket, reagálj, válaszolj és ossz meg tartalmat közvetlenül az alkalmazásban
-- Új biztonsági funkciók, köztük a felhasználók letiltásának és tiltásuk feloldásának lehetősége
-- A Wagey AI fül újratervezve letisztultabb elrendezéssel
-- Támogatás hozzáadva a különböző pénznemekkel működő munkákhoz
+- Üzenetek szerkesztése és törlése a baráti csevegésekben
+- Műszakok megosztása közvetlenül a beszélgetésekben, gazdag előnézettel
+- Olvasatlan üzenetszámláló és újüzenet-jelzők a csevegésekben
+- A Wagey AI mostantól képes keresni a weben
+- Több Wagey-beszélgetés böngészése és kezelése
 - Hibajavítások és egyéb fejlesztések

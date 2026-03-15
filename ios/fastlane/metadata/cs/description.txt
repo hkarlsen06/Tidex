@@ -1,11 +1,11 @@
-Sledujte své pracovní směny a počítejte si mzdu s aplikací Tidex.
+Sledujte své pracovní směny a počítejte si mzdu s Tidex.
 
 Funkce:
-• Snadé zaznamenávání směn s časem začátku a konce
+• Snadné zaznamenávání směn s časem začátku a konce
 • Automatický výpočet mzdy
 • Kalendářní přehled všech směn
 • Přehled výdělků a statistiky
 • Widget pro rychlý přístup
 • Synchronizace mezi zařízeními
 
-Ideální pro zaměstnance, kteří si chtějí hlídat odpracované hodiny a výdělky.
+Ideální pro zaměstnance, kteří chtějí mít přehled o odpracovaných hodinách a výdělcích.
