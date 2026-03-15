@@ -756,6 +756,7 @@ final class AdminSettingsViewModel: ObservableObject {
   private var searchTask: Task<Void, Never>?
   private let perPage = 20
   private let adminRouteBaseURL = URL(string: "https://tidex.invalid")!  // swiftlint:disable:this force_unwrapping
+  private var initialReportId: String?
 
   deinit {
     searchTask?.cancel()
@@ -798,6 +799,10 @@ final class AdminSettingsViewModel: ObservableObject {
   func clearMessages() {
     errorMessage = nil
     sqlError = nil
+  }
+
+  func setInitialReportSelection(_ reportId: String?) {
+    initialReportId = reportId
   }
 
   // MARK: - Users Tab Methods
@@ -1045,6 +1050,13 @@ final class AdminSettingsViewModel: ObservableObject {
       let result: AdminReportsResponse = try await makeRequest(url: components.url!, method: "GET")
       reportsItems = result.reports
       reportsTotal = result.total
+      if let initialReportId {
+        self.selectedReport = result.reports.first(where: { $0.id == initialReportId })
+        reportsReviewerNotes = self.selectedReport?.reviewerNotes ?? reportsReviewerNotes
+        if self.selectedReport != nil {
+          self.initialReportId = nil
+        }
+      }
       if let selectedReport {
         self.selectedReport =
           result.reports.first(where: { $0.id == selectedReport.id }) ?? selectedReport

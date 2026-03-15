@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import type { Locale } from '@/lib/i18n/config';
-import type { Dictionary } from '@/lib/i18n/dictionaries/no';
-import { TermsOfService } from '@components/legal/TermsOfService';
-import { PrivacyPolicy } from '@components/legal/PrivacyPolicy';
-import { SecurityPolicy } from '@components/legal/SecurityPolicy';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
+import { TermsOfService } from '@/components/legal/TermsOfService';
+import { PrivacyPolicy } from '@/components/legal/PrivacyPolicy';
+import { SecurityPolicy } from '@/components/legal/SecurityPolicy';
 import { MarketingLocaleToggle } from './MarketingLocaleToggle';
 import { LocaleLangSetter } from './LocaleLangSetter';
 

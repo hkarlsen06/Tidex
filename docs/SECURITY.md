@@ -8,8 +8,8 @@ The project implements [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) via a 
 
 ### Location
 
-- **File**: `public/.well-known/security.txt`
-- **URL**: `https://app.tidex.no/.well-known/security.txt`
+- **File**: `marketing/public/.well-known/security.txt`
+- **URL**: `https://tidex.no/.well-known/security.txt`
 
 ### Fields
 
@@ -18,20 +18,16 @@ The project implements [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) via a 
 | Contact | `mailto:contact@tidex.no` | Primary security contact |
 | Expires | `2027-01-05T00:00:00.000Z` | File validity (update annually) |
 | Preferred-Languages | `no, en` | Supported languages |
-| Canonical | `https://app.tidex.no/.well-known/security.txt` | Canonical location |
+| Canonical | `https://tidex.no/.well-known/security.txt` | Canonical location |
 | Policy | `https://tidex.no/security` | Link to disclosure policy |
 
 ### Updating
 
 The `Expires` field uses a static date that should be updated annually. To update:
 
-1. Edit `public/.well-known/security.txt`
+1. Edit `marketing/public/.well-known/security.txt`
 2. Set `Expires` to one year from the current date in ISO 8601 format
 3. Commit and deploy
-
-### Routing
-
-The proxy (`proxy.ts`) is configured to skip locale routing for `/.well-known/*` paths, ensuring the file is accessible without locale prefixes.
 
 ## Security Disclosure Policy
 
@@ -48,9 +44,9 @@ The security disclosure policy is available at:
 
 ### Source Files
 
-- **Translations**: `lib/i18n/dictionaries/legal.*.ts` (security section)
-- **Component**: `components/legal/SecurityPolicy.tsx`
-- **Pages**: `marketing/app/security/page.tsx` and `marketing/app/[locale]/security/page.tsx`
+- **Translations**: `marketing/lib/i18n/dictionaries/legal.*.ts` (security section)
+- **Component**: `marketing/components/legal/SecurityPolicy.tsx`
+- **Pages**: `marketing/app/[locale]/security/page.tsx` and `marketing/public/_redirects`
 
 ## Security Contact
 

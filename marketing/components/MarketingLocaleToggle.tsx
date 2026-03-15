@@ -1,4 +1,4 @@
-import { LocaleSwitcher } from '@appui/LocaleSwitcher';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 
 export function MarketingLocaleToggle() {
   return <LocaleSwitcher />;

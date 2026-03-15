@@ -16,6 +16,7 @@
 /icons/* /icons/:splat 200
 /badges/* /badges/:splat 200
 /docs/* /docs/:splat 200
+/.well-known/* /.well-known/:splat 200
 
 # Rewrite /en/payroll to serve docs page (always English)
 /en/payroll /docs/payroll/ 200

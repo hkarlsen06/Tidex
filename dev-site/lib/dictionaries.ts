@@ -1,6 +1,6 @@
 import type { DevLocale } from './i18n-config';
-import { devNo } from '@/lib/i18n/dictionaries/dev.no';
-import { devEn } from '@/lib/i18n/dictionaries/dev.en';
+import { devNo } from './i18n/dictionaries/dev.no';
+import { devEn } from './i18n/dictionaries/dev.en';
 
 export type DevDictionary = typeof devNo;
 

@@ -1,0 +1,40 @@
+/.well-known/apple-app-site-association /.well-known/apple-app-site-association 200
+/.well-known/security.txt /.well-known/security.txt 200
+
+/ https://tidex.no/no/ 308
+/support https://tidex.no/no/support/ 308
+/support/ https://tidex.no/no/support/ 308
+/privacy https://tidex.no/no/privacy/ 308
+/privacy/ https://tidex.no/no/privacy/ 308
+/terms https://tidex.no/no/terms/ 308
+/terms/ https://tidex.no/no/terms/ 308
+/security https://tidex.no/no/security/ 308
+/security/ https://tidex.no/no/security/ 308
+
+/en https://tidex.no/en/ 308
+/en/ https://tidex.no/en/ 308
+/no https://tidex.no/no/ 308
+/no/ https://tidex.no/no/ 308
+
+/en/support https://tidex.no/en/support/ 308
+/en/support/ https://tidex.no/en/support/ 308
+/en/privacy https://tidex.no/en/privacy/ 308
+/en/privacy/ https://tidex.no/en/privacy/ 308
+/en/terms https://tidex.no/en/terms/ 308
+/en/terms/ https://tidex.no/en/terms/ 308
+/en/security https://tidex.no/en/security/ 308
+/en/security/ https://tidex.no/en/security/ 308
+
+/no/support https://tidex.no/no/support/ 308
+/no/support/ https://tidex.no/no/support/ 308
+/no/privacy https://tidex.no/no/privacy/ 308
+/no/privacy/ https://tidex.no/no/privacy/ 308
+/no/terms https://tidex.no/no/terms/ 308
+/no/terms/ https://tidex.no/no/terms/ 308
+/no/security https://tidex.no/no/security/ 308
+/no/security/ https://tidex.no/no/security/ 308
+
+/en/* https://tidex.no/en/support/ 308
+/no/* https://tidex.no/no/support/ 308
+
+/* https://tidex.no/no/support/ 308

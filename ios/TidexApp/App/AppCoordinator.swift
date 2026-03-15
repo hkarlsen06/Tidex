@@ -81,6 +81,7 @@ final class AppCoordinator: ObservableObject {
     case addShift  // Navigate to Add Shift tab (preselected date set via SharedMonthContext)
     case feedback  // Navigate to feedback settings (for users receiving response)
     case adminFeedback  // Navigate to admin panel with feedback tab (for admins receiving new feedback)
+    case adminReport(reportId: String?)  // Open admin panel on reports tab and optionally select a report
   }
 
   // MARK: - Terms Acceptance State
@@ -1129,41 +1130,92 @@ final class AppCoordinator: ObservableObject {
   /// - tidex://sharing?user=<userId> → Navigate to sharing tab and select the sharer
   /// - tidex://sharing/manage?highlight=<userId> → Open manage modal and highlight user
   /// - tidex://shifts?dates=2025-01-15,2025-01-16 → Navigate to shifts with dates selected
+  /// - tidex://admin?tab=reports&reportId=<uuid> → Open admin reports
   func handleDeepLink(_ url: URL) {
-    guard url.scheme == "tidex" else { return }
-
-    let host = url.host?.lowercased()
     let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-
-    switch host {
-    case "sharing":
-      // Check for manage path
-      if url.path == "/manage" || url.pathComponents.contains("manage") {
-        let highlightUserId = queryItems.first(where: { $0.name == "highlight" })?.value
-        pendingDeepLink = .sharingManage(highlightUserId: highlightUserId)
-      } else {
-        // Navigate to sharer with optional date highlighting
-        let sharerId = queryItems.first(where: { $0.name == "user" })?.value
-        let datesString = queryItems.first(where: { $0.name == "dates" })?.value
-        let dates = datesString?.components(separatedBy: ",").map {
-          $0.trimmingCharacters(in: .whitespaces)
-        }
-        pendingDeepLink = .sharing(sharerId: sharerId, highlightDates: dates, changes: nil)
+    if url.scheme == "tidex" {
+      switch url.host?.lowercased() {
+      case "sharing":
+        handleSharingDeepLink(path: url.path, queryItems: queryItems)
+      case "shifts":
+        handleShiftsDeepLink(queryItems: queryItems)
+      case "admin":
+        handleAdminDeepLink(queryItems: queryItems)
+      default:
+        break
       }
+      return
+    }
 
-    case "shifts":
-      let datesString = queryItems.first(where: { $0.name == "dates" })?.value
-      let dates = datesString?.components(separatedBy: ",").map {
-        $0.trimmingCharacters(in: .whitespaces)
-      }
-      // Parse action parameter: "open" (default) or "highlight"
-      let actionString = queryItems.first(where: { $0.name == "action" })?.value?.lowercased()
-      let action: ShiftDeepLinkAction = actionString == "highlight" ? .highlight : .open
-      pendingDeepLink = .shifts(dates: dates, action: action)
+    guard
+      let scheme = url.scheme?.lowercased(),
+      scheme == "https" || scheme == "http",
+      url.host?.lowercased() == "app.tidex.no"
+    else {
+      return
+    }
 
+    switch normalizedAppPath(url.path) {
+    case "/sharing", "/sharing/manage":
+      handleSharingDeepLink(path: normalizedAppPath(url.path), queryItems: queryItems)
+    case "/shifts":
+      handleShiftsDeepLink(queryItems: queryItems)
+    case "/settings/admin":
+      handleAdminDeepLink(queryItems: queryItems)
     default:
       break
     }
+  }
+
+  private func handleSharingDeepLink(path: String, queryItems: [URLQueryItem]) {
+    let pathComponents = path.split(separator: "/")
+    if path == "/manage" || path == "/sharing/manage" || pathComponents.contains("manage") {
+      let highlightUserId = queryItems.first(where: { $0.name == "highlight" })?.value
+      pendingDeepLink = .sharingManage(highlightUserId: highlightUserId)
+      return
+    }
+
+    let sharerId = queryItems.first(where: { $0.name == "user" })?.value
+    let datesString = queryItems.first(where: { $0.name == "dates" })?.value
+    let dates = datesString?.components(separatedBy: ",").map {
+      $0.trimmingCharacters(in: .whitespaces)
+    }
+    pendingDeepLink = .sharing(sharerId: sharerId, highlightDates: dates, changes: nil)
+  }
+
+  private func handleShiftsDeepLink(queryItems: [URLQueryItem]) {
+    let datesString = queryItems.first(where: { $0.name == "dates" })?.value
+    let dates = datesString?.components(separatedBy: ",").map {
+      $0.trimmingCharacters(in: .whitespaces)
+    }
+    let actionString = queryItems.first(where: { $0.name == "action" })?.value?.lowercased()
+    let action: ShiftDeepLinkAction = actionString == "highlight" ? .highlight : .open
+    pendingDeepLink = .shifts(dates: dates, action: action)
+  }
+
+  private func handleAdminDeepLink(queryItems: [URLQueryItem]) {
+    let tab = queryItems.first(where: { $0.name == "tab" })?.value?.lowercased()
+    let reportId = queryItems.first(where: { $0.name == "reportId" })?.value
+
+    switch tab {
+    case "reports":
+      pendingDeepLink = .adminReport(reportId: reportId)
+    default:
+      pendingDeepLink = .adminFeedback
+    }
+  }
+
+  private func normalizedAppPath(_ path: String) -> String {
+    let segments = path.split(separator: "/", omittingEmptySubsequences: true)
+    guard let first = segments.first else { return "/" }
+
+    let strippedSegments =
+      first == "en" || first == "no"
+      ? Array(segments.dropFirst())
+      : Array(segments)
+
+    guard !strippedSegments.isEmpty else { return "/" }
+    return "/" + strippedSegments.joined(separator: "/")
   }
 
   /// Clear the pending deep link after it has been consumed

@@ -102,7 +102,7 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
             </div>
           </div>
 
-          {/* Tidex Web App Project Card */}
+          {/* Tidex Marketing Site Project Card */}
           <div className="overflow-hidden rounded-3xl border border-border/40 bg-surface-primary/50 shadow-app-lg backdrop-blur-xs">
             <div className="grid gap-8 md:grid-cols-2">
               {/* Project Image/Preview */}
@@ -134,7 +134,7 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
                     {projects.tidexWeb.tech}
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {['Next.js 16', 'TypeScript', 'Supabase', 'Tailwind CSS', 'React 19'].map(
+                    {['Next.js 16', 'TypeScript', 'Tailwind CSS', 'React 19', 'Cloudflare Pages'].map(
                       (tech) => (
                         <span
                           key={tech}
@@ -171,7 +171,7 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
                 {/* Links */}
                 <div className="flex flex-wrap gap-4">
                   <a
-                    href="https://app.tidex.no"
+                    href="https://tidex.no"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-6 py-3 font-semibold text-text-inverse shadow-app transition-transform hover:scale-105"

@@ -206,4 +206,4 @@ XCTAssertEqual(computed.gross, expectedGross)
 
 - [../AGENTS.md](../AGENTS.md) - Project instructions for coding agents
 - [../docs/](../docs/) - Shared documentation (payroll spec, notifications, DB schema)
-- [../next/docs/](../next/docs/) - Web app documentation
+- [../marketing/](../marketing/) - Public website code

@@ -1,0 +1,9 @@
+# Tidex Security Contact Information
+# https://securitytxt.org/
+# RFC 9116
+
+Contact: mailto:contact@tidex.no
+Expires: 2027-01-05T00:00:00.000Z
+Preferred-Languages: no, en
+Canonical: https://tidex.no/.well-known/security.txt
+Policy: https://tidex.no/security

@@ -1,3 +1,0 @@
-{
-  "installCommand": "pnpm add --filter next \"https://api.motion.dev/registry.tgz?package=motion-plus&version=2.8.0&token=$MOTION_PLUS_ACCESS_TOKEN\" && pnpm install"
-}

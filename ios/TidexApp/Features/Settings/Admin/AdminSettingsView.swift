@@ -6,6 +6,7 @@ struct AdminSettingsView: View {
 
   /// Optional initial tab to select when the view appears (for deep linking)
   var initialTab: AdminTab?
+  var initialReportId: String?
 
   var body: some View {
     VStack(spacing: 0) {
@@ -44,6 +45,7 @@ struct AdminSettingsView: View {
       if let initialTab = initialTab {
         viewModel.selectedTab = initialTab
       }
+      viewModel.setInitialReportSelection(initialReportId)
       await viewModel.loadInitialData()
     }
     .sheet(item: $viewModel.selectedUser) { user in

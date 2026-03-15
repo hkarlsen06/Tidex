@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import type { Locale } from '@/lib/i18n/config';
 import { MarketingLocaleToggle } from './MarketingLocaleToggle';
 import { LocaleLangSetter } from './LocaleLangSetter';

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { Locale } from '@/lib/i18n/config';
+import type { DevLocale } from '../lib/i18n-config';
 
 interface LocaleLangSetterProps {
-  locale: Locale;
+  locale: DevLocale;
 }
 
 export function LocaleLangSetter({ locale }: LocaleLangSetterProps) {

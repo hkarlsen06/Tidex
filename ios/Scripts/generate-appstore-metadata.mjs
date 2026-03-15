@@ -24,8 +24,8 @@ import pLimit from "p-limit";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load env from next/.env.local
-config({ path: path.join(__dirname, "../../next/.env.local") });
+// Load env from repo-root .env.local
+config({ path: path.join(__dirname, "../../.env.local") });
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.4";
@@ -309,7 +309,7 @@ function extractJson(text) {
 async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale, languageName, fields = TRANSLATED_FIELDS) {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not set in next/.env.local");
+    throw new Error("OPENAI_API_KEY is not set in .env.local at the repository root");
   }
 
   // Build source/reference objects with only the requested fields
@@ -577,7 +577,7 @@ async function main() {
   // Check for OpenAI API key
   if (!process.env.OPENAI_API_KEY?.trim()) {
     console.log("\n⚠ OPENAI_API_KEY not set - skipping translations");
-    console.log("  Set OPENAI_API_KEY in next/.env.local to enable translations");
+    console.log("  Set OPENAI_API_KEY in .env.local at the repository root to enable translations");
     return;
   }
 

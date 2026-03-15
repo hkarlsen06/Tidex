@@ -2,7 +2,7 @@
 
 > **Version:** 1.2
 > **Last Updated:** 2026-02-26
-> **Source of Truth:** Next.js app on the `feature/multi-job` branch (merging to main)
+> **Source of Truth:** Shared payroll logic in the Tidex monorepo (`marketing`, `ios`, and `supabase/functions/_shared/wagey`)
 > **Purpose:** Enable re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results
 
 ---
@@ -1357,7 +1357,7 @@ export const getComputedShifts = cache(async (userId, options) => { ... });
 cacheTag(`user-${userId}`, "user-shifts");
 ```
 
-**Invalidation:**
+**Invalidation in the retired Next.js app:**
 ```typescript
 import { revalidateTag } from "next/cache";
 revalidateTag(`user-${userId}`, "max");

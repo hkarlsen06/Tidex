@@ -40,6 +40,8 @@ struct MainTabView: View {
   // State for feedback deep link sheets
   @State private var showFeedbackSheet = false
   @State private var showAdminFeedbackSheet = false
+  @State private var adminSheetInitialTab: AdminTab = .feedback
+  @State private var adminSheetInitialReportId: String?
 
   // State for Home-owned stats navigation
   @State private var showHomeStats = false
@@ -298,7 +300,10 @@ struct MainTabView: View {
       }
     }
     .sheet(isPresented: $showAdminFeedbackSheet) {
-      AdminSettingsView(initialTab: .feedback)
+      AdminSettingsView(
+        initialTab: adminSheetInitialTab,
+        initialReportId: adminSheetInitialReportId
+      )
     }
     .alert(
       String(localized: .addShiftSubmitRequirementsTitle),
@@ -583,6 +588,13 @@ struct MainTabView: View {
       coordinator.clearPendingDeepLink()
     case .adminFeedback:
       // Open admin panel with feedback tab for admins viewing new feedback
+      adminSheetInitialTab = .feedback
+      adminSheetInitialReportId = nil
+      showAdminFeedbackSheet = true
+      coordinator.clearPendingDeepLink()
+    case .adminReport(let reportId):
+      adminSheetInitialTab = .reports
+      adminSheetInitialReportId = reportId
       showAdminFeedbackSheet = true
       coordinator.clearPendingDeepLink()
     }
