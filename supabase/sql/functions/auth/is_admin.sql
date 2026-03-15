@@ -9,7 +9,11 @@ CREATE OR REPLACE FUNCTION public.is_admin()
  SET search_path TO 'public', 'auth'
 AS $function$
   SELECT COALESCE(
-    (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
+    (
+      SELECT u.raw_app_meta_data ->> 'role' = 'admin'
+      FROM auth.users u
+      WHERE u.id = auth.uid()
+    ),
     false
   );
 $function$;

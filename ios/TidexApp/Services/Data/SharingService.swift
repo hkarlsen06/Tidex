@@ -65,8 +65,8 @@ private struct OutgoingBlockedShareRow: Decodable {
 
 // MARK: - Sharing Service
 
-/// Service for fetching shared shifts and sharers
-/// Read/fetch paths use Supabase RPC; mutation paths stay on existing Next.js endpoints.
+/// Service for fetching shared shifts and sharers.
+/// Sharing management now uses authenticated Supabase RPCs end-to-end.
 @MainActor
 final class SharingService: ObservableObject {
   static let shared = SharingService()
@@ -75,9 +75,6 @@ final class SharingService: ObservableObject {
   @Published private(set) var isLoadingSharers = false
   @Published private(set) var isLoadingShifts = false
   @Published private(set) var error: Error?
-
-  /// Shared URLSession from factory (standard timeout: 30s request, 60s resource)
-  private let urlSession = URLSessionFactory.standard
 
   /// Cache for shift previews (by sharer ID)
   private var previewCache: [String: CachedPreview] = [:]
@@ -584,7 +581,7 @@ final class SharingService: ObservableObject {
     }.value
   }
 
-  // MARK: - Friends Management (via Next.js API)
+  // MARK: - Friends Management (via Supabase RPC)
 
   /// Fetch all friends (bidirectional relationships) and share capacity
   /// Used by the sharing management modal
@@ -595,52 +592,17 @@ final class SharingService: ObservableObject {
   ) {
     do {
       logger.info("Starting fetchAllFriends...")
-
-      let session: Session
-      do {
-        session = try await AuthSessionManager.shared.getSession()
-        logger.info("Got session, token expires at: \(session.expiresAt)")
-      } catch {
-        logger.error("Failed to get session: \(error.localizedDescription)")
-        throw SharingServiceError.notAuthenticated
-      }
-
+      let session = try await AuthSessionManager.shared.getSession()
       let userId = session.normalizedUserId
-      let accessToken = session.accessToken
-      let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/friends")
+      logger.info("Got session, token expires at: \(session.expiresAt)")
 
-      var request = URLRequest(url: url)
-      request.httpMethod = "GET"
-      request.cachePolicy = URLRequest.CachePolicy.reloadIgnoringLocalCacheData
-      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-      logger.info("Fetching all friends from \(url.absoluteString)")
-
-      let (data, response) = try await urlSession.data(for: request)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        logger.error("Response was not HTTPURLResponse")
-        throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
-      }
-
-      logger.info("HTTP status: \(httpResponse.statusCode), data size: \(data.count) bytes")
-
-      switch httpResponse.statusCode {
-      case 200:
-        break
-      case 401:
-        logger.error("Got 401 Unauthorized")
-        throw SharingServiceError.notAuthenticated
-      default:
-        let message = String(data: data, encoding: .utf8)
-        logger.error("HTTP error \(httpResponse.statusCode): \(message ?? "no message")")
-        throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
-      }
-
-      let decoder = JSONDecoder()
       do {
-        let apiResponse = try decoder.decode(FriendsAPIResponse.self, from: data)
+        let apiResponse: FriendsAPIResponse =
+          try await supabase
+          .rpc("get_sharing_friends_api")
+          .single()
+          .execute()
+          .value
         let blockedSets = try? await fetchBlockedUserSets(for: userId)
         let allBlockedPairIds = blockedSets?.allBlockedPairIds ?? Set<String>()
         let blockedByCurrentUserIds = blockedSets?.blockedByCurrentUserIds ?? Set<String>()
@@ -673,6 +635,10 @@ final class SharingService: ObservableObject {
           """
         )
         return (sanitizedFriends, mergedBlockedFriends, apiResponse.capacity)
+      } catch let error as PostgrestError {
+        throw mapRPCError(error)
+      } catch let error as AuthError {
+        throw mapRPCError(error)
       } catch let decodingError as DecodingError {
         // Log detailed decoding error info
         switch decodingError {
@@ -694,10 +660,6 @@ final class SharingService: ObservableObject {
           )
         @unknown default:
           logger.error("Decoding error - unknown: \(decodingError)")
-        }
-        // Also log raw response for debugging
-        if let rawString = String(data: data, encoding: .utf8) {
-          logger.error("Raw response (first 500 chars): \(String(rawString.prefix(500)))")
         }
         throw SharingServiceError.decodingError(underlying: decodingError)
       } catch {
@@ -728,7 +690,7 @@ final class SharingService: ObservableObject {
     case toggleMuted
   }
 
-  /// Generic method to call the /api/sharing/manage endpoint
+  /// Generic method to call the manage_sharing_action RPC.
   private func performManageAction(
     action: ManageAction,
     identifier: String? = nil,
@@ -737,43 +699,35 @@ final class SharingService: ObservableObject {
     showEarnings: Bool? = nil,
     muted: Bool? = nil
   ) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let accessToken = session.accessToken
+    _ = try await AuthSessionManager.shared.getSession()
 
-    let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/manage")
-
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    // Build request body
-    var body: [String: Any] = ["action": action.rawValue]
-    if let identifier = identifier { body["identifier"] = identifier }
-    if let recipientId = recipientId { body["recipientId"] = recipientId }
-    if let ownerId = ownerId { body["ownerId"] = ownerId }
-    if let showEarnings = showEarnings { body["showEarnings"] = showEarnings }
-    if let muted = muted { body["muted"] = muted }
-
-    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+    var params: [String: AnyJSON] = [
+      "p_action": .string(action.rawValue)
+    ]
+    if let identifier {
+      params["p_identifier"] = .string(identifier)
+    }
+    if let recipientId {
+      params["p_recipient_id"] = .string(recipientId)
+    }
+    if let showEarnings {
+      params["p_show_earnings"] = .bool(showEarnings)
+    }
+    _ = ownerId
+    _ = muted
 
     logger.info("Performing manage action: \(action.rawValue)")
-
-    let (data, response) = try await urlSession.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
-    }
-
-    // Decode response to check for errors
-    let decoder = JSONDecoder()
-    let result = try decoder.decode(ManageActionResponse.self, from: data)
+    let result: ManageActionResponse =
+      try await supabase
+      .rpc("manage_sharing_action", params: params)
+      .single()
+      .execute()
+      .value
 
     if !result.success {
       let errorMessage = result.error ?? "Unknown error"
       logger.error("Manage action failed: \(errorMessage)")
-      throw SharingServiceError.httpError(
-        statusCode: httpResponse.statusCode, message: errorMessage)
+      throw SharingServiceError.httpError(statusCode: 400, message: errorMessage)
     }
 
     logger.info("Manage action \(action.rawValue) succeeded")

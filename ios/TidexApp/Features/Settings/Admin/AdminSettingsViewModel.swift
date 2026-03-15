@@ -2,6 +2,7 @@
 // Admin-only file with internal API calls where URLs are guaranteed valid
 import Combine
 import Foundation
+import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AdminSettingsViewModel")
@@ -752,10 +753,9 @@ final class AdminSettingsViewModel: ObservableObject {
 
   // MARK: - Private Properties
 
-  /// Shared URLSession from factory (long-running timeout for admin operations)
-  private let urlSession = URLSessionFactory.longRunning
   private var searchTask: Task<Void, Never>?
   private let perPage = 20
+  private let adminRouteBaseURL = URL(string: "https://tidex.invalid")!  // swiftlint:disable:this force_unwrapping
 
   deinit {
     searchTask?.cancel()
@@ -824,7 +824,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       var components = URLComponents(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/users"),
         resolvingAgainstBaseURL: false)!
       var queryItems = [
         URLQueryItem(name: "page", value: String(page)),
@@ -888,7 +888,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let response: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent(endpoint), method: "POST",
+        url: adminRouteBaseURL.appendingPathComponent(endpoint), method: "POST",
         body: body)
       if response.success {
         Haptics.play(.success)
@@ -916,7 +916,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       var components = URLComponents(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/subscribers"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/subscribers"),
         resolvingAgainstBaseURL: false)!
       components.queryItems = [URLQueryItem(name: "filter", value: subscribersFilter.rawValue)]
 
@@ -965,7 +965,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let response: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent(endpoint), method: "POST",
+        url: adminRouteBaseURL.appendingPathComponent(endpoint), method: "POST",
         body: body)
       if response.success {
         Haptics.play(.success)
@@ -986,7 +986,7 @@ final class AdminSettingsViewModel: ObservableObject {
     feedbackIsLoading = true
 
     do {
-      let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/feedback")
+      let url = adminRouteBaseURL.appendingPathComponent("/api/admin/feedback")
       let result: AdminFeedbackResponse = try await makeRequest(url: url, method: "GET")
       feedbackItems = result.feedback
       feedbackTotal = result.total
@@ -1005,7 +1005,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let result: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/feedback/respond"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/feedback/respond"),
         method: "POST",
         body: ["feedbackId": feedbackId, "response": response]
       )
@@ -1031,7 +1031,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       var components = URLComponents(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/reports"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/reports"),
         resolvingAgainstBaseURL: false)!
       var queryItems = [
         URLQueryItem(name: "limit", value: "50"),
@@ -1073,7 +1073,7 @@ final class AdminSettingsViewModel: ObservableObject {
     do {
       let trimmedNotes = reviewerNotes.trimmingCharacters(in: .whitespacesAndNewlines)
       let result: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/reports/status"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/reports/status"),
         method: "POST",
         body: [
           "reportId": reportId,
@@ -1103,7 +1103,7 @@ final class AdminSettingsViewModel: ObservableObject {
     auditLogIsLoading = true
 
     do {
-      let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/audit-log")
+      let url = adminRouteBaseURL.appendingPathComponent("/api/admin/audit-log")
       let result: AuditLogResponse = try await makeRequest(url: url, method: "GET")
       auditLogEntries = result.entries ?? []
     } catch {
@@ -1128,7 +1128,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let result: SqlResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/sql"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/sql"),
         method: "POST",
         body: ["query": sqlQuery]
       )
@@ -1154,7 +1154,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       var components = URLComponents(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/shares"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/shares"),
         resolvingAgainstBaseURL: false)!
       var queryItems: [URLQueryItem] = []
       if !sharesSearchQuery.isEmpty {
@@ -1189,7 +1189,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let result: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/shares/\(shareId)"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/shares/\(shareId)"),
         method: "DELETE"
       )
       if result.success {
@@ -1222,7 +1222,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let result: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/shares"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/shares"),
         method: "POST",
         body: [
           "ownerId": owner.id,
@@ -1269,7 +1269,7 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingOwner = true
       do {
-        let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
         components.queryItems = [
           URLQueryItem(name: "search", value: query),
@@ -1307,7 +1307,7 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingViewer = true
       do {
-        let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
         components.queryItems = [
           URLQueryItem(name: "search", value: query),
@@ -1341,7 +1341,7 @@ final class AdminSettingsViewModel: ObservableObject {
     notificationsIsLoading = true
 
     do {
-      let url = APIConfiguration.webAppBaseURL.appendingPathComponent(
+      let url = adminRouteBaseURL.appendingPathComponent(
         "/api/admin/notifications/history")
       let result: BroadcastHistoryResponse = try await makeRequest(url: url, method: "GET")
       broadcastHistory = result.broadcasts
@@ -1362,7 +1362,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
     do {
       let result: PreviewCountResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent(
+        url: adminRouteBaseURL.appendingPathComponent(
           "/api/admin/notifications/preview"),
         method: "POST",
         body: ["target": notificationTarget, "includeSelf": false]
@@ -1383,7 +1383,7 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingNotificationUsers = true
       do {
-        let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
         components.queryItems = [
           URLQueryItem(name: "search", value: query),
@@ -1465,7 +1465,7 @@ final class AdminSettingsViewModel: ObservableObject {
       }
 
       let result: AdminActionResponse = try await makeRequest(
-        url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/notifications/send"),
+        url: adminRouteBaseURL.appendingPathComponent("/api/admin/notifications/send"),
         method: "POST",
         body: body
       )
@@ -1561,7 +1561,7 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingImpersonationUsers = true
       do {
-        let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
         components.queryItems = [
           URLQueryItem(name: "search", value: query),
@@ -1627,32 +1627,260 @@ final class AdminSettingsViewModel: ObservableObject {
   private func makeRequest<T: Decodable>(url: URL, method: String, body: [String: Any]? = nil)
     async throws -> T
   {
-    let session = try await AuthSessionManager.shared.getSession()
+    _ = try await AuthSessionManager.shared.getSession()
 
-    var request = URLRequest(url: url)
-    request.httpMethod = method
-    request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    let path = normalizedAPIPath(from: url)
+    let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
 
-    if let body = body {
-      request.httpBody = try JSONSerialization.data(withJSONObject: body)
+    switch (method, path) {
+    case ("GET", "/api/admin/users"):
+      let page = intQuery(named: "page", in: queryItems) ?? 1
+      let perPage =
+        intQuery(named: "perPage", in: queryItems) ?? intQuery(named: "limit", in: queryItems)
+        ?? self.perPage
+      let search = stringQuery(named: "search", in: queryItems)
+      return try await rpcRequest(
+        "admin_list_users_api",
+        params: compactParams([
+          "p_page": .integer(page),
+          "p_per_page": .integer(perPage),
+          "p_search": search.map(AnyJSON.string),
+        ])
+      )
+
+    case ("POST", "/api/admin/users/ban"):
+      return try await edgeRequest("admin-user-ban", body: body)
+
+    case ("POST", "/api/admin/users/admin"):
+      return try await edgeRequest("admin-user-role", body: body)
+
+    case ("POST", "/api/admin/users/grandfathered"):
+      return try await rpcRequest(
+        "admin_toggle_grandfathered_api",
+        params: compactParams([
+          "p_target_user_id": stringBody(body, key: "targetUserId").map(AnyJSON.string),
+          "p_target_email": stringBody(body, key: "targetEmail").map(AnyJSON.string),
+          "p_grant": boolBody(body, key: "grant").map(AnyJSON.bool),
+        ])
+      )
+
+    case ("POST", "/api/admin/users/trial"):
+      return try await rpcRequest(
+        "admin_manage_trial_api",
+        params: compactParams([
+          "p_target_user_id": stringBody(body, key: "targetUserId").map(AnyJSON.string),
+          "p_target_email": stringBody(body, key: "targetEmail").map(AnyJSON.string),
+          "p_action": stringBody(body, key: "action").map(AnyJSON.string),
+          "p_duration_days": intBody(body, key: "durationDays").map(AnyJSON.integer),
+        ])
+      )
+
+    case ("GET", "/api/admin/subscribers"):
+      return try await rpcRequest(
+        "admin_get_subscribers_api",
+        params: compactParams([
+          "p_filter": stringQuery(named: "filter", in: queryItems).map(AnyJSON.string)
+        ])
+      )
+
+    case ("GET", "/api/admin/feedback"):
+      return try await rpcRequest("admin_get_feedback_api")
+
+    case ("POST", "/api/admin/feedback/respond"):
+      return try await rpcRequest(
+        "admin_respond_feedback_api",
+        params: compactParams([
+          "p_feedback_id": stringBody(body, key: "feedbackId").map(AnyJSON.string),
+          "p_response": stringBody(body, key: "response").map(AnyJSON.string),
+        ])
+      )
+
+    case ("GET", "/api/admin/reports"):
+      return try await rpcRequest(
+        "admin_get_reports_api",
+        params: compactParams([
+          "p_limit": intQuery(named: "limit", in: queryItems).map(AnyJSON.integer),
+          "p_offset": intQuery(named: "offset", in: queryItems).map(AnyJSON.integer),
+          "p_status": stringQuery(named: "status", in: queryItems).map(AnyJSON.string),
+        ])
+      )
+
+    case ("POST", "/api/admin/reports/status"):
+      return try await rpcRequest(
+        "admin_update_report_status_api",
+        params: compactParams([
+          "p_report_id": stringBody(body, key: "reportId").map(AnyJSON.string),
+          "p_status": stringBody(body, key: "status").map(AnyJSON.string),
+          "p_reviewer_notes": nullableStringBody(body, key: "reviewerNotes"),
+        ])
+      )
+
+    case ("GET", "/api/admin/audit-log"):
+      return try await rpcRequest("admin_get_audit_log_api")
+
+    case ("POST", "/api/admin/sql"):
+      return try await rpcRequest(
+        "admin_execute_sql_api",
+        params: compactParams([
+          "p_query": stringBody(body, key: "query").map(AnyJSON.string)
+        ])
+      )
+
+    case ("GET", "/api/admin/shares"):
+      return try await rpcRequest(
+        "admin_get_shares_api",
+        params: compactParams([
+          "p_search": stringQuery(named: "search", in: queryItems).map(AnyJSON.string),
+          "p_page": intQuery(named: "page", in: queryItems).map(AnyJSON.integer),
+          "p_page_size": intQuery(named: "pageSize", in: queryItems).map(AnyJSON.integer),
+        ])
+      )
+
+    case ("DELETE", let sharePath) where sharePath.hasPrefix("/api/admin/shares/"):
+      return try await rpcRequest(
+        "admin_delete_share_api",
+        params: ["p_share_id": .string(String(sharePath.split(separator: "/").last ?? ""))]
+      )
+
+    case ("POST", "/api/admin/shares"):
+      return try await rpcRequest(
+        "admin_create_share_api",
+        params: compactParams([
+          "p_owner_id": stringBody(body, key: "ownerId").map(AnyJSON.string),
+          "p_viewer_id": stringBody(body, key: "viewerId").map(AnyJSON.string),
+          "p_show_earnings": boolBody(body, key: "showEarnings").map(AnyJSON.bool),
+        ])
+      )
+
+    case ("GET", "/api/admin/notifications/history"):
+      return try await rpcRequest("admin_get_broadcast_history_api")
+
+    case ("POST", "/api/admin/notifications/preview"):
+      return try await rpcRequest(
+        "admin_preview_notification_target_api",
+        params: compactParams([
+          "p_target": stringBody(body, key: "target").map(AnyJSON.string),
+          "p_specific_user_ids": stringArrayBody(body, key: "specificUserIds").map(anyJSONArray),
+          "p_include_self": boolBody(body, key: "includeSelf").map(AnyJSON.bool),
+        ])
+      )
+
+    case ("POST", "/api/admin/notifications/send"):
+      return try await rpcRequest(
+        "admin_send_broadcast_api",
+        params: compactParams([
+          "p_title": stringBody(body, key: "title").map(AnyJSON.string),
+          "p_title_no": stringBody(body, key: "titleNo").map(AnyJSON.string),
+          "p_body": stringBody(body, key: "body").map(AnyJSON.string),
+          "p_body_no": stringBody(body, key: "bodyNo").map(AnyJSON.string),
+          "p_target": stringBody(body, key: "target").map(AnyJSON.string),
+          "p_deeplink": stringBody(body, key: "deeplink").map(AnyJSON.string),
+          "p_deeplink_no": stringBody(body, key: "deeplinkNo").map(AnyJSON.string),
+          "p_specific_user_ids": stringArrayBody(body, key: "specificUserIds").map(anyJSONArray),
+          "p_include_self": boolBody(body, key: "includeSelf").map(AnyJSON.bool),
+        ])
+      )
+
+    default:
+      throw AdminError.invalidURL
     }
+  }
 
-    let (data, response) = try await urlSession.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw AdminError.networkError
+  private func rpcRequest<T: Decodable>(
+    _ functionName: String,
+    params: [String: AnyJSON] = [:]
+  ) async throws -> T {
+    do {
+      return
+        try await supabase
+        .rpc(functionName, params: params)
+        .single()
+        .execute()
+        .value
+    } catch {
+      throw mapTransportError(error)
     }
+  }
 
-    guard httpResponse.statusCode == 200 else {
-      if httpResponse.statusCode == 401 { throw AdminError.unauthorized }
-      if httpResponse.statusCode == 403 { throw AdminError.forbidden }
-      throw AdminError.serverError(
-        code: httpResponse.statusCode,
-        message: String(data: data, encoding: .utf8) ?? "Unknown error")
+  private func edgeRequest<T: Decodable>(
+    _ functionName: String,
+    body: [String: Any]? = nil
+  ) async throws -> T {
+    do {
+      let payload: [String: Any] = body ?? [:]
+      let encodedBody = try anyJSONBody(payload)
+      return try await supabase.functions.invoke(
+        functionName,
+        options: FunctionInvokeOptions(body: encodedBody)
+      )
+    } catch {
+      throw mapTransportError(error)
     }
+  }
 
-    return try JSONDecoder().decode(T.self, from: data)
+  private func mapTransportError(_ error: Error) -> AdminError {
+    if error is AuthError {
+      return .unauthorized
+    }
+    if let error = error as? PostgrestError {
+      return .serverError(code: 500, message: error.message)
+    }
+    return .serverError(code: 500, message: error.localizedDescription)
+  }
+
+  private func normalizedAPIPath(from url: URL) -> String {
+    let path = url.path
+    return path.hasSuffix("/") && path.count > 1 ? String(path.dropLast()) : path
+  }
+
+  private func stringQuery(named name: String, in items: [URLQueryItem]) -> String? {
+    items.first(where: { $0.name == name })?.value
+  }
+
+  private func intQuery(named name: String, in items: [URLQueryItem]) -> Int? {
+    guard let value = stringQuery(named: name, in: items) else { return nil }
+    return Int(value)
+  }
+
+  private func stringBody(_ body: [String: Any]?, key: String) -> String? {
+    body?[key] as? String
+  }
+
+  private func nullableStringBody(_ body: [String: Any]?, key: String) -> AnyJSON? {
+    guard let body, let value = body[key] else { return nil }
+    if value is NSNull {
+      return .null
+    }
+    return (value as? String).map(AnyJSON.string)
+  }
+
+  private func intBody(_ body: [String: Any]?, key: String) -> Int? {
+    body?[key] as? Int
+  }
+
+  private func boolBody(_ body: [String: Any]?, key: String) -> Bool? {
+    body?[key] as? Bool
+  }
+
+  private func stringArrayBody(_ body: [String: Any]?, key: String) -> [String]? {
+    body?[key] as? [String]
+  }
+
+  private func anyJSONArray(_ values: [String]) -> AnyJSON {
+    .array(values.map(AnyJSON.string))
+  }
+
+  private func anyJSONBody(_ body: [String: Any]) throws -> AnyJSON {
+    let data = try JSONSerialization.data(withJSONObject: body)
+    return try AnyJSON.decoder.decode(AnyJSON.self, from: data)
+  }
+
+  private func compactParams(_ pairs: [String: AnyJSON?]) -> [String: AnyJSON] {
+    pairs.reduce(into: [:]) { partialResult, element in
+      if let value = element.value {
+        partialResult[element.key] = value
+      }
+    }
   }
 }
 

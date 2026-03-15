@@ -1672,7 +1672,6 @@ private struct RPCErrorResponse: Codable {
 enum FriendsAPIClient {
   /// Base URL for Supabase REST RPC
   private static let rpcBaseURL = URL(string: "https://identity.tidex.no/rest/v1/rpc")
-  fileprivate static let webAppBaseURL = URL(string: "https://app.tidex.no")
 
   /// Fallback anon/publishable key for extension contexts lacking Info.plist config
   private static let fallbackAnonKey = "sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb"
@@ -2043,37 +2042,12 @@ enum FriendsAPIClient {
     }
 
     private static func fetchFriends(accessToken: String) async throws -> ShareFriendsResponse {
-      guard let webAppBaseURL = FriendsAPIClient.webAppBaseURL else {
-        throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.invalid_web_app_base_url"))
-      }
-
-      let url = webAppBaseURL.appendingPathComponent("/api/sharing/friends")
-      var request = URLRequest(url: url)
-      request.httpMethod = "GET"
-      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-      request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-      do {
-        let (data, response) = try await FriendsAPIClient.urlSession.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-          throw FriendsAPIError.networkError(
-            underlying: String(localized: "share.error.invalid_friends_response"))
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-          return try JSONDecoder().decode(ShareFriendsResponse.self, from: data)
-        case 401:
-          throw FriendsAPIError.unauthorized
-        default:
-          throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
-        }
-      } catch let error as FriendsAPIError {
-        throw error
-      } catch {
-        throw FriendsAPIError.networkError(underlying: error.localizedDescription)
-      }
+      try await FriendsAPIClient.callRPC(
+        functionName: "get_sharing_friends_api",
+        body: [:],
+        accessToken: accessToken,
+        expectsSingleObject: true
+      )
     }
 
     private static func uploadImageAttachment(
