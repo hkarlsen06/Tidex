@@ -6,10 +6,12 @@ import type {
   ImageContent,
   Message,
   RedactedThinkingContent,
+  Source,
   ThinkingContent,
   ToolResultContent,
+  Tool,
 } from "./ai-types.ts";
-import { DEFAULT_CLAUDE_MODEL, streamClaudeChat } from "./claude.ts";
+import { ClaudeProviderError, DEFAULT_CLAUDE_MODEL, streamClaudeChat } from "./claude.ts";
 import { invalidateWageyCache, type WageyRequestContext } from "./context.ts";
 import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
@@ -22,6 +24,7 @@ const SSE_HEARTBEAT_MS = 15_000;
 const SSE_FLUSH_PADDING = ": " + " ".repeat(2048) + "\n\n";
 
 export type ChatChunk =
+  | { type: "text_start" }
   | { type: "text"; content: string }
   | { type: "status"; status: "thinking" }
   | { type: "tool_start"; toolName: string; toolCallId: string; toolArguments?: string }
@@ -30,6 +33,9 @@ export type ChatChunk =
   | { type: "error"; error: string }
   | { type: "wagey_limit"; remaining: number; resetDays: number; exceeded?: boolean; bonus?: number }
   | { type: "wagey_no_access" }
+  | { type: "wagey_sources"; items: Source[] }
+  | { type: "wagey_built_in_tool_start"; toolName: string; toolCallId: string }
+  | { type: "wagey_built_in_tool_result"; toolName: string; toolCallId: string; result: string; success: boolean }
   | { type: "wagey_compaction"; content: string };
 
 const imageContentBlockSchema = z.object({
@@ -99,6 +105,19 @@ type PendingToolUse = {
   input: Record<string, unknown>;
 };
 
+const BUILT_IN_TOOLS: Tool[] = [
+  {
+    type: "web_search_20260209",
+    name: "web_search",
+    max_uses: 3,
+  },
+  {
+    type: "web_fetch_20260209",
+    name: "web_fetch",
+    max_uses: 3,
+  },
+];
+
 const READ_ONLY_TOOL_NAMES = new Set<ToolName>([
   "query_shifts",
   "calculate_wages",
@@ -119,6 +138,13 @@ function extractTextContent(content: ChatInput["messages"][0]["content"]): strin
     .filter((block): block is z.infer<typeof textContentBlockSchema> => block.type === "text")
     .map((block) => block.text)
     .join("");
+}
+
+function hasClientCapability(
+  client: ChatInput["client"],
+  capability: z.infer<typeof clientCapabilitySchema>,
+): boolean {
+  return client?.capabilities?.includes(capability) ?? false;
 }
 
 export function convertToClaudeMessages(
@@ -309,12 +335,52 @@ function log(level: "info" | "warn" | "error", requestId: string, message: strin
   console.log(JSON.stringify(payload));
 }
 
+function getPublicErrorMessage(error: unknown): string {
+  if (error instanceof ClaudeProviderError) {
+    return error.publicMessage;
+  }
+
+  return error instanceof Error
+    ? error.message
+    : "Failed to initialize Wagey";
+}
+
+function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
+  if (error instanceof ClaudeProviderError) {
+    return {
+      error: error.message,
+      status: error.status,
+      providerType: error.providerType,
+      providerMessage: error.providerMessage,
+      requestId: error.requestId,
+      publicMessage: error.publicMessage,
+    };
+  }
+
+  return {
+    error: error instanceof Error ? error.message : String(error),
+  };
+}
+
 function getClaudeConfig(): { apiKey: string; model: string } {
   const apiKey = Deno.env.get("CLAUDE_API_KEY")?.trim() ?? "";
-  const model = Deno.env.get("CLAUDE_MODEL")?.trim() ?? DEFAULT_CLAUDE_MODEL;
+  const configuredModel = Deno.env.get("CLAUDE_MODEL")?.trim() ?? "";
 
   if (!apiKey) {
     throw new Error("Missing CLAUDE_API_KEY");
+  }
+
+  const model = configuredModel.startsWith("claude-opus-4-6")
+    ? configuredModel
+    : DEFAULT_CLAUDE_MODEL;
+
+  if (configuredModel && configuredModel !== model) {
+    console.warn(JSON.stringify({
+      scope: "wagey-router",
+      message: "Ignoring unsupported CLAUDE_MODEL for Wagey; falling back to default Opus 4.6",
+      configuredModel,
+      fallbackModel: model,
+    }));
   }
 
   return { apiKey, model };
@@ -341,6 +407,11 @@ export async function handleWageyRequest(
 
   const { input } = parsed.data;
   const ctx = typeof ctxOrFactory === "function" ? await ctxOrFactory() : ctxOrFactory;
+  const supportsRichSources = hasClientCapability(input.client, "rich_sources_v1");
+  const supportsRichBuiltInToolEvents = hasClientCapability(
+    input.client,
+    "rich_built_in_tool_events_v1",
+  );
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -348,28 +419,57 @@ export async function handleWageyRequest(
       let streamClosed = false;
       let heartbeatHandle: number | null = null;
 
-      const sendChunk = (chunk: ChatChunk) => {
-        if (streamClosed) return;
-
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "chunk", chunk })}\n\n`));
-      };
-
-      const sendComment = (comment: string) => {
-        if (streamClosed) return;
-        controller.enqueue(encoder.encode(`: ${comment}\n\n`));
-      };
-
-      const closeStream = (reason: string) => {
-        if (streamClosed) return;
-        streamClosed = true;
+      const stopHeartbeat = () => {
         if (heartbeatHandle !== null) {
           clearInterval(heartbeatHandle);
           heartbeatHandle = null;
         }
-        controller.close();
+      };
+
+      const markStreamClosed = () => {
+        if (streamClosed) return;
+        streamClosed = true;
+        stopHeartbeat();
+      };
+
+      const tryEnqueue = (payload: string): boolean => {
+        if (streamClosed || req.signal.aborted) {
+          markStreamClosed();
+          return false;
+        }
+
+        try {
+          controller.enqueue(encoder.encode(payload));
+          return true;
+        } catch {
+          markStreamClosed();
+          return false;
+        }
+      };
+
+      const sendChunk = (chunk: ChatChunk) => {
+        tryEnqueue(`data: ${JSON.stringify({ type: "chunk", chunk })}\n\n`);
+      };
+
+      const sendComment = (comment: string) => {
+        tryEnqueue(`: ${comment}\n\n`);
+      };
+
+      const closeStream = (reason: string) => {
+        if (streamClosed) return;
+        markStreamClosed();
+        try {
+          controller.close();
+        } catch {
+          // Client already disconnected; nothing left to do.
+        }
       };
 
       const sendErrorAndClose = (message: string) => {
+        if (streamClosed || req.signal.aborted) {
+          closeStream("error_after_abort");
+          return;
+        }
         log("error", requestId, "Sending stream error", { error: message });
         try {
           sendChunk({ type: "error", error: message });
@@ -379,7 +479,7 @@ export async function handleWageyRequest(
       };
 
       try {
-        controller.enqueue(encoder.encode(SSE_FLUSH_PADDING));
+        tryEnqueue(SSE_FLUSH_PADDING);
         sendComment("connected");
         heartbeatHandle = setInterval(() => {
           sendComment("keep-alive");
@@ -449,6 +549,7 @@ export async function handleWageyRequest(
         let hasUserVisibleAssistantOutput = false;
         let latestCompactionContent: string | undefined;
         let conversationMessages = [...messages];
+        const collectedSources = new Map<string, Source>();
         let invocationConsumed = false;
         let finalRemaining = projectedRemaining;
         let finalBonus = projectedBonus;
@@ -487,82 +588,148 @@ export async function handleWageyRequest(
             sendChunk({ type: "status", status: "thinking" });
 
             const toolUses: PendingToolUse[] = [];
-            let currentTextContent = "";
-            let compactionBlock: CompactionContent | null = null;
-            const thinkingBlocks: Array<ThinkingContent | RedactedThinkingContent> = [];
+            const startedToolUseIds = new Set<string>();
+            const assistantContent: ContentBlock[] = [];
+
+            let shouldStartNewAssistantTextBlock = true;
+
+            const appendAssistantText = (content: string) => {
+              if (!content) return;
+
+              const lastBlock = assistantContent[assistantContent.length - 1];
+              if (!shouldStartNewAssistantTextBlock && lastBlock?.type === "text") {
+                lastBlock.text += content;
+              } else {
+                assistantContent.push({ type: "text", text: content });
+              }
+              shouldStartNewAssistantTextBlock = false;
+            };
 
             for await (const chunk of streamClaudeChat({
               apiKey: claude.apiKey,
               model: claude.model,
               system,
               messages: conversationMessages,
-              tools,
+              tools: [...tools, ...BUILT_IN_TOOLS],
               maxTokens: 2048,
               signal: req.signal,
             })) {
               if (req.signal.aborted) break;
 
-              if (chunk.type === "text") {
+              if (chunk.type === "text_start") {
+                shouldStartNewAssistantTextBlock = true;
+                sendChunk({ type: "text_start" });
+              } else if (chunk.type === "text") {
+                if (!chunk.content) {
+                  continue;
+                }
                 if (!(await ensureInvocationConsumed())) {
                   return;
                 }
                 hasUserVisibleAssistantOutput = true;
-                currentTextContent += chunk.content;
+                appendAssistantText(chunk.content);
                 sendChunk({ type: "text", content: chunk.content });
+              } else if (chunk.type === "built_in_tool_start") {
+                if (!(await ensureInvocationConsumed())) {
+                  return;
+                }
+                hasUserVisibleAssistantOutput = true;
+                shouldStartNewAssistantTextBlock = true;
+                assistantContent.push({
+                  type: "server_tool_use",
+                  id: chunk.id,
+                  name: chunk.name,
+                  input: chunk.input,
+                });
+                if (supportsRichBuiltInToolEvents) {
+                  sendChunk({
+                    type: "wagey_built_in_tool_start",
+                    toolName: chunk.name,
+                    toolCallId: chunk.id,
+                  });
+                }
+              } else if (chunk.type === "tool_use_start") {
+                if (!(await ensureInvocationConsumed())) {
+                  return;
+                }
+                hasUserVisibleAssistantOutput = true;
+                shouldStartNewAssistantTextBlock = true;
+                startedToolUseIds.add(chunk.id);
+                sendChunk({
+                  type: "tool_start",
+                  toolName: chunk.name,
+                  toolCallId: chunk.id,
+                  toolArguments: Object.keys(chunk.input).length > 0 ? JSON.stringify(chunk.input) : undefined,
+                });
+              } else if (chunk.type === "built_in_tool_result") {
+                if (!(await ensureInvocationConsumed())) {
+                  return;
+                }
+                hasUserVisibleAssistantOutput = true;
+                shouldStartNewAssistantTextBlock = true;
+                assistantContent.push(chunk.result);
+                if (supportsRichBuiltInToolEvents) {
+                  sendChunk({
+                    type: "wagey_built_in_tool_result",
+                    toolName: chunk.name,
+                    toolCallId: chunk.id,
+                    result: JSON.stringify(chunk.result),
+                    success: chunk.success,
+                  });
+                }
               } else if (chunk.type === "tool_use") {
                 if (!(await ensureInvocationConsumed())) {
                   return;
                 }
-                const duplicate = toolUses.some((use) => use.name === chunk.name && JSON.stringify(use.input) === JSON.stringify(chunk.input));
+                const duplicate = toolUses.some((use) => use.id === chunk.id);
                 if (!duplicate) {
                   toolUses.push({ id: chunk.id, name: chunk.name, input: chunk.input });
                   hasUserVisibleAssistantOutput = true;
-                  sendChunk({
-                    type: "tool_start",
-                    toolName: chunk.name,
-                    toolCallId: chunk.id,
-                    toolArguments: JSON.stringify(chunk.input),
+                  shouldStartNewAssistantTextBlock = true;
+                  assistantContent.push({
+                    type: "tool_use",
+                    id: chunk.id,
+                    name: chunk.name,
+                    input: chunk.input,
                   });
+                  if (!startedToolUseIds.has(chunk.id)) {
+                    sendChunk({
+                      type: "tool_start",
+                      toolName: chunk.name,
+                      toolCallId: chunk.id,
+                      toolArguments: JSON.stringify(chunk.input),
+                    });
+                  }
+                }
+              } else if (chunk.type === "sources") {
+                for (const item of chunk.items) {
+                  collectedSources.set(item.url, item);
                 }
               } else if (chunk.type === "compaction") {
-                compactionBlock = { type: "compaction", content: chunk.content };
+                shouldStartNewAssistantTextBlock = true;
+                assistantContent.push({ type: "compaction", content: chunk.content });
                 latestCompactionContent = chunk.content;
+              } else if (chunk.type === "thinking_start") {
+                sendChunk({ type: "status", status: "thinking" });
               } else if (chunk.type === "thinking") {
-                thinkingBlocks.push({
+                shouldStartNewAssistantTextBlock = true;
+                assistantContent.push({
                   type: "thinking",
                   thinking: chunk.thinking,
                   signature: chunk.signature,
                 });
               } else if (chunk.type === "redacted_thinking") {
-                thinkingBlocks.push({
+                shouldStartNewAssistantTextBlock = true;
+                assistantContent.push({
                   type: "redacted_thinking",
                   data: chunk.data,
                 });
               }
             }
 
-            const assistantContent: ContentBlock[] = [];
-            if (compactionBlock) {
-              assistantContent.push(compactionBlock);
-            }
-            if (thinkingBlocks.length > 0) {
-              assistantContent.push(...thinkingBlocks);
-            }
-            if (currentTextContent) {
-              assistantContent.push({ type: "text", text: currentTextContent });
-            }
-            for (const toolUse of toolUses) {
-              assistantContent.push({
-                type: "tool_use",
-                id: toolUse.id,
-                name: toolUse.name,
-                input: toolUse.input,
-              });
-            }
-
             conversationMessages.push({
               role: "assistant",
-              content: assistantContent.length > 0 ? assistantContent : currentTextContent,
+              content: assistantContent.length > 0 ? assistantContent : "",
             });
 
             if (req.signal.aborted || toolUses.length === 0) {
@@ -600,12 +767,10 @@ export async function handleWageyRequest(
           }
         } catch (error) {
           aiLoopFailed = true;
-          log("error", requestId, "Claude loop failed", {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          log("error", requestId, "Claude loop failed", getLoggableErrorMetadata(error));
           sendChunk({
             type: "error",
-            error: error instanceof Error ? error.message : "Claude stream failed before producing a response",
+            error: getPublicErrorMessage(error),
           });
         }
 
@@ -630,6 +795,13 @@ export async function handleWageyRequest(
           finalBonus = Math.max(0, Number(access.bonus) || 0);
         }
 
+        if (supportsRichSources && collectedSources.size > 0) {
+          sendChunk({
+            type: "wagey_sources",
+            items: Array.from(collectedSources.values()),
+          });
+        }
+
         sendChunk({
           type: "wagey_limit",
           remaining: finalRemaining,
@@ -648,10 +820,12 @@ export async function handleWageyRequest(
         sendChunk({ type: "done" });
         closeStream("done");
       } catch (error) {
-        log("error", requestId, "Stream start failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        sendErrorAndClose(error instanceof Error ? error.message : "Failed to initialize Wagey");
+        if (streamClosed || req.signal.aborted) {
+          closeStream("aborted");
+          return;
+        }
+        log("error", requestId, "Stream start failed", getLoggableErrorMetadata(error));
+        sendErrorAndClose(getPublicErrorMessage(error));
       }
     },
     cancel() {},

@@ -70,7 +70,7 @@ enum SSEStreamParser {
             try Task.checkCancellation()
             buffer.append(byte)
 
-            if let range = eventBoundaryRange(in: buffer) {
+            while let range = eventBoundaryRange(in: buffer) {
               let eventData = buffer.subdata(in: 0..<range.lowerBound)
               buffer.removeSubrange(0..<range.upperBound)
 

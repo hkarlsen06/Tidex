@@ -6,6 +6,7 @@ struct ChatMessageList: View {
   let streamingContentBlocks: [ContentBlock]
   let isStreaming: Bool
   let isThinking: Bool
+  let showsConversationLengthWarning: Bool
   let remainingMessagesText: String?
   let showsHistoryButton: Bool
   let bottomContentInset: CGFloat
@@ -26,6 +27,7 @@ struct ChatMessageList: View {
     streamingContentBlocks: [ContentBlock],
     isStreaming: Bool,
     isThinking: Bool,
+    showsConversationLengthWarning: Bool = false,
     remainingMessagesText: String?,
     showsHistoryButton: Bool,
     bottomContentInset: CGFloat = Spacing.bottomScrollMargin,
@@ -39,6 +41,7 @@ struct ChatMessageList: View {
     self.streamingContentBlocks = streamingContentBlocks
     self.isStreaming = isStreaming
     self.isThinking = isThinking
+    self.showsConversationLengthWarning = showsConversationLengthWarning
     self.remainingMessagesText = remainingMessagesText
     self.showsHistoryButton = showsHistoryButton
     self.bottomContentInset = bottomContentInset
@@ -113,6 +116,11 @@ struct ChatMessageList: View {
         // Copy conversation button (after last assistant message, when not streaming)
         if !isStreaming, messages.last?.role == .assistant {
           copyConversationButton
+        }
+
+        if showsConversationLengthWarning {
+          conversationLengthWarning
+            .padding(.top, Spacing.sm)
         }
       }
     }
@@ -305,6 +313,23 @@ struct ChatMessageList: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.leading, 18)
     .padding(.top, Spacing.xxs)
+  }
+
+  private var conversationLengthWarning: some View {
+    HStack(spacing: Spacing.xs) {
+      Image(systemName: "info.circle")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(.wageyConversationLongWarning)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.xsm)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 
   private func copyConversation() {

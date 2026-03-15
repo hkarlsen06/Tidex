@@ -134,8 +134,8 @@ struct ToolStatusView: View {
     ]
   }
 
-  /// Fallback map for tools without action-specific names
-  /// Tool names match those defined in lib/chat/tools.ts
+  /// Fallback map for tools without action-specific names.
+  /// Includes Tidex function tools plus provider built-in research tools.
   private var toolNameMapping: [String: String] {
     [
       // Shift management
@@ -175,8 +175,9 @@ struct ToolStatusView: View {
       "manage_feedback": String(localized: .wageyToolManageFeedback),
       "manage_profile": String(localized: .wageyToolManageProfile),
 
-      // OpenAI built-in tools
+      // Provider built-in tools
       "web_search": String(localized: .wageyToolWebSearch),
+      "web_fetch": String(localized: .wageyToolWebFetch),
       "code_interpreter": String(localized: .wageyToolCodeInterpreter),
     ]
   }

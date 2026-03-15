@@ -191,10 +191,11 @@ struct StoredChatMessage: Codable, Identifiable, Equatable {
   var textContent: String {
     // Try new format first
     if let blocks = contentBlocks {
-      return blocks.compactMap { block in
-        if case .text(let text) = block { return text }
-        return nil
-      }.joined()
+      return WageyTextContent.flatten(
+        blocks: blocks.compactMap { block in
+          if case .text(let text) = block { return text }
+          return nil
+        })
     }
     // Fall back to legacy format
     return content ?? ""

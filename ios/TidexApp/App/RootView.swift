@@ -344,6 +344,7 @@ struct LoadingView: View {
     enum Scenario: String {
       case friendsChat = "friends-chat"
       case friendsChatReply = "friends-chat-reply"
+      case wageyHistoryDelete = "wagey-history-delete"
     }
 
     let scenario: Scenario
@@ -366,6 +367,51 @@ struct LoadingView: View {
       switch configuration.scenario {
       case .friendsChat, .friendsChatReply:
         FriendsThreadUITestHostView(configuration: configuration)
+      case .wageyHistoryDelete:
+        WageyHistoryUITestHostView()
+      }
+    }
+  }
+
+  private struct WageyHistoryUITestHostView: View {
+    @State private var conversations: [LocalConversation] = [
+      LocalConversation(
+        id: "ui-test-conversation-1",
+        userId: "UI-TEST-USER",
+        title: "Review overtime rules",
+        messages: [],
+        createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
+      ),
+      LocalConversation(
+        id: "ui-test-conversation-2",
+        userId: "UI-TEST-USER",
+        title: "Holiday pay question",
+        messages: [],
+        createdAt: Date(timeIntervalSince1970: 1_700_000_100),
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_100)
+      ),
+    ]
+    @State private var currentConversationId: String? = "ui-test-conversation-1"
+
+    var body: some View {
+      NavigationStack {
+        ConversationSidebarView(
+          conversations: conversations,
+          currentConversationId: currentConversationId,
+          onSelectConversation: { id in
+            currentConversationId = id
+          },
+          onNewConversation: {
+            currentConversationId = nil
+          },
+          onDeleteConversation: { id in
+            conversations.removeAll { $0.id == id }
+            if currentConversationId == id {
+              currentConversationId = conversations.first?.id
+            }
+          }
+        )
       }
     }
   }

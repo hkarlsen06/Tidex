@@ -74,7 +74,7 @@ final class WageyViewModel {
   private static let compactionMessageLimit = 12
 
   /// Coalescing window for streamed chunks before mutating UI state.
-  private static let streamFlushInterval: TimeInterval = 0.05
+  private static let streamFlushInterval: TimeInterval = 0.016
 
   // MARK: - Published State
 
@@ -89,6 +89,9 @@ final class WageyViewModel {
 
   /// Content blocks being streamed from the assistant (in chronological order)
   private(set) var activeContentBlocks: [ContentBlock] = []
+
+  /// Whether the next incoming text chunk should begin a new text block.
+  private var shouldStartNewStreamingTextBlock = true
 
   /// Sources associated with the currently streaming assistant response
   private(set) var activeSources: [MessageSource] = []
@@ -201,10 +204,11 @@ final class WageyViewModel {
 
   /// Current streaming text (concatenated from all text blocks)
   var currentStreamingText: String {
-    activeContentBlocks.compactMap { block in
-      if case .text(let text) = block { return text }
-      return nil
-    }.joined()
+    WageyTextContent.flatten(
+      blocks: activeContentBlocks.compactMap { block in
+        if case .text(let text) = block { return text }
+        return nil
+      })
   }
 
   /// Active tool calls (extracted from content blocks for UI)
@@ -348,6 +352,7 @@ final class WageyViewModel {
     currentConversationId = nil
     messages = []
     activeContentBlocks = []
+    shouldStartNewStreamingTextBlock = true
     activeSources = []
     currentCompaction = nil
     limitReached = false
@@ -461,6 +466,7 @@ final class WageyViewModel {
     currentConversationId = nil
     messages = []
     activeContentBlocks = []
+    shouldStartNewStreamingTextBlock = true
     activeSources = []
     currentCompaction = nil
     error = nil
@@ -469,7 +475,10 @@ final class WageyViewModel {
   /// Delete a conversation
   /// - Parameter id: Conversation ID to delete
   func deleteConversation(id: String) {
-    _ = conversationsRepository.deleteConversation(id: id)
+    guard conversationsRepository.deleteConversation(id: id) else {
+      return
+    }
+
     conversations.removeAll { $0.id == id }
 
     // If deleting the current conversation, start a new one
@@ -539,6 +548,7 @@ final class WageyViewModel {
     isStreaming = true
     isModelThinking = true
     activeContentBlocks = []
+    shouldStartNewStreamingTextBlock = true
     activeSources = []
     hadSuccessfulToolCalls = false
     pendingSyncTables = []
@@ -825,24 +835,28 @@ final class WageyViewModel {
     case .status(let thinking):
       isModelThinking = thinking
 
+    case .textStart:
+      shouldStartNewStreamingTextBlock = true
+
     case .text(let content):
       isModelThinking = false
-      // Append text to the last text block, or create a new one
-      if let lastIndex = activeContentBlocks.indices.last,
+      // Preserve provider text-block boundaries instead of flattening all text into one run.
+      if !shouldStartNewStreamingTextBlock,
+        let lastIndex = activeContentBlocks.indices.last,
         case .text(let existingText) = activeContentBlocks[lastIndex]
       {
-        // Append to existing text block
         activeContentBlocks[lastIndex] = .text(existingText + content)
       } else {
-        // Create new text block
         activeContentBlocks.append(.text(content))
       }
+      shouldStartNewStreamingTextBlock = false
 
       // Light haptic for each token chunk
       Haptics.playStreamingToken()
 
     case .toolStart(let toolName, let toolCallId, let toolArguments):
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       // Add a new tool call in progress
       let toolCall = ToolCall(
         id: toolCallId,
@@ -855,6 +869,7 @@ final class WageyViewModel {
 
     case .toolResult(let toolName, let toolCallId, let result, let success):
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       // Update the tool call with its result (find by id in content blocks)
       if let index = activeContentBlocks.firstIndex(where: { block in
         if case .toolCall(let tc) = block { return tc.id == toolCallId }
@@ -877,6 +892,7 @@ final class WageyViewModel {
 
     case .builtInToolStart(let toolName, let toolCallId):
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       let toolCall = ToolCall(
         id: toolCallId,
         name: toolName,
@@ -886,6 +902,7 @@ final class WageyViewModel {
 
     case .builtInToolResult(let toolName, let toolCallId, let result, let success):
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       if let index = activeContentBlocks.firstIndex(where: { block in
         if case .toolCall(let tc) = block { return tc.id == toolCallId }
         return false
@@ -903,6 +920,7 @@ final class WageyViewModel {
 
     case .wageyLimit(let remaining, let days, let exceeded, let bonus):
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       // Update wagey invocations from API response to stay in sync
       // The count is: limit - remaining
       let usedCount = max(0, messageLimit - remaining)
@@ -935,6 +953,7 @@ final class WageyViewModel {
 
     case .wageyNoAccess:
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       // User doesn't have access to Wagey
       limitReached = true
       error = WageyError.noAccess
@@ -950,10 +969,12 @@ final class WageyViewModel {
 
     case .done:
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
     // Stream completed - finalize handled after loop
 
     case .error(let message):
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
       // Server-side error
       error = WageyError.serverError(message)
     }
@@ -961,7 +982,9 @@ final class WageyViewModel {
 
   /// Finalize the streaming text into a message
   private func finalizeStreamingText(wasCancelled: Bool = false) {
-    let finalizedBlocks = finalizedContentBlocks(wasCancelled: wasCancelled)
+    let finalizeIncompleteToolCalls = wasCancelled || error != nil
+    let finalizedBlocks = finalizedContentBlocks(
+      finalizeIncompleteToolCalls: finalizeIncompleteToolCalls)
     let fallbackMessage = Self.fallbackAssistantMessage(
       error: error,
       limitReached: limitReached,
@@ -1010,6 +1033,7 @@ final class WageyViewModel {
 
     // Reset streaming state
     activeContentBlocks = []
+    shouldStartNewStreamingTextBlock = true
     activeSources = []
     pendingCompactionContent = nil
     hadSuccessfulToolCalls = false
@@ -1130,20 +1154,50 @@ final class WageyViewModel {
     messages = Array(messages.suffix(from: index))
   }
 
-  private func finalizedContentBlocks(wasCancelled: Bool) -> [ContentBlock] {
-    guard wasCancelled else { return activeContentBlocks }
+  private func finalizedContentBlocks(finalizeIncompleteToolCalls: Bool) -> [ContentBlock] {
+    guard finalizeIncompleteToolCalls else { return activeContentBlocks }
 
     return activeContentBlocks.compactMap { block in
       switch block {
       case .text(let text):
         return text.isEmpty ? nil : .text(text)
       case .toolCall(let toolCall):
-        guard toolCall.result != nil else { return nil }
-        return .toolCall(toolCall)
+        if toolCall.result != nil {
+          return .toolCall(toolCall)
+        }
+
+        return .toolCall(interruptedToolCall(from: toolCall))
       case .image(let attachment):
         return .image(attachment)
       }
     }
+  }
+
+  private func interruptedToolCall(from toolCall: ToolCall) -> ToolCall {
+    ToolCall(
+      id: toolCall.id,
+      name: toolCall.name,
+      kind: toolCall.kind,
+      arguments: toolCall.arguments,
+      result: interruptedToolResultPayload(),
+      success: false
+    )
+  }
+
+  private func interruptedToolResultPayload() -> String {
+    let payload: [String: Any] = [
+      "success": false,
+      "message": String(localized: .wageyToolInterruptedMessage),
+    ]
+
+    guard
+      let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]),
+      let string = String(data: data, encoding: .utf8)
+    else {
+      return "{\"success\":false}"
+    }
+
+    return string
   }
 
   private func shouldPresentAlert(for error: Error?) -> Bool {
@@ -1186,10 +1240,10 @@ final class WageyViewModel {
 extension ChatChunk {
   fileprivate var isDeferrableStreamChunk: Bool {
     switch self {
-    case .status, .text:
+    case .status:
       return true
-    case .toolStart, .toolResult, .builtInToolStart, .builtInToolResult, .done, .error,
-      .wageyLimit, .wageyNoAccess, .sources, .compaction, .unknown:
+    case .textStart, .toolStart, .toolResult, .builtInToolStart, .builtInToolResult, .done, .error,
+      .wageyLimit, .wageyNoAccess, .sources, .compaction, .unknown, .text:
       return false
     }
   }

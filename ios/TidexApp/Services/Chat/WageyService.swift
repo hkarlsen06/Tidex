@@ -3,7 +3,7 @@ import Foundation
 import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyService")
-private let wageyEdgeFunctionName = "wagey-chat"
+private let wageyEdgeFunctionName = "wagey-chat-v2"
 
 private struct WageyStreamRequestContext {
   let messages: [ChatMessage]
@@ -257,6 +257,7 @@ private actor WageyStreamWorker {
       request.setValue(APIConfiguration.supabaseAnonKey, forHTTPHeaderField: "apikey")
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
       request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+      request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
       request.httpBody = try JSONEncoder().encode(
         makeRequestBody(
           context: context
@@ -294,7 +295,7 @@ private actor WageyStreamWorker {
 
         if let chatChunk = Self.mapToChatChunk(rawChunk) {
           switch chatChunk {
-          case .status, .done:
+          case .status, .textStart, .done:
             break
           default:
             receivedRenderableChunk = true
@@ -403,6 +404,8 @@ private actor WageyStreamWorker {
     switch raw.type {
     case "status":
       return .status(thinking: raw.status == "thinking")
+    case "text_start":
+      return .textStart
     case "text":
       guard let content = raw.content else { return nil }
       return .text(content: content)
