@@ -195,7 +195,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-03-08',
+    lastUpdatedDate: '2026-03-15',
     dateLocale: 'en-US',
     sections: [
       {
@@ -281,15 +281,15 @@ export const legalEn = {
             },
           },
           {
-            boldLabel: 'OpenAI:',
-            text: 'The Wagey AI assistant is powered by OpenAI. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to OpenAI for processing. When needed, Wagey may also use OpenAI web search to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. OpenAI processes data in accordance with their {link}.',
+            boldLabel: 'Anthropic:',
+            text: "The Wagey AI assistant is powered by Claude from Anthropic. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to Anthropic for processing. When needed, Wagey may also use Anthropic's built-in web search and web fetch tools to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. Anthropic processes data in accordance with their {link}.",
             link: {
-              href: 'https://openai.com/policies/privacy-policy',
+              href: 'https://www.anthropic.com/legal/privacy',
               text: 'privacy policy',
             },
           },
         ],
-        closingParagraph: 'Data is only shared with OpenAI when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with any other third parties beyond those listed above.',
+        closingParagraph: 'Data is only shared with Anthropic when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with any other third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

@@ -74,6 +74,39 @@ final class WageyConversationPersistenceTests: XCTestCase {
     XCTAssertTrue(roundTrip.toolCalls?.first?.isBuiltIn == true)
   }
 
+  func testChatMessageFlattensSeparateTextBlocksWithParagraphBreaks() {
+    let message = ChatMessage(
+      id: "assistant-text-blocks",
+      role: .assistant,
+      contentBlocks: [
+        .text("La meg sjekke tilleggssatsene også."),
+        .text("Nå har jeg det jeg trenger."),
+      ],
+      timestamp: Date(timeIntervalSince1970: 1_700_000_200)
+    )
+
+    XCTAssertEqual(
+      message.content,
+      "La meg sjekke tilleggssatsene også.\n\nNå har jeg det jeg trenger."
+    )
+  }
+
+  func testStoredChatMessageTextContentPreservesSeparateTextBlocks() throws {
+    let message = ChatMessage(
+      id: "assistant-persisted-text-blocks",
+      role: .assistant,
+      contentBlocks: [
+        .text("Første blokk."),
+        .text("Andre blokk."),
+      ],
+      timestamp: Date(timeIntervalSince1970: 1_700_000_300)
+    )
+
+    let stored = StoredChatMessage(from: message)
+
+    XCTAssertEqual(stored.textContent, "Første blokk.\n\nAndre blokk.")
+  }
+
   func testLocalConversationStoresCompactionSummary() {
     let conversation = LocalConversation(
       userId: "USER",

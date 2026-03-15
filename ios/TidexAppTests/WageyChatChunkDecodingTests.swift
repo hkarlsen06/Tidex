@@ -3,6 +3,20 @@ import XCTest
 @testable import Tidex
 
 final class WageyChatChunkDecodingTests: XCTestCase {
+  func testDecodesTextStartChunk() throws {
+    let data = Data(
+      """
+      {
+        "type": "text_start"
+      }
+      """.utf8
+    )
+
+    let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+
+    XCTAssertEqual(chunk, .textStart)
+  }
+
   func testDecodesThinkingStatusChunk() throws {
     let data = Data(
       """
@@ -121,6 +135,48 @@ final class WageyChatChunkDecodingTests: XCTestCase {
         toolName: "web_search",
         toolCallId: "search_1",
         result: "{\"status\":\"completed\"}",
+        success: true
+      )
+    )
+  }
+
+  func testDecodesWebFetchBuiltInToolChunks() throws {
+    let startData = Data(
+      """
+      {
+        "type": "wagey_built_in_tool_start",
+        "toolName": "web_fetch",
+        "toolCallId": "fetch_1"
+      }
+      """.utf8
+    )
+
+    let resultData = Data(
+      """
+      {
+        "type": "wagey_built_in_tool_result",
+        "toolName": "web_fetch",
+        "toolCallId": "fetch_1",
+        "result": "{\"type\":\"web_fetch_tool_result\",\"tool_use_id\":\"fetch_1\",\"content\":{\"url\":\"https://example.com/tariff.pdf\",\"title\":\"Tariff PDF\",\"content\":\"Fetched text\"}}",
+        "success": true
+      }
+      """.utf8
+    )
+
+    let startChunk = try JSONDecoder().decode(ChatChunk.self, from: startData)
+    let resultChunk = try JSONDecoder().decode(ChatChunk.self, from: resultData)
+
+    XCTAssertEqual(
+      startChunk,
+      .builtInToolStart(toolName: "web_fetch", toolCallId: "fetch_1")
+    )
+    XCTAssertEqual(
+      resultChunk,
+      .builtInToolResult(
+        toolName: "web_fetch",
+        toolCallId: "fetch_1",
+        result:
+          "{\"type\":\"web_fetch_tool_result\",\"tool_use_id\":\"fetch_1\",\"content\":{\"url\":\"https://example.com/tariff.pdf\",\"title\":\"Tariff PDF\",\"content\":\"Fetched text\"}}",
         success: true
       )
     )

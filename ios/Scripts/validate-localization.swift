@@ -28,14 +28,10 @@ private struct PlaceholderSpec {
 }
 
 private let placeholderMappings: [String: [PlaceholderSpec]] = [
-  "addShift.addShifts": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "addShift.datesSelected": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "addShift.conflictPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
   "addShift.everyNWeeks": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
   "addShift.monthPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
   "addShift.yearPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
   "appearance.info.systemActive": [PlaceholderSpec(placeholder: "{mode}", specifier: "%@")],
-  "feedback.charCount": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
   "monthLimit.confirmDeleteButton": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
   "monthLimit.confirmDeleteButtonPlural": [
     PlaceholderSpec(placeholder: "{count}", specifier: "%lld")

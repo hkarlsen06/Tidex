@@ -6,6 +6,10 @@ final class TidexAppUITests: XCTestCase {
     static let sendButton = "friends-thread-composer.send-button"
     static let replyCancelButton = "friends-thread-composer.reply-cancel"
     static let uiTestingError = "ui-testing.error"
+    static let wageyHistoryFirstRow = "wagey-history.row.ui-test-conversation-1"
+    static let wageyHistorySwipeDelete = "wagey-history.delete-swipe.ui-test-conversation-1"
+    static let wageyHistoryConfirmDelete = "wagey-history.delete-confirm.ui-test-conversation-1"
+    static let wageyHistoryCancelDelete = "wagey-history.delete-cancel.ui-test-conversation-1"
   }
 
   private let defaultTimeout: TimeInterval = 15
@@ -101,6 +105,86 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertFalse(cancelButton.waitForExistence(timeout: 1), "Expected reply banner to dismiss")
   }
 
+  @MainActor
+  func testWageyHistoryDeleteScenarioCancelKeepsConversation() {
+    let app = makeApp(scenario: "wagey-history-delete")
+    app.launch()
+
+    let row = wageyHistoryRow(in: app)
+    assertExists(
+      row,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected Wagey history row to render"
+    )
+
+    row.swipeLeft()
+
+    let swipeDeleteButton = wageyHistorySwipeDeleteButton(in: app)
+    assertExists(
+      swipeDeleteButton,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected swipe delete action to appear"
+    )
+    swipeDeleteButton.tap()
+
+    let cancelButton = wageyHistoryCancelDeleteButton(in: app)
+    assertExists(
+      cancelButton,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected delete confirmation to appear"
+    )
+    cancelButton.tap()
+
+    assertExists(
+      row,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected row to remain after cancelling delete"
+    )
+  }
+
+  @MainActor
+  func testWageyHistoryDeleteScenarioConfirmRemovesConversation() {
+    let app = makeApp(scenario: "wagey-history-delete")
+    app.launch()
+
+    let row = wageyHistoryRow(in: app)
+    assertExists(
+      row,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected Wagey history row to render"
+    )
+
+    row.swipeLeft()
+
+    let swipeDeleteButton = wageyHistorySwipeDeleteButton(in: app)
+    assertExists(
+      swipeDeleteButton,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected swipe delete action to appear"
+    )
+    swipeDeleteButton.tap()
+
+    let confirmButton = wageyHistoryConfirmDeleteButton(in: app)
+    assertExists(
+      confirmButton,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected delete confirmation button to appear"
+    )
+    confirmButton.tap()
+
+    XCTAssertFalse(
+      row.waitForExistence(timeout: defaultTimeout),
+      "Expected row to be removed after confirming delete"
+    )
+  }
+
   private func makeApp(scenario: String) -> XCUIApplication {
     let app = XCUIApplication()
     app.launchArguments += ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -173,6 +257,29 @@ final class TidexAppUITests: XCTestCase {
   private func uiTestingError(in app: XCUIApplication) -> XCUIElement? {
     let errorElement = app.descendants(matching: .any)[AccessibilityID.uiTestingError]
     return errorElement.exists ? errorElement : nil
+  }
+
+  private func wageyHistoryRow(in app: XCUIApplication) -> XCUIElement {
+    let candidates = [
+      app.buttons[AccessibilityID.wageyHistoryFirstRow],
+      app.cells[AccessibilityID.wageyHistoryFirstRow],
+      app.otherElements[AccessibilityID.wageyHistoryFirstRow],
+    ]
+
+    return candidates.first(where: \.exists)
+      ?? app.descendants(matching: .any)[AccessibilityID.wageyHistoryFirstRow]
+  }
+
+  private func wageyHistorySwipeDeleteButton(in app: XCUIApplication) -> XCUIElement {
+    app.buttons[AccessibilityID.wageyHistorySwipeDelete]
+  }
+
+  private func wageyHistoryConfirmDeleteButton(in app: XCUIApplication) -> XCUIElement {
+    app.buttons[AccessibilityID.wageyHistoryConfirmDelete]
+  }
+
+  private func wageyHistoryCancelDeleteButton(in app: XCUIApplication) -> XCUIElement {
+    app.buttons[AccessibilityID.wageyHistoryCancelDelete]
   }
 
   private func assertExists(

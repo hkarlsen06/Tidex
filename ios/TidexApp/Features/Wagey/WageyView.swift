@@ -202,6 +202,7 @@ struct WageyView: View {
           streamingContentBlocks: viewModel.activeContentBlocks,
           isStreaming: viewModel.isStreaming,
           isThinking: viewModel.isModelThinking,
+          showsConversationLengthWarning: viewModel.isConversationLong,
           remainingMessagesText: nil,
           showsHistoryButton: false,
           bottomContentInset: bottomChromeHeight + Spacing.lg,
@@ -244,10 +245,6 @@ struct WageyView: View {
 
   private var bottomChrome: some View {
     VStack(spacing: 0) {
-      if viewModel.isConversationLong {
-        conversationLengthWarning
-      }
-
       ChatInputField(
         inputText: $inputText,
         focusedHorizontalPadding: Spacing.xs,
@@ -314,23 +311,6 @@ struct WageyView: View {
   }
 
   // MARK: - Conversation Length Warning
-
-  private var conversationLengthWarning: some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "info.circle")
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
-
-      Text(.wageyConversationLongWarning)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .padding(.horizontal, Spacing.md)
-    .padding(.vertical, Spacing.xsm)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.tidexSurfaceSecondary)
-  }
-
   // MARK: - Message Handling
 
   /// Handle sending a message, showing paywall if limit reached

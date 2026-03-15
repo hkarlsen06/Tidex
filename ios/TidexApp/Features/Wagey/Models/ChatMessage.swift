@@ -28,12 +28,13 @@ struct ChatMessage: Identifiable, Equatable {
 
   /// Concatenated text content (for backward compatibility and API requests)
   var content: String {
-    contentBlocks.compactMap { block in
-      if case .text(let text) = block {
-        return text
-      }
-      return nil
-    }.joined()
+    WageyTextContent.flatten(
+      blocks: contentBlocks.compactMap { block in
+        if case .text(let text) = block {
+          return text
+        }
+        return nil
+      })
   }
 
   /// All tool calls from the message (for backward compatibility and API requests)
@@ -149,6 +150,16 @@ enum ContentBlock: Identifiable, Equatable {
   }
 }
 
+enum WageyTextContent {
+  private static let blockSeparator = "\n\n"
+
+  static func flatten(blocks: [String]) -> String {
+    blocks
+      .filter { !$0.isEmpty }
+      .joined(separator: blockSeparator)
+  }
+}
+
 // MARK: - Image Attachment
 
 /// An image attached to a message.
@@ -246,6 +257,9 @@ enum ChatChunk: Equatable {
   /// Backend status signal indicating the model is actively working
   case status(thinking: Bool)
 
+  /// Start of a new visible text block from the provider stream
+  case textStart
+
   /// Text content to append to the current message
   case text(content: String)
 
@@ -255,10 +269,10 @@ enum ChatChunk: Equatable {
   /// A tool execution has completed
   case toolResult(toolName: String, toolCallId: String, result: String, success: Bool)
 
-  /// A built-in OpenAI tool execution has started
+  /// A provider built-in tool execution has started
   case builtInToolStart(toolName: String, toolCallId: String)
 
-  /// A built-in OpenAI tool execution has completed
+  /// A provider built-in tool execution has completed
   case builtInToolResult(toolName: String, toolCallId: String, result: String, success: Bool)
 
   /// The stream has completed successfully
@@ -311,6 +325,9 @@ extension ChatChunk: Decodable {
     case "status":
       let status = try container.decode(String.self, forKey: .status)
       self = .status(thinking: status == "thinking")
+
+    case "text_start":
+      self = .textStart
 
     case "text":
       let content = try container.decode(String.self, forKey: .content)

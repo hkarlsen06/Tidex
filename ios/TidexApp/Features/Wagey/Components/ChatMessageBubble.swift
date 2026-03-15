@@ -102,37 +102,63 @@ struct ChatMessageBubble: View {
 
 private struct MessageSourcesView: View {
   let sources: [MessageSource]
+  @State private var isExpanded = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.wageySourcesTitle)
-        .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextSecondary)
+      Button {
+        withAnimation(.easeInOut(duration: 0.18)) {
+          isExpanded.toggle()
+        }
+      } label: {
+        HStack(spacing: Spacing.xs) {
+          Text(.wageySourcesTitle)
+            .font(.tidexCaptionStrong)
+            .foregroundColor(.tidexTextSecondary)
 
-      ForEach(sources) { source in
-        if let url = URL(string: source.url) {
-          Link(destination: url) {
-            HStack(alignment: .top, spacing: Spacing.xs) {
-              faviconView(for: url)
-                .padding(.top, 2)
+          Text("\(sources.count)")
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
 
-              VStack(alignment: .leading, spacing: 2) {
-                Text(source.title)
-                  .font(.tidexFootnoteMedium)
-                  .foregroundColor(.tidexTextPrimary)
-                  .multilineTextAlignment(.leading)
+          Spacer(minLength: 0)
 
-                Text(source.domain)
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexTextMuted)
+          Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(.tidexTextMuted)
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(Color.tidexSurfaceSecondary.opacity(0.4))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      }
+      .buttonStyle(.plain)
+
+      if isExpanded {
+        ForEach(sources) { source in
+          if let url = URL(string: source.url) {
+            Link(destination: url) {
+              HStack(alignment: .top, spacing: Spacing.xs) {
+                faviconView(for: url)
+                  .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 2) {
+                  Text(source.title)
+                    .font(.tidexFootnoteMedium)
+                    .foregroundColor(.tidexTextPrimary)
+                    .multilineTextAlignment(.leading)
+
+                  Text(source.domain)
+                    .font(.tidexCaptionRegular)
+                    .foregroundColor(.tidexTextMuted)
+                }
+
+                Spacer(minLength: 0)
               }
-
-              Spacer(minLength: 0)
+              .padding(.horizontal, Spacing.sm)
+              .padding(.vertical, Spacing.xs)
+              .background(Color.tidexSurfaceSecondary.opacity(0.55))
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
             }
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xs)
-            .background(Color.tidexSurfaceSecondary.opacity(0.55))
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           }
         }
       }
@@ -304,11 +330,13 @@ struct StreamingMessageBubble: View {
   var body: some View {
     HStack {
       VStack(alignment: .leading, spacing: Spacing.xs) {
-        // If no content blocks yet, show typing indicator
         if contentBlocks.isEmpty {
-          TypingIndicatorView()
+          if isThinking {
+            ThinkingStatusBubble()
+          } else {
+            TypingIndicatorView()
+          }
         } else {
-          // Render content blocks in chronological order
           ForEach(Array(contentBlocks.enumerated()), id: \.offset) { _, block in
             switch block {
             case .text(let text):
@@ -322,8 +350,9 @@ struct StreamingMessageBubble: View {
             }
           }
 
-          // If blocks exist but no text yet (e.g., only tool calls), show typing indicator
-          if isThinking || !hasAnyText {
+          if isThinking {
+            ThinkingStatusBubble()
+          } else if !hasAnyText {
             TypingIndicatorView()
           }
         }
@@ -349,6 +378,22 @@ struct StreamingMessageBubble: View {
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.sm)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
+  }
+}
+
+private struct ThinkingStatusBubble: View {
+  var body: some View {
+    HStack(spacing: 0) {
+      Text(.wageyStreamingThinkingTitle)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
+
+      InlineJumpingDotsView()
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.msm)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
   }
@@ -458,6 +503,24 @@ struct StreamingMessageBubble: View {
           result: nil,
           success: nil
         )),
+    ],
+    isThinking: true
+  )
+  .padding()
+  .background(Color.tidexBackground)
+}
+
+#Preview("Streaming - Thinking After Tool") {
+  StreamingMessageBubble(
+    contentBlocks: [
+      .toolCall(
+        ToolCall(
+          id: "call_1",
+          name: "web_search",
+          arguments: nil,
+          result: "{\"status\":\"completed\"}",
+          success: true
+        ))
     ],
     isThinking: true
   )

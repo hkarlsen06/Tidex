@@ -10,6 +10,8 @@ struct ConversationSidebarView: View {
   let onNewConversation: () -> Void
   let onDeleteConversation: (String) -> Void
 
+  @State private var pendingDeleteConversation: ConversationSidebarItem?
+
   var body: some View {
     Group {
       if conversations.isEmpty {
@@ -20,6 +22,23 @@ struct ConversationSidebarView: View {
     }
     .navigationTitle(Text(.wageyConversationsTitle))
     .navigationBarTitleDisplayMode(.inline)
+    .confirmationDialog(
+      String(localized: .wageyConversationsDeleteConfirm),
+      isPresented: isShowingDeleteConfirmation,
+      titleVisibility: .visible,
+      presenting: pendingDeleteConversation
+    ) { conversation in
+      Button(String(localized: .commonDelete), role: .destructive) {
+        onDeleteConversation(conversation.id)
+        pendingDeleteConversation = nil
+      }
+      .accessibilityIdentifier(ConversationSidebarAccessibilityID.confirmDelete(conversation.id))
+
+      Button(String(localized: .commonCancel), role: .cancel) {
+        pendingDeleteConversation = nil
+      }
+      .accessibilityIdentifier(ConversationSidebarAccessibilityID.cancelDelete(conversation.id))
+    }
   }
 
   // MARK: - Empty State
@@ -47,15 +66,15 @@ struct ConversationSidebarView: View {
 
   private var conversationList: some View {
     List {
-      ForEach(conversations, id: \.id) { conversation in
+      ForEach(conversationItems) { conversation in
         ConversationRowView(
           conversation: conversation,
           isSelected: conversation.id == currentConversationId,
           onSelect: {
             onSelectConversation(conversation.id)
           },
-          onDelete: {
-            onDeleteConversation(conversation.id)
+          onRequestDelete: {
+            pendingDeleteConversation = conversation
           }
         )
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
@@ -63,18 +82,61 @@ struct ConversationSidebarView: View {
     }
     .listStyle(.plain)
   }
+
+  private var conversationItems: [ConversationSidebarItem] {
+    conversations.map(ConversationSidebarItem.init)
+  }
+
+  private var isShowingDeleteConfirmation: Binding<Bool> {
+    Binding(
+      get: { pendingDeleteConversation != nil },
+      set: { isPresented in
+        if !isPresented {
+          pendingDeleteConversation = nil
+        }
+      }
+    )
+  }
+}
+
+struct ConversationSidebarItem: Identifiable, Equatable {
+  let id: String
+  let title: String
+  let updatedAt: Date
+
+  init(conversation: LocalConversation) {
+    id = conversation.id
+    title = conversation.title
+    updatedAt = conversation.updatedAt
+  }
+}
+
+enum ConversationSidebarAccessibilityID {
+  static func row(_ conversationId: String) -> String {
+    "wagey-history.row.\(conversationId)"
+  }
+
+  static func swipeDelete(_ conversationId: String) -> String {
+    "wagey-history.delete-swipe.\(conversationId)"
+  }
+
+  static func confirmDelete(_ conversationId: String) -> String {
+    "wagey-history.delete-confirm.\(conversationId)"
+  }
+
+  static func cancelDelete(_ conversationId: String) -> String {
+    "wagey-history.delete-cancel.\(conversationId)"
+  }
 }
 
 // MARK: - Conversation Row
 
 struct ConversationRowView: View {
 
-  let conversation: LocalConversation
+  let conversation: ConversationSidebarItem
   let isSelected: Bool
   let onSelect: () -> Void
-  let onDelete: () -> Void
-
-  @State private var showDeleteConfirmation = false
+  let onRequestDelete: () -> Void
 
   /// Localized title - translates "New Conversation" to current locale
   private var localizedTitle: String {
@@ -114,22 +176,15 @@ struct ConversationRowView: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier(ConversationSidebarAccessibilityID.row(conversation.id))
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-      Button(role: .destructive) {
-        showDeleteConfirmation = true
+      Button {
+        onRequestDelete()
       } label: {
         Label(String(localized: .commonDelete), systemImage: "trash")
       }
-    }
-    .confirmationDialog(
-      String(localized: .wageyConversationsDeleteConfirm),
-      isPresented: $showDeleteConfirmation,
-      titleVisibility: .visible
-    ) {
-      Button(String(localized: .commonDelete), role: .destructive) {
-        onDelete()
-      }
-      Button(String(localized: .commonCancel), role: .cancel) {}
+      .tint(.tidexError)
+      .accessibilityIdentifier(ConversationSidebarAccessibilityID.swipeDelete(conversation.id))
     }
   }
 

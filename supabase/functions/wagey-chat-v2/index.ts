@@ -22,7 +22,7 @@ function json(
 
 function log(level: "info" | "warn" | "error", requestId: string, message: string, metadata: Record<string, unknown> = {}): void {
   const payload = {
-    scope: "wagey-chat",
+    scope: "wagey-chat-v2",
     requestId,
     message,
     ...metadata,
