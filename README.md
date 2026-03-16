@@ -1,20 +1,22 @@
 # Tidex
 
-A monorepo for tracking work shifts and calculating wages, containing:
+A monorepo for the Tidex iOS app and its supporting infrastructure.
+
+Tidex is now an iOS-only product. This repository still contains the supporting public/legal website, the legacy compatibility host for old `app.tidex.no` links, the developer site, and the shared Supabase backend.
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **dev-site/** - Developer portfolio site for `kkarlsen.dev`
 - **ios/** - Native iOS application
 
-The public web surfaces and the iOS app share a common Supabase backend for authentication, database, and edge functions.
+The iOS app and its supporting web infrastructure share a common Supabase backend for authentication, database, and edge functions.
 
 ## Tech Stack
 
-### Web (marketing/)
+### Supporting Web Surfaces
 - **Framework**: Next.js 16 with React 19
-- **Styling**: Tailwind CSS v4 with semantic design tokens
-- **Hosting**: Static export for Cloudflare Pages
+- **Purpose**: Public marketing/legal pages plus legacy compatibility redirects
+- **Hosting**: Cloudflare Pages
 
 ### iOS (ios/)
 - **Framework**: SwiftUI with iOS 26
@@ -52,12 +54,12 @@ tidex/
 - pnpm
 - Xcode 16+ (for iOS development)
 
-### Web Development
+### Supporting Website Development
 
 ```bash
 cd marketing
 pnpm install
-pnpm dev            # Start the Tidex public site locally (http://localhost:3001)
+pnpm dev            # Start the Tidex public/legal site locally (http://localhost:3001)
 ```
 
 ### iOS Development

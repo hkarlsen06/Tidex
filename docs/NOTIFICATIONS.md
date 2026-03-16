@@ -184,22 +184,9 @@ private func handleNotificationTap(_ userInfo: [AnyHashable: Any]) {
 }
 ```
 
-### Step 6: Handle in Web App (if needed)
+### Step 6: Handle in Other Clients (if needed)
 
-Update `lib/notifications/push-service.ts`:
-
-```typescript
-private handleNotificationTap(payload: PushNotificationPayload): void {
-  const locale = this.getLocale();
-
-  switch (payload.type) {
-    case "friend_request_received":
-      window.location.href = `/${locale}${payload.deeplink || '/friends'}`;
-      break;
-    // ... other cases
-  }
-}
-```
+If a notification needs custom behavior outside the iOS app, update the relevant active client to interpret the payload and deep link correctly. Tidex no longer ships a full web app client.
 
 ---
 

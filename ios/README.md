@@ -121,7 +121,7 @@ Supabase (Server)
 
 1. Review [PAYROLL_SYSTEM.md](PAYROLL_SYSTEM.md)
 2. Update PayrollCalculator or PayrollEngine
-3. Ensure consistency with web backend (`lib/payroll/calc.ts`)
+3. Ensure consistency with the shared backend payroll implementation in `supabase/functions/_shared/wagey`
 4. Test with property-based tests
 
 ### Adding a New Repository
@@ -183,7 +183,7 @@ XCTAssertEqual(computed.gross, expectedGross)
 ### Payroll calculations wrong
 - Verify snapshot is correct (check from_date)
 - Check break deduction settings
-- Compare with web backend calculation
+- Compare with the shared backend payroll calculation
 - Review [PAYROLL_SYSTEM.md](PAYROLL_SYSTEM.md)
 
 ### Conflicts not resolving
@@ -206,4 +206,4 @@ XCTAssertEqual(computed.gross, expectedGross)
 
 - [../AGENTS.md](../AGENTS.md) - Project instructions for coding agents
 - [../docs/](../docs/) - Shared documentation (payroll spec, notifications, DB schema)
-- [../marketing/](../marketing/) - Public website code
+- [../marketing/](../marketing/) - Public/legal website code

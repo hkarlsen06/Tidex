@@ -8,14 +8,16 @@ This file provides guidance to coding agents when working with code in this repo
 
 ## Project Overview
 
-A monorepo containing the public Tidex web surfaces and the native iOS application:
+A monorepo for the Tidex iOS app and its supporting infrastructure.
+
+Tidex is now an iOS-only product. The repository still includes supporting public/legal web surfaces, the legacy compatibility host for `app.tidex.no`, and the shared backend.
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **dev-site/** - Developer portfolio static site
 - **ios/** - Native iOS application
 
-The web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
+The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
 
 ## Repository Structure
 

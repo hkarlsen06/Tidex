@@ -2,7 +2,7 @@
 
 > **Version:** 1.2
 > **Last Updated:** 2026-02-26
-> **Source of Truth:** Shared payroll logic in the Tidex monorepo (`marketing`, `ios`, and `supabase/functions/_shared/wagey`)
+> **Source of Truth:** Shared payroll logic in the Tidex monorepo (`ios` and `supabase/functions/_shared/wagey`)
 > **Purpose:** Enable re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results
 
 ---
@@ -1345,23 +1345,9 @@ function shiftsOverlap(a, b): boolean {
 2. Preserve all shift data for viewing
 3. Give visual feedback (strikethrough) for excluded shifts
 
-### G.7 Caching
+### G.7 Historical Web Caching Note
 
-**React `cache()`:** Request deduplication within single render
-```typescript
-export const getComputedShifts = cache(async (userId, options) => { ... });
-```
-
-**Next.js `cacheTag()`:** Cross-request caching with invalidation
-```typescript
-cacheTag(`user-${userId}`, "user-shifts");
-```
-
-**Invalidation in the retired Next.js app:**
-```typescript
-import { revalidateTag } from "next/cache";
-revalidateTag(`user-${userId}`, "max");
-```
+The retired Next.js app previously used React request caching and Next.js tag invalidation around payroll-derived reads. That web-specific behavior is historical context only and is no longer part of the active product surface.
 
 ---
 
