@@ -1,25 +1,18 @@
-import Link from 'next/link';
 import Image from 'next/image';
-import { Clock, Layers, Shield, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { Dictionary } from '@/lib/i18n/dictionaries';
+import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/i18n/config';
-import { MarketingLocaleToggle } from './MarketingLocaleToggle';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
+import { buildLocalizedMarketingPath } from '@/lib/paths';
 import { LocaleLangSetter } from './LocaleLangSetter';
-import { buildLocalizedMarketingPath } from '../lib/paths';
-
-const featureIcons = {
-  shield: Shield,
-  zap: Zap,
-  clock: Clock,
-  layers: Layers,
-} as const;
+import { MarketingLocaleToggle } from './MarketingLocaleToggle';
 
 interface LandingPageProps {
   locale: Locale;
@@ -28,153 +21,197 @@ interface LandingPageProps {
 
 export function LandingPage({ locale, dictionary }: LandingPageProps) {
   const marketing = dictionary.marketing;
-  const heroHighlights = marketing.hero.highlights;
-  const features = marketing.features.items.map((item) => ({
-    ...item,
-    Icon: featureIcons[item.icon as keyof typeof featureIcons] ?? Shield,
-  }));
   const faqs = marketing.faq.items;
   const privacyHref = buildLocalizedMarketingPath(locale, '/privacy');
   const termsHref = buildLocalizedMarketingPath(locale, '/terms');
-  const payrollDocsHref = '/docs/payroll'; // English-only route
+  const payrollDocsHref = '/docs/payroll';
   const appStoreHref = 'https://apps.apple.com/app/id6757129790';
   const mailtoHref = `mailto:${dictionary.legal.contactEmail}?subject=${encodeURIComponent(marketing.contact.emailSubject)}&body=${encodeURIComponent(marketing.contact.emailBody)}`;
+  const heroScreenshotSrc =
+    locale === 'no' ? '/hero/dashboard-no.png' : '/hero/dashboard-en.png';
+  const screenAspectRatio = 1206 / 2622;
+  // Model the visible black bezel, not the full chassis/glass margin.
+  // Apple does not publish bezel thickness directly; using 17 Pro screen-border
+  // data commonly reported around 1.44mm on all four sides.
+  const screenWidthMm = 66.59;
+  const screenHeightMm = 144.78;
+  const visibleBezelMm = 1.44;
+  const horizontalBezelRatio = visibleBezelMm / screenWidthMm;
+  const verticalBezelRatio = visibleBezelMm / screenHeightMm;
+  const horizontalInset = horizontalBezelRatio / (1 + horizontalBezelRatio * 2);
+  const verticalInset = verticalBezelRatio / (1 + verticalBezelRatio * 2);
+  const phoneOuterAspectRatio =
+    (screenAspectRatio * (1 + horizontalBezelRatio * 2)) /
+    (1 + verticalBezelRatio * 2);
+  const phoneOuterClass = 'w-[16.8rem] sm:w-[17.2rem]';
+  const phoneScreenshot = (wrapperClassName: string, phoneClassName: string) => (
+    <div className={wrapperClassName}>
+      <div className="absolute left-1/2 top-1/2 -z-10 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.18),rgba(56,189,248,0.08)_42%,transparent_72%)]" />
+
+      <div
+        className={`relative inline-block overflow-hidden rounded-[3.15rem] border border-white/10 bg-[radial-gradient(circle_at_top,hsl(208_82%_18%),hsl(220_54%_5%)_38%)] ${phoneClassName}`}
+        style={{
+          aspectRatio: `${phoneOuterAspectRatio}`,
+          boxShadow: '0 48px 120px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+        }}
+      >
+        <div className="absolute inset-x-7 top-0 h-px bg-linear-to-r from-transparent via-white/24 to-transparent" />
+
+        <div
+          className="absolute overflow-hidden rounded-[2.9rem]"
+          style={{
+            left: `${horizontalInset * 100}%`,
+            right: `${horizontalInset * 100}%`,
+            top: `${verticalInset * 100}%`,
+            bottom: `${verticalInset * 100}%`,
+          }}
+        >
+          <Image
+            src={heroScreenshotSrc}
+            alt={marketing.hero.screenshotAlt}
+            fill
+            priority
+            sizes="(min-width: 1024px) 288px, (min-width: 640px) 320px, 288px"
+            className="object-cover"
+          />
+          <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] border border-white/8" />
+        </div>
+      </div>
+
+      <div className="absolute bottom-0 left-1/2 -z-10 h-24 w-[78%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.18),transparent_72%)]" />
+    </div>
+  );
 
   return (
-    <main className="relative min-h-screen bg-background text-text-primary">
+    <main className="relative text-text-primary">
       <LocaleLangSetter locale={locale} />
-      {/* Single subtle gradient accent at top */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-100 bg-linear-to-b from-brand-gradient-start/8 to-transparent" />
 
-      <section className="relative flex min-h-svh w-full items-stretch overflow-hidden pt-[max(2rem,env(safe-area-inset-top))]">
-        <div className="relative mx-auto flex w-full max-w-3xl flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-0 sm:pb-8">
-          <div className="relative flex flex-1 flex-col items-center justify-center gap-7 text-center sm:gap-8">
-            <div className="space-y-5 sm:space-y-7">
-              <Image
-                src="/icons/tidex-wordmark.webp"
-                alt={marketing.hero.imageAlt}
-                width={280}
-                height={80}
-                priority
-                className="mx-auto h-auto w-[min(78vw,280px)] animate-in fade-in zoom-in-95 duration-700 sm:w-70"
-              />
-              <div className="space-y-4 sm:space-y-6">
-                <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-5xl">
-                  {marketing.hero.title}
-                </h1>
-                <p className="text-pretty text-base text-text-secondary sm:text-lg max-w-2xl mx-auto">
-                  {marketing.hero.description}
-                </p>
+      <section className="relative flex flex-col overflow-visible px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pb-8 lg:min-h-dvh lg:overflow-hidden lg:pb-10 sm:px-8">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_130%_80%_at_50%_-15%,hsl(199_89%_48%_/_0.24),transparent_60%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-brand-highlight/20 to-transparent" />
+        </div>
+
+        <div className="mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between py-4">
+          <Image
+            src="/apple-touch-icon.png"
+            alt={marketing.hero.imageAlt}
+            width={180}
+            height={180}
+            priority
+            className="h-11 w-11 rounded-[0.9rem] sm:h-12 sm:w-12 sm:rounded-[1rem]"
+          />
+          <MarketingLocaleToggle />
+        </div>
+
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col lg:flex-row lg:items-center lg:gap-14 xl:gap-20">
+          <div className="flex flex-1 flex-col py-10 sm:py-14 lg:max-w-140 lg:flex-none lg:py-0 xl:max-w-150">
+            <h1 className="animate-fade-in text-balance text-[3.25rem] font-semibold leading-[1.04] tracking-[-0.05em] [animation-delay:60ms] sm:text-[3.75rem] lg:text-[4.25rem] xl:text-[4.75rem]">
+              {marketing.hero.title}
+            </h1>
+
+            <p className="mt-6 max-w-[42ch] animate-fade-in text-pretty text-[1.0625rem] leading-[1.8] text-text-secondary [animation-delay:120ms] sm:text-lg lg:mb-10 xl:mb-12">
+              {marketing.hero.description}
+            </p>
+
+            <div className="relative mt-8 animate-fade-in lg:hidden [animation-delay:150ms]">
+              <div className="relative mx-auto h-[19.5rem] w-full max-w-[21rem] overflow-hidden">
+                <div className="absolute inset-x-0 top-0 flex justify-center">
+                  {phoneScreenshot(
+                    'relative scale-[0.92] origin-top',
+                    'w-[17.1rem]'
+                  )}
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/85 to-transparent" />
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted">
-              {heroHighlights.map((highlight, index) => (
-                <span key={highlight} className="flex items-center gap-2">
-                  {index > 0 && <span className="hidden sm:inline text-border-subtle">•</span>}
-                  <span className="font-medium">{highlight}</span>
-                </span>
-              ))}
+
+            <div className="relative z-10 hidden animate-fade-in flex-wrap items-center gap-5 [animation-delay:190ms] lg:mt-auto lg:flex lg:pt-0">
+              <a
+                href={appStoreHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-12 items-center gap-2.5 whitespace-nowrap rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_4px_30px_rgba(255,255,255,0.18)] active:scale-[0.98]"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.05rem] w-[1.05rem] shrink-0" aria-hidden="true">
+                  <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z" />
+                </svg>
+                {marketing.hero.appStoreCta}
+              </a>
+              <Link
+                href="#faq"
+                className="flex items-center gap-1.5 text-sm font-medium text-text-muted transition-colors hover:text-text-primary"
+              >
+                {marketing.hero.secondaryCta}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
+
           </div>
 
-          <div className="flex flex-col items-center gap-4 pt-5 sm:pt-8">
-            <div className="flex justify-center">
-              <MarketingLocaleToggle />
-            </div>
+          <div className="hidden animate-fade-in lg:flex lg:flex-1 lg:items-center lg:justify-end [animation-delay:150ms]">
+            {phoneScreenshot('relative', phoneOuterClass)}
+          </div>
+        </div>
+      </section>
 
-            <div className="flex w-full flex-col gap-3 sm:mt-1 sm:flex-row sm:items-center sm:justify-center">
-              <Button
-                asChild
-                className="h-14 w-full rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors sm:h-11 sm:w-auto"
-              >
-                <a href={appStoreHref}>
-                  {marketing.hero.primaryCta}
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="h-14 w-full rounded-lg border-border-subtle bg-transparent px-8 text-base font-medium text-text-primary hover:bg-surface-secondary hover:border-text-muted transition-colors sm:h-11 sm:w-auto"
-              >
-                <Link href="#faq">{marketing.hero.secondaryCta}</Link>
-              </Button>
-            </div>
+      <div className="fixed inset-x-0 bottom-0 z-30 lg:hidden">
+        <div className="pointer-events-none absolute inset-x-0 bottom-full h-12 bg-gradient-to-t from-background/90 via-background/45 to-transparent" />
+        <div className="border-t border-white/8 bg-[linear-gradient(180deg,rgba(8,17,30,0.88),rgba(5,12,22,0.96))] px-5 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.36)] backdrop-blur-xl">
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-4">
             <a
-              href="https://apps.apple.com/app/id6757129790"
+              href={appStoreHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 block w-1/2 transition-opacity hover:opacity-80 sm:w-auto"
+              className="inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 active:scale-[0.98]"
             >
-              <Image
-                src={`/badges/app-store-${locale}.svg`}
-                alt={marketing.hero.appStoreCta}
-                width={240}
-                height={80}
-                className="h-auto w-full"
-              />
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.05rem] w-[1.05rem] shrink-0" aria-hidden="true">
+                <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z" />
+              </svg>
+              <span className="truncate">{marketing.hero.appStoreCta}</span>
             </a>
+            <Link
+              href="#faq"
+              className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-text-muted transition-colors active:text-text-primary"
+            >
+              {marketing.hero.secondaryCta}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section
-        id="features"
-        className="px-6 pb-20 sm:pb-24 lg:pb-28"
-      >
-        <div className="mx-auto w-full max-w-4xl space-y-10">
-          <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-gradient-start">
-              {marketing.features.eyebrow}
+      <section id="faq" className="px-6 pb-24 pt-6 sm:pb-32 lg:pb-36">
+        <div className="mx-auto w-full max-w-5xl p-0 sm:rounded-4xl sm:border sm:border-white/8 sm:bg-white/4 sm:p-12 sm:backdrop-blur-xl lg:p-14">
+          <div className="mb-10 max-w-2xl space-y-4 sm:mb-14 sm:space-y-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-highlight">
+              {marketing.faq.eyebrow}
             </p>
-            <h2 className="text-pretty text-3xl font-semibold sm:text-4xl">
-              {marketing.features.heading}
+            <h2 className="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+              {marketing.faq.heading}
             </h2>
-            <p className="max-w-2xl text-pretty text-base text-text-secondary sm:text-lg">
-              {marketing.features.description}
-            </p>
-          </div>
-
-          <div className="grid gap-px bg-border-subtle sm:grid-cols-2 lg:grid-cols-4 rounded-xl overflow-hidden border border-border-subtle">
-            {features.map(({ Icon, title, description }) => (
-              <div
-                key={title}
-                className="group flex h-full flex-col gap-4 bg-surface-primary p-6 transition-colors hover:bg-surface-secondary"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-gradient-start/10 text-brand-gradient-start">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-text-primary">{title}</h3>
-                  <p className="text-sm leading-relaxed text-text-secondary">{description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="faq"
-        className="px-6 pb-20 sm:pb-28 lg:pb-32"
-      >
-        <div className="mx-auto w-full max-w-3xl">
-          <div className="mb-10 space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-gradient-start">{marketing.faq.eyebrow}</p>
-            <h2 className="text-3xl font-semibold sm:text-4xl">{marketing.faq.heading}</h2>
-            <p className="text-base text-text-secondary">
+            <p className="text-base leading-7 text-text-secondary sm:text-lg">
               {marketing.faq.description}
             </p>
           </div>
 
-          <Accordion type="single" collapsible className="space-y-1">
+          <Accordion type="single" collapsible className="space-y-3">
             {faqs.map((faq) => (
-              <AccordionItem key={faq.question} value={faq.question} className="border-b border-border-subtle last:border-b-0">
-                <AccordionTrigger className="py-5 text-left text-base font-medium hover:text-brand-gradient-start transition-colors sm:text-lg">
+              <AccordionItem
+                key={faq.question}
+                value={faq.question}
+                className="rounded-[1.15rem] border border-white/8 bg-background/60 px-4 last:border-b sm:rounded-[1.4rem] sm:px-6"
+              >
+                <AccordionTrigger className="py-5 text-left text-base font-medium hover:text-brand-highlight sm:py-6 sm:text-lg">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="pb-5">
+                <AccordionContent className="pb-5 sm:pb-6">
                   {faq.answers.map((paragraph, answerIndex) => (
-                    <p key={`${faq.question}-${answerIndex}`} className="pb-3 text-base leading-relaxed text-text-secondary last:pb-0">
+                    <p
+                      key={`${faq.question}-${answerIndex}`}
+                      className="pb-3 text-base leading-7 text-text-secondary last:pb-0"
+                    >
                       {paragraph}
                     </p>
                   ))}
@@ -185,54 +222,55 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
         </div>
       </section>
 
-      <section className="px-6 pb-16 sm:pb-24">
-        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 rounded-xl border border-border-subtle bg-surface-secondary px-8 py-12 text-center">
-          <h2 className="text-2xl font-semibold sm:text-3xl">{marketing.ctaPrimary.heading}</h2>
-          <p className="max-w-xl text-pretty text-base text-text-secondary">
-            {marketing.ctaPrimary.description}
-          </p>
-          <Button
-            asChild
-            className="h-11 rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors"
-          >
-            <a href={appStoreHref}>
-              {marketing.ctaPrimary.button}
-            </a>
-          </Button>
-        </div>
-      </section>
-
-      <section className="px-6 pb-16 sm:pb-20">
-        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 text-center">
-          <h2 className="text-xl font-semibold sm:text-2xl">{marketing.contact.heading}</h2>
-          <p className="max-w-xl text-pretty text-sm text-text-secondary">
-            {marketing.contact.description}
-          </p>
-          <Button
-            asChild
-            variant="outline"
-            className="h-10 rounded-lg border-border-subtle bg-transparent px-6 text-sm font-medium text-text-primary hover:bg-surface-secondary hover:border-text-muted transition-colors"
-          >
-            <a href={mailtoHref}>
-              {marketing.contact.button}
-            </a>
-          </Button>
-        </div>
-      </section>
-
-      <footer className="border-t border-border-subtle px-6 py-8">
-        <div className="mx-auto w-full max-w-4xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="text-sm text-text-muted">
-            {marketing.footer.copyright}
+      <section className="px-6 pb-20 sm:pb-28">
+        <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="rounded-4xl border border-white/8 bg-[linear-gradient(135deg,rgba(56,189,248,0.16),rgba(255,255,255,0.05))] p-10 shadow-[0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-12">
+            <h2 className="max-w-lg text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+              {marketing.ctaPrimary.heading}
+            </h2>
+            <p className="mt-5 max-w-xl text-base leading-7 text-text-secondary sm:text-lg">
+              {marketing.ctaPrimary.description}
+            </p>
+            <Button
+              asChild
+              className="mt-10 h-12 rounded-full bg-white px-6 text-sm font-semibold text-text-inverse hover:bg-white"
+            >
+              <a href={appStoreHref} target="_blank" rel="noopener noreferrer">
+                <span>{marketing.ctaPrimary.button}</span>
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
-          <div className="flex w-full flex-col items-start gap-2 text-sm sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-6">
-            <Link href={payrollDocsHref} className="text-text-secondary hover:text-text-primary transition-colors">
+
+          <div className="rounded-4xl border border-white/8 bg-white/4 p-10 backdrop-blur-xl">
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-[1.75rem]">
+              {marketing.contact.heading}
+            </h2>
+            <p className="mt-5 text-sm leading-7 text-text-secondary sm:text-base">
+              {marketing.contact.description}
+            </p>
+            <Button
+              asChild
+              variant="outline"
+              className="mt-8 h-11 rounded-full border-white/12 bg-white/4 px-5 text-sm font-semibold text-text-primary hover:bg-white/8"
+            >
+              <a href={mailtoHref}>{marketing.contact.button}</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-white/8 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-text-muted">{marketing.footer.copyright}</div>
+          <div className="flex w-full flex-col items-start gap-2 text-sm sm:w-auto sm:flex-row sm:items-center sm:gap-6">
+            <Link href={payrollDocsHref} className="text-text-secondary transition-colors hover:text-text-primary">
               {marketing.footer.payrollDocs}
             </Link>
-            <Link href={privacyHref} className="text-text-secondary hover:text-text-primary transition-colors">
+            <Link href={privacyHref} className="text-text-secondary transition-colors hover:text-text-primary">
               {marketing.footer.privacy}
             </Link>
-            <Link href={termsHref} className="text-text-secondary hover:text-text-primary transition-colors">
+            <Link href={termsHref} className="text-text-secondary transition-colors hover:text-text-primary">
               {marketing.footer.terms}
             </Link>
           </div>
