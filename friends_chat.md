@@ -693,7 +693,7 @@
   - add `shift_shares.hidden`,
   - add `shift_shares.blocked_by_user_id`,
   - backfill and dual-write/sync `blocked` and `hidden`,
-  - update existing sharing readers and writers in iOS, Next.js, and SQL helpers so new code no longer treats `blocked` as the long-term source of truth.
+  - update existing sharing readers and writers in iOS and SQL helpers so new code no longer treats `blocked` as the long-term source of truth.
 - Phase 1: backend core
   - ship messaging tables, Storage bucket, helper functions, RPCs, and RLS,
   - add SQL tests for auth, pagination, idempotency, and block behavior,
