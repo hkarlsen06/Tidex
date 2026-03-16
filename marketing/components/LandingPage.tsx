@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import dashboardEn from '@/public/hero/dashboard-en.png';
+import dashboardNo from '@/public/hero/dashboard-no.png';
 import {
   Accordion,
   AccordionContent,
@@ -28,7 +30,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
   const appStoreHref = 'https://apps.apple.com/app/id6757129790';
   const mailtoHref = `mailto:${dictionary.legal.contactEmail}?subject=${encodeURIComponent(marketing.contact.emailSubject)}&body=${encodeURIComponent(marketing.contact.emailBody)}`;
   const heroScreenshotSrc =
-    locale === 'no' ? '/hero/dashboard-no.png' : '/hero/dashboard-en.png';
+    locale === 'no' ? dashboardNo : dashboardEn;
   const screenAspectRatio = 1206 / 2622;
   // Model the visible black bezel, not the full chassis/glass margin.
   // Apple does not publish bezel thickness directly; using 17 Pro screen-border
@@ -67,7 +69,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
           }}
         >
           <img
-            src={heroScreenshotSrc}
+            src={heroScreenshotSrc.src}
             alt={marketing.hero.screenshotAlt}
             className="h-full w-full object-cover"
           />
