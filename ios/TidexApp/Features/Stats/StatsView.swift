@@ -47,8 +47,7 @@ struct StatsView: View {
   var body: some View {
     ZStack {
       // Background
-      Color.tidexBackground
-        .ignoresSafeArea()
+      TidexAppBackground()
 
       // Main content - month picker is now in shared overlay
       Group {

@@ -216,7 +216,7 @@ struct FeaturedShiftCard: View {
           }
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
       .tidexCardShadow()
       .onChange(of: displayedProgress) { _, newValue in
         // Animate to new progress value

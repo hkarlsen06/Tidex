@@ -54,6 +54,8 @@ struct SharedShiftsListView: View {
   var body: some View {
     GeometryReader { _ in
       ZStack {
+        TidexAppBackground()
+
         if isLoading && shifts.isEmpty {
           loadingState
         } else if showListView {
@@ -200,7 +202,7 @@ struct SharedShiftsListView: View {
               )
               .userCurrency(shiftJob?.currency ?? currency)
               .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-              .listRowBackground(Color.tidexBackground)
+              .listRowBackground(Color.clear)
               .listRowSeparator(.hidden)
             }
           } header: {
@@ -209,7 +211,7 @@ struct SharedShiftsListView: View {
               totalGross: sharer.showEarnings ? weekGroup.totalGross : 0
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-            .listRowBackground(Color.tidexBackground)
+            .listRowBackground(Color.clear)
           }
         }
       }

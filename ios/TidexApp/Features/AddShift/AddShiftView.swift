@@ -50,8 +50,7 @@ struct AddShiftView: View {
     NavigationStack {
       ZStack(alignment: .bottom) {
         // Background that fills entire screen including safe areas
-        Color.tidexBackground
-          .ignoresSafeArea()
+        TidexAppBackground()
 
         if shouldShowWorkSetupRequiredPlaceholder {
           WorkSetupRequiredPlaceholder()

@@ -53,8 +53,7 @@ struct SharingView: View {
     NavigationStack(path: $navigationPath) {
       ZStack {
         // Background that fills entire screen including safe areas
-        Color.tidexBackground
-          .ignoresSafeArea()
+        TidexAppBackground()
 
         // Always show sharer list as root content
         sharerListView

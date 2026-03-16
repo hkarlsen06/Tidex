@@ -188,8 +188,6 @@ struct FriendsThreadView: View {
         handleMessageIDsChange(from: oldValue, to: newValue)
       }
       .onDisappear {
-        FriendsThreadMessageHighlightRegistry.setHighlightedMessageID(
-          nil, in: viewModel.route.threadId)
         FriendsChatPresentationState.shared.setActiveThreadId(nil)
         Task {
           await viewModel.stopRealtime()
@@ -272,8 +270,29 @@ struct FriendsThreadView: View {
     }
     .accessibilityIdentifier(AccessibilityID.threadView)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .background(Color.tidexBackground.ignoresSafeArea())
+    .background {
+      ZStack(alignment: .top) {
+        Color.tidexBackground
+          .ignoresSafeArea()
+
+        TidexAppBackground()
+          .frame(height: 280)
+          .mask(
+            LinearGradient(
+              colors: [
+                .black,
+                .black,
+                .clear,
+              ],
+              startPoint: .top,
+              endPoint: .bottom
+            )
+          )
+          .ignoresSafeArea(edges: .top)
+      }
+    }
     .navigationBarTitleDisplayMode(.inline)
+    .toolbarBackground(.hidden, for: .navigationBar)
     .iPadToolbarBackground()
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -419,7 +438,6 @@ struct FriendsThreadView: View {
       shouldShowOverviewFor: { _ in false }
     )
     .chatTheme(chatTheme)
-    .background(Color.tidexBackground)
     .overlay {
       FriendsThreadChatViewportBridge(
         messages: exyteMessages,
@@ -454,7 +472,6 @@ struct FriendsThreadView: View {
           )
         }
       }
-      .background(Color.tidexBackground)
     }
   }
 
@@ -494,10 +511,7 @@ struct FriendsThreadView: View {
         counterpartAvatarUrl: counterpartAvatarUrl,
         counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
           from: counterpartDisplayName),
-        isHighlighted: FriendsThreadMessageHighlightRegistry.isHighlighted(
-          messageID: message.id,
-          in: viewModel.route.threadId
-        ),
+        isHighlighted: FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage),
         senderFirstName: firstName(
           from: isCurrentUser ? currentUserDisplayName : counterpartDisplayName
         ),
@@ -541,7 +555,6 @@ struct FriendsThreadView: View {
       .padding(.top, Spacing.xxs)
       .padding(.bottom, Spacing.xxs)
       .frame(maxWidth: .infinity)
-      .background(Color.tidexBackground)
       .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 10)
     }
   }
@@ -715,7 +728,7 @@ struct FriendsThreadView: View {
   private var chatTheme: ChatTheme {
     ChatTheme(
       colors: .init(
-        mainBG: .tidexBackground,
+        mainBG: .clear,
         mainTint: .tidexBlue,
         mainText: .tidexTextPrimary,
         mainCaptionText: .tidexTextSecondary,
@@ -919,19 +932,11 @@ struct FriendsThreadView: View {
 
   private func flashHighlightedMessage(_ messageId: String) {
     highlightedMessageId = messageId
-    FriendsThreadMessageHighlightRegistry.setHighlightedMessageID(
-      messageId,
-      in: viewModel.route.threadId
-    )
 
     Task { @MainActor in
       try? await Task.sleep(nanoseconds: 1_200_000_000)
       if highlightedMessageId == messageId {
         highlightedMessageId = nil
-        FriendsThreadMessageHighlightRegistry.setHighlightedMessageID(
-          nil,
-          in: viewModel.route.threadId
-        )
       }
     }
   }
@@ -1059,6 +1064,15 @@ private struct FriendsChatTypingAccessory: View {
     .padding(.top, Spacing.xxs)
     .padding(.bottom, Spacing.xs)
     .background(Color.tidexBackground)
+    .contentShape(Rectangle())
+    .onTapGesture {
+      UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder),
+        to: nil,
+        from: nil,
+        for: nil
+      )
+    }
   }
 }
 

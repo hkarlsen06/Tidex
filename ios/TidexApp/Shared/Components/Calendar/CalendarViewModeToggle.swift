@@ -7,6 +7,8 @@ import UIKit
 /// Uses glass effect for selected state
 struct CalendarViewModeToggle: View {
   private let controlHeight: CGFloat = 44
+  private let controlCornerRadius: CGFloat = CornerRadius.xl
+  private let controlInset: CGFloat = Spacing.xxs
   @Binding var viewMode: CalendarViewMode
   let currency: String
   let showMoneyOption: Bool
@@ -27,19 +29,25 @@ struct CalendarViewModeToggle: View {
 
   var body: some View {
     ZStack {
-      Capsule().fill(Color.tidexSurfaceSecondary)
+      RoundedRectangle(cornerRadius: controlCornerRadius, style: .continuous)
+        .fill(.clear)
+        .glassEffect(.clear, in: .rect(cornerRadius: controlCornerRadius))
 
       GeometryReader { geometry in
-        let inset = Spacing.xxs
-        let innerWidth = max(0, geometry.size.width - (inset * 2))
+        let innerWidth = max(0, geometry.size.width - (controlInset * 2))
         let segmentCount: CGFloat = showMoneyOption ? 2 : 1
         let segmentWidth = innerWidth / segmentCount
         let selectedIndex: CGFloat = viewMode == .money && showMoneyOption ? 1 : 0
+        let selectedCornerRadius = CornerRadius.md
 
-        Capsule().fill(.clear)
-          .tidexGlass(shape: .capsule, interactive: true)
+        RoundedRectangle(cornerRadius: selectedCornerRadius, style: .continuous)
+          .fill(.clear)
+          .glassEffect(
+            .regular.interactive(),
+            in: .rect(cornerRadius: selectedCornerRadius)
+          )
           .frame(width: segmentWidth, height: controlHeight)
-          .offset(x: inset + (selectedIndex * segmentWidth), y: inset)
+          .offset(x: controlInset + (selectedIndex * segmentWidth), y: controlInset)
           .animation(
             reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8),
             value: selectedIndex
@@ -105,9 +113,9 @@ struct CalendarViewModeToggle: View {
           .buttonStyle(.plain)
         }
       }
-      .padding(Spacing.xxs)
+      .padding(controlInset)
     }
-    .frame(height: controlHeight + (Spacing.xxs * 2))
+    .frame(height: controlHeight + (controlInset * 2))
     .onAppear {
       toggleHaptic.prepare()
     }

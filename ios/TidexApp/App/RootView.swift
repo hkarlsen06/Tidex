@@ -89,10 +89,7 @@ private struct RootContent: View {
     )
 
     ZStack {
-      // Background - adapts to system appearance
-      // Uses tidexBackground (adaptive) for main content areas
-      Color.tidexBackground
-        .ignoresSafeArea()
+      TidexAppBackground()
 
       // Content based on app state
       Group {
@@ -334,7 +331,7 @@ struct LoadingView: View {
 
 #Preview("Loading View") {
   ZStack {
-    Color.tidexBackground.ignoresSafeArea()
+    TidexAppBackground()
     LoadingView()
   }
 }

@@ -171,9 +171,8 @@ struct MainTabView: View {
 
         ZStack(alignment: .bottom) {
           // Background that fills entire screen including safe areas
-          // Prevents black bars from showing behind tab content
-          Color.tidexBackground
-            .ignoresSafeArea()
+          // Prevents black bars from showing behind tab content.
+          TidexAppBackground()
 
           TabView(selection: tabSelection) {
             DashboardView(selectedTab: $selectedTab, showStatsView: $showHomeStats)

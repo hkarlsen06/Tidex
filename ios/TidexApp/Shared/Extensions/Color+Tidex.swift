@@ -35,14 +35,14 @@ extension Color {
 
   /// Surface primary for cards and elevated containers
   /// Light: Pure white (#FFFFFF) - maximum contrast against blue-tinted background
-  /// Dark: #142133 - lighter navy for better card separation
+  /// Dark: #16243A - cooler navy surface tuned for the gradient app background
   static var tidexSurfacePrimary: Color {
     Color("TidexSurfacePrimary")
   }
 
   /// Surface secondary for nested elements within cards
   /// Light: Very light gray (#F7F8F8) - subtle distinction from primary
-  /// Dark: #1C2A3D - lighter for better contrast
+  /// Dark: #1B2C45 - slightly lighter cool navy for nested controls
   static var tidexSurfaceSecondary: Color {
     Color("TidexSurfaceSecondary")
   }
@@ -204,14 +204,14 @@ extension Color {
   /// Light mode surface primary - Pure white for maximum contrast against blue-tinted background
   static let tidexLightSurfacePrimary = Color.white
 
-  /// Dark mode surface primary - Lighter for better card separation (#142133)
-  static let tidexDarkSurfacePrimary = Color(red: 0.08, green: 0.13, blue: 0.20)
+  /// Dark mode surface primary - cooler navy tuned for the gradient background (#16243A)
+  static let tidexDarkSurfacePrimary = Color(red: 0.086, green: 0.141, blue: 0.227)
 
   /// Light mode surface secondary - Very light gray (#F7F8F8)
   static let tidexLightSurfaceSecondary = Color(red: 0.965, green: 0.969, blue: 0.973)
 
-  /// Dark mode surface secondary - Lighter for better contrast (#1C2A3D)
-  static let tidexDarkSurfaceSecondary = Color(red: 0.11, green: 0.165, blue: 0.24)
+  /// Dark mode surface secondary - slightly lighter cool navy (#1B2C45)
+  static let tidexDarkSurfaceSecondary = Color(red: 0.106, green: 0.173, blue: 0.271)
 
   /// Light mode text primary - HSlocalized(222, 84%, 8%)
   static let tidexLightTextPrimary = Color(hue: 222 / 360, saturation: 0.84, brightness: 0.08)

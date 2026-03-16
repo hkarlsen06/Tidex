@@ -171,7 +171,7 @@ struct PayrollCard: View {
           .frame(width: geometry.size.width * (animatedProgress / 100))
       }
     }
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
     .tidexCardShadow()
     .shimmer(isActive: isLoading)
     .onChange(of: progress) { _, newValue in
