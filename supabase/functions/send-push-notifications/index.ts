@@ -40,9 +40,10 @@ const APNS_BUNDLE_ID = Deno.env.get("APNS_BUNDLE_ID") ?? "no.tidex.app";
 let cachedFcmAccessToken: { token: string; expiresAt: number } | null = null;
 let cachedApnsTokenProd: { token: string; expiresAt: number } | null = null;
 let cachedApnsTokenSandbox: { token: string; expiresAt: number } | null = null;
+const MAX_DELIVERY_CONCURRENCY = 8;
 
 // ---------- Types ----------
-interface OutboxNotification {
+export interface OutboxNotification {
   id: string;
   owner_id: string | null;
   recipient_id: string;
@@ -59,6 +60,7 @@ interface OutboxNotification {
 
 interface PushDevice {
   id: string;
+  user_id: string;
   fcm_token: string | null;
   apns_token: string | null;
 }
@@ -67,6 +69,23 @@ interface NotificationDeliveryJob {
   notifications: OutboxNotification[];
   notification: OutboxNotification;
 }
+
+interface BatchedUnreadCountRow {
+  user_id: string;
+  unread_count: number | string | null;
+}
+
+interface DeviceSendAttemptResult {
+  success: boolean;
+  clearApnsTokenDeviceId?: string;
+  deleteDeviceId?: string;
+}
+
+const richFormattingTypes = new Set([
+  "thread_message",
+  "thread_screenshot",
+  "shifts_screenshotted",
+]);
 
 // ---------- Helpers ----------
 function res(body: string, status: number) {
@@ -87,6 +106,14 @@ function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+export function usesRichFormatting(notificationType: string): boolean {
+  return richFormattingTypes.has(notificationType);
+}
+
+export function usesThreadActions(notificationType: string): boolean {
+  return notificationType === "thread_message";
 }
 
 function notificationDataString(
@@ -130,7 +157,7 @@ function isNewerNotification(
     (lhs.created_at === rhs.created_at && lhs.id > rhs.id);
 }
 
-function coalesceNotifications(
+export function coalesceNotifications(
   notifications: OutboxNotification[],
 ): NotificationDeliveryJob[] {
   const jobsByKey = new Map<string, NotificationDeliveryJob>();
@@ -180,7 +207,7 @@ function coalesceNotifications(
   });
 }
 
-function buildApsPayload(
+export function buildApsPayload(
   notification: OutboxNotification,
   badgeCount: number,
 ): Record<string, unknown> {
@@ -188,12 +215,17 @@ function buildApsPayload(
     alert: { title: notification.title, body: notification.body },
     sound: "tidex_notification.caf",
     badge: Math.max(0, badgeCount),
-    "mutable-content": 1,
   };
+
+  if (usesRichFormatting(notification.notification_type)) {
+    aps["mutable-content"] = 1;
+  }
 
   const threadId = notificationThreadId(notification);
   if (threadId) {
-    aps["category"] = "THREAD_MESSAGE";
+    if (usesThreadActions(notification.notification_type)) {
+      aps["category"] = "THREAD_MESSAGE";
+    }
     aps["thread-id"] = threadId;
     aps["target-content-id"] = `friend-chat:${threadId}`;
     aps["interruption-level"] = "active";
@@ -256,7 +288,7 @@ function buildApnsHeaders(
 }
 
 async function getUnreadBadgeCount(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   recipientId: string,
   cache: Map<string, number>,
 ): Promise<number> {
@@ -288,9 +320,93 @@ async function getUnreadBadgeCount(
   return Math.max(0, badgeCount);
 }
 
-function base64UrlEncode(input: string | ArrayBuffer): string {
+async function getUnreadBadgeCounts(
+  supabase: any,
+  recipientIds: string[],
+): Promise<Map<string, number>> {
+  const uniqueRecipientIds = Array.from(new Set(recipientIds));
+  const counts = new Map<string, number>(
+    uniqueRecipientIds.map((recipientId) => [recipientId, 0]),
+  );
+
+  if (uniqueRecipientIds.length === 0) {
+    return counts;
+  }
+
+  const { data, error } = await supabase
+    .schema("internal")
+    .rpc("get_unread_direct_message_counts", {
+      p_user_ids: uniqueRecipientIds,
+    });
+
+  if (error) {
+    console.error("Failed to fetch batched unread badge counts:", error);
+    for (const recipientId of uniqueRecipientIds) {
+      counts.set(
+        recipientId,
+        await getUnreadBadgeCount(supabase, recipientId, counts),
+      );
+    }
+    return counts;
+  }
+
+  for (const row of (data ?? []) as BatchedUnreadCountRow[]) {
+    counts.set(
+      row.user_id,
+      Math.max(
+        0,
+        typeof row.unread_count === "number"
+          ? row.unread_count
+          : Number.parseInt(String(row.unread_count ?? 0), 10) || 0,
+      ),
+    );
+  }
+
+  return counts;
+}
+
+function groupPushDevicesByRecipient(devices: PushDevice[]): Map<string, PushDevice[]> {
+  const grouped = new Map<string, PushDevice[]>();
+
+  for (const device of devices) {
+    const existing = grouped.get(device.user_id);
+    if (existing) {
+      existing.push(device);
+    } else {
+      grouped.set(device.user_id, [device]);
+    }
+  }
+
+  return grouped;
+}
+
+async function fetchPushDevicesByRecipient(
+  supabase: any,
+  recipientIds: string[],
+): Promise<Map<string, PushDevice[]>> {
+  const uniqueRecipientIds = Array.from(new Set(recipientIds));
+  if (uniqueRecipientIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .schema("internal")
+    .from("push_devices")
+    .select("id, user_id, fcm_token, apns_token")
+    .in("user_id", uniqueRecipientIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return groupPushDevicesByRecipient((data ?? []) as PushDevice[]);
+}
+
+function base64UrlEncode(input: string | ArrayBuffer | Uint8Array): string {
   const bytes = typeof input === "string"
     ? new TextEncoder().encode(input)
+    : input instanceof Uint8Array
+    ? input
     : new Uint8Array(input);
 
   const base64 = btoa(String.fromCharCode(...bytes));
@@ -415,7 +531,7 @@ function signatureToRaw(sig: Uint8Array): Uint8Array {
   offset++;
   const rLength = sig[offset];
   offset++;
-  let r = sig.slice(offset, offset + rLength);
+  let r: Uint8Array = sig.slice(offset, offset + rLength);
   offset += rLength;
 
   // Read s
@@ -429,7 +545,7 @@ function signatureToRaw(sig: Uint8Array): Uint8Array {
   offset++;
   const sLength = sig[offset];
   offset++;
-  let s = sig.slice(offset, offset + sLength);
+  let s: Uint8Array = sig.slice(offset, offset + sLength);
 
   // Normalize to 32 bytes each (remove leading zeros or pad)
   r = normalizeToLength(r, 32);
@@ -734,8 +850,115 @@ async function sendToApns(
   return { success: false, invalidToken: true };
 }
 
+export function didAnyDeliverySucceed(
+  results: Array<{ success: boolean }>,
+): boolean {
+  return results.some((result) => result.success);
+}
+
+async function clearInvalidApnsTokens(
+  supabase: any,
+  deviceIds: string[],
+): Promise<void> {
+  if (deviceIds.length === 0) return;
+
+  await Promise.all(
+    deviceIds.map(async (deviceId) => {
+      const { error } = await supabase
+        .schema("internal")
+        .from("push_devices")
+        .update({ apns_token: null })
+        .eq("id", deviceId);
+
+      if (error) {
+        throw error;
+      }
+    }),
+  );
+}
+
+async function markOutboxNotifications(
+  supabase: any,
+  notificationIds: string[],
+  payload: Record<string, unknown>,
+): Promise<void> {
+  if (notificationIds.length === 0) return;
+
+  const { error } = await supabase
+    .schema("internal")
+    .from("notifications_outbox")
+    .update(payload)
+    .in("id", notificationIds);
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function sendToDevice(
+  device: PushDevice,
+  notification: OutboxNotification,
+  badgeCount: number,
+  apnsConfigured: boolean,
+  fcmAccessToken: string | null,
+): Promise<DeviceSendAttemptResult> {
+  let result: { success: boolean; invalidToken?: boolean };
+
+  if (device.apns_token && apnsConfigured) {
+    result = await sendToApns(
+      device.apns_token,
+      notification,
+      badgeCount,
+    );
+
+    return {
+      success: result.success,
+      clearApnsTokenDeviceId: result.invalidToken ? device.id : undefined,
+    };
+  }
+
+  if (device.fcm_token && fcmAccessToken) {
+    result = await sendToFcm(
+      fcmAccessToken,
+      device.fcm_token,
+      notification,
+      badgeCount,
+    );
+
+    return {
+      success: result.success,
+      deleteDeviceId: result.invalidToken ? device.id : undefined,
+    };
+  }
+
+  return { success: false };
+}
+
+async function runWithConcurrencyLimit<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let nextIndex = 0;
+  const concurrency = Math.max(1, Math.min(limit, items.length));
+
+  await Promise.all(
+    Array.from({ length: concurrency }, async () => {
+      while (true) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        if (currentIndex >= items.length) {
+          return;
+        }
+
+        await worker(items[currentIndex]);
+      }
+    }),
+  );
+}
+
 // ---------- Server ----------
-serve(async (req: Request) => {
+async function handleRequest(req: Request) {
   try {
     // Only allow POST requests (or GET for cron health checks)
     if (req.method !== "POST" && req.method !== "GET") {
@@ -776,6 +999,8 @@ serve(async (req: Request) => {
       return json({ processed: 0, message: "No pending notifications" });
     }
 
+    console.log(`[Push] Claimed ${notifications.length} notifications`);
+
     // Get FCM access token only if FCM is configured
     let fcmAccessToken: string | null = null;
     if (fcmConfigured) {
@@ -785,125 +1010,125 @@ serve(async (req: Request) => {
     let processed = 0;
     let failed = 0;
     const invalidTokens: string[] = [];
-    const unreadBadgeCountByRecipient = new Map<string, number>();
     const deliveryJobs = coalesceNotifications(
       notifications as OutboxNotification[],
     );
+    console.log(
+      `[Push] Coalesced ${notifications.length} claimed notifications into ${deliveryJobs.length} delivery jobs`,
+    );
 
-    for (const job of deliveryJobs) {
+    const recipientIds = deliveryJobs.map((job) => job.notification.recipient_id);
+    const deviceFetchStartedAt = performance.now();
+    const devicesByRecipient = await fetchPushDevicesByRecipient(
+      supabase,
+      recipientIds,
+    );
+    console.log(
+      `[Push] Loaded push devices for ${devicesByRecipient.size} recipients in ${
+        Math.round(performance.now() - deviceFetchStartedAt)
+      } ms`,
+    );
+
+    const badgeLookupStartedAt = performance.now();
+    const unreadBadgeCountByRecipient = await getUnreadBadgeCounts(
+      supabase,
+      recipientIds,
+    );
+    console.log(
+      `[Push] Loaded unread badge counts for ${unreadBadgeCountByRecipient.size} recipients in ${
+        Math.round(performance.now() - badgeLookupStartedAt)
+      } ms`,
+    );
+
+    await runWithConcurrencyLimit(deliveryJobs, MAX_DELIVERY_CONCURRENCY, async (job) => {
       const notification = job.notification;
       const notificationIds = job.notifications.map((entry) => entry.id);
-      try {
-        // Get recipient's push tokens (both APNs and FCM)
-        const { data: devices } = await supabase
-          .schema("internal")
-          .from("push_devices")
-          .select("id, fcm_token, apns_token")
-          .eq("user_id", notification.recipient_id);
+      const sendStartedAt = performance.now();
 
-        if (!devices?.length) {
+      try {
+        const devices = devicesByRecipient.get(notification.recipient_id) ?? [];
+
+        if (devices.length === 0) {
           // No devices registered, mark as skipped
-          await supabase
-            .schema("internal")
-            .from("notifications_outbox")
-            .update({
-              status: "skipped",
-              processed_at: new Date().toISOString(),
-            })
-            .in("id", notificationIds);
-          continue;
+          await markOutboxNotifications(supabase, notificationIds, {
+            status: "skipped",
+            processed_at: new Date().toISOString(),
+          });
+          console.log(
+            `[Push] Skipped notification ${notification.id} with no devices in ${
+              Math.round(performance.now() - sendStartedAt)
+            } ms`,
+          );
+          return;
         }
 
-        const badgeCount = await getUnreadBadgeCount(
-          supabase,
-          notification.recipient_id,
-          unreadBadgeCountByRecipient,
+        const badgeCount =
+          unreadBadgeCountByRecipient.get(notification.recipient_id) ?? 0;
+        const results = await Promise.all(
+          devices.map((device) =>
+            sendToDevice(
+              device,
+              notification,
+              badgeCount,
+              apnsConfigured,
+              fcmAccessToken,
+            )
+          ),
         );
 
-        // Send to each device
-        // Priority: APNs (native iOS) > FCM (hybrid/Android)
-        let anySuccess = false;
-        for (const device of devices as PushDevice[]) {
-          let result: { success: boolean; invalidToken?: boolean };
+        const invalidApnsTokenDeviceIds = results
+          .map((result) => result.clearApnsTokenDeviceId)
+          .filter((deviceId): deviceId is string => Boolean(deviceId));
+        const invalidFcmTokenDeviceIds = results
+          .map((result) => result.deleteDeviceId)
+          .filter((deviceId): deviceId is string => Boolean(deviceId));
 
-          // Prefer APNs if token exists and APNs is configured
-          if (device.apns_token && apnsConfigured) {
-            result = await sendToApns(
-              device.apns_token,
-              notification,
-              badgeCount,
-            );
-            if (result.invalidToken) {
-              // Clear invalid APNs token but don't delete device (may have FCM)
-              await supabase
-                .schema("internal")
-                .from("push_devices")
-                .update({ apns_token: null })
-                .eq("id", device.id);
-            }
-          } // Fall back to FCM if APNs not available/failed
-          else if (device.fcm_token && fcmAccessToken) {
-            result = await sendToFcm(
-              fcmAccessToken,
-              device.fcm_token,
-              notification,
-              badgeCount,
-            );
-            if (result.invalidToken) {
-              // Token is invalid, queue device for deletion
-              invalidTokens.push(device.id);
-            }
-          } else {
-            // No valid token for this device
-            result = { success: false };
-          }
+        await clearInvalidApnsTokens(supabase, invalidApnsTokenDeviceIds);
+        invalidTokens.push(...invalidFcmTokenDeviceIds);
 
-          if (result.success) {
-            anySuccess = true;
-          }
-        }
+        const anySuccess = didAnyDeliverySucceed(results);
 
         // Mark notification status
-        await supabase
-          .schema("internal")
-          .from("notifications_outbox")
-          .update({
-            status: anySuccess ? "sent" : "failed",
-            error_message: anySuccess ? null : "All devices failed",
-            processed_at: new Date().toISOString(),
-          })
-          .in("id", notificationIds);
+        await markOutboxNotifications(supabase, notificationIds, {
+          status: anySuccess ? "sent" : "failed",
+          error_message: anySuccess ? null : "All devices failed",
+          processed_at: new Date().toISOString(),
+        });
 
         if (anySuccess) processed += notificationIds.length;
         else failed += notificationIds.length;
+        console.log(
+          `[Push] Processed notification ${notification.id} across ${devices.length} devices in ${
+            Math.round(performance.now() - sendStartedAt)
+          } ms (success=${anySuccess})`,
+        );
       } catch (error) {
         console.error(
           `Error processing notification ${notification.id}:`,
           error,
         );
 
-        await supabase
-          .schema("internal")
-          .from("notifications_outbox")
-          .update({
-            status: "failed",
-            error_message: error instanceof Error
-              ? error.message
-              : "Unknown error",
-            processed_at: new Date().toISOString(),
-          })
-          .in("id", notificationIds);
+        await markOutboxNotifications(supabase, notificationIds, {
+          status: "failed",
+          error_message: error instanceof Error
+            ? error.message
+            : "Unknown error",
+          processed_at: new Date().toISOString(),
+        });
 
         failed += notificationIds.length;
       }
-    }
+    });
 
     // Clean up invalid tokens
     if (invalidTokens.length > 0) {
-      await supabase.schema("internal").from("push_devices").delete().in(
+      const { error } = await supabase.schema("internal").from("push_devices").delete().in(
         "id",
         invalidTokens,
       );
+      if (error) {
+        throw error;
+      }
       console.log(`Deleted ${invalidTokens.length} invalid tokens`);
     }
 
@@ -936,6 +1161,10 @@ serve(async (req: Request) => {
       }
     }
 
+    console.log(
+      `[Push] Batch complete: processed=${processed}, failed=${failed}, claimed=${notifications.length}`,
+    );
+
     return json({
       processed,
       failed,
@@ -949,4 +1178,8 @@ serve(async (req: Request) => {
       500,
     );
   }
-});
+}
+
+if (import.meta.main) {
+  serve(handleRequest);
+}

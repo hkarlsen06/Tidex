@@ -4,7 +4,6 @@ import UserNotifications
 import os
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "NotificationServiceExtension")
-private let avatarFetchBudget = Duration.seconds(2)
 
 private enum SenderAvatarLoader {
   static let inMemoryCache = NSCache<NSURL, INImage>()
@@ -13,45 +12,24 @@ private enum SenderAvatarLoader {
     diskCapacity: 20 * 1024 * 1024,
     diskPath: "TidexNotificationAvatarCache"
   )
-  static let session: URLSession = {
-    let configuration = URLSessionConfiguration.default
-    configuration.requestCachePolicy = .useProtocolCachePolicy
-    configuration.timeoutIntervalForRequest = 3
-    configuration.timeoutIntervalForResource = 4
-    configuration.waitsForConnectivity = false
-    configuration.urlCache = urlCache
-    return URLSession(configuration: configuration)
-  }()
 
   static func cachedImage(for request: URLRequest, url: URL) -> INImage? {
     if let image = inMemoryCache.object(forKey: url as NSURL) {
+      logger.debug(
+        "Sender avatar cache hit (memory) for \(url.absoluteString, privacy: .private(mask: .hash))"
+      )
       return image
     }
 
     guard let response = urlCache.cachedResponse(for: request) else {
+      logger.debug(
+        "Sender avatar cache miss for \(url.absoluteString, privacy: .private(mask: .hash))")
       return nil
     }
 
+    logger.debug(
+      "Sender avatar cache hit (disk) for \(url.absoluteString, privacy: .private(mask: .hash))")
     return makeImage(from: response.data, url: url)
-  }
-
-  static func fetchImage(for request: URLRequest, url: URL) async -> INImage? {
-    do {
-      let (data, response) = try await session.data(for: request)
-      guard let httpResponse = response as? HTTPURLResponse,
-        (200..<300).contains(httpResponse.statusCode)
-      else {
-        return nil
-      }
-
-      return makeImage(from: data, url: url)
-    } catch is CancellationError {
-      return nil
-    } catch {
-      logger.error(
-        "Failed to download sender avatar: \(error.localizedDescription, privacy: .public)")
-      return nil
-    }
   }
 
   private static func makeImage(from data: Data, url: URL) -> INImage? {
@@ -102,6 +80,8 @@ final class NotificationService: UNNotificationServiceExtension {
     from request: UNNotificationRequest,
     content: UNMutableNotificationContent
   ) async -> UNNotificationContent {
+    let startedAt = Date()
+
     guard
       let payload = CommunicationNotificationPayload(
         userInfo: request.content.userInfo,
@@ -111,12 +91,13 @@ final class NotificationService: UNNotificationServiceExtension {
       return content
     }
 
+    logger.debug("Enriching notification for type \(payload.type, privacy: .public)")
     content.threadIdentifier = payload.threadId
     if #available(iOS 15.0, *) {
       content.targetContentIdentifier = payload.targetContentIdentifier
     }
 
-    let senderImage = await fetchSenderImage(from: payload.senderAvatarUrl)
+    let senderImage = fetchSenderImage(from: payload.senderAvatarUrl)
     let sender = INPerson(
       personHandle: INPersonHandle(value: payload.senderUserId, type: .unknown),
       nameComponents: nil,
@@ -156,6 +137,9 @@ final class NotificationService: UNNotificationServiceExtension {
         mutableUpdatedContent.targetContentIdentifier = payload.targetContentIdentifier
       }
 
+      logger.debug(
+        "Notification enrichment completed in \(Self.elapsedMilliseconds(since: startedAt), privacy: .public) ms"
+      )
       return mutableUpdatedContent
     } catch {
       logger.error(
@@ -165,32 +149,16 @@ final class NotificationService: UNNotificationServiceExtension {
     }
   }
 
-  private func fetchSenderImage(from url: URL?) async -> INImage? {
+  private func fetchSenderImage(from url: URL?) -> INImage? {
     guard let url else { return nil }
 
     let request = URLRequest(
       url: url,
-      cachePolicy: .returnCacheDataElseLoad,
+      cachePolicy: .returnCacheDataDontLoad,
       timeoutInterval: 3
     )
 
-    if let cachedImage = SenderAvatarLoader.cachedImage(for: request, url: url) {
-      return cachedImage
-    }
-
-    return await withTaskGroup(of: INImage?.self, returning: INImage?.self) { group in
-      group.addTask {
-        await SenderAvatarLoader.fetchImage(for: request, url: url)
-      }
-      group.addTask {
-        try? await Task.sleep(for: avatarFetchBudget)
-        return nil
-      }
-
-      let result = await group.next() ?? nil
-      group.cancelAll()
-      return result
-    }
+    return SenderAvatarLoader.cachedImage(for: request, url: url)
   }
 
   private func donate(_ interaction: INInteraction) async throws {
@@ -203,6 +171,10 @@ final class NotificationService: UNNotificationServiceExtension {
         }
       }
     }
+  }
+
+  private static func elapsedMilliseconds(since startedAt: Date) -> Int {
+    Int(Date().timeIntervalSince(startedAt) * 1000)
   }
 }
 
