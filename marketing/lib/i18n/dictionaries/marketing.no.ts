@@ -7,40 +7,15 @@ export const marketingNo = {
     ogImageAlt: 'Tidex — Kontroll på lønnen din',
   },
   hero: {
-    title: 'Få kontroll over lønnen din',
-    description: 'Lønnskalkulatoren som tar vakter, tillegg og tariff på alvor. Excel er over.',
-    highlights: ['Nøyaktig', 'Rask', 'Privat', 'Stabil'],
+    eyebrow: 'Native iPhone-app',
+    title: 'Se hva vakten din er verdt.',
+    description: 'Tidex beregner lønn, tillegg og tariff i sanntid — slik at du aldri overraskes på lønnsdagen.',
     primaryCta: 'Åpne appen',
     appStoreCta: 'Last ned fra App Store',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex-logo',
-  },
-  features: {
-    eyebrow: 'Hvorfor Tidex?',
-    heading: 'Laget for deg som vil ha full kontroll',
-    description: 'Våre viktigste funksjoner er designet for å gjøre lønnsberegningen enkel, nøyaktig og pålitelig.',
-    items: [
-      {
-        icon: 'shield',
-        title: 'Beskytt deg mot dårlig lønn',
-        description: 'Se hva du vil tjene før du takker ja til ei ekstravakt.',
-      },
-      {
-        icon: 'zap',
-        title: 'Automatiske tillegg',
-        description: 'Tillegg regnes automatisk ut for hver vakt.',
-      },
-      {
-        icon: 'clock',
-        title: 'Smidige utregninger',
-        description: 'Håndterer pauser, delte skift og vakter som går over midnatt uten stress.',
-      },
-      {
-        icon: 'layers',
-        title: 'Rapporter klare',
-        description: 'Last ned komplette PDF-rapporter og behold full oversikt måned for måned.',
-      },
-    ],
+    screenshotAlt: 'Skjermbilde av Tidex iPhone-appen som viser dashbordet og vaktoversikten.',
+    trustNote: 'Gratis å starte. Bygget for ekte turnusarbeid.',
   },
   faq: {
     eyebrow: 'FAQ',

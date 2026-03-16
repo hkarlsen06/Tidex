@@ -24,7 +24,7 @@ export function LocaleSwitcher() {
   };
 
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-full bg-white/8 p-0.5 text-sm font-medium backdrop-blur-sm">
+    <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm font-medium text-text-secondary">
       {locales.map((locale) => {
         const isActive = locale === currentLocale;
         const href = buildLocalePath(locale);
@@ -36,8 +36,8 @@ export function LocaleSwitcher() {
             aria-current={isActive ? "page" : undefined}
             className={`rounded-full px-4 py-1.5 transition-all ${
               isActive
-                ? "bg-surface-primary text-text-primary shadow-sm"
-                : "text-text-muted hover:text-text-secondary"
+                ? "bg-white text-text-inverse"
+                : "text-text-muted hover:bg-white/[0.04] hover:text-text-primary"
             }`}
           >
             {localeNames[locale]}

@@ -7,40 +7,15 @@ export const marketingEn = {
     ogImageAlt: 'Tidex — Full control over your salary',
   },
   hero: {
-    title: 'Stay in control of your salary',
-    description: 'The wage calculator that treats shifts, supplements and tariffs seriously. Excel is history.',
-    highlights: ['Accurate', 'Fast', 'Private', 'Reliable'],
+    eyebrow: 'Native iPhone app',
+    title: 'Know what your shift is worth.',
+    description: 'Tidex calculates wages, supplements and tariffs in real time — so you arrive at payday with zero surprises.',
     primaryCta: 'Open the app',
     appStoreCta: 'Download on the App Store',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex logo',
-  },
-  features: {
-    eyebrow: 'Why Tidex?',
-    heading: 'Built for people who want full control',
-    description: 'Our core features are designed to make salary calculations simple, precise and trustworthy.',
-    items: [
-      {
-        icon: 'shield',
-        title: 'Protect yourself from underpayment',
-        description: 'Know what you will earn before you accept an extra shift.',
-      },
-      {
-        icon: 'zap',
-        title: 'Automatic supplements',
-        description: 'Every supplement is calculated automatically for each shift.',
-      },
-      {
-        icon: 'clock',
-        title: 'Smooth calculations',
-        description: 'Handles breaks, split shifts and overnight work without hassle.',
-      },
-      {
-        icon: 'layers',
-        title: 'Reports on demand',
-        description: 'Download complete PDF reports and keep the full overview month by month.',
-      },
-    ],
+    screenshotAlt: 'Screenshot of the Tidex iPhone app showing the dashboard and shifts overview.',
+    trustNote: 'Free to start. Built for real shift work.',
   },
   faq: {
     eyebrow: 'FAQ',
