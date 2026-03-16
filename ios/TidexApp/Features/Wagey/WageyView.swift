@@ -86,8 +86,7 @@ struct WageyView: View {
   private var chatInterface: some View {
     NavigationStack {
       ZStack {
-        Color.tidexBackground
-          .ignoresSafeArea()
+        TidexAppBackground()
 
         mainContent
           .frame(maxWidth: .infinity, maxHeight: .infinity)

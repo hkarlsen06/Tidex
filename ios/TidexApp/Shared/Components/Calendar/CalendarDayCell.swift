@@ -79,10 +79,17 @@ struct CalendarDayCell<Content: View>: View {
   let dayInfo: CalendarDayInfo
   let style: CalendarCellStyle
   let content: CalendarCellContent
-  private let horizontalCornerInset: CGFloat = Spacing.xxxs
   private let topCornerInset: CGFloat = 1
-  private let topRowHeight: CGFloat = 17
-  private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm - 2
+  private let defaultTopRowHeight: CGFloat = 17
+  private let todayTopRowHeight: CGFloat = 20
+  private let leadingMarkerLeadingInset: CGFloat = 3
+  private let dayNumberTrailingInset: CGFloat = 2
+  private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm
+  private let todayBadgeLeadingInset: CGFloat = Spacing.xxs + 1
+  private let todayBadgeTrailingInset: CGFloat = 3
+  private let todayBadgeTopInset: CGFloat = 1
+  private let todayBadgeBottomInset: CGFloat = 2
+  private let todayBadgeOverlayColor: Color = .tidexBlue.opacity(0.18)
   private let stackedMetricSpacing: CGFloat = -3
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
@@ -115,15 +122,19 @@ struct CalendarDayCell<Content: View>: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack(alignment: .center) {
+      HStack(alignment: .top, spacing: 0) {
         leadingMarkerSlot
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.leading, leadingMarkerLeadingInset)
 
-        Spacer(minLength: 0)
-
-        dayNumberView
+        if !style.showsTodayBadge {
+          dayNumberView
+            .padding(.trailing, dayNumberTrailingInset)
+        }
       }
-      .frame(height: topRowHeight, alignment: .top)
-      .padding(.horizontal, horizontalCornerInset)
+      .frame(
+        height: style.showsTodayBadge ? todayTopRowHeight : defaultTopRowHeight, alignment: .top
+      )
       .padding(.top, topCornerInset)
 
       contentView
@@ -139,6 +150,11 @@ struct CalendarDayCell<Content: View>: View {
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .strokeBorder(style.borderColor, lineWidth: style.borderWidth)
     )
+    .overlay(alignment: .topTrailing) {
+      if style.showsTodayBadge {
+        todayBadgeView
+      }
+    }
     .tidexCardShadow(cornerRadius: CornerRadius.sm)
     .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
   }
@@ -179,19 +195,38 @@ struct CalendarDayCell<Content: View>: View {
       .font(.tidexBodyMedium)
       .fixedSize(horizontal: true, vertical: false)
       .monospacedDigit()
-      .foregroundColor(style.showsTodayBadge ? .tidexTextOnBrand : style.dayNumberColor)
+      .foregroundColor(style.dayNumberColor)
+  }
+
+  private var todayBadgeView: some View {
+    Text("\(dayInfo.dayNumber)")
+      .font(.tidexBodyMedium)
+      .fixedSize(horizontal: true, vertical: false)
+      .foregroundColor(.tidexTextOnBrand)
+      .padding(.leading, todayBadgeLeadingInset)
+      .padding(.trailing, todayBadgeTrailingInset)
+      .padding(.top, todayBadgeTopInset)
+      .padding(.bottom, todayBadgeBottomInset)
       .background {
-        if style.showsTodayBadge {
-          RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
-            .fill(Color.tidexBrandPrimary)
-            .overlay {
-              RoundedRectangle(cornerRadius: todayBadgeCornerRadius, style: .continuous)
-                .fill(Color.black.opacity(0.15))
-            }
-            .padding(.horizontal, -(horizontalCornerInset - topCornerInset - 1))
-            .padding(.vertical, 1)
-        }
+        todayBadgeShape
+          .fill(Color.tidexBrandPrimary)
+          .overlay {
+            todayBadgeShape
+              .fill(todayBadgeOverlayColor)
+          }
       }
+  }
+
+  private var todayBadgeShape: some InsettableShape {
+    UnevenRoundedRectangle(
+      cornerRadii: RectangleCornerRadii(
+        topLeading: 0,
+        bottomLeading: todayBadgeCornerRadius,
+        bottomTrailing: 0,
+        topTrailing: todayBadgeCornerRadius
+      ),
+      style: .continuous
+    )
   }
 
   @ViewBuilder

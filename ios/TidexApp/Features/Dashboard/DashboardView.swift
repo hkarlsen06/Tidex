@@ -78,10 +78,9 @@ struct DashboardView: View {
   var body: some View {
     NavigationStack {
       ZStack {
-        // Background that fills entire screen including safe areas
-        // Uses adaptive tidexBackground to match other tabs and prevent black bars during transitions
-        Color.tidexBackground
-          .ignoresSafeArea()
+        // Background that fills entire screen including safe areas.
+        // Matches the brighter-at-the-top app chrome used in the marketing mockup.
+        TidexAppBackground()
 
         // Main content - month picker is now in shared overlay
         Group {
@@ -121,7 +120,7 @@ struct DashboardView: View {
         }
       )
       .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+      .toolbarBackground(.hidden, for: .navigationBar)
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
           TodayDateLabel()
@@ -827,14 +826,14 @@ struct DashboardView: View {
           ? .tidexTextPrimary
           : .tidexTextMuted
       )
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.card)
-          .fill(
-            isEnabled
-              ? Color.tidexSurfacePrimary
-              : Color.tidexSurfacePrimary.opacity(0.72)
-          )
+      .tidexGlass(
+        shape: .rect(cornerRadius: CornerRadius.card),
+        tint: isEnabled ? Color.tidexBlue.opacity(0.04) : Color.white.opacity(0.01),
+        clear: true,
+        interactive: isEnabled,
+        fallbackOpacity: isEnabled ? 0.5 : 0.42
       )
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
       .tidexCardShadow(cornerRadius: CornerRadius.card)
     }
     .buttonStyle(.plain)
@@ -845,14 +844,26 @@ struct DashboardView: View {
   private func clockButtonsSkeletonSection() -> some View {
     HStack(spacing: Spacing.sm) {
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
         .frame(height: 34)
+        .tidexGlass(
+          shape: .rect(cornerRadius: CornerRadius.card),
+          tint: Color.tidexBlue.opacity(0.03),
+          clear: true,
+          fallbackOpacity: 0.5
+        )
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
         .tidexCardShadow(cornerRadius: CornerRadius.card)
         .shimmer(isActive: true)
 
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
         .frame(height: 34)
+        .tidexGlass(
+          shape: .rect(cornerRadius: CornerRadius.card),
+          tint: Color.tidexBlue.opacity(0.03),
+          clear: true,
+          fallbackOpacity: 0.5
+        )
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
         .tidexCardShadow(cornerRadius: CornerRadius.card)
         .shimmer(isActive: true)
     }

@@ -40,8 +40,7 @@ struct TabScreenContainer<
   var body: some View {
     NavigationStack {
       ZStack {
-        Color.tidexBackground
-          .ignoresSafeArea()
+        TidexAppBackground()
 
         content()
       }
@@ -148,13 +147,16 @@ struct RefreshableTabScreenContainer<Content: View>: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        content()
+      ZStack {
+        TidexAppBackground()
+
+        ScrollView {
+          content()
+        }
+        .refreshable {
+          await onRefresh()
+        }
       }
-      .refreshable {
-        await onRefresh()
-      }
-      .background(Color.tidexBackground)
       .navigationTitle(title)
       .navigationBarTitleDisplayMode(.inline)
       .toolbarBackground(Color.tidexBackground, for: .navigationBar)

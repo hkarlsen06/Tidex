@@ -440,6 +440,33 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     XCTAssertEqual(highlightedMessages[0].text, "One")
     XCTAssertNotEqual(highlightedMessages[1].text, "Two")
     XCTAssertTrue(highlightedMessages[1].text.hasPrefix("Two"))
+    XCTAssertFalse(FriendsThreadExyteHighlightRedrawResolver.isHighlighted(highlightedMessages[0]))
+    XCTAssertTrue(FriendsThreadExyteHighlightRedrawResolver.isHighlighted(highlightedMessages[1]))
+    XCTAssertEqual(
+      FriendsThreadExyteHighlightRedrawResolver.visibleText(for: highlightedMessages[1]),
+      "Two"
+    )
+  }
+
+  func testMenuItemsIgnoreTransientHighlightMarkerForMediaOnlyMessage() {
+    let highlightedMediaOnlyMessage =
+      FriendsThreadExyteHighlightRedrawResolver
+      .applyingHighlightMarker(
+        to: [
+          Message(
+            id: "message-2",
+            user: User(id: "other", name: "Other", avatarURL: nil, isCurrentUser: false),
+            createdAt: Date(),
+            text: ""
+          )
+        ],
+        highlightedPresentedMessageID: "message-2"
+      )[0]
+
+    XCTAssertEqual(
+      FriendsThreadMessageMenuAction.menuItems(for: highlightedMediaOnlyMessage),
+      [.reply, .report]
+    )
   }
 
   private func makeMessage(

@@ -179,8 +179,7 @@ struct ShiftsView: View {
     NavigationStack {
       ZStack(alignment: .bottom) {
         // Background that fills entire screen including safe areas
-        Color.tidexBackground
-          .ignoresSafeArea()
+        TidexAppBackground()
 
         // Content area - fills entire screen, content scrolls behind month picker
         mainContentLayer
@@ -1075,7 +1074,7 @@ struct ShiftsView: View {
             Section {
               listJobFilterBar
                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
-                .listRowBackground(Color.tidexBackground)
+                .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
           }
@@ -1093,7 +1092,7 @@ struct ShiftsView: View {
                 totalGross: weekGroup.totalGross
               )
               .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-              .listRowBackground(Color.tidexBackground)
+              .listRowBackground(Color.clear)
               .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
             }
           }
@@ -1424,7 +1423,7 @@ struct ShiftsView: View {
           Section {
             listJobFilterBar
               .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
-              .listRowBackground(Color.tidexBackground)
+              .listRowBackground(Color.clear)
               .listRowSeparator(.hidden)
           }
         }
@@ -1442,7 +1441,7 @@ struct ShiftsView: View {
               totalGross: weekGroup.totalGross
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-            .listRowBackground(Color.tidexBackground)
+            .listRowBackground(Color.clear)
             .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
           }
         }
@@ -1482,7 +1481,7 @@ struct ShiftsView: View {
     case .shift(let shift):
       shiftCardRow(shift: shift)
         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-        .listRowBackground(Color.tidexBackground)
+        .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         // Native swipe actions - works perfectly with List scrolling
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -1515,7 +1514,7 @@ struct ShiftsView: View {
         selectedTab = .add
       })
       .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-      .listRowBackground(Color.tidexBackground)
+      .listRowBackground(Color.clear)
       .listRowSeparator(.hidden)
     }
   }

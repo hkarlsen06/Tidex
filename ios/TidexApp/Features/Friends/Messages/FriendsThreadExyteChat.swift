@@ -41,7 +41,9 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
   }
 
   static func menuItems(for message: ExyteChat.Message) -> [Self] {
-    let hasText = !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    let hasText = !FriendsThreadExyteHighlightRedrawResolver.visibleText(for: message)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .isEmpty
 
     if message.user.isCurrentUser {
       var items: [Self] = [.reply]
@@ -244,23 +246,6 @@ enum FriendsThreadChatViewportResolver {
   }
 }
 
-@MainActor
-enum FriendsThreadMessageHighlightRegistry {
-  private static var highlightedMessageIDsByThread: [String: String] = [:]
-
-  static func setHighlightedMessageID(_ messageID: String?, in threadID: String) {
-    if let messageID {
-      highlightedMessageIDsByThread[threadID] = messageID
-    } else {
-      highlightedMessageIDsByThread.removeValue(forKey: threadID)
-    }
-  }
-
-  static func isHighlighted(messageID: String, in threadID: String) -> Bool {
-    highlightedMessageIDsByThread[threadID] == messageID
-  }
-}
-
 enum FriendsThreadChatViewportRequestResolver {
   static func presentedMessageID(
     for messageId: String?,
@@ -328,6 +313,15 @@ enum FriendsThreadExyteHighlightRedrawResolver {
       highlightedMessage.text += redrawMarker
       return highlightedMessage
     }
+  }
+
+  static func isHighlighted(_ message: ExyteChat.Message) -> Bool {
+    message.text.hasSuffix(redrawMarker)
+  }
+
+  static func visibleText(for message: ExyteChat.Message) -> String {
+    guard isHighlighted(message) else { return message.text }
+    return String(message.text.dropLast(redrawMarker.count))
   }
 }
 
