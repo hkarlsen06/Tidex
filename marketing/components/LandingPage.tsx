@@ -66,13 +66,10 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             bottom: `${verticalInset * 100}%`,
           }}
         >
-          <Image
+          <img
             src={heroScreenshotSrc}
             alt={marketing.hero.screenshotAlt}
-            fill
-            priority
-            sizes="(min-width: 1024px) 288px, (min-width: 640px) 320px, 288px"
-            className="object-cover"
+            className="h-full w-full object-cover"
           />
           <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] border border-white/8" />
         </div>
