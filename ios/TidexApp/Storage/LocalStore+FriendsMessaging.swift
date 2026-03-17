@@ -245,7 +245,14 @@ extension LocalStoreActor {
   }
 
   func deleteMessage(id: String, viewerUserId: String) throws {
+    guard let message = try fetchMessage(id: id, viewerUserId: viewerUserId) else { return }
+    let threadId = message.threadId
     try deleteStoredMessage(id: id, viewerUserId: viewerUserId)
+    try refreshThreadPreviewAfterDeletingMessage(
+      threadId: threadId,
+      deletedMessageId: id,
+      viewerUserId: viewerUserId
+    )
     try modelContext.save()
   }
 
@@ -586,6 +593,68 @@ extension LocalStoreActor {
     try deleteAttachments(messageId: id, viewerUserId: viewerUserId)
     try deleteReactions(messageId: id, viewerUserId: viewerUserId)
     modelContext.delete(message)
+  }
+
+  private func refreshThreadPreviewAfterDeletingMessage(
+    threadId: String,
+    deletedMessageId: String,
+    viewerUserId: String
+  ) throws {
+    let threadDescriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { localThread in
+        localThread.id == threadId && localThread.viewerUserId == viewerUserId
+      }
+    )
+
+    guard let thread = try modelContext.fetch(threadDescriptor).first else { return }
+    guard thread.lastMessageId == deletedMessageId else { return }
+
+    let latestMessageDescriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.threadId == threadId && localMessage.viewerUserId == viewerUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessage.createdAt, order: .reverse),
+        SortDescriptor(\LocalMessage.id, order: .reverse),
+      ]
+    )
+
+    guard let latestMessage = try modelContext.fetch(latestMessageDescriptor).first else {
+      thread.lastMessageId = nil
+      thread.lastMessageSenderId = nil
+      thread.lastMessageAt = nil
+      thread.lastMessageBody = nil
+      thread.lastMessagePreviewKindRaw = nil
+      thread.lastMessageHasImage = false
+      thread.sortTimestamp = thread.createdAt
+      thread.updatedAt = Date()
+      return
+    }
+
+    let latestMessageId = latestMessage.id
+    let attachmentDescriptor = FetchDescriptor<LocalMessageAttachment>(
+      predicate: #Predicate { attachment in
+        attachment.messageId == latestMessageId && attachment.viewerUserId == viewerUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessageAttachment.attachmentIndex, order: .forward),
+        SortDescriptor(\LocalMessageAttachment.id, order: .forward),
+      ]
+    )
+
+    let latestFriendMessage = latestMessage.toFriendMessage(
+      attachments: try modelContext.fetch(attachmentDescriptor),
+      reactions: []
+    )
+
+    thread.lastMessageId = latestFriendMessage.id
+    thread.lastMessageSenderId = latestFriendMessage.senderUserId
+    thread.lastMessageAt = latestFriendMessage.createdAt
+    thread.lastMessageBody = latestFriendMessage.body
+    thread.lastMessagePreviewKindRaw = latestFriendMessage.previewKind.rawValue
+    thread.lastMessageHasImage = latestFriendMessage.hasImageAttachment
+    thread.sortTimestamp = latestFriendMessage.createdAt
+    thread.updatedAt = Date()
   }
 
   private func reconcileMissingThreads(keeping threadIds: [String], for viewerUserId: String) throws

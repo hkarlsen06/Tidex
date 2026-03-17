@@ -37,6 +37,7 @@
 		4E61778127607441CA2BF1FBF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */; };
 		614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */; };
 		804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */; };
+		88F1A2B33040111100A1B2C3 /* FriendsListOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88F1A2B43040111100A1B2C4 /* FriendsListOrderingTests.swift */; };
 		91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */; };
 		9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */; };
 		A1B2C3D43031111100A1B2C3 /* LaunchAppearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */; };
@@ -151,6 +152,7 @@
 		6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TemporaryClockSessionStoreTests.swift; sourceTree = "<group>"; };
 		855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/App/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollTotalsTests.swift; sourceTree = "<group>"; };
+		88F1A2B43040111100A1B2C4 /* FriendsListOrderingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsListOrderingTests.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC732DB07C7200EA8C5F /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = SOURCE_ROOT; };
 		958DCC742DB07C7200EA8C5F /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -366,6 +368,7 @@
 				F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */,
 				0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */,
 				86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */,
+				88F1A2B43040111100A1B2C4 /* FriendsListOrderingTests.swift */,
 				A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */,
 				C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */,
 				00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */,
@@ -877,6 +880,7 @@
 				DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */,
 				614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */,
 				91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */,
+				88F1A2B33040111100A1B2C3 /* FriendsListOrderingTests.swift in Sources */,
 				A1B2C3D43031111100A1B2C3 /* LaunchAppearanceTests.swift in Sources */,
 				C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */,
 				804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */,

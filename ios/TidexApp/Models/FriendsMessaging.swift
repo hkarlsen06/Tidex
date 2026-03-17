@@ -596,7 +596,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     senderUserId == viewerUserId
       && messageType == .user
       && deletedAt == nil
-      && sendState == .sent
+      && (sendState == .sent || sendState == .failed)
   }
 
   func withSendState(

@@ -41,9 +41,8 @@ final class FriendsThreadViewModel: ObservableObject {
     static let remoteTimeout: Duration = .seconds(5)
   }
 
-  private enum OptimisticSend {
-    // Let the composer collapse before inserting into Exyte's list.
-    static let insertionDelay: Duration = .milliseconds(120)
+  private enum MessageBody {
+    static let characterLimit = 2000
   }
 
   private enum ComposerState: Equatable {
@@ -137,7 +136,13 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published private(set) var counterpartShiftPreview: SharerShiftPreview?
   @Published private var composerState: ComposerState = .normal
   @Published private(set) var composerFocusRequestToken = 0
-  @Published var draft = ""
+  @Published private(set) var composerValidationMessage: String?
+  @Published private(set) var draftCharacterCount = 0
+  @Published var draft = "" {
+    didSet {
+      updateDraftValidation(for: draft)
+    }
+  }
   @Published var stagedComposerAttachment: FriendsComposerAttachmentDraft?
   @Published var sendErrorMessage: String?
 
@@ -174,6 +179,14 @@ final class FriendsThreadViewModel: ObservableObject {
 
   var draftEditTarget: FriendMessage? {
     composerState.editTarget
+  }
+
+  var draftCharacterLimit: Int {
+    MessageBody.characterLimit
+  }
+
+  var isDraftOverCharacterLimit: Bool {
+    draftCharacterCount > MessageBody.characterLimit
   }
 
   init(
@@ -502,6 +515,7 @@ final class FriendsThreadViewModel: ObservableObject {
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     let composerAttachment = stagedComposerAttachment
     guard !normalizedContent.isEmpty || composerAttachment != nil else { return false }
+    guard !isMessageBodyTooLong(normalizedContent) else { return false }
     guard canSendShiftSnapshotAttachment(composerAttachment) else {
       sendErrorMessage = shiftSnapshotSendUnavailableMessage
       return false
@@ -542,7 +556,13 @@ final class FriendsThreadViewModel: ObservableObject {
     await stopTypingIfNeeded()
 
     let sendTask = startSendTask(for: optimisticMessage)
-    if let earlyResult = await peekSendResultWithinOptimisticWindow(sendTask) {
+    await repository.saveOptimisticMessage(
+      optimisticMessage,
+      in: route.threadId,
+      for: viewerUserId
+    )
+
+    if let earlyResult = await sendTask.peekResult() {
       switch earlyResult {
       case .success(let sentMessage):
         await repository.saveConfirmedMessage(
@@ -554,18 +574,15 @@ final class FriendsThreadViewModel: ObservableObject {
         loadFromCache()
         return true
       case .failure(let error):
+        await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
         await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
-        sendErrorMessage = sendMessageFailedMessage
+        sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
+        loadFromCache()
         threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
         return false
       }
     }
 
-    await repository.saveOptimisticMessage(
-      optimisticMessage,
-      in: route.threadId,
-      for: viewerUserId
-    )
     loadFromCache()
     sendMessageInBackground(optimisticMessage, sendTask: sendTask)
     return true
@@ -591,6 +608,11 @@ final class FriendsThreadViewModel: ObservableObject {
     sendErrorMessage = nil
     await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
     loadFromCache()
+
+    guard message.sendState == .sent else {
+      Haptics.play(.light)
+      return
+    }
 
     do {
       let updatedThread = try await service.deleteMessage(messageId: messageId)
@@ -989,6 +1011,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedContent.isEmpty else { return false }
+    guard !isMessageBodyTooLong(normalizedContent) else { return false }
 
     if currentMessage.normalizedBody == normalizedContent {
       sendErrorMessage = nil
@@ -1021,7 +1044,7 @@ final class FriendsThreadViewModel: ObservableObject {
       composerState = .edit(currentMessage)
       composerFocusRequestToken += 1
       loadFromCache()
-      sendErrorMessage = editMessageFailedMessage
+      sendErrorMessage = isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage
       Haptics.play(.error)
       threadLogger.error("Failed to edit message: \(error.localizedDescription)")
       return false
@@ -1180,15 +1203,21 @@ final class FriendsThreadViewModel: ObservableObject {
     return handle
   }
 
-  private func peekSendResultWithinOptimisticWindow(
-    _ sendTask: SendTaskHandle
-  ) async -> Result<FriendMessage, Error>? {
-    if let result = await sendTask.peekResult() {
-      return result
-    }
+  private func updateDraftValidation(for draft: String) {
+    let normalizedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    draftCharacterCount = normalizedDraft.count
+    composerValidationMessage =
+      isMessageBodyTooLong(normalizedDraft) ? messageTooLongMessage : nil
+  }
 
-    try? await Task.sleep(for: OptimisticSend.insertionDelay)
-    return await sendTask.peekResult()
+  private func isMessageBodyTooLong(_ normalizedBody: String) -> Bool {
+    normalizedBody.count > MessageBody.characterLimit
+  }
+
+  private func isMessageBodyTooLongError(_ error: Error) -> Bool {
+    guard let serviceError = error as? FriendsMessagingServiceError else { return false }
+    guard case .httpError(_, let message) = serviceError else { return false }
+    return (message ?? "").localizedCaseInsensitiveContains("2000 character limit")
   }
 
   private func sendMessageToService(_ message: FriendMessage) async throws -> FriendMessage {
@@ -1310,6 +1339,11 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private var sendMessageFailedMessage: String {
     String(localized: .friendsChatSendFailed)
+  }
+
+  private var messageTooLongMessage: String {
+    String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
+      .replacingOccurrences(of: "{limit}", with: "\(MessageBody.characterLimit)")
   }
 
   private var editMessageFailedMessage: String {

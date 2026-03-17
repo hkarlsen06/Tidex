@@ -28,6 +28,7 @@ struct FriendsThreadView: View {
   @State private var showProfile = false
   @State private var isPinnedToBottom = true
   @State private var lastHandledNavigationRequestId: UUID?
+  @State private var pinToBottomRequestToken = 0
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -73,6 +74,9 @@ struct FriendsThreadView: View {
       stagedAttachment: viewModel.stagedComposerAttachment,
       isThreadReadOnly: viewModel.isThreadReadOnly,
       sendErrorMessage: viewModel.sendErrorMessage,
+      composerValidationMessage: viewModel.composerValidationMessage,
+      draftCharacterCount: viewModel.draftCharacterCount,
+      draftCharacterLimit: viewModel.draftCharacterLimit,
       placeholder: String(localized: .friendsChatPlaceholder),
       canSendShiftSnapshots: viewModel.canSendShiftSnapshots,
       focusRequestToken: viewModel.composerFocusRequestToken
@@ -442,6 +446,7 @@ struct FriendsThreadView: View {
       FriendsThreadChatViewportBridge(
         messages: exyteMessages,
         scrollRequest: viewportScrollRequest,
+        pinToBottomRequestToken: pinToBottomRequestToken,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
         onPinnedToBottomChanged: { isPinnedToBottom = $0 },
         onDidHandleScrollRequest: handleViewportScrollRequest
@@ -781,7 +786,13 @@ struct FriendsThreadView: View {
       }
     }
     composerBridge.onSend = { content in
-      let wasPinnedToBottom = isPinnedToBottom
+      let wasPinnedToBottom = await MainActor.run { () -> Bool in
+        let wasPinnedToBottom = isPinnedToBottom
+        if !wasPinnedToBottom {
+          pinToBottomRequestToken += 1
+        }
+        return wasPinnedToBottom
+      }
       let didSend = await viewModel.sendMessage(content: content)
       guard didSend else { return false }
 

@@ -23,6 +23,9 @@ struct FriendsThreadComposerConfiguration: Equatable {
   let stagedAttachment: FriendsComposerAttachmentDraft?
   let isThreadReadOnly: Bool
   let sendErrorMessage: String?
+  let composerValidationMessage: String?
+  let draftCharacterCount: Int
+  let draftCharacterLimit: Int
   let placeholder: String
   let canSendShiftSnapshots: Bool
   let focusRequestToken: Int
@@ -36,6 +39,9 @@ final class FriendsThreadComposerBridge: ObservableObject {
   @Published private(set) var stagedAttachment: FriendsComposerAttachmentDraft?
   @Published private(set) var isThreadReadOnly = false
   @Published private(set) var sendErrorMessage: String?
+  @Published private(set) var composerValidationMessage: String?
+  @Published private(set) var draftCharacterCount = 0
+  @Published private(set) var draftCharacterLimit = 0
   @Published private(set) var placeholder: String = ""
   @Published private(set) var canSendShiftSnapshots = false
   @Published private(set) var focusRequestToken = 0
@@ -56,6 +62,10 @@ final class FriendsThreadComposerBridge: ObservableObject {
   private var isApplyingExternalDraft = false
   private var isApplyingExternalAttachment = false
 
+  var isDraftOverCharacterLimit: Bool {
+    draftCharacterCount > draftCharacterLimit
+  }
+
   var draftBinding: Binding<String> {
     Binding(
       get: { self.draftText },
@@ -70,6 +80,9 @@ final class FriendsThreadComposerBridge: ObservableObject {
     replyPreview = configuration.replyPreview
     isThreadReadOnly = configuration.isThreadReadOnly
     sendErrorMessage = configuration.sendErrorMessage
+    composerValidationMessage = configuration.composerValidationMessage
+    draftCharacterCount = configuration.draftCharacterCount
+    draftCharacterLimit = configuration.draftCharacterLimit
     placeholder = configuration.placeholder
     canSendShiftSnapshots = configuration.canSendShiftSnapshots
     focusRequestToken = configuration.focusRequestToken
@@ -156,6 +169,7 @@ struct FriendsThreadComposerHostedView: View {
     let normalizedDraft = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
     return (!normalizedDraft.isEmpty || bridge.stagedAttachment != nil)
       && !bridge.isThreadReadOnly
+      && !bridge.isDraftOverCharacterLimit
       && !isSubmitting
       && !attachmentController.isProcessingAttachment
   }
@@ -209,13 +223,26 @@ struct FriendsThreadComposerHostedView: View {
         .padding(.horizontal, Spacing.md)
       }
 
-      if let sendErrorMessage = bridge.sendErrorMessage {
-        HStack(spacing: Spacing.xs) {
-          Text(sendErrorMessage)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+      if shouldShowComposerMeta {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+          if let sendErrorMessage = bridge.sendErrorMessage {
+            Text(sendErrorMessage)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexError)
+          } else if let composerValidationMessage = bridge.composerValidationMessage {
+            Text(composerValidationMessage)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexError)
+          }
 
-          Spacer()
+          Spacer(minLength: 0)
+
+          if bridge.draftCharacterCount > 0 {
+            Text("\(bridge.draftCharacterCount)/\(bridge.draftCharacterLimit)")
+              .font(.tidexFootnote)
+              .foregroundColor(bridge.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted)
+              .monospacedDigit()
+          }
         }
         .padding(.horizontal, Spacing.md)
       }
@@ -350,6 +377,12 @@ struct FriendsThreadComposerHostedView: View {
       reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.9),
       value: shouldHidePlusButton
     )
+  }
+
+  private var shouldShowComposerMeta: Bool {
+    bridge.sendErrorMessage != nil
+      || bridge.composerValidationMessage != nil
+      || bridge.draftCharacterCount > 0
   }
 
   private func sendMessage() {
