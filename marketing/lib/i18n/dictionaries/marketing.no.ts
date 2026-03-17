@@ -15,7 +15,7 @@ export const marketingNo = {
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex-logo',
     screenshotAlt: 'Skjermbilde av Tidex iPhone-appen som viser dashbordet og vaktoversikten.',
-    trustNote: 'Gratis å starte. Bygget for ekte turnusarbeid.',
+    trustNote: 'Gratis å starte. Bygget for ekte arbeid.',
   },
   faq: {
     eyebrow: 'FAQ',
@@ -25,7 +25,7 @@ export const marketingNo = {
       {
         question: 'Hva er Tidex, og hvorfor bør jeg bruke det?',
         answers: [
-          'Tidex er en iPhone-app for turnusarbeidere som vil vite hva hver vakt faktisk er verdt før lønning.',
+          'Tidex er en iPhone-app for timelønnede som vil vite hva hver vakt faktisk er verdt før lønning.',
           'Du får et tydelig estimat av lønn, tillegg, overtid og pauser på ett sted, så du kan planlegge bedre, oppdage feil og få mer kontroll på inntekten din.',
         ],
       },
