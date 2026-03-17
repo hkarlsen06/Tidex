@@ -23,6 +23,13 @@ export const marketingNo = {
     description: 'Alt du trenger å vite om vakter, rapporter og hvordan dataene dine behandles.',
     items: [
       {
+        question: 'Hva er Tidex, og hvorfor bør jeg bruke det?',
+        answers: [
+          'Tidex er en iPhone-app for turnusarbeidere som vil vite hva hver vakt faktisk er verdt før lønning.',
+          'Du får et tydelig estimat av lønn, tillegg, overtid og pauser på ett sted, så du kan planlegge bedre, oppdage feil og få mer kontroll på inntekten din.',
+        ],
+      },
+      {
         question: 'Hva koster Tidex?',
         answers: [
           'Du kan komme i gang gratis med kjernefunksjonene.',
