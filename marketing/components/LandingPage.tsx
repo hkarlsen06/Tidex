@@ -251,7 +251,12 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             </p>
           </div>
 
-          <Accordion type="single" collapsible className="space-y-3">
+          <Accordion
+            type="single"
+            collapsible
+            defaultValue={faqs[0]?.question}
+            className="space-y-3"
+          >
             {faqs.map((faq) => (
               <AccordionItem
                 key={faq.question}
