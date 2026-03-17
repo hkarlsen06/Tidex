@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import dashboardEn from '@/public/hero/dashboard-en.png';
 import dashboardNo from '@/public/hero/dashboard-no.png';
@@ -22,6 +23,12 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ locale, dictionary }: LandingPageProps) {
+  const mobileBottomCtaHeight = 'calc(6.5rem + env(safe-area-inset-bottom))';
+  const mobileHeroStyle = {
+    '--mobile-hero-height': 'var(--hero-initial-dvh)',
+    '--mobile-bottom-cta-height': mobileBottomCtaHeight,
+    '--mobile-phone-fade-height': '7rem',
+  } as CSSProperties;
   const marketing = dictionary.marketing;
   const faqs = marketing.faq.items;
   const privacyHref = buildLocalizedMarketingPath(locale, '/privacy');
@@ -46,9 +53,15 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
     (screenAspectRatio * (1 + horizontalBezelRatio * 2)) /
     (1 + verticalBezelRatio * 2);
   const phoneOuterClass = 'w-[16.8rem] sm:w-[17.2rem]';
-  const phoneScreenshot = (wrapperClassName: string, phoneClassName: string) => (
+  const phoneScreenshot = (
+    wrapperClassName: string,
+    phoneClassName: string,
+    showAmbientGlow = true
+  ) => (
     <div className={wrapperClassName}>
-      <div className="absolute left-1/2 top-1/2 -z-10 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.18),rgba(56,189,248,0.08)_42%,transparent_72%)]" />
+      {showAmbientGlow ? (
+        <div className="absolute left-1/2 top-1/2 -z-10 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.18),rgba(56,189,248,0.08)_42%,transparent_72%)]" />
+      ) : null}
 
       <div
         className={`relative inline-block overflow-hidden rounded-[3.15rem] border border-white/10 bg-[radial-gradient(circle_at_top,hsl(208_82%_18%),hsl(220_54%_5%)_38%)] ${phoneClassName}`}
@@ -73,19 +86,37 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             alt={marketing.hero.screenshotAlt}
             className="h-full w-full object-cover"
           />
+          <div
+            className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-full bg-[hsl(220_54%_5%)] shadow-[0_4px_12px_rgba(0,0,0,0.26)]"
+            style={{
+              top: '1.15%',
+              width: '34.5%',
+              height: '4.3%',
+            }}
+          >
+            <div className="absolute inset-y-1/2 right-[20%] aspect-square h-[16%] -translate-y-1/2 rounded-full bg-[rgba(10,14,20,0.78)] opacity-38" />
+            <div className="absolute inset-y-1/2 right-[9%] aspect-square h-[30%] -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.09),rgba(74,98,132,0.1)_20%,rgba(10,14,20,0.88)_52%,rgba(0,0,0,0.96)_100%)] opacity-58" />
+          </div>
           <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] border border-white/8" />
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-1/2 -z-10 h-24 w-[78%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.18),transparent_72%)]" />
+      {showAmbientGlow ? (
+        <div className="absolute bottom-0 left-1/2 -z-10 h-24 w-[78%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.18),transparent_72%)]" />
+      ) : null}
     </div>
   );
 
   return (
-    <main className="relative text-text-primary">
+    <main
+      className="relative pb-[calc(6.5rem+env(safe-area-inset-bottom))] text-text-primary lg:pb-0"
+    >
       <LocaleLangSetter locale={locale} />
 
-      <section className="relative flex flex-col overflow-visible px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pb-8 lg:min-h-dvh lg:overflow-hidden lg:pb-10 sm:px-8">
+      <section
+        className="relative flex min-h-[var(--mobile-hero-height)] flex-col overflow-hidden px-5 pb-[var(--mobile-bottom-cta-height)] pt-[max(1rem,env(safe-area-inset-top))] sm:pb-8 sm:px-8 lg:min-h-dvh lg:pb-10"
+        style={mobileHeroStyle}
+      >
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_130%_80%_at_50%_-15%,hsl(199_89%_48%_/_0.24),transparent_60%)]" />
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
@@ -93,36 +124,49 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
         </div>
 
         <div className="mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between py-4">
-          <Image
-            src="/apple-touch-icon.png"
-            alt={marketing.hero.imageAlt}
-            width={180}
-            height={180}
-            priority
-            className="h-11 w-11 rounded-[0.9rem] sm:h-12 sm:w-12 sm:rounded-[1rem]"
-          />
+          <a
+            href={appStoreHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={marketing.hero.appStoreCta}
+            className="rounded-[0.9rem] transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] sm:rounded-[1rem]"
+          >
+            <Image
+              src="/apple-touch-icon.png"
+              alt={marketing.hero.imageAlt}
+              width={180}
+              height={180}
+              priority
+              className="h-11 w-11 rounded-[0.9rem] sm:h-12 sm:w-12 sm:rounded-[1rem]"
+            />
+          </a>
           <MarketingLocaleToggle />
         </div>
 
         <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col lg:flex-row lg:items-center lg:gap-14 xl:gap-20">
-          <div className="flex flex-1 flex-col py-10 sm:py-14 lg:max-w-140 lg:flex-none lg:py-0 xl:max-w-150">
+          <div className="flex min-h-0 flex-1 flex-col py-10 sm:py-14 lg:max-w-140 lg:flex-none lg:py-0 xl:max-w-150">
             <h1 className="animate-fade-in text-balance text-[3.25rem] font-semibold leading-[1.04] tracking-[-0.05em] [animation-delay:60ms] sm:text-[3.75rem] lg:text-[4.25rem] xl:text-[4.75rem]">
               {marketing.hero.title}
             </h1>
 
-            <p className="mt-6 max-w-[42ch] animate-fade-in text-pretty text-[1.0625rem] leading-[1.8] text-text-secondary [animation-delay:120ms] sm:text-lg lg:mb-10 xl:mb-12">
+            <p className="mt-3 max-w-[42ch] animate-fade-in text-pretty text-[1.0625rem] leading-[1.8] text-text-secondary [animation-delay:120ms] sm:text-lg lg:mb-10 xl:mb-12">
               {marketing.hero.description}
             </p>
 
-            <div className="relative mt-8 animate-fade-in lg:hidden [animation-delay:150ms]">
-              <div className="relative mx-auto h-[19.5rem] w-full max-w-[21rem] overflow-hidden">
+            <div className="relative mb-2 mt-auto pt-10 animate-fade-in lg:hidden [animation-delay:150ms]">
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-x-0 top-0 flex justify-center">
+                  <div className="h-[21rem] w-[21rem] -translate-y-[1.75rem] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.14),rgba(56,189,248,0.06)_44%,transparent_72%)]" />
+                </div>
+              </div>
+              <div className="relative mx-auto h-[19.5rem] w-full max-w-[21rem] overflow-visible">
                 <div className="absolute inset-x-0 top-0 flex justify-center">
                   {phoneScreenshot(
                     'relative scale-[0.92] origin-top',
-                    'w-[17.1rem]'
+                    'w-[17.1rem]',
+                    false
                   )}
                 </div>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/85 to-transparent" />
               </div>
             </div>
 
@@ -153,22 +197,31 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             {phoneScreenshot('relative', phoneOuterClass)}
           </div>
         </div>
+
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 lg:hidden"
+          style={{
+            height: 'calc(var(--mobile-phone-fade-height) + var(--mobile-bottom-cta-height))',
+            background:
+              'linear-gradient(to bottom, transparent 0, hsl(var(--background)) var(--mobile-phone-fade-height), hsl(var(--background)) 100%)',
+          }}
+        />
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-30 lg:hidden">
         <div className="pointer-events-none absolute inset-x-0 bottom-full h-12 bg-gradient-to-t from-background/90 via-background/45 to-transparent" />
         <div className="border-t border-white/8 bg-[linear-gradient(180deg,rgba(8,17,30,0.88),rgba(5,12,22,0.96))] px-5 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.36)] backdrop-blur-xl">
-          <div className="mx-auto flex w-full max-w-6xl items-center gap-4">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-center gap-4">
             <a
               href={appStoreHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 active:scale-[0.98]"
+              className="inline-flex h-12 items-center gap-2.5 whitespace-nowrap rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 active:scale-[0.98]"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.05rem] w-[1.05rem] shrink-0" aria-hidden="true">
                 <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z" />
               </svg>
-              <span className="truncate">{marketing.hero.appStoreCta}</span>
+              <span>{marketing.hero.appStoreCta}</span>
             </a>
             <Link
               href="#faq"
@@ -181,12 +234,15 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
         </div>
       </div>
 
-      <section id="faq" className="px-6 pb-24 pt-6 sm:pb-32 lg:pb-36">
-        <div className="mx-auto w-full max-w-5xl p-0 sm:rounded-4xl sm:border sm:border-white/8 sm:bg-white/4 sm:p-12 sm:backdrop-blur-xl lg:p-14">
+      <section
+        id="faq"
+        className="relative overflow-hidden px-6 pb-24 pt-6 sm:pb-32 lg:pb-36"
+      >
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_130%_80%_at_50%_-15%,hsl(199_89%_48%_/_0.24),transparent_60%)]" />
+        </div>
+        <div className="mx-auto w-full max-w-5xl">
           <div className="mb-10 max-w-2xl space-y-4 sm:mb-14 sm:space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-highlight">
-              {marketing.faq.eyebrow}
-            </p>
             <h2 className="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
               {marketing.faq.heading}
             </h2>
