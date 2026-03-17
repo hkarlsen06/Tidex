@@ -16,6 +16,7 @@ DECLARE
   v_existing_state public.thread_user_state%ROWTYPE;
   v_existing_message public.messages%ROWTYPE;
   v_result public.thread_user_state%ROWTYPE;
+  v_newly_read_count integer := 0;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -36,12 +37,27 @@ BEGIN
     RAISE EXCEPTION 'Read marker message does not belong to the thread';
   END IF;
 
+  INSERT INTO public.thread_user_state (
+    thread_id,
+    user_id,
+    unread_count,
+    updated_at
+  )
+  VALUES (
+    p_thread_id,
+    v_uid,
+    0,
+    now()
+  )
+  ON CONFLICT (thread_id, user_id) DO NOTHING;
+
   SELECT *
   INTO v_existing_state
   FROM public.thread_user_state tus
   WHERE tus.thread_id = p_thread_id
     AND tus.user_id = v_uid
-  LIMIT 1;
+  LIMIT 1
+  FOR UPDATE;
 
   IF v_existing_state.last_read_message_id IS NOT NULL THEN
     SELECT *
@@ -53,25 +69,26 @@ BEGIN
 
   IF v_existing_message.id IS NULL
      OR (v_target_message.created_at, v_target_message.id) > (v_existing_message.created_at, v_existing_message.id) THEN
-    INSERT INTO public.thread_user_state (
-      thread_id,
-      user_id,
-      last_read_message_id,
-      last_read_at,
-      updated_at
-    )
-    VALUES (
-      p_thread_id,
-      v_uid,
-      v_target_message.id,
-      v_target_message.created_at,
-      now()
-    )
-    ON CONFLICT (thread_id, user_id) DO UPDATE
+    SELECT COUNT(*)::integer
+    INTO v_newly_read_count
+    FROM public.messages m
+    WHERE m.thread_id = p_thread_id
+      AND m.sender_user_id <> v_uid
+      AND m.deleted_at IS NULL
+      AND (m.created_at, m.id) <= (v_target_message.created_at, v_target_message.id)
+      AND (
+        v_existing_message.id IS NULL
+        OR (m.created_at, m.id) > (v_existing_message.created_at, v_existing_message.id)
+      );
+
+    UPDATE public.thread_user_state
     SET
-      last_read_message_id = EXCLUDED.last_read_message_id,
-      last_read_at = EXCLUDED.last_read_at,
-      updated_at = now();
+      last_read_message_id = v_target_message.id,
+      last_read_at = v_target_message.created_at,
+      unread_count = GREATEST(COALESCE(unread_count, 0) - v_newly_read_count, 0),
+      updated_at = now()
+    WHERE thread_id = p_thread_id
+      AND user_id = v_uid;
   END IF;
 
   SELECT *

@@ -42,6 +42,7 @@ AS $function$
       t.last_message_at,
       t.created_at,
       tus.muted,
+      tus.unread_count,
       dt.user_low_id,
       dt.user_high_id,
       cu.user_id
@@ -68,18 +69,6 @@ AS $function$
         ELSE NULL
       END AS counterpart_user_id
     FROM base_thread bt
-  ),
-  read_marker AS (
-    SELECT
-      tus.thread_id,
-      rm.created_at AS last_read_created_at,
-      rm.id AS last_read_message_id
-    FROM public.thread_user_state tus
-    LEFT JOIN public.messages rm
-      ON rm.id = tus.last_read_message_id
-    JOIN auth_context cu
-      ON cu.user_id = tus.user_id
-    WHERE tus.thread_id = p_thread_id
   )
   SELECT
     c.id AS thread_id,
@@ -115,22 +104,7 @@ AS $function$
       COALESCE(last_message_media.has_image, false)
     ) AS last_message_preview_kind,
     COALESCE(last_message_media.has_image, false) AS last_message_has_image,
-    COALESCE(
-      (
-        SELECT count(*)
-        FROM public.messages um
-        LEFT JOIN read_marker rm
-          ON rm.thread_id = um.thread_id
-        WHERE um.thread_id = c.id
-          AND um.deleted_at IS NULL
-          AND um.sender_user_id <> c.user_id
-          AND (
-            rm.last_read_message_id IS NULL
-            OR (um.created_at, um.id) > (rm.last_read_created_at, rm.last_read_message_id)
-          )
-      ),
-      0
-    ) AS unread_count,
+    COALESCE(c.unread_count, 0)::bigint AS unread_count,
     COALESCE(c.muted, false) AS muted,
     c.created_at
   FROM counterpart c

@@ -1038,7 +1038,7 @@ struct FriendsThreadView: View {
     lastHandledNavigationRequestId = navigationRequestId
     await viewModel.handleNotificationOpen(
       targetMessageId: viewModel.route.initialMessageId,
-      forceRefresh: true
+      forceRefresh: false
     )
   }
 }

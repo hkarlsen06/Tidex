@@ -1,8 +1,12 @@
 import {
   buildApsPayload,
+  buildApnsEnvironmentOrder,
+  buildPrefetchApnsHeaders,
+  buildPrefetchPayload,
   coalesceNotifications,
   didAnyDeliverySucceed,
   type OutboxNotification,
+  usesMessagePrefetch,
   usesRichFormatting,
   usesThreadActions,
 } from "./index.ts";
@@ -39,6 +43,9 @@ Deno.test("rich-formatting helper only matches supported notification types", ()
   assertFalse(usesRichFormatting("share_started"));
   assert(usesThreadActions("thread_message"));
   assertFalse(usesThreadActions("thread_screenshot"));
+  assert(usesMessagePrefetch("thread_message"));
+  assert(usesMessagePrefetch("thread_screenshot"));
+  assertFalse(usesMessagePrefetch("share_started"));
 });
 
 Deno.test("thread messages keep mutable content and thread actions", () => {
@@ -74,6 +81,46 @@ Deno.test("non-rich notifications omit mutable content", () => {
   assertEquals(aps["thread-id"], "sharing");
 });
 
+Deno.test("prefetch payload uses background headers and includes message metadata", () => {
+  const notification = makeNotification("thread_message", {
+    data_payload: {
+      thread_id: "thread-1",
+      message_id: "message-1",
+      message_created_at: "2026-03-17T09:00:00.000Z",
+      sender_user_id: "sender-1",
+    },
+  });
+
+  const headers = buildPrefetchApnsHeaders(notification);
+  const payload = buildPrefetchPayload(notification);
+
+  assertEquals(headers, {
+    "apns-push-type": "background",
+    "apns-priority": "5",
+    "apns-collapse-id": "friend-prefetch:thread-1",
+  });
+  assertEquals(payload, {
+    aps: { "content-available": 1 },
+    delivery_mode: "prefetch",
+    type: "thread_message",
+    thread_id: "thread-1",
+    message_id: "message-1",
+    message_created_at: "2026-03-17T09:00:00.000Z",
+    sender_user_id: "sender-1",
+  });
+});
+
+Deno.test("prefetch payload omits alert fields and requires message id", () => {
+  const notification = makeNotification("thread_screenshot", {
+    data_payload: {
+      thread_id: "thread-1",
+    },
+  });
+
+  assertEquals(buildPrefetchApnsHeaders(notification), null);
+  assertEquals(buildPrefetchPayload(notification), null);
+});
+
 Deno.test("coalescing keeps all outbox rows and latest message count", () => {
   const jobs = coalesceNotifications([
     makeNotification("thread_message", {
@@ -102,4 +149,19 @@ Deno.test("coalescing keeps all outbox rows and latest message count", () => {
 Deno.test("delivery summary succeeds when any device succeeds", () => {
   assert(didAnyDeliverySucceed([{ success: false }, { success: true }]));
   assertFalse(didAnyDeliverySucceed([{ success: false }, { success: false }]));
+});
+
+Deno.test("apns environment order prefers stored environment when known", () => {
+  assertEquals(buildApnsEnvironmentOrder("sandbox"), [
+    "sandbox",
+    "production",
+  ]);
+  assertEquals(buildApnsEnvironmentOrder("production"), [
+    "production",
+    "sandbox",
+  ]);
+  assertEquals(buildApnsEnvironmentOrder(null), [
+    "production",
+    "sandbox",
+  ]);
 });

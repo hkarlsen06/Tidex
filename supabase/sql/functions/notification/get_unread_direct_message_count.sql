@@ -32,58 +32,40 @@ BEGIN
     RAISE EXCEPTION 'Target user is required';
   END IF;
 
-  WITH unread_per_thread AS (
-    SELECT
-      t.id,
-      COUNT(*)::integer AS unread_count
-    FROM public.threads t
-    LEFT JOIN public.direct_threads dt
-      ON dt.thread_id = t.id
-    INNER JOIN public.thread_memberships tm
-      ON tm.thread_id = t.id
-     AND tm.user_id = v_target_user_id
-     AND tm.status = 'active'
-    LEFT JOIN public.thread_user_state tus
-      ON tus.thread_id = t.id
-     AND tus.user_id = v_target_user_id
-    LEFT JOIN public.messages rm
-      ON rm.id = tus.last_read_message_id
-    INNER JOIN public.messages m
-      ON m.thread_id = t.id
-     AND m.sender_user_id <> v_target_user_id
-    WHERE t.kind = 'direct'
-      AND (
-        dt.thread_id IS NULL
-        OR NOT EXISTS (
-          SELECT 1
-          FROM public.shift_shares ss
-          WHERE (
-            (ss.owner_id = v_target_user_id AND ss.viewer_id = CASE
-              WHEN dt.user_low_id = v_target_user_id THEN dt.user_high_id
-              WHEN dt.user_high_id = v_target_user_id THEN dt.user_low_id
-              ELSE NULL
-            END)
-            OR
-            (ss.owner_id = CASE
-              WHEN dt.user_low_id = v_target_user_id THEN dt.user_high_id
-              WHEN dt.user_high_id = v_target_user_id THEN dt.user_low_id
-              ELSE NULL
-            END AND ss.viewer_id = v_target_user_id)
-          )
-            AND ss.blocked_by_user_id IS NOT NULL
-        )
-      )
-      AND m.deleted_at IS NULL
-      AND (
-        tus.last_read_message_id IS NULL
-        OR rm.id IS NULL
-        OR (m.created_at, m.id) > (rm.created_at, rm.id)
-      )
-    GROUP BY t.id
-  )
-  SELECT COALESCE(SUM(unread_count), 0)::integer
+  SELECT COALESCE(SUM(COALESCE(tus.unread_count, 0)), 0)::integer
   INTO v_unread_count
-  FROM unread_per_thread;
+  FROM public.threads t
+  LEFT JOIN public.direct_threads dt
+    ON dt.thread_id = t.id
+  INNER JOIN public.thread_memberships tm
+    ON tm.thread_id = t.id
+   AND tm.user_id = v_target_user_id
+   AND tm.status = 'active'
+  LEFT JOIN public.thread_user_state tus
+    ON tus.thread_id = t.id
+   AND tus.user_id = v_target_user_id
+  WHERE t.kind = 'direct'
+    AND (
+      dt.thread_id IS NULL
+      OR NOT EXISTS (
+        SELECT 1
+        FROM public.shift_shares ss
+        WHERE (
+          (ss.owner_id = v_target_user_id AND ss.viewer_id = CASE
+            WHEN dt.user_low_id = v_target_user_id THEN dt.user_high_id
+            WHEN dt.user_high_id = v_target_user_id THEN dt.user_low_id
+            ELSE NULL
+          END)
+          OR
+          (ss.owner_id = CASE
+            WHEN dt.user_low_id = v_target_user_id THEN dt.user_high_id
+            WHEN dt.user_high_id = v_target_user_id THEN dt.user_low_id
+            ELSE NULL
+          END AND ss.viewer_id = v_target_user_id)
+        )
+          AND ss.blocked_by_user_id IS NOT NULL
+      )
+    );
 
   RETURN COALESCE(v_unread_count, 0);
 END;

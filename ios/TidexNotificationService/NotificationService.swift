@@ -1,17 +1,43 @@
+import CryptoKit
 import Foundation
 import Intents
 import UserNotifications
 import os
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "NotificationServiceExtension")
+private let avatarFetchBudget = Duration.milliseconds(250)
 
 private enum SenderAvatarLoader {
+  private static let appGroupId = "group.no.tidex.app"
+  private static let sharedCacheDirectoryName = "NotificationAvatarCache"
   static let inMemoryCache = NSCache<NSURL, INImage>()
   static let urlCache = URLCache(
     memoryCapacity: 4 * 1024 * 1024,
     diskCapacity: 20 * 1024 * 1024,
     diskPath: "TidexNotificationAvatarCache"
   )
+  static let session: URLSession = {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.requestCachePolicy = .useProtocolCachePolicy
+    configuration.timeoutIntervalForRequest = 1
+    configuration.timeoutIntervalForResource = 1
+    configuration.waitsForConnectivity = false
+    configuration.urlCache = urlCache
+    return URLSession(configuration: configuration)
+  }()
+
+  private static var sharedCacheDirectory: URL? {
+    guard
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
+      return nil
+    }
+
+    let directory = containerURL.appendingPathComponent(sharedCacheDirectoryName, isDirectory: true)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    return directory
+  }
 
   static func cachedImage(for request: URLRequest, url: URL) -> INImage? {
     if let image = inMemoryCache.object(forKey: url as NSURL) {
@@ -19,6 +45,13 @@ private enum SenderAvatarLoader {
         "Sender avatar cache hit (memory) for \(url.absoluteString, privacy: .private(mask: .hash))"
       )
       return image
+    }
+
+    if let sharedCachedImage = sharedCachedImage(for: url) {
+      logger.debug(
+        "Sender avatar cache hit (shared) for \(url.absoluteString, privacy: .private(mask: .hash))"
+      )
+      return sharedCachedImage
     }
 
     guard let response = urlCache.cachedResponse(for: request) else {
@@ -30,6 +63,60 @@ private enum SenderAvatarLoader {
     logger.debug(
       "Sender avatar cache hit (disk) for \(url.absoluteString, privacy: .private(mask: .hash))")
     return makeImage(from: response.data, url: url)
+  }
+
+  static func fetchImage(for url: URL) async -> INImage? {
+    let request = URLRequest(
+      url: url,
+      cachePolicy: .useProtocolCachePolicy,
+      timeoutInterval: 1
+    )
+
+    do {
+      let (data, response) = try await session.data(for: request)
+      guard let httpResponse = response as? HTTPURLResponse,
+        (200..<300).contains(httpResponse.statusCode)
+      else {
+        return nil
+      }
+
+      urlCache.storeCachedResponse(CachedURLResponse(response: response, data: data), for: request)
+      storeSharedImageData(data, for: url)
+      return makeImage(from: data, url: url)
+    } catch is CancellationError {
+      return nil
+    } catch {
+      logger.debug(
+        "Sender avatar fetch failed for \(url.absoluteString, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .public)"
+      )
+      return nil
+    }
+  }
+
+  private static func sharedCachedImage(for url: URL) -> INImage? {
+    guard let fileURL = sharedCacheFileURL(for: url),
+      let data = try? Data(contentsOf: fileURL)
+    else {
+      return nil
+    }
+
+    return makeImage(from: data, url: url)
+  }
+
+  private static func storeSharedImageData(_ data: Data, for url: URL) {
+    guard let fileURL = sharedCacheFileURL(for: url) else { return }
+    try? data.write(to: fileURL, options: .atomic)
+  }
+
+  private static func sharedCacheFileURL(for url: URL) -> URL? {
+    guard let directory = sharedCacheDirectory else { return nil }
+    return directory.appendingPathComponent(fileName(for: url))
+  }
+
+  private static func fileName(for url: URL) -> String {
+    SHA256.hash(data: Data(url.absoluteString.utf8))
+      .compactMap { String(format: "%02x", $0) }
+      .joined()
   }
 
   private static func makeImage(from data: Data, url: URL) -> INImage? {
@@ -92,12 +179,17 @@ final class NotificationService: UNNotificationServiceExtension {
     }
 
     logger.debug("Enriching notification for type \(payload.type, privacy: .public)")
+    if let messageCreatedAt = payload.messageCreatedAt {
+      logger.debug(
+        "Notification start lag \(Self.elapsedMilliseconds(since: messageCreatedAt), privacy: .public) ms for type \(payload.type, privacy: .public)"
+      )
+    }
     content.threadIdentifier = payload.threadId
     if #available(iOS 15.0, *) {
       content.targetContentIdentifier = payload.targetContentIdentifier
     }
 
-    let senderImage = fetchSenderImage(from: payload.senderAvatarUrl)
+    let senderImage = await loadSenderImage(from: payload.senderAvatarUrl)
     let sender = INPerson(
       personHandle: INPersonHandle(value: payload.senderUserId, type: .unknown),
       nameComponents: nil,
@@ -123,7 +215,7 @@ final class NotificationService: UNNotificationServiceExtension {
     interaction.direction = .incoming
 
     do {
-      try await donate(interaction)
+      let contentUpdateStartedAt = Date()
       let updatedContent = try content.updating(from: intent)
       guard
         let mutableUpdatedContent = updatedContent.mutableCopy() as? UNMutableNotificationContent
@@ -137,6 +229,10 @@ final class NotificationService: UNNotificationServiceExtension {
         mutableUpdatedContent.targetContentIdentifier = payload.targetContentIdentifier
       }
 
+      logger.debug(
+        "Notification content updated in \(Self.elapsedMilliseconds(since: contentUpdateStartedAt), privacy: .public) ms"
+      )
+      donateBestEffort(interaction)
       logger.debug(
         "Notification enrichment completed in \(Self.elapsedMilliseconds(since: startedAt), privacy: .public) ms"
       )
@@ -155,13 +251,65 @@ final class NotificationService: UNNotificationServiceExtension {
     let request = URLRequest(
       url: url,
       cachePolicy: .returnCacheDataDontLoad,
-      timeoutInterval: 3
+      timeoutInterval: 1
     )
 
     return SenderAvatarLoader.cachedImage(for: request, url: url)
   }
 
-  private func donate(_ interaction: INInteraction) async throws {
+  private func loadSenderImage(from url: URL?) async -> INImage? {
+    guard let url else { return nil }
+    let startedAt = Date()
+
+    let request = URLRequest(
+      url: url,
+      cachePolicy: .returnCacheDataDontLoad,
+      timeoutInterval: 1
+    )
+
+    if let cachedImage = SenderAvatarLoader.cachedImage(for: request, url: url) {
+      logger.debug(
+        "Sender avatar resolved from cache in \(Self.elapsedMilliseconds(since: startedAt), privacy: .public) ms"
+      )
+      return cachedImage
+    }
+
+    let fetchedImage = await withTaskGroup(of: INImage?.self, returning: INImage?.self) { group in
+      group.addTask {
+        await SenderAvatarLoader.fetchImage(for: url)
+      }
+      group.addTask {
+        try? await Task.sleep(for: avatarFetchBudget)
+        return nil
+      }
+
+      let result = await group.next() ?? nil
+      group.cancelAll()
+      return result
+    }
+    logger.debug(
+      "Sender avatar fetch result hit=\(fetchedImage != nil, privacy: .public) duration=\(Self.elapsedMilliseconds(since: startedAt), privacy: .public) ms"
+    )
+    return fetchedImage
+  }
+
+  private func donateBestEffort(_ interaction: INInteraction) {
+    Task.detached(priority: .utility) {
+      let donationStartedAt = Date()
+      do {
+        try await Self.donate(interaction)
+        logger.debug(
+          "Notification donation completed in \(Self.elapsedMilliseconds(since: donationStartedAt), privacy: .public) ms"
+        )
+      } catch {
+        logger.error(
+          "Notification donation failed after \(Self.elapsedMilliseconds(since: donationStartedAt), privacy: .public) ms: \(error.localizedDescription, privacy: .public)"
+        )
+      }
+    }
+  }
+
+  private static func donate(_ interaction: INInteraction) async throws {
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       interaction.donate { error in
         if let error {
@@ -186,6 +334,9 @@ private struct CommunicationNotificationPayload {
   let senderDisplayName: String
   let senderAvatarUrl: URL?
   let targetContentIdentifier: String
+  let messageCreatedAt: Date?
+
+  private static let iso8601Formatter = ISO8601DateFormatter()
 
   init?(userInfo: [AnyHashable: Any], fallbackSenderDisplayName: String) {
     guard let type = userInfo["type"] as? String else { return nil }
@@ -220,6 +371,7 @@ private struct CommunicationNotificationPayload {
     }
 
     self.targetContentIdentifier = "friend-chat:\(threadId)"
+    self.messageCreatedAt = Self.date(from: userInfo["message_created_at"] as? String)
   }
 
   private static let supportedTypes: Set<String> = [
@@ -227,6 +379,11 @@ private struct CommunicationNotificationPayload {
     "thread_screenshot",
     "shifts_screenshotted",
   ]
+
+  private static func date(from iso8601: String?) -> Date? {
+    guard let iso8601, !iso8601.isEmpty else { return nil }
+    return iso8601Formatter.date(from: iso8601)
+  }
 }
 
 extension String {

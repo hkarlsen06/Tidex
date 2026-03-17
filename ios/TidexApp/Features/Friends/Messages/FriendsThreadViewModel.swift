@@ -235,7 +235,7 @@ final class FriendsThreadViewModel: ObservableObject {
     guard !isLoading else { return }
     isLoading = true
     loadFromCache()
-    await loadPendingComposerAttachment()
+    await loadPendingComposerDraft()
 
     async let realtimeSubscription: Void = realtimeCoordinator.startThreadSubscription(
       threadId: route.threadId,
@@ -337,19 +337,7 @@ final class FriendsThreadViewModel: ObservableObject {
   func setComposerAttachment(_ attachment: FriendsComposerAttachmentDraft?) async {
     guard composerMode != .edit else { return }
     stagedComposerAttachment = attachment
-
-    if let attachment {
-      await composerDraftStore.saveAttachmentDraft(
-        attachment,
-        threadId: route.threadId,
-        viewerUserId: viewerUserId
-      )
-    } else {
-      await composerDraftStore.clearAttachmentDraft(
-        threadId: route.threadId,
-        viewerUserId: viewerUserId
-      )
-    }
+    await persistPendingComposerDraft()
   }
 
   var canSendShiftSnapshots: Bool {
@@ -468,6 +456,8 @@ final class FriendsThreadViewModel: ObservableObject {
       return
     }
 
+    await persistPendingComposerDraft()
+
     let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     if hasText {
       await sendTypingStartIfNeeded()
@@ -547,7 +537,7 @@ final class FriendsThreadViewModel: ObservableObject {
     draft = ""
     composerState = .normal
     stagedComposerAttachment = nil
-    await composerDraftStore.clearAttachmentDraft(
+    await composerDraftStore.clearDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
     await stopTypingIfNeeded()
 
@@ -702,7 +692,7 @@ final class FriendsThreadViewModel: ObservableObject {
     draft = ""
     composerState = .normal
     stagedComposerAttachment = nil
-    await composerDraftStore.clearAttachmentDraft(
+    await composerDraftStore.clearDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
     sendErrorMessage = nil
     isThreadReadOnly = true
@@ -812,11 +802,18 @@ final class FriendsThreadViewModel: ObservableObject {
     prefetchQuotedMessagesIfNeeded()
   }
 
-  private func loadPendingComposerAttachment() async {
-    stagedComposerAttachment = await composerDraftStore.loadAttachmentDraft(
-      threadId: route.threadId,
-      viewerUserId: viewerUserId
-    )
+  private func loadPendingComposerDraft() async {
+    guard
+      let storedDraft = await composerDraftStore.loadDraft(
+        threadId: route.threadId,
+        viewerUserId: viewerUserId
+      )
+    else {
+      return
+    }
+
+    draft = storedDraft.text
+    stagedComposerAttachment = storedDraft.attachment
   }
 
   private func syncComposerStateWithCachedMessages() {
@@ -863,19 +860,7 @@ final class FriendsThreadViewModel: ObservableObject {
     composerState = resolvedState
     draft = snapshot?.draft ?? ""
     stagedComposerAttachment = snapshot?.stagedAttachment
-
-    if let attachment = snapshot?.stagedAttachment {
-      await composerDraftStore.saveAttachmentDraft(
-        attachment,
-        threadId: route.threadId,
-        viewerUserId: viewerUserId
-      )
-    } else {
-      await composerDraftStore.clearAttachmentDraft(
-        threadId: route.threadId,
-        viewerUserId: viewerUserId
-      )
-    }
+    await persistPendingComposerDraft()
 
     let shouldRequestFocus =
       requestFocus
@@ -909,6 +894,17 @@ final class FriendsThreadViewModel: ObservableObject {
   private func messageForComposerContext(id: String) -> FriendMessage? {
     messages.first(where: { $0.id == id })
       ?? repository.getMessage(id: id, viewerUserId: viewerUserId)
+  }
+
+  private func persistPendingComposerDraft() async {
+    guard composerMode != .edit else { return }
+
+    await composerDraftStore.saveDraft(
+      text: draft,
+      attachment: stagedComposerAttachment,
+      threadId: route.threadId,
+      viewerUserId: viewerUserId
+    )
   }
 
   private func loadCounterpartShiftPreview(forceRefresh: Bool) async {

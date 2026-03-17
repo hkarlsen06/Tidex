@@ -269,7 +269,7 @@ BEGIN
 
   SELECT
     COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', 'Someone'),
-    us.profile_picture_url
+    COALESCE(us.profile_picture_url, u.raw_user_meta_data->>'avatar_url')
   INTO v_name, v_avatar_url
   FROM auth.users u
   LEFT JOIN public.user_settings us ON us.user_id = u.id
@@ -376,7 +376,7 @@ BEGIN
 
   SELECT
     COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', 'Someone'),
-    us.profile_picture_url
+    COALESCE(us.profile_picture_url, u.raw_user_meta_data->>'avatar_url')
   INTO v_name, v_avatar_url
   FROM auth.users u
   LEFT JOIN public.user_settings us ON us.user_id = u.id

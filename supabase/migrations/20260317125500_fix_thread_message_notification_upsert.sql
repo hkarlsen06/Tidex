@@ -1,5 +1,4 @@
--- Function: queue_thread_message_notification
--- Description: Enqueues push notifications for newly inserted thread messages
+-- Fix thread message notification enqueueing to avoid partial-index ON CONFLICT inference failures.
 
 CREATE OR REPLACE FUNCTION public.queue_thread_message_notification()
 RETURNS trigger

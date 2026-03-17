@@ -21,6 +21,7 @@ struct FriendCard: View {
   let sharer: SharedUser
   let preview: SharerShiftPreview?
   let messagePreview: FriendCardMessagePreview?
+  let isTyping: Bool
   let isSelected: Bool
   let isRefreshing: Bool
   let onChatTap: () -> Void
@@ -39,7 +40,8 @@ struct FriendCard: View {
             CompactFriendIdentityRow(
               sharer: sharer,
               unreadMessageCount: unreadMessageCount,
-              messagePreview: messagePreview
+              messagePreview: messagePreview,
+              isTyping: isTyping
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -211,6 +213,7 @@ struct FriendsListEmptyState: View {
         timestamp: Date().addingTimeInterval(-900),
         state: .incomingUnread
       ),
+      isTyping: false,
       isSelected: false,
       isRefreshing: false,
       onChatTap: {},
@@ -235,6 +238,7 @@ struct FriendsListEmptyState: View {
         timestamp: Date().addingTimeInterval(-7200),
         state: .outgoingOpened
       ),
+      isTyping: false,
       isSelected: true,
       isRefreshing: false,
       onChatTap: {},

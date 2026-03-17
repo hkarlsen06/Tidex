@@ -10,6 +10,7 @@ struct SharerListView: View {
   let sharers: [SharedUser]
   let hiddenSharers: [SharedUser]
   let chatOnlyUserIds: Set<String>
+  let typingUserIds: Set<String>
   let unreadChatUserIds: Set<String>
   let unreadChatCountsByUserId: [String: Int]
   let chatPreviewsByUserId: [String: FriendCardMessagePreview]
@@ -41,7 +42,23 @@ struct SharerListView: View {
     var seenIds = Set<String>()
 
     return combined.filter { sharer in
-      guard unreadChatUserIds.contains(sharer.id), seenIds.insert(sharer.id).inserted else {
+      guard
+        unreadChatUserIds.contains(sharer.id),
+        !typingUserIds.contains(sharer.id),
+        seenIds.insert(sharer.id).inserted
+      else {
+        return false
+      }
+      return true
+    }
+  }
+
+  private var promotedTypingSharers: [SharedUser] {
+    let combined = sortedSharers(from: sharers + hiddenSharers)
+    var seenIds = Set<String>()
+
+    return combined.filter { sharer in
+      guard typingUserIds.contains(sharer.id), seenIds.insert(sharer.id).inserted else {
         return false
       }
       return true
@@ -49,11 +66,15 @@ struct SharerListView: View {
   }
 
   private var sortedVisibleNonUnreadSharers: [SharedUser] {
-    sortedVisibleSharers.filter { !unreadChatUserIds.contains($0.id) }
+    sortedVisibleSharers.filter {
+      !unreadChatUserIds.contains($0.id) && !typingUserIds.contains($0.id)
+    }
   }
 
   private var sortedHiddenNonUnreadSharers: [SharedUser] {
-    sortedHiddenSharers.filter { !unreadChatUserIds.contains($0.id) }
+    sortedHiddenSharers.filter {
+      !unreadChatUserIds.contains($0.id) && !typingUserIds.contains($0.id)
+    }
   }
 
   /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
@@ -165,6 +186,10 @@ struct SharerListView: View {
 
   private var sharersList: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
+      ForEach(promotedTypingSharers) { sharer in
+        sharerCard(for: sharer)
+      }
+
       ForEach(promotedUnreadSharers) { sharer in
         sharerCard(for: sharer)
       }
@@ -181,6 +206,7 @@ struct SharerListView: View {
     .animation(.spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: isShowingHiddenSharers)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: unreadChatUserIds)
+    .animation(.spring(duration: 0.35, bounce: 0.12), value: typingUserIds)
   }
 
   @ViewBuilder
@@ -248,6 +274,7 @@ struct SharerListView: View {
       sharer: sharer,
       preview: preview,
       messagePreview: chatPreviewsByUserId[sharer.id],
+      isTyping: typingUserIds.contains(sharer.id),
       isSelected: isSelected,
       isRefreshing: isRefreshing,
       onChatTap: {
@@ -279,6 +306,7 @@ struct SharerListView: View {
       sharer: sharer,
       preview: preview,
       messagePreview: chatPreviewsByUserId[sharer.id],
+      isTyping: typingUserIds.contains(sharer.id),
       isSelected: isSelected,
       isRefreshing: isRefreshing,
       onChatTap: {
@@ -326,6 +354,7 @@ struct SharerListView: View {
       )
     ],
     chatOnlyUserIds: [],
+    typingUserIds: [],
     unreadChatUserIds: [],
     unreadChatCountsByUserId: [:],
     chatPreviewsByUserId: [:],

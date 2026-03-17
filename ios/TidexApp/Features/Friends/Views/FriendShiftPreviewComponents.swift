@@ -10,6 +10,7 @@ struct CompactFriendIdentityRow: View {
   let sharer: SharedUser
   var unreadMessageCount = 0
   var messagePreview: FriendCardMessagePreview? = nil
+  var isTyping = false
   var showsContactInfo = true
   var avatarSize: CGFloat = AvatarView.Size.large
 
@@ -24,7 +25,9 @@ struct CompactFriendIdentityRow: View {
           .lineLimit(1)
           .truncationMode(.tail)
 
-        if let messagePreview {
+        if isTyping {
+          FriendCardTypingPreviewRow()
+        } else if let messagePreview {
           FriendCardMessagePreviewRow(messagePreview: messagePreview)
         } else if showsContactInfo, let contactInfo = sharer.contactInfo {
           Text(contactInfo)
@@ -62,6 +65,17 @@ struct CompactFriendIdentityRow: View {
           .offset(x: 8, y: -8)
       }
     }
+  }
+}
+
+private struct FriendCardTypingPreviewRow: View {
+  var body: some View {
+    HStack(spacing: Spacing.xs) {
+      InlineJumpingDotsView()
+
+      Spacer(minLength: 0)
+    }
+    .frame(height: 18)
   }
 }
 
