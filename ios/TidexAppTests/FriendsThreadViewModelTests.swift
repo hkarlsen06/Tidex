@@ -190,6 +190,42 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(confirmedMessages.first?.sendState, .sent)
   }
 
+  func testSendDraftBlocksTooLongMessagesBeforeRPC() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = String(repeating: "a", count: 2001)
+
+    XCTAssertEqual(viewModel.draftCharacterCount, 2001)
+    XCTAssertEqual(
+      viewModel.composerValidationMessage,
+      String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
+        .replacingOccurrences(of: "{limit}", with: "2000")
+    )
+
+    let didSend = await viewModel.sendDraft()
+
+    XCTAssertFalse(didSend)
+    XCTAssertEqual(mockService.sendMessageCallCount, 0)
+    XCTAssertEqual(viewModel.draft, String(repeating: "a", count: 2001))
+    XCTAssertTrue(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
+  }
+
   func testSendDraftWithReplyTargetPersistsReturnedReplyReference() async throws {
     let repository = try makeRepository()
     let route = makeRoute()
@@ -800,6 +836,91 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(
       repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").map(\.id),
       [originalMessage.id]
+    )
+  }
+
+  func testDeleteFailedMessageRemovesItLocallyWithoutCallingServer() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let previousMessage = FriendMessage(
+      id: "message-sent",
+      threadId: route.threadId,
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Previous",
+      clientId: "client-sent",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_100),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let failedMessage = FriendMessage(
+      id: "local-failed",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Will not send",
+      clientId: "client-failed",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_110),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .failed,
+      failureMessage: "Failed"
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: failedMessage.id,
+      lastMessageSenderId: failedMessage.senderUserId,
+      lastMessageAt: failedMessage.createdAt,
+      lastMessageBody: failedMessage.body,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    await repository.saveThread(thread, for: "viewer-1")
+    await repository.saveMessages(
+      [previousMessage, failedMessage], in: route.threadId, for: "viewer-1")
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.deleteMessage(messageId: failedMessage.id)
+
+    XCTAssertNil(mockService.lastDeletedMessageId)
+    XCTAssertEqual(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").map(\.id),
+      [previousMessage.id]
+    )
+    XCTAssertEqual(
+      repository.getThread(id: route.threadId, viewerUserId: "viewer-1")?.lastMessageId,
+      previousMessage.id
     )
   }
 
@@ -1802,6 +1923,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   var sendError: Error?
   var editError: Error?
   var deleteError: Error?
+  var sendMessageCallCount = 0
   var lastSentReplyToMessageId: String?
   var lastSentMetadataData: Data?
   var lastEditedMessageId: String?
@@ -1845,6 +1967,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     metadataData: Data?
   ) async throws -> FriendMessage {
     await Task.yield()
+    sendMessageCallCount += 1
     if let sendDelay {
       try? await Task.sleep(for: sendDelay)
     }

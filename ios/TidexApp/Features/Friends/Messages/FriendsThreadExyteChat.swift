@@ -328,6 +328,7 @@ enum FriendsThreadExyteHighlightRedrawResolver {
 struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   let messages: [ExyteChat.Message]
   let scrollRequest: FriendsThreadChatViewportScrollRequest?
+  let pinToBottomRequestToken: Int
   let highlightedPresentedMessageID: String?
   let onPinnedToBottomChanged: (Bool) -> Void
   let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
@@ -346,21 +347,35 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   func updateUIView(_ uiView: UIView, context: Context) {
     context.coordinator.update(
       from: uiView,
-      messages: messages,
-      scrollRequest: scrollRequest,
-      highlightedPresentedMessageID: highlightedPresentedMessageID,
-      onPinnedToBottomChanged: onPinnedToBottomChanged,
-      onDidHandleScrollRequest: onDidHandleScrollRequest
+      input: .init(
+        messages: messages,
+        scrollRequest: scrollRequest,
+        pinToBottomRequestToken: pinToBottomRequestToken,
+        highlightedPresentedMessageID: highlightedPresentedMessageID,
+        onPinnedToBottomChanged: onPinnedToBottomChanged,
+        onDidHandleScrollRequest: onDidHandleScrollRequest
+      )
     )
   }
 
   @MainActor
   final class Coordinator {
+    struct UpdateInput {
+      let messages: [ExyteChat.Message]
+      let scrollRequest: FriendsThreadChatViewportScrollRequest?
+      let pinToBottomRequestToken: Int
+      let highlightedPresentedMessageID: String?
+      let onPinnedToBottomChanged: (Bool) -> Void
+      let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
+    }
+
     private weak var tableView: UITableView?
     private var contentOffsetObservation: NSKeyValueObservation?
     private var contentSizeObservation: NSKeyValueObservation?
     private var messages: [ExyteChat.Message] = []
     private var scrollRequest: FriendsThreadChatViewportScrollRequest?
+    private var pinToBottomRequestToken = 0
+    private var handledPinToBottomRequestToken = 0
     private var highlightedPresentedMessageID: String?
     private var lastHighlightedPresentedMessageID: String?
     private var lastVisibleHighlightedIndexPath: IndexPath?
@@ -371,27 +386,25 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
     func update(
       from view: UIView,
-      messages: [ExyteChat.Message],
-      scrollRequest: FriendsThreadChatViewportScrollRequest?,
-      highlightedPresentedMessageID: String?,
-      onPinnedToBottomChanged: @escaping (Bool) -> Void,
-      onDidHandleScrollRequest: @escaping (FriendsThreadChatViewportScrollRequest) -> Void
+      input: UpdateInput
     ) {
-      self.messages = messages
-      self.scrollRequest = scrollRequest
-      self.highlightedPresentedMessageID = highlightedPresentedMessageID
-      self.onPinnedToBottomChanged = onPinnedToBottomChanged
-      self.onDidHandleScrollRequest = onDidHandleScrollRequest
+      messages = input.messages
+      scrollRequest = input.scrollRequest
+      pinToBottomRequestToken = input.pinToBottomRequestToken
+      highlightedPresentedMessageID = input.highlightedPresentedMessageID
+      onPinnedToBottomChanged = input.onPinnedToBottomChanged
+      onDidHandleScrollRequest = input.onDidHandleScrollRequest
 
-      if scrollRequest == nil {
+      if input.scrollRequest == nil {
         handledScrollRequest = nil
       }
 
       attachIfNeeded(from: view)
+      attemptPendingPinToBottom()
       reportPinnedToBottomIfNeeded()
       attemptPendingScroll()
       refreshHighlightedRowsIfNeeded(
-        force: highlightedPresentedMessageID != lastHighlightedPresentedMessageID)
+        force: input.highlightedPresentedMessageID != lastHighlightedPresentedMessageID)
     }
 
     private func attachIfNeeded(from view: UIView) {
@@ -433,6 +446,20 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       guard tableView === self.tableView else { return }
       reportPinnedToBottomIfNeeded()
       refreshHighlightedRowsIfNeeded(force: false)
+    }
+
+    private func attemptPendingPinToBottom() {
+      guard let tableView else { return }
+      guard handledPinToBottomRequestToken != pinToBottomRequestToken else { return }
+
+      handledPinToBottomRequestToken = pinToBottomRequestToken
+      let targetOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top)
+
+      UIView.performWithoutAnimation {
+        tableView.layoutIfNeeded()
+        tableView.setContentOffset(targetOffset, animated: false)
+        tableView.layoutIfNeeded()
+      }
     }
 
     private func reportPinnedToBottomIfNeeded() {

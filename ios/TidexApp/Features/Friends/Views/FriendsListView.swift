@@ -1,11 +1,180 @@
 import SwiftUI
 
-/// List of users who share their shifts with the current user
-/// Sorts sharers by shift proximity to match Next.js behavior:
-/// 1. Active shifts first (currently happening)
-/// 2. Upcoming shifts next (soonest first)
-/// 3. Past shifts next (most recent first)
-/// 4. No shifts last
+struct FriendsListOrdering {
+  let typingUserIds: Set<String>
+  let unreadChatUserIds: Set<String>
+  let chatPreviewsByUserId: [String: FriendCardMessagePreview]
+  let shiftPreviews: [String: SharerShiftPreview]
+  let isLoadingShiftPreviews: Bool
+
+  func sortedSharers(_ sharers: [SharedUser]) -> [SharedUser] {
+    sharers.sorted(by: compare)
+  }
+
+  func visibleSharers(visible: [SharedUser], hidden: [SharedUser]) -> [SharedUser] {
+    sortedSharers(visible + hidden.filter { hasMessageStatus(for: $0.id) })
+  }
+
+  func hiddenDisclosureSharers(_ hidden: [SharedUser]) -> [SharedUser] {
+    sortedSharers(hidden.filter { !hasMessageStatus(for: $0.id) })
+  }
+
+  func shouldSuppressShiftPreview(for sharer: SharedUser) -> Bool {
+    sharer.hidden && hasMessageStatus(for: sharer.id)
+  }
+
+  private func compare(_ lhs: SharedUser, _ rhs: SharedUser) -> Bool {
+    let messageStatusLhs = messageStatus(for: lhs.id)
+    let messageStatusRhs = messageStatus(for: rhs.id)
+
+    if messageStatusLhs.isPresent != messageStatusRhs.isPresent {
+      return messageStatusLhs.isPresent
+    }
+
+    if messageStatusLhs.isPresent, messageStatusRhs.isPresent {
+      if messageStatusLhs.timestamp != messageStatusRhs.timestamp {
+        switch (messageStatusLhs.timestamp, messageStatusRhs.timestamp) {
+        case (let lhsTimestamp?, let rhsTimestamp?):
+          return lhsTimestamp > rhsTimestamp
+        case (.some, .none):
+          return true
+        case (.none, .some):
+          return false
+        case (.none, .none):
+          break
+        }
+      }
+
+      if messageStatusLhs.priority != messageStatusRhs.priority {
+        return messageStatusLhs.priority < messageStatusRhs.priority
+      }
+    }
+
+    return compareShiftFallback(lhs, rhs)
+  }
+
+  private func messageStatus(for sharerId: String) -> MessageStatusSortDescriptor {
+    let preview = chatPreviewsByUserId[sharerId]
+    let isTyping = typingUserIds.contains(sharerId)
+    let hasUnread = unreadChatUserIds.contains(sharerId)
+
+    return MessageStatusSortDescriptor(
+      isPresent: isTyping || hasUnread || preview != nil,
+      priority: messagePriority(
+        isTyping: isTyping,
+        hasUnread: hasUnread,
+        previewState: preview?.state
+      ),
+      timestamp: preview?.timestamp
+    )
+  }
+
+  func hasMessageStatus(for sharerId: String) -> Bool {
+    messageStatus(for: sharerId).isPresent
+  }
+
+  private func messagePriority(
+    isTyping: Bool,
+    hasUnread: Bool,
+    previewState: FriendCardMessageState?
+  ) -> Int {
+    if isTyping {
+      return 0
+    }
+
+    if hasUnread {
+      return 1
+    }
+
+    switch previewState {
+    case .outgoingFailed:
+      return 2
+    case .outgoingSending:
+      return 3
+    case .outgoingSent, .outgoingOpened, .incomingOpened:
+      return 4
+    case .incomingUnread:
+      return 1
+    case .none:
+      return 5
+    }
+  }
+
+  /// Falls back to the original shift-based ordering for users without message activity.
+  private func compareShiftFallback(_ lhs: SharedUser, _ rhs: SharedUser) -> Bool {
+    guard !isLoadingShiftPreviews && !shiftPreviews.isEmpty else {
+      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    }
+
+    let previewLhs = shiftPreviews[lhs.id]
+    let previewRhs = shiftPreviews[rhs.id]
+
+    let priorityLhs = shiftStatusPriority(for: previewLhs?.status)
+    let priorityRhs = shiftStatusPriority(for: previewRhs?.status)
+
+    if priorityLhs != priorityRhs {
+      return priorityLhs < priorityRhs
+    }
+
+    guard let shiftLhs = previewLhs?.shift, let shiftRhs = previewRhs?.shift else {
+      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    }
+
+    let timeLhs = shiftStartTime(for: shiftLhs)
+    let timeRhs = shiftStartTime(for: shiftRhs)
+
+    guard let timeLhs, let timeRhs else {
+      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    }
+
+    switch previewLhs?.status {
+    case .upcoming:
+      if timeLhs == timeRhs {
+        return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+      }
+      return timeLhs < timeRhs
+    case .past:
+      if timeLhs == timeRhs {
+        return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+      }
+      return timeLhs > timeRhs
+    default:
+      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    }
+  }
+
+  private func shiftStatusPriority(for status: ShiftPreviewStatus?) -> Int {
+    switch status {
+    case .active: return 0
+    case .upcoming: return 1
+    case .past: return 2
+    case .none: return 3
+    }
+  }
+
+  private func shiftStartTime(for shift: SharedShiftData) -> Date? {
+    guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return nil }
+
+    let components = shift.start_time.split(separator: ":").compactMap { Int($0) }
+    guard components.count >= 2 else { return nil }
+
+    return Calendar.current.date(
+      bySettingHour: components[0],
+      minute: components[1],
+      second: 0,
+      of: shiftDate
+    )
+  }
+}
+
+private struct MessageStatusSortDescriptor {
+  let isPresent: Bool
+  let priority: Int
+  let timestamp: Date?
+}
+
+/// List of users who share their shifts with the current user.
+/// Uses message activity first, then falls back to the legacy shift proximity ordering.
 struct SharerListView: View {
   let sharers: [SharedUser]
   let hiddenSharers: [SharedUser]
@@ -30,130 +199,20 @@ struct SharerListView: View {
   @State private var isShowingHiddenSharers = false
 
   private var sortedVisibleSharers: [SharedUser] {
-    sortedSharers(from: sharers)
+    ordering.visibleSharers(visible: sharers, hidden: hiddenSharers)
   }
 
   private var sortedHiddenSharers: [SharedUser] {
-    sortedSharers(from: hiddenSharers)
+    ordering.hiddenDisclosureSharers(hiddenSharers)
   }
 
-  private var promotedUnreadSharers: [SharedUser] {
-    let combined = sortedSharers(from: sharers + hiddenSharers)
-    var seenIds = Set<String>()
-
-    return combined.filter { sharer in
-      guard
-        unreadChatUserIds.contains(sharer.id),
-        !typingUserIds.contains(sharer.id),
-        seenIds.insert(sharer.id).inserted
-      else {
-        return false
-      }
-      return true
-    }
-  }
-
-  private var promotedTypingSharers: [SharedUser] {
-    let combined = sortedSharers(from: sharers + hiddenSharers)
-    var seenIds = Set<String>()
-
-    return combined.filter { sharer in
-      guard typingUserIds.contains(sharer.id), seenIds.insert(sharer.id).inserted else {
-        return false
-      }
-      return true
-    }
-  }
-
-  private var sortedVisibleNonUnreadSharers: [SharedUser] {
-    sortedVisibleSharers.filter {
-      !unreadChatUserIds.contains($0.id) && !typingUserIds.contains($0.id)
-    }
-  }
-
-  private var sortedHiddenNonUnreadSharers: [SharedUser] {
-    sortedHiddenSharers.filter {
-      !unreadChatUserIds.contains($0.id) && !typingUserIds.contains($0.id)
-    }
-  }
-
-  /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
-  /// Sorting is deferred until previews finish loading to prevent layout jumps
-  private func sortedSharers(from sharers: [SharedUser]) -> [SharedUser] {
-    // While previews are loading, maintain stable alphabetical order
-    // This prevents jarring re-sorts as individual previews arrive
-    guard !isLoadingPreviews && !shiftPreviews.isEmpty else {
-      return sharers.sorted {
-        $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-      }
-    }
-
-    return sharers.sorted { a, b in
-      let previewA = shiftPreviews[a.id]
-      let previewB = shiftPreviews[b.id]
-
-      // Priority: active > upcoming > past > no shift
-      let priorityA = statusPriority(for: previewA?.status)
-      let priorityB = statusPriority(for: previewB?.status)
-
-      if priorityA != priorityB {
-        return priorityA < priorityB
-      }
-
-      // Within same status, sort by time
-      guard let shiftA = previewA?.shift, let shiftB = previewB?.shift else {
-        // Fallback to alphabetical for stable ordering
-        return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
-      }
-
-      let timeA = shiftStartTime(for: shiftA)
-      let timeB = shiftStartTime(for: shiftB)
-
-      guard let timeA = timeA, let timeB = timeB else {
-        return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
-      }
-
-      switch previewA?.status {
-      case .upcoming:
-        // Upcoming: soonest first (ascending), then alphabetical for same time
-        if timeA == timeB {
-          return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
-        }
-        return timeA < timeB
-      case .past:
-        // Past: most recent first (descending), then alphabetical for same time
-        if timeA == timeB {
-          return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
-        }
-        return timeA > timeB
-      default:
-        return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
-      }
-    }
-  }
-
-  /// Get priority value for status (lower = higher priority)
-  private func statusPriority(for status: ShiftPreviewStatus?) -> Int {
-    switch status {
-    case .active: return 0
-    case .upcoming: return 1
-    case .past: return 2
-    case .none: return 3
-    }
-  }
-
-  /// Parse shift start time for sorting
-  private func shiftStartTime(for shift: SharedShiftData) -> Date? {
-    guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return nil }
-
-    let components = shift.start_time.split(separator: ":").compactMap { Int($0) }
-    guard components.count >= 2 else { return nil }
-
-    return Calendar.current.date(
-      bySettingHour: components[0],
-      minute: components[1],
-      second: 0,
-      of: shiftDate
+  private var ordering: FriendsListOrdering {
+    FriendsListOrdering(
+      typingUserIds: typingUserIds,
+      unreadChatUserIds: unreadChatUserIds,
+      chatPreviewsByUserId: chatPreviewsByUserId,
+      shiftPreviews: shiftPreviews,
+      isLoadingShiftPreviews: isLoadingPreviews
     )
   }
 
@@ -186,19 +245,11 @@ struct SharerListView: View {
 
   private var sharersList: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      ForEach(promotedTypingSharers) { sharer in
+      ForEach(sortedVisibleSharers) { sharer in
         sharerCard(for: sharer)
       }
 
-      ForEach(promotedUnreadSharers) { sharer in
-        sharerCard(for: sharer)
-      }
-
-      ForEach(sortedVisibleNonUnreadSharers) { sharer in
-        sharerCard(for: sharer)
-      }
-
-      if !sortedHiddenNonUnreadSharers.isEmpty {
+      if !sortedHiddenSharers.isEmpty {
         hiddenSharersDisclosure
       }
     }
@@ -226,7 +277,7 @@ struct SharerListView: View {
             .font(.tidexLabelStrong)
             .foregroundColor(.tidexTextPrimary)
 
-          Text("\(sortedHiddenNonUnreadSharers.count)")
+          Text("\(sortedHiddenSharers.count)")
             .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextMuted)
             .padding(.horizontal, Spacing.xs)
@@ -253,7 +304,7 @@ struct SharerListView: View {
       .buttonStyle(.plain)
 
       if isShowingHiddenSharers {
-        ForEach(sortedHiddenNonUnreadSharers) { sharer in
+        ForEach(sortedHiddenSharers) { sharer in
           hiddenSharerCard(for: sharer)
         }
       }
@@ -262,13 +313,15 @@ struct SharerListView: View {
 
   @ViewBuilder
   private func sharerCard(for sharer: SharedUser) -> some View {
-    let preview = shiftPreviews[sharer.id]
+    let suppressShiftPreview = ordering.shouldSuppressShiftPreview(for: sharer)
+    let preview = suppressShiftPreview ? nil : shiftPreviews[sharer.id]
     let isOpeningMessage = openingThreadUserId == sharer.id
     let isSelected =
       selectedSharer?.id == sharer.id
       || highlightedChatUserId == sharer.id
       || isOpeningMessage
     let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
+    let isCalendarAvailable = !opensChatDirectly
 
     FriendCard(
       sharer: sharer,
@@ -281,12 +334,12 @@ struct SharerListView: View {
         onMessageTap(sharer)
       },
       onCalendarTap: {
-        if opensChatDirectly {
+        if !isCalendarAvailable {
           return
         }
         onSelectSharer(sharer)
       },
-      isCalendarAvailable: !opensChatDirectly,
+      isCalendarAvailable: isCalendarAvailable,
       isOpeningMessage: isOpeningMessage,
       unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
     )
