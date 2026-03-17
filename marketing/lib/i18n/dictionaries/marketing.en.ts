@@ -23,6 +23,13 @@ export const marketingEn = {
     description: 'Everything you need to know about shifts, reports and how we handle your data.',
     items: [
       {
+        question: 'What is Tidex, and why should I use it?',
+        answers: [
+          'Tidex is an iPhone app for shift workers who want to know what each shift is actually worth before payday.',
+          'It gives you a clear estimate of salary, supplements, overtime and breaks in one place, so you can plan better, catch mistakes and feel more in control of your income.',
+        ],
+      },
+      {
         question: 'How much does Tidex cost?',
         answers: [
           'You can get started for free with the core features.',
