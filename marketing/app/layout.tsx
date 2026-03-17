@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 const manrope = Manrope({ subsets: ['latin'], display: 'swap', variable: '--font-display' });
 
 export const metadata: Metadata = {
-  title: 'Tidex — Regn ut lønna di - gratis!',
+  title: 'Lønnskalkulator | Tidex',
   description:
     'Få oversikt over lønn, tillegg og overtid med Tidex. En moderne lønnskalkulator som hjelper deg og teamet ditt å holde kontroll.',
   metadataBase: new URL('https://tidex.no'),
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Tidex — Regn ut lønna di - gratis!',
+    title: 'Lønnskalkulator | Tidex',
     description:
       'Hold styr på lønnen din, planlegg vakter og håndter tillegg automatisk med Tidex.',
     url: 'https://tidex.no',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tidex — Regn ut lønna di - gratis!',
+    title: 'Lønnskalkulator | Tidex',
     description:
       'Planlegg vakter, beregn tillegg og få kontroll på lønnen din med Tidex.',
     images: ['/og/landing.png'],

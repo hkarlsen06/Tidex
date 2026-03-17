@@ -1,17 +1,17 @@
 export const marketingNo = {
   meta: {
-    title: 'Tidex — Regn ut lønna di - gratis!',
+    title: 'Lønnskalkulator | Tidex',
     description: 'Få oversikt over lønn, tillegg og overtid med Tidex. En moderne lønnskalkulator som gir full kontroll.',
-    ogTitle: 'Tidex — Regn ut lønna di - gratis!',
+    ogTitle: 'Tidex | Timelønn',
     ogDescription: 'Hold styr på lønnen din, planlegg vakter og håndter tillegg automatisk med Tidex.',
     ogImageAlt: 'Tidex — Kontroll på lønnen din',
   },
   hero: {
-    eyebrow: 'Native iPhone-app',
-    title: 'Se hva vakten din er verdt.',
-    description: 'Tidex beregner lønn, tillegg og tariff i sanntid — slik at du aldri overraskes på lønnsdagen.',
-    primaryCta: 'Åpne appen',
-    appStoreCta: 'Last ned fra App Store',
+    eyebrow: 'iPhone-app',
+    title: 'Se hva vakten din er verdt',
+    description: '…så du alltid vet hva du faktisk får utbetalt.',
+    primaryCta: 'Se neste lønning',
+    appStoreCta: 'Se neste lønning',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex-logo',
     screenshotAlt: 'Skjermbilde av Tidex iPhone-appen som viser dashbordet og vaktoversikten.',
@@ -23,31 +23,31 @@ export const marketingNo = {
     description: 'Alt du trenger å vite om vakter, rapporter og hvordan dataene dine behandles.',
     items: [
       {
-        question: 'Hva koster det? Er det gratis?',
+        question: 'Hva koster Tidex?',
         answers: [
-          'Ja, du kan komme i gang gratis med kjernefunksjonene.',
-          'Skaleres du opp i bruken, gir Pro-abonnementet ubegrensede måneder for bare 29 kr i måneden.',
+          'Du kan komme i gang gratis med kjernefunksjonene.',
+          'Hvis du vil ha mer, koster Pro 29 kr i måneden med ubegrenset historikk.',
         ],
       },
       {
-        question: 'Finnes det en native iOS-app?',
+        question: 'Har dere en iPhone-app?',
         answers: [
-          'Ja, Tidex har en native iOS-app laget i SwiftUI som ligger i App Store.',
-          'iOS-appen bruker samme sikre backend og kontosystem som resten av Tidex, så vakter, innstillinger og abonnement holdes synkronisert.',
+          'Ja, Tidex finnes som app for iPhone, og du laster den ned i App Store.',
+          'Vakter, innstillinger og abonnement er knyttet til kontoen din, så alt holder seg oppdatert i appen.',
         ],
       },
       {
-        question: 'Er nettappen fortsatt tilgjengelig?',
+        question: 'Kan jeg fortsatt bruke nettsiden?',
         answers: [
-          'Nei. Den gamle nettappen er avviklet fordi den ble brukt for lite til at det ga mening å vedlikeholde den ved siden av den native appen.',
-          'Tidex bygges av én utvikler, så jeg må bruke tiden der den hjelper flest. Akkurat nå betyr det iOS-appen, som er der de aktive brukerne er.',
+          'Nei. Den gamle nettsiden er avviklet fordi nesten alle brukte iPhone-appen.',
+          'Tidex bygges av én utvikler, så tiden brukes der den hjelper flest. Akkurat nå betyr det iPhone-appen, som er der de aktive brukerne er.',
           'Hvis du har en gammel nettkonto eller spørsmål om tidligere webbetalinger, hjelper support deg manuelt.',
         ],
       },
       {
-        question: 'Hvordan håndteres pauser og pausetrekk?',
+        question: 'Hvordan fungerer pauser?',
         answers: [
-          'Vi regner smart: Jobber du over 5,5 timer, trekker vi automatisk 30 minutter pause — med standardregler som gjelder for de fleste stillinger.',
+          'Jobber du over 5,5 timer, trekker appen automatisk 30 minutter pause med standardregler som passer for de fleste.',
           'Hvis arbeidsgiveren din har andre regler, kan du overstyre pausereglene i innstillingene, også for vakter som går over midnatt.',
         ],
       },
@@ -59,7 +59,7 @@ export const marketingNo = {
         ],
       },
       {
-        question: 'Kan jeg laste ned lønnsrapporter?',
+        question: 'Kan jeg laste ned en lønnsrapport?',
         answers: [
           'Ja. Du kan laste ned alle vaktene dine som PDF eller Excel (CSV) når som helst, for eksempel til lønnsslipp og timeseddel.',
           'Rapporten viser arbeidstimer, pauser, tillegg og total utbetaling for hver vakt.',
@@ -68,15 +68,15 @@ export const marketingNo = {
       {
         question: 'Hvor lagres dataene mine?',
         answers: [
-          'Dataene dine lagres i sikre Supabase-tabeller knyttet til kontoen din.',
-          'iOS-appen bruker lokal-first-lagring og synkroniserer mot samme backend, slik at dataene dine er tilgjengelige på enheten samtidig som de er knyttet til kontoen din.',
+          'Dataene dine lagres sikkert og er knyttet til kontoen din.',
+          'Appen synkroniserer dataene dine, så de er tilgjengelige på enheten din og følger deg når du logger inn.',
         ],
       },
       {
         question: 'Er dataene mine trygge?',
         answers: [
-          'Selvfølgelig. Vi tar personvern seriøst. Vaktdata sendes til serveren ved innlogging og synkronisering, ikke tilfeldig.',
-          'Vi lagrer kun det som trengs for å gi funksjonalitet: vakter, innstillinger og profilinformasjon.',
+          'Ja. Vi tar personvern seriøst, og vaktdataene dine sendes bare når det trengs for innlogging og synkronisering.',
+          'Vi lagrer bare det som trengs for at appen skal fungere: vakter, innstillinger og profilinformasjon.',
         ],
       },
     ],
