@@ -607,8 +607,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
   ) {
-    // Handle silent push notifications if needed
-    completionHandler(.newData)
+    guard (userInfo["delivery_mode"] as? String) == "prefetch" else {
+      completionHandler(.noData)
+      return
+    }
+
+    let threadId = userInfo["thread_id"] as? String
+    let messageId = userInfo["message_id"] as? String
+    launchLog.info(
+      "Received silent prefetch push thread=\(threadId ?? "<missing>", privacy: .private) message=\(messageId ?? "<missing>", privacy: .private)"
+    )
+
+    Task { @MainActor in
+      let outcome = await FriendNotificationMessagePrefetcher.shared.prefetchBackgroundMessage(
+        threadId: threadId,
+        messageId: messageId
+      )
+      launchLog.info(
+        "Silent prefetch completion result=\(String(describing: outcome.backgroundFetchResult.rawValue), privacy: .public)"
+      )
+      completionHandler(outcome.backgroundFetchResult)
+    }
   }
 
   /// Register APNs token via authenticated Supabase RPC.
@@ -699,6 +718,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     await registerAPNsToken(token)
+  }
+
+  private func prefetchThreadMessageFromNotification(
+    threadId: String,
+    messageId: String?
+  ) {
+    Task { @MainActor in
+      _ = await FriendNotificationMessagePrefetcher.shared.prefetchMessage(
+        threadId: threadId,
+        messageId: messageId,
+        skipWhenBiometricLocked: false
+      )
+    }
   }
 }
 
@@ -872,6 +904,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     {
       let messageId = userInfo["message_id"] as? String
       let senderUserId = userInfo["sender_user_id"] as? String
+
+      prefetchThreadMessageFromNotification(threadId: threadId, messageId: messageId)
 
       Task { @MainActor in
         await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)

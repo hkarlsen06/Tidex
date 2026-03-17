@@ -2,38 +2,86 @@ import Foundation
 import SwiftData
 
 extension LocalStoreActor {
-  func savePendingFriendComposerDraft(
-    attachmentData: Data,
+  func savePendingFriendComposerDraftText(
+    _ draftText: String,
     threadId: String,
     viewerUserId: String
   ) throws {
-    let compositeKey = "\(viewerUserId):\(threadId)"
-    let descriptor = FetchDescriptor<LocalPendingFriendComposerDraft>(
-      predicate: #Predicate { $0.compositeKey == compositeKey }
-    )
+    let draft =
+      try pendingFriendComposerDraft(threadId: threadId, viewerUserId: viewerUserId)
+      ?? LocalPendingFriendComposerDraft(
+        viewerUserId: viewerUserId,
+        threadId: threadId
+      )
 
-    if let existing = try modelContext.fetch(descriptor).first {
-      existing.attachmentData = attachmentData
-      existing.updatedAt = Date()
-    } else {
-      modelContext.insert(
-        LocalPendingFriendComposerDraft(
-          viewerUserId: viewerUserId,
-          threadId: threadId,
-          attachmentData: attachmentData
-        ))
+    if draft.modelContext == nil {
+      modelContext.insert(draft)
     }
 
+    draft.draftText = draftText
+    draft.updatedAt = Date()
+    try deletePendingFriendComposerDraftIfEmpty(draft)
+    try modelContext.save()
+  }
+
+  func clearPendingFriendComposerDraftText(threadId: String, viewerUserId: String) throws {
+    guard
+      let existing = try pendingFriendComposerDraft(
+        threadId: threadId,
+        viewerUserId: viewerUserId
+      )
+    else {
+      return
+    }
+
+    existing.draftText = nil
+    existing.updatedAt = Date()
+    try deletePendingFriendComposerDraftIfEmpty(existing)
+    try modelContext.save()
+  }
+
+  func savePendingFriendComposerDraftAttachmentData(
+    _ attachmentData: Data,
+    threadId: String,
+    viewerUserId: String
+  ) throws {
+    let draft =
+      try pendingFriendComposerDraft(threadId: threadId, viewerUserId: viewerUserId)
+      ?? LocalPendingFriendComposerDraft(
+        viewerUserId: viewerUserId,
+        threadId: threadId
+      )
+
+    if draft.modelContext == nil {
+      modelContext.insert(draft)
+    }
+
+    draft.attachmentData = attachmentData
+    draft.updatedAt = Date()
+    try deletePendingFriendComposerDraftIfEmpty(draft)
+    try modelContext.save()
+  }
+
+  func clearPendingFriendComposerDraftAttachmentData(threadId: String, viewerUserId: String) throws
+  {
+    guard
+      let existing = try pendingFriendComposerDraft(
+        threadId: threadId,
+        viewerUserId: viewerUserId
+      )
+    else {
+      return
+    }
+
+    existing.attachmentData = nil
+    existing.updatedAt = Date()
+    try deletePendingFriendComposerDraftIfEmpty(existing)
     try modelContext.save()
   }
 
   func clearPendingFriendComposerDraft(threadId: String, viewerUserId: String) throws {
-    let compositeKey = "\(viewerUserId):\(threadId)"
-    let descriptor = FetchDescriptor<LocalPendingFriendComposerDraft>(
-      predicate: #Predicate { $0.compositeKey == compositeKey }
-    )
-
-    for existing in try modelContext.fetch(descriptor) {
+    for existing in try pendingFriendComposerDrafts(threadId: threadId, viewerUserId: viewerUserId)
+    {
       modelContext.delete(existing)
     }
 
@@ -50,6 +98,32 @@ extension LocalStoreActor {
     }
 
     try modelContext.save()
+  }
+
+  private func pendingFriendComposerDraft(threadId: String, viewerUserId: String) throws
+    -> LocalPendingFriendComposerDraft?
+  {
+    try pendingFriendComposerDrafts(threadId: threadId, viewerUserId: viewerUserId).first
+  }
+
+  private func pendingFriendComposerDrafts(threadId: String, viewerUserId: String) throws
+    -> [LocalPendingFriendComposerDraft]
+  {
+    let compositeKey = "\(viewerUserId):\(threadId)"
+    let descriptor = FetchDescriptor<LocalPendingFriendComposerDraft>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    return try modelContext.fetch(descriptor)
+  }
+
+  private func deletePendingFriendComposerDraftIfEmpty(_ draft: LocalPendingFriendComposerDraft)
+    throws
+  {
+    let hasDraftText = !(draft.draftText?.isEmpty ?? true)
+    if !hasDraftText, draft.attachmentData == nil {
+      modelContext.delete(draft)
+    }
   }
 
   func saveThreadSummaries(_ threads: [FriendThread], for viewerUserId: String) throws {

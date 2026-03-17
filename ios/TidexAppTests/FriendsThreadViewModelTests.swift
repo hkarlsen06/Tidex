@@ -1093,6 +1093,68 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.stagedComposerAttachment, snapshotDraft)
   }
 
+  func testLoadHydratesPendingComposerTextDraft() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+
+    await draftStore.saveDraftText(
+      "Unsent message",
+      threadId: route.threadId,
+      viewerUserId: "viewer-1"
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.load()
+
+    XCTAssertEqual(viewModel.draft, "Unsent message")
+  }
+
+  func testHandleDraftChangedPersistsComposerTextDraft() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+
+    let storedText = await draftStore.loadDraftText(
+      threadId: route.threadId,
+      viewerUserId: "viewer-1"
+    )
+    XCTAssertEqual(storedText, "Persistent text")
+  }
+
   func testSendDraftWithShiftSnapshotUsesStoredMetadata() async throws {
     let repository = try makeRepository()
     let draftStore = try makeDraftStore()

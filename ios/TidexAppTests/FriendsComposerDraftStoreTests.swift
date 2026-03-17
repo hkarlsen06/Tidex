@@ -5,6 +5,20 @@ import XCTest
 
 @MainActor
 final class FriendsComposerDraftStoreTests: XCTestCase {
+  func testLoadAndClearTextDraft() async throws {
+    let store = try makeStore()
+
+    await store.saveDraftText("Draft message", threadId: "thread-1", viewerUserId: "viewer-1")
+
+    let loadedText = await store.loadDraftText(threadId: "thread-1", viewerUserId: "viewer-1")
+    XCTAssertEqual(loadedText, "Draft message")
+
+    await store.saveDraftText("", threadId: "thread-1", viewerUserId: "viewer-1")
+
+    let clearedText = await store.loadDraftText(threadId: "thread-1", viewerUserId: "viewer-1")
+    XCTAssertEqual(clearedText, "")
+  }
+
   func testLoadAndClearAttachmentDraft() async throws {
     let store = try makeStore()
     let attachment = FriendsComposerAttachmentDraft.shiftSnapshot(
@@ -22,6 +36,21 @@ final class FriendsComposerDraftStoreTests: XCTestCase {
     let clearedDraft = await store.loadAttachmentDraft(
       threadId: "thread-1", viewerUserId: "viewer-1")
     XCTAssertNil(clearedDraft)
+  }
+
+  func testClearingAttachmentPreservesSavedTextDraft() async throws {
+    let store = try makeStore()
+    let attachment = FriendsComposerAttachmentDraft.shiftSnapshot(
+      ComposerShiftSnapshotDraft(snapshot: makeShiftSnapshot())
+    )
+
+    await store.saveDraftText("Draft message", threadId: "thread-1", viewerUserId: "viewer-1")
+    await store.saveAttachmentDraft(attachment, threadId: "thread-1", viewerUserId: "viewer-1")
+    await store.clearAttachmentDraft(threadId: "thread-1", viewerUserId: "viewer-1")
+
+    let restoredDraft = await store.loadDraft(threadId: "thread-1", viewerUserId: "viewer-1")
+    XCTAssertEqual(restoredDraft?.text, "Draft message")
+    XCTAssertNil(restoredDraft?.attachment)
   }
 
   private func makeStore() throws -> FriendsComposerDraftStore {

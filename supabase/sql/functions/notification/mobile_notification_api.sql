@@ -73,6 +73,10 @@ BEGIN
       app_version = p_app_version,
       last_seen_at = v_now,
       updated_at = v_now,
+      apns_environment = CASE
+        WHEN p_apns_token IS NOT NULL AND p_apns_token IS DISTINCT FROM apns_token THEN NULL
+        ELSE apns_environment
+      END,
       apns_token = COALESCE(p_apns_token, apns_token),
       fcm_token = COALESCE(p_fcm_token, fcm_token)
     WHERE id = v_existing_id;

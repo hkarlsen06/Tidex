@@ -30,7 +30,7 @@ struct AvatarView: View {
 
   var body: some View {
     if let urlString = url, let imageUrl = URL(string: urlString) {
-      CachedAsyncImage(url: imageUrl) { image in
+      CachedAsyncImage(url: imageUrl, syncToNotificationServiceCache: true) { image in
         image
           .resizable()
           .aspectRatio(contentMode: .fill)

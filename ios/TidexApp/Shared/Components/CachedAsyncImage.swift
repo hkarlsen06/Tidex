@@ -4,6 +4,54 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ImageCache")
 
+private enum NotificationAvatarSharedCache {
+  private static let appGroupId = "group.no.tidex.app"
+  private static let cacheDirectoryName = "NotificationAvatarCache"
+
+  private static var cacheDirectory: URL? {
+    guard
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
+      return nil
+    }
+
+    let directory = containerURL.appendingPathComponent(cacheDirectoryName, isDirectory: true)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    return directory
+  }
+
+  static func store(_ image: UIImage, for url: URL) {
+    guard let cacheFileURL = cacheFileURL(for: url) else { return }
+
+    let data = image.jpegData(compressionQuality: 0.85) ?? image.pngData()
+    guard let data else { return }
+    try? data.write(to: cacheFileURL, options: .atomic)
+  }
+
+  static func remove(for url: URL) {
+    guard let cacheFileURL = cacheFileURL(for: url) else { return }
+    try? FileManager.default.removeItem(at: cacheFileURL)
+  }
+
+  static func clearAll() {
+    guard let directory = cacheDirectory else { return }
+    try? FileManager.default.removeItem(at: directory)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+  }
+
+  private static func cacheFileURL(for url: URL) -> URL? {
+    guard let directory = cacheDirectory else { return nil }
+    return directory.appendingPathComponent(fileName(for: url))
+  }
+
+  private static func fileName(for url: URL) -> String {
+    SHA256.hash(data: Data(url.absoluteString.utf8))
+      .compactMap { String(format: "%02x", $0) }
+      .joined()
+  }
+}
+
 // MARK: - Cached Image Wrapper
 
 /// Wrapper class for UIImage that tracks when it was cached for expiration
@@ -162,6 +210,7 @@ final class ImageCache: @unchecked Sendable {
 
   func remove(for url: URL) {
     memoryCache.removeObject(forKey: url.absoluteString as NSString)
+    NotificationAvatarSharedCache.remove(for: url)
 
     diskCacheQueue.async { [weak self] in
       guard let self = self else { return }
@@ -172,6 +221,7 @@ final class ImageCache: @unchecked Sendable {
 
   func clearAll() {
     memoryCache.removeAllObjects()
+    NotificationAvatarSharedCache.clearAll()
 
     diskCacheQueue.async { [weak self] in
       guard let self = self else { return }
@@ -230,6 +280,7 @@ final class ImageCache: @unchecked Sendable {
 /// Uses NSCache for in-memory caching to avoid re-fetching on every render
 struct CachedAsyncImage<Content: View, Placeholder: View>: View {
   let url: URL?
+  let syncToNotificationServiceCache: Bool
   let content: (Image) -> Content
   let placeholder: () -> Placeholder
 
@@ -238,10 +289,12 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
   init(
     url: URL?,
+    syncToNotificationServiceCache: Bool = false,
     @ViewBuilder content: @escaping (Image) -> Content,
     @ViewBuilder placeholder: @escaping () -> Placeholder
   ) {
     self.url = url
+    self.syncToNotificationServiceCache = syncToNotificationServiceCache
     self.content = content
     self.placeholder = placeholder
   }
@@ -270,6 +323,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
     // Check memory cache first (synchronous, fast)
     if let cached = ImageCache.shared.get(for: url) {
+      if syncToNotificationServiceCache {
+        NotificationAvatarSharedCache.store(cached, for: url)
+      }
       loadedImage = cached
       return
     }
@@ -279,6 +335,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     Task {
       // Check disk cache second (async but no network)
       if let diskCached = await ImageCache.shared.getFromDisk(for: url) {
+        if syncToNotificationServiceCache {
+          NotificationAvatarSharedCache.store(diskCached, for: url)
+        }
         await MainActor.run {
           loadedImage = diskCached
           isLoading = false
@@ -292,6 +351,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         if let image = UIImage(data: data) {
           // Cache the image (memory + disk)
           ImageCache.shared.set(image, for: url)
+          if syncToNotificationServiceCache {
+            NotificationAvatarSharedCache.store(image, for: url)
+          }
 
           await MainActor.run {
             loadedImage = image
@@ -319,7 +381,12 @@ extension CachedAsyncImage where Placeholder == EmptyView {
     url: URL?,
     @ViewBuilder content: @escaping (Image) -> Content
   ) {
-    self.init(url: url, content: content, placeholder: { EmptyView() })
+    self.init(
+      url: url,
+      syncToNotificationServiceCache: false,
+      content: content,
+      placeholder: { EmptyView() }
+    )
   }
 }
 
@@ -328,6 +395,7 @@ where Content == Image, Placeholder == ProgressView<EmptyView, EmptyView> {
   init(url: URL?) {
     self.init(
       url: url,
+      syncToNotificationServiceCache: false,
       content: { $0 },
       placeholder: { ProgressView() }
     )

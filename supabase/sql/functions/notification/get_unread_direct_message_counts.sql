@@ -22,7 +22,7 @@ AS $$
     SELECT
       requested.user_id,
       t.id,
-      COUNT(*)::integer AS unread_count
+      COALESCE(tus.unread_count, 0)::integer AS unread_count
     FROM requested_users requested
     INNER JOIN public.threads t
       ON t.kind = 'direct'
@@ -35,11 +35,6 @@ AS $$
     LEFT JOIN public.thread_user_state tus
       ON tus.thread_id = t.id
      AND tus.user_id = requested.user_id
-    LEFT JOIN public.messages rm
-      ON rm.id = tus.last_read_message_id
-    INNER JOIN public.messages m
-      ON m.thread_id = t.id
-     AND m.sender_user_id <> requested.user_id
     WHERE (
       dt.thread_id IS NULL
       OR NOT EXISTS (
@@ -61,13 +56,6 @@ AS $$
           AND ss.blocked_by_user_id IS NOT NULL
       )
     )
-      AND m.deleted_at IS NULL
-      AND (
-        tus.last_read_message_id IS NULL
-        OR rm.id IS NULL
-        OR (m.created_at, m.id) > (rm.created_at, rm.id)
-      )
-    GROUP BY requested.user_id, t.id
   )
   SELECT
     requested.user_id,

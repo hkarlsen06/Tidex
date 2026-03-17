@@ -56,13 +56,17 @@ export interface OutboxNotification {
   data_payload: Record<string, unknown>;
   idempotency_key: string;
   created_at: string;
+  claimed_at?: string | null;
 }
+
+type ApnsEnvironment = "production" | "sandbox";
 
 interface PushDevice {
   id: string;
   user_id: string;
   fcm_token: string | null;
   apns_token: string | null;
+  apns_environment?: ApnsEnvironment | null;
 }
 
 interface NotificationDeliveryJob {
@@ -79,12 +83,22 @@ interface DeviceSendAttemptResult {
   success: boolean;
   clearApnsTokenDeviceId?: string;
   deleteDeviceId?: string;
+  prefetchEligible: boolean;
+  prefetchAttempted: boolean;
+  prefetchSucceeded: boolean;
+  alertLatencyMs?: number;
+  prefetchLatencyMs?: number;
+  confirmedApnsEnvironment?: ApnsEnvironment;
 }
 
 const richFormattingTypes = new Set([
   "thread_message",
   "thread_screenshot",
   "shifts_screenshotted",
+]);
+const messagePrefetchTypes = new Set([
+  "thread_message",
+  "thread_screenshot",
 ]);
 
 // ---------- Helpers ----------
@@ -116,6 +130,10 @@ export function usesThreadActions(notificationType: string): boolean {
   return notificationType === "thread_message";
 }
 
+export function usesMessagePrefetch(notificationType: string): boolean {
+  return messagePrefetchTypes.has(notificationType);
+}
+
 function notificationDataString(
   notification: OutboxNotification,
   key: string,
@@ -143,10 +161,29 @@ function notificationThreadId(notification: OutboxNotification): string | null {
 function notificationCollapseId(
   notification: OutboxNotification,
 ): string | null {
+  if (notification.notification_type !== "thread_message") return null;
   const threadId = notificationThreadId(notification);
   if (!threadId) return null;
   if (notificationMessageCount(notification) < 4) return null;
   return `thread-message:${threadId}`;
+}
+
+function notificationMessageId(notification: OutboxNotification): string | null {
+  return notificationDataString(notification, "message_id");
+}
+
+function notificationPrefetchThreadId(
+  notification: OutboxNotification,
+): string | null {
+  return notificationDataString(notification, "thread_id");
+}
+
+function notificationPrefetchCollapseId(
+  notification: OutboxNotification,
+): string | null {
+  const threadId = notificationPrefetchThreadId(notification);
+  if (!threadId) return null;
+  return `friend-prefetch:${threadId}`;
 }
 
 function isNewerNotification(
@@ -287,6 +324,80 @@ function buildApnsHeaders(
   return headers;
 }
 
+export function buildPrefetchApsPayload(): Record<string, unknown> {
+  return {
+    "content-available": 1,
+  };
+}
+
+export function buildPrefetchApnsHeaders(
+  notification: OutboxNotification,
+): Record<string, string> | null {
+  if (!usesMessagePrefetch(notification.notification_type)) {
+    return null;
+  }
+
+  const threadId = notificationPrefetchThreadId(notification);
+  const messageId = notificationMessageId(notification);
+  if (!threadId || !messageId) {
+    return null;
+  }
+
+  const headers: Record<string, string> = {
+    "apns-push-type": "background",
+    "apns-priority": "5",
+  };
+  const collapseId = notificationPrefetchCollapseId(notification);
+  if (collapseId) {
+    headers["apns-collapse-id"] = collapseId;
+  }
+
+  return headers;
+}
+
+export function buildPrefetchPayload(
+  notification: OutboxNotification,
+): Record<string, unknown> | null {
+  if (!usesMessagePrefetch(notification.notification_type)) {
+    return null;
+  }
+
+  const threadId = notificationPrefetchThreadId(notification);
+  const messageId = notificationMessageId(notification);
+  if (!threadId || !messageId) {
+    return null;
+  }
+
+  const payload: Record<string, unknown> = {
+    aps: buildPrefetchApsPayload(),
+    delivery_mode: "prefetch",
+    type: notification.notification_type,
+    thread_id: threadId,
+    message_id: messageId,
+  };
+  const senderUserId = notificationDataString(notification, "sender_user_id");
+  if (senderUserId) {
+    payload.sender_user_id = senderUserId;
+  }
+  const messageCreatedAt = notificationDataString(
+    notification,
+    "message_created_at",
+  );
+  if (messageCreatedAt) {
+    payload.message_created_at = messageCreatedAt;
+  }
+
+  return payload;
+}
+
+export function buildApnsEnvironmentOrder(
+  preferredEnvironment: string | null | undefined,
+): ApnsEnvironment[] {
+  return preferredEnvironment === "sandbox"
+    ? ["sandbox", "production"]
+    : ["production", "sandbox"];
+}
+
 async function getUnreadBadgeCount(
   supabase: any,
   recipientId: string,
@@ -325,9 +436,7 @@ async function getUnreadBadgeCounts(
   recipientIds: string[],
 ): Promise<Map<string, number>> {
   const uniqueRecipientIds = Array.from(new Set(recipientIds));
-  const counts = new Map<string, number>(
-    uniqueRecipientIds.map((recipientId) => [recipientId, 0]),
-  );
+  const counts = new Map<string, number>();
 
   if (uniqueRecipientIds.length === 0) {
     return counts;
@@ -362,6 +471,12 @@ async function getUnreadBadgeCounts(
     );
   }
 
+  for (const recipientId of uniqueRecipientIds) {
+    if (!counts.has(recipientId)) {
+      counts.set(recipientId, 0);
+    }
+  }
+
   return counts;
 }
 
@@ -392,7 +507,7 @@ async function fetchPushDevicesByRecipient(
   const { data, error } = await supabase
     .schema("internal")
     .from("push_devices")
-    .select("id, user_id, fcm_token, apns_token")
+    .select("id, user_id, fcm_token, apns_token, apns_environment")
     .in("user_id", uniqueRecipientIds);
 
   if (error) {
@@ -751,39 +866,29 @@ async function sendToFcm(
   return { success: false };
 }
 
-/**
- * Send a notification to APNs (Apple Push Notification service)
- * Uses HTTP/2 API with JWT authentication
- * Tries production first, falls back to sandbox if BadDeviceToken
- */
-async function sendToApns(
+async function sendPayloadToApns(
   apnsToken: string,
-  notification: OutboxNotification,
-  badgeCount: number,
-): Promise<{ success: boolean; invalidToken?: boolean }> {
-  const { title, body, data_payload, notification_type } = notification;
-
-  // Build custom data payload
-  const customData: Record<string, unknown> = {
-    type: notification_type,
-    ...data_payload,
-  };
-
-  const aps = buildApsPayload(notification, badgeCount);
-  const apnsHeaders = buildApnsHeaders(notification);
-
-  // APNs payload format
-  const payload = {
-    aps,
-    ...customData,
-  };
-
+  payload: Record<string, unknown>,
+  apnsHeaders: Record<string, string>,
+  logLabel: string,
+  preferredEnvironment?: ApnsEnvironment | null,
+): Promise<{
+  success: boolean;
+  invalidToken?: boolean;
+  environment?: ApnsEnvironment;
+  latencyMs?: number;
+}> {
   // Try production first, then sandbox
   // This handles mixed environments (App Store + TestFlight users)
-  const environments: Array<{ sandbox: boolean; host: string }> = [
-    { sandbox: false, host: "api.push.apple.com" },
-    { sandbox: true, host: "api.sandbox.push.apple.com" },
-  ];
+  const environments = buildApnsEnvironmentOrder(preferredEnvironment).map(
+    (environment) => ({
+      environment,
+      sandbox: environment === "sandbox",
+      host: environment === "sandbox"
+        ? "api.sandbox.push.apple.com"
+        : "api.push.apple.com",
+    }),
+  );
 
   // Check if sandbox credentials are configured
   const sandboxConfigured = !!(APNS_SANDBOX_KEY_ID && APNS_SANDBOX_PRIVATE_KEY);
@@ -796,8 +901,9 @@ async function sendToApns(
 
     const jwtToken = await getApnsToken(env.sandbox);
     const apnsUrl = `https://${env.host}/3/device/${apnsToken}`;
+    const requestStartedAt = performance.now();
 
-    console.log(`[APNs] Trying ${env.host}...`);
+    console.log(`[APNs] Trying ${env.host} for ${logLabel}...`);
 
     const response = await fetch(apnsUrl, {
       method: "POST",
@@ -811,14 +917,18 @@ async function sendToApns(
     });
 
     if (response.ok) {
-      console.log(`[APNs] Success via ${env.host}`);
-      return { success: true };
+      console.log(`[APNs] Success via ${env.host} for ${logLabel}`);
+      return {
+        success: true,
+        environment: env.environment,
+        latencyMs: Math.round(performance.now() - requestStartedAt),
+      };
     }
 
     const status = response.status;
     const errorBody = await response.text();
     console.error(
-      `APNs error (${status}) via ${env.host} for token ${
+      `APNs ${logLabel} error (${status}) via ${env.host} for token ${
         apnsToken.substring(0, 20)
       }...:`,
       errorBody,
@@ -850,6 +960,64 @@ async function sendToApns(
   return { success: false, invalidToken: true };
 }
 
+/**
+ * Send a notification to APNs (Apple Push Notification service)
+ * Uses HTTP/2 API with JWT authentication
+ * Tries production first, falls back to sandbox if BadDeviceToken
+ */
+async function sendToApns(
+  apnsToken: string,
+  notification: OutboxNotification,
+  badgeCount: number,
+  preferredEnvironment?: ApnsEnvironment | null,
+): Promise<{
+  success: boolean;
+  invalidToken?: boolean;
+  environment?: ApnsEnvironment;
+  latencyMs?: number;
+}> {
+  const customData: Record<string, unknown> = {
+    type: notification.notification_type,
+    ...notification.data_payload,
+  };
+
+  return sendPayloadToApns(
+    apnsToken,
+    {
+      aps: buildApsPayload(notification, badgeCount),
+      ...customData,
+    },
+    buildApnsHeaders(notification),
+    "alert",
+    preferredEnvironment,
+  );
+}
+
+async function sendPrefetchToApns(
+  apnsToken: string,
+  notification: OutboxNotification,
+  preferredEnvironment?: ApnsEnvironment | null,
+): Promise<{
+  success: boolean;
+  invalidToken?: boolean;
+  environment?: ApnsEnvironment;
+  latencyMs?: number;
+}> {
+  const payload = buildPrefetchPayload(notification);
+  const headers = buildPrefetchApnsHeaders(notification);
+  if (!payload || !headers) {
+    return { success: false };
+  }
+
+  return sendPayloadToApns(
+    apnsToken,
+    payload,
+    headers,
+    "prefetch",
+    preferredEnvironment,
+  );
+}
+
 export function didAnyDeliverySucceed(
   results: Array<{ success: boolean }>,
 ): boolean {
@@ -877,6 +1045,24 @@ async function clearInvalidApnsTokens(
   );
 }
 
+async function persistApnsEnvironment(
+  supabase: any,
+  deviceIds: string[],
+  environment: ApnsEnvironment,
+): Promise<void> {
+  if (deviceIds.length === 0) return;
+
+  const { error } = await supabase
+    .schema("internal")
+    .from("push_devices")
+    .update({ apns_environment: environment })
+    .in("id", Array.from(new Set(deviceIds)));
+
+  if (error) {
+    throw error;
+  }
+}
+
 async function markOutboxNotifications(
   supabase: any,
   notificationIds: string[],
@@ -902,23 +1088,58 @@ async function sendToDevice(
   apnsConfigured: boolean,
   fcmAccessToken: string | null,
 ): Promise<DeviceSendAttemptResult> {
-  let result: { success: boolean; invalidToken?: boolean };
+  const prefetchEligible = Boolean(
+    device.apns_token &&
+      apnsConfigured &&
+      buildPrefetchPayload(notification) &&
+      buildPrefetchApnsHeaders(notification),
+  );
+  let prefetchAttempted = false;
+  let prefetchSucceeded = false;
+  let alertLatencyMs: number | undefined;
+  let prefetchLatencyMs: number | undefined;
+  let confirmedApnsEnvironment: ApnsEnvironment | undefined;
 
   if (device.apns_token && apnsConfigured) {
-    result = await sendToApns(
+    const result = await sendToApns(
       device.apns_token,
       notification,
       badgeCount,
+      device.apns_environment,
     );
+    alertLatencyMs = result.latencyMs;
+    confirmedApnsEnvironment = result.environment;
+
+    if (result.success && prefetchEligible) {
+      prefetchAttempted = true;
+      const prefetchResult = await sendPrefetchToApns(
+        device.apns_token,
+        notification,
+        result.environment ?? device.apns_environment,
+      );
+      prefetchSucceeded = prefetchResult.success;
+      prefetchLatencyMs = prefetchResult.latencyMs;
+      if (!prefetchResult.success) {
+        console.warn(
+          `[Push] Prefetch push failed for notification ${notification.id} on device ${device.id}`,
+        );
+      }
+    }
 
     return {
       success: result.success,
       clearApnsTokenDeviceId: result.invalidToken ? device.id : undefined,
+      prefetchEligible,
+      prefetchAttempted,
+      prefetchSucceeded,
+      alertLatencyMs,
+      prefetchLatencyMs,
+      confirmedApnsEnvironment,
     };
   }
 
   if (device.fcm_token && fcmAccessToken) {
-    result = await sendToFcm(
+    const result = await sendToFcm(
       fcmAccessToken,
       device.fcm_token,
       notification,
@@ -928,10 +1149,24 @@ async function sendToDevice(
     return {
       success: result.success,
       deleteDeviceId: result.invalidToken ? device.id : undefined,
+      prefetchEligible: false,
+      prefetchAttempted: false,
+      prefetchSucceeded: false,
+      alertLatencyMs: undefined,
+      prefetchLatencyMs: undefined,
+      confirmedApnsEnvironment: undefined,
     };
   }
 
-  return { success: false };
+  return {
+    success: false,
+    prefetchEligible: false,
+    prefetchAttempted: false,
+    prefetchSucceeded: false,
+    alertLatencyMs: undefined,
+    prefetchLatencyMs: undefined,
+    confirmedApnsEnvironment: undefined,
+  };
 }
 
 async function runWithConcurrencyLimit<T>(
@@ -1010,6 +1245,11 @@ async function handleRequest(req: Request) {
     let processed = 0;
     let failed = 0;
     const invalidTokens: string[] = [];
+    let prefetchEligibleCount = 0;
+    let prefetchAttemptedCount = 0;
+    let prefetchSuccessCount = 0;
+    const confirmedProductionDeviceIds: string[] = [];
+    const confirmedSandboxDeviceIds: string[] = [];
     const deliveryJobs = coalesceNotifications(
       notifications as OutboxNotification[],
     );
@@ -1044,6 +1284,20 @@ async function handleRequest(req: Request) {
       const notification = job.notification;
       const notificationIds = job.notifications.map((entry) => entry.id);
       const sendStartedAt = performance.now();
+      const enqueueToClaimMs = notification.claimed_at
+        ? Math.max(
+          0,
+          Math.round(
+            Date.parse(notification.claimed_at) - Date.parse(notification.created_at),
+          ),
+        )
+        : undefined;
+      const claimToSendMs = notification.claimed_at
+        ? Math.max(
+          0,
+          Math.round(Date.now() - Date.parse(notification.claimed_at)),
+        )
+        : undefined;
 
       try {
         const devices = devicesByRecipient.get(notification.recipient_id) ?? [];
@@ -1085,6 +1339,20 @@ async function handleRequest(req: Request) {
 
         await clearInvalidApnsTokens(supabase, invalidApnsTokenDeviceIds);
         invalidTokens.push(...invalidFcmTokenDeviceIds);
+        prefetchEligibleCount += results.filter((result) => result.prefetchEligible).length;
+        prefetchAttemptedCount += results.filter((result) => result.prefetchAttempted).length;
+        prefetchSuccessCount += results.filter((result) => result.prefetchSucceeded).length;
+        for (let index = 0; index < results.length; index += 1) {
+          const result = results[index];
+          if (!result.confirmedApnsEnvironment) continue;
+          const deviceId = devices[index]?.id;
+          if (!deviceId) continue;
+          if (result.confirmedApnsEnvironment === "production") {
+            confirmedProductionDeviceIds.push(deviceId);
+          } else {
+            confirmedSandboxDeviceIds.push(deviceId);
+          }
+        }
 
         const anySuccess = didAnyDeliverySucceed(results);
 
@@ -1097,10 +1365,25 @@ async function handleRequest(req: Request) {
 
         if (anySuccess) processed += notificationIds.length;
         else failed += notificationIds.length;
+        const alertLatencyValues = results
+          .map((result) => result.alertLatencyMs)
+          .filter((value): value is number => value !== undefined);
+        const prefetchLatencyValues = results
+          .map((result) => result.prefetchLatencyMs)
+          .filter((value): value is number => value !== undefined);
         console.log(
           `[Push] Processed notification ${notification.id} across ${devices.length} devices in ${
             Math.round(performance.now() - sendStartedAt)
-          } ms (success=${anySuccess})`,
+          } ms (success=${anySuccess}, enqueue_to_claim_ms=${enqueueToClaimMs ?? "n/a"}, claim_to_send_ms=${claimToSendMs ?? "n/a"}, alert_envs=${
+            results
+              .map((result) => result.confirmedApnsEnvironment)
+              .filter((environment): environment is ApnsEnvironment => Boolean(environment))
+              .join(",") || "n/a"
+          }, alert_latency_ms=${
+            alertLatencyValues.length > 0 ? alertLatencyValues.join(",") : "n/a"
+          }, prefetch_latency_ms=${
+            prefetchLatencyValues.length > 0 ? prefetchLatencyValues.join(",") : "n/a"
+          })`,
         );
       } catch (error) {
         console.error(
@@ -1119,6 +1402,17 @@ async function handleRequest(req: Request) {
         failed += notificationIds.length;
       }
     });
+
+    await persistApnsEnvironment(
+      supabase,
+      confirmedProductionDeviceIds,
+      "production",
+    );
+    await persistApnsEnvironment(
+      supabase,
+      confirmedSandboxDeviceIds,
+      "sandbox",
+    );
 
     // Clean up invalid tokens
     if (invalidTokens.length > 0) {
@@ -1162,7 +1456,7 @@ async function handleRequest(req: Request) {
     }
 
     console.log(
-      `[Push] Batch complete: processed=${processed}, failed=${failed}, claimed=${notifications.length}`,
+      `[Push] Batch complete: processed=${processed}, failed=${failed}, claimed=${notifications.length}, prefetch_eligible=${prefetchEligibleCount}, prefetch_attempted=${prefetchAttemptedCount}, prefetch_succeeded=${prefetchSuccessCount}, prefetch_failed=${prefetchAttemptedCount - prefetchSuccessCount}`,
     );
 
     return json({

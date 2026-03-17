@@ -41,13 +41,17 @@ struct SharingView: View {
   @State private var unreadChatUserIds: Set<String> = []
   @State private var unreadChatCountsByUserId: [String: Int] = [:]
   @State private var chatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
+  @State private var typingUserIds: Set<String> = []
+  @State private var typingResetTasks: [String: Task<Void, Never>] = [:]
   @State private var unreadRefreshTask: Task<Void, Never>?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
+  private static let typingIndicatorTimeout: Duration = .seconds(5)
 
   private let friendsMessagingService = FriendsMessagingService.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
+  private let friendsRealtimeCoordinator = FriendsMessagingRealtimeCoordinator.shared
 
   var body: some View {
     NavigationStack(path: $navigationPath) {
@@ -109,6 +113,7 @@ struct SharingView: View {
     .task {
       await viewModel.loadSharers()
       scheduleChatMetadataRefresh()
+      await syncTypingSubscriptions()
     }
     .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
       // Handle tab reselection - if sharing tab is tapped again while viewing a sharer,
@@ -162,6 +167,9 @@ struct SharingView: View {
     }
     .onChange(of: coordinator.userId) { _, _ in
       scheduleChatMetadataRefresh()
+      Task {
+        await syncTypingSubscriptions()
+      }
     }
     .onReceive(
       NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
@@ -179,6 +187,22 @@ struct SharingView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
       scheduleChatMetadataRefresh()
+      Task {
+        await syncTypingSubscriptions()
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .friendsThreadTypingDidChange)) {
+      notification in
+      guard
+        let threadId = notification.userInfo?["threadId"] as? String,
+        let userId = notification.userInfo?["userId"] as? String,
+        let isTyping = notification.userInfo?["isTyping"] as? Bool,
+        userId != coordinator.getCurrentUserId()
+      else {
+        return
+      }
+
+      handleTypingIndicatorChange(threadId: threadId, userId: userId, isTyping: isTyping)
     }
     .onDisappear {
       deepLinkNavigationTask?.cancel()
@@ -187,6 +211,12 @@ struct SharingView: View {
       highlightClearTask = nil
       unreadRefreshTask?.cancel()
       unreadRefreshTask = nil
+      typingResetTasks.values.forEach { $0.cancel() }
+      typingResetTasks.removeAll()
+      typingUserIds.removeAll()
+      Task {
+        await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
+      }
     }
     .alert(
       String(localized: .friendsChatOpenFailed),
@@ -345,6 +375,7 @@ struct SharingView: View {
           sharers: viewModel.sharers,
           hiddenSharers: viewModel.hiddenSharers,
           chatOnlyUserIds: viewModel.chatOnlyUserIds,
+          typingUserIds: typingUserIds,
           unreadChatUserIds: unreadChatUserIds,
           unreadChatCountsByUserId: unreadChatCountsByUserId,
           chatPreviewsByUserId: chatPreviewsByUserId,
@@ -429,7 +460,29 @@ struct SharingView: View {
     openingThreadId = threadId
     defer { openingThreadId = nil }
 
+    let isNotificationOpen =
+      (initialMessageId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+      || (notificationSenderUserId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+
     do {
+      if isNotificationOpen {
+        let route = makeImmediateChatRoute(
+          threadId: threadId,
+          initialMessageId: initialMessageId,
+          notificationSenderUserId: notificationSenderUserId
+        )
+
+        activeChatHighlightUserId =
+          route.counterpartUserId.isEmpty
+          ? notificationSenderUserId
+          : route.counterpartUserId
+        navigationPath = NavigationPath()
+        viewModel.deselectSharer()
+        navigationPath.append(route)
+        hasSelectedSharer = false
+        return
+      }
+
       async let threadTask = friendsMessagingService.fetchThreadSummary(threadId: threadId)
       async let messagesTask = friendsMessagingService.listThreadMessages(
         threadId: threadId,
@@ -470,6 +523,45 @@ struct SharingView: View {
         ? String(localized: .friendsChatOpenFailed)
         : error.localizedDescription
     }
+  }
+
+  private func makeImmediateChatRoute(
+    threadId: String,
+    initialMessageId: String?,
+    notificationSenderUserId: String?
+  ) -> FriendChatRoute {
+    let cachedThread =
+      coordinator.getCurrentUserId().flatMap {
+        friendsMessagesRepository.getThread(id: threadId, viewerUserId: $0)
+      }
+      ?? FriendThread(
+        id: threadId,
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: notificationSenderUserId,
+        counterpartDisplayName: nil,
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: nil,
+        lastMessageSenderId: nil,
+        lastMessageAt: nil,
+        lastMessageBody: nil,
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date()
+      )
+
+    return FriendChatRoute(
+      thread: cachedThread,
+      fallbackDisplayName: cachedThread.counterpartDisplayName
+        ?? String(localized: .sharingFriendsTitle),
+      fallbackAvatarUrl: cachedThread.counterpartAvatarUrl,
+      initialMessageId: initialMessageId,
+      notificationSenderUserId: notificationSenderUserId
+    )
   }
 
   private func isBlockedDirectThreadCreationError(_ error: FriendsMessagingServiceError) -> Bool {
@@ -519,6 +611,9 @@ struct SharingView: View {
       unreadChatCountsByUserId = nextUnreadChatCountsByUserId
       unreadChatUserIds = Set(nextUnreadChatCountsByUserId.keys)
       chatPreviewsByUserId = nextChatPreviewsByUserId
+      typingUserIds = typingUserIds.intersection(
+        Set(directThreads.compactMap(\.counterpartUserId))
+      )
     }
   }
 
@@ -528,6 +623,59 @@ struct SharingView: View {
       try? await Task.sleep(for: .milliseconds(120))
       guard !Task.isCancelled else { return }
       refreshChatMetadata()
+    }
+  }
+
+  private func syncTypingSubscriptions() async {
+    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
+      await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
+      await MainActor.run {
+        typingResetTasks.values.forEach { $0.cancel() }
+        typingResetTasks.removeAll()
+        typingUserIds.removeAll()
+      }
+      return
+    }
+
+    let directThreadIds =
+      friendsMessagesRepository
+      .getThreads(for: viewerUserId)
+      .filter { $0.kind == .direct }
+      .map(\.id)
+
+    await friendsRealtimeCoordinator.syncThreadListTypingSubscriptions(threadIds: directThreadIds)
+  }
+
+  private func handleTypingIndicatorChange(threadId: String, userId: String, isTyping: Bool) {
+    guard
+      let viewerUserId = coordinator.getCurrentUserId(),
+      let thread = friendsMessagesRepository.getThread(id: threadId, viewerUserId: viewerUserId),
+      thread.kind == .direct,
+      thread.counterpartUserId == userId
+    else {
+      return
+    }
+
+    typingResetTasks[userId]?.cancel()
+
+    if isTyping {
+      _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+        typingUserIds.insert(userId)
+      }
+
+      typingResetTasks[userId] = Task { @MainActor in
+        try? await Task.sleep(for: Self.typingIndicatorTimeout)
+        guard !Task.isCancelled else { return }
+        _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+          typingUserIds.remove(userId)
+        }
+        typingResetTasks[userId] = nil
+      }
+    } else {
+      _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+        typingUserIds.remove(userId)
+      }
+      typingResetTasks[userId] = nil
     }
   }
 
