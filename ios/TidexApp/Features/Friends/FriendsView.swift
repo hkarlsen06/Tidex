@@ -171,6 +171,12 @@ struct SharingView: View {
         await syncTypingSubscriptions()
       }
     }
+    .onChange(of: selectedTab) { _, newTab in
+      guard newTab == .sharing else { return }
+      Task {
+        await resubscribeTypingSubscriptions()
+      }
+    }
     .onReceive(
       NotificationCenter.default.publisher(for: Notification.Name("friendsVisibilityChanged"))
     ) { notification in
@@ -203,6 +209,14 @@ struct SharingView: View {
       }
 
       handleTypingIndicatorChange(threadId: threadId, userId: userId, isTyping: isTyping)
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
+    {
+      _ in
+      guard selectedTab == .sharing else { return }
+      Task {
+        await resubscribeTypingSubscriptions()
+      }
     }
     .onDisappear {
       deepLinkNavigationTask?.cancel()
@@ -644,6 +658,17 @@ struct SharingView: View {
       .map(\.id)
 
     await friendsRealtimeCoordinator.syncThreadListTypingSubscriptions(threadIds: directThreadIds)
+  }
+
+  private func resubscribeTypingSubscriptions() async {
+    await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
+    await MainActor.run {
+      typingResetTasks.values.forEach { $0.cancel() }
+      typingResetTasks.removeAll()
+      typingUserIds.removeAll()
+    }
+    scheduleChatMetadataRefresh()
+    await syncTypingSubscriptions()
   }
 
   private func handleTypingIndicatorChange(threadId: String, userId: String, isTyping: Bool) {

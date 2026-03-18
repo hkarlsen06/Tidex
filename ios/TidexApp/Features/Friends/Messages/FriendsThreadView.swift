@@ -236,6 +236,13 @@ struct FriendsThreadView: View {
           await reportScreenshot()
         }
       }
+      .onReceive(
+        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+      ) { _ in
+        Task {
+          await viewModel.handleAppDidBecomeActive()
+        }
+      }
   }
 
   private var threadContent: some View {
