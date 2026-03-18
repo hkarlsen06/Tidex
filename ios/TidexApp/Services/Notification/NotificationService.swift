@@ -216,7 +216,9 @@ final class NotificationService {
         let identifiers = notifications.compactMap { notification -> String? in
           let userInfo = notification.request.content.userInfo
           let type = userInfo["type"] as? String ?? ""
-          guard type == "thread_message" || type == "thread_screenshot" else {
+          guard
+            type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
+          else {
             return nil
           }
 

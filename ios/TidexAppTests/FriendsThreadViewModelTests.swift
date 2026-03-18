@@ -1309,6 +1309,212 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(realtimeCoordinator.typingStopCallCount, 1)
   }
 
+  func testHandleDraftChangedQueuesVisibleTypingNotificationAfterSustainedTyping() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.queueThreadTypingNotificationResult = true
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 0)
+
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 1)
+    XCTAssertEqual(mockService.lastQueuedTypingNotificationThreadId, route.threadId)
+  }
+
+  func testHandleDraftChangedDoesNotQueueVisibleTypingNotificationForShortDrafts() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.queueThreadTypingNotificationResult = true
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Short"
+    await viewModel.handleDraftChanged(to: "Short")
+
+    try? await Task.sleep(for: .milliseconds(300))
+    viewModel.draft = ""
+    await viewModel.handleDraftChanged(to: "")
+    try? await Task.sleep(for: .milliseconds(600))
+    await Task.yield()
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 0)
+  }
+
+  func testHandleDraftChangedRespectsVisibleTypingNotificationCooldown() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.queueThreadTypingNotificationResult = true
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    viewModel.draft = ""
+    await viewModel.handleDraftChanged(to: "")
+    viewModel.draft = "Back again"
+    await viewModel.handleDraftChanged(to: "Back again")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 1)
+  }
+
+  func testHandleDraftChangedDoesNotStartCooldownWhenVisibleTypingNotificationIsSuppressed()
+    async throws
+  {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.queueThreadTypingNotificationResult = false
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    viewModel.draft = ""
+    await viewModel.handleDraftChanged(to: "")
+    viewModel.draft = "Back again"
+    await viewModel.handleDraftChanged(to: "Back again")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 2)
+  }
+
+  func testHandleDraftChangedDoesNotStartCooldownWhenVisibleTypingNotificationQueueFails()
+    async throws
+  {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.queueThreadTypingNotificationError = TestError.failed
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    viewModel.draft = ""
+    await viewModel.handleDraftChanged(to: "")
+    viewModel.draft = "Back again"
+    await viewModel.handleDraftChanged(to: "Back again")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 2)
+  }
+
+  func testSuccessfulSendResetsVisibleTypingNotificationCooldown() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.queueThreadTypingNotificationResult = true
+    mockService.sentMessage = FriendMessage(
+      id: "message-1",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_001),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    viewModel.draft = "Hello"
+    let didSend = await viewModel.sendDraft()
+    XCTAssertTrue(didSend)
+
+    viewModel.draft = "Fresh draft"
+    await viewModel.handleDraftChanged(to: "Fresh draft")
+    try? await Task.sleep(for: .milliseconds(900))
+    await Task.yield()
+
+    XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 2)
+  }
+
   func testHandleAppDidBecomeActiveResubscribesRealtimeAndRefreshesThreadData() async throws {
     let repository = try makeRepository()
     let route = makeRoute()
@@ -2020,12 +2226,16 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   var sendError: Error?
   var editError: Error?
   var deleteError: Error?
+  var queueThreadTypingNotificationError: Error?
   var sendMessageCallCount = 0
+  var queueThreadTypingNotificationResult = false
+  var queueThreadTypingNotificationCallCount = 0
   var lastSentReplyToMessageId: String?
   var lastSentMetadataData: Data?
   var lastEditedMessageId: String?
   var lastEditedBody: String?
   var lastDeletedMessageId: String?
+  var lastQueuedTypingNotificationThreadId: String?
   var createdReport:
     (threadId: String, reportedUserId: String, messageId: String?, reason: FriendAbuseReportReason)?
   var blockedUserId: String?
@@ -2119,6 +2329,16 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
       muted: false,
       updatedAt: Date()
     )
+  }
+
+  func queueThreadTypingNotification(threadId: String) async throws -> Bool {
+    await Task.yield()
+    queueThreadTypingNotificationCallCount += 1
+    lastQueuedTypingNotificationThreadId = threadId
+    if let queueThreadTypingNotificationError {
+      throw queueThreadTypingNotificationError
+    }
+    return queueThreadTypingNotificationResult
   }
 
   func fetchThreadSummary(threadId _: String) async throws -> FriendThread {

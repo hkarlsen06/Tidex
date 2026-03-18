@@ -153,7 +153,8 @@ function notificationMessageCount(notification: OutboxNotification): number {
 }
 
 function notificationThreadId(notification: OutboxNotification): string | null {
-  return notification.notification_type === "thread_message"
+  return notification.notification_type === "thread_message" ||
+      notification.notification_type === "thread_typing"
     ? notificationDataString(notification, "thread_id")
     : null;
 }
@@ -161,9 +162,14 @@ function notificationThreadId(notification: OutboxNotification): string | null {
 function notificationCollapseId(
   notification: OutboxNotification,
 ): string | null {
-  if (notification.notification_type !== "thread_message") return null;
   const threadId = notificationThreadId(notification);
   if (!threadId) return null;
+
+  if (notification.notification_type === "thread_typing") {
+    return `thread-typing:${threadId}`;
+  }
+
+  if (notification.notification_type !== "thread_message") return null;
   if (notificationMessageCount(notification) < 4) return null;
   return `thread-message:${threadId}`;
 }
@@ -202,7 +208,7 @@ export function coalesceNotifications(
   for (const notification of notifications) {
     const threadId = notificationThreadId(notification);
     const key = threadId
-      ? `thread_message:${notification.recipient_id}:${threadId}`
+      ? `${notification.notification_type}:${notification.recipient_id}:${threadId}`
       : notification.id;
 
     const existing = jobsByKey.get(key);
@@ -221,7 +227,10 @@ export function coalesceNotifications(
   }
 
   return Array.from(jobsByKey.values()).map((job) => {
-    if (job.notifications.length == 1) {
+    if (
+      job.notifications.length == 1 ||
+      job.notification.notification_type !== "thread_message"
+    ) {
       return job;
     }
 
@@ -266,7 +275,9 @@ export function buildApsPayload(
     aps["thread-id"] = threadId;
     aps["target-content-id"] = `friend-chat:${threadId}`;
     aps["interruption-level"] = "active";
-    aps["relevance-score"] = notificationMessageCount(notification) > 1
+    aps["relevance-score"] = notification.notification_type === "thread_typing"
+      ? 0.8
+      : notificationMessageCount(notification) > 1
       ? 0.95
       : 0.9;
     return aps;
@@ -308,7 +319,7 @@ export function buildApsPayload(
   return aps;
 }
 
-function buildApnsHeaders(
+export function buildApnsHeaders(
   notification: OutboxNotification,
 ): Record<string, string> {
   const headers: Record<string, string> = {
@@ -319,6 +330,12 @@ function buildApnsHeaders(
   const collapseId = notificationCollapseId(notification);
   if (collapseId) {
     headers["apns-collapse-id"] = collapseId;
+  }
+
+  if (notification.notification_type === "thread_typing") {
+    headers["apns-expiration"] = String(
+      Math.floor(Date.now() / 1000) + 60,
+    );
   }
 
   return headers;
@@ -1081,6 +1098,28 @@ async function markOutboxNotifications(
   }
 }
 
+async function filterSendingNotificationIds(
+  supabase: any,
+  notificationIds: string[],
+): Promise<string[]> {
+  if (notificationIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .schema("internal")
+    .from("notifications_outbox")
+    .select("id")
+    .in("id", notificationIds)
+    .eq("status", "sending");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).flatMap((row: { id?: string | null }) =>
+    typeof row.id === "string" ? [row.id] : []
+  );
+}
+
 async function sendToDevice(
   device: PushDevice,
   notification: OutboxNotification,
@@ -1300,11 +1339,22 @@ async function handleRequest(req: Request) {
         : undefined;
 
       try {
+        const deliverableNotificationIds = await filterSendingNotificationIds(
+          supabase,
+          notificationIds,
+        );
+        if (deliverableNotificationIds.length === 0) {
+          console.log(
+            `[Push] Skipped notification ${notification.id} because it was superseded before delivery`,
+          );
+          return;
+        }
+
         const devices = devicesByRecipient.get(notification.recipient_id) ?? [];
 
         if (devices.length === 0) {
           // No devices registered, mark as skipped
-          await markOutboxNotifications(supabase, notificationIds, {
+          await markOutboxNotifications(supabase, deliverableNotificationIds, {
             status: "skipped",
             processed_at: new Date().toISOString(),
           });
@@ -1357,14 +1407,14 @@ async function handleRequest(req: Request) {
         const anySuccess = didAnyDeliverySucceed(results);
 
         // Mark notification status
-        await markOutboxNotifications(supabase, notificationIds, {
+        await markOutboxNotifications(supabase, deliverableNotificationIds, {
           status: anySuccess ? "sent" : "failed",
           error_message: anySuccess ? null : "All devices failed",
           processed_at: new Date().toISOString(),
         });
 
-        if (anySuccess) processed += notificationIds.length;
-        else failed += notificationIds.length;
+        if (anySuccess) processed += deliverableNotificationIds.length;
+        else failed += deliverableNotificationIds.length;
         const alertLatencyValues = results
           .map((result) => result.alertLatencyMs)
           .filter((value): value is number => value !== undefined);

@@ -1,5 +1,6 @@
 import {
   buildApsPayload,
+  buildApnsHeaders,
   buildApnsEnvironmentOrder,
   buildPrefetchApnsHeaders,
   buildPrefetchPayload,
@@ -41,10 +42,13 @@ Deno.test("rich-formatting helper only matches supported notification types", ()
   assert(usesRichFormatting("thread_screenshot"));
   assert(usesRichFormatting("shifts_screenshotted"));
   assertFalse(usesRichFormatting("share_started"));
+  assertFalse(usesRichFormatting("thread_typing"));
   assert(usesThreadActions("thread_message"));
+  assertFalse(usesThreadActions("thread_typing"));
   assertFalse(usesThreadActions("thread_screenshot"));
   assert(usesMessagePrefetch("thread_message"));
   assert(usesMessagePrefetch("thread_screenshot"));
+  assertFalse(usesMessagePrefetch("thread_typing"));
   assertFalse(usesMessagePrefetch("share_started"));
 });
 
@@ -79,6 +83,38 @@ Deno.test("non-rich notifications omit mutable content", () => {
 
   assertFalse("mutable-content" in aps);
   assertEquals(aps["thread-id"], "sharing");
+});
+
+Deno.test("thread typing notifications route to the same thread without actions", () => {
+  const aps = buildApsPayload(
+    makeNotification("thread_typing", {
+      data_payload: { thread_id: "thread-1" },
+    }),
+    0,
+  );
+
+  assertFalse("mutable-content" in aps);
+  assertFalse("category" in aps);
+  assertEquals(aps["thread-id"], "thread-1");
+  assertEquals(aps["target-content-id"], "friend-chat:thread-1");
+});
+
+Deno.test("thread typing notifications use collapse and short expiration headers", () => {
+  const headers = buildApnsHeaders(
+    makeNotification("thread_typing", {
+      data_payload: { thread_id: "thread-1" },
+    }),
+  );
+
+  assertEquals(headers["apns-push-type"], "alert");
+  assertEquals(headers["apns-priority"], "10");
+  assertEquals(headers["apns-collapse-id"], "thread-typing:thread-1");
+  assert("apns-expiration" in headers);
+
+  const expiration = Number(headers["apns-expiration"]);
+  assert(Number.isFinite(expiration));
+  assert(expiration >= Math.floor(Date.now() / 1000));
+  assert(expiration <= Math.floor(Date.now() / 1000) + 60);
 });
 
 Deno.test("prefetch payload uses background headers and includes message metadata", () => {
@@ -144,6 +180,30 @@ Deno.test("coalescing keeps all outbox rows and latest message count", () => {
   ]);
   assertEquals(jobs[0].notification.id, "newer");
   assertEquals(jobs[0].notification.data_payload.message_count, 5);
+});
+
+Deno.test("coalescing keeps latest typing notification per recipient thread", () => {
+  const jobs = coalesceNotifications([
+    makeNotification("thread_typing", {
+      id: "older",
+      recipient_id: "recipient-1",
+      created_at: "2026-03-17T09:00:00.000Z",
+      data_payload: { thread_id: "thread-1" },
+    }),
+    makeNotification("thread_typing", {
+      id: "newer",
+      recipient_id: "recipient-1",
+      created_at: "2026-03-17T09:01:00.000Z",
+      data_payload: { thread_id: "thread-1" },
+    }),
+  ]);
+
+  assertEquals(jobs.length, 1);
+  assertEquals(jobs[0].notifications.map((notification) => notification.id), [
+    "older",
+    "newer",
+  ]);
+  assertEquals(jobs[0].notification.id, "newer");
 });
 
 Deno.test("delivery summary succeeds when any device succeeds", () => {

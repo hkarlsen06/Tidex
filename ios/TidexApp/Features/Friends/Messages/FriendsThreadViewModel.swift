@@ -39,6 +39,8 @@ final class FriendsThreadViewModel: ObservableObject {
     static let refreshInterval: TimeInterval = 2.5
     static let idleStopDelay: Duration = .seconds(4)
     static let remoteTimeout: Duration = .seconds(5)
+    static let pushEscalationDelay: Duration = .milliseconds(700)
+    static let pushCooldown: TimeInterval = 120
   }
 
   private enum MessageBody {
@@ -164,6 +166,8 @@ final class FriendsThreadViewModel: ObservableObject {
   private var didSendTypingStart = false
   private var lastTypingStartSentAt: Date?
   private var localTypingStopTask: Task<Void, Never>?
+  private var localTypingPushTask: Task<Void, Never>?
+  private var lastTypingPushQueuedAt: Date?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
   private var counterpartStateRefreshTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
@@ -482,6 +486,7 @@ final class FriendsThreadViewModel: ObservableObject {
     let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     if hasText {
       await sendTypingStartIfNeeded()
+      scheduleTypingNotificationIfNeeded()
       scheduleTypingStop()
     } else {
       await stopTypingIfNeeded()
@@ -991,6 +996,8 @@ final class FriendsThreadViewModel: ObservableObject {
   private func stopTypingIfNeeded() async {
     localTypingStopTask?.cancel()
     localTypingStopTask = nil
+    localTypingPushTask?.cancel()
+    localTypingPushTask = nil
 
     guard didSendTypingStart else { return }
 
@@ -1010,6 +1017,52 @@ final class FriendsThreadViewModel: ObservableObject {
       guard !Task.isCancelled else { return }
       await self.stopTypingIfNeeded()
     }
+  }
+
+  private func scheduleTypingNotificationIfNeeded() {
+    let now = Date()
+    if let lastTypingPushQueuedAt,
+      now.timeIntervalSince(lastTypingPushQueuedAt) < Typing.pushCooldown
+    {
+      return
+    }
+
+    guard localTypingPushTask == nil else { return }
+
+    localTypingPushTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      defer { self.localTypingPushTask = nil }
+
+      try? await Task.sleep(for: Typing.pushEscalationDelay)
+      guard !Task.isCancelled else { return }
+      guard !self.isThreadReadOnly, self.composerMode != .edit else { return }
+      guard !self.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+      await self.queueTypingNotificationIfNeeded()
+    }
+  }
+
+  private func queueTypingNotificationIfNeeded() async {
+    let now = Date()
+    if let lastTypingPushQueuedAt,
+      now.timeIntervalSince(lastTypingPushQueuedAt) < Typing.pushCooldown
+    {
+      return
+    }
+
+    do {
+      let didQueue = try await service.queueThreadTypingNotification(threadId: route.threadId)
+      if didQueue {
+        lastTypingPushQueuedAt = Date()
+      }
+    } catch {
+      threadLogger.error(
+        "Failed to queue typing push notification: \(error.localizedDescription)")
+    }
+  }
+
+  private func resetTypingNotificationCooldown() {
+    lastTypingPushQueuedAt = nil
   }
 
   private func saveEditedMessage(content: String) async -> Bool {
@@ -1235,7 +1288,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func sendMessageToService(_ message: FriendMessage) async throws -> FriendMessage {
     let outgoingAttachments = try await makeOutgoingAttachments(for: message)
-    return try await service.sendMessage(
+    let sentMessage = try await service.sendMessage(
       threadId: route.threadId,
       clientId: message.clientId,
       body: message.body,
@@ -1243,6 +1296,8 @@ final class FriendsThreadViewModel: ObservableObject {
       attachments: outgoingAttachments,
       metadataData: message.sendableMetadataData
     )
+    resetTypingNotificationCooldown()
+    return sentMessage
   }
 
   private func makeOptimisticAttachment(from image: ImageAttachment) -> FriendMessageAttachment {
