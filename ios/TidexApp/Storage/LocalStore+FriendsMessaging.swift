@@ -195,7 +195,12 @@ extension LocalStoreActor {
     var storedMessage = message
 
     if let existing = try fetchMessage(id: message.id, viewerUserId: viewerUserId) {
-      existing.apply(message: message)
+      storedMessage = mergedMessagePreservingLocalOrdering(
+        incoming: message,
+        existing: existing,
+        viewerUserId: viewerUserId
+      )
+      existing.apply(message: storedMessage)
     } else if message.senderUserId == viewerUserId,
       let existing = try findReplaceableLocalMessage(
         for: message,
@@ -432,6 +437,62 @@ extension LocalStoreActor {
     )
 
     return confirmedMessage
+  }
+
+  private func mergedMessagePreservingLocalOrdering(
+    incoming message: FriendMessage,
+    existing localMessage: LocalMessage,
+    viewerUserId: String
+  ) -> FriendMessage {
+    guard
+      shouldPreserveLocalCreatedAt(for: message, existing: localMessage, viewerUserId: viewerUserId)
+    else {
+      return message
+    }
+
+    return FriendMessage(
+      id: message.id,
+      threadId: message.threadId,
+      senderUserId: message.senderUserId,
+      messageType: message.messageType,
+      body: message.body,
+      clientId: message.clientId,
+      replyToMessageId: message.replyToMessageId,
+      createdAt: localMessage.createdAt,
+      editedAt: message.editedAt,
+      deletedAt: message.deletedAt,
+      metadataData: message.metadataData,
+      attachments: message.attachments,
+      reactions: message.reactions,
+      sendState: message.sendState,
+      failureMessage: message.failureMessage
+    )
+  }
+
+  private func shouldPreserveLocalCreatedAt(
+    for message: FriendMessage,
+    existing localMessage: LocalMessage,
+    viewerUserId: String
+  ) -> Bool {
+    guard message.senderUserId == viewerUserId, localMessage.senderUserId == viewerUserId else {
+      return false
+    }
+
+    let normalizedIncomingClientId = normalizedClientId(message.clientId)
+    let normalizedExistingClientId = normalizedClientId(localMessage.clientId)
+
+    guard
+      !normalizedIncomingClientId.isEmpty,
+      normalizedIncomingClientId == normalizedExistingClientId
+    else {
+      return false
+    }
+
+    return localMessage.createdAt != message.createdAt
+  }
+
+  private func normalizedClientId(_ clientId: String) -> String {
+    clientId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
   }
 
   private func updateThreadMessageReferencesIfNeeded(
