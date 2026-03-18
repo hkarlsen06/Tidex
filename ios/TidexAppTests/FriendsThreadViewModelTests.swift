@@ -1276,6 +1276,103 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(storedText, "Persistent text")
   }
 
+  func testHandleDraftChangedRetriesTypingStartAfterInitialBroadcastFailure() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+    realtimeCoordinator.canBroadcastTyping = false
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.draft = "Persistent text"
+    await viewModel.handleDraftChanged(to: "Persistent text")
+
+    XCTAssertEqual(realtimeCoordinator.typingStartCallCount, 1)
+
+    realtimeCoordinator.canBroadcastTyping = true
+    await viewModel.handleDraftChanged(to: "Persistent text")
+
+    XCTAssertEqual(realtimeCoordinator.typingStartCallCount, 2)
+
+    viewModel.draft = ""
+    await viewModel.handleDraftChanged(to: "")
+
+    XCTAssertEqual(realtimeCoordinator.typingStopCallCount, 1)
+  }
+
+  func testHandleAppDidBecomeActiveResubscribesRealtimeAndRefreshesThreadData() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let message = FriendMessage(
+      id: "message-1",
+      threadId: route.threadId,
+      senderUserId: route.counterpartUserId,
+      messageType: .user,
+      body: "Welcome back",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_001),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: route.counterpartUserId,
+      counterpartDisplayName: route.displayName,
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: message.id,
+      lastMessageSenderId: message.senderUserId,
+      lastMessageAt: message.createdAt,
+      lastMessageBody: message.body,
+      lastMessageHasImage: false,
+      unreadCount: 1,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    mockService.threadMessages = [message]
+
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.handleCounterpartTypingChange(userId: route.counterpartUserId, isTyping: true)
+    XCTAssertTrue(viewModel.counterpartIsTyping)
+
+    await viewModel.handleAppDidBecomeActive()
+
+    XCTAssertEqual(realtimeCoordinator.startThreadSubscriptionCallCount, 1)
+    XCTAssertFalse(viewModel.counterpartIsTyping)
+    XCTAssertEqual(viewModel.messages.map(\.id), [message.id])
+    XCTAssertEqual(
+      repository.getThread(id: route.threadId, viewerUserId: "viewer-1")?.lastMessageId,
+      message.id
+    )
+  }
+
   func testSendDraftWithShiftSnapshotUsesStoredMetadata() async throws {
     let repository = try makeRepository()
     let draftStore = try makeDraftStore()
@@ -2075,5 +2172,42 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   func downloadAttachmentData(path _: String) async throws -> Data {
     await Task.yield()
     return Data()
+  }
+}
+
+@MainActor
+private final class MockFriendsRealtimeCoordinator: FriendsMessagingRealtimeCoordinating {
+  var canBroadcastTyping = true
+  private(set) var startThreadSubscriptionCallCount = 0
+  private(set) var typingStartCallCount = 0
+  private(set) var typingStopCallCount = 0
+
+  func startThreadListSubscription(viewerUserId _: String) async {
+    await Task.yield()
+  }
+
+  func stopThreadListSubscription() async {
+    await Task.yield()
+  }
+
+  func startThreadSubscription(threadId _: String, viewerUserId _: String) async {
+    startThreadSubscriptionCallCount += 1
+    await Task.yield()
+  }
+
+  func stopThreadSubscription(threadId _: String) async {
+    await Task.yield()
+  }
+
+  func sendTypingStart(threadId _: String, userId _: String) async -> Bool {
+    typingStartCallCount += 1
+    await Task.yield()
+    return canBroadcastTyping
+  }
+
+  func sendTypingStop(threadId _: String, userId _: String) async -> Bool {
+    typingStopCallCount += 1
+    await Task.yield()
+    return canBroadcastTyping
   }
 }

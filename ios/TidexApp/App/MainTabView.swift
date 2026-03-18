@@ -289,6 +289,13 @@ struct MainTabView: View {
       handlePendingDeepLink(coordinator.pendingDeepLink)
       selectionHaptic.prepare()
     }
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
+    { _ in
+      Task {
+        await startFriendsThreadListTrackingIfPossible()
+        scheduleUnreadFriendsCountRefresh()
+      }
+    }
     .onDisappear {
       unreadRefreshTask?.cancel()
       unreadRefreshTask = nil

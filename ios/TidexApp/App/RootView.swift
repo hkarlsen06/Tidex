@@ -641,8 +641,14 @@ struct LoadingView: View {
       await Task.yield()
     }
     func stopThreadSubscription(threadId _: String) async { await Task.yield() }
-    func sendTypingStart(threadId _: String, userId _: String) async { await Task.yield() }
-    func sendTypingStop(threadId _: String, userId _: String) async { await Task.yield() }
+    func sendTypingStart(threadId _: String, userId _: String) async -> Bool {
+      await Task.yield()
+      return true
+    }
+    func sendTypingStop(threadId _: String, userId _: String) async -> Bool {
+      await Task.yield()
+      return true
+    }
   }
 
   @MainActor

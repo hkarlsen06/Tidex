@@ -462,6 +462,14 @@ final class FriendsThreadViewModel: ObservableObject {
     )
   }
 
+  func handleAppDidBecomeActive() async {
+    counterpartTypingTimeoutTask?.cancel()
+    counterpartTypingTimeoutTask = nil
+    counterpartIsTyping = false
+    await startRealtime()
+    await refreshFromServer()
+  }
+
   func handleDraftChanged(to draft: String) async {
     guard !isThreadReadOnly, !route.counterpartUserId.isEmpty else { return }
     guard composerMode != .edit else {
@@ -967,10 +975,15 @@ final class FriendsThreadViewModel: ObservableObject {
       return
     }
 
-    await realtimeCoordinator.sendTypingStart(
-      threadId: route.threadId,
-      userId: viewerUserId
-    )
+    guard
+      await realtimeCoordinator.sendTypingStart(
+        threadId: route.threadId,
+        userId: viewerUserId
+      )
+    else {
+      return
+    }
+
     didSendTypingStart = true
     lastTypingStartSentAt = now
   }
@@ -981,7 +994,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
     guard didSendTypingStart else { return }
 
-    await realtimeCoordinator.sendTypingStop(
+    _ = await realtimeCoordinator.sendTypingStop(
       threadId: route.threadId,
       userId: viewerUserId
     )
