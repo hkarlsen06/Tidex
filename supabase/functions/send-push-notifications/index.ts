@@ -93,6 +93,7 @@ interface DeviceSendAttemptResult {
 
 const richFormattingTypes = new Set([
   "thread_message",
+  "thread_typing",
   "thread_screenshot",
   "shifts_screenshotted",
 ]);

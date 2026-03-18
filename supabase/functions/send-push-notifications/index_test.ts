@@ -39,10 +39,10 @@ function makeNotification(
 
 Deno.test("rich-formatting helper only matches supported notification types", () => {
   assert(usesRichFormatting("thread_message"));
+  assert(usesRichFormatting("thread_typing"));
   assert(usesRichFormatting("thread_screenshot"));
   assert(usesRichFormatting("shifts_screenshotted"));
   assertFalse(usesRichFormatting("share_started"));
-  assertFalse(usesRichFormatting("thread_typing"));
   assert(usesThreadActions("thread_message"));
   assertFalse(usesThreadActions("thread_typing"));
   assertFalse(usesThreadActions("thread_screenshot"));
@@ -93,7 +93,7 @@ Deno.test("thread typing notifications route to the same thread without actions"
     0,
   );
 
-  assertFalse("mutable-content" in aps);
+  assertEquals(aps["mutable-content"], 1);
   assertFalse("category" in aps);
   assertEquals(aps["thread-id"], "thread-1");
   assertEquals(aps["target-content-id"], "friend-chat:thread-1");
