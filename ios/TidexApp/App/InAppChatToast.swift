@@ -17,7 +17,9 @@ struct InAppChatToastPayload: Equatable, Sendable {
     notificationTitle: String,
     notificationBody: String
   ) {
-    guard let type = userInfo["type"] as? String, type == "thread_message" else { return nil }
+    guard let type = userInfo["type"] as? String,
+      type == "thread_message" || type == "thread_typing"
+    else { return nil }
     guard let threadId = userInfo["thread_id"] as? String, !threadId.isEmpty else { return nil }
 
     self.threadId = threadId

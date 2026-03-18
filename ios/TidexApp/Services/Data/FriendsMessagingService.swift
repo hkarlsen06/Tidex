@@ -25,6 +25,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func deleteMessage(messageId: String) async throws -> FriendThread
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
+  func queueThreadTypingNotification(threadId: String) async throws -> Bool
   func fetchUnreadDirectMessageCount(userId: String) async throws -> Int
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
   func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
@@ -322,6 +323,32 @@ final class FriendsMessagingService: ObservableObject {
         .value
 
       return row.toFriendThreadState()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func queueThreadTypingNotification(threadId: String) async throws -> Bool {
+    let params: [String: AnyJSON] = [
+      "p_thread_id": .string(threadId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let queued: Bool =
+        try await supabase
+        .rpc("queue_thread_typing_notification", params: params)
+        .execute()
+        .value
+
+      return queued
     } catch let error as PostgrestError {
       throw mapRPCError(error)
     } catch let error as AuthError {

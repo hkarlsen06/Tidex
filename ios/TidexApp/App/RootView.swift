@@ -777,6 +777,11 @@ struct LoadingView: View {
       )
     }
 
+    func queueThreadTypingNotification(threadId _: String) async throws -> Bool {
+      await Task.yield()
+      return false
+    }
+
     func fetchUnreadDirectMessageCount(userId _: String) async throws -> Int {
       await Task.yield()
       return 0

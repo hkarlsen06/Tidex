@@ -358,6 +358,13 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     XCTFail("Unexpected call to sendMessage in FriendNotificationMessagePrefetcherTests")
     throw TestError.failed
   }
+  func queueThreadTypingNotification(threadId _: String) async throws -> Bool {
+    await Task.yield()
+    XCTFail(
+      "Unexpected call to queueThreadTypingNotification in FriendNotificationMessagePrefetcherTests"
+    )
+    throw TestError.failed
+  }
   func editMessage(messageId: String, body: String) async throws -> FriendMessage {
     await Task.yield()
     XCTFail("Unexpected call to editMessage in FriendNotificationMessagePrefetcherTests")
