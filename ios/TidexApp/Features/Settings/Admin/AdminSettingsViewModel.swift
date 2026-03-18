@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 // Admin-only file with internal API calls where URLs are guaranteed valid
 import Combine
 import Foundation
@@ -755,7 +754,9 @@ final class AdminSettingsViewModel: ObservableObject {
 
   private var searchTask: Task<Void, Never>?
   private let perPage = 20
-  private let adminRouteBaseURL = URL(string: "https://tidex.invalid")!  // swiftlint:disable:this force_unwrapping
+  private let adminRouteBaseURL =
+    URL(string: "https://tidex.invalid")
+    ?? URL(fileURLWithPath: "/")
   private var initialReportId: String?
 
   deinit {
@@ -828,17 +829,13 @@ final class AdminSettingsViewModel: ObservableObject {
     if !append { usersIsLoading = true }
 
     do {
-      var components = URLComponents(
-        url: adminRouteBaseURL.appendingPathComponent("/api/admin/users"),
-        resolvingAgainstBaseURL: false)!
       var queryItems = [
         URLQueryItem(name: "page", value: String(page)),
         URLQueryItem(name: "perPage", value: String(perPage)),
       ]
       if let search = search { queryItems.append(URLQueryItem(name: "search", value: search)) }
-      components.queryItems = queryItems
-
-      let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+      let url = try adminRequestURL(path: "/api/admin/users", queryItems: queryItems)
+      let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
 
       if append {
         users.append(contentsOf: result.users)
@@ -920,13 +917,12 @@ final class AdminSettingsViewModel: ObservableObject {
     subscribersIsLoading = true
 
     do {
-      var components = URLComponents(
-        url: adminRouteBaseURL.appendingPathComponent("/api/admin/subscribers"),
-        resolvingAgainstBaseURL: false)!
-      components.queryItems = [URLQueryItem(name: "filter", value: subscribersFilter.rawValue)]
-
+      let url = try adminRequestURL(
+        path: "/api/admin/subscribers",
+        queryItems: [URLQueryItem(name: "filter", value: subscribersFilter.rawValue)]
+      )
       let result: AdminSubscribersResponse = try await makeRequest(
-        url: components.url!, method: "GET")
+        url: url, method: "GET")
 
       if result.success {
         subscribers = result.subscribers ?? []
@@ -1035,9 +1031,6 @@ final class AdminSettingsViewModel: ObservableObject {
     reportsIsLoading = true
 
     do {
-      var components = URLComponents(
-        url: adminRouteBaseURL.appendingPathComponent("/api/admin/reports"),
-        resolvingAgainstBaseURL: false)!
       var queryItems = [
         URLQueryItem(name: "limit", value: "50"),
         URLQueryItem(name: "offset", value: "0"),
@@ -1045,9 +1038,8 @@ final class AdminSettingsViewModel: ObservableObject {
       if let reportsStatusFilter {
         queryItems.append(URLQueryItem(name: "status", value: reportsStatusFilter.rawValue))
       }
-      components.queryItems = queryItems
-
-      let result: AdminReportsResponse = try await makeRequest(url: components.url!, method: "GET")
+      let url = try adminRequestURL(path: "/api/admin/reports", queryItems: queryItems)
+      let result: AdminReportsResponse = try await makeRequest(url: url, method: "GET")
       reportsItems = result.reports
       reportsTotal = result.total
       if let initialReportId {
@@ -1165,16 +1157,12 @@ final class AdminSettingsViewModel: ObservableObject {
     sharesIsLoading = true
 
     do {
-      var components = URLComponents(
-        url: adminRouteBaseURL.appendingPathComponent("/api/admin/shares"),
-        resolvingAgainstBaseURL: false)!
       var queryItems: [URLQueryItem] = []
       if !sharesSearchQuery.isEmpty {
         queryItems.append(URLQueryItem(name: "search", value: sharesSearchQuery))
       }
-      components.queryItems = queryItems.isEmpty ? nil : queryItems
-
-      let result: SharesResponse = try await makeRequest(url: components.url!, method: "GET")
+      let url = try adminRequestURL(path: "/api/admin/shares", queryItems: queryItems)
+      let result: SharesResponse = try await makeRequest(url: url, method: "GET")
       shares = result.shares ?? []
       sharesTotalCount = result.totalCount ?? 0
     } catch {
@@ -1281,14 +1269,13 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingOwner = true
       do {
-        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [
-          URLQueryItem(name: "search", value: query),
-          URLQueryItem(name: "perPage", value: "10"),
-        ]
-
-        let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+        let url = try adminRequestURL(
+          path: "/api/admin/users",
+          queryItems: [
+            URLQueryItem(name: "search", value: query),
+            URLQueryItem(name: "perPage", value: "10"),
+          ])
+        let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
         createShareOwnerResults = result.users
       } catch {
         createShareOwnerResults = []
@@ -1319,14 +1306,13 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingViewer = true
       do {
-        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [
-          URLQueryItem(name: "search", value: query),
-          URLQueryItem(name: "perPage", value: "10"),
-        ]
-
-        let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+        let url = try adminRequestURL(
+          path: "/api/admin/users",
+          queryItems: [
+            URLQueryItem(name: "search", value: query),
+            URLQueryItem(name: "perPage", value: "10"),
+          ])
+        let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
         createShareViewerResults = result.users
       } catch {
         createShareViewerResults = []
@@ -1395,14 +1381,13 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingNotificationUsers = true
       do {
-        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [
-          URLQueryItem(name: "search", value: query),
-          URLQueryItem(name: "limit", value: "10"),
-        ]
-
-        let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+        let url = try adminRequestURL(
+          path: "/api/admin/users",
+          queryItems: [
+            URLQueryItem(name: "search", value: query),
+            URLQueryItem(name: "limit", value: "10"),
+          ])
+        let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
         // Filter out already selected users
         let selectedIds = Set(notificationSelectedUsers.map { $0.id })
         notificationUserSearchResults = result.users.filter { !selectedIds.contains($0.id) }
@@ -1573,14 +1558,13 @@ final class AdminSettingsViewModel: ObservableObject {
     Task {
       isSearchingImpersonationUsers = true
       do {
-        let url = adminRouteBaseURL.appendingPathComponent("/api/admin/users")
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [
-          URLQueryItem(name: "search", value: query),
-          URLQueryItem(name: "perPage", value: "10"),
-        ]
-
-        let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+        let url = try adminRequestURL(
+          path: "/api/admin/users",
+          queryItems: [
+            URLQueryItem(name: "search", value: query),
+            URLQueryItem(name: "perPage", value: "10"),
+          ])
+        let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
         impersonationUserSearchResults = result.users
       } catch {
         impersonationUserSearchResults = []
@@ -1840,6 +1824,25 @@ final class AdminSettingsViewModel: ObservableObject {
     return .serverError(code: 500, message: error.localizedDescription)
   }
 
+  private func adminRequestURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
+    guard
+      var components = URLComponents(
+        url: adminRouteBaseURL.appendingPathComponent(path),
+        resolvingAgainstBaseURL: false
+      )
+    else {
+      throw AdminError.invalidURL
+    }
+
+    components.queryItems = queryItems.isEmpty ? nil : queryItems
+
+    guard let url = components.url else {
+      throw AdminError.invalidURL
+    }
+
+    return url
+  }
+
   private func normalizedAPIPath(from url: URL) -> String {
     let path = url.path
     return path.hasSuffix("/") && path.count > 1 ? String(path.dropLast()) : path
@@ -1948,4 +1951,3 @@ extension AdminSubscriberItem {
     }
   }
 }
-// swiftlint:enable force_unwrapping
