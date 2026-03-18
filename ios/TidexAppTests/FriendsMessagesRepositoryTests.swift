@@ -283,6 +283,108 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(storedThread.lastMessageAt, optimisticCreatedAt)
   }
 
+  func testSaveMessagesPreservesOptimisticOrderAfterRealtimeResave() async throws {
+    let repository = try makeRepository()
+    let thread = FriendThread(
+      id: "thread-1",
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-1",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: nil,
+      lastMessageSenderId: nil,
+      lastMessageAt: nil,
+      lastMessageBody: nil,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+    let optimisticCreatedAt = Date(timeIntervalSince1970: 1_700_000_050)
+    let optimisticMessage = FriendMessage(
+      id: "local-client-1",
+      threadId: "thread-1",
+      senderUserId: viewerUserId,
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: optimisticCreatedAt,
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sending,
+      failureMessage: nil
+    )
+    let serverCreatedAt = optimisticCreatedAt.addingTimeInterval(2)
+    let confirmedMessage = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: viewerUserId,
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: serverCreatedAt,
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+    let laterIncomingMessage = FriendMessage(
+      id: "message-2",
+      threadId: "thread-1",
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Reply",
+      clientId: "client-2",
+      replyToMessageId: nil,
+      createdAt: optimisticCreatedAt.addingTimeInterval(1),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+
+    await repository.saveThread(thread, for: viewerUserId)
+    await repository.saveOptimisticMessage(
+      optimisticMessage,
+      in: "thread-1",
+      for: viewerUserId
+    )
+    await repository.saveConfirmedMessage(
+      confirmedMessage,
+      replacingLocalMessageId: optimisticMessage.id,
+      in: "thread-1",
+      for: viewerUserId
+    )
+    await repository.saveMessages([confirmedMessage], in: "thread-1", for: viewerUserId)
+    await repository.saveMessages([laterIncomingMessage], in: "thread-1", for: viewerUserId)
+
+    let messages = repository.getMessages(threadId: "thread-1", viewerUserId: viewerUserId)
+    let storedOutgoingMessage = try XCTUnwrap(messages.first(where: { $0.id == "message-1" }))
+    let storedThread = try XCTUnwrap(
+      repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    )
+
+    XCTAssertEqual(messages.map(\.id), ["message-1", "message-2"])
+    XCTAssertEqual(storedOutgoingMessage.createdAt, optimisticCreatedAt)
+    XCTAssertEqual(storedThread.lastMessageId, "message-2")
+    XCTAssertEqual(storedThread.lastMessageAt, laterIncomingMessage.createdAt)
+  }
+
   func testSaveMessagesUpdatesThreadPreviewKindForShiftSnapshot() async throws {
     let repository = try makeRepository()
     let thread = FriendThread(
