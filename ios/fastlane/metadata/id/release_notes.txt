@@ -1,6 +1,5 @@
-- Edit dan hapus pesan di obrolan dengan teman
-- Bagikan shift langsung di percakapan dengan pratinjau lengkap
-- Jumlah pesan belum dibaca dan indikator pesan baru di obrolan
-- Wagey AI kini dapat menelusuri web
-- Telusuri dan kelola beberapa percakapan Wagey
+- Pemberitahuan chat teman ditingkatkan agar pesan baru terbuka lebih cepat dan lebih andal
+- Daftar Teman ditingkatkan agar chat aktif, pesan yang belum dibaca, dan orang yang sedang mengetik lebih mudah terlihat
+- Ditambahkan umpan balik panjang pesan yang lebih jelas saat menulis di chat teman
+- Desain aplikasi diperbarui dan tampilan layar chat dipoles
 - Perbaikan bug dan peningkatan lainnya

@@ -1,6 +1,5 @@
-- Edit and delete messages in friend chats
-- Share shifts directly in conversations with rich previews
-- Unread message counts and new message indicators in chats
-- Wagey AI can now search the web
-- Browse and manage multiple Wagey conversations
+- Improved friend chat notifications so new messages open faster and more reliably
+- Improved the Friends list to better surface active chats, unread messages, and people who are typing
+- Added clearer message length feedback while writing in friend chats
+- Refreshed the app design and polished chat screens
 - Bug fixes and other improvements

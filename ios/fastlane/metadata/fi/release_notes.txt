@@ -1,6 +1,5 @@
-- Muokkaa ja poista viestejä ystäväkeskusteluissa
-- Jaa vuoroja suoraan keskusteluissa monipuolisilla esikatseluilla
-- Lukemattomien viestien määrät ja uusien viestien ilmaisimet keskusteluissa
-- Wagey AI voi nyt hakea verkosta
-- Selaa ja hallinnoi useita Wagey-keskusteluja
-- Virhekorjauksia ja muita parannuksia
+- Parannettu kaverikeskustelujen ilmoituksia, jotta uudet viestit avautuvat nopeammin ja luotettavammin
+- Parannettu Kaverit-listaa, jotta aktiiviset keskustelut, lukemattomat viestit ja kirjoittavat henkilöt näkyvät paremmin
+- Lisätty selkeämpi palaute viestin pituudesta kirjoitettaessa kaverikeskusteluissa
+- Uudistettu sovelluksen ilmettä ja viimeistelty keskustelunäkymiä
+- Virheenkorjauksia ja muita parannuksia

@@ -1,6 +1,5 @@
-- Rediger og slett meldinger i vennesamtaler
-- Del vakter direkte i samtaler med rike forhåndsvisninger
-- Uleste meldingsteller og nye meldingsindikatorer
-- Wagey AI kan nå søke på nettet
-- Bla gjennom og administrer flere Wagey-samtaler
+- Forbedret varsler i vennesamtaler, slik at nye meldinger åpnes raskere og mer pålitelig
+- Forbedret vennelisten slik at aktive samtaler, uleste meldinger og de som skriver vises tydeligere
+- Lagt til tydeligere tegngrense og varsler mens du skriver i vennesamtaler
+- Frisket opp appdesignet og finpusset chatskjermene
 - Feilrettinger og andre forbedringer

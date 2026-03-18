@@ -1,6 +1,5 @@
-- Edita y elimina mensajes en chats con amigos
-- Comparte turnos directamente en las conversaciones con vistas previas enriquecidas
-- Recuentos de mensajes no leídos e indicadores de mensajes nuevos en los chats
-- Wagey AI ahora puede buscar en la web
-- Explora y gestiona varias conversaciones de Wagey
+- Hemos mejorado las notificaciones de los chats con amigos para que los mensajes nuevos se abran más rápido y de forma más fiable
+- Hemos mejorado la lista de amigos para destacar mejor los chats activos, los mensajes no leídos y las personas que están escribiendo
+- Hemos añadido indicaciones más claras sobre la longitud de los mensajes mientras escribes en los chats con amigos
+- Hemos renovado el diseño de la app y mejorado las pantallas de chat
 - Corrección de errores y otras mejoras

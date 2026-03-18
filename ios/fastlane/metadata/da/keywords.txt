@@ -1,1 +1,1 @@
-vagt,timer,løn,arbejde,arbejdstid,tidsur,vagtplan,indtjening,lønning,job
+vagt,timer,løn,arbejde,arbejdstid,tidsregistrering,indtjening,skema,job,penge

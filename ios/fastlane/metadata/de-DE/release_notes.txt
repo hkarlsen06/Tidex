@@ -1,6 +1,5 @@
-- Nachrichten in Freundeschats bearbeiten und löschen
-- Schichten direkt in Unterhaltungen mit umfangreichen Vorschauen teilen
-- Zähler für ungelesene Nachrichten und neue Nachrichtenindikatoren in Chats
-- Wagey AI kann jetzt im Web suchen
-- Mehrere Wagey-Unterhaltungen durchsuchen und verwalten
+- Benachrichtigungen in Freundeschats verbessert, sodass neue Nachrichten schneller und zuverlässiger geöffnet werden
+- Die Freundesliste verbessert, damit aktive Chats, ungelesene Nachrichten und tippende Personen besser sichtbar sind
+- Klareres Feedback zur Nachrichtenlänge beim Schreiben in Freundeschats hinzugefügt
+- App-Design aktualisiert und Chat-Bildschirme überarbeitet
 - Fehlerbehebungen und weitere Verbesserungen

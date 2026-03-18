@@ -1,6 +1,5 @@
-- Upravujte a odstraňujte správy v chatoch s priateľmi
-- Zdieľajte zmeny priamo v konverzáciách s bohatými náhľadmi
-- Počty neprečítaných správ a indikátory nových správ v chatoch
-- Wagey AI teraz dokáže vyhľadávať na webe
-- Prechádzajte a spravujte viacero konverzácií vo Wagey
+- Vylepšili sme upozornenia v chate s priateľmi, takže nové správy sa otvárajú rýchlejšie a spoľahlivejšie
+- Vylepšili sme zoznam priateľov, aby boli aktívne chaty, neprečítané správy a píšuci používatelia výraznejšie
+- Pridali sme jasnejšiu spätnú väzbu o dĺžke správy počas písania v chate s priateľmi
+- Obnovili sme dizajn aplikácie a vylepšili obrazovky chatu
 - Opravy chýb a ďalšie vylepšenia

@@ -8,7 +8,7 @@
       "promotional_text": "Payroll calculation made easy",
       "description": "Track your work shifts and calculate your wages with Tidex.\n\nFeatures:\n• Easy shift logging with start/end times\n• Automatic wage calculations\n• Calendar view of all shifts\n• Earnings overview and statistics\n• Widget for quick access\n• Sync across devices\n\nPerfect for employees who want to keep track of their work hours and earnings.",
       "keywords": "shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings",
-      "release_notes": "- Edit and delete messages in friend chats\n- Share shifts directly in conversations with rich previews\n- Unread message counts and new message indicators in chats\n- Wagey AI can now search the web\n- Browse and manage multiple Wagey conversations\n- Bug fixes and other improvements"
+      "release_notes": "- Improved friend chat notifications so new messages open faster and more reliably\n- Improved the Friends list to better surface active chats, unread messages, and people who are typing\n- Added clearer message length feedback while writing in friend chats\n- Refreshed the app design and polished chat screens\n- Bug fixes and other improvements"
     },
     "nb": {
       "name": "Tidex",
@@ -16,7 +16,7 @@
       "promotional_text": "Lønnsberegning gjort enkelt",
       "description": "Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.\n\nFunksjoner:\n• Enkel vaktregistrering med start- og sluttider\n• Automatisk lønnsberegning\n• Kalendervisning av alle vakter\n• Inntektsoversikt og statistikk\n• Widget for rask tilgang\n• Synkronisering på tvers av enheter\n\nPerfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.",
       "keywords": "vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger",
-      "release_notes": "- Rediger og slett meldinger i vennesamtaler\n- Del vakter direkte i samtaler med rike forhåndsvisninger\n- Uleste meldingsteller og nye meldingsindikatorer\n- Wagey AI kan nå søke på nettet\n- Bla gjennom og administrer flere Wagey-samtaler\n- Feilrettinger og andre forbedringer"
+      "release_notes": "- Forbedret varsler i vennesamtaler, slik at nye meldinger åpnes raskere og mer pålitelig\n- Forbedret vennelisten slik at aktive samtaler, uleste meldinger og de som skriver vises tydeligere\n- Lagt til tydeligere tegngrense og varsler mens du skriver i vennesamtaler\n- Frisket opp appdesignet og finpusset chatskjermene\n- Feilrettinger og andre forbedringer"
     }
   }
 }

@@ -1,6 +1,5 @@
-- Üzenetek szerkesztése és törlése a baráti csevegésekben
-- Műszakok megosztása közvetlenül a beszélgetésekben, gazdag előnézettel
-- Olvasatlan üzenetszámláló és újüzenet-jelzők a csevegésekben
-- A Wagey AI mostantól képes keresni a weben
-- Több Wagey-beszélgetés böngészése és kezelése
+- Javítottuk a baráti csevegések értesítéseit, így az új üzenetek gyorsabban és megbízhatóbban nyílnak meg
+- Továbbfejlesztettük a Barátok listáját, hogy jobban kiemelje az aktív csevegéseket, az olvasatlan üzeneteket és a gépelő felhasználókat
+- Egyértelműbb visszajelzést adtunk az üzenethosszról írás közben a baráti csevegésekben
+- Felfrissítettük az alkalmazás dizájnját, és finomítottuk a csevegési képernyőket
 - Hibajavítások és egyéb fejlesztések
