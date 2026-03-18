@@ -32,6 +32,10 @@ struct FriendsListOrdering {
     }
 
     if messageStatusLhs.isPresent, messageStatusRhs.isPresent {
+      if messageStatusLhs.isTyping != messageStatusRhs.isTyping {
+        return messageStatusLhs.isTyping
+      }
+
       if messageStatusLhs.timestamp != messageStatusRhs.timestamp {
         switch (messageStatusLhs.timestamp, messageStatusRhs.timestamp) {
         case (let lhsTimestamp?, let rhsTimestamp?):
@@ -60,6 +64,7 @@ struct FriendsListOrdering {
 
     return MessageStatusSortDescriptor(
       isPresent: isTyping || hasUnread || preview != nil,
+      isTyping: isTyping,
       priority: messagePriority(
         isTyping: isTyping,
         hasUnread: hasUnread,
@@ -169,6 +174,7 @@ struct FriendsListOrdering {
 
 private struct MessageStatusSortDescriptor {
   let isPresent: Bool
+  let isTyping: Bool
   let priority: Int
   let timestamp: Date?
 }

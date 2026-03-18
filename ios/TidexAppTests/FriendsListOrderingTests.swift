@@ -123,6 +123,40 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertFalse(ordering.shouldSuppressShiftPreview(for: hidden[1]))
   }
 
+  func testTypingUsersSortAheadOfUnreadAndRecentMessages() {
+    let users = [
+      makeUser(id: "typing", firstName: "Typing"),
+      makeUser(id: "unread", firstName: "Unread"),
+      makeUser(id: "recent", firstName: "Recent"),
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: ["typing"],
+      unreadChatUserIds: ["unread"],
+      chatPreviewsByUserId: [
+        "typing": FriendCardMessagePreview(
+          text: "Typing…",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_100),
+          state: .incomingOpened
+        ),
+        "unread": FriendCardMessagePreview(
+          text: "Unread",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingUnread
+        ),
+        "recent": FriendCardMessagePreview(
+          text: "Recent",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_400),
+          state: .incomingOpened
+        ),
+      ],
+      shiftPreviews: [:],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["typing", "unread", "recent"])
+  }
+
   private func makeUser(id: String, firstName: String, hidden: Bool = false) -> SharedUser {
     SharedUser(
       id: id,
