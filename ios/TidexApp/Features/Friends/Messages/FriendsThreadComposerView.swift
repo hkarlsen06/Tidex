@@ -33,6 +33,8 @@ struct FriendsThreadComposerConfiguration: Equatable {
 
 @MainActor
 final class FriendsThreadComposerBridge: ObservableObject {
+  private static let characterCountDisplayThresholdFraction = 0.8
+
   @Published private(set) var mode: FriendsThreadComposerMode = .normal
   @Published private(set) var draftText: String = ""
   @Published private(set) var replyPreview: FriendsChatReplyPreviewModel?
@@ -64,6 +66,15 @@ final class FriendsThreadComposerBridge: ObservableObject {
 
   var isDraftOverCharacterLimit: Bool {
     draftCharacterCount > draftCharacterLimit
+  }
+
+  var shouldShowCharacterCount: Bool {
+    guard draftCharacterCount > 0, draftCharacterLimit > 0 else { return false }
+    return isDraftOverCharacterLimit
+      || draftCharacterCount
+        >= Int(
+          Double(draftCharacterLimit) * Self.characterCountDisplayThresholdFraction
+        )
   }
 
   var draftBinding: Binding<String> {
@@ -237,7 +248,7 @@ struct FriendsThreadComposerHostedView: View {
 
           Spacer(minLength: 0)
 
-          if bridge.draftCharacterCount > 0 {
+          if bridge.shouldShowCharacterCount {
             Text("\(bridge.draftCharacterCount)/\(bridge.draftCharacterLimit)")
               .font(.tidexFootnote)
               .foregroundColor(bridge.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted)
@@ -382,7 +393,7 @@ struct FriendsThreadComposerHostedView: View {
   private var shouldShowComposerMeta: Bool {
     bridge.sendErrorMessage != nil
       || bridge.composerValidationMessage != nil
-      || bridge.draftCharacterCount > 0
+      || bridge.shouldShowCharacterCount
   }
 
   private func sendMessage() {
