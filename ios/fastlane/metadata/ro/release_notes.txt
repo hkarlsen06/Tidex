@@ -1,6 +1,5 @@
-- Editează și șterge mesaje în conversațiile cu prietenii
-- Distribuie ture direct în conversații, cu previzualizări bogate
-- Număr de mesaje necitite și indicatori pentru mesaje noi în chaturi
-- Wagey AI poate acum să caute pe web
-- Răsfoiește și gestionează mai multe conversații Wagey
+- Am îmbunătățit notificările pentru chaturile cu prieteni, astfel încât mesajele noi să se deschidă mai rapid și mai fiabil
+- Am îmbunătățit lista de prieteni pentru a evidenția mai bine chaturile active, mesajele necitite și persoanele care scriu
+- Am adăugat un feedback mai clar privind lungimea mesajelor în timp ce scrii în chaturile cu prieteni
+- Am reîmprospătat designul aplicației și am îmbunătățit ecranele de chat
 - Corecturi de erori și alte îmbunătățiri

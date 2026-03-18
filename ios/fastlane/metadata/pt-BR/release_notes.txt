@@ -1,6 +1,5 @@
-- Edite e exclua mensagens em conversas com amigos
-- Compartilhe turnos diretamente nas conversas com prévias avançadas
-- Contadores de mensagens não lidas e novos indicadores de mensagens nas conversas
-- O Wagey AI agora pode pesquisar na web
-- Navegue e gerencie várias conversas do Wagey
+- Melhoramos as notificações do chat com amigos para que novas mensagens abram mais rápido e com mais confiabilidade
+- Melhoramos a lista de Amigos para destacar melhor conversas ativas, mensagens não lidas e pessoas que estão digitando
+- Adicionamos um feedback mais claro sobre o limite de caracteres ao escrever em chats com amigos
+- Atualizamos o design do app e refinamos as telas de chat
 - Correções de bugs e outras melhorias

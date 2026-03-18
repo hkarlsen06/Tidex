@@ -1,1 +1,1 @@
-műszak,bér,fizetés,munka,órák,idő,beosztás,kereset,munkanapló,naptár
+műszak,követés,bér,fizetés,munka,órák,idő,beosztás,kereset,munkanapló

@@ -1,6 +1,5 @@
-- Chỉnh sửa và xóa tin nhắn trong cuộc trò chuyện với bạn bè
-- Chia sẻ ca làm trực tiếp trong cuộc trò chuyện với bản xem trước phong phú
-- Số lượng tin nhắn chưa đọc và chỉ báo tin nhắn mới trong trò chuyện
-- Wagey AI giờ đây có thể tìm kiếm trên web
-- Duyệt và quản lý nhiều cuộc trò chuyện Wagey
-- Sửa lỗi và các cải tiến khác
+- Đã cải thiện thông báo trò chuyện bạn bè để tin nhắn mới mở nhanh hơn và đáng tin cậy hơn
+- Đã cải thiện danh sách Bạn bè để hiển thị rõ hơn các cuộc trò chuyện đang hoạt động, tin nhắn chưa đọc và những người đang nhập
+- Đã thêm phản hồi rõ ràng hơn về độ dài tin nhắn khi soạn tin trong trò chuyện bạn bè
+- Đã làm mới thiết kế ứng dụng và tinh chỉnh các màn hình trò chuyện
+- Sửa lỗi và cải tiến khác

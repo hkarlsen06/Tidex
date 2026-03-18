@@ -1,6 +1,5 @@
-- Edytowanie i usuwanie wiadomości w czatach ze znajomymi
-- Udostępniaj zmiany bezpośrednio w rozmowach z rozbudowanymi podglądami
-- Liczniki nieprzeczytanych wiadomości i wskaźniki nowych wiadomości w czatach
-- Wagey AI może teraz przeszukiwać internet
-- Przeglądaj i zarządzaj wieloma rozmowami Wagey
-- Poprawki błędów i inne ulepszenia
+- Ulepszono powiadomienia na czacie ze znajomymi, dzięki czemu nowe wiadomości otwierają się szybciej i bardziej niezawodnie
+- Ulepszono listę znajomych, aby lepiej wyróżniać aktywne czaty, nieprzeczytane wiadomości i osoby, które piszą
+- Dodano wyraźniejszą informację o limicie długości wiadomości podczas pisania na czacie ze znajomymi
+- Odświeżono wygląd aplikacji i dopracowano ekrany czatu
+- Poprawki błędów i inne usprawnienia

@@ -1,6 +1,5 @@
-- Rediger og slet beskeder i chats med venner
-- Del vagter direkte i samtaler med flotte forhåndsvisninger
-- Tællere for ulæste beskeder og nye beskedindikatorer i chats
-- Wagey AI kan nu søge på nettet
-- Gennemse og administrer flere Wagey-samtaler
+- Forbedrede notifikationer i vennechats, så nye beskeder åbnes hurtigere og mere pålideligt
+- Forbedret vennelisten, så aktive chats, ulæste beskeder og personer, der skriver, vises tydeligere
+- Tilføjet tydeligere feedback om beskedlængde, mens du skriver i vennechats
+- Opdateret appdesignet og finpudset chatskærmene
 - Fejlrettelser og andre forbedringer

@@ -1,6 +1,5 @@
-- Edita i suprimeix missatges als xats amb amics
-- Comparteix torns directament a les converses amb previsualitzacions enriquides
-- Comptadors de missatges no llegits i indicadors de missatges nous als xats
-- Wagey AI ara pot cercar al web
-- Navega i gestiona diverses converses de Wagey
-- Correccions d'errors i altres millores
+- Hem millorat les notificacions del xat amb amics perquè els missatges nous s'obrin més ràpid i de manera més fiable
+- Hem millorat la llista d'amics perquè destaqui millor els xats actius, els missatges no llegits i les persones que estan escrivint
+- Hem afegit comentaris més clars sobre la longitud dels missatges mentre escrius als xats amb amics
+- Hem renovat el disseny de l'app i polit les pantalles del xat
+- Correcció d'errors i altres millores

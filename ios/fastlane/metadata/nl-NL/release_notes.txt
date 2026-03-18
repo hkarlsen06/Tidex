@@ -1,6 +1,5 @@
-- Bewerk en verwijder berichten in chats met vrienden
-- Deel diensten direct in gesprekken met uitgebreide voorvertoningen
-- Tellers voor ongelezen berichten en indicatoren voor nieuwe berichten in chats
-- Wagey AI kan nu op het web zoeken
-- Blader door en beheer meerdere Wagey-gesprekken
+- Meldingen voor chats met vrienden verbeterd, zodat nieuwe berichten sneller en betrouwbaarder openen
+- De vriendenlijst verbeterd zodat actieve chats, ongelezen berichten en mensen die typen beter zichtbaar zijn
+- Duidelijkere feedback over berichtlengte toegevoegd tijdens het schrijven in chats met vrienden
+- Het appontwerp vernieuwd en de chatschermen verder verfijnd
 - Bugfixes en andere verbeteringen

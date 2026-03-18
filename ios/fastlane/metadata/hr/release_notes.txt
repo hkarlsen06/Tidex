@@ -1,6 +1,5 @@
-- Uređujte i brišite poruke u razgovorima s prijateljima
-- Dijelite smjene izravno u razgovorima uz bogate preglede
-- Brojači nepročitanih poruka i indikatori novih poruka u razgovorima
-- Wagey AI sada može pretraživati web
-- Pregledavajte i upravljajte s više Wagey razgovora
+- Poboljšane obavijesti u razgovorima s prijateljima kako bi se nove poruke otvarale brže i pouzdanije
+- Poboljšan je popis prijatelja kako bi se aktivni razgovori, nepročitane poruke i osobe koje tipkaju bolje istaknuli
+- Dodane su jasnije povratne informacije o duljini poruke tijekom pisanja u razgovorima s prijateljima
+- Osvježen je dizajn aplikacije i dotjerani su zasloni razgovora
 - Ispravci grešaka i druga poboljšanja

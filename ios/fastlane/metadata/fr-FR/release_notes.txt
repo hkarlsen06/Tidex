@@ -1,6 +1,5 @@
-- Modifiez et supprimez des messages dans les discussions entre amis
-- Partagez des horaires directement dans les conversations avec des aperçus enrichis
-- Compteurs de messages non lus et indicateurs de nouveaux messages dans les discussions
-- Wagey AI peut désormais rechercher sur le web
-- Parcourez et gérez plusieurs conversations Wagey
+- Amélioration des notifications des discussions entre amis pour que les nouveaux messages s’ouvrent plus vite et de façon plus fiable
+- Amélioration de la liste d’amis pour mieux mettre en avant les discussions actives, les messages non lus et les personnes en train d’écrire
+- Ajout d’un retour plus clair sur la longueur des messages pendant la rédaction dans les discussions entre amis
+- Refonte du design de l’app et amélioration des écrans de discussion
 - Corrections de bugs et autres améliorations

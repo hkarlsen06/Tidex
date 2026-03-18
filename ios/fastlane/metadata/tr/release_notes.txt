@@ -1,6 +1,5 @@
-- Arkadaş sohbetlerinde mesajları düzenleyin ve silin
-- Vardiyaları zengin önizlemelerle doğrudan konuşmalarda paylaşın
-- Sohbetlerde okunmamış mesaj sayıları ve yeni mesaj göstergeleri
-- Wagey AI artık web'de arama yapabiliyor
-- Birden fazla Wagey konuşmasına göz atın ve yönetin
+- Arkadaş sohbeti bildirimleri iyileştirildi; yeni mesajlar artık daha hızlı ve daha güvenilir şekilde açılıyor
+- Arkadaşlar listesi, aktif sohbetleri, okunmamış mesajları ve yazmakta olan kişileri daha iyi gösterecek şekilde geliştirildi
+- Arkadaş sohbetlerinde yazarken mesaj uzunluğu için daha açık geri bildirim eklendi
+- Uygulama tasarımı yenilendi ve sohbet ekranları iyileştirildi
 - Hata düzeltmeleri ve diğer iyileştirmeler

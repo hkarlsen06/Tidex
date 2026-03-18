@@ -1,1 +1,1 @@
-schicht,stunden,lohn,arbeit,zeitplan,einnahmen,rechner,job,gehalt,tracker
+schicht,arbeitszeit,lohn,gehalt,arbeit,stunden,zeit,uhr,dienstplan,verdienst

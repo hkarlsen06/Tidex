@@ -4,8 +4,8 @@ Funktioner:
 • Enkel registrering av arbetspass med start- och sluttider
 • Automatisk löneberäkning
 • Kalendervy över alla pass
-• Översikt över inkomster och statistik
+• Översikt över intäkter och statistik
 • Widget för snabb åtkomst
 • Synkronisering mellan enheter
 
-Perfekt för anställda som vill hålla koll på sina arbetstimmar och sin lön.
+Perfekt för anställda som vill hålla koll på sina arbetstider och intäkter.
