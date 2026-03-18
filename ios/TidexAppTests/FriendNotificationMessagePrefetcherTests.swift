@@ -220,6 +220,7 @@ private final class MockPrefetchContext: FriendNotificationMessagePrefetchContex
   }
 
   func currentUserId() async -> String? {
+    await Task.yield()
     userId
   }
 }
@@ -240,12 +241,14 @@ private final class MockFriendsMessagesRepository: FriendsMessagesRepositoryProv
   }
 
   func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async {
+    await Task.yield()
     for thread in threads {
       self.threads[thread.id] = thread
     }
   }
 
   func saveThread(_ thread: FriendThread, for viewerUserId: String) async {
+    await Task.yield()
     savedThread = thread
     threads[thread.id] = thread
   }
@@ -253,15 +256,19 @@ private final class MockFriendsMessagesRepository: FriendsMessagesRepositoryProv
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
     async
   {
+    await Task.yield()
     savedMessages = messages
     for message in messages {
       self.messages[message.id] = message
     }
   }
 
-  func saveThreadState(_ state: FriendThreadState) async {}
+  func saveThreadState(_ state: FriendThreadState) async {
+    await Task.yield()
+  }
 
   func deleteMessage(id: String, viewerUserId: String) async {
+    await Task.yield()
     messages[id] = nil
   }
 }
@@ -304,11 +311,13 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   var fetchMessagePayloadCallCount = 0
 
   func fetchThreadSummary(threadId: String) async throws -> FriendThread {
+    await Task.yield()
     fetchThreadSummaryCallCount += 1
     return threadToReturn
   }
 
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage {
+    await Task.yield()
     fetchMessagePayloadCallCount += 1
     if let fetchMessageError {
       throw fetchMessageError
@@ -316,16 +325,27 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     return messageToReturn
   }
 
-  func getOrCreateDirectThread(otherUserId: String) async throws -> FriendThread { fatalError() }
+  func getOrCreateDirectThread(otherUserId: String) async throws -> FriendThread {
+    await Task.yield()
+    XCTFail(
+      "Unexpected call to getOrCreateDirectThread in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
   func listMyThreads(limit: Int, before cursor: FriendThreadCursor?) async throws -> [FriendThread]
   {
-    fatalError()
+    await Task.yield()
+    XCTFail("Unexpected call to listMyThreads in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
   }
   func listThreadMessages(
     threadId: String,
     limit: Int,
     before cursor: FriendMessageCursor?
-  ) async throws -> [FriendMessage] { fatalError() }
+  ) async throws -> [FriendMessage] {
+    await Task.yield()
+    XCTFail("Unexpected call to listThreadMessages in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
   func sendMessage(
     threadId: String,
     clientId: String,
@@ -333,34 +353,76 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     replyToMessageId: String?,
     attachments: [FriendOutgoingAttachment],
     metadataData: Data?
-  ) async throws -> FriendMessage { fatalError() }
-  func editMessage(messageId: String, body: String) async throws -> FriendMessage { fatalError() }
-  func deleteMessage(messageId: String) async throws -> FriendThread { fatalError() }
+  ) async throws -> FriendMessage {
+    await Task.yield()
+    XCTFail("Unexpected call to sendMessage in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
+  func editMessage(messageId: String, body: String) async throws -> FriendMessage {
+    await Task.yield()
+    XCTFail("Unexpected call to editMessage in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
+  func deleteMessage(messageId: String) async throws -> FriendThread {
+    await Task.yield()
+    XCTFail("Unexpected call to deleteMessage in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   {
-    fatalError()
+    await Task.yield()
+    XCTFail("Unexpected call to markThreadRead in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
   }
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState {
-    fatalError()
+    await Task.yield()
+    XCTFail("Unexpected call to setThreadMuted in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
   }
-  func fetchUnreadDirectMessageCount(userId: String) async throws -> Int { fatalError() }
+  func fetchUnreadDirectMessageCount(userId: String) async throws -> Int {
+    await Task.yield()
+    XCTFail(
+      "Unexpected call to fetchUnreadDirectMessageCount in FriendNotificationMessagePrefetcherTests"
+    )
+    throw TestError.failed
+  }
   func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState? {
-    fatalError()
+    await Task.yield()
+    XCTFail("Unexpected call to fetchThreadState in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
   }
   func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
-    fatalError()
+    await Task.yield()
+    XCTFail("Unexpected call to toggleMessageReaction in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
   }
   func createAbuseReport(
     threadId: String,
     reportedUserId: String,
     messageId: String?,
     reason: FriendAbuseReportReason
-  ) async throws { fatalError() }
-  func blockUserPair(otherUserId: String) async throws { fatalError() }
+  ) async throws {
+    await Task.yield()
+    XCTFail("Unexpected call to createAbuseReport in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
+  func blockUserPair(otherUserId: String) async throws {
+    await Task.yield()
+    XCTFail("Unexpected call to blockUserPair in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
   func uploadImageAttachment(threadId: String, image: ImageAttachment) async throws
     -> FriendOutgoingAttachment
-  { fatalError() }
-  func downloadAttachmentData(path: String) async throws -> Data { fatalError() }
+  {
+    await Task.yield()
+    XCTFail("Unexpected call to uploadImageAttachment in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
+  func downloadAttachmentData(path: String) async throws -> Data {
+    await Task.yield()
+    XCTFail("Unexpected call to downloadAttachmentData in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
 }
 
 private enum TestError: Error {
