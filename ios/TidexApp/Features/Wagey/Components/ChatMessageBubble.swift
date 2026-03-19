@@ -215,11 +215,22 @@ private struct SelectedImageViewer: Identifiable {
 struct ImageViewerOverlay: View {
   let image: UIImage
   let onDismiss: () -> Void
+  let onSave: (() -> Void)?
 
   @State private var scale: CGFloat = 1.0
   @State private var lastScale: CGFloat = 1.0
   @State private var offset: CGSize = .zero
   @State private var lastOffset: CGSize = .zero
+
+  init(
+    image: UIImage,
+    onDismiss: @escaping () -> Void,
+    onSave: (() -> Void)? = nil
+  ) {
+    self.image = image
+    self.onDismiss = onDismiss
+    self.onSave = onSave
+  }
 
   var body: some View {
     ZStack {
@@ -291,7 +302,23 @@ struct ImageViewerOverlay: View {
       // Close button
       VStack {
         HStack {
+          if let onSave {
+            Button(action: onSave) {
+              Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 30))
+                .foregroundColor(.white.opacity(0.8))
+                .background(
+                  Circle()
+                    .fill(Color.black.opacity(0.3))
+                )
+            }
+            .accessibilityLabel(
+              Text(String(localized: "friends.chat.action.save_image", table: "Localizable"))
+            )
+          }
+
           Spacer()
+
           Button {
             onDismiss()
           } label: {

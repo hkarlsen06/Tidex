@@ -111,6 +111,22 @@ final class FriendsComposerAttachmentControllerTests: XCTestCase {
     XCTAssertTrue(controller.isDrawerOpen)
   }
 
+  func testLoadMoreRecentPhotosAppendsNextPageNearEndOfDrawer() async {
+    let provider = MockRecentPhotoProvider(
+      authorizationState: .authorized,
+      photos: (0..<16).map { FriendsComposerRecentPhoto(id: "photo-\($0)", thumbnail: makeImage()) }
+    )
+    let controller = FriendsComposerAttachmentController(recentPhotoProvider: provider)
+
+    await controller.loadRecentPhotosIfNeeded()
+    XCTAssertEqual(controller.recentPhotos.count, 12)
+
+    await controller.loadMoreRecentPhotosIfNeeded(currentPhotoID: "photo-8")
+
+    XCTAssertEqual(controller.recentPhotosState, .loaded)
+    XCTAssertEqual(controller.recentPhotos.count, 16)
+  }
+
   private func makeImage() -> UIImage {
     UIGraphicsImageRenderer(size: CGSize(width: 12, height: 12)).image { context in
       UIColor.systemBlue.setFill()
@@ -143,12 +159,21 @@ private final class MockRecentPhotoProvider: FriendsComposerRecentPhotoProviding
     return authorizationStateValue
   }
 
-  func loadRecentPhotos(limit: Int, targetSize: CGSize) async -> [FriendsComposerRecentPhoto] {
+  func loadRecentPhotos(limit: Int, offset: Int, targetSize: CGSize) async
+    -> FriendsComposerRecentPhotoPage
+  {
     if loadDelayNanoseconds > 0 {
       try? await Task.sleep(nanoseconds: loadDelayNanoseconds)
     }
     await Task.yield()
-    return Array(photosValue.prefix(limit))
+    let startIndex = min(max(offset, 0), photosValue.count)
+    let endIndex = min(startIndex + limit, photosValue.count)
+    let page = Array(photosValue[startIndex..<endIndex])
+    return FriendsComposerRecentPhotoPage(
+      photos: page,
+      hasMore: endIndex < photosValue.count,
+      nextOffset: endIndex
+    )
   }
 
   func loadImageData(localIdentifier: String) async -> Data? {

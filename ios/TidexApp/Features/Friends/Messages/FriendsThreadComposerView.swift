@@ -269,6 +269,7 @@ struct FriendsThreadComposerHostedView: View {
         FriendsThreadComposerAttachmentDrawer(
           recentPhotosState: attachmentController.recentPhotosState,
           recentPhotos: attachmentController.recentPhotos,
+          isLoadingMoreRecentPhotos: attachmentController.isLoadingMoreRecentPhotos,
           isProcessingAttachment: attachmentController.isProcessingAttachment,
           showsShiftCalendarAction: bridge.canSendShiftSnapshots,
           stagedAttachment: bridge.stagedAttachment,
@@ -284,6 +285,11 @@ struct FriendsThreadComposerHostedView: View {
           onSelectRecentPhoto: { photo in
             Task {
               await handleRecentPhotoSelection(photo)
+            }
+          },
+          onRecentPhotoAppear: { photo in
+            Task {
+              await attachmentController.loadMoreRecentPhotosIfNeeded(currentPhotoID: photo.id)
             }
           }
         )
@@ -571,6 +577,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
 
   let recentPhotosState: FriendsComposerRecentPhotosState
   let recentPhotos: [FriendsComposerRecentPhoto]
+  let isLoadingMoreRecentPhotos: Bool
   let isProcessingAttachment: Bool
   let showsShiftCalendarAction: Bool
   let stagedAttachment: FriendsComposerAttachmentDraft?
@@ -578,6 +585,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
   let onOpenCamera: () -> Void
   let onOpenShiftCalendar: () -> Void
   let onSelectRecentPhoto: (FriendsComposerRecentPhoto) -> Void
+  let onRecentPhotoAppear: (FriendsComposerRecentPhoto) -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -621,7 +629,6 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           HStack {
             Spacer()
             ProgressView()
-              .padding(.vertical, Spacing.md)
             Spacer()
           }
         case .loaded:
@@ -641,6 +648,21 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isProcessingAttachment)
+                .onAppear {
+                  onRecentPhotoAppear(photo)
+                }
+              }
+
+              if isLoadingMoreRecentPhotos {
+                VStack {
+                  ProgressView()
+                    .controlSize(.regular)
+                }
+                .frame(width: Layout.previewWidth, height: Layout.previewHeight)
+                .background(
+                  RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                    .fill(Color.tidexSurfaceSecondary)
+                )
               }
             }
             .padding(.horizontal, Spacing.md)
@@ -672,6 +694,8 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           )
         }
       }
+      .frame(maxWidth: .infinity)
+      .frame(height: Layout.previewHeight)
     }
     .padding(Spacing.md)
     .background(
@@ -692,7 +716,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
         .foregroundColor(.tidexTextMuted)
       Spacer()
     }
-    .padding(.vertical, Spacing.sm)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
   }
 
   private func actionButton(

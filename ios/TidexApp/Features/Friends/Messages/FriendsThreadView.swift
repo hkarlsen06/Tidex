@@ -1,4 +1,5 @@
 import ExyteChat
+import Photos
 import SwiftUI
 import UIKit
 
@@ -28,6 +29,7 @@ struct FriendsThreadView: View {
   @State private var showProfile = false
   @State private var isPinnedToBottom = true
   @State private var isComposerFocused = false
+  @State private var isAttachmentDrawerOpen = false
   @State private var liveEdgeScrollTargetPresentedMessageID: String?
   @State private var lastHandledNavigationRequestId: UUID?
 
@@ -169,6 +171,11 @@ struct FriendsThreadView: View {
 
   private var shouldAutoFollowLatest: Bool {
     shouldStickToLatest || liveEdgeScrollTargetPresentedMessageID != nil
+  }
+
+  private var shouldShowCounterpartShiftPreviewHeader: Bool {
+    viewModel.counterpartShiftPreview != nil
+      && !(isComposerFocused && isAttachmentDrawerOpen)
   }
 
   private func updateLiveEdgeScrollTargetToLatestMessage() {
@@ -596,6 +603,9 @@ struct FriendsThreadView: View {
         },
         onTapQuotedMessage: {
           handleQuotedMessageTap(for: message)
+        },
+        onSaveImage: { image in
+          saveImageToPhotoLibrary(image)
         }
       )
       .id(exyteMessage.id)
@@ -606,7 +616,9 @@ struct FriendsThreadView: View {
 
   @ViewBuilder
   private var counterpartShiftPreviewHeader: some View {
-    if let counterpartShiftPreview = viewModel.counterpartShiftPreview {
+    if shouldShowCounterpartShiftPreviewHeader,
+      let counterpartShiftPreview = viewModel.counterpartShiftPreview
+    {
       Button {
         openCounterpartShiftPreview(preview: counterpartShiftPreview)
       } label: {
@@ -860,7 +872,9 @@ struct FriendsThreadView: View {
     composerBridge.onFocusChanged = { isFocused in
       isComposerFocused = isFocused
     }
-    composerBridge.onAttachmentDrawerOpenChanged = nil
+    composerBridge.onAttachmentDrawerOpenChanged = { isOpen in
+      isAttachmentDrawerOpen = isOpen
+    }
     composerBridge.onHeightChanged = nil
     composerBridge.apply(configuration: composerConfiguration)
   }
@@ -1079,10 +1093,89 @@ struct FriendsThreadView: View {
     }
   }
 
+  private func saveImageToPhotoLibrary(_ image: UIImage) {
+    Task { @MainActor in
+      do {
+        try await FriendsChatPhotoLibrarySaver.save(image: image)
+        Haptics.play(.success)
+      } catch let error as FriendsChatPhotoLibrarySaveError {
+        Haptics.play(.error)
+        alertState = AlertState(
+          title: String(localized: .commonError),
+          message: error.errorDescription
+        )
+      } catch {
+        Haptics.play(.error)
+        alertState = AlertState(
+          title: String(localized: .commonError),
+          message: String(localized: "friends.chat.image.save_failed", table: "Localizable")
+        )
+      }
+    }
+  }
+
   private struct AlertState: Identifiable {
     let id = UUID()
     let title: String
     var message: String? = nil
+  }
+
+  private enum FriendsChatPhotoLibrarySaveError: LocalizedError {
+    case permissionDenied
+    case saveFailed
+
+    var errorDescription: String? {
+      switch self {
+      case .permissionDenied:
+        return String(
+          localized: "friends.chat.image.save_permission_denied",
+          table: "Localizable"
+        )
+      case .saveFailed:
+        return String(localized: "friends.chat.image.save_failed", table: "Localizable")
+      }
+    }
+  }
+
+  private enum FriendsChatPhotoLibrarySaver {
+    static func save(image: UIImage) async throws {
+      try await ensureWriteAccess()
+
+      try await withCheckedThrowingContinuation {
+        (continuation: CheckedContinuation<Void, Error>) in
+        PHPhotoLibrary.shared().performChanges({
+          PHAssetChangeRequest.creationRequestForAsset(from: image)
+        }) { success, error in
+          if let error {
+            continuation.resume(throwing: error)
+            return
+          }
+
+          if success {
+            continuation.resume(returning: ())
+          } else {
+            continuation.resume(throwing: FriendsChatPhotoLibrarySaveError.saveFailed)
+          }
+        }
+      }
+    }
+
+    private static func ensureWriteAccess() async throws {
+      let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+      switch status {
+      case .authorized, .limited:
+        return
+      case .notDetermined:
+        let requestedStatus = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard requestedStatus == .authorized || requestedStatus == .limited else {
+          throw FriendsChatPhotoLibrarySaveError.permissionDenied
+        }
+      case .denied, .restricted:
+        throw FriendsChatPhotoLibrarySaveError.permissionDenied
+      @unknown default:
+        throw FriendsChatPhotoLibrarySaveError.saveFailed
+      }
+    }
   }
 
   private enum ReportTarget: Equatable {
