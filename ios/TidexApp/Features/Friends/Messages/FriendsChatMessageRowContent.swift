@@ -44,6 +44,7 @@ struct FriendsChatMessageRowContent: View {
   let onRetry: () -> Void
   let onToggleReaction: (String) -> Void
   let onTapQuotedMessage: () -> Void
+  let onSaveImage: (UIImage) -> Void
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -112,7 +113,8 @@ struct FriendsChatMessageRowContent: View {
                   if attachment.kind == .image {
                     FriendsChatImageView(
                       attachment: attachment,
-                      isCurrentUser: isCurrentUser
+                      isCurrentUser: isCurrentUser,
+                      onSaveImage: onSaveImage
                     )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
@@ -749,20 +751,28 @@ struct ChatShiftSnapshotCard: View {
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let onSaveImage: (UIImage) -> Void
 
   @State private var selectedImageViewer: FriendsChatSelectedImageViewer?
 
   var body: some View {
     FriendsChatImageAttachmentCard(
       attachment: attachment,
-      isCurrentUser: isCurrentUser
+      isCurrentUser: isCurrentUser,
+      onSave: onSaveImage
     ) { image in
       selectedImageViewer = FriendsChatSelectedImageViewer(image: image)
     }
     .fullScreenCover(item: $selectedImageViewer) { viewer in
-      ImageViewerOverlay(image: viewer.image) {
-        selectedImageViewer = nil
-      }
+      ImageViewerOverlay(
+        image: viewer.image,
+        onDismiss: {
+          selectedImageViewer = nil
+        },
+        onSave: {
+          onSaveImage(viewer.image)
+        }
+      )
     }
   }
 }
@@ -831,16 +841,19 @@ struct FriendsChatImageAttachmentCard: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
   var onTap: ((UIImage) -> Void)? = nil
+  var onSave: ((UIImage) -> Void)? = nil
 
   @StateObject private var loader: FriendsChatImageLoader
 
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
+    onSave: ((UIImage) -> Void)? = nil,
     onTap: ((UIImage) -> Void)? = nil
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
+    self.onSave = onSave
     self.onTap = onTap
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL)
@@ -863,6 +876,22 @@ struct FriendsChatImageAttachmentCard: View {
                 isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
                 lineWidth: 1
               )
+          }
+          .overlay(alignment: .bottomTrailing) {
+            if let onSave {
+              Button {
+                onSave(image)
+              } label: {
+                Image(systemName: "arrow.down.circle.fill")
+                  .font(.system(size: 24, weight: .semibold))
+                  .foregroundStyle(.white, Color.black.opacity(0.28))
+                  .padding(Spacing.xs)
+              }
+              .buttonStyle(.plain)
+              .accessibilityLabel(
+                Text(String(localized: "friends.chat.action.save_image", table: "Localizable"))
+              )
+            }
           }
           .contentShape(imageShape)
           .onTapGesture {

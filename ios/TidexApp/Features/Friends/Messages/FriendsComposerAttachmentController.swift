@@ -9,6 +9,12 @@ struct FriendsComposerRecentPhoto: Identifiable {
   let thumbnail: UIImage
 }
 
+struct FriendsComposerRecentPhotoPage {
+  let photos: [FriendsComposerRecentPhoto]
+  let hasMore: Bool
+  let nextOffset: Int
+}
+
 enum FriendsComposerPhotoAuthorizationState: Equatable {
   case notDetermined
   case authorized
@@ -38,7 +44,8 @@ enum FriendsComposerRecentPhotosState: Equatable {
 protocol FriendsComposerRecentPhotoProviding: AnyObject {
   func authorizationState() -> FriendsComposerPhotoAuthorizationState
   func requestAuthorization() async -> FriendsComposerPhotoAuthorizationState
-  func loadRecentPhotos(limit: Int, targetSize: CGSize) async -> [FriendsComposerRecentPhoto]
+  func loadRecentPhotos(limit: Int, offset: Int, targetSize: CGSize) async
+    -> FriendsComposerRecentPhotoPage
   func loadImageData(localIdentifier: String) async -> Data?
 }
 
@@ -56,21 +63,35 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
     return Self.authorizationState(from: status)
   }
 
-  func loadRecentPhotos(limit: Int, targetSize: CGSize) async -> [FriendsComposerRecentPhoto] {
+  func loadRecentPhotos(limit: Int, offset: Int, targetSize: CGSize) async
+    -> FriendsComposerRecentPhotoPage
+  {
     await Task.detached(priority: .userInitiated) { [imageManager] in
       let options = PHFetchOptions()
       options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-      options.fetchLimit = limit
       options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
 
       let assets = PHAsset.fetchAssets(with: options)
-      guard assets.firstObject != nil else { return [] }
+      guard assets.firstObject != nil else {
+        return FriendsComposerRecentPhotoPage(photos: [], hasMore: false, nextOffset: 0)
+      }
 
       var photos: [FriendsComposerRecentPhoto] = []
-      photos.reserveCapacity(min(limit, assets.count))
+      let startIndex = min(max(offset, 0), assets.count)
+      photos.reserveCapacity(limit)
 
-      let assetCount = min(limit, assets.count)
-      for index in 0..<assetCount {
+      guard startIndex < assets.count else {
+        return FriendsComposerRecentPhotoPage(
+          photos: [],
+          hasMore: false,
+          nextOffset: startIndex
+        )
+      }
+
+      var nextOffset = startIndex
+      while nextOffset < assets.count, photos.count < limit {
+        let index = nextOffset
+        nextOffset += 1
         let asset = assets.object(at: index)
         guard
           let thumbnail = await Self.loadThumbnail(
@@ -85,7 +106,11 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
         photos.append(FriendsComposerRecentPhoto(id: asset.localIdentifier, thumbnail: thumbnail))
       }
 
-      return photos
+      return FriendsComposerRecentPhotoPage(
+        photos: photos,
+        hasMore: nextOffset < assets.count,
+        nextOffset: nextOffset
+      )
     }.value
   }
 
@@ -158,7 +183,9 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
         }
 
         if let error = info?[PHImageErrorKey] as? Error {
-          debugPrint("FriendsComposerRecentPhotoProvider thumbnail load failed:", error)
+          if !Self.shouldSuppressThumbnailErrorLog(error) {
+            debugPrint("FriendsComposerRecentPhotoProvider thumbnail load failed:", error)
+          }
           didResume = true
           continuation.resume(returning: degradedFallbackImage)
           return
@@ -184,21 +211,33 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
       }
     }
   }
+
+  private static func shouldSuppressThumbnailErrorLog(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    return nsError.domain == PHPhotosErrorDomain && nsError.code == -1
+  }
 }
 
 @MainActor
 final class FriendsComposerAttachmentController: ObservableObject {
+  private enum Pagination {
+    static let pageSize = 12
+    static let loadMoreThreshold = 4
+  }
+
   @Published var isDrawerOpen = false
   @Published var isShowingPhotoLibrary = false
   @Published var isShowingCamera = false
   @Published var isShowingShiftCalendar = false
   @Published private(set) var recentPhotosState: FriendsComposerRecentPhotosState = .idle
   @Published private(set) var recentPhotos: [FriendsComposerRecentPhoto] = []
+  @Published private(set) var isLoadingMoreRecentPhotos = false
   @Published private(set) var isProcessingAttachment = false
 
   private let recentPhotoProvider: any FriendsComposerRecentPhotoProviding
-  private let recentPhotoLimit = 12
   private let thumbnailDisplaySize = CGSize(width: 280, height: 500)
+  private var hasMoreRecentPhotos = false
+  private var nextRecentPhotoOffset = 0
 
   init(
     recentPhotoProvider: any FriendsComposerRecentPhotoProviding =
@@ -250,6 +289,21 @@ final class FriendsComposerAttachmentController: ObservableObject {
     await loadRecentPhotosIfNeeded(forceRefresh: false, requestAuthorizationIfNeeded: false)
   }
 
+  func loadMoreRecentPhotosIfNeeded(currentPhotoID: String) async {
+    guard recentPhotosState == .loaded, hasMoreRecentPhotos, !isLoadingMoreRecentPhotos else {
+      return
+    }
+
+    guard let currentIndex = recentPhotos.firstIndex(where: { $0.id == currentPhotoID }) else {
+      return
+    }
+
+    let remainingPhotoCount = recentPhotos.count - currentIndex - 1
+    guard remainingPhotoCount <= Pagination.loadMoreThreshold else { return }
+
+    await loadNextRecentPhotosPage()
+  }
+
   private func loadRecentPhotosIfNeeded(
     forceRefresh: Bool,
     requestAuthorizationIfNeeded: Bool
@@ -266,18 +320,46 @@ final class FriendsComposerAttachmentController: ObservableObject {
         return
       }
 
+      nextRecentPhotoOffset = 0
+      hasMoreRecentPhotos = false
+      isLoadingMoreRecentPhotos = false
       recentPhotos = []
       recentPhotosState = .denied
       return
     }
 
     recentPhotosState = .loading
-    let photos = await recentPhotoProvider.loadRecentPhotos(
-      limit: recentPhotoLimit,
+    isLoadingMoreRecentPhotos = false
+    let page = await recentPhotoProvider.loadRecentPhotos(
+      limit: Pagination.pageSize,
+      offset: 0,
       targetSize: thumbnailTargetSize
     )
-    recentPhotos = photos
-    recentPhotosState = photos.isEmpty ? .empty : .loaded
+    recentPhotos = page.photos
+    nextRecentPhotoOffset = page.nextOffset
+    hasMoreRecentPhotos = page.hasMore
+    recentPhotosState = page.photos.isEmpty ? .empty : .loaded
+  }
+
+  private func loadNextRecentPhotosPage() async {
+    guard recentPhotosState == .loaded, hasMoreRecentPhotos, !isLoadingMoreRecentPhotos else {
+      return
+    }
+
+    isLoadingMoreRecentPhotos = true
+
+    let page = await recentPhotoProvider.loadRecentPhotos(
+      limit: Pagination.pageSize,
+      offset: nextRecentPhotoOffset,
+      targetSize: thumbnailTargetSize
+    )
+
+    let existingIDs = Set(recentPhotos.map(\.id))
+    let uniqueNewPhotos = page.photos.filter { !existingIDs.contains($0.id) }
+    recentPhotos.append(contentsOf: uniqueNewPhotos)
+    nextRecentPhotoOffset = page.nextOffset
+    hasMoreRecentPhotos = page.hasMore && !page.photos.isEmpty
+    isLoadingMoreRecentPhotos = false
   }
 
   func makeImageAttachment(from photoItem: PhotosPickerItem?) async -> ImageAttachment? {
