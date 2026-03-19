@@ -584,6 +584,22 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     FriendMessageCursor(createdAt: createdAt, messageId: id)
   }
 
+  func logicalRowIdentity(viewerUserId: String) -> String {
+    let normalizedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+
+    if senderUserId == viewerUserId, !normalizedClientId.isEmpty {
+      return "client:\(normalizedClientId)"
+    }
+
+    return "message:\(id)"
+  }
+
+  func matchesLogicalRow(of other: FriendMessage, viewerUserId: String) -> Bool {
+    logicalRowIdentity(viewerUserId: viewerUserId)
+      == other.logicalRowIdentity(viewerUserId: viewerUserId)
+  }
+
   func canEdit(viewerUserId: String) -> Bool {
     senderUserId == viewerUserId
       && messageType == .user

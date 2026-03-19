@@ -133,6 +133,33 @@ enum FriendsThreadMessageStatusResolver {
 }
 
 enum FriendsThreadMessageListChangeResolver {
+  enum Change: Equatable {
+    case none
+    case prependedHistory
+    case appendedIncoming
+    case appendedOutgoing
+  }
+
+  static func resolve(
+    oldMessageIDs: [String],
+    newMessageIDs: [String],
+    lastMessageSenderId: String?,
+    viewerUserId: String
+  ) -> Change {
+    guard !newMessageIDs.isEmpty, newMessageIDs != oldMessageIDs else { return .none }
+
+    let prependedMessage = isPrependedMessage(
+      oldMessageIDs: oldMessageIDs, newMessageIDs: newMessageIDs)
+    let appendedMessage = isAppendedMessage(
+      oldMessageIDs: oldMessageIDs, newMessageIDs: newMessageIDs)
+
+    guard appendedMessage, !prependedMessage else {
+      return prependedMessage ? .prependedHistory : .none
+    }
+
+    return lastMessageSenderId == viewerUserId ? .appendedOutgoing : .appendedIncoming
+  }
+
   static func isPrependedMessage(oldMessageIDs: [String], newMessageIDs: [String]) -> Bool {
     newMessageIDs.count > oldMessageIDs.count
       && newMessageIDs.first != oldMessageIDs.first
@@ -189,6 +216,15 @@ enum FriendsThreadIncomingAppendResolver {
   }
 }
 
+enum FriendsThreadLiveEdgeResolver {
+  static func shouldStickToLatest(
+    isPinnedToBottom: Bool,
+    isComposerFocused: Bool
+  ) -> Bool {
+    isPinnedToBottom || isComposerFocused
+  }
+}
+
 enum FriendsThreadCounterpartPreviewNavigationResolver {
   static func deepLink(for preview: SharerShiftPreview) -> AppCoordinator.DeepLink? {
     guard let shift = preview.shift else { return nil }
@@ -211,6 +247,7 @@ struct FriendsThreadChatViewportScrollRequest: Equatable {
   enum Kind: Equatable {
     case reply
     case restore
+    case liveEdge
   }
 
   let kind: Kind
@@ -260,6 +297,7 @@ enum FriendsThreadChatViewportRequestResolver {
   static func request(
     replyTargetMessageId: String?,
     restoreTargetMessageId: String?,
+    liveEdgeTargetPresentedMessageID: String?,
     messages: [FriendMessage],
     viewerUserId: String
   ) -> FriendsThreadChatViewportScrollRequest? {
@@ -272,11 +310,18 @@ enum FriendsThreadChatViewportRequestResolver {
       return replyRequest
     }
 
-    return makeRequest(
+    if let restoreRequest = makeRequest(
       kind: .restore,
       messageId: restoreTargetMessageId,
       messages: messages,
       viewerUserId: viewerUserId
+    ) {
+      return restoreRequest
+    }
+
+    return makePresentedMessageIDRequest(
+      kind: .liveEdge,
+      presentedMessageID: liveEdgeTargetPresentedMessageID
     )
   }
 
@@ -296,6 +341,19 @@ enum FriendsThreadChatViewportRequestResolver {
         for: message,
         viewerUserId: viewerUserId
       )
+    )
+  }
+
+  private static func makePresentedMessageIDRequest(
+    kind: FriendsThreadChatViewportScrollRequest.Kind,
+    presentedMessageID: String?
+  ) -> FriendsThreadChatViewportScrollRequest? {
+    guard let presentedMessageID else { return nil }
+
+    return FriendsThreadChatViewportScrollRequest(
+      kind: kind,
+      messageID: presentedMessageID,
+      presentedMessageID: presentedMessageID
     )
   }
 }
@@ -328,7 +386,6 @@ enum FriendsThreadExyteHighlightRedrawResolver {
 struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   let messages: [ExyteChat.Message]
   let scrollRequest: FriendsThreadChatViewportScrollRequest?
-  let pinToBottomRequestToken: Int
   let highlightedPresentedMessageID: String?
   let onPinnedToBottomChanged: (Bool) -> Void
   let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
@@ -350,7 +407,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       input: .init(
         messages: messages,
         scrollRequest: scrollRequest,
-        pinToBottomRequestToken: pinToBottomRequestToken,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
         onPinnedToBottomChanged: onPinnedToBottomChanged,
         onDidHandleScrollRequest: onDidHandleScrollRequest
@@ -363,7 +419,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     struct UpdateInput {
       let messages: [ExyteChat.Message]
       let scrollRequest: FriendsThreadChatViewportScrollRequest?
-      let pinToBottomRequestToken: Int
       let highlightedPresentedMessageID: String?
       let onPinnedToBottomChanged: (Bool) -> Void
       let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
@@ -374,8 +429,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var contentSizeObservation: NSKeyValueObservation?
     private var messages: [ExyteChat.Message] = []
     private var scrollRequest: FriendsThreadChatViewportScrollRequest?
-    private var pinToBottomRequestToken = 0
-    private var handledPinToBottomRequestToken = 0
     private var highlightedPresentedMessageID: String?
     private var lastHighlightedPresentedMessageID: String?
     private var lastVisibleHighlightedIndexPath: IndexPath?
@@ -390,7 +443,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     ) {
       messages = input.messages
       scrollRequest = input.scrollRequest
-      pinToBottomRequestToken = input.pinToBottomRequestToken
       highlightedPresentedMessageID = input.highlightedPresentedMessageID
       onPinnedToBottomChanged = input.onPinnedToBottomChanged
       onDidHandleScrollRequest = input.onDidHandleScrollRequest
@@ -400,7 +452,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       }
 
       attachIfNeeded(from: view)
-      attemptPendingPinToBottom()
       reportPinnedToBottomIfNeeded()
       attemptPendingScroll()
       refreshHighlightedRowsIfNeeded(
@@ -448,20 +499,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       refreshHighlightedRowsIfNeeded(force: false)
     }
 
-    private func attemptPendingPinToBottom() {
-      guard let tableView else { return }
-      guard handledPinToBottomRequestToken != pinToBottomRequestToken else { return }
-
-      handledPinToBottomRequestToken = pinToBottomRequestToken
-      let targetOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top)
-
-      UIView.performWithoutAnimation {
-        tableView.layoutIfNeeded()
-        tableView.setContentOffset(targetOffset, animated: false)
-        tableView.layoutIfNeeded()
-      }
-    }
-
     private func reportPinnedToBottomIfNeeded() {
       guard let tableView else { return }
       let isPinnedToBottom = FriendsThreadChatViewportResolver.isPinnedToBottom(
@@ -491,6 +528,8 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         case .reply:
           .middle
         case .restore:
+          .top
+        case .liveEdge:
           .top
         }
       let animated = scrollRequest.kind == .reply
@@ -587,14 +626,7 @@ extension UIView {
 
 enum FriendsThreadMessagePresentationID {
   static func make(for message: FriendMessage, viewerUserId: String) -> String {
-    let normalizedClientId = message.clientId.trimmingCharacters(in: .whitespacesAndNewlines)
-      .lowercased()
-
-    if message.senderUserId == viewerUserId, !normalizedClientId.isEmpty {
-      return "client:\(normalizedClientId)"
-    }
-
-    return "message:\(message.id)"
+    message.logicalRowIdentity(viewerUserId: viewerUserId)
   }
 }
 

@@ -27,8 +27,9 @@ struct FriendsThreadView: View {
   @State private var screenshotBellShakeTrigger = false
   @State private var showProfile = false
   @State private var isPinnedToBottom = true
+  @State private var isComposerFocused = false
+  @State private var liveEdgeScrollTargetPresentedMessageID: String?
   @State private var lastHandledNavigationRequestId: UUID?
-  @State private var pinToBottomRequestToken = 0
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -119,6 +120,10 @@ struct FriendsThreadView: View {
     }
   }
 
+  private var presentedMessageIndexLookup: [String: Int] {
+    Dictionary(uniqueKeysWithValues: zip(presentedMessageIDs, viewModel.messages.indices))
+  }
+
   private var exyteMessages: [ExyteChat.Message] {
     FriendsThreadExyteHighlightRedrawResolver.applyingHighlightMarker(
       to: FriendsThreadExyteMessageFactory.makeMessages(
@@ -141,6 +146,7 @@ struct FriendsThreadView: View {
     FriendsThreadChatViewportRequestResolver.request(
       replyTargetMessageId: viewModel.replyScrollTargetMessageId,
       restoreTargetMessageId: viewModel.restoreScrollTargetMessageId,
+      liveEdgeTargetPresentedMessageID: liveEdgeScrollTargetPresentedMessageID,
       messages: viewModel.messages,
       viewerUserId: viewModel.viewerUserId
     )
@@ -154,9 +160,47 @@ struct FriendsThreadView: View {
     )
   }
 
+  private var shouldStickToLatest: Bool {
+    FriendsThreadLiveEdgeResolver.shouldStickToLatest(
+      isPinnedToBottom: isPinnedToBottom,
+      isComposerFocused: isComposerFocused
+    )
+  }
+
+  private var shouldAutoFollowLatest: Bool {
+    shouldStickToLatest || liveEdgeScrollTargetPresentedMessageID != nil
+  }
+
+  private func updateLiveEdgeScrollTargetToLatestMessage() {
+    guard let latestMessage = viewModel.messages.last else {
+      liveEdgeScrollTargetPresentedMessageID = nil
+      return
+    }
+
+    liveEdgeScrollTargetPresentedMessageID = FriendsThreadMessagePresentationID.make(
+      for: latestMessage,
+      viewerUserId: viewModel.viewerUserId
+    )
+  }
+
+  private func consumeLiveEdgeScrollTarget(ifMatching presentedMessageID: String) {
+    guard liveEdgeScrollTargetPresentedMessageID == presentedMessageID else { return }
+    liveEdgeScrollTargetPresentedMessageID = nil
+  }
+
   private func messageID(for presentedMessageID: String) -> String {
-    presentedMessageLookup[presentedMessageID]?.id
-      ?? presentedMessageID.replacingOccurrences(of: "message:", with: "")
+    if let messageId = presentedMessageLookup[presentedMessageID]?.id {
+      return messageId
+    }
+
+    if let message = viewModel.messages.first(where: {
+      FriendsThreadMessagePresentationID.make(for: $0, viewerUserId: viewModel.viewerUserId)
+        == presentedMessageID
+    }) {
+      return message.id
+    }
+
+    return presentedMessageID.replacingOccurrences(of: "message:", with: "")
   }
 
   var body: some View {
@@ -184,6 +228,15 @@ struct FriendsThreadView: View {
         guard newValue else { return }
         unreadIncomingCount = 0
         showsNewMessagesPill = false
+        Task {
+          await viewModel.markVisibleMessagesReadIfNeeded()
+        }
+      }
+      .onChange(of: isComposerFocused) { _, newValue in
+        guard newValue else { return }
+        unreadIncomingCount = 0
+        showsNewMessagesPill = false
+        requestScrollToBottom()
         Task {
           await viewModel.markVisibleMessagesReadIfNeeded()
         }
@@ -453,7 +506,6 @@ struct FriendsThreadView: View {
       FriendsThreadChatViewportBridge(
         messages: exyteMessages,
         scrollRequest: viewportScrollRequest,
-        pinToBottomRequestToken: pinToBottomRequestToken,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
         onPinnedToBottomChanged: { isPinnedToBottom = $0 },
         onDidHandleScrollRequest: handleViewportScrollRequest
@@ -491,7 +543,7 @@ struct FriendsThreadView: View {
   private func chatRow(for exyteMessage: ExyteChat.Message) -> some View {
     if let message = presentedMessageLookup[exyteMessage.id] {
       let isCurrentUser = message.senderUserId == viewModel.viewerUserId
-      let index = viewModel.messages.firstIndex(where: { $0.id == message.id })
+      let index = presentedMessageIndexLookup[exyteMessage.id]
       let previousMessage = index.flatMap { $0 > 0 ? viewModel.messages[$0 - 1] : nil }
       let nextMessage = index.flatMap {
         $0 < (viewModel.messages.count - 1) ? viewModel.messages[$0 + 1] : nil
@@ -793,27 +845,20 @@ struct FriendsThreadView: View {
       }
     }
     composerBridge.onSend = { content in
-      let wasPinnedToBottom = await MainActor.run { () -> Bool in
-        let wasPinnedToBottom = isPinnedToBottom
-        if !wasPinnedToBottom {
-          pinToBottomRequestToken += 1
-        }
-        return wasPinnedToBottom
-      }
       let didSend = await viewModel.sendMessage(content: content)
       guard didSend else { return false }
 
       await MainActor.run {
         unreadIncomingCount = 0
         showsNewMessagesPill = false
-        if !wasPinnedToBottom {
-          requestScrollToBottom()
-        }
       }
       return true
     }
     composerBridge.onSaveEdit = { content in
       await viewModel.sendMessage(content: content)
+    }
+    composerBridge.onFocusChanged = { isFocused in
+      isComposerFocused = isFocused
     }
     composerBridge.onAttachmentDrawerOpenChanged = nil
     composerBridge.onHeightChanged = nil
@@ -846,33 +891,31 @@ struct FriendsThreadView: View {
   }
 
   private func handleMessageIDsChange(from oldValue: [String], to newValue: [String]) {
-    guard !newValue.isEmpty, newValue != oldValue else { return }
-    guard let lastMessage = viewModel.messages.last else { return }
-
-    let prependedMessages = FriendsThreadMessageListChangeResolver.isPrependedMessage(
+    let change = FriendsThreadMessageListChangeResolver.resolve(
       oldMessageIDs: oldValue,
-      newMessageIDs: newValue
-    )
-    let appendedMessage = FriendsThreadMessageListChangeResolver.isAppendedMessage(
-      oldMessageIDs: oldValue,
-      newMessageIDs: newValue
+      newMessageIDs: newValue,
+      lastMessageSenderId: viewModel.messages.last?.senderUserId,
+      viewerUserId: viewModel.viewerUserId
     )
 
-    guard appendedMessage, !prependedMessages else { return }
-    if lastMessage.senderUserId == viewModel.viewerUserId {
+    switch change {
+    case .none, .prependedHistory:
+      return
+    case .appendedOutgoing:
       unreadIncomingCount = 0
       showsNewMessagesPill = false
-      if !isPinnedToBottom {
-        requestScrollToBottom()
-      }
+      guard shouldAutoFollowLatest else { return }
+      updateLiveEdgeScrollTargetToLatestMessage()
       return
+    case .appendedIncoming:
+      break
     }
 
     let appendOutcome = FriendsThreadIncomingAppendResolver.resolve(
       previousMessageCount: oldValue.count,
       unreadIncomingCount: unreadIncomingCount,
       isIncoming: true,
-      isPinnedToBottom: isPinnedToBottom
+      isPinnedToBottom: shouldAutoFollowLatest
     )
     unreadIncomingCount = appendOutcome.unreadIncomingCount
     showsNewMessagesPill = appendOutcome.showsNewMessagesPill
@@ -883,7 +926,9 @@ struct FriendsThreadView: View {
       return
     }
 
-    guard isPinnedToBottom else { return }
+    guard shouldAutoFollowLatest else { return }
+
+    updateLiveEdgeScrollTargetToLatestMessage()
 
     Task {
       await viewModel.markVisibleMessagesReadIfNeeded()
@@ -926,10 +971,18 @@ struct FriendsThreadView: View {
     switch request.kind {
     case .reply:
       flashHighlightedMessage(request.messageID)
-      viewModel.consumeReplyScrollTarget()
-      viewModel.consumeRestoreScrollTarget()
+      Task { @MainActor in
+        viewModel.consumeReplyScrollTarget()
+        viewModel.consumeRestoreScrollTarget()
+      }
     case .restore:
-      viewModel.consumeRestoreScrollTarget()
+      Task { @MainActor in
+        viewModel.consumeRestoreScrollTarget()
+      }
+    case .liveEdge:
+      DispatchQueue.main.async {
+        consumeLiveEdgeScrollTarget(ifMatching: request.presentedMessageID)
+      }
     }
   }
 

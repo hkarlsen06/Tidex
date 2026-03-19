@@ -139,3 +139,28 @@ Run commands from the repository root unless explicitly stated otherwise.
   - Exit code `0` + `STATUS: SUCCESS` -> build succeeded
   - Non-zero exit code or `STATUS: FAILURE` -> build failed
   - If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
+
+**iOS Tests:**
+- When running iOS tests from the terminal, always run:
+
+```bash
+./scripts/xcode-test-agent.sh
+```
+
+- Do NOT run `xcodebuild test` directly.
+- JSON output is available with:
+
+```bash
+./scripts/xcode-test-agent.sh --json
+```
+
+- Pass focused test flags through to `xcodebuild test`, for example:
+
+```bash
+./scripts/xcode-test-agent.sh -- -only-testing:TidexAppTests/FriendsMessagesRepositoryTests
+```
+
+- Interpretation rules:
+  - Exit code `0` + `STATUS: SUCCESS` -> tests passed
+  - Non-zero exit code or `STATUS: FAILURE` -> tests failed
+  - If present, read the `TESTS`, `WARNINGS`, `ERRORS`, and `test_failures` diagnostics

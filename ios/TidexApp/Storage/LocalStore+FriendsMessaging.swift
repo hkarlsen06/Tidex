@@ -195,7 +195,7 @@ extension LocalStoreActor {
     var storedMessage = message
 
     if let existing = try fetchMessage(id: message.id, viewerUserId: viewerUserId) {
-      storedMessage = mergedMessagePreservingLocalOrdering(
+      storedMessage = mergedMessagePreservingLocalState(
         incoming: message,
         existing: existing,
         viewerUserId: viewerUserId
@@ -244,8 +244,26 @@ extension LocalStoreActor {
     in threadId: String,
     for viewerUserId: String
   ) throws {
-    _ = localMessageId
-    try saveMessage(message, in: threadId, for: viewerUserId)
+    if let localMessage = try fetchMessage(id: localMessageId, viewerUserId: viewerUserId) {
+      let storedMessage = try confirmStoredMessage(
+        message,
+        replacing: localMessage,
+        in: threadId,
+        viewerUserId: viewerUserId
+      )
+      try deleteConflictingMessages(
+        matchingClientId: storedMessage.clientId,
+        threadId: threadId,
+        viewerUserId: viewerUserId,
+        keepingMessageId: storedMessage.id
+      )
+      try replaceAttachments(for: storedMessage, viewerUserId: viewerUserId)
+      try replaceReactions(for: storedMessage, viewerUserId: viewerUserId)
+      try updateThreadPreviewIfNeeded(for: storedMessage, viewerUserId: viewerUserId)
+    } else {
+      try saveMessage(message, in: threadId, for: viewerUserId)
+    }
+
     try modelContext.save()
   }
 
@@ -398,13 +416,19 @@ extension LocalStoreActor {
     viewerUserId: String
   ) throws -> FriendMessage {
     let previousMessageId = localMessage.id
+    let resolvedClientId = preservedOutgoingClientId(
+      incomingClientId: message.clientId,
+      existingClientId: localMessage.clientId,
+      senderUserId: message.senderUserId,
+      viewerUserId: viewerUserId
+    )
     let confirmedMessage = FriendMessage(
       id: message.id,
       threadId: message.threadId,
       senderUserId: message.senderUserId,
       messageType: message.messageType,
       body: message.body,
-      clientId: message.clientId,
+      clientId: resolvedClientId,
       replyToMessageId: message.replyToMessageId,
       createdAt: localMessage.createdAt,
       editedAt: message.editedAt,
@@ -439,14 +463,22 @@ extension LocalStoreActor {
     return confirmedMessage
   }
 
-  private func mergedMessagePreservingLocalOrdering(
+  private func mergedMessagePreservingLocalState(
     incoming message: FriendMessage,
     existing localMessage: LocalMessage,
     viewerUserId: String
   ) -> FriendMessage {
-    guard
+    let resolvedClientId = preservedOutgoingClientId(
+      incomingClientId: message.clientId,
+      existingClientId: localMessage.clientId,
+      senderUserId: message.senderUserId,
+      viewerUserId: viewerUserId
+    )
+    let resolvedCreatedAt =
       shouldPreserveLocalCreatedAt(for: message, existing: localMessage, viewerUserId: viewerUserId)
-    else {
+      ? localMessage.createdAt : message.createdAt
+
+    guard resolvedCreatedAt != message.createdAt || resolvedClientId != message.clientId else {
       return message
     }
 
@@ -456,9 +488,9 @@ extension LocalStoreActor {
       senderUserId: message.senderUserId,
       messageType: message.messageType,
       body: message.body,
-      clientId: message.clientId,
+      clientId: resolvedClientId,
       replyToMessageId: message.replyToMessageId,
-      createdAt: localMessage.createdAt,
+      createdAt: resolvedCreatedAt,
       editedAt: message.editedAt,
       deletedAt: message.deletedAt,
       metadataData: message.metadataData,
@@ -493,6 +525,23 @@ extension LocalStoreActor {
 
   private func normalizedClientId(_ clientId: String) -> String {
     clientId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+  }
+
+  private func preservedOutgoingClientId(
+    incomingClientId: String,
+    existingClientId: String,
+    senderUserId: String,
+    viewerUserId: String
+  ) -> String {
+    guard senderUserId == viewerUserId else { return incomingClientId }
+
+    let normalizedIncomingClientId = normalizedClientId(incomingClientId)
+    guard normalizedIncomingClientId.isEmpty else { return incomingClientId }
+
+    let normalizedExistingClientId = normalizedClientId(existingClientId)
+    guard !normalizedExistingClientId.isEmpty else { return incomingClientId }
+
+    return existingClientId
   }
 
   private func updateThreadMessageReferencesIfNeeded(

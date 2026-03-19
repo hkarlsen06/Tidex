@@ -560,7 +560,6 @@ final class FriendsThreadViewModel: ObservableObject {
       sendState: .sending,
       failureMessage: nil
     )
-
     draft = ""
     composerState = .normal
     stagedComposerAttachment = nil
@@ -611,7 +610,10 @@ final class FriendsThreadViewModel: ObservableObject {
 
     let originalThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId)
     let shouldCancelComposerMode =
-      draftReplyTarget?.id == messageId || draftEditTarget?.id == messageId
+      draftReplyTarget.map { $0.matchesLogicalRow(of: message, viewerUserId: viewerUserId) }
+      ?? false
+      || draftEditTarget.map { $0.matchesLogicalRow(of: message, viewerUserId: viewerUserId) }
+        ?? false
     let cancelledComposerSnapshot = shouldCancelComposerMode ? currentComposerSnapshot() : nil
 
     if shouldCancelComposerMode {
@@ -856,13 +858,13 @@ final class FriendsThreadViewModel: ObservableObject {
     case .normal:
       break
     case .reply(let message):
-      guard let refreshedMessage = messageForComposerContext(id: message.id) else {
+      guard let refreshedMessage = messageForComposerContext(matching: message) else {
         composerState = .normal
         return
       }
       composerState = .reply(refreshedMessage)
     case .edit(let message):
-      guard let refreshedMessage = messageForComposerContext(id: message.id),
+      guard let refreshedMessage = messageForComposerContext(matching: message),
         refreshedMessage.canEdit(viewerUserId: viewerUserId)
       else {
         draft = ""
@@ -912,12 +914,12 @@ final class FriendsThreadViewModel: ObservableObject {
     case .normal:
       return .normal
     case .reply(let message):
-      guard let refreshedMessage = messageForComposerContext(id: message.id) else {
+      guard let refreshedMessage = messageForComposerContext(matching: message) else {
         return .normal
       }
       return .reply(refreshedMessage)
     case .edit(let message):
-      guard let refreshedMessage = messageForComposerContext(id: message.id),
+      guard let refreshedMessage = messageForComposerContext(matching: message),
         refreshedMessage.canEdit(viewerUserId: viewerUserId)
       else {
         return .normal
@@ -926,9 +928,17 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  private func messageForComposerContext(id: String) -> FriendMessage? {
-    messages.first(where: { $0.id == id })
-      ?? repository.getMessage(id: id, viewerUserId: viewerUserId)
+  private func messageForComposerContext(matching reference: FriendMessage) -> FriendMessage? {
+    if let message = messages.first(where: {
+      $0.matchesLogicalRow(of: reference, viewerUserId: viewerUserId)
+    }) {
+      return message
+    }
+
+    return repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+      .first(where: {
+        $0.matchesLogicalRow(of: reference, viewerUserId: viewerUserId)
+      })
   }
 
   private func persistPendingComposerDraft() async {

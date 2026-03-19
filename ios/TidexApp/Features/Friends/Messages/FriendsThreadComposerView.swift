@@ -58,6 +58,7 @@ final class FriendsThreadComposerBridge: ObservableObject {
       (ShiftWithComputations) async
         -> FriendsComposerAttachmentDraft?
     )?
+  var onFocusChanged: ((Bool) -> Void)?
   var onHeightChanged: ((CGFloat) -> Void)?
   var onAttachmentDrawerOpenChanged: ((Bool) -> Void)?
 
@@ -127,6 +128,10 @@ final class FriendsThreadComposerBridge: ObservableObject {
 
   func reportHeight(_ height: CGFloat) {
     onHeightChanged?(height)
+  }
+
+  func reportFocusChanged(_ isFocused: Bool) {
+    onFocusChanged?(isFocused)
   }
 
   func reportAttachmentDrawerOpen(_ isOpen: Bool) {
@@ -365,7 +370,10 @@ struct FriendsThreadComposerHostedView: View {
       actionButtonAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.sendButton,
       submitLabel: .return,
       focusTrigger: composerFocusTrigger,
-      onFocusChanged: { isComposerFocused = $0 },
+      onFocusChanged: {
+        isComposerFocused = $0
+        bridge.reportFocusChanged($0)
+      },
       horizontalPadding: MonthPickerLayout.horizontalPadding,
       focusedHorizontalPadding: Spacing.xs,
       topPadding: Spacing.xs,

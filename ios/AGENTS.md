@@ -9,6 +9,7 @@ iOS-specific development guidance for the Tidex native app.
 Run commands from the repository root unless explicitly stated otherwise.
 
 Use the repository build wrapper for any iOS build. Do not run `xcodebuild` directly. If the wrapper hangs or takes unusually long, stop and report.
+Use the repository test wrapper for any iOS test run. Do not run `xcodebuild test` directly.
 
 ### Build Wrapper
 
@@ -28,6 +29,31 @@ Interpretation rules:
 - Exit code `0` + `STATUS: SUCCESS` -> build succeeded
 - Non-zero exit code or `STATUS: FAILURE` -> build failed
 - If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
+
+### Test Wrapper
+
+```bash
+./scripts/xcode-test-agent.sh
+```
+
+Do NOT run `xcodebuild test` directly.
+
+JSON output is available with:
+
+```bash
+./scripts/xcode-test-agent.sh --json
+```
+
+Pass focused test filters through to `xcodebuild test`, for example:
+
+```bash
+./scripts/xcode-test-agent.sh -- -only-testing:TidexAppTests/FriendsMessagesRepositoryTests
+```
+
+Interpretation rules:
+- Exit code `0` + `STATUS: SUCCESS` -> tests passed
+- Non-zero exit code or `STATUS: FAILURE` -> tests failed
+- If present, read the `TESTS`, `WARNINGS`, `ERRORS`, and `test_failures` diagnostics
 
 **ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
 - API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
