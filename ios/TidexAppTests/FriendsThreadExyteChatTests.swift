@@ -114,6 +114,28 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testLogicalRowIdentityNormalizesOutgoingClientID() {
+    let message = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: "viewer",
+      messageType: .user,
+      body: "Hello",
+      clientId: " Client-1 ",
+      replyToMessageId: nil,
+      createdAt: Date(),
+      editedAt: nil,
+      deletedAt: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+
+    XCTAssertEqual(message.logicalRowIdentity(viewerUserId: "viewer"), "client:client-1")
+    XCTAssertEqual(message.logicalRowIdentity(viewerUserId: "other"), "message:message-1")
+  }
+
   func testPresentationIDsDoNotRegisterConfirmedOutgoingMessageAsAppend() {
     let optimisticMessage = makeMessage(
       id: "local-client-1",
@@ -183,6 +205,30 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testListChangeResolverClassifiesOutgoingAppendSeparately() {
+    XCTAssertEqual(
+      FriendsThreadMessageListChangeResolver.resolve(
+        oldMessageIDs: ["message-1", "message-2"],
+        newMessageIDs: ["message-1", "message-2", "message-3"],
+        lastMessageSenderId: "viewer",
+        viewerUserId: "viewer"
+      ),
+      .appendedOutgoing
+    )
+  }
+
+  func testListChangeResolverClassifiesIncomingAppendSeparately() {
+    XCTAssertEqual(
+      FriendsThreadMessageListChangeResolver.resolve(
+        oldMessageIDs: ["message-1", "message-2"],
+        newMessageIDs: ["message-1", "message-2", "message-3"],
+        lastMessageSenderId: "other",
+        viewerUserId: "viewer"
+      ),
+      .appendedIncoming
+    )
+  }
+
   func testIncomingAppendResolverShowsNewMessagesPillWhenUserIsScrolledUp() {
     XCTAssertEqual(
       FriendsThreadIncomingAppendResolver.resolve(
@@ -211,6 +257,30 @@ final class FriendsThreadExyteChatTests: XCTestCase {
         unreadIncomingCount: 0,
         showsNewMessagesPill: false,
         shouldPlayFeedback: false
+      )
+    )
+  }
+
+  func testLiveEdgeResolverTreatsFocusedComposerAsPinnedToLatest() {
+    XCTAssertTrue(
+      FriendsThreadLiveEdgeResolver.shouldStickToLatest(
+        isPinnedToBottom: false,
+        isComposerFocused: true
+      )
+    )
+  }
+
+  func testLiveEdgeResolverFallsBackToViewportPinWhenComposerIsNotFocused() {
+    XCTAssertFalse(
+      FriendsThreadLiveEdgeResolver.shouldStickToLatest(
+        isPinnedToBottom: false,
+        isComposerFocused: false
+      )
+    )
+    XCTAssertTrue(
+      FriendsThreadLiveEdgeResolver.shouldStickToLatest(
+        isPinnedToBottom: true,
+        isComposerFocused: false
       )
     )
   }
@@ -355,6 +425,7 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       FriendsThreadChatViewportRequestResolver.request(
         replyTargetMessageId: replyTarget.id,
         restoreTargetMessageId: restoreTarget.id,
+        liveEdgeTargetPresentedMessageID: nil,
         messages: [restoreTarget, replyTarget],
         viewerUserId: "viewer"
       ),
@@ -377,6 +448,7 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       FriendsThreadChatViewportRequestResolver.request(
         replyTargetMessageId: "missing-message",
         restoreTargetMessageId: restoreTarget.id,
+        liveEdgeTargetPresentedMessageID: nil,
         messages: [restoreTarget],
         viewerUserId: "viewer"
       ),
@@ -384,6 +456,23 @@ final class FriendsThreadExyteChatTests: XCTestCase {
         kind: .restore,
         messageID: restoreTarget.id,
         presentedMessageID: "message:\(restoreTarget.id)"
+      )
+    )
+  }
+
+  func testViewportRequestResolverFallsBackToLiveEdgeTargetWhenOtherTargetsAreMissing() {
+    XCTAssertEqual(
+      FriendsThreadChatViewportRequestResolver.request(
+        replyTargetMessageId: nil,
+        restoreTargetMessageId: nil,
+        liveEdgeTargetPresentedMessageID: "client:client-1",
+        messages: [],
+        viewerUserId: "viewer"
+      ),
+      FriendsThreadChatViewportScrollRequest(
+        kind: .liveEdge,
+        messageID: "client:client-1",
+        presentedMessageID: "client:client-1"
       )
     )
   }

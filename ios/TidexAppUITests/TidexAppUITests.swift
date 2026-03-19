@@ -10,6 +10,7 @@ final class TidexAppUITests: XCTestCase {
     static let wageyHistorySwipeDelete = "wagey-history.delete-swipe.ui-test-conversation-1"
     static let wageyHistoryConfirmDelete = "wagey-history.delete-confirm.ui-test-conversation-1"
     static let wageyHistoryCancelDelete = "wagey-history.delete-cancel.ui-test-conversation-1"
+    static let popoverDismissRegion = "PopoverDismissRegion"
   }
 
   private let defaultTimeout: TimeInterval = 15
@@ -17,6 +18,9 @@ final class TidexAppUITests: XCTestCase {
   private let sendButtonLabel = "Send message"
   private let seededIncomingMessage = "Initial incoming message"
   private let sentMessageText = "UI test send"
+  private let commonDeleteLabel = "Delete"
+  private let commonCancelLabel = "Cancel"
+  private let deleteConfirmationTitle = "Delete this conversation?"
 
   override func setUpWithError() throws {
     continueAfterFailure = false
@@ -129,12 +133,20 @@ final class TidexAppUITests: XCTestCase {
     )
     swipeDeleteButton.tap()
 
+    let confirmation = wageyHistoryDeleteConfirmation(in: app)
+    assertExists(
+      confirmation,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected delete confirmation to appear"
+    )
+
     let cancelButton = wageyHistoryCancelDeleteButton(in: app)
     assertExists(
       cancelButton,
       in: app,
       timeout: defaultTimeout,
-      message: "Expected delete confirmation to appear"
+      message: "Expected a way to dismiss the delete confirmation"
     )
     cancelButton.tap()
 
@@ -275,11 +287,54 @@ final class TidexAppUITests: XCTestCase {
   }
 
   private func wageyHistoryConfirmDeleteButton(in app: XCUIApplication) -> XCUIElement {
-    app.buttons[AccessibilityID.wageyHistoryConfirmDelete]
+    let candidates = [
+      app.sheets[deleteConfirmationTitle]
+        .descendants(matching: .button)
+        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
+        .firstMatch,
+      app.sheets[deleteConfirmationTitle].buttons[commonDeleteLabel],
+      app.descendants(matching: .button)
+        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
+        .firstMatch,
+      app.buttons[commonDeleteLabel],
+    ]
+
+    return candidates.first(where: \.exists)
+      ?? app.descendants(matching: .button)
+      .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
+      .firstMatch
+  }
+
+  private func wageyHistoryDeleteConfirmation(in app: XCUIApplication) -> XCUIElement {
+    let candidates = [
+      app.sheets[deleteConfirmationTitle],
+      app.staticTexts[deleteConfirmationTitle],
+      app.descendants(matching: .button)
+        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
+        .firstMatch,
+      app.buttons[commonDeleteLabel],
+    ]
+
+    return candidates.first(where: \.exists) ?? app.sheets[deleteConfirmationTitle]
   }
 
   private func wageyHistoryCancelDeleteButton(in app: XCUIApplication) -> XCUIElement {
-    app.buttons[AccessibilityID.wageyHistoryCancelDelete]
+    let candidates = [
+      app.sheets[deleteConfirmationTitle]
+        .descendants(matching: .button)
+        .matching(identifier: AccessibilityID.wageyHistoryCancelDelete)
+        .firstMatch,
+      app.sheets[deleteConfirmationTitle].buttons[commonCancelLabel],
+      app.descendants(matching: .button)
+        .matching(identifier: AccessibilityID.wageyHistoryCancelDelete)
+        .firstMatch,
+      app.buttons[AccessibilityID.popoverDismissRegion],
+      app.buttons["dismiss popup"],
+      app.buttons[commonCancelLabel],
+    ]
+
+    return candidates.first(where: \.exists)
+      ?? app.buttons[AccessibilityID.popoverDismissRegion]
   }
 
   private func assertExists(

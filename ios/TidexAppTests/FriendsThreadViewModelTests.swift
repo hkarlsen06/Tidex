@@ -1515,6 +1515,76 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(mockService.queueThreadTypingNotificationCallCount, 2)
   }
 
+  func testReplyTargetSurvivesOutgoingMessageConfirmationByLogicalRowIdentity() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let optimisticMessage = FriendMessage(
+      id: "local-client-1",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_001),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sending,
+      failureMessage: nil
+    )
+    let confirmedMessage = FriendMessage(
+      id: "message-1",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Hello",
+      clientId: "client-1",
+      replyToMessageId: nil,
+      createdAt: optimisticMessage.createdAt.addingTimeInterval(2),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+
+    await repository.saveThread(makeThread(), for: "viewer-1")
+    await repository.saveOptimisticMessage(
+      optimisticMessage,
+      in: route.threadId,
+      for: "viewer-1"
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: MockFriendsMessagingService(),
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    viewModel.reloadFromCache()
+    viewModel.setReplyTarget(optimisticMessage)
+
+    await repository.saveConfirmedMessage(
+      confirmedMessage,
+      replacingLocalMessageId: optimisticMessage.id,
+      in: route.threadId,
+      for: "viewer-1"
+    )
+
+    viewModel.reloadFromCache()
+
+    XCTAssertEqual(viewModel.draftReplyTarget?.id, confirmedMessage.id)
+    XCTAssertEqual(viewModel.draftReplyTarget?.clientId, confirmedMessage.clientId)
+  }
+
   func testHandleAppDidBecomeActiveResubscribesRealtimeAndRefreshesThreadData() async throws {
     let repository = try makeRepository()
     let route = makeRoute()
