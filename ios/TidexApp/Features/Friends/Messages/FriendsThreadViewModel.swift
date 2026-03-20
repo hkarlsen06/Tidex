@@ -754,34 +754,24 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private func refreshFromServer() async {
-    async let threadRefresh: Void = refreshThreadSummaryFromServer()
-    async let messagesRefresh: Void = refreshLatestMessagesFromServer()
+    async let threadRefresh: Void = refreshThreadSnapshotFromServer()
     async let statesRefresh: Void = refreshThreadStatesFromServer()
-    _ = await (threadRefresh, messagesRefresh, statesRefresh)
+    _ = await (threadRefresh, statesRefresh)
   }
 
-  private func refreshThreadSummaryFromServer() async {
+  private func refreshThreadSnapshotFromServer() async {
     do {
-      let refreshedThread = try await service.fetchThreadSummary(threadId: route.threadId)
-      await repository.saveThread(refreshedThread, for: viewerUserId)
-      loadFromCache()
-    } catch {
-      threadLogger.error("Failed to refresh thread summary: \(error.localizedDescription)")
-    }
-  }
-
-  private func refreshLatestMessagesFromServer() async {
-    do {
-      let refreshedMessages = try await service.listThreadMessages(
+      let snapshot = try await service.fetchThreadSyncSnapshotV2(
         threadId: route.threadId,
-        limit: Pagination.pageSize,
-        before: nil
+        messageLimit: Pagination.pageSize
       )
-      hasMoreHistoricalMessages = refreshedMessages.count == Pagination.pageSize
-      await repository.saveMessages(refreshedMessages, in: route.threadId, for: viewerUserId)
+      hasMoreHistoricalMessages = snapshot.hasMore
+      await repository.saveThread(snapshot.thread, for: viewerUserId)
+      await repository.saveMessages(snapshot.messages, in: route.threadId, for: viewerUserId)
+      await repository.saveThreadState(snapshot.viewerState)
       loadFromCache()
     } catch {
-      threadLogger.error("Failed to refresh thread messages: \(error.localizedDescription)")
+      threadLogger.error("Failed to refresh thread snapshot: \(error.localizedDescription)")
     }
   }
 
@@ -1178,13 +1168,14 @@ final class FriendsThreadViewModel: ObservableObject {
     defer { isLoadingOlderMessages = false }
 
     do {
-      let olderMessages = try await service.listThreadMessages(
+      let page = try await service.listThreadMessagesV2(
         threadId: route.threadId,
         limit: Pagination.pageSize,
         before: oldestLoadedMessage.paginationCursor
       )
 
-      hasMoreHistoricalMessages = olderMessages.count == Pagination.pageSize
+      let olderMessages = page.messages
+      hasMoreHistoricalMessages = page.hasMore
       guard !olderMessages.isEmpty else { return false }
 
       await repository.saveMessages(olderMessages, in: route.threadId, for: viewerUserId)
@@ -1219,7 +1210,7 @@ final class FriendsThreadViewModel: ObservableObject {
         }
 
         do {
-          let quotedMessage = try await self.service.fetchMessagePayload(messageId: messageId)
+          let quotedMessage = try await self.service.fetchMessageSyncPayloadV2(messageId: messageId)
           guard quotedMessage.threadId == self.route.threadId else { return }
           guard quotedMessage.deletedAt == nil else {
             self.quotedMessagesById.removeValue(forKey: messageId)
@@ -1259,7 +1250,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     do {
-      let message = try await service.fetchMessagePayload(messageId: messageId)
+      let message = try await service.fetchMessageSyncPayloadV2(messageId: messageId)
       guard message.threadId == route.threadId, message.deletedAt == nil else { return }
       await repository.saveMessages([message], in: route.threadId, for: viewerUserId)
       loadFromCache()

@@ -139,10 +139,11 @@ final class NotificationService {
     }
 
     do {
-      let unreadCount = try await FriendsMessagingService.shared.fetchUnreadDirectMessageCount(
-        userId: viewerUserId
+      let snapshot = try await FriendsMessagingService.shared.fetchInboxSyncSnapshotV2(
+        limit: 1,
+        before: nil
       )
-      setApplicationBadgeCount(unreadCount)
+      setApplicationBadgeCount(snapshot.unreadDirectMessageCount)
     } catch {
       logger.error("Failed to refresh app badge count: \(error.localizedDescription)")
     }

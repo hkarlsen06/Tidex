@@ -17,6 +17,7 @@ DECLARE
   v_existing_message public.messages%ROWTYPE;
   v_result public.thread_user_state%ROWTYPE;
   v_newly_read_count integer := 0;
+  v_did_advance boolean := false;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -69,6 +70,8 @@ BEGIN
 
   IF v_existing_message.id IS NULL
      OR (v_target_message.created_at, v_target_message.id) > (v_existing_message.created_at, v_existing_message.id) THEN
+    v_did_advance := true;
+
     SELECT COUNT(*)::integer
     INTO v_newly_read_count
     FROM public.messages m
@@ -97,6 +100,10 @@ BEGIN
   WHERE tus.thread_id = p_thread_id
     AND tus.user_id = v_uid
   LIMIT 1;
+
+  IF v_did_advance THEN
+    PERFORM internal.emit_thread_upserted_inbox_event_v2(v_uid, p_thread_id);
+  END IF;
 
   RETURN v_result;
 END;

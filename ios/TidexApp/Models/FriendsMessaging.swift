@@ -44,6 +44,94 @@ struct FriendMessageCursor: Equatable {
   let messageId: String
 }
 
+struct FriendInboxSyncSnapshot: Equatable {
+  let threads: [FriendThread]
+  let unreadDirectMessageCount: Int
+  let nextCursor: FriendThreadCursor?
+  let snapshotVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+}
+
+struct FriendThreadCounterpartPresence: Equatable {
+  let userId: String
+  let displayName: String?
+  let profilePictureUrl: String?
+  let oauthAvatarUrl: String?
+}
+
+struct FriendThreadSyncSnapshot: Equatable {
+  let thread: FriendThread
+  let viewerState: FriendThreadState
+  let counterpartPresence: FriendThreadCounterpartPresence?
+  let messages: [FriendMessage]
+  let nextCursor: FriendMessageCursor?
+  let snapshotVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+}
+
+enum FriendMessagingSyncScope: Equatable {
+  case inbox
+  case thread(threadId: String)
+}
+
+struct FriendMessagingSyncState: Equatable {
+  let viewerUserId: String
+  let scope: FriendMessagingSyncScope
+  let version: Int64
+  let retainedFromVersion: Int64
+  let updatedAt: Date
+}
+
+struct FriendInboxSyncEvent: Equatable {
+  enum EventType: String, Equatable {
+    case threadUpserted = "thread_upserted"
+    case threadRemoved = "thread_removed"
+  }
+
+  let id: String
+  let version: Int64
+  let threadId: String?
+  let eventType: EventType
+  let thread: FriendThread?
+}
+
+struct FriendInboxSyncEventsPage: Equatable {
+  let requiresSnapshot: Bool
+  let latestVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+  let events: [FriendInboxSyncEvent]
+}
+
+struct FriendThreadSyncEvent: Equatable {
+  enum EventType: String, Equatable {
+    case messageUpserted = "message_upserted"
+    case messageDeleted = "message_deleted"
+  }
+
+  let id: String
+  let version: Int64
+  let eventType: EventType
+  let message: FriendMessage?
+  let deletedMessageId: String?
+}
+
+struct FriendThreadSyncEventsPage: Equatable {
+  let requiresSnapshot: Bool
+  let latestVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+  let events: [FriendThreadSyncEvent]
+}
+
+struct FriendThreadMessagesPage: Equatable {
+  let messages: [FriendMessage]
+  let nextCursor: FriendMessageCursor?
+  let hasMore: Bool
+}
+
 enum FriendLastMessagePreviewKind: String, Codable, Equatable {
   case text
   case image

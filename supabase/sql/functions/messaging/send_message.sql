@@ -38,6 +38,7 @@ DECLARE
   v_attachment_count integer := 0;
   v_existing_message_id uuid;
   v_message_id uuid;
+  v_message_created_at timestamptz;
   v_attachment record;
   v_object record;
 BEGIN
@@ -185,6 +186,9 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- Emit the V2 sync payload after attachments have been persisted.
+  PERFORM set_config('tidex.messaging_v2_emit_message_insert', 'false', true);
+
   INSERT INTO public.messages (
     thread_id,
     sender_user_id,
@@ -203,7 +207,7 @@ BEGIN
     p_reply_to_message_id,
     p_metadata
   )
-  RETURNING messages.id INTO v_message_id;
+  RETURNING messages.id, messages.created_at INTO v_message_id, v_message_created_at;
 
   INSERT INTO public.message_attachments (
     id,
@@ -234,12 +238,30 @@ BEGIN
   SET
     last_message_id = v_message_id,
     last_message_sender_id = v_uid,
-    last_message_at = (
-      SELECT m.created_at
-      FROM public.messages m
-      WHERE m.id = v_message_id
-    )
+    last_message_at = v_message_created_at
   WHERE threads.id = p_thread_id;
+
+  PERFORM internal.append_thread_event(
+    p_thread_id,
+    'message_upserted',
+    'message',
+    v_message_id,
+    internal.build_message_sync_payload_v2(v_message_id),
+    v_uid
+  );
+
+  PERFORM internal.emit_thread_upserted_inbox_event_v2(
+    tm.user_id,
+    p_thread_id,
+    true,
+    v_message_id,
+    v_uid,
+    v_message_created_at
+  )
+  FROM public.thread_memberships tm
+  WHERE tm.thread_id = p_thread_id
+    AND tm.status = 'active'
+    AND internal.can_access_thread_as_user(p_thread_id, tm.user_id);
 
   RETURN QUERY
   SELECT *

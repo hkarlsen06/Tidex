@@ -672,6 +672,33 @@ struct LoadingView: View {
       return [threadSummary]
     }
 
+    func fetchInboxSyncSnapshotV2(limit _: Int, before _: FriendThreadCursor?) async throws
+      -> FriendInboxSyncSnapshot
+    {
+      await Task.yield()
+      return FriendInboxSyncSnapshot(
+        threads: [threadSummary],
+        unreadDirectMessageCount: 0,
+        nextCursor: nil,
+        snapshotVersion: 0,
+        retainedFromVersion: 0,
+        hasMore: false
+      )
+    }
+
+    func listInboxEventsV2(afterVersion _: Int64, limit _: Int) async throws
+      -> FriendInboxSyncEventsPage
+    {
+      await Task.yield()
+      return FriendInboxSyncEventsPage(
+        requiresSnapshot: false,
+        latestVersion: 0,
+        retainedFromVersion: 0,
+        hasMore: false,
+        events: []
+      )
+    }
+
     func listThreadMessages(
       threadId _: String,
       limit _: Int,
@@ -679,6 +706,64 @@ struct LoadingView: View {
     ) async throws -> [FriendMessage] {
       await Task.yield()
       return messages
+    }
+
+    func listThreadMessagesV2(
+      threadId _: String,
+      limit _: Int,
+      before _: FriendMessageCursor?
+    ) async throws -> FriendThreadMessagesPage {
+      await Task.yield()
+      return FriendThreadMessagesPage(
+        messages: messages,
+        nextCursor: nil,
+        hasMore: false
+      )
+    }
+
+    func fetchThreadSyncSnapshotV2(threadId _: String, messageLimit _: Int) async throws
+      -> FriendThreadSyncSnapshot
+    {
+      await Task.yield()
+      let viewerState = FriendThreadState(
+        threadId: threadSummary.id,
+        userId: FriendsThreadUITestFixtures.viewerUserId,
+        lastReadMessageId: messages.last?.id,
+        lastReadAt: messages.last?.createdAt,
+        muted: threadSummary.muted,
+        updatedAt: Date()
+      )
+
+      return FriendThreadSyncSnapshot(
+        thread: threadSummary,
+        viewerState: viewerState,
+        counterpartPresence: threadSummary.counterpartUserId.map {
+          FriendThreadCounterpartPresence(
+            userId: $0,
+            displayName: threadSummary.counterpartDisplayName,
+            profilePictureUrl: threadSummary.counterpartProfilePictureUrl,
+            oauthAvatarUrl: threadSummary.counterpartOAuthAvatarUrl
+          )
+        },
+        messages: messages,
+        nextCursor: nil,
+        snapshotVersion: 0,
+        retainedFromVersion: 0,
+        hasMore: false
+      )
+    }
+
+    func listThreadEventsV2(threadId _: String, afterVersion _: Int64, limit _: Int) async throws
+      -> FriendThreadSyncEventsPage
+    {
+      await Task.yield()
+      return FriendThreadSyncEventsPage(
+        requiresSnapshot: false,
+        latestVersion: 0,
+        retainedFromVersion: 0,
+        hasMore: false,
+        events: []
+      )
     }
 
     func sendMessage(
@@ -808,6 +893,10 @@ struct LoadingView: View {
         throw FriendsMessagingServiceError.httpError(statusCode: 404, message: "Message not found")
       }
       return message
+    }
+
+    func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage {
+      try await fetchMessagePayload(messageId: messageId)
     }
 
     func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {

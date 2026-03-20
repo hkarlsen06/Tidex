@@ -9,11 +9,15 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessag
 protocol FriendsMessagesRepositoryProviding: AnyObject {
   func getThread(id: String, viewerUserId: String) -> FriendThread?
   func getMessage(id: String, viewerUserId: String) -> FriendMessage?
+  func getMessagingSyncState(viewerUserId: String, scope: FriendMessagingSyncScope) async
+    -> FriendMessagingSyncState?
   func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async
   func saveThread(_ thread: FriendThread, for viewerUserId: String) async
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
     async
   func saveThreadState(_ state: FriendThreadState) async
+  func saveMessagingSyncState(_ state: FriendMessagingSyncState) async
+  func deleteThread(id: String, viewerUserId: String) async
   func deleteMessage(id: String, viewerUserId: String) async
 }
 
@@ -172,6 +176,21 @@ final class FriendsMessagesRepository: ObservableObject {
     }
   }
 
+  func getMessagingSyncState(
+    viewerUserId: String,
+    scope: FriendMessagingSyncScope
+  ) async -> FriendMessagingSyncState? {
+    do {
+      return try await storeActor.fetchMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: scope
+      )
+    } catch {
+      logger.error("Failed to fetch messaging sync state: \(error.localizedDescription)")
+      return nil
+    }
+  }
+
   func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async {
     do {
       try await storeActor.saveThreadSummaries(threads, for: viewerUserId)
@@ -259,6 +278,23 @@ final class FriendsMessagesRepository: ObservableObject {
       logger.info("Saved thread state for \(state.threadId, privacy: .private)")
     } catch {
       logger.error("Failed to save thread state: \(error.localizedDescription)")
+    }
+  }
+
+  func saveMessagingSyncState(_ state: FriendMessagingSyncState) async {
+    do {
+      try await storeActor.saveMessagingSyncState(state)
+    } catch {
+      logger.error("Failed to save messaging sync state: \(error.localizedDescription)")
+    }
+  }
+
+  func deleteThread(id: String, viewerUserId: String) async {
+    do {
+      try await storeActor.deleteThread(id: id, viewerUserId: viewerUserId)
+      logger.info("Deleted thread \(id, privacy: .private)")
+    } catch {
+      logger.error("Failed to delete thread: \(error.localizedDescription)")
     }
   }
 
