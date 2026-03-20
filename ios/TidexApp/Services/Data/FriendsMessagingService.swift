@@ -11,8 +11,17 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessag
 protocol FriendsMessagingServiceProviding: AnyObject {
   func getOrCreateDirectThread(otherUserId: String) async throws -> FriendThread
   func listMyThreads(limit: Int, before cursor: FriendThreadCursor?) async throws -> [FriendThread]
+  func fetchInboxSyncSnapshotV2(limit: Int, before cursor: FriendThreadCursor?) async throws
+    -> FriendInboxSyncSnapshot
+  func listInboxEventsV2(afterVersion: Int64, limit: Int) async throws -> FriendInboxSyncEventsPage
   func listThreadMessages(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
     async throws -> [FriendMessage]
+  func listThreadMessagesV2(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
+    async throws -> FriendThreadMessagesPage
+  func fetchThreadSyncSnapshotV2(threadId: String, messageLimit: Int) async throws
+    -> FriendThreadSyncSnapshot
+  func listThreadEventsV2(threadId: String, afterVersion: Int64, limit: Int) async throws
+    -> FriendThreadSyncEventsPage
   func listThreadStates(threadId: String) async throws -> [FriendThreadState]
   func sendMessage(
     threadId: String,
@@ -31,6 +40,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func fetchThreadSummary(threadId: String) async throws -> FriendThread
   func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage
+  func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage
   func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage
   func createAbuseReport(
     threadId: String,
@@ -137,6 +147,72 @@ final class FriendsMessagingService: ObservableObject {
     }
   }
 
+  func fetchInboxSyncSnapshotV2(
+    limit: Int = 30,
+    before cursor: FriendThreadCursor? = nil
+  ) async throws -> FriendInboxSyncSnapshot {
+    var params: [String: AnyJSON] = [
+      "p_limit": .integer(limit)
+    ]
+
+    if let cursor {
+      params["p_before_last_message_at"] = .string(cursor.lastMessageAt.toISO8601String())
+      params["p_before_thread_id"] = .string(cursor.threadId)
+    }
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let payload: MessagingInboxSyncSnapshotV2Row =
+        try await supabase
+        .rpc("get_inbox_sync_snapshot_v2", params: params)
+        .single()
+        .execute()
+        .value
+
+      return payload.toFriendInboxSyncSnapshot()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func listInboxEventsV2(
+    afterVersion: Int64,
+    limit: Int = 100
+  ) async throws -> FriendInboxSyncEventsPage {
+    let params: [String: AnyJSON] = [
+      "p_after_version": .integer(Int(afterVersion)),
+      "p_limit": .integer(limit),
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let payload: MessagingInboxSyncEventsPageV2Row =
+        try await supabase
+        .rpc("list_inbox_events_v2", params: params)
+        .single()
+        .execute()
+        .value
+
+      return try payload.toFriendInboxSyncEventsPage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
   func listThreadMessages(
     threadId: String,
     limit: Int = 50,
@@ -162,6 +238,107 @@ final class FriendsMessagingService: ObservableObject {
         .value
 
       return rows.map { $0.toFriendMessage() }
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func listThreadMessagesV2(
+    threadId: String,
+    limit: Int = 50,
+    before cursor: FriendMessageCursor? = nil
+  ) async throws -> FriendThreadMessagesPage {
+    var params: [String: AnyJSON] = [
+      "p_thread_id": .string(threadId),
+      "p_limit": .integer(limit),
+    ]
+
+    if let cursor {
+      params["p_before_created_at"] = .string(cursor.createdAt.toISO8601String())
+      params["p_before_message_id"] = .string(cursor.messageId)
+    }
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let payload: MessagingThreadMessagesPageV2Row =
+        try await supabase
+        .rpc("list_thread_messages_v2", params: params)
+        .single()
+        .execute()
+        .value
+
+      return payload.toFriendThreadMessagesPage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func fetchThreadSyncSnapshotV2(
+    threadId: String,
+    messageLimit: Int = 50
+  ) async throws -> FriendThreadSyncSnapshot {
+    let params: [String: AnyJSON] = [
+      "p_thread_id": .string(threadId),
+      "p_message_limit": .integer(messageLimit),
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let payload: MessagingThreadSyncSnapshotV2Row =
+        try await supabase
+        .rpc("get_thread_sync_snapshot_v2", params: params)
+        .single()
+        .execute()
+        .value
+
+      return payload.toFriendThreadSyncSnapshot()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func listThreadEventsV2(
+    threadId: String,
+    afterVersion: Int64,
+    limit: Int = 100
+  ) async throws -> FriendThreadSyncEventsPage {
+    let params: [String: AnyJSON] = [
+      "p_thread_id": .string(threadId),
+      "p_after_version": .integer(Int(afterVersion)),
+      "p_limit": .integer(limit),
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let payload: MessagingThreadSyncEventsPageV2Row =
+        try await supabase
+        .rpc("list_thread_events_v2", params: params)
+        .single()
+        .execute()
+        .value
+
+      return try payload.toFriendThreadSyncEventsPage()
     } catch let error as PostgrestError {
       throw mapRPCError(error)
     } catch let error as AuthError {
@@ -479,6 +656,33 @@ final class FriendsMessagingService: ObservableObject {
     }
   }
 
+  func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage {
+    let params: [String: AnyJSON] = [
+      "p_message_id": .string(messageId)
+    ]
+
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let row: MessagingMessageRow =
+        try await supabase
+        .rpc("get_message_sync_payload_v2", params: params)
+        .single()
+        .execute()
+        .value
+
+      return row.toFriendMessage()
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
   func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
     let params: [String: AnyJSON] = [
       "p_message_id": .string(messageId),
@@ -760,9 +964,374 @@ private struct MessagingThreadSummaryRow: Decodable {
     )
   }
 
-  private static func encode(_ value: AnyJSON?) -> Data? {
+  static func encode(_ value: AnyJSON?) -> Data? {
     guard let value else { return nil }
     return try? JSONEncoder().encode(value)
+  }
+}
+
+private struct MessagingInboxSyncSnapshotV2Row: Decodable {
+  let threads: [MessagingThreadSummaryRow]
+  let unreadDirectMessageCount: Int
+  let nextCursor: MessagingThreadCursorRow?
+  let snapshotVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case threads
+    case unreadDirectMessageCount = "unread_direct_message_count"
+    case nextCursor = "next_cursor"
+    case snapshotVersion = "snapshot_version"
+    case retainedFromVersion = "retained_from_version"
+    case hasMore = "has_more"
+  }
+
+  func toFriendInboxSyncSnapshot() -> FriendInboxSyncSnapshot {
+    FriendInboxSyncSnapshot(
+      threads: threads.map { $0.toFriendThread() },
+      unreadDirectMessageCount: unreadDirectMessageCount,
+      nextCursor: nextCursor?.toFriendThreadCursor(),
+      snapshotVersion: snapshotVersion,
+      retainedFromVersion: retainedFromVersion,
+      hasMore: hasMore
+    )
+  }
+}
+
+private struct MessagingInboxSyncEventsPageV2Row: Decodable {
+  let requiresSnapshot: Bool
+  let latestVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+  let events: [MessagingInboxSyncEventRow]
+
+  enum CodingKeys: String, CodingKey {
+    case requiresSnapshot = "requires_snapshot"
+    case latestVersion = "latest_version"
+    case retainedFromVersion = "retained_from_version"
+    case hasMore = "has_more"
+    case events
+  }
+
+  func toFriendInboxSyncEventsPage() throws -> FriendInboxSyncEventsPage {
+    try FriendInboxSyncEventsPage(
+      requiresSnapshot: requiresSnapshot,
+      latestVersion: latestVersion,
+      retainedFromVersion: retainedFromVersion,
+      hasMore: hasMore,
+      events: events.map { try $0.toFriendInboxSyncEvent() }
+    )
+  }
+}
+
+private struct MessagingThreadSyncSnapshotV2Row: Decodable {
+  let thread: MessagingThreadCoreRow
+  let viewerState: MessagingThreadSyncViewerStateRow
+  let counterpartState: MessagingThreadCounterpartPresenceRow?
+  let messages: [MessagingMessageRow]
+  let nextCursor: MessagingMessageCursorRow?
+  let snapshotVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case thread
+    case viewerState = "viewer_state"
+    case counterpartState = "counterpart_state"
+    case messages
+    case nextCursor = "next_cursor"
+    case snapshotVersion = "snapshot_version"
+    case retainedFromVersion = "retained_from_version"
+    case hasMore = "has_more"
+  }
+
+  func toFriendThreadSyncSnapshot() -> FriendThreadSyncSnapshot {
+    let friendMessages = messages.map { $0.toFriendMessage() }
+    let latestMessage = friendMessages.last
+    let counterpartPresence = counterpartState?.toFriendThreadCounterpartPresence()
+
+    let friendThread = FriendThread(
+      id: thread.id,
+      kind: FriendThreadKind(rawValue: thread.kind) ?? .direct,
+      title: thread.title,
+      avatarUrl: thread.avatarUrl,
+      metadataData: MessagingThreadSummaryRow.encode(thread.metadata),
+      counterpartUserId: counterpartPresence?.userId,
+      counterpartDisplayName: counterpartPresence?.displayName,
+      counterpartProfilePictureUrl: counterpartPresence?.profilePictureUrl,
+      counterpartOAuthAvatarUrl: counterpartPresence?.oauthAvatarUrl,
+      lastMessageId: latestMessage?.id,
+      lastMessageSenderId: latestMessage?.senderUserId,
+      lastMessageAt: latestMessage?.createdAt,
+      lastMessageBody: latestMessage?.body,
+      lastMessagePreviewKind: latestMessage?.previewKind,
+      lastMessageHasImage: latestMessage?.hasImageAttachment ?? false,
+      unreadCount: viewerState.unreadCount,
+      muted: viewerState.muted,
+      createdAt: thread.createdAt
+    )
+
+    return FriendThreadSyncSnapshot(
+      thread: friendThread,
+      viewerState: viewerState.toFriendThreadState(),
+      counterpartPresence: counterpartPresence,
+      messages: friendMessages,
+      nextCursor: nextCursor?.toFriendMessageCursor(),
+      snapshotVersion: snapshotVersion,
+      retainedFromVersion: retainedFromVersion,
+      hasMore: hasMore
+    )
+  }
+}
+
+private struct MessagingThreadSyncEventsPageV2Row: Decodable {
+  let requiresSnapshot: Bool
+  let latestVersion: Int64
+  let retainedFromVersion: Int64
+  let hasMore: Bool
+  let events: [MessagingThreadSyncEventRow]
+
+  enum CodingKeys: String, CodingKey {
+    case requiresSnapshot = "requires_snapshot"
+    case latestVersion = "latest_version"
+    case retainedFromVersion = "retained_from_version"
+    case hasMore = "has_more"
+    case events
+  }
+
+  func toFriendThreadSyncEventsPage() throws -> FriendThreadSyncEventsPage {
+    try FriendThreadSyncEventsPage(
+      requiresSnapshot: requiresSnapshot,
+      latestVersion: latestVersion,
+      retainedFromVersion: retainedFromVersion,
+      hasMore: hasMore,
+      events: events.map { try $0.toFriendThreadSyncEvent() }
+    )
+  }
+}
+
+private struct MessagingThreadMessagesPageV2Row: Decodable {
+  let messages: [MessagingMessageRow]
+  let nextCursor: MessagingMessageCursorRow?
+  let hasMore: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case messages
+    case nextCursor = "next_cursor"
+    case hasMore = "has_more"
+  }
+
+  func toFriendThreadMessagesPage() -> FriendThreadMessagesPage {
+    FriendThreadMessagesPage(
+      messages: messages.map { $0.toFriendMessage() },
+      nextCursor: nextCursor?.toFriendMessageCursor(),
+      hasMore: hasMore
+    )
+  }
+}
+
+private struct MessagingThreadCoreRow: Decodable {
+  let id: String
+  let kind: String
+  let title: String?
+  let avatarUrl: String?
+  let metadata: AnyJSON?
+  let createdAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case kind
+    case title
+    case avatarUrl = "avatar_url"
+    case metadata
+    case createdAt = "created_at"
+  }
+}
+
+private struct MessagingThreadSyncViewerStateRow: Decodable {
+  let threadId: String
+  let userId: String
+  let lastReadMessageId: String?
+  let lastReadAt: Date?
+  let unreadCount: Int
+  let muted: Bool
+  let updatedAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case threadId = "thread_id"
+    case userId = "user_id"
+    case lastReadMessageId = "last_read_message_id"
+    case lastReadAt = "last_read_at"
+    case unreadCount = "unread_count"
+    case muted
+    case updatedAt = "updated_at"
+  }
+
+  func toFriendThreadState() -> FriendThreadState {
+    FriendThreadState(
+      threadId: threadId,
+      userId: userId,
+      lastReadMessageId: lastReadMessageId,
+      lastReadAt: lastReadAt,
+      muted: muted,
+      updatedAt: updatedAt
+    )
+  }
+}
+
+private struct MessagingThreadCounterpartPresenceRow: Decodable {
+  let userId: String
+  let displayName: String?
+  let profilePictureUrl: String?
+  let oauthAvatarUrl: String?
+
+  enum CodingKeys: String, CodingKey {
+    case userId = "user_id"
+    case displayName = "display_name"
+    case profilePictureUrl = "profile_picture_url"
+    case oauthAvatarUrl = "oauth_avatar_url"
+  }
+
+  func toFriendThreadCounterpartPresence() -> FriendThreadCounterpartPresence {
+    FriendThreadCounterpartPresence(
+      userId: userId,
+      displayName: displayName,
+      profilePictureUrl: profilePictureUrl,
+      oauthAvatarUrl: oauthAvatarUrl
+    )
+  }
+}
+
+private struct MessagingThreadCursorRow: Decodable {
+  let beforeLastMessageAt: Date
+  let beforeThreadId: String
+
+  enum CodingKeys: String, CodingKey {
+    case beforeLastMessageAt = "before_last_message_at"
+    case beforeThreadId = "before_thread_id"
+  }
+
+  func toFriendThreadCursor() -> FriendThreadCursor {
+    FriendThreadCursor(lastMessageAt: beforeLastMessageAt, threadId: beforeThreadId)
+  }
+}
+
+private struct MessagingInboxSyncEventRow: Decodable {
+  let id: String
+  let version: Int64
+  let threadId: String?
+  let eventType: String
+  let payload: AnyJSON?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case version
+    case threadId = "thread_id"
+    case eventType = "event_type"
+    case payload
+  }
+
+  func toFriendInboxSyncEvent() throws -> FriendInboxSyncEvent {
+    guard let resolvedEventType = FriendInboxSyncEvent.EventType(rawValue: eventType) else {
+      throw DecodingError.dataCorrupted(
+        .init(codingPath: [], debugDescription: "Unsupported inbox event type: \(eventType)")
+      )
+    }
+
+    let thread: FriendThread? =
+      if resolvedEventType == .threadUpserted, let payload {
+        try Self.decode(payload, as: MessagingThreadSummaryRow.self).toFriendThread()
+      } else {
+        nil
+      }
+
+    return FriendInboxSyncEvent(
+      id: id,
+      version: version,
+      threadId: threadId,
+      eventType: resolvedEventType,
+      thread: thread
+    )
+  }
+
+  private static func decode<T: Decodable>(_ value: AnyJSON, as type: T.Type) throws -> T {
+    let data = try canonicalJSONEncoder.encode(value)
+    return try syncJSONDecoder.decode(type, from: data)
+  }
+}
+
+private struct MessagingThreadSyncEventRow: Decodable {
+  let id: String
+  let version: Int64
+  let eventType: String
+  let payload: AnyJSON?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case version
+    case eventType = "event_type"
+    case payload
+  }
+
+  func toFriendThreadSyncEvent() throws -> FriendThreadSyncEvent {
+    guard let resolvedEventType = FriendThreadSyncEvent.EventType(rawValue: eventType) else {
+      throw DecodingError.dataCorrupted(
+        .init(codingPath: [], debugDescription: "Unsupported thread event type: \(eventType)")
+      )
+    }
+
+    let message: FriendMessage?
+    let deletedMessageId: String?
+
+    switch resolvedEventType {
+    case .messageUpserted:
+      guard let payload else {
+        throw DecodingError.valueNotFound(
+          AnyJSON.self,
+          .init(codingPath: [], debugDescription: "Missing message payload for message_upserted")
+        )
+      }
+      message = try Self.decode(payload, as: MessagingMessageRow.self).toFriendMessage()
+      deletedMessageId = nil
+    case .messageDeleted:
+      guard let payload else {
+        throw DecodingError.valueNotFound(
+          AnyJSON.self,
+          .init(codingPath: [], debugDescription: "Missing tombstone payload for message_deleted")
+        )
+      }
+      let tombstone = try Self.decode(payload, as: MessagingDeletedMessageRow.self)
+      message = nil
+      deletedMessageId = tombstone.id
+    }
+
+    return FriendThreadSyncEvent(
+      id: id,
+      version: version,
+      eventType: resolvedEventType,
+      message: message,
+      deletedMessageId: deletedMessageId
+    )
+  }
+
+  private static func decode<T: Decodable>(_ value: AnyJSON, as type: T.Type) throws -> T {
+    let data = try canonicalJSONEncoder.encode(value)
+    return try syncJSONDecoder.decode(type, from: data)
+  }
+}
+
+private struct MessagingMessageCursorRow: Decodable {
+  let beforeCreatedAt: Date
+  let beforeMessageId: String
+
+  enum CodingKeys: String, CodingKey {
+    case beforeCreatedAt = "before_created_at"
+    case beforeMessageId = "before_message_id"
+  }
+
+  func toFriendMessageCursor() -> FriendMessageCursor {
+    FriendMessageCursor(createdAt: beforeCreatedAt, messageId: beforeMessageId)
   }
 }
 
@@ -820,6 +1389,18 @@ private struct MessagingMessageRow: Decodable {
   private static func encode(_ value: AnyJSON?) -> Data? {
     guard let value else { return nil }
     return try? JSONEncoder().encode(value)
+  }
+}
+
+private struct MessagingDeletedMessageRow: Decodable {
+  let id: String
+  let threadId: String
+  let deletedAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case threadId = "thread_id"
+    case deletedAt = "deleted_at"
   }
 }
 

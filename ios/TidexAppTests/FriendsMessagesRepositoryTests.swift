@@ -559,6 +559,51 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(state?.muted, true)
   }
 
+  func testSaveThreadStatePreservesUnreadCountForPartialReadThread() async throws {
+    let repository = try makeRepository()
+
+    await repository.saveThread(
+      FriendThread(
+        id: "thread-1",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "friend-1",
+        counterpartDisplayName: "Friend",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-2",
+        lastMessageSenderId: "friend-1",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_010),
+        lastMessageBody: "Still unread",
+        lastMessageHasImage: false,
+        unreadCount: 3,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_699_999_000)
+      ),
+      for: viewerUserId
+    )
+
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: true,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_011)
+      ))
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    let state = repository.getThreadState(threadId: "thread-1", viewerUserId: viewerUserId)
+
+    XCTAssertEqual(thread?.unreadCount, 3)
+    XCTAssertEqual(thread?.muted, true)
+    XCTAssertEqual(state?.lastReadMessageId, "message-1")
+    XCTAssertEqual(state?.muted, true)
+  }
+
   func testSaveMessagesUpdatesLastMessageBodyWhenLatestMessageIsEdited() async throws {
     let repository = try makeRepository()
     let thread = FriendThread(

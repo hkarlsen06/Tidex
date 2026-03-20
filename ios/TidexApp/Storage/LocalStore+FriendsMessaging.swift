@@ -297,6 +297,107 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
+  func saveMessagingSyncState(_ state: FriendMessagingSyncState) throws {
+    let scopeRaw: String
+    let threadId: String?
+
+    switch state.scope {
+    case .inbox:
+      scopeRaw = "inbox"
+      threadId = nil
+    case .thread(let resolvedThreadId):
+      scopeRaw = "thread"
+      threadId = resolvedThreadId
+    }
+
+    let compositeKey = LocalFriendMessagingSyncState.makeCompositeKey(
+      viewerUserId: state.viewerUserId,
+      scopeRaw: scopeRaw,
+      threadId: threadId
+    )
+    let descriptor = FetchDescriptor<LocalFriendMessagingSyncState>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    if let existing = try modelContext.fetch(descriptor).first {
+      existing.version = state.version
+      existing.retainedFromVersion = state.retainedFromVersion
+      existing.updatedAt = state.updatedAt
+    } else {
+      modelContext.insert(
+        LocalFriendMessagingSyncState(
+          viewerUserId: state.viewerUserId,
+          scopeRaw: scopeRaw,
+          threadId: threadId,
+          version: state.version,
+          retainedFromVersion: state.retainedFromVersion,
+          updatedAt: state.updatedAt
+        ))
+    }
+
+    try modelContext.save()
+  }
+
+  func fetchMessagingSyncState(
+    viewerUserId: String,
+    scope: FriendMessagingSyncScope
+  ) throws -> FriendMessagingSyncState? {
+    let scopeRaw: String
+    let threadId: String?
+
+    switch scope {
+    case .inbox:
+      scopeRaw = "inbox"
+      threadId = nil
+    case .thread(let resolvedThreadId):
+      scopeRaw = "thread"
+      threadId = resolvedThreadId
+    }
+
+    let compositeKey = LocalFriendMessagingSyncState.makeCompositeKey(
+      viewerUserId: viewerUserId,
+      scopeRaw: scopeRaw,
+      threadId: threadId
+    )
+    let descriptor = FetchDescriptor<LocalFriendMessagingSyncState>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    return try modelContext.fetch(descriptor).first?.toFriendMessagingSyncState()
+  }
+
+  func deleteMessagingSyncState(
+    viewerUserId: String,
+    scope: FriendMessagingSyncScope
+  ) throws {
+    let scopeRaw: String
+    let threadId: String?
+
+    switch scope {
+    case .inbox:
+      scopeRaw = "inbox"
+      threadId = nil
+    case .thread(let resolvedThreadId):
+      scopeRaw = "thread"
+      threadId = resolvedThreadId
+    }
+
+    let compositeKey = LocalFriendMessagingSyncState.makeCompositeKey(
+      viewerUserId: viewerUserId,
+      scopeRaw: scopeRaw,
+      threadId: threadId
+    )
+    let descriptor = FetchDescriptor<LocalFriendMessagingSyncState>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    for existing in try modelContext.fetch(descriptor) {
+      modelContext.delete(existing)
+    }
+
+    try modelContext.save()
+  }
+
   private func upsertThreadState(_ state: FriendThreadState, updateReadMarker: Bool) throws {
     let stateUserId = state.userId
     let stateThreadId = state.threadId
@@ -332,7 +433,10 @@ extension LocalStoreActor {
 
     if let localThread = try modelContext.fetch(threadDescriptor).first {
       localThread.muted = state.muted
-      if updateReadMarker, state.lastReadMessageId != nil {
+      if updateReadMarker,
+        let lastReadMessageId = state.lastReadMessageId,
+        lastReadMessageId == localThread.lastMessageId
+      {
         localThread.unreadCount = 0
       }
       localThread.updatedAt = Date()
@@ -780,7 +884,7 @@ extension LocalStoreActor {
     }
   }
 
-  private func deleteThread(id: String, viewerUserId: String) throws {
+  func deleteThread(id: String, viewerUserId: String) throws {
     let threadDescriptor = FetchDescriptor<LocalThread>(
       predicate: #Predicate { localThread in
         localThread.id == id && localThread.viewerUserId == viewerUserId
@@ -808,5 +912,10 @@ extension LocalStoreActor {
     for messageId in messageIds {
       try deleteStoredMessage(id: messageId, viewerUserId: viewerUserId)
     }
+
+    try deleteMessagingSyncState(
+      viewerUserId: viewerUserId,
+      scope: .thread(threadId: id)
+    )
   }
 }

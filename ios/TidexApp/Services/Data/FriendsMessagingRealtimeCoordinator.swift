@@ -27,6 +27,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     static let pageSize = 50
   }
 
+  private enum SyncReplayError: Error {
+    case stalledPagination
+  }
+
   private enum TypingEvent {
     static let start = "typing_start"
     static let stop = "typing_stop"
@@ -274,50 +278,110 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     await broadcastTypingEvent(event: TypingEvent.stop, threadId: threadId, userId: userId)
   }
 
-  private func refreshThreadList(viewerUserId: String) async {
+  private func refreshThreadList(
+    viewerUserId: String,
+    allowIncrementalSync: Bool = true
+  ) async {
+    if allowIncrementalSync {
+      do {
+        if let syncState = await repository.getMessagingSyncState(
+          viewerUserId: viewerUserId,
+          scope: .inbox
+        ),
+          try await replayInboxEvents(viewerUserId: viewerUserId, startingAt: syncState)
+        {
+          NotificationCenter.default.post(name: .friendsThreadDidUpdate, object: nil)
+          return
+        }
+      } catch {
+        realtimeLogger.error("Failed to replay inbox sync events: \(error.localizedDescription)")
+      }
+    }
+
     do {
-      let threads = try await service.listMyThreads(limit: 100, before: nil)
-      await repository.saveThreads(threads, for: viewerUserId)
+      let snapshot = try await service.fetchInboxSyncSnapshotV2(limit: 100, before: nil)
+      await repository.saveThreads(snapshot.threads, for: viewerUserId)
+      await saveMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: .inbox,
+        version: snapshot.snapshotVersion,
+        retainedFromVersion: snapshot.retainedFromVersion
+      )
       NotificationCenter.default.post(name: .friendsThreadDidUpdate, object: nil)
     } catch {
       realtimeLogger.error("Failed to refresh thread list: \(error.localizedDescription)")
     }
   }
 
-  private func refreshThreadDetail(threadId: String, viewerUserId: String) async {
-    await refreshThreadSummary(
-      threadId: threadId,
-      viewerUserId: viewerUserId,
-      shouldNotify: false
-    )
-    await refreshThreadStates(threadId: threadId, shouldNotify: false)
-
-    do {
-      let messages = try await service.listThreadMessages(
-        threadId: threadId, limit: Pagination.pageSize, before: nil)
-      await repository.saveMessages(messages, in: threadId, for: viewerUserId)
-      notifyThreadUpdated(threadId: threadId)
-    } catch {
-      realtimeLogger.error(
-        "Failed to refresh thread detail for \(threadId, privacy: .private): \(error.localizedDescription)"
-      )
-    }
-  }
-
-  private func refreshThreadSummary(
+  private func refreshThreadDetail(
     threadId: String,
     viewerUserId: String,
-    shouldNotify: Bool = true
+    allowIncrementalSync: Bool = true
   ) async {
+    await refreshThreadSnapshot(
+      threadId: threadId,
+      viewerUserId: viewerUserId,
+      shouldNotify: false,
+      allowIncrementalSync: allowIncrementalSync
+    )
+    await refreshThreadStates(threadId: threadId, shouldNotify: false)
+    notifyThreadUpdated(threadId: threadId)
+  }
+
+  private func refreshThreadSnapshot(
+    threadId: String,
+    viewerUserId: String,
+    shouldNotify: Bool = true,
+    allowIncrementalSync: Bool = true
+  ) async {
+    if allowIncrementalSync {
+      do {
+        if let syncState = await repository.getMessagingSyncState(
+          viewerUserId: viewerUserId,
+          scope: .thread(threadId: threadId)
+        ),
+          try await replayThreadEvents(
+            threadId: threadId,
+            viewerUserId: viewerUserId,
+            startingAt: syncState
+          )
+        {
+          if shouldNotify {
+            notifyThreadUpdated(threadId: threadId)
+          }
+          return
+        }
+      } catch {
+        realtimeLogger.error(
+          "Failed to replay thread sync events for \(threadId, privacy: .private): \(error.localizedDescription)"
+        )
+      }
+    }
+
     do {
-      let thread = try await service.fetchThreadSummary(threadId: threadId)
-      await repository.saveThread(thread, for: viewerUserId)
+      let snapshot = try await service.fetchThreadSyncSnapshotV2(
+        threadId: threadId,
+        messageLimit: Pagination.pageSize
+      )
+      await repository.saveThread(snapshot.thread, for: viewerUserId)
+      await repository.saveMessages(
+        snapshot.messages,
+        in: threadId,
+        for: viewerUserId
+      )
+      await repository.saveThreadState(snapshot.viewerState)
+      await saveMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: .thread(threadId: threadId),
+        version: snapshot.snapshotVersion,
+        retainedFromVersion: snapshot.retainedFromVersion
+      )
       if shouldNotify {
         notifyThreadUpdated(threadId: threadId)
       }
     } catch {
       realtimeLogger.error(
-        "Failed to refresh thread summary for \(threadId, privacy: .private): \(error.localizedDescription)"
+        "Failed to refresh thread snapshot for \(threadId, privacy: .private): \(error.localizedDescription)"
       )
     }
   }
@@ -340,15 +404,21 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
   private func refreshMessage(messageId: String, viewerUserId: String) async {
     do {
-      let message = try await service.fetchMessagePayload(messageId: messageId)
+      let message = try await service.fetchMessageSyncPayloadV2(messageId: messageId)
       if message.deletedAt != nil {
         await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
-        await refreshThreadSummary(threadId: message.threadId, viewerUserId: viewerUserId)
+        await refreshThreadSnapshot(
+          threadId: message.threadId,
+          viewerUserId: viewerUserId
+        )
         notifyThreadUpdated(threadId: message.threadId)
         return
       }
       await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
-      await refreshThreadSummary(threadId: message.threadId, viewerUserId: viewerUserId)
+      await refreshThreadSnapshot(
+        threadId: message.threadId,
+        viewerUserId: viewerUserId
+      )
       notifyThreadUpdated(threadId: message.threadId)
     } catch {
       realtimeLogger.error(
@@ -357,33 +427,22 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func handleThreadListThreadAction(_ action: AnyAction, viewerUserId: String) async {
-    guard let threadId = Self.extractThreadId(from: action) else { return }
-    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    guard Self.extractThreadId(from: action) != nil else { return }
+    await refreshThreadList(viewerUserId: viewerUserId)
   }
 
   private func handleThreadListMessageAction(_ action: AnyAction, viewerUserId: String) async {
-    if case .delete = action,
-      let messageId = Self.extractMessageId(from: action),
-      let threadId = Self.extractThreadId(from: action)
-    {
-      await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
-      await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    guard Self.extractThreadId(from: action) != nil || Self.extractMessageId(from: action) != nil
+    else {
       return
     }
-
-    if let messageId = Self.extractMessageId(from: action) {
-      await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
-      return
-    }
-
-    guard let threadId = Self.extractThreadId(from: action) else { return }
-    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    await refreshThreadList(viewerUserId: viewerUserId)
   }
 
   private func handleThreadListStateAction(_ action: AnyAction, viewerUserId: String) async {
     if let state = Self.decodeThreadUserState(from: action) {
       await repository.saveThreadState(state)
-      await refreshThreadSummary(threadId: state.threadId, viewerUserId: viewerUserId)
+      await refreshThreadList(viewerUserId: viewerUserId)
     }
   }
 
@@ -394,7 +453,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   ) async {
     guard let changedThreadId = Self.extractThreadId(from: action), changedThreadId == threadId
     else { return }
-    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
   }
 
   private func handleThreadDetailMessageAction(
@@ -406,8 +465,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     if case .delete = action, let messageId = Self.extractMessageId(from: action) {
       await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
-      await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
-      notifyThreadUpdated(threadId: threadId)
+      await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
       return
     }
 
@@ -427,11 +485,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       return
     }
     await repository.saveThreadState(state)
-    await refreshThreadSummary(
-      threadId: threadId,
-      viewerUserId: viewerUserId,
-      shouldNotify: false
-    )
+    await refreshThreadList(viewerUserId: viewerUserId)
     notifyThreadUpdated(threadId: threadId)
   }
 
@@ -502,7 +556,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           hasSkippedInitialSubscribedRefresh = true
           continue
         }
-        await self.refreshThreadList(viewerUserId: viewerUserId)
+        await self.refreshThreadList(
+          viewerUserId: viewerUserId,
+          allowIncrementalSync: false
+        )
       }
     }
   }
@@ -521,7 +578,11 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           hasSkippedInitialSubscribedRefresh = true
           continue
         }
-        await self.refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
+        await self.refreshThreadDetail(
+          threadId: threadId,
+          viewerUserId: viewerUserId,
+          allowIncrementalSync: false
+        )
       }
     }
   }
@@ -656,6 +717,123 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
         "Failed to decode thread user state from realtime payload: \(error.localizedDescription)")
       return nil
     }
+  }
+
+  private func replayInboxEvents(
+    viewerUserId: String,
+    startingAt syncState: FriendMessagingSyncState
+  ) async throws -> Bool {
+    var currentVersion = syncState.version
+
+    while true {
+      let page = try await service.listInboxEventsV2(
+        afterVersion: currentVersion,
+        limit: 100
+      )
+
+      if page.requiresSnapshot {
+        return false
+      }
+
+      if page.hasMore, page.events.isEmpty {
+        throw SyncReplayError.stalledPagination
+      }
+
+      for event in page.events {
+        await applyInboxEvent(event, viewerUserId: viewerUserId)
+        currentVersion = event.version
+      }
+
+      await saveMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: .inbox,
+        version: currentVersion,
+        retainedFromVersion: page.retainedFromVersion
+      )
+
+      if !page.hasMore {
+        return true
+      }
+    }
+  }
+
+  private func replayThreadEvents(
+    threadId: String,
+    viewerUserId: String,
+    startingAt syncState: FriendMessagingSyncState
+  ) async throws -> Bool {
+    var currentVersion = syncState.version
+
+    while true {
+      let page = try await service.listThreadEventsV2(
+        threadId: threadId,
+        afterVersion: currentVersion,
+        limit: 100
+      )
+
+      if page.requiresSnapshot {
+        return false
+      }
+
+      if page.hasMore, page.events.isEmpty {
+        throw SyncReplayError.stalledPagination
+      }
+
+      for event in page.events {
+        await applyThreadEvent(event, viewerUserId: viewerUserId)
+        currentVersion = event.version
+      }
+
+      await saveMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: .thread(threadId: threadId),
+        version: currentVersion,
+        retainedFromVersion: page.retainedFromVersion
+      )
+
+      if !page.hasMore {
+        return true
+      }
+    }
+  }
+
+  private func applyInboxEvent(_ event: FriendInboxSyncEvent, viewerUserId: String) async {
+    switch event.eventType {
+    case .threadUpserted:
+      guard let thread = event.thread else { return }
+      await repository.saveThread(thread, for: viewerUserId)
+    case .threadRemoved:
+      guard let threadId = event.threadId else { return }
+      await repository.deleteThread(id: threadId, viewerUserId: viewerUserId)
+    }
+  }
+
+  private func applyThreadEvent(_ event: FriendThreadSyncEvent, viewerUserId: String) async {
+    switch event.eventType {
+    case .messageUpserted:
+      guard let message = event.message else { return }
+      await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
+    case .messageDeleted:
+      guard let deletedMessageId = event.deletedMessageId else { return }
+      await repository.deleteMessage(id: deletedMessageId, viewerUserId: viewerUserId)
+    }
+  }
+
+  private func saveMessagingSyncState(
+    viewerUserId: String,
+    scope: FriendMessagingSyncScope,
+    version: Int64,
+    retainedFromVersion: Int64
+  ) async {
+    await repository.saveMessagingSyncState(
+      FriendMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: scope,
+        version: version,
+        retainedFromVersion: retainedFromVersion,
+        updatedAt: Date()
+      )
+    )
   }
 }
 

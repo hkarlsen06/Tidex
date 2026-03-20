@@ -13,6 +13,8 @@ AS $function$
 DECLARE
   v_uid uuid := auth.uid();
   v_result public.thread_user_state%ROWTYPE;
+  v_existing_muted boolean;
+  v_requested_muted boolean := COALESCE(p_muted, false);
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -21,6 +23,13 @@ BEGIN
   IF NOT public.can_access_thread(p_thread_id) THEN
     RAISE EXCEPTION 'Thread access denied';
   END IF;
+
+  SELECT tus.muted
+  INTO v_existing_muted
+  FROM public.thread_user_state tus
+  WHERE tus.thread_id = p_thread_id
+    AND tus.user_id = v_uid
+  LIMIT 1;
 
   INSERT INTO public.thread_user_state (
     thread_id,
@@ -31,7 +40,7 @@ BEGIN
   VALUES (
     p_thread_id,
     v_uid,
-    COALESCE(p_muted, false),
+    v_requested_muted,
     now()
   )
   ON CONFLICT (thread_id, user_id) DO UPDATE
@@ -45,6 +54,10 @@ BEGIN
   WHERE tus.thread_id = p_thread_id
     AND tus.user_id = v_uid
   LIMIT 1;
+
+  IF v_existing_muted IS DISTINCT FROM v_requested_muted OR v_existing_muted IS NULL THEN
+    PERFORM internal.emit_thread_upserted_inbox_event_v2(v_uid, p_thread_id);
+  END IF;
 
   RETURN v_result;
 END;

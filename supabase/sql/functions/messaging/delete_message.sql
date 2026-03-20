@@ -73,6 +73,8 @@ BEGIN
     RAISE EXCEPTION 'Message is already deleted';
   END IF;
 
+  PERFORM set_config('tidex.messaging_v2_emit_message_soft_delete', 'true', true);
+
   UPDATE public.messages
   SET deleted_at = now()
   WHERE messages.id = p_message_id;

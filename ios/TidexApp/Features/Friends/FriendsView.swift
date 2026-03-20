@@ -497,33 +497,33 @@ struct SharingView: View {
         return
       }
 
-      async let threadTask = friendsMessagingService.fetchThreadSummary(threadId: threadId)
-      async let messagesTask = friendsMessagingService.listThreadMessages(
+      let snapshot = try await friendsMessagingService.fetchThreadSyncSnapshotV2(
         threadId: threadId,
-        limit: 50,
-        before: nil
+        messageLimit: 50
       )
-
-      let thread = try await threadTask
-      let messages = try await messagesTask
       guard !Task.isCancelled else { return }
 
       if let viewerUserId = coordinator.getCurrentUserId() {
-        await friendsMessagesRepository.saveThread(thread, for: viewerUserId)
-        await friendsMessagesRepository.saveMessages(messages, in: threadId, for: viewerUserId)
+        await friendsMessagesRepository.saveThread(snapshot.thread, for: viewerUserId)
+        await friendsMessagesRepository.saveMessages(
+          snapshot.messages,
+          in: threadId,
+          for: viewerUserId
+        )
+        await friendsMessagesRepository.saveThreadState(snapshot.viewerState)
         guard !Task.isCancelled else { return }
       }
 
       let route = FriendChatRoute(
-        thread: thread,
-        fallbackDisplayName: thread.counterpartDisplayName
+        thread: snapshot.thread,
+        fallbackDisplayName: snapshot.thread.counterpartDisplayName
           ?? String(localized: .sharingFriendsTitle),
-        fallbackAvatarUrl: thread.counterpartAvatarUrl,
+        fallbackAvatarUrl: snapshot.thread.counterpartAvatarUrl,
         initialMessageId: initialMessageId,
         notificationSenderUserId: notificationSenderUserId
       )
 
-      activeChatHighlightUserId = thread.counterpartUserId
+      activeChatHighlightUserId = snapshot.thread.counterpartUserId
       navigationPath = NavigationPath()
       viewModel.deselectSharer()
       navigationPath.append(route)

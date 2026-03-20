@@ -31,6 +31,8 @@ DECLARE
   v_thread_id uuid;
   v_user_low_id uuid;
   v_user_high_id uuid;
+  v_was_visible_low boolean := false;
+  v_was_visible_high boolean := false;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -82,6 +84,11 @@ BEGIN
     END;
   END LOOP;
 
+  IF v_thread_id IS NOT NULL THEN
+    v_was_visible_low := internal.can_access_thread_as_user(v_thread_id, v_user_low_id);
+    v_was_visible_high := internal.can_access_thread_as_user(v_thread_id, v_user_high_id);
+  END IF;
+
   INSERT INTO public.thread_memberships (
     thread_id,
     user_id,
@@ -105,6 +112,14 @@ BEGIN
     (v_thread_id, v_user_low_id),
     (v_thread_id, v_user_high_id)
   ON CONFLICT ON CONSTRAINT thread_user_state_pkey DO NOTHING;
+
+  IF NOT v_was_visible_low AND internal.can_access_thread_as_user(v_thread_id, v_user_low_id) THEN
+    PERFORM internal.emit_thread_upserted_inbox_event_v2(v_user_low_id, v_thread_id);
+  END IF;
+
+  IF NOT v_was_visible_high AND internal.can_access_thread_as_user(v_thread_id, v_user_high_id) THEN
+    PERFORM internal.emit_thread_upserted_inbox_event_v2(v_user_high_id, v_thread_id);
+  END IF;
 
   RETURN QUERY
   SELECT *

@@ -32,6 +32,8 @@ DECLARE
   v_deleted_at timestamptz;
   v_existing_body text;
   v_normalized_body text;
+  v_is_preview_source boolean := false;
+  v_did_update boolean := false;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -90,11 +92,37 @@ BEGIN
   END IF;
 
   IF v_normalized_body IS DISTINCT FROM v_existing_body THEN
+    SELECT t.last_message_id = p_message_id
+    INTO v_is_preview_source
+    FROM public.threads t
+    WHERE t.id = v_thread_id;
+
     UPDATE public.messages
     SET
       body = v_normalized_body,
       edited_at = now()
     WHERE messages.id = p_message_id;
+
+    v_did_update := FOUND;
+  END IF;
+
+  IF v_did_update THEN
+    PERFORM internal.append_thread_event(
+      v_thread_id,
+      'message_upserted',
+      'message',
+      p_message_id,
+      internal.build_message_sync_payload_v2(p_message_id),
+      v_uid
+    );
+
+    IF COALESCE(v_is_preview_source, false) THEN
+      PERFORM internal.emit_thread_upserted_inbox_event_v2(tm.user_id, v_thread_id)
+      FROM public.thread_memberships tm
+      WHERE tm.thread_id = v_thread_id
+        AND tm.status = 'active'
+        AND internal.can_access_thread_as_user(v_thread_id, tm.user_id);
+    END IF;
   END IF;
 
   RETURN QUERY

@@ -257,6 +257,48 @@ final class LocalMessageReaction {
   }
 }
 
+@Model
+final class LocalFriendMessagingSyncState {
+  @Attribute(.unique)
+  var compositeKey: String
+  var viewerUserId: String
+  var scopeRaw: String
+  var threadId: String?
+  var version: Int64
+  var retainedFromVersion: Int64
+  var updatedAt: Date
+
+  init(
+    viewerUserId: String,
+    scopeRaw: String,
+    threadId: String? = nil,
+    version: Int64 = 0,
+    retainedFromVersion: Int64 = 0,
+    updatedAt: Date = Date()
+  ) {
+    self.compositeKey = Self.makeCompositeKey(
+      viewerUserId: viewerUserId,
+      scopeRaw: scopeRaw,
+      threadId: threadId
+    )
+    self.viewerUserId = viewerUserId
+    self.scopeRaw = scopeRaw
+    self.threadId = threadId
+    self.version = version
+    self.retainedFromVersion = retainedFromVersion
+    self.updatedAt = updatedAt
+  }
+
+  static func makeCompositeKey(viewerUserId: String, scopeRaw: String, threadId: String?) -> String
+  {
+    if let threadId {
+      return "\(viewerUserId):\(scopeRaw):\(threadId)"
+    }
+
+    return "\(viewerUserId):\(scopeRaw)"
+  }
+}
+
 // MARK: - Conversions
 
 extension LocalThread {
@@ -403,5 +445,24 @@ extension LocalMessage {
     sendStateRaw = message.sendState.rawValue
     failureMessage = message.failureMessage
     updatedAt = Date()
+  }
+}
+
+extension LocalFriendMessagingSyncState {
+  func toFriendMessagingSyncState() -> FriendMessagingSyncState {
+    let scope: FriendMessagingSyncScope
+    if scopeRaw == "thread", let threadId {
+      scope = .thread(threadId: threadId)
+    } else {
+      scope = .inbox
+    }
+
+    return FriendMessagingSyncState(
+      viewerUserId: viewerUserId,
+      scope: scope,
+      version: version,
+      retainedFromVersion: retainedFromVersion,
+      updatedAt: updatedAt
+    )
   }
 }

@@ -63,11 +63,15 @@ BEGIN
       AND mr.user_id = v_uid
       AND mr.emoji = v_emoji
   ) THEN
+    PERFORM set_config('tidex.messaging_v2_emit_message_reaction', 'true', true);
+
     DELETE FROM public.message_reactions mr
     WHERE mr.message_id = p_message_id
       AND mr.user_id = v_uid
       AND mr.emoji = v_emoji;
   ELSE
+    PERFORM set_config('tidex.messaging_v2_emit_message_reaction', 'true', true);
+
     INSERT INTO public.message_reactions (
       thread_id,
       message_id,

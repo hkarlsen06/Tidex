@@ -146,17 +146,30 @@ final class FriendNotificationMessagePrefetcher {
       cachedThread == nil || cachedThread?.lastMessageId != normalizedMessageId
 
     do {
-      let fetchedMessage = try await service.fetchMessagePayload(messageId: normalizedMessageId)
+      if shouldFetchThread {
+        let snapshot = try await service.fetchThreadSyncSnapshotV2(
+          threadId: normalizedThreadId,
+          messageLimit: 50
+        )
+        await repository.saveThread(snapshot.thread, for: viewerUserId)
+        await repository.saveMessages(snapshot.messages, in: normalizedThreadId, for: viewerUserId)
+        await repository.saveThreadState(snapshot.viewerState)
+      }
+
+      let fetchedMessage: FriendMessage
+      if let cachedMessage = repository.getMessage(
+        id: normalizedMessageId, viewerUserId: viewerUserId)
+      {
+        fetchedMessage = cachedMessage
+      } else {
+        fetchedMessage = try await service.fetchMessageSyncPayloadV2(messageId: normalizedMessageId)
+      }
+
       guard fetchedMessage.threadId == normalizedThreadId else {
         return .skipped(.mismatchedThread)
       }
       guard fetchedMessage.deletedAt == nil else {
         return .skipped(.deletedMessage)
-      }
-
-      if shouldFetchThread {
-        let fetchedThread = try await service.fetchThreadSummary(threadId: normalizedThreadId)
-        await repository.saveThread(fetchedThread, for: viewerUserId)
       }
 
       await repository.saveMessages([fetchedMessage], in: normalizedThreadId, for: viewerUserId)
