@@ -398,6 +398,11 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     XCTFail("Unexpected call to fetchThreadState in FriendNotificationMessagePrefetcherTests")
     throw TestError.failed
   }
+  func listThreadStates(threadId: String) async throws -> [FriendThreadState] {
+    await Task.yield()
+    XCTFail("Unexpected call to listThreadStates in FriendNotificationMessagePrefetcherTests")
+    throw TestError.failed
+  }
   func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
     await Task.yield()
     XCTFail("Unexpected call to toggleMessageReaction in FriendNotificationMessagePrefetcherTests")

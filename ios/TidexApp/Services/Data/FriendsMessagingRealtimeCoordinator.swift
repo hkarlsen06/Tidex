@@ -285,7 +285,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func refreshThreadDetail(threadId: String, viewerUserId: String) async {
-    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    await refreshThreadSummary(
+      threadId: threadId,
+      viewerUserId: viewerUserId,
+      shouldNotify: false
+    )
+    await refreshThreadStates(threadId: threadId, shouldNotify: false)
 
     do {
       let messages = try await service.listThreadMessages(
@@ -299,14 +304,36 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
-  private func refreshThreadSummary(threadId: String, viewerUserId: String) async {
+  private func refreshThreadSummary(
+    threadId: String,
+    viewerUserId: String,
+    shouldNotify: Bool = true
+  ) async {
     do {
       let thread = try await service.fetchThreadSummary(threadId: threadId)
       await repository.saveThread(thread, for: viewerUserId)
-      notifyThreadUpdated(threadId: threadId)
+      if shouldNotify {
+        notifyThreadUpdated(threadId: threadId)
+      }
     } catch {
       realtimeLogger.error(
         "Failed to refresh thread summary for \(threadId, privacy: .private): \(error.localizedDescription)"
+      )
+    }
+  }
+
+  private func refreshThreadStates(threadId: String, shouldNotify: Bool = true) async {
+    do {
+      let states = try await service.listThreadStates(threadId: threadId)
+      for state in states {
+        await repository.saveThreadState(state)
+      }
+      if shouldNotify {
+        notifyThreadUpdated(threadId: threadId)
+      }
+    } catch {
+      realtimeLogger.error(
+        "Failed to refresh thread states for \(threadId, privacy: .private): \(error.localizedDescription)"
       )
     }
   }
@@ -400,7 +427,11 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       return
     }
     await repository.saveThreadState(state)
-    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    await refreshThreadSummary(
+      threadId: threadId,
+      viewerUserId: viewerUserId,
+      shouldNotify: false
+    )
     notifyThreadUpdated(threadId: threadId)
   }
 

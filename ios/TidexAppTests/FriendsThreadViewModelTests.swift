@@ -1649,6 +1649,85 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
   }
 
+  func testHandleAppDidBecomeActiveRefreshesCounterpartReadState() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let message = FriendMessage(
+      id: "message-read-1",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Seen already",
+      clientId: "client-read-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_100),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: route.counterpartUserId,
+      counterpartDisplayName: route.displayName,
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: message.id,
+      lastMessageSenderId: message.senderUserId,
+      lastMessageAt: message.createdAt,
+      lastMessageBody: message.body,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    mockService.threadMessages = [message]
+    mockService.threadStates = [
+      FriendThreadState(
+        threadId: route.threadId,
+        userId: "viewer-1",
+        lastReadMessageId: nil,
+        lastReadAt: nil,
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_101)
+      ),
+      FriendThreadState(
+        threadId: route.threadId,
+        userId: route.counterpartUserId,
+        lastReadMessageId: message.id,
+        lastReadAt: message.createdAt,
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_102)
+      ),
+    ]
+
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.handleAppDidBecomeActive()
+
+    XCTAssertEqual(realtimeCoordinator.startThreadSubscriptionCallCount, 1)
+    XCTAssertEqual(viewModel.counterpartReadState?.lastReadMessageId, message.id)
+    XCTAssertEqual(
+      repository.getThreadState(threadId: route.threadId, viewerUserId: route.counterpartUserId)?
+        .lastReadMessageId,
+      message.id
+    )
+  }
+
   func testSendDraftWithShiftSnapshotUsesStoredMetadata() async throws {
     let repository = try makeRepository()
     let draftStore = try makeDraftStore()
@@ -2291,6 +2370,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   var threadMessages: [FriendMessage] = []
   var sendDelay: Duration?
   var fetchThreadStateDelay: Duration?
+  var threadStates: [FriendThreadState] = []
   var listThreadMessagesHandler:
     ((String, Int, FriendMessageCursor?) async throws -> [FriendMessage])?
   var sendError: Error?
@@ -2422,6 +2502,14 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
       try? await Task.sleep(for: fetchThreadStateDelay)
     }
     return nil
+  }
+
+  func listThreadStates(threadId _: String) async throws -> [FriendThreadState] {
+    await Task.yield()
+    if let fetchThreadStateDelay {
+      try? await Task.sleep(for: fetchThreadStateDelay)
+    }
+    return threadStates
   }
 
   func fetchMessagePayload(messageId _: String) async throws -> FriendMessage {

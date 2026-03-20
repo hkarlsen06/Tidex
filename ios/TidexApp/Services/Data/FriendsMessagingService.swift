@@ -13,6 +13,7 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func listMyThreads(limit: Int, before cursor: FriendThreadCursor?) async throws -> [FriendThread]
   func listThreadMessages(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
     async throws -> [FriendMessage]
+  func listThreadStates(threadId: String) async throws -> [FriendThreadState]
   func sendMessage(
     threadId: String,
     clientId: String,
@@ -161,6 +162,30 @@ final class FriendsMessagingService: ObservableObject {
         .value
 
       return rows.map { $0.toFriendMessage() }
+    } catch let error as PostgrestError {
+      throw mapRPCError(error)
+    } catch let error as AuthError {
+      throw mapRPCError(error)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
+    }
+  }
+
+  func listThreadStates(threadId: String) async throws -> [FriendThreadState] {
+    do {
+      _ = try await AuthSessionManager.shared.getSession()
+
+      let response: [MessagingThreadUserStateRow] =
+        try await supabase
+        .from("thread_user_state")
+        .select()
+        .eq("thread_id", value: threadId)
+        .execute()
+        .value
+
+      return response.map { $0.toFriendThreadState() }
     } catch let error as PostgrestError {
       throw mapRPCError(error)
     } catch let error as AuthError {
