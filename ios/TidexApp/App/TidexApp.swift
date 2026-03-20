@@ -1,3 +1,4 @@
+import Intents
 import SwiftUI
 
 @main
@@ -27,6 +28,9 @@ struct TidexApp: App {
           AppLifecycleHandler.shared.handleOpenURL(url)
         }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+          AppLifecycleHandler.shared.handleUserActivity(activity)
+        }
+        .onContinueUserActivity(NSStringFromClass(INSendMessageIntent.self)) { activity in
           AppLifecycleHandler.shared.handleUserActivity(activity)
         }
         .onReceive(didBecomeActive) { _ in

@@ -16,7 +16,7 @@ struct FriendChatRoute: Hashable {
     notificationSenderUserId: String? = nil
   ) {
     self.threadId = thread.id
-    self.counterpartUserId = thread.counterpartUserId ?? ""
+    self.counterpartUserId = thread.counterpartUserId ?? notificationSenderUserId ?? ""
     self.displayName = thread.counterpartDisplayName ?? fallbackDisplayName
     self.avatarUrl = thread.counterpartAvatarUrl ?? fallbackAvatarUrl
     let normalizedMessageId = initialMessageId?.trimmingCharacters(in: .whitespacesAndNewlines)

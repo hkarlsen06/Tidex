@@ -1,5 +1,6 @@
 import Foundation
 import GoogleSignIn
+import Intents
 import UIKit
 import os.log
 
@@ -157,6 +158,10 @@ final class AppLifecycleHandler {
   }
 
   func handleUserActivity(_ activity: NSUserActivity) {
+    if handleCommunicationActivity(activity) {
+      return
+    }
+
     guard activity.activityType == NSUserActivityTypeBrowsingWeb,
       let url = activity.webpageURL
     else {
@@ -181,5 +186,63 @@ final class AppLifecycleHandler {
     Task { @MainActor in
       AppCoordinator.shared.handleDeepLink(url)
     }
+  }
+
+  private func handleCommunicationActivity(_ activity: NSUserActivity) -> Bool {
+    guard activity.activityType == NSStringFromClass(INSendMessageIntent.self) else {
+      return false
+    }
+
+    let intent = activity.interaction?.intent as? INSendMessageIntent
+    let threadId =
+      normalizedNonEmpty(intent?.conversationIdentifier)
+      ?? normalizedThreadId(from: activity.targetContentIdentifier)
+
+    guard let threadId else {
+      logger.error("Received communication activity without a thread identifier")
+      return true
+    }
+
+    let senderUserId =
+      normalizedNonEmpty(intent?.sender?.customIdentifier)
+      ?? normalizedNonEmpty(intent?.sender?.contactIdentifier)
+      ?? normalizedNonEmpty(intent?.sender?.personHandle?.value)
+
+    logger.info("Resuming communication activity for thread \(threadId, privacy: .private)")
+
+    Task { @MainActor in
+      await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
+      AppCoordinator.shared.pendingDeepLink = .friendChat(
+        threadId: threadId,
+        messageId: nil,
+        senderUserId: senderUserId
+      )
+    }
+
+    return true
+  }
+
+  private func normalizedThreadId(from targetContentIdentifier: String?) -> String? {
+    guard let targetContentIdentifier = normalizedNonEmpty(targetContentIdentifier) else {
+      return nil
+    }
+
+    if targetContentIdentifier.hasPrefix("friend-chat:") {
+      return normalizedNonEmpty(
+        String(targetContentIdentifier.dropFirst("friend-chat:".count))
+      )
+    }
+
+    return nil
+  }
+
+  private func normalizedNonEmpty(_ value: String?) -> String? {
+    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !value.isEmpty
+    else {
+      return nil
+    }
+
+    return value
   }
 }
