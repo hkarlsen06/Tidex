@@ -43,6 +43,10 @@ final class FriendsThreadViewModel: ObservableObject {
     static let pushCooldown: TimeInterval = 120
   }
 
+  private enum ActiveThreadReconciliation {
+    static let interval: Duration = .seconds(12)
+  }
+
   private enum MessageBody {
     static let characterLimit = 2000
   }
@@ -168,8 +172,9 @@ final class FriendsThreadViewModel: ObservableObject {
   private var localTypingStopTask: Task<Void, Never>?
   private var localTypingPushTask: Task<Void, Never>?
   private var lastTypingPushQueuedAt: Date?
+  private var activeThreadCatchUpTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
-  private var counterpartStateRefreshTask: Task<Void, Never>?
+  private var threadStatesRefreshTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
   private var suspendedComposerSnapshot: ComposerSnapshot?
 
@@ -242,6 +247,14 @@ final class FriendsThreadViewModel: ObservableObject {
     syncCounterpartShiftPreviewFromCache()
   }
 
+  deinit {
+    localTypingStopTask?.cancel()
+    localTypingPushTask?.cancel()
+    activeThreadCatchUpTask?.cancel()
+    counterpartTypingTimeoutTask?.cancel()
+    threadStatesRefreshTask?.cancel()
+  }
+
   func loadIfNeeded() async {
     guard !hasLoaded else { return }
     hasLoaded = true
@@ -254,12 +267,8 @@ final class FriendsThreadViewModel: ObservableObject {
     loadFromCache()
     await loadPendingComposerDraft()
 
-    async let realtimeSubscription: Void = realtimeCoordinator.startThreadSubscription(
-      threadId: route.threadId,
-      viewerUserId: viewerUserId
-    )
+    async let realtimeSubscription: Void = startRealtime()
     async let counterpartPreviewRefresh: Void = loadCounterpartShiftPreview(forceRefresh: false)
-    refreshCounterpartStateInBackground()
     await refreshFromServer()
     _ = await (realtimeSubscription, counterpartPreviewRefresh)
     isLoading = false
@@ -268,7 +277,6 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func refresh() async {
-    refreshCounterpartStateInBackground()
     await refreshFromServer()
     await loadCounterpartShiftPreview(forceRefresh: true)
     await markLatestIncomingAsRead()
@@ -453,9 +461,13 @@ final class FriendsThreadViewModel: ObservableObject {
       return
     }
     await stopTypingIfNeeded()
+    activeThreadCatchUpTask?.cancel()
+    activeThreadCatchUpTask = nil
     counterpartTypingTimeoutTask?.cancel()
     counterpartTypingTimeoutTask = nil
     counterpartIsTyping = false
+    threadStatesRefreshTask?.cancel()
+    threadStatesRefreshTask = nil
     await realtimeCoordinator.stopThreadSubscription(threadId: route.threadId)
   }
 
@@ -464,6 +476,7 @@ final class FriendsThreadViewModel: ObservableObject {
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
+    startActiveThreadCatchUpLoopIfNeeded()
   }
 
   func handleAppDidBecomeActive() async {
@@ -743,7 +756,8 @@ final class FriendsThreadViewModel: ObservableObject {
   private func refreshFromServer() async {
     async let threadRefresh: Void = refreshThreadSummaryFromServer()
     async let messagesRefresh: Void = refreshLatestMessagesFromServer()
-    _ = await (threadRefresh, messagesRefresh)
+    async let statesRefresh: Void = refreshThreadStatesFromServer()
+    _ = await (threadRefresh, messagesRefresh, statesRefresh)
   }
 
   private func refreshThreadSummaryFromServer() async {
@@ -771,31 +785,58 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  private func refreshCounterpartStateInBackground() {
-    counterpartStateRefreshTask?.cancel()
-    counterpartStateRefreshTask = Task { @MainActor [weak self] in
+  private func refreshThreadStatesInBackground() {
+    threadStatesRefreshTask?.cancel()
+    threadStatesRefreshTask = Task { @MainActor [weak self] in
       guard let self else { return }
 
       do {
-        if let refreshedCounterpartState = try await self.fetchCounterpartStateIfNeeded() {
-          await self.repository.saveThreadState(refreshedCounterpartState)
-          self.loadFromCache()
-        }
+        let refreshedStates = try await self.service.listThreadStates(threadId: self.route.threadId)
+        await self.saveThreadStates(refreshedStates)
       } catch is CancellationError {
         return
       } catch {
-        threadLogger.error("Failed to refresh counterpart state: \(error.localizedDescription)")
+        threadLogger.error("Failed to refresh thread states: \(error.localizedDescription)")
       }
     }
   }
 
-  private func fetchCounterpartStateIfNeeded() async throws -> FriendThreadState? {
-    guard !route.counterpartUserId.isEmpty else { return nil }
+  private func startActiveThreadCatchUpLoopIfNeeded() {
+    guard activeThreadCatchUpTask == nil else { return }
 
-    return try await service.fetchThreadState(
-      threadId: route.threadId,
-      userId: route.counterpartUserId
-    )
+    activeThreadCatchUpTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+
+      while !Task.isCancelled {
+        do {
+          try await Task.sleep(for: ActiveThreadReconciliation.interval)
+        } catch {
+          return
+        }
+
+        guard !Task.isCancelled else { return }
+        guard FriendsChatPresentationState.shared.activeThreadId == self.route.threadId else {
+          continue
+        }
+        guard UIApplication.shared.applicationState == .active else {
+          continue
+        }
+
+        await self.refreshFromServer()
+      }
+    }
+  }
+
+  private func refreshThreadStatesFromServer() async {
+    refreshThreadStatesInBackground()
+    await threadStatesRefreshTask?.value
+  }
+
+  private func saveThreadStates(_ states: [FriendThreadState]) async {
+    for state in states {
+      await repository.saveThreadState(state)
+    }
+    loadFromCache()
   }
 
   private func markLatestIncomingAsRead() async {

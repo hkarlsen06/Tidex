@@ -797,6 +797,11 @@ struct LoadingView: View {
       return nil
     }
 
+    func listThreadStates(threadId _: String) async throws -> [FriendThreadState] {
+      await Task.yield()
+      return []
+    }
+
     func fetchMessagePayload(messageId: String) async throws -> FriendMessage {
       await Task.yield()
       guard let message = messages.first(where: { $0.id == messageId }) else {
