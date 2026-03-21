@@ -408,7 +408,8 @@ struct ShiftDetailsSheet: View {
             coordinator.pendingDeepLink = .friendChat(
               threadId: result.threadId,
               messageId: nil,
-              senderUserId: nil
+              senderUserId: nil,
+              navigationRequestId: nil
             )
             showingSendToChatSheet = false
             dismiss()

@@ -906,7 +906,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         AppCoordinator.shared.pendingDeepLink = .friendChat(
           threadId: threadId,
           messageId: messageId,
-          senderUserId: senderUserId
+          senderUserId: senderUserId,
+          navigationRequestId: UUID()
         )
       }
     }

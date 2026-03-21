@@ -168,7 +168,8 @@ final class AppLifecycleHandler {
       AppCoordinator.shared.pendingDeepLink = .friendChat(
         threadId: threadId,
         messageId: nil,
-        senderUserId: senderUserId
+        senderUserId: senderUserId,
+        navigationRequestId: UUID()
       )
     }
 

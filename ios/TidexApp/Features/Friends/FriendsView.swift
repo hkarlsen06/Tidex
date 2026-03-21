@@ -308,13 +308,14 @@ struct SharingView: View {
       showManageSheet = true
       coordinator.clearPendingDeepLink()
 
-    case .friendChat(let threadId, let messageId, let senderUserId):
+    case .friendChat(let threadId, let messageId, let senderUserId, let navigationRequestId):
       deepLinkNavigationTask?.cancel()
       deepLinkNavigationTask = Task { @MainActor in
         await openChat(
           threadId: threadId,
           initialMessageId: messageId,
-          notificationSenderUserId: senderUserId
+          notificationSenderUserId: senderUserId,
+          navigationRequestId: navigationRequestId
         )
       }
       coordinator.clearPendingDeepLink()
@@ -425,8 +426,17 @@ struct SharingView: View {
       .frame(maxWidth: .infinity)
     }
     .refreshable {
-      await viewModel.refresh()
+      await refreshFriendsTab()
     }
+  }
+
+  private func refreshFriendsTab() async {
+    let refreshTask = Task { @MainActor in
+      await viewModel.refresh()
+      await reconnectFriendsRealtime()
+    }
+
+    _ = await refreshTask.result
   }
 
   private func openChat(for sharedUser: SharedUser) async {
@@ -466,7 +476,8 @@ struct SharingView: View {
   private func openChat(
     threadId: String,
     initialMessageId: String? = nil,
-    notificationSenderUserId: String? = nil
+    notificationSenderUserId: String? = nil,
+    navigationRequestId: UUID? = nil
   ) async {
     guard openingThreadId == nil else { return }
 
@@ -474,7 +485,8 @@ struct SharingView: View {
     defer { openingThreadId = nil }
 
     let isNotificationOpen =
-      (initialMessageId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+      navigationRequestId != nil
+      || (initialMessageId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
       || (notificationSenderUserId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
 
     do {
@@ -482,7 +494,8 @@ struct SharingView: View {
         let route = makeImmediateChatRoute(
           threadId: threadId,
           initialMessageId: initialMessageId,
-          notificationSenderUserId: notificationSenderUserId
+          notificationSenderUserId: notificationSenderUserId,
+          navigationRequestId: navigationRequestId
         )
 
         activeChatHighlightUserId =
@@ -519,7 +532,8 @@ struct SharingView: View {
           ?? String(localized: .sharingFriendsTitle),
         fallbackAvatarUrl: snapshot.thread.counterpartAvatarUrl,
         initialMessageId: initialMessageId,
-        notificationSenderUserId: notificationSenderUserId
+        notificationSenderUserId: notificationSenderUserId,
+        navigationRequestId: navigationRequestId
       )
 
       activeChatHighlightUserId = snapshot.thread.counterpartUserId
@@ -541,7 +555,8 @@ struct SharingView: View {
   private func makeImmediateChatRoute(
     threadId: String,
     initialMessageId: String?,
-    notificationSenderUserId: String?
+    notificationSenderUserId: String?,
+    navigationRequestId: UUID?
   ) -> FriendChatRoute {
     let cachedThread =
       coordinator.getCurrentUserId().flatMap {
@@ -573,7 +588,8 @@ struct SharingView: View {
         ?? String(localized: .sharingFriendsTitle),
       fallbackAvatarUrl: cachedThread.counterpartAvatarUrl,
       initialMessageId: initialMessageId,
-      notificationSenderUserId: notificationSenderUserId
+      notificationSenderUserId: notificationSenderUserId,
+      navigationRequestId: navigationRequestId
     )
   }
 
@@ -637,6 +653,15 @@ struct SharingView: View {
       guard !Task.isCancelled else { return }
       refreshChatMetadata()
     }
+  }
+
+  private func reconnectFriendsRealtime() async {
+    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else { return }
+
+    await friendsRealtimeCoordinator.stopThreadListSubscription()
+    await friendsRealtimeCoordinator.startThreadListSubscription(viewerUserId: viewerUserId)
+    await resubscribeTypingSubscriptions()
+    scheduleChatMetadataRefresh()
   }
 
   private func syncTypingSubscriptions() async {
