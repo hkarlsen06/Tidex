@@ -60,6 +60,30 @@ pnpm ios:l10n:audit
 pnpm ios:l10n:validate
 ```
 
+## Local Chat Package Workflow
+
+The Exyte `Chat` dependency is forked at `TidexHQ/Chat` and is also cloned locally at `../Chat` for day-to-day development.
+
+- Default local development workflow: compile Tidex against the sibling `../Chat` clone.
+- Switch package source with:
+
+```bash
+./scripts/set-chat-package-source.sh local
+./scripts/set-chat-package-source.sh remote
+```
+
+- `local` mode points Xcode at `../../Chat` as a local Swift package.
+- `remote` mode points Xcode back at `https://github.com/TidexHQ/Chat.git` for a portable committed state.
+- When editing the package, make code changes in the `../Chat` repo and commit them there, not inside `tidex`.
+
+**Release / shipping reminder:**
+
+- If the user asks for work that implies a release or shared portable state, treat that as a reminder to check the `Chat` fork workflow.
+- Examples: release, ship, App Store submission, TestFlight build, tagging a version, cutting a release, handing work off, or preparing CI-safe commits.
+- Before those steps, if `../Chat` has relevant changes, remember to commit, tag, and push the `TidexHQ/Chat` fork.
+- Before committing release-oriented Tidex project changes, run `./scripts/set-chat-package-source.sh remote`.
+- After release work, switch back with `./scripts/set-chat-package-source.sh local` if continuing local package development.
+
 ## Supabase Edge Functions
 
 **CRITICAL: Edit locally in `supabase/functions/`, deploy via CLI, NOT via MCP deploy tool**
