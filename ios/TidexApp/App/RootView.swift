@@ -17,7 +17,7 @@ extension Notification.Name {
 /// when heavier singletons trigger initialization during the first body evaluation.
 ///
 /// After the initial frame is on screen, `isReady` flips and `RootContent` is
-/// created, which initializes `AppCoordinator`, `BiometricAuthService`, etc.
+/// created, which initializes `AppCoordinator` and other heavier singletons.
 struct RootView: View {
   @State private var isReady = false
 
@@ -61,7 +61,6 @@ struct RootView: View {
 private struct RootContent: View {
   // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
   @ObservedObject private var coordinator = AppCoordinator.shared
-  @ObservedObject private var biometricService = BiometricAuthService.shared
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
@@ -149,12 +148,6 @@ private struct RootContent: View {
             .transition(.opacity)
           } else {
             MainTabView()
-              .overlay {
-                if biometricService.isLocked {
-                  AppLockView()
-                    .transition(.opacity)
-                }
-              }
               .overlay(alignment: .top) {
                 if let activeChatToast {
                   InAppChatToastView(
@@ -188,7 +181,6 @@ private struct RootContent: View {
     .motionAnimation(
       .pageTransition, value: hasCompletedPostAuthOnboarding, reduceMotion: reduceMotion
     )
-    .motionAnimation(.subtle, value: biometricService.isLocked, reduceMotion: reduceMotion)
     .environmentObject(coordinator)
     // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
     // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle

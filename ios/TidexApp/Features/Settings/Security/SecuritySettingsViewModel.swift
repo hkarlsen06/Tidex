@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import Supabase
 import os.log
@@ -75,34 +74,6 @@ final class SecuritySettingsViewModel: ObservableObject {
     case input
     case otp
   }
-
-  // MARK: - Biometric Lock
-
-  /// Biometric service for app lock
-  private let biometricService = BiometricAuthService.shared
-
-  /// Whether biometric lock is enabled
-  var isBiometricLockEnabled: Bool {
-    biometricService.isEnabled
-  }
-
-  /// Whether biometrics are available on this device
-  var isBiometricAvailable: Bool {
-    biometricService.isAvailable
-  }
-
-  /// The type of biometric (Face ID, Touch ID)
-  var biometricTypeName: String {
-    biometricService.biometricTypeName
-  }
-
-  /// SF Symbol for the biometric type
-  var biometricIconName: String {
-    biometricService.biometricIconName
-  }
-
-  /// Toggle biometric lock state
-  @Published private(set) var isTogglingBiometric = false
 
   // MARK: - Initialization
 
@@ -656,32 +627,6 @@ final class SecuritySettingsViewModel: ObservableObject {
   /// Clear messages
   func clearMessages() {
     errorMessage = nil
-  }
-
-  // MARK: - Biometric Lock Management
-
-  /// Toggle biometric lock on/off
-  func toggleBiometricLock() async {
-    isTogglingBiometric = true
-    errorMessage = nil
-
-    if isBiometricLockEnabled {
-      // Disable - no authentication required
-      biometricService.disableBiometricLock()
-      Haptics.play(.success)
-    } else {
-      // Enable - requires authentication
-      let success = await biometricService.enableBiometricLock()
-      if success {
-        Haptics.play(.success)
-      } else {
-        errorMessage = String(localized: .securityBiometricErrorsAuthFailed)
-      }
-    }
-
-    // Force UI update since we're reading from biometricService
-    objectWillChange.send()
-    isTogglingBiometric = false
   }
 }
 

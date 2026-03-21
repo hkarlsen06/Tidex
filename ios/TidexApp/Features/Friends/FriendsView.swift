@@ -210,8 +210,7 @@ struct SharingView: View {
 
       handleTypingIndicatorChange(threadId: threadId, userId: userId, isTyping: isTyping)
     }
-    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
-    {
+    .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) {
       _ in
       guard selectedTab == .sharing else { return }
       Task {

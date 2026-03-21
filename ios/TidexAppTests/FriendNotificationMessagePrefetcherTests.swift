@@ -108,25 +108,6 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
     XCTAssertEqual(service.fetchMessagePayloadCallCount, 1)
   }
 
-  func testBackgroundPrefetchSkipsWhenBiometricLocked() async {
-    let context = MockPrefetchContext(isBiometricLocked: true)
-    let repository = MockFriendsMessagesRepository()
-    let service = MockFriendsMessagingService()
-    let prefetcher = FriendNotificationMessagePrefetcher(
-      context: context,
-      repository: repository,
-      service: service
-    )
-
-    let outcome = await prefetcher.prefetchBackgroundMessage(
-      threadId: "thread-1",
-      messageId: "message-1"
-    )
-
-    XCTAssertEqual(outcome, .skipped(.biometricLocked))
-    XCTAssertEqual(service.fetchMessagePayloadCallCount, 0)
-  }
-
   func testBackgroundPrefetchSkipsWhenImpersonating() async {
     let context = MockPrefetchContext(isImpersonating: true)
     let repository = MockFriendsMessagesRepository()
@@ -205,16 +186,13 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
 
 @MainActor
 private final class MockPrefetchContext: FriendNotificationMessagePrefetchContextProviding {
-  let isBiometricLocked: Bool
   let isImpersonating: Bool
   let userId: String?
 
   init(
-    isBiometricLocked: Bool = false,
     isImpersonating: Bool = false,
     userId: String? = "viewer-1"
   ) {
-    self.isBiometricLocked = isBiometricLocked
     self.isImpersonating = isImpersonating
     self.userId = userId
   }
