@@ -13,7 +13,8 @@ struct FriendChatRoute: Hashable {
     fallbackDisplayName: String,
     fallbackAvatarUrl: String?,
     initialMessageId: String? = nil,
-    notificationSenderUserId: String? = nil
+    notificationSenderUserId: String? = nil,
+    navigationRequestId: UUID? = nil
   ) {
     self.threadId = thread.id
     self.counterpartUserId = thread.counterpartUserId ?? notificationSenderUserId ?? ""
@@ -28,10 +29,7 @@ struct FriendChatRoute: Hashable {
       }
     self.initialMessageId = effectiveMessageId
     self.navigationRequestId =
-      if effectiveMessageId != nil || notificationSenderUserId != nil {
-        UUID()
-      } else {
-        nil
-      }
+      navigationRequestId
+      ?? (effectiveMessageId != nil || notificationSenderUserId != nil ? UUID() : nil)
   }
 }

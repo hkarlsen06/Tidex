@@ -770,6 +770,7 @@ final class FriendsThreadViewModel: ObservableObject {
       await repository.saveMessages(snapshot.messages, in: route.threadId, for: viewerUserId)
       await repository.saveThreadState(snapshot.viewerState)
       loadFromCache()
+      notifyThreadUpdated()
     } catch {
       threadLogger.error("Failed to refresh thread snapshot: \(error.localizedDescription)")
     }
@@ -827,6 +828,7 @@ final class FriendsThreadViewModel: ObservableObject {
       await repository.saveThreadState(state)
     }
     loadFromCache()
+    notifyThreadUpdated()
   }
 
   private func markLatestIncomingAsRead() async {
@@ -847,9 +849,18 @@ final class FriendsThreadViewModel: ObservableObject {
       )
       await repository.saveThreadState(state)
       loadFromCache()
+      notifyThreadUpdated()
     } catch {
       threadLogger.error("Failed to mark thread as read: \(error.localizedDescription)")
     }
+  }
+
+  private func notifyThreadUpdated() {
+    NotificationCenter.default.post(
+      name: .friendsThreadDidUpdate,
+      object: nil,
+      userInfo: ["threadId": route.threadId]
+    )
   }
 
   private func loadFromCache() {

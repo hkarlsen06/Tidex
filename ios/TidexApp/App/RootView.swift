@@ -157,7 +157,8 @@ private struct RootContent: View {
                       coordinator.pendingDeepLink = .friendChat(
                         threadId: activeChatToast.threadId,
                         messageId: activeChatToast.messageId,
-                        senderUserId: activeChatToast.senderUserId
+                        senderUserId: activeChatToast.senderUserId,
+                        navigationRequestId: UUID()
                       )
                     },
                     onDismiss: {
