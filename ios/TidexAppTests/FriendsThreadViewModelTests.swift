@@ -226,6 +226,50 @@ final class FriendsThreadViewModelTests: XCTestCase {
       repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
   }
 
+  func testSendDraftBlocksMessagesThatExceedBackendCodePointLimit() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = makeThread()
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    let draft = String(repeating: "👨‍👩‍👧‍👦", count: 300)
+    let expectedBackendCount =
+      draft
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .unicodeScalars.count
+
+    XCTAssertTrue(expectedBackendCount > 2000)
+
+    viewModel.draft = draft
+
+    XCTAssertEqual(viewModel.draftCharacterCount, expectedBackendCount)
+    XCTAssertEqual(
+      viewModel.composerValidationMessage,
+      String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
+        .replacingOccurrences(of: "{limit}", with: "2000")
+    )
+
+    let didSend = await viewModel.sendDraft()
+
+    XCTAssertFalse(didSend)
+    XCTAssertEqual(mockService.sendMessageCallCount, 0)
+    XCTAssertEqual(viewModel.draft, draft)
+    XCTAssertTrue(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
+  }
+
   func testSendDraftWithReplyTargetPersistsReturnedReplyReference() async throws {
     let repository = try makeRepository()
     let route = makeRoute()

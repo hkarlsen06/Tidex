@@ -30,8 +30,8 @@ struct FriendsThreadView: View {
   @State private var isPinnedToBottom = true
   @State private var isComposerFocused = false
   @State private var isAttachmentDrawerOpen = false
-  @State private var liveEdgeScrollTargetPresentedMessageID: String?
   @State private var lastHandledNavigationRequestId: UUID?
+  @State private var pendingFocusScrollTask: Task<Void, Never>?
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -148,7 +148,7 @@ struct FriendsThreadView: View {
     FriendsThreadChatViewportRequestResolver.request(
       replyTargetMessageId: viewModel.replyScrollTargetMessageId,
       restoreTargetMessageId: viewModel.restoreScrollTargetMessageId,
-      liveEdgeTargetPresentedMessageID: liveEdgeScrollTargetPresentedMessageID,
+      liveEdgeTargetPresentedMessageID: nil,
       messages: viewModel.messages,
       viewerUserId: viewModel.viewerUserId
     )
@@ -170,29 +170,12 @@ struct FriendsThreadView: View {
   }
 
   private var shouldAutoFollowLatest: Bool {
-    shouldStickToLatest || liveEdgeScrollTargetPresentedMessageID != nil
+    shouldStickToLatest
   }
 
   private var shouldShowCounterpartShiftPreviewHeader: Bool {
     viewModel.counterpartShiftPreview != nil
       && !(isComposerFocused && isAttachmentDrawerOpen)
-  }
-
-  private func updateLiveEdgeScrollTargetToLatestMessage() {
-    guard let latestMessage = viewModel.messages.last else {
-      liveEdgeScrollTargetPresentedMessageID = nil
-      return
-    }
-
-    liveEdgeScrollTargetPresentedMessageID = FriendsThreadMessagePresentationID.make(
-      for: latestMessage,
-      viewerUserId: viewModel.viewerUserId
-    )
-  }
-
-  private func consumeLiveEdgeScrollTarget(ifMatching presentedMessageID: String) {
-    guard liveEdgeScrollTargetPresentedMessageID == presentedMessageID else { return }
-    liveEdgeScrollTargetPresentedMessageID = nil
   }
 
   private func messageID(for presentedMessageID: String) -> String {
@@ -240,10 +223,13 @@ struct FriendsThreadView: View {
         }
       }
       .onChange(of: isComposerFocused) { _, newValue in
+        pendingFocusScrollTask?.cancel()
         guard newValue else { return }
         unreadIncomingCount = 0
         showsNewMessagesPill = false
-        requestScrollToBottom()
+        if !isPinnedToBottom {
+          scheduleScrollToBottomAfterKeyboardSettles()
+        }
         Task {
           await viewModel.markVisibleMessagesReadIfNeeded()
         }
@@ -252,6 +238,7 @@ struct FriendsThreadView: View {
         handleMessageIDsChange(from: oldValue, to: newValue)
       }
       .onDisappear {
+        pendingFocusScrollTask?.cancel()
         FriendsChatPresentationState.shared.setActiveThreadId(nil)
         Task {
           await viewModel.stopRealtime()
@@ -364,6 +351,7 @@ struct FriendsThreadView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbarBackground(.hidden, for: .navigationBar)
+    .toolbarBackground(.hidden, for: .tabBar)
     .iPadToolbarBackground()
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -478,6 +466,7 @@ struct FriendsThreadView: View {
       }
     )
     .showDateHeaders(true)
+    .appliesFocusModifierToCustomInputView(false)
     .headerBuilder { date in
       FriendsThreadDateSeparator(date: date)
     }
@@ -514,7 +503,9 @@ struct FriendsThreadView: View {
         messages: exyteMessages,
         scrollRequest: viewportScrollRequest,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
-        onPinnedToBottomChanged: { isPinnedToBottom = $0 },
+        onPinnedToBottomChanged: {
+          isPinnedToBottom = $0
+        },
         onDidHandleScrollRequest: handleViewportScrollRequest
       )
       .allowsHitTesting(false)
@@ -918,8 +909,6 @@ struct FriendsThreadView: View {
     case .appendedOutgoing:
       unreadIncomingCount = 0
       showsNewMessagesPill = false
-      guard shouldAutoFollowLatest else { return }
-      updateLiveEdgeScrollTargetToLatestMessage()
       return
     case .appendedIncoming:
       break
@@ -942,8 +931,6 @@ struct FriendsThreadView: View {
 
     guard shouldAutoFollowLatest else { return }
 
-    updateLiveEdgeScrollTargetToLatestMessage()
-
     Task {
       await viewModel.markVisibleMessagesReadIfNeeded()
     }
@@ -951,10 +938,15 @@ struct FriendsThreadView: View {
 
   private func requestScrollToBottom() {
     NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
+  }
 
-    Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(120))
-      NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
+  private func scheduleScrollToBottomAfterKeyboardSettles() {
+    pendingFocusScrollTask?.cancel()
+    pendingFocusScrollTask = Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(220))
+      guard !Task.isCancelled, isComposerFocused else { return }
+      guard !isPinnedToBottom else { return }
+      requestScrollToBottom()
     }
   }
 
@@ -994,9 +986,7 @@ struct FriendsThreadView: View {
         viewModel.consumeRestoreScrollTarget()
       }
     case .liveEdge:
-      DispatchQueue.main.async {
-        consumeLiveEdgeScrollTarget(ifMatching: request.presentedMessageID)
-      }
+      break
     }
   }
 

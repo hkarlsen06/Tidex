@@ -1313,13 +1313,17 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func updateDraftValidation(for draft: String) {
     let normalizedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    draftCharacterCount = normalizedDraft.count
+    draftCharacterCount = messageBodyLengthForBackendValidation(normalizedDraft)
     composerValidationMessage =
       isMessageBodyTooLong(normalizedDraft) ? messageTooLongMessage : nil
   }
 
   private func isMessageBodyTooLong(_ normalizedBody: String) -> Bool {
-    normalizedBody.count > MessageBody.characterLimit
+    messageBodyLengthForBackendValidation(normalizedBody) > MessageBody.characterLimit
+  }
+
+  private func messageBodyLengthForBackendValidation(_ normalizedBody: String) -> Int {
+    normalizedBody.unicodeScalars.count
   }
 
   private func isMessageBodyTooLongError(_ error: Error) -> Bool {
