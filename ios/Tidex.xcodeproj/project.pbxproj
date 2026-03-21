@@ -697,7 +697,7 @@
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 				11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
-				11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */,
+				11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageReference "../../Chat" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -1677,13 +1677,9 @@
 				minimumVersion = 9.1.0;
 			};
 		};
-		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/exyte/Chat.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.7.6;
-			};
+		11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageReference "../../Chat" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../Chat;
 		};
 		11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1748,7 +1744,6 @@
 		};
 		11CD7FA42F63CFC700A987E7 /* ExyteChat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */;
 			productName = ExyteChat;
 		};
 		11F0A0033011111100A1B2C3 /* Sentry-Dynamic */ = {
