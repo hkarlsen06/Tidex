@@ -40,11 +40,6 @@ struct SecuritySettingsView: View {
         }
       }
 
-      // Biometric lock section (only show if available)
-      if viewModel.isBiometricAvailable {
-        biometricLockSection
-      }
-
       // AI data sharing section
       aiDataSharingSection
 
@@ -106,89 +101,6 @@ struct SecuritySettingsView: View {
       }
     } message: {
       Text(.securityMfaUnenrollDialogDescription)
-    }
-  }
-
-  // MARK: - Biometric Lock Section
-
-  private var biometricLockSection: some View {
-    Section(
-      header: Text(String(localized: .securityBiometricSectionTitle)),
-      footer: Text(.securityBiometricSectionSubtitle)
-    ) {
-      if viewModel.isTogglingBiometric {
-        HStack(spacing: Spacing.sm) {
-          // Icon
-          RoundedRectangle(cornerRadius: CornerRadius.xs)
-            .fill(Color.tidexBlue.opacity(0.75))
-            .frame(width: 29, height: 29)
-            .overlay(
-              Image(systemName: viewModel.biometricIconName)
-                .font(.tidexFootnote)
-                .foregroundColor(.white)
-            )
-
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(
-              viewModel.isBiometricLockEnabled
-                ? String(localized: .securityBiometricEnabled)
-                : String(localized: .securityBiometricDisabled)
-            )
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-          }
-
-          Spacer()
-
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-            .scaleEffect(0.8)
-        }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      } else {
-        Toggle(
-          isOn: Binding(
-            get: { viewModel.isBiometricLockEnabled },
-            set: { _ in
-              Task {
-                await viewModel.toggleBiometricLock()
-              }
-            }
-          )
-        ) {
-          HStack(spacing: Spacing.sm) {
-            // Icon
-            RoundedRectangle(cornerRadius: CornerRadius.xs)
-              .fill(Color.tidexBlue.opacity(0.75))
-              .frame(width: 29, height: 29)
-              .overlay(
-                Image(systemName: viewModel.biometricIconName)
-                  .font(.tidexFootnote)
-                  .foregroundColor(.white)
-              )
-
-            VStack(alignment: .leading, spacing: Spacing.micro) {
-              Text(String(localized: .securityBiometricTitle(viewModel.biometricTypeName)))
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
-
-              Text(
-                viewModel.isBiometricLockEnabled
-                  ? String(localized: .securityBiometricEnabled)
-                  : String(localized: .securityBiometricDisabled)
-              )
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-            }
-          }
-        }
-        .tint(.tidexBlue)
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
     }
   }
 

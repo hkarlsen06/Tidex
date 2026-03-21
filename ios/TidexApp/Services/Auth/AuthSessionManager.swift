@@ -50,9 +50,6 @@ final class AuthSessionManager: ObservableObject {
   /// Maximum time to wait for an existing refresh task before timing out (30 seconds)
   private let refreshTaskTimeout: UInt64 = 30_000_000_000  // nanoseconds
 
-  /// Minimum interval between explicit foreground server validations (5 minutes)
-  private let foregroundValidationInterval: TimeInterval = 300
-
   // MARK: - State
 
   /// The current refresh task, if one is in progress
@@ -66,9 +63,6 @@ final class AuthSessionManager: ObservableObject {
 
   /// Whether a refresh is currently in progress
   @Published private(set) var isRefreshing = false
-
-  /// Last time we validated session state against server via explicit refresh
-  private var lastForegroundValidationAt: Date?
 
   // MARK: - Initialization
 
@@ -208,23 +202,6 @@ final class AuthSessionManager: ObservableObject {
     return try await performRefresh()
   }
 
-  /// Whether foreground flow should perform an explicit server validation refresh.
-  /// This helps detect remote/global sign-out within a bounded window.
-  func shouldValidateSessionOnForeground() -> Bool {
-    guard let lastForegroundValidationAt else { return true }
-    return Date().timeIntervalSince(lastForegroundValidationAt) >= foregroundValidationInterval
-  }
-
-  /// Mark that a successful explicit server validation occurred.
-  func markForegroundValidation() {
-    lastForegroundValidationAt = Date()
-  }
-
-  /// Reset foreground validation throttle state (e.g. when auth session ends).
-  func resetForegroundValidationState() {
-    lastForegroundValidationAt = nil
-  }
-
   /// Best-effort classification of revoked/invalid refresh-session errors.
   func isSessionRevokedError(_ error: Error) -> Bool {
     let message = error.localizedDescription.lowercased()
@@ -263,7 +240,6 @@ final class AuthSessionManager: ObservableObject {
 
     return false
   }
-
   // MARK: - Private Methods
 
   /// Waits for an existing refresh task with a timeout to prevent deadlocks.
@@ -424,7 +400,6 @@ final class AuthSessionManager: ObservableObject {
 
   /// Clear the access token from shared keychain (called on sign out)
   func clearSharedKeychain() {
-    lastForegroundValidationAt = nil
     do {
       try SharedKeychainStorage.clearAccessToken()
       logger.info("Cleared shared keychain")

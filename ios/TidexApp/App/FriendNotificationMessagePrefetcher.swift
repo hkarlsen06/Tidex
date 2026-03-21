@@ -9,7 +9,6 @@ private let prefetchLogger = Logger(
 
 @MainActor
 protocol FriendNotificationMessagePrefetchContextProviding: AnyObject {
-  var isBiometricLocked: Bool { get }
   var isImpersonating: Bool { get }
   func currentUserId() async -> String?
 }
@@ -19,10 +18,6 @@ final class FriendNotificationMessagePrefetchContext:
   FriendNotificationMessagePrefetchContextProviding
 {
   static let shared = FriendNotificationMessagePrefetchContext()
-
-  var isBiometricLocked: Bool {
-    BiometricAuthService.shared.isLocked
-  }
 
   var isImpersonating: Bool {
     ImpersonationManager.shared.isImpersonating
@@ -43,7 +38,6 @@ enum FriendNotificationMessagePrefetchSkipReason: String, Equatable {
   case missingThreadId
   case missingMessageId
   case missingUserId
-  case biometricLocked
   case impersonating
   case alreadyCached
   case deletedMessage
@@ -93,19 +87,14 @@ final class FriendNotificationMessagePrefetcher {
     messageId: String?
   ) async -> FriendNotificationMessagePrefetchOutcome {
     let startedAt = Date()
-    let outcome = await prefetchMessage(
-      threadId: threadId,
-      messageId: messageId,
-      skipWhenBiometricLocked: true
-    )
+    let outcome = await prefetchMessage(threadId: threadId, messageId: messageId)
     logOutcome(outcome, threadId: threadId, messageId: messageId, startedAt: startedAt)
     return outcome
   }
 
   func prefetchMessage(
     threadId: String?,
-    messageId: String?,
-    skipWhenBiometricLocked: Bool
+    messageId: String?
   ) async -> FriendNotificationMessagePrefetchOutcome {
     guard
       let normalizedThreadId = threadId?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -119,10 +108,6 @@ final class FriendNotificationMessagePrefetcher {
       !normalizedMessageId.isEmpty
     else {
       return .skipped(.missingMessageId)
-    }
-
-    if skipWhenBiometricLocked && context.isBiometricLocked {
-      return .skipped(.biometricLocked)
     }
 
     if context.isImpersonating {

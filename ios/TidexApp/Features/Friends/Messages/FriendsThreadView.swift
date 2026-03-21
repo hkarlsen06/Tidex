@@ -297,7 +297,7 @@ struct FriendsThreadView: View {
         }
       }
       .onReceive(
-        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+        NotificationCenter.default.publisher(for: .tidexDidBecomeActive)
       ) { _ in
         Task {
           await viewModel.handleAppDidBecomeActive()

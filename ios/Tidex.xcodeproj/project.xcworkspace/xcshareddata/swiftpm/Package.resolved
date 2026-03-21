@@ -139,10 +139,10 @@
     {
       "identity" : "supabase-swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/TidexHQ/supabase-swift.git",
+      "location" : "https://github.com/supabase/supabase-swift.git",
       "state" : {
-        "revision" : "24d842b7ab065214b854db207440f8571f36187e",
-        "version" : "2.42.1"
+        "revision" : "bed6535e50b9297d101eb64c0ffa6152751a5791",
+        "version" : "2.42.0"
       }
     },
     {

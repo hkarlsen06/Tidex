@@ -5,8 +5,6 @@ enum PrivacyBlurManager {
   private static var privacyBlurView: UIVisualEffectView?
 
   static func showIfNeeded() {
-    guard BiometricAuthService.isEnabledStatic else { return }
-    guard !BiometricAuthService.isCurrentlyAuthenticating else { return }
     guard privacyBlurView == nil else { return }
     guard let window = keyWindow() else { return }
 
