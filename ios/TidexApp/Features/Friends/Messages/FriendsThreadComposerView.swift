@@ -303,7 +303,6 @@ struct FriendsThreadComposerHostedView: View {
     )
     .fixedSize(horizontal: false, vertical: true)
     .frame(maxWidth: .infinity, alignment: .bottom)
-    .background(Color.tidexBackground)
     .background(
       GeometryReader { geometry in
         Color.clear.preference(

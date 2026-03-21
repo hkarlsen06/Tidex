@@ -74,7 +74,9 @@ The Exyte `Chat` dependency is forked at `TidexHQ/Chat` and is also cloned local
 
 - `local` mode points Xcode at `../../Chat` as a local Swift package.
 - `remote` mode points Xcode back at `https://github.com/TidexHQ/Chat.git` for a portable committed state.
-- When editing the package, make code changes in the `../Chat` repo and commit them there, not inside `tidex`.
+- When editing the package, make code changes in the sibling `../Chat` repo and commit them there, not inside `tidex`.
+- Treat this as a hard rule: do not edit a resolved SwiftPM package checkout, build artifact, or any `Chat` source copy that lives under `tidex`.
+- If a change should persist, it must land in `../Chat`, because that is the sustained fork repo and the source of truth for local package development.
 
 **Release / shipping reminder:**
 
