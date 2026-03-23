@@ -43,11 +43,55 @@ interface BeforeUserCreatedPayload {
 }
 
 // ---------- Helpers ----------
-function buildNotificationBody(user: BeforeUserCreatedPayload["user"]): string {
+export function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function extractName(user: BeforeUserCreatedPayload["user"]): string | null {
+  const metadata = user.user_metadata ?? {};
+  const metadataPartsName = [
+    asNonEmptyString(metadata.given_name),
+    asNonEmptyString(metadata.family_name),
+  ].filter(Boolean).join(" ").trim();
+
+  const metadataName =
+    asNonEmptyString(metadata.full_name) ??
+    asNonEmptyString(metadata.name) ??
+    (metadataPartsName || null);
+  if (metadataName) return metadataName;
+
+  for (const identity of user.identities ?? []) {
+    if (!identity || typeof identity !== "object") continue;
+    const identityRecord = identity as Record<string, unknown>;
+
+    const identityData =
+      identityRecord.identity_data &&
+        typeof identityRecord.identity_data === "object"
+        ? (identityRecord.identity_data as Record<string, unknown>)
+        : null;
+    if (!identityData) continue;
+    const identityPartsName = [
+      asNonEmptyString(identityData.given_name),
+      asNonEmptyString(identityData.family_name),
+    ].filter(Boolean).join(" ").trim();
+
+    const identityName =
+      asNonEmptyString(identityData.full_name) ??
+      asNonEmptyString(identityData.name) ??
+      (identityPartsName || null);
+    if (identityName) return identityName;
+  }
+
+  return null;
+}
+
+export function buildNotificationBody(user: BeforeUserCreatedPayload["user"]): string {
   const lines: string[] = [];
 
   // Add name if available from user_metadata
-  const fullName = user.user_metadata?.full_name as string | undefined;
+  const fullName = extractName(user);
   if (fullName) {
     lines.push(fullName);
   }
@@ -123,7 +167,7 @@ serve(async (req: Request) => {
     const title = "New user signed up";
     const body = buildNotificationBody(payload.user);
     const idempotencyKey = `new-signup-${payload.user.id}`;
-    const fullName = payload.user.user_metadata?.full_name as string | undefined;
+    const fullName = extractName(payload.user);
 
     // Insert notification into outbox
     const { error } = await supabase.schema("internal").from("notifications_outbox").insert({
