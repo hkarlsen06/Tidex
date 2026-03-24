@@ -157,7 +157,7 @@ struct PayrollCard: View {
       }
     }
     .padding(.horizontal, Spacing.mlg)
-    .padding(.vertical, Spacing.lg)
+    .padding(.vertical, ShiftCardMetrics.verticalPadding)
     .background(Color.tidexSurfacePrimary)
     .overlay(alignment: .leading) {
       // Progress bar overlay - fills from left based on progress

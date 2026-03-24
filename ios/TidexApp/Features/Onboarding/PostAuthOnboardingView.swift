@@ -38,6 +38,7 @@ struct PostAuthOnboardingView: View {
 
   enum PostAuthScreen: String {
     case loading
+    case purpose
     case wage
     case supplements
     case settingsAccordion
@@ -60,16 +61,26 @@ struct PostAuthOnboardingView: View {
           Color.tidexBackground
             .ignoresSafeArea()
 
+        case .purpose:
+          PurposeScreen(
+            onSelectPaySetup: {
+              navigateTo(.wage)
+            },
+            onSelectFriendsOnly: {
+              startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
+            }
+          )
+          .transition(screenTransition)
+
         case .wage:
           WageScreen(
             data: onboardingData,
             onContinue: {
               navigateFromWage()
             },
-            onBack: nil,
-            onSkipSetup: entryMode == .initial
+            onBack: entryMode == .initial
               ? {
-                startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
+                navigateBack(to: .purpose)
               } : nil
           )
           .transition(screenTransition)
@@ -308,7 +319,7 @@ struct PostAuthOnboardingView: View {
     onboardingData.hasInitializedWageForLocale = false
 
     // Default start
-    currentScreen = .wage
+    currentScreen = entryMode == .initial ? .purpose : .wage
   }
 
   // MARK: - Persistence

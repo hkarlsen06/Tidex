@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum ShiftCardMetrics {
+  static let verticalPadding: CGFloat = Spacing.md
+}
+
 /// Shared two-row card layout used by feature-specific cards.
 /// Each row is its own HStack so left/right items align per-row regardless of font size.
 ///

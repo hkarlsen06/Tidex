@@ -48,7 +48,7 @@ struct TodayPlaceholderCard: View {
       EmptyView()
     }
     .padding(.horizontal, Spacing.mlg)
-    .padding(.vertical, Spacing.mlg)
+    .padding(.vertical, ShiftCardMetrics.verticalPadding)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)

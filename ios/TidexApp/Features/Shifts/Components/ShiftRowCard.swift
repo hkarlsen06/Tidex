@@ -140,7 +140,7 @@ struct ShiftRowCard: View {
       }
     }
     .padding(.horizontal, Spacing.mlg)
-    .padding(.vertical, Spacing.mlg)
+    .padding(.vertical, ShiftCardMetrics.verticalPadding)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(hasConflict ? Color.tidexWarning.opacity(0.08) : Color.tidexSurfacePrimary)
