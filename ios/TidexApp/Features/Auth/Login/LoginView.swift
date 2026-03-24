@@ -3,12 +3,22 @@ import SwiftUI
 /// Main login screen view with native iOS styling
 /// Supports email/password, phone/OTP, Google, and Apple sign-in
 struct LoginView: View {
-  @StateObject private var viewModel = LoginViewModel()
+  @ObservedObject var viewModel: LoginViewModel
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   // Navigation callbacks
   var onNavigateToSignup: (() -> Void)?
   var onNavigateToResetPassword: (() -> Void)?
+
+  init(
+    viewModel: LoginViewModel,
+    onNavigateToSignup: (() -> Void)? = nil,
+    onNavigateToResetPassword: (() -> Void)? = nil
+  ) {
+    self.viewModel = viewModel
+    self.onNavigateToSignup = onNavigateToSignup
+    self.onNavigateToResetPassword = onNavigateToResetPassword
+  }
 
   var body: some View {
     GeometryReader { geometry in
@@ -23,6 +33,10 @@ struct LoginView: View {
           // Main content
           VStack(spacing: Spacing.lg) {
             // Error/Success banners
+            if let prompt = viewModel.accountCreationPromptMessage {
+              accountCreationPromptCard(message: prompt)
+            }
+
             if let error = viewModel.errorMessage {
               ErrorBanner(
                 message: error,
@@ -194,6 +208,49 @@ struct LoginView: View {
 
   // MARK: - Reveal Email Button
 
+  private func accountCreationPromptCard(message: String) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.md) {
+      HStack(alignment: .top, spacing: Spacing.sm) {
+        Image(systemName: "exclamationmark.triangle.fill")
+          .foregroundColor(.tidexError)
+          .font(.tidexBody)
+
+        Text(message)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.leading)
+
+        Spacer()
+
+        Button(action: {
+          viewModel.accountCreationPromptMessage = nil
+        }) {
+          Image(systemName: "xmark")
+            .foregroundColor(.tidexTextMuted)
+            .font(.tidexCaptionStrong)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
+      }
+
+      PrimaryButton(
+        title: String(localized: .loginCreateAccount),
+        action: {
+          onNavigateToSignup?()
+        }
+      )
+    }
+    .padding(Spacing.md)
+    .background(Color.tidexError.opacity(0.15))
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.md)
+        .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
+    )
+    .cornerRadius(CornerRadius.md)
+  }
+
   private var revealEmailButton: some View {
     Button {
       MotionTokens.animate(.feedback, reduceMotion: reduceMotion) {
@@ -359,5 +416,5 @@ struct SnappyButtonStyle: ButtonStyle {
 }
 
 #Preview {
-  LoginView()
+  LoginView(viewModel: LoginViewModel())
 }

@@ -24,6 +24,7 @@ final class LoginViewModel: ObservableObject {
 
   @Published var errorMessage: String?
   @Published var successMessage: String?
+  @Published var accountCreationPromptMessage: String?
 
   @Published var fieldErrors = FieldErrors()
 
@@ -108,7 +109,7 @@ final class LoginViewModel: ObservableObject {
         fieldErrors.emailOrPhone = String(localized: .loginErrorsInvalidEmailOrPhone)
       }
     } catch {
-      handleError(error)
+      handleSignInError(error)
     }
   }
 
@@ -191,6 +192,16 @@ final class LoginViewModel: ObservableObject {
     }
   }
 
+  func applySignupPrefill(emailOrPhone: String, password: String) {
+    currentStep = .input
+    self.emailOrPhone = emailOrPhone
+    self.password = password
+    otpCode = ""
+    fieldErrors.clear()
+    clearMessages()
+    showEmailForm = !emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
   // MARK: - Private Methods
 
   private func signInWithEmail() async throws {
@@ -242,6 +253,24 @@ final class LoginViewModel: ObservableObject {
     await AppCoordinator.shared.handleLoginSuccess()
   }
 
+  private func handleSignInError(_ error: Error) {
+    if shouldNavigateToSignup(for: error) {
+      showEmailForm = true
+      accountCreationPromptMessage = ErrorTranslations.translate(error)
+      Haptics.play(.error)
+      return
+    }
+
+    handleError(error)
+  }
+
+  private func shouldNavigateToSignup(for error: Error) -> Bool {
+    let message = error.localizedDescription.lowercased()
+
+    return message.contains("user not found")
+      || message.contains("signups not allowed")
+  }
+
   private func handleError(_ error: Error) {
     // Translate the error message
     let translated = ErrorTranslations.translate(error)
@@ -252,6 +281,7 @@ final class LoginViewModel: ObservableObject {
   private func clearMessages() {
     errorMessage = nil
     successMessage = nil
+    accountCreationPromptMessage = nil
   }
 }
 

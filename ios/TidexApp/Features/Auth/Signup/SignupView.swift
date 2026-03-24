@@ -3,8 +3,16 @@ import SwiftUI
 /// Main signup screen view with native iOS styling
 /// Supports email/password, phone/OTP, Google, and Apple sign-up
 struct SignupView: View {
-  @StateObject private var viewModel = SignupViewModel()
+  @ObservedObject var viewModel: SignupViewModel
   var onNavigateToLogin: (() -> Void)?
+
+  init(
+    viewModel: SignupViewModel,
+    onNavigateToLogin: (() -> Void)? = nil
+  ) {
+    self.viewModel = viewModel
+    self.onNavigateToLogin = onNavigateToLogin
+  }
 
   var body: some View {
     GeometryReader { geometry in
@@ -351,5 +359,5 @@ struct SignupOTPForm: View {
 }
 
 #Preview {
-  SignupView()
+  SignupView(viewModel: SignupViewModel())
 }

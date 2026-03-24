@@ -7,6 +7,8 @@ struct AuthNavigationView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentScreen: AuthScreen
+  @StateObject private var loginViewModel = LoginViewModel()
+  @StateObject private var signupViewModel = SignupViewModel()
 
   enum AuthScreen {
     case login
@@ -30,7 +32,8 @@ struct AuthNavigationView: View {
         switch currentScreen {
         case .login:
           LoginView(
-            onNavigateToSignup: { navigateTo(.signup) },
+            viewModel: loginViewModel,
+            onNavigateToSignup: { navigateToSignup() },
             onNavigateToResetPassword: { navigateTo(.resetPassword) }
           )
           .transition(
@@ -38,7 +41,8 @@ struct AuthNavigationView: View {
 
         case .signup:
           SignupView(
-            onNavigateToLogin: { navigateTo(.login) }
+            viewModel: signupViewModel,
+            onNavigateToLogin: { navigateToLoginFromSignup() }
           )
           .transition(
             MotionTokens.mirroredMoveTransition(edge: .trailing, reduceMotion: reduceMotion))
@@ -57,6 +61,22 @@ struct AuthNavigationView: View {
 
   private func navigateTo(_ screen: AuthScreen) {
     currentScreen = screen
+  }
+
+  private func navigateToSignup() {
+    signupViewModel.applyLoginPrefill(
+      emailOrPhone: loginViewModel.emailOrPhone,
+      password: loginViewModel.password
+    )
+    navigateTo(.signup)
+  }
+
+  private func navigateToLoginFromSignup() {
+    loginViewModel.applySignupPrefill(
+      emailOrPhone: signupViewModel.emailOrPhone,
+      password: signupViewModel.password
+    )
+    navigateTo(.login)
   }
 }
 
