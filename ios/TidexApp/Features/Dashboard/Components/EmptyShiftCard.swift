@@ -63,7 +63,7 @@ struct EmptyShiftCard: View {
         }
       }
       .padding(.horizontal, Spacing.mlg)
-      .padding(.vertical, Spacing.lg)
+      .padding(.vertical, ShiftCardMetrics.verticalPadding)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.card)
           .fill(Color.tidexSurfacePrimary)

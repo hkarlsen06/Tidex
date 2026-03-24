@@ -18,6 +18,11 @@ struct FriendCardMessagePreview: Equatable {
 /// A card displaying a friend who shares their shifts with the current user
 /// Shows their name, avatar, and a preview of their next/active/past shift
 struct FriendCard: View {
+  enum SurfaceStyle {
+    case standard
+    case example
+  }
+
   let sharer: SharedUser
   let preview: SharerShiftPreview?
   let messagePreview: FriendCardMessagePreview?
@@ -29,6 +34,7 @@ struct FriendCard: View {
   var isCalendarAvailable = true
   var isOpeningMessage = false
   var unreadMessageCount = 0
+  var surfaceStyle: SurfaceStyle = .standard
 
   private let actionButtonSize: CGFloat = 44
 
@@ -108,17 +114,41 @@ struct FriendCard: View {
     }
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-        .fill(isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary)
+        .fill(backgroundFillColor)
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-        .strokeBorder(
-          isSelected ? Color.tidexBlue : Color.clear,
-          lineWidth: 2
-        )
+        .strokeBorder(borderColor, style: borderStyle)
     )
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-    .tidexCardShadow()
+    .modifier(FriendCardShadowModifier(isEnabled: surfaceStyle == .standard))
+  }
+
+  private var backgroundFillColor: Color {
+    switch surfaceStyle {
+    case .standard:
+      isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary
+    case .example:
+      .clear
+    }
+  }
+
+  private var borderColor: Color {
+    switch surfaceStyle {
+    case .standard:
+      isSelected ? .tidexBlue : .clear
+    case .example:
+      .tidexBorder
+    }
+  }
+
+  private var borderStyle: StrokeStyle {
+    switch surfaceStyle {
+    case .standard:
+      StrokeStyle(lineWidth: 2)
+    case .example:
+      StrokeStyle(lineWidth: 1.5, dash: [7, 5])
+    }
   }
 
   /// Skeleton placeholder for shift preview while refreshing
@@ -145,6 +175,18 @@ struct FriendCard: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .shimmer(duration: 1.2)
+  }
+}
+
+private struct FriendCardShadowModifier: ViewModifier {
+  let isEnabled: Bool
+
+  func body(content: Content) -> some View {
+    if isEnabled {
+      content.tidexCardShadow()
+    } else {
+      content
+    }
   }
 }
 

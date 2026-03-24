@@ -5,6 +5,11 @@ import SwiftUI
 /// - For other months: shows best shift (highest earnings)
 /// Design matches ShiftCard from the Next.js app
 struct FeaturedShiftCard: View {
+  enum SurfaceStyle {
+    case standard
+    case example
+  }
+
   let shift: ShiftWithComputations
   let isToday: Bool
   let isBestShift: Bool  // true = showing best shift, false = showing next shift
@@ -22,6 +27,7 @@ struct FeaturedShiftCard: View {
   var showIncreaseHighlight: Bool = false
   /// Whether footer text/badge under the card should be shown.
   var showFooter: Bool = true
+  var surfaceStyle: SurfaceStyle = .standard
 
   init(
     shift: ShiftWithComputations,
@@ -35,7 +41,8 @@ struct FeaturedShiftCard: View {
     finalCountdownSeconds: Int? = nil,
     showTimeRangeEndSkeleton: Bool = false,
     showIncreaseHighlight: Bool = false,
-    showFooter: Bool = true
+    showFooter: Bool = true,
+    surfaceStyle: SurfaceStyle = .standard
   ) {
     self.shift = shift
     self.isToday = isToday
@@ -49,6 +56,7 @@ struct FeaturedShiftCard: View {
     self.showTimeRangeEndSkeleton = showTimeRangeEndSkeleton
     self.showIncreaseHighlight = showIncreaseHighlight
     self.showFooter = showFooter
+    self.surfaceStyle = surfaceStyle
   }
 
   @Environment(\.userCurrency) private var currency
@@ -127,6 +135,10 @@ struct FeaturedShiftCard: View {
     hasProgress(progress) && !showTimeRangeEndSkeleton
   }
 
+  private var cardShape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+  }
+
   // MARK: - Body
 
   var body: some View {
@@ -202,8 +214,8 @@ struct FeaturedShiftCard: View {
         }
       }
       .padding(.horizontal, Spacing.mlg)
-      .padding(.vertical, Spacing.lg)
-      .background(Color.tidexSurfacePrimary)
+      .padding(.vertical, ShiftCardMetrics.verticalPadding)
+      .background(surfaceStyle == .example ? Color.clear : Color.tidexSurfacePrimary)
       .overlay(alignment: .leading) {
         // Progress bar overlay - fills from left based on progress (for active shifts)
         // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
@@ -216,8 +228,12 @@ struct FeaturedShiftCard: View {
           }
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-      .tidexCardShadow()
+      .overlay {
+        cardShape
+          .strokeBorder(cardBorderColor, style: cardBorderStyle)
+      }
+      .clipShape(cardShape)
+      .modifier(CardShadowModifier(isEnabled: surfaceStyle == .standard))
       .onChange(of: displayedProgress) { _, newValue in
         // Animate to new progress value
         withAnimation(.linear(duration: 1.0)) {
@@ -334,6 +350,36 @@ struct FeaturedShiftCard: View {
     Image(systemName: "clock")
       .font(.tidexSubheadline)
       .foregroundColor(.tidexTextMuted)
+  }
+
+  private var cardBorderColor: Color {
+    switch surfaceStyle {
+    case .standard:
+      .clear
+    case .example:
+      .tidexBorder
+    }
+  }
+
+  private var cardBorderStyle: StrokeStyle {
+    switch surfaceStyle {
+    case .standard:
+      StrokeStyle(lineWidth: 0)
+    case .example:
+      StrokeStyle(lineWidth: 1.5, dash: [7, 5])
+    }
+  }
+}
+
+private struct CardShadowModifier: ViewModifier {
+  let isEnabled: Bool
+
+  func body(content: Content) -> some View {
+    if isEnabled {
+      content.tidexCardShadow()
+    } else {
+      content
+    }
   }
 }
 
