@@ -457,7 +457,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func stopRealtime() async {
-    if FriendsChatPresentationState.shared.activeThreadId == route.threadId {
+    if SensitiveContentPresentationState.shared.activeFriendThreadId == route.threadId {
       return
     }
     await stopTypingIfNeeded()
@@ -806,7 +806,8 @@ final class FriendsThreadViewModel: ObservableObject {
         }
 
         guard !Task.isCancelled else { return }
-        guard FriendsChatPresentationState.shared.activeThreadId == self.route.threadId else {
+        guard SensitiveContentPresentationState.shared.activeFriendThreadId == self.route.threadId
+        else {
           continue
         }
         guard UIApplication.shared.applicationState == .active else {

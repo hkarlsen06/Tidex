@@ -41,7 +41,9 @@ final class AppLifecycleHandler {
   func handleWillResignActive() {
     liveActivityRecoveryTask?.cancel()
     liveActivityRecoveryTask = nil
-    PrivacyBlurManager.showIfNeeded()
+    if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
+      PrivacyBlurManager.showIfNeeded()
+    }
   }
 
   func handleDidEnterBackground() {
@@ -49,7 +51,9 @@ final class AppLifecycleHandler {
     liveActivityRecoveryTask = nil
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()
     // Defensive: ensure blur is shown when entering background.
-    PrivacyBlurManager.showIfNeeded()
+    if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
+      PrivacyBlurManager.showIfNeeded()
+    }
   }
 
   private func runForegroundLiveActivityMaintenance() {
