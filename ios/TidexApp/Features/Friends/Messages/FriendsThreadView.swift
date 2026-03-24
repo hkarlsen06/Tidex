@@ -204,7 +204,9 @@ struct FriendsThreadView: View {
       }
       .onAppear {
         syncComposerBridge()
-        FriendsChatPresentationState.shared.setActiveThreadId(viewModel.route.threadId)
+        SensitiveContentPresentationState.shared.setVisibleContext(
+          .friendThread(threadId: viewModel.route.threadId)
+        )
         Task {
           await NotificationService.shared.clearDeliveredFriendChatNotifications(
             for: viewModel.route.threadId
@@ -239,7 +241,7 @@ struct FriendsThreadView: View {
       }
       .onDisappear {
         pendingFocusScrollTask?.cancel()
-        FriendsChatPresentationState.shared.setActiveThreadId(nil)
+        SensitiveContentPresentationState.shared.setVisibleContext(nil)
         Task {
           await viewModel.stopRealtime()
         }

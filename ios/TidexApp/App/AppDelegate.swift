@@ -739,7 +739,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
 
     return MainActor.assumeIsolated {
-      FriendsChatPresentationState.shared.activeThreadId == threadId
+      SensitiveContentPresentationState.shared.activeFriendThreadId == threadId
     }
   }
 
