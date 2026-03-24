@@ -223,6 +223,16 @@ final class SignupViewModel: ObservableObject {
     onNavigateToLogin?()
   }
 
+  func applyLoginPrefill(emailOrPhone: String, password: String) {
+    currentStep = .input
+    self.emailOrPhone = emailOrPhone
+    self.password = password
+    otpCode = ""
+    fieldErrors.clear()
+    clearMessages()
+    showEmailForm = !emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
   // MARK: - Private Methods
 
   private func signUpWithEmail() async throws {
