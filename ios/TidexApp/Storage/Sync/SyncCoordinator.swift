@@ -506,6 +506,8 @@ final class SyncCoordinator: ObservableObject {
         result = try await pullJobsPage(userId: userId, cursor: cursor)
       case .userShifts:
         result = try await pullUserShiftsPage(userId: userId, cursor: cursor)
+      case .events:
+        result = try await pullEventsPage(userId: userId, cursor: cursor)
       case .recurringShifts:
         result = try await pullRecurringShiftsPage(userId: userId, cursor: cursor)
       case .wageSnapshots:
@@ -1036,6 +1038,245 @@ final class SyncCoordinator: ObservableObject {
 
   // Helper to convert UserShiftField to itself (for type safety in intersection)
   private func convertToUserShiftField(_ field: UserShiftField) -> UserShiftField {
+    field
+  }
+
+  // MARK: - Events Pull
+
+  private func pullEventsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
+    let rows: [SyncEventRow]
+
+    if let cursorUpdatedAt = cursor.updatedAt {
+      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+      let cursorTieId = cursor.tieId
+
+      rows =
+        try await supabase
+        .from("events")
+        .select()
+        .eq("user_id", value: userId)
+        .or(
+          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
+        )
+        .order("updated_at", ascending: true)
+        .order("id", ascending: true)
+        .limit(pageSize)
+        .execute()
+        .value
+    } else {
+      rows =
+        try await supabase
+        .from("events")
+        .select()
+        .eq("user_id", value: userId)
+        .order("updated_at", ascending: true)
+        .order("id", ascending: true)
+        .limit(pageSize)
+        .execute()
+        .value
+    }
+
+    if rows.isEmpty {
+      return PagePullResult(
+        rowsProcessed: 0,
+        lastUpdatedAt: cursor.updatedAt,
+        lastTieId: cursor.tieId,
+        maxRevision: 0,
+        newConflicts: 0,
+        autoMerged: 0,
+        hasMore: false
+      )
+    }
+
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    var newConflicts = 0
+    var autoMerged = 0
+    var maxRevision: Int64 = 0
+    let pageStartTime = Date()
+
+    for (index, row) in rows.enumerated() {
+      let result = try await applyEventRow(row, storeActor: storeActor)
+      if result == .conflict { newConflicts += 1 }
+      if result == .autoMerged { autoMerged += 1 }
+      if row.revision > maxRevision {
+        maxRevision = row.revision
+      }
+
+      let rowNumber = index + 1
+      if rowNumber.isMultiple(of: pullSaveBatchSize) {
+        try await storeActor.save()
+        logger.debug("events: saved batch at row \(rowNumber)/\(rows.count)")
+      }
+    }
+
+    try await storeActor.save()
+
+    let duration = Date().timeIntervalSince(pageStartTime)
+    logger.info(
+      "events: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
+
+    guard let lastRow = rows.last else {
+      logger.warning("Unexpected empty rows after processing in pullEventsPage")
+      return PagePullResult(
+        rowsProcessed: 0,
+        lastUpdatedAt: Date(),
+        lastTieId: "",
+        maxRevision: maxRevision,
+        newConflicts: newConflicts,
+        autoMerged: autoMerged,
+        hasMore: false
+      )
+    }
+
+    let lastUpdatedAt = try requireISO8601(lastRow.updated_at, table: .events, id: lastRow.id)
+
+    return PagePullResult(
+      rowsProcessed: rows.count,
+      lastUpdatedAt: lastUpdatedAt,
+      lastTieId: lastRow.id,
+      maxRevision: maxRevision,
+      newConflicts: newConflicts,
+      autoMerged: autoMerged,
+      hasMore: rows.count == pageSize
+    )
+  }
+
+  private func applyEventRow(_ serverRow: SyncEventRow, storeActor: LocalStoreActor) async throws
+    -> ApplyResult
+  {
+    let serverUpdatedAt = try requireISO8601(serverRow.updated_at, table: .events, id: serverRow.id)
+    let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+    if let existing = try await storeActor.getEvent(id: serverRow.id) {
+      return try await applyEventToExisting(
+        existing: existing,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
+      )
+    } else {
+      try await insertNewEvent(
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
+      )
+      return .inserted
+    }
+  }
+
+  private func applyEventToExisting(
+    existing: LocalEvent,
+    serverRow: SyncEventRow,
+    serverUpdatedAt: Date,
+    serverDeletedAt: Date?,
+    storeActor: LocalStoreActor
+  ) async throws -> ApplyResult {
+    let serverSnapshot = EventServerSnapshot.from(
+      serverRow: serverRow,
+      updatedAt: serverUpdatedAt,
+      deletedAt: serverDeletedAt
+    )
+
+    switch existing.syncStatus {
+    case .clean:
+      await storeActor.updateEventFromServer(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        serverDeletedAt: serverDeletedAt,
+        snapshot: serverSnapshot
+      )
+      return .updated
+
+    case .dirty, .pendingDelete:
+      if serverRow.revision == existing.serverRevision {
+        return .noChange
+      }
+
+      guard let lastSnapshot = EventServerSnapshot.decode(from: existing.lastSyncedSnapshot) else {
+        await storeActor.markEventConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
+        return .conflict
+      }
+
+      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
+      let localDirtyFields = existing.dirtyFieldKeys
+      let conflictingFields = serverChangedFields.intersection(
+        Set(localDirtyFields.map { convertToEventField($0) }))
+
+      if conflictingFields.isEmpty {
+        await storeActor.autoMergeEvent(
+          id: serverRow.id,
+          serverRow: serverRow,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: serverRow.revision,
+          serverDeletedAt: serverDeletedAt,
+          newSnapshot: serverSnapshot,
+          localDirtyFields: localDirtyFields
+        )
+        return .autoMerged
+      } else {
+        await storeActor.markEventConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
+        return .conflict
+      }
+
+    case .conflict:
+      await storeActor.updateEventConflictSnapshot(id: serverRow.id, serverSnapshot: serverSnapshot)
+      return .noChange
+    }
+  }
+
+  private func insertNewEvent(
+    serverRow: SyncEventRow,
+    serverUpdatedAt: Date,
+    serverDeletedAt: Date?,
+    storeActor: LocalStoreActor
+  ) async throws {
+    let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
+
+    guard let startDate = dateFormatter.date(from: serverRow.start_date) else {
+      logger.error("Failed to parse start_date '\(serverRow.start_date)' for event \(serverRow.id)")
+      throw SyncError.dateParsingFailed(
+        table: .events, id: serverRow.id, rawValue: serverRow.start_date)
+    }
+
+    guard let endDate = dateFormatter.date(from: serverRow.end_date) else {
+      logger.error("Failed to parse end_date '\(serverRow.end_date)' for event \(serverRow.id)")
+      throw SyncError.dateParsingFailed(
+        table: .events, id: serverRow.id, rawValue: serverRow.end_date)
+    }
+
+    let snapshot = EventServerSnapshot.from(
+      serverRow: serverRow,
+      updatedAt: serverUpdatedAt,
+      deletedAt: serverDeletedAt
+    )
+
+    let localEvent = LocalEvent(
+      id: serverRow.id,
+      userId: serverRow.user_id,
+      startDate: startDate,
+      endDate: endDate,
+      isAllDay: serverRow.is_all_day,
+      startTime: serverRow.start_time,
+      endTime: serverRow.end_time,
+      note: serverRow.note,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      serverDeletedAt: serverDeletedAt,
+      syncStatus: .clean,
+      dirtyFields: LocalEvent.emptyDirtyFields(),
+      lastSyncedSnapshot: try snapshot.encodedOrThrow(),
+      localUpdatedAt: Date(),
+      conflictServerSnapshot: nil
+    )
+
+    try await storeActor.upsertEvent(localEvent)
+  }
+
+  private func convertToEventField(_ field: EventField) -> EventField {
     field
   }
 
@@ -1792,6 +2033,8 @@ final class SyncCoordinator: ObservableObject {
       return try await pushJobs(userId: userId)
     case .userShifts:
       return try await pushUserShifts(userId: userId)
+    case .events:
+      return try await pushEvents(userId: userId)
     case .recurringShifts:
       return try await pushRecurringShifts(userId: userId)
     case .wageSnapshots:
@@ -2708,6 +2951,392 @@ final class SyncCoordinator: ObservableObject {
     } else {
       // Conflict - overlapping fields or retry failed
       await storeActor.markShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+      return .conflict
+    }
+  }
+
+  // MARK: - Events Push
+
+  private func pushEvents(userId: String) async throws -> TablePushResult {
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    let dirtyEvents = try await storeActor.getDirtyEvents(userId: userId)
+
+    if dirtyEvents.isEmpty {
+      return TablePushResult(table: .events, rowsPushed: 0, newConflicts: 0, rebased: 0)
+    }
+
+    var rowsPushed = 0
+    var newConflicts = 0
+    var rebased = 0
+
+    for event in dirtyEvents {
+      let result = try await pushEvent(
+        event, userId: userId, storeActor: storeActor, isRetry: false)
+      switch result {
+      case .success, .deleted:
+        rowsPushed += 1
+      case .conflict:
+        newConflicts += 1
+      case .rebased:
+        rebased += 1
+        rowsPushed += 1
+      case .noChange:
+        break
+      }
+    }
+
+    try await storeActor.save()
+    return TablePushResult(
+      table: .events,
+      rowsPushed: rowsPushed,
+      newConflicts: newConflicts,
+      rebased: rebased
+    )
+  }
+
+  private func pushEvent(
+    _ event: LocalEvent,
+    userId: String,
+    storeActor: LocalStoreActor,
+    isRetry: Bool
+  ) async throws -> PushResult {
+    let eventId = event.id
+
+    if event.syncStatus == .pendingDelete {
+      return try await pushEventDelete(event, userId: userId, storeActor: storeActor)
+    }
+
+    let dirtyFields = event.dirtyFieldKeys
+    if dirtyFields.isEmpty {
+      await storeActor.markEventClean(id: eventId)
+      return .noChange
+    }
+
+    if event.serverRevision == 0 {
+      return try await insertEvent(event, userId: userId, storeActor: storeActor)
+    }
+
+    var updateData: [String: AnyJSON] = [:]
+    if dirtyFields.contains(.startDate) {
+      updateData["start_date"] = .string(event.startDateString)
+    }
+    if dirtyFields.contains(.endDate) {
+      updateData["end_date"] = .string(event.endDateString)
+    }
+    if dirtyFields.contains(.isAllDay) {
+      updateData["is_all_day"] = .bool(event.isAllDay)
+    }
+    if dirtyFields.contains(.startTime) {
+      if let startTime = event.startTime {
+        updateData["start_time"] = .string(startTime)
+      } else {
+        updateData["start_time"] = .null
+      }
+    }
+    if dirtyFields.contains(.endTime) {
+      if let endTime = event.endTime {
+        updateData["end_time"] = .string(endTime)
+      } else {
+        updateData["end_time"] = .null
+      }
+    }
+    if dirtyFields.contains(.note) {
+      updateData["note"] = .string(event.note)
+    }
+
+    try requireNonEmptyUpdate(updateData, table: .events, id: eventId)
+
+    let serverRevision = Int(event.serverRevision)
+
+    do {
+      let returnedRows: [SyncEventRow] =
+        try await supabase
+        .from("events")
+        .update(updateData)
+        .eq("id", value: eventId)
+        .eq("user_id", value: userId)
+        .eq("revision", value: serverRevision)
+        .is("deleted_at", value: nil)
+        .select()
+        .execute()
+        .value
+
+      if let returnedRow = returnedRows.first {
+        let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
+        let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+        let serverSnapshot = EventServerSnapshot.from(
+          serverRow: returnedRow,
+          updatedAt: serverUpdatedAt,
+          deletedAt: serverDeletedAt
+        )
+
+        await storeActor.markEventPushed(
+          id: eventId,
+          serverRow: returnedRow,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: returnedRow.revision,
+          snapshot: serverSnapshot
+        )
+
+        logger.debug("Pushed event \(eventId.prefix(8))")
+        return .success
+      } else {
+        return try await handleEventPushConflict(
+          event: event,
+          userId: userId,
+          storeActor: storeActor,
+          isRetry: isRetry
+        )
+      }
+    } catch {
+      let errorString = String(describing: error)
+      if errorString.contains("row-level security") || errorString.contains("42501") {
+        logger.warning(
+          "Event \(eventId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
+        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
+        return .conflict
+      }
+      logger.error("Push event failed: \(error.localizedDescription)")
+      throw error
+    }
+  }
+
+  private func pushEventDelete(
+    _ event: LocalEvent,
+    userId: String,
+    storeActor: LocalStoreActor
+  ) async throws -> PushResult {
+    let eventId = event.id
+    let serverRevision = Int(event.serverRevision)
+
+    let returnedRows: [SyncEventRow] =
+      try await supabase
+      .from("events")
+      .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+      .eq("id", value: eventId)
+      .eq("user_id", value: userId)
+      .eq("revision", value: serverRevision)
+      .is("deleted_at", value: nil)
+      .select()
+      .execute()
+      .value
+
+    if let returnedRow = returnedRows.first {
+      let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
+      let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+
+      await storeActor.markEventDeleted(
+        id: eventId,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        serverDeletedAt: serverDeletedAt
+      )
+
+      logger.debug("Deleted event \(eventId.prefix(8))")
+      return .deleted
+    } else {
+      let serverRows: [SyncEventRow] =
+        try await supabase
+        .from("events")
+        .select()
+        .eq("id", value: eventId)
+        .execute()
+        .value
+
+      if let serverRow = serverRows.first {
+        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
+        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+        if serverDeletedAt != nil {
+          await storeActor.markEventDeleted(
+            id: eventId,
+            serverUpdatedAt: serverUpdatedAt,
+            serverRevision: serverRow.revision,
+            serverDeletedAt: serverDeletedAt
+          )
+          return .deleted
+        }
+
+        let serverSnapshot = EventServerSnapshot.from(
+          serverRow: serverRow,
+          updatedAt: serverUpdatedAt,
+          deletedAt: serverDeletedAt
+        )
+        await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+      }
+      return .conflict
+    }
+  }
+
+  private func insertEvent(
+    _ event: LocalEvent,
+    userId: String,
+    storeActor: LocalStoreActor
+  ) async throws -> PushResult {
+    let eventId = event.id
+    var insertData: [String: AnyJSON] = [
+      "id": .string(eventId),
+      "user_id": .string(userId),
+      "start_date": .string(event.startDateString),
+      "end_date": .string(event.endDateString),
+      "is_all_day": .bool(event.isAllDay),
+      "note": .string(event.note),
+    ]
+
+    if let startTime = event.startTime {
+      insertData["start_time"] = .string(startTime)
+    }
+    if let endTime = event.endTime {
+      insertData["end_time"] = .string(endTime)
+    }
+
+    do {
+      let returnedRows: [SyncEventRow] =
+        try await supabase
+        .from("events")
+        .insert(insertData)
+        .select()
+        .execute()
+        .value
+
+      if let returnedRow = returnedRows.first {
+        let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
+        let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+        let serverSnapshot = EventServerSnapshot.from(
+          serverRow: returnedRow,
+          updatedAt: serverUpdatedAt,
+          deletedAt: serverDeletedAt
+        )
+
+        await storeActor.markEventPushed(
+          id: eventId,
+          serverRow: returnedRow,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: returnedRow.revision,
+          snapshot: serverSnapshot
+        )
+
+        logger.debug("Inserted new event \(eventId.prefix(8))")
+        return .success
+      } else {
+        logger.error("Insert event returned no rows for \(eventId.prefix(8))")
+        return .conflict
+      }
+    } catch {
+      let errorString = String(describing: error)
+      if errorString.contains("duplicate") || errorString.contains("23505") {
+        logger.warning("Event \(eventId.prefix(8)) already exists on server, fetching and merging")
+        let serverRows: [SyncEventRow] =
+          try await supabase
+          .from("events")
+          .select()
+          .eq("id", value: eventId)
+          .execute()
+          .value
+
+        if let serverRow = serverRows.first {
+          let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
+          let serverSnapshot = EventServerSnapshot.from(
+            serverRow: serverRow,
+            updatedAt: serverUpdatedAt,
+            deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
+          )
+          await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+        }
+        return .conflict
+      }
+      if errorString.contains("row-level security") || errorString.contains("42501") {
+        logger.warning("Event \(eventId.prefix(8)) blocked by RLS policy, marking as conflict")
+        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
+        return .conflict
+      }
+      logger.error("Insert event failed: \(error.localizedDescription)")
+      throw error
+    }
+  }
+
+  private func handleEventPushConflict(
+    event: LocalEvent,
+    userId: String,
+    storeActor: LocalStoreActor,
+    isRetry: Bool
+  ) async throws -> PushResult {
+    let eventId = event.id
+
+    let serverRows: [SyncEventRow] =
+      try await supabase
+      .from("events")
+      .select()
+      .eq("id", value: eventId)
+      .execute()
+      .value
+
+    guard let serverRow = serverRows.first else {
+      if event.serverRevision == 0 {
+        logger.debug("Event \(eventId.prefix(8)) is new (serverRevision=0), attempting INSERT")
+        return try await insertEvent(event, userId: userId, storeActor: storeActor)
+      }
+      logger.debug("Event \(eventId.prefix(8)) was deleted on server")
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
+      return .conflict
+    }
+
+    let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
+    let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+    if serverDeletedAt != nil {
+      let serverSnapshot = EventServerSnapshot.from(
+        serverRow: serverRow,
+        updatedAt: serverUpdatedAt,
+        deletedAt: serverDeletedAt
+      )
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+      return .conflict
+    }
+
+    guard let lastSnapshot = EventServerSnapshot.decode(from: event.lastSyncedSnapshot) else {
+      let serverSnapshot = EventServerSnapshot.from(
+        serverRow: serverRow,
+        updatedAt: serverUpdatedAt,
+        deletedAt: serverDeletedAt
+      )
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+      return .conflict
+    }
+
+    let newServerSnapshot = EventServerSnapshot.from(
+      serverRow: serverRow,
+      updatedAt: serverUpdatedAt,
+      deletedAt: serverDeletedAt
+    )
+
+    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
+    let localDirtyFields = event.dirtyFieldKeys
+    let conflictingFields = serverChangedFields.intersection(
+      Set(localDirtyFields.map { convertToEventField($0) }))
+
+    if conflictingFields.isEmpty && !isRetry {
+      await storeActor.rebaseEvent(
+        id: eventId,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        serverDeletedAt: serverDeletedAt,
+        newSnapshot: newServerSnapshot,
+        localDirtyFields: localDirtyFields
+      )
+
+      if let rebasedEvent = try await storeActor.getEvent(id: eventId) {
+        let retryResult = try await pushEvent(
+          rebasedEvent, userId: userId, storeActor: storeActor, isRetry: true)
+        if retryResult == .success {
+          return .rebased
+        }
+        return retryResult
+      }
+      return .conflict
+    } else {
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
   }

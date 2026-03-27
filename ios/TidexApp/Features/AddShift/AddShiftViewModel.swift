@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewM
 enum AddShiftCompletion {
   case single
   case recurring
+  case event
 }
 
 // MARK: - Calendar Display Data
@@ -48,6 +49,7 @@ final class AddShiftViewModel: ObservableObject {
   // MARK: - Dependencies
 
   private let shiftsRepository: ShiftsRepository
+  private let eventsRepository: EventsRepository
   private let recurringRepository: RecurringShiftsRepository
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
@@ -59,6 +61,9 @@ final class AddShiftViewModel: ObservableObject {
 
   @Published var mode: AddShiftMode = .single {
     didSet {
+      if mode == .events {
+        selectedDays.removeAll()
+      }
       publishStateToCoordinator()
       scheduleDraftSave()
     }
@@ -86,6 +91,77 @@ final class AddShiftViewModel: ObservableObject {
     didSet { publishStateToCoordinator() }
   }
   @Published var error: String?
+
+  // MARK: - Event Mode State
+
+  @Published var eventNote = "" {
+    didSet {
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
+
+  @Published var isEventAllDay = false {
+    didSet {
+      guard oldValue != isEventAllDay else { return }
+      if isEventAllDay {
+        if eventStartDate != eventDate {
+          eventStartDate = eventDate
+        }
+        if eventEndDate != eventDate {
+          eventEndDate = eventDate
+        }
+        startTime = nil
+        endTime = nil
+      } else {
+        if eventDate != eventStartDate {
+          eventDate = eventStartDate
+        }
+        if eventEndDate != eventStartDate {
+          eventEndDate = eventStartDate
+        }
+      }
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
+
+  @Published var eventDate: Date = Calendar.current.startOfDay(for: Date()) {
+    didSet {
+      guard oldValue != eventDate else { return }
+      if !isEventAllDay {
+        if eventStartDate != eventDate {
+          eventStartDate = eventDate
+        }
+        if eventEndDate != eventDate {
+          eventEndDate = eventDate
+        }
+      }
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
+
+  @Published var eventStartDate: Date = Calendar.current.startOfDay(for: Date()) {
+    didSet {
+      guard oldValue != eventStartDate else { return }
+      if !isEventAllDay {
+        if eventDate != eventStartDate {
+          eventDate = eventStartDate
+        }
+      }
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
+
+  @Published var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
+    didSet {
+      guard oldValue != eventEndDate else { return }
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
 
   /// Active (non-archived, non-deleted) jobs for the current user.
   @Published private(set) var activeJobs: [Job] = []
@@ -321,6 +397,7 @@ final class AddShiftViewModel: ObservableObject {
 
   init(
     shiftsRepository: ShiftsRepository? = nil,
+    eventsRepository: EventsRepository? = nil,
     recurringRepository: RecurringShiftsRepository? = nil,
     jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
@@ -329,6 +406,7 @@ final class AddShiftViewModel: ObservableObject {
     addShiftCoordinator: AddShiftCoordinator? = nil
   ) {
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+    self.eventsRepository = eventsRepository ?? EventsRepository.shared
     self.recurringRepository = recurringRepository ?? RecurringShiftsRepository.shared
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
@@ -404,27 +482,32 @@ final class AddShiftViewModel: ObservableObject {
       }
     case .recurring:
       showPreview()
+    case .events:
+      Task {
+        await submitEvent()
+      }
     }
   }
 
   /// Publish current state to the coordinator (call after state changes)
   private func publishStateToCoordinator() {
-    let canSubmit = mode == .single ? canSubmitSingle : canSubmitRecurring
+    let canSubmit: Bool
+    switch mode {
+    case .single:
+      canSubmit = canSubmitSingle
+    case .recurring:
+      canSubmit = canSubmitRecurring
+    case .events:
+      canSubmit = canSubmitEvent
+    }
     addShiftCoordinator.updateCanSubmit(canSubmit)
     addShiftCoordinator.updateMode(mode)
     addShiftCoordinator.updateIsLoading(isLoading)
     addShiftCoordinator.updateJobSelection(
-      selectedJobId: effectiveSelectedJobId,
-      requiresJobSelection: requiresExplicitJobSelection
+      selectedJobId: mode == .events ? nil : effectiveSelectedJobId,
+      requiresJobSelection: mode == .events ? false : requiresExplicitJobSelection
     )
-    addShiftCoordinator.updateSubmitBlockers(
-      mode: mode,
-      hasSelectedDates: !selectedDates.isEmpty,
-      hasSelectedDays: !selectedDays.isEmpty,
-      hasValidTimes: hasValidTimes,
-      hasAvailableJobs: !activeJobs.isEmpty,
-      hasSelectedJob: effectiveSelectedJobId != nil
-    )
+    addShiftCoordinator.updateSubmitBlockers(submitBlockers)
   }
 
   // MARK: - Month Navigation
@@ -463,6 +546,11 @@ final class AddShiftViewModel: ObservableObject {
       && hasValidTimes
       && !activeJobs.isEmpty
       && effectiveSelectedJobId != nil
+  }
+
+  var canSubmitEvent: Bool {
+    hasEventNote
+      && (isEventAllDay ? isEventDateRangeValid : hasValidEventTimes)
   }
 
   /// Selected job object for display and contextual calculations.
@@ -507,6 +595,68 @@ final class AddShiftViewModel: ObservableObject {
     startTime != nil && endTime != nil
   }
 
+  private var hasValidEventTimes: Bool {
+    guard startTime != nil, endTime != nil else { return false }
+    return endTimeString > startTimeString
+  }
+
+  private var hasEventNote: Bool {
+    !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  private var isEventDateRangeValid: Bool {
+    eventEndDate >= eventStartDate
+  }
+
+  private var submitBlockers: [AddShiftSubmitBlocker] {
+    var blockers: [AddShiftSubmitBlocker] = []
+
+    switch mode {
+    case .single:
+      if activeJobs.isEmpty {
+        blockers.append(.noAvailableJob)
+      } else if effectiveSelectedJobId == nil {
+        blockers.append(.noSelectedJob)
+      }
+      if selectedDates.isEmpty {
+        blockers.append(.noSingleDates)
+      }
+      if !hasValidTimes {
+        blockers.append(.missingTimes)
+      }
+
+    case .recurring:
+      if activeJobs.isEmpty {
+        blockers.append(.noAvailableJob)
+      } else if effectiveSelectedJobId == nil {
+        blockers.append(.noSelectedJob)
+      }
+      if selectedDays.isEmpty {
+        blockers.append(.noRecurringDays)
+      }
+      if !hasValidTimes {
+        blockers.append(.missingTimes)
+      }
+
+    case .events:
+      if isEventAllDay {
+        if !isEventDateRangeValid {
+          blockers.append(.invalidEventDateRange)
+        }
+      } else {
+        if !hasValidEventTimes {
+          blockers.append(.missingTimes)
+        }
+      }
+
+      if !hasEventNote {
+        blockers.append(.missingEventNote)
+      }
+    }
+
+    return blockers
+  }
+
   /// Whether the form has any content that can be cleared
   /// Used to conditionally show the undo/clear button
   var hasContent: Bool {
@@ -515,6 +665,13 @@ final class AddShiftViewModel: ObservableObject {
       return !selectedDates.isEmpty || startTime != nil || endTime != nil
     case .recurring:
       return !selectedDays.isEmpty || startTime != nil || endTime != nil
+    case .events:
+      return !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        || startTime != nil || endTime != nil
+        || eventDate != Calendar.current.startOfDay(for: Date())
+        || eventStartDate != Calendar.current.startOfDay(for: Date())
+        || eventEndDate != Calendar.current.startOfDay(for: Date())
+        || isEventAllDay
     }
   }
 
@@ -598,6 +755,10 @@ final class AddShiftViewModel: ObservableObject {
   /// Uses `ConflictExclusion.combinedEarnings` so the "lowest gross wins" rule
   /// is applied consistently with the rest of the app.
   var toolbarTotals: CalendarHeaderTotals? {
+    if mode == .events {
+      return nil
+    }
+
     let existingEarnings = cachedDisplayData?.existingShiftEarnings ?? [:]
 
     // Build preview earnings map for the current mode
@@ -614,6 +775,8 @@ final class AddShiftViewModel: ObservableObject {
           }
         }
         return map
+      case .events:
+        return [:]
       }
     }()
 
@@ -907,6 +1070,53 @@ final class AddShiftViewModel: ObservableObject {
       showMonthLimitSheet = true
     } catch {
       logger.error("Failed to create shifts: \(error.localizedDescription)")
+      self.error = error.localizedDescription
+      Haptics.play(.error)
+    }
+
+    isLoading = false
+  }
+
+  /// Submit a private event.
+  func submitEvent() async {
+    guard canSubmitEvent else { return }
+
+    let userId: String
+    do {
+      userId = try AppCoordinator.shared.requireUserId()
+    } catch {
+      self.error = error.localizedDescription
+      return
+    }
+
+    isLoading = true
+    error = nil
+
+    do {
+      let trimmedNote = eventNote.trimmingCharacters(in: .whitespacesAndNewlines)
+      let startDate = isEventAllDay ? eventStartDate : eventDate
+      let endDate = isEventAllDay ? eventEndDate : eventDate
+      let startTime = isEventAllDay ? nil : startTimeString
+      let endTime = isEventAllDay ? nil : endTimeString
+
+      _ = try await eventsRepository.createEvent(
+        userId: userId,
+        startDate: startDate,
+        endDate: endDate,
+        isAllDay: isEventAllDay,
+        startTime: startTime,
+        endTime: endTime,
+        note: trimmedNote
+      )
+
+      logger.info("Created private event")
+
+      clearForm()
+      Haptics.playShiftCreationSuccess()
+      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      onShiftsCreated?(.event)
+    } catch {
+      logger.error("Failed to create event: \(error.localizedDescription)")
       self.error = error.localizedDescription
       Haptics.play(.error)
     }
@@ -1431,6 +1641,10 @@ final class AddShiftViewModel: ObservableObject {
         anchorEarnings = [:]
         datesToCheck = []
       }
+    case .events:
+      projectedRecurringDates = nil
+      anchorEarnings = nil
+      datesToCheck = []
     }
 
     guard input.hasValidTimes, !datesToCheck.isEmpty else {
@@ -1660,6 +1874,14 @@ final class AddShiftViewModel: ObservableObject {
     repeatInterval = 1
     endCondition = nil
 
+    // Reset event-specific fields.
+    eventNote = ""
+    isEventAllDay = false
+    let defaultEventDate = Self.defaultEventDate()
+    eventDate = defaultEventDate
+    eventStartDate = defaultEventDate
+    eventEndDate = defaultEventDate
+
     // NOTE: Do NOT reset the month context here!
     // The user should stay on the month where they just added shifts
     // so that when they're navigated to the Shifts tab, they see their new shifts.
@@ -1684,6 +1906,10 @@ final class AddShiftViewModel: ObservableObject {
     components.hour = 17
     components.minute = 0
     return calendar.date(from: components) ?? Date()
+  }
+
+  private static func defaultEventDate() -> Date {
+    Calendar.current.startOfDay(for: Date())
   }
 
   // MARK: - Draft Persistence Methods
@@ -1721,6 +1947,11 @@ final class AddShiftViewModel: ObservableObject {
       selectedDays: selectedDays,
       repeatInterval: repeatInterval,
       endCondition: endCondition,
+      eventNote: eventNote,
+      isEventAllDay: isEventAllDay,
+      eventDate: eventDate.toISODateString(),
+      eventStartDate: eventStartDate.toISODateString(),
+      eventEndDate: eventEndDate.toISODateString(),
       lastModified: Date()
     )
 
@@ -1766,6 +1997,18 @@ final class AddShiftViewModel: ObservableObject {
       selectedDays = draft.selectedDays
       repeatInterval = draft.repeatInterval
       endCondition = draft.endCondition
+    case .events:
+      eventNote = draft.eventNote
+      isEventAllDay = draft.isEventAllDay
+      if let eventDate = draft.eventDate.flatMap({ Date.fromISODateString($0) }) {
+        self.eventDate = eventDate
+      }
+      if let eventStartDate = draft.eventStartDate.flatMap({ Date.fromISODateString($0) }) {
+        self.eventStartDate = eventStartDate
+      }
+      if let eventEndDate = draft.eventEndDate.flatMap({ Date.fromISODateString($0) }) {
+        self.eventEndDate = eventEndDate
+      }
     }
 
     logger.info(
@@ -1790,6 +2033,12 @@ final class AddShiftViewModel: ObservableObject {
     endTime = nil
     repeatInterval = 1
     endCondition = nil
+    eventNote = ""
+    isEventAllDay = false
+    let defaultEventDate = Self.defaultEventDate()
+    eventDate = defaultEventDate
+    eventStartDate = defaultEventDate
+    eventEndDate = defaultEventDate
     error = nil
 
     // Haptic feedback

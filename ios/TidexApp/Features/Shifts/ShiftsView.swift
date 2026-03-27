@@ -4,21 +4,30 @@ import os.log
 private let logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
 
 /// Helper struct for day sheet selection (must be Identifiable for .sheet(item:))
-private struct DayShiftSelection: Identifiable {
+private struct DayItemSelection: Identifiable {
   let id = UUID()
   let dateISO: String
-  let shifts: [ShiftWithComputations]
+  let items: [DayPresentationItem]
+}
+
+private struct EventSheetSelection: Identifiable {
+  let id = UUID()
+  let event: EventRow
+  let startInEditMode: Bool
 }
 
 /// Represents an item in the shifts list - either a shift card or today's placeholder
 private enum ShiftListItem: Identifiable {
   case shift(ShiftWithComputations)
+  case event(EventPresentation)
   case todayPlaceholder
 
   var id: String {
     switch self {
     case .shift(let shift):
       return shift.id
+    case .event(let event):
+      return "event-\(event.id)"
     case .todayPlaceholder:
       return "today-placeholder"
     }
@@ -29,8 +38,32 @@ private enum ShiftListItem: Identifiable {
     switch self {
     case .shift(let shift):
       return shift.shiftDate
+    case .event(let event):
+      return event.anchorDateISO
     case .todayPlaceholder:
       return todayISO()
+    }
+  }
+
+  var startSortKey: String {
+    switch self {
+    case .shift(let shift):
+      return shift.startTime
+    case .event(let event):
+      return event.sortTime
+    case .todayPlaceholder:
+      return "99:99"
+    }
+  }
+
+  var sortPriority: Int {
+    switch self {
+    case .event(let event):
+      return event.isAllDay ? 0 : 1
+    case .shift:
+      return 1
+    case .todayPlaceholder:
+      return 2
     }
   }
 }
@@ -60,14 +93,17 @@ struct ShiftsView: View {
 
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State private var selectedShift: ShiftWithComputations?
+  @State private var selectedEvent: EventSheetSelection?
   @State private var showDeleteConfirmation = false
   @State private var shiftToDelete: ShiftWithComputations?
+  @State private var showEventDeleteConfirmation = false
+  @State private var eventToDelete: EventRow?
 
   // Edit mode state (when opening from swipe action)
   @State private var shiftToEditDirectly: ShiftWithComputations?
 
   // State for day shifts sheet (when tapping a calendar day)
-  @State private var selectedDayForSheet: DayShiftSelection?
+  @State private var selectedDayForSheet: DayItemSelection?
 
   // Recurring shift editor state
   @State private var recurringShiftToEdit: RecurringShiftRow?
@@ -249,6 +285,9 @@ struct ShiftsView: View {
         .onChange(of: viewModel.shifts) { _, _ in
           recomputeListDerivedDataIfNeeded()
         }
+        .onChange(of: viewModel.events) { _, _ in
+          recomputeListDerivedDataIfNeeded()
+        }
         .onChange(of: viewModel.excludedFromTotalIds) { _, _ in
           recomputeListDerivedDataIfNeeded()
         }
@@ -338,6 +377,27 @@ struct ShiftsView: View {
           .presentationDetents([.medium, .large])
           .presentationDragIndicator(.visible)
         }
+        .sheet(item: $selectedEvent) { selection in
+          EventDetailsSheet(
+            event: selection.event,
+            onDelete: {
+              selectedEvent = nil
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                eventToDelete = selection.event
+                showEventDeleteConfirmation = true
+              }
+            },
+            onUpdate: { editResult in
+              selectedEvent = nil
+              Task {
+                await viewModel.updateEvent(editResult)
+              }
+            },
+            startInEditMode: selection.startInEditMode
+          )
+          .presentationDetents([.medium, .large])
+          .presentationDragIndicator(.visible)
+        }
         // Delete confirmation alert
         .alert(
           shiftToDelete?.isVirtual == true
@@ -364,6 +424,22 @@ struct ShiftsView: View {
             shift.isVirtual
               ? String(localized: .shiftsExcludeConfirmMessage)
               : String(localized: .shiftsDeleteConfirmMessage))
+        }
+        .alert(
+          String(localized: .eventsDeleteConfirmTitle),
+          isPresented: $showEventDeleteConfirmation,
+          presenting: eventToDelete
+        ) { event in
+          Button(String(localized: .commonCancel), role: .cancel) {
+            eventToDelete = nil
+          }
+          Button(String(localized: .eventsDeleteButton), role: .destructive) {
+            Task {
+              await deleteEvent(event)
+            }
+          }
+        } message: { _ in
+          Text(.eventsDeleteConfirmMessage)
         }
         .alert(
           String(localized: .commonError),
@@ -457,17 +533,22 @@ struct ShiftsView: View {
       bodyWithStateObservers
         // Day shifts sheet (when tapping a calendar day)
         .sheet(item: $selectedDayForSheet) { daySelection in
-          DayShiftsSheet(
+          MixedDaySheet(
             dateISO: daySelection.dateISO,
-            shifts: daySelection.shifts,
+            items: daySelection.items,
+            excludedFromTotalIds: viewModel.excludedFromTotalIds,
             onShiftTapped: { shift in
               selectedDayForSheet = nil
-              // Small delay before showing details to allow sheet dismiss animation
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 selectedShift = shift
               }
             },
-            excludedFromTotalIds: viewModel.excludedFromTotalIds
+            onEventTapped: { event in
+              selectedDayForSheet = nil
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
+              }
+            }
           )
           .presentationDetents([.medium])
           .presentationDragIndicator(.visible)
@@ -777,7 +858,10 @@ struct ShiftsView: View {
         selectedShift = shift
       } else {
         // Multiple shifts - open day sheet
-        selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+        selectedDayForSheet = DayItemSelection(
+          dateISO: dateISO,
+          items: shiftsOnDate.map { DayPresentationItem.shift($0) }
+        )
       }
     }
   }
@@ -813,6 +897,19 @@ struct ShiftsView: View {
     }
   }
 
+  private func deleteEvent(_ event: EventRow) async {
+    impactHaptic.impactOccurred()
+
+    do {
+      try await viewModel.deleteEvent(id: event.id)
+      eventToDelete = nil
+    } catch {
+      logger.error("Failed to delete event: \(error.localizedDescription)")
+      operationErrorMessage = ErrorTranslations.translate(error)
+      eventToDelete = nil
+    }
+  }
+
   // MARK: - Tap Handlers
 
   /// Handle shift card tap - simply set the item to present
@@ -821,14 +918,28 @@ struct ShiftsView: View {
     selectedShift = shift
   }
 
+  private func handleEventTapped(_ event: EventRow, startInEditMode: Bool = false) {
+    selectedEvent = EventSheetSelection(event: event, startInEditMode: startInEditMode)
+  }
+
   /// Handle calendar day tap with single-shift auto-navigation
   private func handleDayTapped(dateISO: String, shifts: [ShiftWithComputations]) {
-    if shifts.count == 1, let singleShift = shifts.first {
-      // Single shift: go directly to shift details
-      selectedShift = singleShift
-    } else {
-      // Multiple shifts: show day sheet
-      selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shifts)
+    let items = viewModel.mixedItems(for: dateISO)
+
+    if items.count == 1, let singleItem = items.first {
+      switch singleItem {
+      case .shift(let shift):
+        selectedShift = shift
+      case .event(let event):
+        handleEventTapped(event.event)
+      }
+    } else if !items.isEmpty {
+      selectedDayForSheet = DayItemSelection(dateISO: dateISO, items: items)
+    } else if !shifts.isEmpty {
+      selectedDayForSheet = DayItemSelection(
+        dateISO: dateISO,
+        items: shifts.map { DayPresentationItem.shift($0) }
+      )
     }
   }
 
@@ -931,6 +1042,7 @@ struct ShiftsView: View {
             Spacer()
             ShiftsCalendarView(
               shifts: viewModel.shifts,
+              eventCoverageByDate: viewModel.eventCoverageByDate,
               month: displayedMonthDate,
               year: viewModel.committedYear,
               monthNumber: viewModel.committedMonth,
@@ -939,7 +1051,11 @@ struct ShiftsView: View {
               jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
-                viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                if viewModel.isSelectionModeEnabled {
+                  viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                } else {
+                  handleDayTapped(dateISO: dateISO, shifts: shiftsOnDay)
+                }
               },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,
@@ -966,7 +1082,10 @@ struct ShiftsView: View {
                 if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
                   selectedShift = shift
                 } else if let dateISO = viewModel.selectedDates.first {
-                  selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                  selectedDayForSheet = DayItemSelection(
+                    dateISO: dateISO,
+                    items: shiftsOnDate.map { DayPresentationItem.shift($0) }
+                  )
                 }
               },
               onEdit: {
@@ -1049,7 +1168,7 @@ struct ShiftsView: View {
   /// Shifts list panel for iPad landscape (right side)
   @ViewBuilder
   private var shiftsPanelForIPad: some View {
-    if filteredListShifts.isEmpty && !viewModel.isCurrentMonth {
+    if shiftListItems.isEmpty && !viewModel.isCurrentMonth {
       // Empty state for past/future months
       ScrollView {
         ShiftsEmptyState(
@@ -1142,6 +1261,7 @@ struct ShiftsView: View {
             Spacer()
             ShiftsCalendarView(
               shifts: viewModel.shifts,
+              eventCoverageByDate: viewModel.eventCoverageByDate,
               month: displayedMonthDate,
               year: viewModel.committedYear,
               monthNumber: viewModel.committedMonth,
@@ -1150,7 +1270,11 @@ struct ShiftsView: View {
               jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
-                viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                if viewModel.isSelectionModeEnabled {
+                  viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                } else {
+                  handleDayTapped(dateISO: dateISO, shifts: shiftsOnDay)
+                }
               },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,
@@ -1178,7 +1302,10 @@ struct ShiftsView: View {
                 if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
                   selectedShift = shift
                 } else if let dateISO = viewModel.selectedDates.first {
-                  selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                  selectedDayForSheet = DayItemSelection(
+                    dateISO: dateISO,
+                    items: shiftsOnDate.map { DayPresentationItem.shift($0) }
+                  )
                 }
               },
               onEdit: {
@@ -1271,7 +1398,7 @@ struct ShiftsView: View {
   private var listViewContent: some View {
     // Show empty state only when there are no shifts AND it's not current month
     // (current month with no shifts shows just the today placeholder card in the list)
-    if filteredListShifts.isEmpty && !viewModel.isCurrentMonth {
+    if shiftListItems.isEmpty && !viewModel.isCurrentMonth {
       // Empty state for past/future months with no shifts
       ScrollView {
         ShiftsEmptyState(
@@ -1355,6 +1482,11 @@ struct ShiftsView: View {
     filteredListShiftsCache = filtered
 
     var items: [ShiftListItem] = filtered.map { .shift($0) }
+    items.append(
+      contentsOf: viewModel.events.map {
+        .event(EventPresentation(event: $0, coveredDateISO: $0.start_date))
+      }
+    )
     if viewModel.isCurrentMonth {
       let today = todayISO()
       let hasShiftToday = filtered.contains { $0.shiftDate == today }
@@ -1362,7 +1494,18 @@ struct ShiftsView: View {
         items.append(.todayPlaceholder)
       }
     }
-    items.sort { $0.sortDate < $1.sortDate }
+    items.sort { lhs, rhs in
+      if lhs.sortDate != rhs.sortDate {
+        return lhs.sortDate < rhs.sortDate
+      }
+      if lhs.sortPriority != rhs.sortPriority {
+        return lhs.sortPriority < rhs.sortPriority
+      }
+      if lhs.startSortKey != rhs.startSortKey {
+        return lhs.startSortKey < rhs.startSortKey
+      }
+      return lhs.id < rhs.id
+    }
     shiftListItemsCache = items
 
     var calendar = Calendar(identifier: .iso8601)
@@ -1506,6 +1649,38 @@ struct ShiftsView: View {
           }
           .tint(.red)
         }
+
+    case .event(let event):
+      EventRowCard(
+        event: event.event,
+        coveredDateISO: event.coveredDateISO,
+        onTap: {
+          selectionHaptic.selectionChanged()
+          handleEventTapped(event.event)
+        }
+      )
+      .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+      .listRowBackground(Color.clear)
+      .listRowSeparator(.hidden)
+      .swipeActions(edge: .leading, allowsFullSwipe: true) {
+        Button {
+          selectionHaptic.selectionChanged()
+          handleEventTapped(event.event, startInEditMode: true)
+        } label: {
+          Label(String(localized: .shiftsActionsEdit), systemImage: "pencil")
+        }
+        .tint(.tidexBlue)
+      }
+      .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+        Button(role: .destructive) {
+          impactHaptic.impactOccurred()
+          eventToDelete = event.event
+          showEventDeleteConfirmation = true
+        } label: {
+          Label(String(localized: .eventsDeleteButton), systemImage: "trash")
+        }
+        .tint(.red)
+      }
 
     case .todayPlaceholder:
       TodayPlaceholderCard(onTap: {

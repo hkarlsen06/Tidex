@@ -27,6 +27,21 @@ struct ShiftDraft: Codable {
   /// End condition for recurring mode
   var endCondition: EndCondition?
 
+  /// Event note text.
+  var eventNote: String
+
+  /// Event all-day toggle.
+  var isEventAllDay: Bool
+
+  /// Timed event single date (ISO format YYYY-MM-DD).
+  var eventDate: String?
+
+  /// All-day event start date (ISO format YYYY-MM-DD).
+  var eventStartDate: String?
+
+  /// All-day event end date (ISO format YYYY-MM-DD).
+  var eventEndDate: String?
+
   /// When the draft was last modified
   var lastModified: Date
 
@@ -48,6 +63,14 @@ struct ShiftDraft: Codable {
       return !selectedDates.isEmpty || startTime != nil || endTime != nil || jobId != nil
     case .recurring:
       return !selectedDays.isEmpty || startTime != nil || endTime != nil || jobId != nil
+    case .events:
+      let defaultEventDate = Date().toISODateString()
+      return !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        || eventDate != defaultEventDate
+        || eventStartDate != defaultEventDate
+        || eventEndDate != defaultEventDate
+        || isEventAllDay
+        || startTime != nil || endTime != nil
     }
   }
 }

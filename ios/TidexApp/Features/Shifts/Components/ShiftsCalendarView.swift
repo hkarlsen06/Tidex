@@ -20,6 +20,7 @@ struct ShiftsCalendarView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   let shifts: [ShiftWithComputations]
+  let eventCoverageByDate: [String: [EventPresentation]]
   let month: Date
   let year: Int
   let monthNumber: Int  // 1-12
@@ -125,6 +126,7 @@ struct ShiftsCalendarView: View {
 
   init(
     shifts: [ShiftWithComputations],
+    eventCoverageByDate: [String: [EventPresentation]] = [:],
     month: Date,
     year: Int,
     monthNumber: Int,
@@ -164,6 +166,7 @@ struct ShiftsCalendarView: View {
     excludedFromTotalIds: Set<String> = []
   ) {
     self.shifts = shifts
+    self.eventCoverageByDate = eventCoverageByDate
     self.month = month
     self.year = year
     self.monthNumber = monthNumber
@@ -469,6 +472,7 @@ struct ShiftsCalendarView: View {
 
     CalendarMonthGrid(days: days) { dayInfo in
       let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
+      let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
       let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
       let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
       let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
@@ -485,6 +489,7 @@ struct ShiftsCalendarView: View {
         && !isDeepLinkHighlighted
         && !shiftsOnDay.isEmpty
         && dayJobTimeColors != nil
+      let showEventIndicator = !eventsOnDay.isEmpty && !shiftsOnDay.isEmpty
 
       CalendarDayCell(
         dayInfo: dayInfo,
@@ -498,9 +503,11 @@ struct ShiftsCalendarView: View {
         ),
         content: cellContent(
           for: dayInfo,
+          hasEvents: !eventsOnDay.isEmpty,
           dayJobTimeColors: dayJobTimeColors,
           shouldColorJobMetrics: shouldColorJobMetrics
-        )
+        ),
+        showEventIndicator: showEventIndicator
       )
     }
     .coordinateSpace(name: "calendar")
@@ -603,6 +610,7 @@ struct ShiftsCalendarView: View {
 
   private func cellContent(
     for dayInfo: CalendarDayInfo,
+    hasEvents: Bool,
     dayJobTimeColors: DayJobTimeColors?,
     shouldColorJobMetrics: Bool
   ) -> CalendarCellContent {
@@ -628,6 +636,10 @@ struct ShiftsCalendarView: View {
         )
       }
       return .hours(hoursData)
+    }
+
+    if hasEvents {
+      return .dot(color: .tidexBlue)
     }
 
     return .empty
@@ -668,8 +680,15 @@ struct ShiftsCalendarView: View {
     }
 
     let shiftsOnDay = shiftsByDate[dayISO] ?? []
+    let eventsOnDay = eventCoverageByDate[dayISO] ?? []
 
-    if shiftsOnDay.isEmpty {
+    if isSelectionModeEnabled {
+      guard !shiftsOnDay.isEmpty else { return }
+      onDayTapped?(dayISO, shiftsOnDay)
+      return
+    }
+
+    if shiftsOnDay.isEmpty && eventsOnDay.isEmpty {
       onEmptyDayTapped?(dayISO)
     } else {
       onDayTapped?(dayISO, shiftsOnDay)

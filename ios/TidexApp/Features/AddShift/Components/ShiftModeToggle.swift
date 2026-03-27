@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Toggle between single and recurring shift modes
+/// Toggle between Add tab modes.
 /// Toolbar toggle with independent glass buttons
 struct ShiftModeToggle: View {
   enum Style {
@@ -82,6 +82,8 @@ struct ShiftModeToggle: View {
       return "calendar.badge.plus"
     case .recurring:
       return "repeat"
+    case .events:
+      return "calendar"
     }
   }
 
@@ -91,6 +93,8 @@ struct ShiftModeToggle: View {
       return String(localized: .addShiftModeSingle)
     case .recurring:
       return String(localized: .addShiftModeRecurring)
+    case .events:
+      return String(localized: .addShiftModeEvents)
     }
   }
 
@@ -113,6 +117,7 @@ struct ShiftModeToggle: View {
   VStack(spacing: Spacing.mlg) {
     ShiftModeToggle(mode: .constant(.single))
     ShiftModeToggle(mode: .constant(.recurring))
+    ShiftModeToggle(mode: .constant(.events))
   }
   .padding()
   .background(Color.tidexBackground)

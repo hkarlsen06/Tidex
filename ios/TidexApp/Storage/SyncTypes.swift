@@ -26,6 +26,16 @@ enum UserShiftField: String, Codable, CaseIterable {
   case customSupplements = "custom_supplements"
 }
 
+/// Field keys for tracking dirty fields on LocalEvent
+enum EventField: String, Codable, CaseIterable {
+  case startDate = "start_date"
+  case endDate = "end_date"
+  case isAllDay = "is_all_day"
+  case startTime = "start_time"
+  case endTime = "end_time"
+  case note = "note"
+}
+
 /// Field keys for tracking dirty fields on LocalRecurringShift
 enum RecurringShiftField: String, Codable, CaseIterable {
   case jobId = "job_id"

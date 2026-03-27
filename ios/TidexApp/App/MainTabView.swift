@@ -561,6 +561,12 @@ struct MainTabView: View {
       return .addShiftSubmitRequirementsSelectRecurringDay
     case .missingTimes:
       return .addShiftSubmitRequirementsSetTimes
+    case .noEventDate:
+      return .addShiftSubmitRequirementsSelectEventDate
+    case .invalidEventDateRange:
+      return .addShiftSubmitRequirementsValidEventRange
+    case .missingEventNote:
+      return .addShiftSubmitRequirementsEventNote
     }
   }
 
