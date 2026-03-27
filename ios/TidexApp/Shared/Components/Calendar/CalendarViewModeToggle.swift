@@ -7,7 +7,6 @@ import UIKit
 /// Uses glass effect for selected state
 struct CalendarViewModeToggle: View {
   private let controlHeight: CGFloat = 44
-  private let controlCornerRadius: CGFloat = CornerRadius.xl
   private let controlInset: CGFloat = Spacing.xxs
   @Binding var viewMode: CalendarViewMode
   let currency: String
@@ -29,22 +28,21 @@ struct CalendarViewModeToggle: View {
 
   var body: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: controlCornerRadius, style: .continuous)
+      Capsule()
         .fill(.clear)
-        .glassEffect(.clear, in: .rect(cornerRadius: controlCornerRadius))
+        .glassEffect(.clear, in: .capsule)
 
       GeometryReader { geometry in
         let innerWidth = max(0, geometry.size.width - (controlInset * 2))
         let segmentCount: CGFloat = showMoneyOption ? 2 : 1
         let segmentWidth = innerWidth / segmentCount
         let selectedIndex: CGFloat = viewMode == .money && showMoneyOption ? 1 : 0
-        let selectedCornerRadius = CornerRadius.md
 
-        RoundedRectangle(cornerRadius: selectedCornerRadius, style: .continuous)
+        Capsule()
           .fill(.clear)
           .glassEffect(
             .regular.interactive(),
-            in: .rect(cornerRadius: selectedCornerRadius)
+            in: .capsule
           )
           .frame(width: segmentWidth, height: controlHeight)
           .offset(x: controlInset + (selectedIndex * segmentWidth), y: controlInset)
