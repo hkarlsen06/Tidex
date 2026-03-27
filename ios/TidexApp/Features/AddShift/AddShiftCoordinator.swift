@@ -6,6 +6,9 @@ enum AddShiftSubmitBlocker: Hashable {
   case noSingleDates
   case noRecurringDays
   case missingTimes
+  case noEventDate
+  case invalidEventDateRange
+  case missingEventNote
 }
 
 /// Coordinates state between AddShiftView/ViewModel and the tab bar
@@ -62,37 +65,7 @@ final class AddShiftCoordinator: ObservableObject {
   }
 
   /// Update blockers that explain why submit is unavailable.
-  func updateSubmitBlockers(
-    mode: AddShiftMode,
-    hasSelectedDates: Bool,
-    hasSelectedDays: Bool,
-    hasValidTimes: Bool,
-    hasAvailableJobs: Bool,
-    hasSelectedJob: Bool
-  ) {
-    var blockers: [AddShiftSubmitBlocker] = []
-
-    if !hasAvailableJobs {
-      blockers.append(.noAvailableJob)
-    } else if !hasSelectedJob {
-      blockers.append(.noSelectedJob)
-    }
-
-    switch mode {
-    case .single:
-      if !hasSelectedDates {
-        blockers.append(.noSingleDates)
-      }
-    case .recurring:
-      if !hasSelectedDays {
-        blockers.append(.noRecurringDays)
-      }
-    }
-
-    if !hasValidTimes {
-      blockers.append(.missingTimes)
-    }
-
+  func updateSubmitBlockers(_ blockers: [AddShiftSubmitBlocker]) {
     submitBlockers = blockers
   }
 

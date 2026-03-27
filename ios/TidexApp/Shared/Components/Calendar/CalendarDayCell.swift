@@ -98,6 +98,8 @@ struct CalendarDayCell<Content: View>: View {
   var showSingleUserIndicator: Bool = false
   /// Tint color for the single-person indicator (e.g., green for you, red for friend)
   var singleUserIndicatorColor: Color = .tidexSuccess
+  /// Shows a small event-presence indicator in the cell.
+  var showEventIndicator: Bool = false
 
   /// Optional custom content view (used when content == .custom)
   let customContent: (() -> Content)?
@@ -109,6 +111,7 @@ struct CalendarDayCell<Content: View>: View {
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
     singleUserIndicatorColor: Color = .tidexSuccess,
+    showEventIndicator: Bool = false,
     @ViewBuilder customContent: @escaping () -> Content
   ) {
     self.dayInfo = dayInfo
@@ -117,6 +120,7 @@ struct CalendarDayCell<Content: View>: View {
     self.showOverlapIndicator = showOverlapIndicator
     self.showSingleUserIndicator = showSingleUserIndicator
     self.singleUserIndicatorColor = singleUserIndicatorColor
+    self.showEventIndicator = showEventIndicator
     self.customContent = customContent
   }
 
@@ -153,6 +157,15 @@ struct CalendarDayCell<Content: View>: View {
     .overlay(alignment: .topTrailing) {
       if style.showsTodayBadge {
         todayBadgeView
+      }
+    }
+    .overlay(alignment: .bottomTrailing) {
+      if showEventIndicator {
+        Circle()
+          .fill(Color.tidexBlue)
+          .frame(width: 7, height: 7)
+          .padding(.trailing, Spacing.xxs)
+          .padding(.bottom, Spacing.xxs)
       }
     }
     .tidexCardShadow(cornerRadius: CornerRadius.sm)
@@ -399,7 +412,8 @@ extension CalendarDayCell where Content == EmptyView {
     content: CalendarCellContent,
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
-    singleUserIndicatorColor: Color = .tidexSuccess
+    singleUserIndicatorColor: Color = .tidexSuccess,
+    showEventIndicator: Bool = false
   ) {
     self.dayInfo = dayInfo
     self.style = style
@@ -407,6 +421,7 @@ extension CalendarDayCell where Content == EmptyView {
     self.showOverlapIndicator = showOverlapIndicator
     self.showSingleUserIndicator = showSingleUserIndicator
     self.singleUserIndicatorColor = singleUserIndicatorColor
+    self.showEventIndicator = showEventIndicator
     self.customContent = nil
   }
 }

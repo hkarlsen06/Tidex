@@ -31,6 +31,8 @@ struct AddShiftView: View {
       return String(localized: .addShiftSingleTitle)
     case .recurring:
       return String(localized: .addShiftRecurringTitle)
+    case .events:
+      return String(localized: .addShiftEventsTitle)
     }
   }
 
@@ -128,6 +130,29 @@ struct AddShiftView: View {
                 .onTapGesture {
                   hideKeyboard()
                 }
+              case .events:
+                ScrollView {
+                  VStack(spacing: Spacing.lg) {
+                    EventContent(viewModel: viewModel, focusedTimeField: $focusedTimeField)
+                  }
+                  .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+                  .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+                  .padding(.top, Spacing.md)
+                  .frame(maxWidth: .infinity)
+                  .frame(minHeight: availableHeight, alignment: .top)
+                  .offset(y: tabTransitionOffset)
+                  .opacity(tabTransitionOpacity)
+                }
+                .refreshable {
+                  await refreshAddContent()
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .contentMargins(
+                  .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
+                )
+                .onTapGesture {
+                  hideKeyboard()
+                }
               }
             }
           }
@@ -147,6 +172,8 @@ struct AddShiftView: View {
                       await viewModel.submitSingleShifts()
                     case .recurring:
                       await viewModel.submitRecurringShift()
+                    case .events:
+                      await viewModel.submitEvent()
                     }
                   }
                 },
@@ -237,6 +264,8 @@ struct AddShiftView: View {
           showAddConfettiCelebration()
           showSingleSaveSuccessBanner()
         case .recurring:
+          selectedTab = .shifts
+        case .event:
           selectedTab = .shifts
         }
       }
@@ -530,6 +559,108 @@ private struct RecurringShiftContent: View {
     }
     // Extra bottom padding to clear the month picker
     .padding(.bottom, Spacing.bottomScrollMargin)
+  }
+}
+
+// MARK: - Event Content
+
+private struct EventContent: View {
+  @ObservedObject var viewModel: AddShiftViewModel
+  @Binding var focusedTimeField: TimeInputField?
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.md) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Text(.addShiftEventNoteTitle)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+
+        TextEditor(text: $viewModel.eventNote)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .scrollContentBackground(.hidden)
+          .frame(minHeight: 120)
+          .padding(.horizontal, Spacing.sm)
+          .padding(.vertical, Spacing.xs)
+          .background(
+            RoundedRectangle(cornerRadius: CornerRadius.card)
+              .fill(Color.tidexSurfacePrimary)
+          )
+      }
+
+      Toggle(isOn: $viewModel.isEventAllDay) {
+        Text(.addShiftEventAllDay)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+      }
+      .toggleStyle(.switch)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.sm)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.card)
+          .fill(Color.tidexSurfacePrimary)
+      )
+
+      if viewModel.isEventAllDay {
+        VStack(spacing: Spacing.sm) {
+          dateCard(
+            title: String(localized: .addShiftEventStartDate),
+            selection: $viewModel.eventStartDate,
+            displayedComponents: [.date]
+          )
+          dateCard(
+            title: String(localized: .addShiftEventEndDate),
+            selection: $viewModel.eventEndDate,
+            displayedComponents: [.date]
+          )
+        }
+      } else {
+        VStack(spacing: Spacing.sm) {
+          dateCard(
+            title: String(localized: .addShiftEventDate),
+            selection: $viewModel.eventDate,
+            displayedComponents: [.date]
+          )
+          TimeRangePicker(
+            startTime: $viewModel.startTime,
+            endTime: $viewModel.endTime,
+            scrollProxy: nil,
+            scrollId: "eventTimePicker",
+            focusedFieldBinding: $focusedTimeField,
+            leadingChipAccessory: nil
+          )
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func dateCard(
+    title: String,
+    selection: Binding<Date>,
+    displayedComponents: DatePickerComponents
+  ) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(title)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      DatePicker(
+        "",
+        selection: selection,
+        displayedComponents: displayedComponents
+      )
+      .labelsHidden()
+      .datePickerStyle(.graphical)
+      .padding(.horizontal, Spacing.xs)
+      .padding(.bottom, Spacing.xs)
+    }
+    .padding(.top, Spacing.sm)
+    .padding(.horizontal, Spacing.sm)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.card)
+        .fill(Color.tidexSurfacePrimary)
+    )
   }
 }
 

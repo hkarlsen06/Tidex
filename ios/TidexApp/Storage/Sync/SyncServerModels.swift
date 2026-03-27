@@ -32,6 +32,36 @@ struct SyncShiftRow: Codable {
   }
 }
 
+/// Extended event row with sync metadata fields.
+struct SyncEventRow: Codable {
+  let id: String
+  let user_id: String
+  let start_date: String
+  let end_date: String
+  let is_all_day: Bool
+  let start_time: String?
+  let end_time: String?
+  let note: String
+  let created_at: String?
+  let updated_at: String
+  let revision: Int64
+  let deleted_at: String?
+
+  func toEventRow() -> EventRow {
+    EventRow(
+      id: id,
+      user_id: user_id,
+      start_date: start_date,
+      end_date: end_date,
+      is_all_day: is_all_day,
+      start_time: start_time,
+      end_time: end_time,
+      note: note,
+      created_at: created_at
+    )
+  }
+}
+
 /// Extended recurring shift row with sync metadata fields
 struct SyncRecurringShiftRow: Codable {
   let id: String

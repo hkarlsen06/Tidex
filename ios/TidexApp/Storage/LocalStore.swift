@@ -62,6 +62,7 @@ final class LocalStore {
     let schema = Schema([
       LocalJob.self,
       LocalUserShift.self,
+      LocalEvent.self,
       LocalRecurringShift.self,
       LocalWageSnapshot.self,
       LocalUserSettings.self,
@@ -166,6 +167,7 @@ actor LocalStoreActor {
   func resetAllData() {
     do {
       try modelContext.delete(model: LocalUserShift.self)
+      try modelContext.delete(model: LocalEvent.self)
       try modelContext.delete(model: LocalJob.self)
       try modelContext.delete(model: LocalRecurringShift.self)
       try modelContext.delete(model: LocalWageSnapshot.self)
@@ -265,6 +267,29 @@ actor LocalStoreActor {
       return localShifts.map { $0.toShiftRow() }
     } catch {
       logger.error("Failed to fetch shifts: \(error.localizedDescription)")
+      return []
+    }
+  }
+
+  func fetchEvents(userId: String, startDate: Date, endDate: Date) -> [EventRow] {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { event in
+        event.userId == userId && event.serverDeletedAt == nil
+          && event.syncStatusRaw != "pendingDelete"
+          && event.endDate >= startDate
+          && event.startDate <= endDate
+      },
+      sortBy: [
+        SortDescriptor(\LocalEvent.startDate, order: .forward),
+        SortDescriptor(\LocalEvent.endDate, order: .forward),
+      ]
+    )
+
+    do {
+      let localEvents = try modelContext.fetch(descriptor)
+      return localEvents.map { $0.toEventRow() }
+    } catch {
+      logger.error("Failed to fetch events: \(error.localizedDescription)")
       return []
     }
   }
@@ -1023,6 +1048,268 @@ actor LocalStoreActor {
     localShift.lastSyncedSnapshot = conflictData
     localShift.conflictServerSnapshot = nil
     localShift.localUpdatedAt = Date()
+
+    try modelContext.save()
+  }
+
+  // MARK: - Event Operations
+
+  func upsertEvent(_ event: LocalEvent) throws {
+    let eventId = event.id
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == eventId }
+    )
+
+    if let existing = try modelContext.fetch(descriptor).first {
+      existing.startDate = event.startDate
+      existing.endDate = event.endDate
+      existing.isAllDay = event.isAllDay
+      existing.startTime = event.startTime
+      existing.endTime = event.endTime
+      existing.note = event.note
+      existing.serverUpdatedAt = event.serverUpdatedAt
+      existing.serverRevision = event.serverRevision
+      existing.serverDeletedAt = event.serverDeletedAt
+      existing.syncStatusRaw = event.syncStatusRaw
+      existing.dirtyFields = event.dirtyFields
+      existing.lastSyncedSnapshot = event.lastSyncedSnapshot
+      existing.localUpdatedAt = event.localUpdatedAt
+      existing.conflictServerSnapshot = event.conflictServerSnapshot
+    } else {
+      modelContext.insert(event)
+    }
+  }
+
+  func getEvent(id: String) throws -> LocalEvent? {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+    return try modelContext.fetch(descriptor).first
+  }
+
+  func getAllEvents(userId: String) throws -> [LocalEvent] {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.userId == userId }
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
+  func getDirtyEvents(userId: String) throws -> [LocalEvent] {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { event in
+        event.userId == userId
+          && (event.syncStatusRaw == "dirty" || event.syncStatusRaw == "pendingDelete"
+            || (event.syncStatusRaw == "conflict" && event.serverRevision == 0))
+      }
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
+  func createEvent(
+    id: String? = nil,
+    userId: String,
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool,
+    startTime: String?,
+    endTime: String?,
+    note: String
+  ) throws -> EventRow {
+    let resolvedId = id ?? UUID().lowercasedString
+
+    if let existing = try getEvent(id: resolvedId), existing.userId == userId {
+      return existing.toEventRow()
+    }
+
+    let now = Date()
+    let dateFormatter = isoDateFormatter
+    let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let snapshot = EventServerSnapshot(
+      startDate: dateFormatter.string(from: startDate),
+      endDate: dateFormatter.string(from: endDate),
+      isAllDay: isAllDay,
+      startTime: startTime,
+      endTime: endTime,
+      note: trimmedNote,
+      updatedAt: now,
+      revision: 0,
+      deletedAt: nil
+    )
+
+    let allFields = EventField.allCases.map(\.rawValue)
+    let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+
+    let localEvent = LocalEvent(
+      id: resolvedId,
+      userId: userId,
+      startDate: startDate,
+      endDate: endDate,
+      isAllDay: isAllDay,
+      startTime: startTime,
+      endTime: endTime,
+      note: trimmedNote,
+      serverUpdatedAt: now,
+      serverRevision: 0,
+      serverDeletedAt: nil,
+      syncStatus: .dirty,
+      dirtyFields: dirtyFieldsData,
+      lastSyncedSnapshot: snapshot.encoded(),
+      localUpdatedAt: now,
+      conflictServerSnapshot: nil
+    )
+
+    modelContext.insert(localEvent)
+    try modelContext.save()
+    return localEvent.toEventRow()
+  }
+
+  func updateEvent(
+    id: String,
+    startDate: Date?,
+    endDate: Date?,
+    isAllDay: Bool?,
+    startTime: String?,
+    endTime: String?,
+    note: String?
+  ) throws -> EventRow {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localEvent = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    var newDirtyFields = localEvent.dirtyFieldKeys
+    let now = Date()
+
+    if let startDate, startDate != localEvent.startDate {
+      localEvent.startDate = startDate
+      newDirtyFields.insert(.startDate)
+    }
+
+    if let endDate, endDate != localEvent.endDate {
+      localEvent.endDate = endDate
+      newDirtyFields.insert(.endDate)
+    }
+
+    if let isAllDay, isAllDay != localEvent.isAllDay {
+      localEvent.isAllDay = isAllDay
+      newDirtyFields.insert(.isAllDay)
+    }
+
+    if startTime != localEvent.startTime {
+      localEvent.startTime = startTime
+      newDirtyFields.insert(.startTime)
+    }
+
+    if endTime != localEvent.endTime {
+      localEvent.endTime = endTime
+      newDirtyFields.insert(.endTime)
+    }
+
+    if let note {
+      let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmedNote != localEvent.note {
+        localEvent.note = trimmedNote
+        newDirtyFields.insert(.note)
+      }
+    }
+
+    localEvent.dirtyFieldKeys = newDirtyFields
+    localEvent.localUpdatedAt = now
+
+    if !newDirtyFields.isEmpty && localEvent.syncStatus == .clean {
+      localEvent.syncStatus = .dirty
+    }
+
+    try modelContext.save()
+    return localEvent.toEventRow()
+  }
+
+  func markEventPendingDelete(id: String) throws -> String {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localEvent = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    localEvent.syncStatus = .pendingDelete
+    localEvent.localUpdatedAt = Date()
+
+    try modelContext.save()
+    return localEvent.userId
+  }
+
+  func resolveStoredEventConflictKeepLocal(id: String) throws {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localEvent = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    guard localEvent.syncStatus == .conflict else {
+      throw LocalStoreWriteError.notInConflict
+    }
+
+    guard
+      let serverSnapshot = EventServerSnapshot.decode(
+        from: localEvent.conflictServerSnapshot ?? Data()
+      )
+    else {
+      throw LocalStoreWriteError.missingConflictSnapshot
+    }
+
+    localEvent.serverRevision = serverSnapshot.revision
+    localEvent.serverUpdatedAt = serverSnapshot.updatedAt
+    localEvent.syncStatus = .dirty
+    localEvent.conflictServerSnapshot = nil
+    localEvent.localUpdatedAt = Date()
+
+    try modelContext.save()
+  }
+
+  func resolveStoredEventConflictKeepServer(id: String) throws {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localEvent = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    guard localEvent.syncStatus == .conflict else {
+      throw LocalStoreWriteError.notInConflict
+    }
+
+    let conflictData = localEvent.conflictServerSnapshot ?? Data()
+    guard let serverSnapshot = EventServerSnapshot.decode(from: conflictData) else {
+      throw LocalStoreWriteError.missingConflictSnapshot
+    }
+
+    let dateFormatter = isoDateFormatter
+
+    localEvent.startDate =
+      dateFormatter.date(from: serverSnapshot.startDate) ?? localEvent.startDate
+    localEvent.endDate =
+      dateFormatter.date(from: serverSnapshot.endDate) ?? localEvent.endDate
+    localEvent.isAllDay = serverSnapshot.isAllDay
+    localEvent.startTime = serverSnapshot.startTime
+    localEvent.endTime = serverSnapshot.endTime
+    localEvent.note = serverSnapshot.note
+    localEvent.serverRevision = serverSnapshot.revision
+    localEvent.serverUpdatedAt = serverSnapshot.updatedAt
+    localEvent.serverDeletedAt = serverSnapshot.deletedAt
+    localEvent.syncStatus = .clean
+    localEvent.dirtyFieldKeys = []
+    localEvent.lastSyncedSnapshot = conflictData
+    localEvent.conflictServerSnapshot = nil
+    localEvent.localUpdatedAt = Date()
 
     try modelContext.save()
   }
@@ -2074,6 +2361,7 @@ actor LocalStoreActor {
   func getConflicts(userId: String) throws -> (
     jobs: [LocalJob],
     shifts: [LocalUserShift],
+    events: [LocalEvent],
     recurringShifts: [LocalRecurringShift],
     wageSnapshots: [LocalWageSnapshot],
     settings: LocalUserSettings?
@@ -2091,6 +2379,13 @@ actor LocalStoreActor {
       }
     )
     let shifts = try modelContext.fetch(shiftsDescriptor)
+
+    let eventsDescriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { event in
+        event.userId == userId && event.syncStatusRaw == "conflict"
+      }
+    )
+    let events = try modelContext.fetch(eventsDescriptor)
 
     let recurringDescriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { shift in
@@ -2113,14 +2408,14 @@ actor LocalStoreActor {
     )
     let settings = try modelContext.fetch(settingsDescriptor).first
 
-    return (jobs, shifts, recurringShifts, wageSnapshots, settings)
+    return (jobs, shifts, events, recurringShifts, wageSnapshots, settings)
   }
 
   /// Check if user has any conflicts
   func hasConflicts(userId: String) throws -> Bool {
     let conflicts = try getConflicts(userId: userId)
     return !conflicts.jobs.isEmpty || !conflicts.shifts.isEmpty
-      || !conflicts.recurringShifts.isEmpty
+      || !conflicts.events.isEmpty || !conflicts.recurringShifts.isEmpty
       || !conflicts.wageSnapshots.isEmpty || conflicts.settings != nil
   }
 
@@ -2128,11 +2423,13 @@ actor LocalStoreActor {
   func hasPendingChanges(userId: String) throws -> Bool {
     let dirtyJobs = try getDirtyJobs(userId: userId)
     let dirtyShifts = try getDirtyUserShifts(userId: userId)
+    let dirtyEvents = try getDirtyEvents(userId: userId)
     let dirtyRecurring = try getDirtyRecurringShifts(userId: userId)
     let dirtySnapshots = try getDirtyWageSnapshots(userId: userId)
     let dirtySettings = try getDirtyUserSettings(userId: userId)
 
-    return !dirtyJobs.isEmpty || !dirtyShifts.isEmpty || !dirtyRecurring.isEmpty
+    return !dirtyJobs.isEmpty || !dirtyShifts.isEmpty || !dirtyEvents.isEmpty
+      || !dirtyRecurring.isEmpty
       || !dirtySnapshots.isEmpty
       || dirtySettings != nil
   }
@@ -2140,7 +2437,8 @@ actor LocalStoreActor {
   /// Count total conflicts for a user
   func countConflicts(userId: String) throws -> Int {
     let conflicts = try getConflicts(userId: userId)
-    return conflicts.jobs.count + conflicts.shifts.count + conflicts.recurringShifts.count
+    return conflicts.jobs.count + conflicts.shifts.count + conflicts.events.count
+      + conflicts.recurringShifts.count
       + conflicts.wageSnapshots.count
       + (conflicts.settings != nil ? 1 : 0)
   }
@@ -2366,6 +2664,100 @@ actor LocalStoreActor {
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = newSnapshot.encoded()
     // Keep syncStatus = dirty (still needs push)
+  }
+
+  // MARK: - Sync Update Operations for Events
+
+  func updateEventFromServer(
+    id: String,
+    serverRow: SyncEventRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date?,
+    snapshot: EventServerSnapshot
+  ) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    let dateFormatter = isoDateFormatter
+
+    existing.startDate = dateFormatter.date(from: serverRow.start_date) ?? existing.startDate
+    existing.endDate = dateFormatter.date(from: serverRow.end_date) ?? existing.endDate
+    existing.isAllDay = serverRow.is_all_day
+    existing.startTime = serverRow.start_time
+    existing.endTime = serverRow.end_time
+    existing.note = serverRow.note
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.serverDeletedAt = serverDeletedAt
+    existing.lastSyncedSnapshot = snapshot.encoded()
+    existing.localUpdatedAt = Date()
+  }
+
+  func markEventConflict(id: String, serverSnapshot: EventServerSnapshot?) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.syncStatus = .conflict
+    existing.conflictServerSnapshot = serverSnapshot?.encoded()
+  }
+
+  func updateEventConflictSnapshot(id: String, serverSnapshot: EventServerSnapshot) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.conflictServerSnapshot = serverSnapshot.encoded()
+  }
+
+  func autoMergeEvent(
+    id: String,
+    serverRow: SyncEventRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date?,
+    newSnapshot: EventServerSnapshot,
+    localDirtyFields: Set<EventField>
+  ) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    let dateFormatter = isoDateFormatter
+
+    if !localDirtyFields.contains(.startDate) {
+      existing.startDate = dateFormatter.date(from: serverRow.start_date) ?? existing.startDate
+    }
+    if !localDirtyFields.contains(.endDate) {
+      existing.endDate = dateFormatter.date(from: serverRow.end_date) ?? existing.endDate
+    }
+    if !localDirtyFields.contains(.isAllDay) {
+      existing.isAllDay = serverRow.is_all_day
+    }
+    if !localDirtyFields.contains(.startTime) {
+      existing.startTime = serverRow.start_time
+    }
+    if !localDirtyFields.contains(.endTime) {
+      existing.endTime = serverRow.end_time
+    }
+    if !localDirtyFields.contains(.note) {
+      existing.note = serverRow.note
+    }
+
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.serverDeletedAt = serverDeletedAt
+    existing.lastSyncedSnapshot = newSnapshot.encoded()
   }
 
   // MARK: - Sync Update Operations for Recurring Shifts
@@ -2976,6 +3368,127 @@ actor LocalStoreActor {
     existing.syncStatus = .dirty
     existing.conflictServerSnapshot = nil
     // Keep dirtyFieldKeys - they contain the fields we want to push
+  }
+
+  // MARK: - Push Operations for Events
+
+  func markEventPushed(
+    id: String,
+    serverRow: SyncEventRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    snapshot: EventServerSnapshot
+  ) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    let dateFormatter = isoDateFormatter
+
+    existing.startDate = dateFormatter.date(from: serverRow.start_date) ?? existing.startDate
+    existing.endDate = dateFormatter.date(from: serverRow.end_date) ?? existing.endDate
+    existing.isAllDay = serverRow.is_all_day
+    existing.startTime = serverRow.start_time
+    existing.endTime = serverRow.end_time
+    existing.note = serverRow.note
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.lastSyncedSnapshot = snapshot.encoded()
+    existing.conflictServerSnapshot = nil
+    existing.localUpdatedAt = Date()
+  }
+
+  func markEventClean(id: String) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  func markEventDeleted(
+    id: String,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date?
+  ) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.serverDeletedAt = serverDeletedAt
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  func rebaseEvent(
+    id: String,
+    serverRow: SyncEventRow,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date?,
+    newSnapshot: EventServerSnapshot,
+    localDirtyFields: Set<EventField>
+  ) {
+    autoMergeEvent(
+      id: id,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      serverDeletedAt: serverDeletedAt,
+      newSnapshot: newSnapshot,
+      localDirtyFields: localDirtyFields
+    )
+  }
+
+  func resolveEventConflictKeepServer(id: String, serverSnapshot: EventServerSnapshot) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    let dateFormatter = isoDateFormatter
+
+    existing.startDate = dateFormatter.date(from: serverSnapshot.startDate) ?? existing.startDate
+    existing.endDate = dateFormatter.date(from: serverSnapshot.endDate) ?? existing.endDate
+    existing.isAllDay = serverSnapshot.isAllDay
+    existing.startTime = serverSnapshot.startTime
+    existing.endTime = serverSnapshot.endTime
+    existing.note = serverSnapshot.note
+    existing.serverUpdatedAt = serverSnapshot.updatedAt
+    existing.serverRevision = serverSnapshot.revision
+    existing.serverDeletedAt = serverSnapshot.deletedAt
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.lastSyncedSnapshot = serverSnapshot.encoded()
+    existing.conflictServerSnapshot = nil
+    existing.localUpdatedAt = Date()
+  }
+
+  func resolveEventConflictKeepLocal(id: String, serverRevision: Int64) {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+    existing.serverRevision = serverRevision
+    existing.syncStatus = .dirty
+    existing.conflictServerSnapshot = nil
   }
 
   // MARK: - Push Operations for Recurring Shifts

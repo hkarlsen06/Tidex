@@ -113,6 +113,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   // MARK: - Dependencies (Local-First Repositories)
 
   private let shiftsRepository: ShiftsRepository
+  private let eventsRepository: EventsRepository
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
@@ -124,6 +125,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   /// All shifts for the displayed month (computed with payroll)
   @Published private(set) var shifts: [ShiftWithComputations] = []
+  /// Private events overlapping the currently visible calendar range.
+  @Published private(set) var events: [EventRow] = []
   /// Shifts grouped by ISO week
   @Published private(set) var weekGroups: [WeekGroup] = []
   /// Whether data is currently loading
@@ -245,6 +248,12 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Whether a shift update is in progress
   @Published var isUpdatingShift: Bool = false
 
+  /// Whether an event update is in progress
+  private var isUpdatingEvent = false
+
+  /// Whether an event deletion is in progress
+  private var isDeletingEvent = false
+
   /// The shift being copied or moved (stored when entering copy/move mode)
   private var shiftForOperation: ShiftWithComputations?
 
@@ -282,9 +291,67 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     Dictionary(uniqueKeysWithValues: activeJobs.map { ($0.id, $0) })
   }
 
+  private var lastLoadedVisibleRange: (start: Date, end: Date)?
+
   func jobForShift(_ shift: ShiftWithComputations) -> Job? {
     guard let jobId = shift.shift.job_id else { return nil }
     return activeJobsById[jobId]
+  }
+
+  private func visibleRangeContains(_ dateISO: String) -> Bool {
+    guard
+      let range = lastLoadedVisibleRange,
+      let date = Date.fromISODateString(dateISO)
+    else {
+      return false
+    }
+
+    return date >= range.start && date <= range.end
+  }
+
+  var eventCoverageByDate: [String: [EventPresentation]] {
+    var result: [String: [EventPresentation]] = [:]
+    for event in events {
+      if event.is_all_day {
+        let daySpan = max(Date.daysBetween(event.start_date, event.end_date), 0)
+        for offset in 0...daySpan {
+          guard
+            let startDate = Date.fromISODateString(event.start_date),
+            let coveredDate = Calendar.current.date(byAdding: .day, value: offset, to: startDate)
+          else {
+            continue
+          }
+          let coveredDateISO = coveredDate.toISODateString()
+          guard visibleRangeContains(coveredDateISO) else { continue }
+          result[coveredDateISO, default: []].append(
+            EventPresentation(event: event, coveredDateISO: coveredDateISO)
+          )
+        }
+      } else if visibleRangeContains(event.start_date) {
+        result[event.start_date, default: []].append(
+          EventPresentation(event: event, coveredDateISO: event.start_date)
+        )
+      }
+    }
+    return result
+  }
+
+  func mixedItems(for dateISO: String) -> [DayPresentationItem] {
+    let shiftItems =
+      shifts
+      .filter { $0.shiftDate == dateISO }
+      .map { DayPresentationItem.shift($0) }
+    let eventItems = (eventCoverageByDate[dateISO] ?? []).map { DayPresentationItem.event($0) }
+
+    return (shiftItems + eventItems).sorted { lhs, rhs in
+      if lhs.isAllDayEvent != rhs.isAllDayEvent {
+        return lhs.isAllDayEvent
+      }
+      if lhs.startSortKey != rhs.startSortKey {
+        return lhs.startSortKey < rhs.startSortKey
+      }
+      return lhs.id < rhs.id
+    }
   }
 
   /// Recompute cached selection summary for header UI.
@@ -381,6 +448,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   init(
     shiftsRepository: ShiftsRepository? = nil,
+    eventsRepository: EventsRepository? = nil,
     jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
@@ -390,6 +458,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   ) {
     // Use provided repositories or default to shared instances
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+    self.eventsRepository = eventsRepository ?? EventsRepository.shared
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
@@ -891,6 +960,57 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     recurringShiftsRepository.getRecurringShift(id: id)
   }
 
+  // MARK: - Event Editing
+
+  func updateEvent(_ editResult: EventEditResult) async {
+    guard !isUpdatingEvent else { return }
+
+    isUpdatingEvent = true
+    logger.info("📝 Updating event \(editResult.eventId)")
+
+    do {
+      guard
+        let startDate = Date.fromISODateString(editResult.startDate),
+        let endDate = Date.fromISODateString(editResult.endDate)
+      else {
+        logger.error(
+          "Invalid event date range: \(editResult.startDate) - \(editResult.endDate)"
+        )
+        isUpdatingEvent = false
+        return
+      }
+
+      _ = try await eventsRepository.updateEvent(
+        id: editResult.eventId,
+        startDate: startDate,
+        endDate: endDate,
+        isAllDay: editResult.isAllDay,
+        startTime: editResult.startTime,
+        endTime: editResult.endTime,
+        note: editResult.note
+      )
+
+      await reloadFromLocal()
+      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    } catch {
+      logger.error("❌ Failed to update event: \(error.localizedDescription)")
+    }
+
+    isUpdatingEvent = false
+  }
+
+  func deleteEvent(id: String) async throws {
+    guard !isDeletingEvent else { return }
+
+    isDeletingEvent = true
+    defer { isDeletingEvent = false }
+
+    logger.info("🗑️ Deleting event \(id)")
+    try await eventsRepository.deleteEvent(id: id)
+    await reloadFromLocal()
+    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+  }
+
   // MARK: - Shift Editing
 
   /// Update a shift with new date/time values
@@ -1084,6 +1204,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil
     activeJobs = []
+    events = []
+    lastLoadedVisibleRange = nil
 
     await loadShiftsFromLocal()
 
@@ -1141,6 +1263,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       snapshots = []
       recurringShifts = []
       activeJobs = []
+      events = []
+      lastLoadedVisibleRange = nil
 
       // Reload from local repositories
       await loadShiftsFromLocal()
@@ -1173,6 +1297,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     activeJobs = []
+    events = []
+    lastLoadedVisibleRange = nil
 
     // Also clear in-memory recurring shifts cache so exclusions are picked up
     recurringShifts = []
@@ -1239,8 +1365,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         startDate: visibleRange.start,
         endDate: visibleRange.end
       )
+      let displayEvents = await eventsRepository.getEventsOffMain(
+        for: userId,
+        startDate: visibleRange.start,
+        endDate: visibleRange.end
+      )
       logger.info(
         "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
+      logger.info(
+        "📋 Loaded events for \(displayYM.year)-\(displayYM.month): \(displayEvents.count)")
 
       // Check if we have settings to compute payroll
       guard let currentSettings = self.settings else {
@@ -1288,6 +1421,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         year: displayYM.year,
         month: displayYM.month
       )
+      self.events = displayEvents
+      self.lastLoadedVisibleRange = visibleRange
 
       // Find next upcoming shift (only on current month)
       if isCurrentMonth {
@@ -1367,6 +1502,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         startDate: visibleRange.start,
         endDate: visibleRange.end
       )
+      let displayEvents = await eventsRepository.getEventsOffMain(
+        for: userId,
+        startDate: visibleRange.start,
+        endDate: visibleRange.end
+      )
 
       // Ensure settings are available
       guard let currentSettings = self.settings else {
@@ -1414,6 +1554,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         year: loadYear,
         month: loadMonth
       )
+      self.events = displayEvents
+      self.lastLoadedVisibleRange = visibleRange
 
       // Find next upcoming shift (only on current month)
       if isCurrentMonth {

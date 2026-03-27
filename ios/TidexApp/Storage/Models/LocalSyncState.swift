@@ -44,6 +44,12 @@ final class LocalSyncState {
   /// Tie-breaker ID at the last synced updated_at for user_shifts
   var lastUserShiftsUpdatedAtTieId: String?
 
+  /// Last synced updated_at for events table
+  var lastEventsUpdatedAt: Date?
+
+  /// Tie-breaker ID at the last synced updated_at for events
+  var lastEventsUpdatedAtTieId: String?
+
   /// Last synced updated_at for recurring_shifts table
   var lastRecurringShiftsUpdatedAt: Date?
 
@@ -94,6 +100,8 @@ final class LocalSyncState {
     lastJobsUpdatedAtTieId: String? = nil,
     lastUserShiftsUpdatedAt: Date? = nil,
     lastUserShiftsUpdatedAtTieId: String? = nil,
+    lastEventsUpdatedAt: Date? = nil,
+    lastEventsUpdatedAtTieId: String? = nil,
     lastRecurringShiftsUpdatedAt: Date? = nil,
     lastRecurringShiftsUpdatedAtTieId: String? = nil,
     lastWageSnapshotsUpdatedAt: Date? = nil,
@@ -115,6 +123,8 @@ final class LocalSyncState {
     self.lastJobsUpdatedAtTieId = lastJobsUpdatedAtTieId
     self.lastUserShiftsUpdatedAt = lastUserShiftsUpdatedAt
     self.lastUserShiftsUpdatedAtTieId = lastUserShiftsUpdatedAtTieId
+    self.lastEventsUpdatedAt = lastEventsUpdatedAt
+    self.lastEventsUpdatedAtTieId = lastEventsUpdatedAtTieId
     self.lastRecurringShiftsUpdatedAt = lastRecurringShiftsUpdatedAt
     self.lastRecurringShiftsUpdatedAtTieId = lastRecurringShiftsUpdatedAtTieId
     self.lastWageSnapshotsUpdatedAt = lastWageSnapshotsUpdatedAt
@@ -148,6 +158,9 @@ final class LocalSyncState {
     case .userShifts:
       return SyncCursor(
         updatedAt: lastUserShiftsUpdatedAt, tieId: lastUserShiftsUpdatedAtTieId ?? "")
+    case .events:
+      return SyncCursor(
+        updatedAt: lastEventsUpdatedAt, tieId: lastEventsUpdatedAtTieId ?? "")
     case .recurringShifts:
       return SyncCursor(
         updatedAt: lastRecurringShiftsUpdatedAt, tieId: lastRecurringShiftsUpdatedAtTieId ?? "")
@@ -173,6 +186,9 @@ final class LocalSyncState {
     case .userShifts:
       lastUserShiftsUpdatedAt = updatedAt
       lastUserShiftsUpdatedAtTieId = tieId
+    case .events:
+      lastEventsUpdatedAt = updatedAt
+      lastEventsUpdatedAtTieId = tieId
     case .recurringShifts:
       lastRecurringShiftsUpdatedAt = updatedAt
       lastRecurringShiftsUpdatedAtTieId = tieId
@@ -197,6 +213,8 @@ final class LocalSyncState {
       return 0
     case .userShifts:
       return lastRevisionUserShifts
+    case .events:
+      return 0
     case .recurringShifts:
       return lastRevisionRecurringShifts
     case .wageSnapshots:
@@ -215,6 +233,8 @@ final class LocalSyncState {
       break
     case .userShifts:
       lastRevisionUserShifts = revision
+    case .events:
+      break
     case .recurringShifts:
       lastRevisionRecurringShifts = revision
     case .wageSnapshots:
@@ -250,6 +270,8 @@ final class LocalSyncState {
     lastJobsUpdatedAtTieId = nil
     lastUserShiftsUpdatedAt = nil
     lastUserShiftsUpdatedAtTieId = nil
+    lastEventsUpdatedAt = nil
+    lastEventsUpdatedAtTieId = nil
     lastRecurringShiftsUpdatedAt = nil
     lastRecurringShiftsUpdatedAtTieId = nil
     lastWageSnapshotsUpdatedAt = nil
@@ -299,6 +321,7 @@ struct SyncCursor {
 enum SyncTable: String, CaseIterable {
   case jobs = "jobs"
   case userShifts = "user_shifts"
+  case events = "events"
   case recurringShifts = "recurring_shifts"
   case wageSnapshots = "wage_snapshots"
   case userSettings = "user_settings"
@@ -314,6 +337,7 @@ enum SyncTable: String, CaseIterable {
     switch self {
     case .jobs: return "Jobs"
     case .userShifts: return "User Shifts"
+    case .events: return "Events"
     case .recurringShifts: return "Recurring Shifts"
     case .wageSnapshots: return "Wage Snapshots"
     case .userSettings: return "User Settings"

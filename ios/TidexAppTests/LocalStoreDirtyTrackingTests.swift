@@ -11,6 +11,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     let schema = Schema([
       LocalJob.self,
       LocalUserShift.self,
+      LocalEvent.self,
       LocalRecurringShift.self,
       LocalWageSnapshot.self,
       LocalUserSettings.self,
@@ -217,6 +218,229 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.serverRevision, 9)
     XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
     XCTAssertNil(local.conflictServerSnapshot)
+  }
+
+  func testCreateEventMarksAllFieldsDirty() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-1",
+      userId: userId,
+      startDate: makeDate("2026-03-02"),
+      endDate: makeDate("2026-03-02"),
+      isAllDay: false,
+      startTime: "09:00",
+      endTime: "11:00",
+      note: "Doctor"
+    )
+
+    let localRecord = try await store.getEvent(id: "event-1")
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set(EventField.allCases))
+  }
+
+  func testUpdateEventTracksOnlyChangedFieldsAfterClean() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-2",
+      userId: userId,
+      startDate: makeDate("2026-03-02"),
+      endDate: makeDate("2026-03-02"),
+      isAllDay: false,
+      startTime: "09:00",
+      endTime: "11:00",
+      note: "Doctor"
+    )
+
+    await store.markEventClean(id: "event-2")
+    try await store.save()
+
+    _ = try await store.updateEvent(
+      id: "event-2",
+      startDate: nil,
+      endDate: nil,
+      isAllDay: nil,
+      startTime: "10:00",
+      endTime: "12:00",
+      note: " Dentist "
+    )
+
+    let localRecord = try await store.getEvent(id: "event-2")
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.startTime, "10:00")
+    XCTAssertEqual(local.endTime, "12:00")
+    XCTAssertEqual(local.note, "Dentist")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.startTime, .endTime, .note]))
+  }
+
+  func testMarkEventPendingDeleteSetsPendingDeleteStatus() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-3",
+      userId: userId,
+      startDate: makeDate("2026-03-04"),
+      endDate: makeDate("2026-03-06"),
+      isAllDay: true,
+      startTime: nil,
+      endTime: nil,
+      note: "Trip"
+    )
+
+    _ = try await store.markEventPendingDelete(id: "event-3")
+
+    let localRecord = try await store.getEvent(id: "event-3")
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .pendingDelete)
+  }
+
+  func testResolveStoredEventConflictKeepServerOverwritesLocal() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-4",
+      userId: userId,
+      startDate: makeDate("2026-03-02"),
+      endDate: makeDate("2026-03-02"),
+      isAllDay: false,
+      startTime: "09:00",
+      endTime: "11:00",
+      note: "Doctor"
+    )
+
+    let serverUpdatedAt = makeDate("2026-03-04", "14:00")
+    let serverSnapshot = EventServerSnapshot.from(
+      startDate: "2026-03-05",
+      endDate: "2026-03-07",
+      isAllDay: true,
+      startTime: nil,
+      endTime: nil,
+      note: "Conference",
+      updatedAt: serverUpdatedAt,
+      revision: 7,
+      deletedAt: nil
+    )
+
+    await store.markEventConflict(id: "event-4", serverSnapshot: serverSnapshot)
+    try await store.save()
+
+    try await store.resolveStoredEventConflictKeepServer(id: "event-4")
+
+    let localRecord = try await store.getEvent(id: "event-4")
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .clean)
+    XCTAssertEqual(local.startDateString, "2026-03-05")
+    XCTAssertEqual(local.endDateString, "2026-03-07")
+    XCTAssertTrue(local.isAllDay)
+    XCTAssertNil(local.startTime)
+    XCTAssertNil(local.endTime)
+    XCTAssertEqual(local.note, "Conference")
+    XCTAssertEqual(local.serverRevision, 7)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+    XCTAssertEqual(local.dirtyFieldKeys, [])
+
+    let syncedSnapshot = try XCTUnwrap(EventServerSnapshot.decode(from: local.lastSyncedSnapshot))
+    XCTAssertEqual(syncedSnapshot, serverSnapshot)
+  }
+
+  func testResolveStoredEventConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
+    async throws
+  {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-5",
+      userId: userId,
+      startDate: makeDate("2026-03-02"),
+      endDate: makeDate("2026-03-02"),
+      isAllDay: false,
+      startTime: "09:00",
+      endTime: "11:00",
+      note: "Doctor"
+    )
+
+    await store.markEventClean(id: "event-5")
+    try await store.save()
+
+    _ = try await store.updateEvent(
+      id: "event-5",
+      startDate: nil,
+      endDate: nil,
+      isAllDay: nil,
+      startTime: "10:30",
+      endTime: "12:00",
+      note: nil
+    )
+
+    let serverUpdatedAt = makeDate("2026-03-04", "16:00")
+    let serverSnapshot = EventServerSnapshot.from(
+      startDate: "2026-03-02",
+      endDate: "2026-03-02",
+      isAllDay: false,
+      startTime: "08:00",
+      endTime: "10:00",
+      note: "Server note",
+      updatedAt: serverUpdatedAt,
+      revision: 9,
+      deletedAt: nil
+    )
+
+    await store.markEventConflict(id: "event-5", serverSnapshot: serverSnapshot)
+    try await store.save()
+
+    try await store.resolveStoredEventConflictKeepLocal(id: "event-5")
+
+    let localRecord = try await store.getEvent(id: "event-5")
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.startTime, "10:30")
+    XCTAssertEqual(local.endTime, "12:00")
+    XCTAssertEqual(local.serverRevision, 9)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+  }
+
+  func testFetchEventsReturnsTimedAndCoveredAllDayEvents() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-6",
+      userId: userId,
+      startDate: makeDate("2026-03-10"),
+      endDate: makeDate("2026-03-10"),
+      isAllDay: false,
+      startTime: "12:00",
+      endTime: "13:00",
+      note: "Lunch"
+    )
+
+    _ = try await store.createEvent(
+      id: "event-7",
+      userId: userId,
+      startDate: makeDate("2026-03-08"),
+      endDate: makeDate("2026-03-12"),
+      isAllDay: true,
+      startTime: nil,
+      endTime: nil,
+      note: "Vacation"
+    )
+
+    let events = await store.fetchEvents(
+      userId: userId,
+      startDate: makeDate("2026-03-10"),
+      endDate: makeDate("2026-03-10", "23:59")
+    )
+
+    XCTAssertEqual(events.map(\.id), ["event-7", "event-6"])
   }
 
   func testCreateJobMarksAllFieldsDirty() async throws {
