@@ -9,12 +9,12 @@ enum TermsVersion {
   /// Base URL for user-facing pages (terms, privacy)
   static let baseURL = APIConfiguration.marketingBaseURL.absoluteString
 
-  /// Fallback terms version date (used when API is unavailable)
-  /// Keep this at the latest of terms/privacy as a safety net.
-  private static let fallbackVersionDate = "2026-03-15"
+  /// Fallback legal version reference (used when API is unavailable).
+  /// Prefer a precise timestamp so same-day legal updates can still trigger re-acceptance.
+  private static let fallbackVersionReference = "2026-03-28T00:40:00Z"
 
-  /// Cached version date (fetched from API)
-  private static var cachedVersionDate: String?
+  /// Cached version reference (fetched from API)
+  private static var cachedVersionReference: String?
   private static var lastFetchTime: Date?
   private static let cacheExpiryInterval: TimeInterval = 3600  // 1 hour
 
@@ -24,12 +24,12 @@ enum TermsVersion {
 
   // MARK: - Public API
 
-  /// Fetch the current terms version date from the API
+  /// Fetch the current legal version reference from the API
   /// Uses a cached value if available and not expired
   /// Returns fallback version if API is unavailable (timeout/error)
-  static func fetchCurrentVersionDate() async -> String {
+  static func fetchCurrentVersionReference() async -> String {
     // Check cache first
-    if let cached = cachedVersionDate,
+    if let cached = cachedVersionReference,
       let fetchTime = lastFetchTime,
       Date().timeIntervalSince(fetchTime) < cacheExpiryInterval
     {
@@ -41,7 +41,7 @@ enum TermsVersion {
       let url = APIConfiguration.legalVersionURL
       guard url.absoluteString.isEmpty == false else {
         logger.error("Invalid endpoint URL")
-        return fallbackVersionDate
+        return fallbackVersionReference
       }
 
       let (data, response) = try await withTimeout(seconds: requestTimeout) {
@@ -52,27 +52,29 @@ enum TermsVersion {
         httpResponse.statusCode == 200
       else {
         logger.warning("API returned non-200 status")
-        return fallbackVersionDate
+        return fallbackVersionReference
       }
 
       let versionResponse = try JSONDecoder().decode(VersionResponse.self, from: data)
 
-      let latestVersionDate = latestVersionDate(
+      let latestVersionReference = latestVersionReference(
         termsVersionDate: versionResponse.termsVersionDate,
-        privacyVersionDate: versionResponse.privacyVersionDate
+        privacyVersionDate: versionResponse.privacyVersionDate,
+        termsVersionAt: versionResponse.termsVersionAt,
+        privacyVersionAt: versionResponse.privacyVersionAt
       )
 
       // Cache the result
-      cachedVersionDate = latestVersionDate
+      cachedVersionReference = latestVersionReference
       lastFetchTime = Date()
 
-      return latestVersionDate
+      return latestVersionReference
     } catch is TimeoutError {
       logger.warning("Request timed out after \(requestTimeout)s. Using fallback.")
-      return fallbackVersionDate
+      return fallbackVersionReference
     } catch {
       logger.warning("Failed to fetch version: \(error.localizedDescription). Using fallback.")
-      return fallbackVersionDate
+      return fallbackVersionReference
     }
   }
 
@@ -114,9 +116,9 @@ enum TermsVersion {
 
     // Use cached version if available, otherwise use fallback
     // The async fetch happens in AppCoordinator before this is called
-    let currentVersionDate = cachedVersionDate ?? fallbackVersionDate
+    let currentVersionReference = cachedVersionReference ?? fallbackVersionReference
 
-    return compareDates(acceptedAt: termsAcceptedAt, versionDate: currentVersionDate)
+    return compareDates(acceptedAt: termsAcceptedAt, versionReference: currentVersionReference)
   }
 
   /// Async version that fetches the latest version date first
@@ -126,47 +128,24 @@ enum TermsVersion {
       return true
     }
 
-    let currentVersionDate = await fetchCurrentVersionDate()
-    return compareDates(acceptedAt: termsAcceptedAt, versionDate: currentVersionDate)
+    let currentVersionReference = await fetchCurrentVersionReference()
+    return compareDates(acceptedAt: termsAcceptedAt, versionReference: currentVersionReference)
   }
 
   // MARK: - Private Helpers
 
-  private static func compareDates(acceptedAt: String, versionDate: String) -> Bool {
+  private static func compareDates(acceptedAt: String, versionReference: String) -> Bool {
     // Parse the ISO date string from user metadata
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-    // Try with fractional seconds first, then without
-    var acceptedDate: Date?
-    acceptedDate = formatter.date(from: acceptedAt)
-    if acceptedDate == nil {
-      formatter.formatOptions = [.withInternetDateTime]
-      acceptedDate = formatter.date(from: acceptedAt)
-    }
-
-    // Fallback to simple date parsing if ISO8601 fails
-    if acceptedDate == nil {
-      let simpleDateFormatter = DateFormatter()
-      simpleDateFormatter.dateFormat = "yyyy-MM-dd"
-      simpleDateFormatter.timeZone = TimeZone(identifier: "UTC")
-      acceptedDate = simpleDateFormatter.date(from: acceptedAt)
-    }
-
+    let acceptedDate = parseVersionReference(acceptedAt)
     guard let accepted = acceptedDate else {
       // Can't parse date, require re-acceptance
       logger.warning("Could not parse termsAcceptedAt: \(acceptedAt)")
       return true
     }
 
-    // Parse current version date
-    let versionFormatter = DateFormatter()
-    versionFormatter.dateFormat = "yyyy-MM-dd"
-    versionFormatter.timeZone = TimeZone(identifier: "UTC")
-
-    guard let currentVersion = versionFormatter.date(from: versionDate) else {
+    guard let currentVersion = parseVersionReference(versionReference) else {
       // Should never happen with valid date
-      logger.error("Could not parse versionDate: \(versionDate)")
+      logger.error("Could not parse versionReference: \(versionReference)")
       return false
     }
 
@@ -174,22 +153,42 @@ enum TermsVersion {
     return accepted < currentVersion
   }
 
-  private static func latestVersionDate(
+  private static func latestVersionReference(
     termsVersionDate: String,
-    privacyVersionDate: String
+    privacyVersionDate: String,
+    termsVersionAt: String?,
+    privacyVersionAt: String?
   ) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone(identifier: "UTC")
+    let termsReference = termsVersionAt ?? termsVersionDate
+    let privacyReference = privacyVersionAt ?? privacyVersionDate
 
     guard
-      let termsDate = formatter.date(from: termsVersionDate),
-      let privacyDate = formatter.date(from: privacyVersionDate)
+      let termsDate = parseVersionReference(termsReference),
+      let privacyDate = parseVersionReference(privacyReference)
     else {
       return termsVersionDate
     }
 
-    return privacyDate > termsDate ? privacyVersionDate : termsVersionDate
+    return privacyDate > termsDate ? privacyReference : termsReference
+  }
+
+  private static func parseVersionReference(_ value: String) -> Date? {
+    let isoFormatter = ISO8601DateFormatter()
+    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+    if let date = isoFormatter.date(from: value) {
+      return date
+    }
+
+    isoFormatter.formatOptions = [.withInternetDateTime]
+    if let date = isoFormatter.date(from: value) {
+      return date
+    }
+
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+    dateFormatter.timeZone = TimeZone(identifier: "UTC")
+    return dateFormatter.date(from: value)
   }
 }
 
@@ -198,4 +197,6 @@ enum TermsVersion {
 private struct VersionResponse: Decodable {
   let termsVersionDate: String
   let privacyVersionDate: String
+  let termsVersionAt: String?
+  let privacyVersionAt: String?
 }
