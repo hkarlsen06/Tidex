@@ -195,7 +195,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-03-15',
+    lastUpdatedDate: '2026-03-28',
     dateLocale: 'en-US',
     sections: [
       {
@@ -209,13 +209,14 @@ export const legalEn = {
         heading: '2. Data we collect',
         paragraphs: ['We collect the following personal data when you use the service:'],
         list: [
-          { boldLabel: 'Account information:', text: 'Full name, email address or phone number, and encrypted password.' },
+          { boldLabel: 'Account information:', text: 'Full name, display name, email address or phone number, optional profile photo, and hashed password data if you use password login.' },
           { boldLabel: 'Shift data:', text: 'Working hours, breaks, salary settings and related information you register.' },
           { boldLabel: 'Friends messaging data:', text: 'Messages, reply references, image attachments, abuse reports, block actions, thread metadata, and read/mute state when you use Friends messaging.' },
-          { boldLabel: 'Authentication data:', text: 'Session (cookie) information that keeps you logged in.' },
-          { boldLabel: 'Payment data:', text: 'Handled by Apple (iOS in-app purchases) and, for legacy website subscriptions only, Stripe. We do not store card information.' },
+          { boldLabel: 'Authentication data:', text: 'Session tokens and authentication state needed to keep you signed in, including login provider information when you use Sign in with Apple or Google Sign-In.' },
+          { boldLabel: 'Payment data:', text: 'Handled by Apple for iOS in-app purchases. We do not store card information.' },
           { boldLabel: 'AI assistant data:', text: 'When you use the Wagey AI assistant, the messages you send (including text and images), your display name, and shift data retrieved during the conversation are processed by a third-party AI service (see section 5).' },
           { boldLabel: 'Notification metadata:', text: 'If you enable push notifications, notification payloads may include sender identity, limited message preview text, screenshot alerts, and thread identifiers so the app can show and open the correct conversation.' },
+          { boldLabel: 'Diagnostics data:', text: 'In app builds where crash reporting is enabled, technical diagnostics such as app version, device type, operating system, and crash or error context may be processed to help us detect and fix reliability issues.' },
         ],
       },
       {
@@ -225,10 +226,13 @@ export const legalEn = {
           { text: 'Provide shift tracking and salary calculations.' },
           { text: 'Provide Friends messaging, image attachments, screenshot alerts, abuse reports, safety tooling, and user blocking.' },
           { text: 'Authenticate and manage your account.' },
-          { text: 'Process subscription payments via Apple (iOS app) and, for legacy website subscriptions only, Stripe.' },
+          { text: 'Support optional sign-in with Apple and Google.' },
+          { text: 'Process subscription payments via Apple (iOS app).' },
+          { text: 'Deliver push notifications and related in-app alerts if you enable them.' },
           { text: 'Communicate with you about the service.' },
           { text: 'Provide AI-powered assistance through the Wagey feature, including answering questions about your shifts, helping manage shifts, and calculating wages. This requires sending relevant data to a third-party AI service (see section 5).' },
           { text: 'Review abuse reports, enforce our rules, and protect users and the service from abuse.' },
+          { text: 'Detect, investigate, and fix crashes, errors, and reliability issues.' },
         ],
         importantNote: {
           label: 'Important:',
@@ -238,9 +242,10 @@ export const legalEn = {
       {
         heading: '4. Storage and processing',
         list: [
-          { boldLabel: 'Storage:', text: 'All data is stored with Supabase (PostgreSQL).' },
+          { boldLabel: 'Storage:', text: 'Core account, app, and file data is stored with Supabase (PostgreSQL and Storage).' },
+          { boldLabel: 'On-device storage:', text: 'The iOS app stores session tokens in the iOS Keychain and may cache app data locally on your device to support sign-in and app performance.' },
           { boldLabel: 'Retention:', text: 'Data is kept for as long as you maintain an active account. We do not guarantee long-term archival.' },
-          { boldLabel: 'Deletion:', text: 'If you delete your account, every piece of data is removed immediately from our systems.' },
+          { boldLabel: 'Deletion:', text: 'If you delete your account, we delete your account data from our active systems as part of the deletion process.' },
           { boldLabel: 'Safety review:', text: 'If content is reported or linked to abusive behaviour, authorised reviewers may inspect relevant messages, attachments, account metadata, and report records to investigate and enforce our rules.' },
         ],
       },
@@ -250,46 +255,46 @@ export const legalEn = {
         list: [
           {
             boldLabel: 'Supabase:',
-            text: 'Database and authentication. Read their {link}.',
+            text: 'Database, authentication, realtime features, and file storage. Read their {link}.',
             link: {
               href: 'https://supabase.com/privacy',
               text: 'privacy policy',
             },
           },
           {
-            boldLabel: 'Stripe:',
-            text: 'Payment processing for legacy website subscriptions. Read their {link}.',
-            link: {
-              href: 'https://stripe.com/privacy',
-              text: 'privacy policy',
-            },
-          },
-          {
             boldLabel: 'Apple:',
-            text: 'In-App Purchase and payment processing for iOS purchases. Read their {link}.',
+            text: 'In-App Purchase and payment processing for iOS purchases, Sign in with Apple, and Apple Push Notification service for push delivery. Read their {link}.',
             link: {
               href: 'https://www.apple.com/legal/privacy/',
               text: 'privacy policy',
             },
           },
           {
-            boldLabel: 'Cloudflare Turnstile:',
-            text: 'Captcha verification during signup. Read their {link}.',
+            boldLabel: 'Google:',
+            text: 'Optional Google Sign-In. Read their {link}.',
             link: {
-              href: 'https://www.cloudflare.com/privacypolicy/',
+              href: 'https://policies.google.com/privacy',
               text: 'privacy policy',
             },
           },
           {
-            boldLabel: 'Anthropic:',
-            text: "The Wagey AI assistant is powered by Claude from Anthropic. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to Anthropic for processing. When needed, Wagey may also use Anthropic's built-in web search and web fetch tools to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. Anthropic processes data in accordance with their {link}.",
+            boldLabel: 'Sentry:',
+            text: 'Crash and error monitoring in app builds where it is enabled. Read their {link}.',
             link: {
-              href: 'https://www.anthropic.com/legal/privacy',
+              href: 'https://sentry.io/privacy/',
+              text: 'privacy policy',
+            },
+          },
+          {
+            boldLabel: 'Mistral AI:',
+            text: "The Wagey AI assistant uses Mistral AI for response generation. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to Mistral AI for processing. Wagey may also use Mistral's built-in web search tool to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. Mistral's current paid API documentation says Scale plan API inputs and outputs are not used to train models, and Mistral's current privacy policy says standard API inputs and outputs may be retained for abuse monitoring for up to 30 rolling days unless zero-data-retention is enabled. Mistral AI processes data in accordance with their {link}.",
+            link: {
+              href: 'https://legal.mistral.ai/terms/privacy-policy',
               text: 'privacy policy',
             },
           },
         ],
-        closingParagraph: 'Data is only shared with Anthropic when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with any other third parties beyond those listed above.',
+        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in, purchases, or push notifications, and with Mistral AI when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',
@@ -305,7 +310,7 @@ export const legalEn = {
       },
       {
         heading: '7. Security',
-        paragraphs: ['We use industry-standard security measures including encrypted password hashes, HTTPS encryption and secure authentication through Supabase.'],
+        paragraphs: ['We use industry-standard security measures including hashed passwords, HTTPS encryption, secure authentication through Supabase, and iOS Keychain storage for session tokens on your device.'],
       },
       {
         heading: '8. Changes to this policy',

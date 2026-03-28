@@ -2,7 +2,7 @@ import SafariServices
 import SwiftUI
 
 /// Consent view shown before first use of Wagey
-/// Explains what data is shared with Anthropic and requires explicit user consent
+/// Explains what data is shared with Mistral AI and requires explicit user consent
 struct WageyConsentView: View {
   /// Callback when user agrees to data sharing
   let onAgree: () -> Void
@@ -13,9 +13,9 @@ struct WageyConsentView: View {
   /// URL for opening Safari to view the privacy policy
   @State private var safariURL: URL?
 
-  /// Anthropic privacy policy URL
-  private static let anthropicPrivacyURL = URL(
-    string: "https://www.anthropic.com/legal/privacy"
+  /// Mistral AI privacy policy URL
+  private static let mistralPrivacyURL = URL(
+    string: "https://legal.mistral.ai/terms/privacy-policy"
   )
 
   /// Tidex privacy policy URL
@@ -203,7 +203,7 @@ struct WageyConsentView: View {
         .background(Color.tidexBorderSubtle)
 
       Button {
-        if let url = Self.anthropicPrivacyURL {
+        if let url = Self.mistralPrivacyURL {
           safariURL = url
         }
       } label: {
@@ -211,7 +211,7 @@ struct WageyConsentView: View {
           Image(systemName: "lock.shield")
             .font(.tidexBody)
             .frame(width: 20, alignment: .leading)
-          Text(.wageyConsentAnthropicPrivacyLink)
+          Text(.wageyConsentProviderPrivacyLink)
             .font(.tidexBody)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
