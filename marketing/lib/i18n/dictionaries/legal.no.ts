@@ -195,7 +195,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-03-15',
+    lastUpdatedDate: '2026-03-28',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -209,13 +209,14 @@ export const legalNo = {
         heading: '2. Hvilke data vi samler inn',
         paragraphs: ['Vi samler inn følgende personopplysninger når du bruker tjenesten:'],
         list: [
-          { boldLabel: 'Kontoinformasjon:', text: 'Fullt navn, e-postadresse eller telefonnummer og kryptert passord.' },
+          { boldLabel: 'Kontoinformasjon:', text: 'Fullt navn, visningsnavn, e-postadresse eller telefonnummer, valgfritt profilbilde og passordhasher dersom du bruker passordinnlogging.' },
           { boldLabel: 'Skiftdata:', text: 'Arbeidstider, pauser, lønnsinnstillinger og relatert informasjon du registrerer.' },
           { boldLabel: 'Vennemeldinger:', text: 'Meldinger, svarreferanser, bildevedlegg, misbruksrapporter, blokkeringer, trådmetadata og lese-/mute-status når du bruker vennemeldinger.' },
-          { boldLabel: 'Autentiseringsinformasjon:', text: 'Informasjon om økter (cookies) for å holde deg innlogget.' },
-          { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Apple (iOS-kjøp i appen) og, for eldre nettabonnementer, Stripe. Vi lagrer ikke kortinformasjon.' },
+          { boldLabel: 'Autentiseringsinformasjon:', text: 'Økttokens og autentiseringstilstand som trengs for å holde deg innlogget, inkludert informasjon om innloggingsleverandør når du bruker Logg inn med Apple eller Google-innlogging.' },
+          { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Apple for kjøp i appen på iOS. Vi lagrer ikke kortinformasjon.' },
           { boldLabel: 'AI-assistentdata:', text: 'Når du bruker Wagey AI-assistenten, blir meldingene du sender (inkludert tekst og bilder), visningsnavnet ditt og skiftdata som hentes under samtalen behandlet av en tredjeparts AI-tjeneste (se punkt 5).' },
           { boldLabel: 'Varslingsmetadata:', text: 'Hvis du aktiverer pushvarsler, kan varslingspayloaden inneholde avsenderidentitet, begrenset meldingsforhåndsvisning, skjermbildevarsler og trådidentifikatorer slik at appen kan vise og åpne riktig samtale.' },
+          { boldLabel: 'Diagnostikkdata:', text: 'I appbygg der krasjrapportering er aktivert, kan teknisk diagnostikk som appversjon, enhetstype, operativsystem og krasj- eller feilkontekst behandles for å hjelpe oss med å oppdage og rette stabilitetsproblemer.' },
         ],
       },
       {
@@ -225,10 +226,13 @@ export const legalNo = {
           { text: 'Tilby skiftsporing og lønnsutregning.' },
           { text: 'Tilby vennemeldinger, bildevedlegg, skjermbildevarsler, misbruksrapportering, sikkerhetsfunksjoner og blokkering av brukere.' },
           { text: 'Autentisere og administrere kontoen din.' },
-          { text: 'Behandle abonnementsbetalinger via Apple (iOS-appen) og, for eldre nettabonnementer, Stripe.' },
+          { text: 'Støtte valgfri innlogging med Apple og Google.' },
+          { text: 'Behandle abonnementsbetalinger via Apple (iOS-appen).' },
+          { text: 'Levere pushvarsler og relaterte varsler i appen dersom du aktiverer dem.' },
           { text: 'Kommunisere med deg om tjenesten.' },
           { text: 'Tilby AI-drevet assistanse gjennom Wagey-funksjonen, inkludert å svare på spørsmål om skiftene dine, hjelpe med å administrere skift og beregne lønn. Dette krever sending av relevante data til en tredjeparts AI-tjeneste (se punkt 5).' },
           { text: 'Behandle misbruksrapporter, håndheve reglene våre og beskytte brukere og tjenesten mot misbruk.' },
+          { text: 'Oppdage, undersøke og rette krasj, feil og stabilitetsproblemer.' },
         ],
         importantNote: {
           label: 'Viktig:',
@@ -238,9 +242,10 @@ export const legalNo = {
       {
         heading: '4. Datalagring og -behandling',
         list: [
-          { boldLabel: 'Lagring:', text: 'All data lagres hos Supabase (PostgreSQL).' },
+          { boldLabel: 'Lagring:', text: 'Kjerneinformasjon om konto, appdata og filer lagres hos Supabase (PostgreSQL og Storage).' },
+          { boldLabel: 'Lagring på enheten:', text: 'iOS-appen lagrer økttokens i iOS-nøkkelringen og kan mellomlagre appdata lokalt på enheten for å støtte innlogging og appytelse.' },
           { boldLabel: 'Oppbevaring:', text: 'Data oppbevares så lenge du har en aktiv konto. Vi garanterer ikke langtidsoppbevaring.' },
-          { boldLabel: 'Sletting:', text: 'Ved sletting av konto fjernes alle data umiddelbart fra våre systemer.' },
+          { boldLabel: 'Sletting:', text: 'Når du sletter kontoen din, sletter vi kontodataene dine fra våre aktive systemer som en del av sletteprosessen.' },
           { boldLabel: 'Sikkerhetsgjennomgang:', text: 'Hvis innhold rapporteres eller knyttes til misbruk, kan autoriserte behandlere gjennomgå relevante meldinger, vedlegg, kontometadata og rapportdata for å undersøke og håndheve reglene våre.' },
         ],
       },
@@ -250,46 +255,46 @@ export const legalNo = {
         list: [
           {
             boldLabel: 'Supabase:',
-            text: 'Database og autentisering. Les deres {link}.',
+            text: 'Database, autentisering, realtime-funksjoner og fillagring. Les deres {link}.',
             link: {
               href: 'https://supabase.com/privacy',
               text: 'personvernerklæring',
             },
           },
           {
-            boldLabel: 'Stripe:',
-            text: 'Betalingsbehandling for eldre nettabonnementer. Les deres {link}.',
-            link: {
-              href: 'https://stripe.com/privacy',
-              text: 'personvernerklæring',
-            },
-          },
-          {
             boldLabel: 'Apple:',
-            text: 'In-App Purchase og betalingsbehandling for iOS-kjøp. Les deres {link}.',
+            text: 'In-App Purchase og betalingsbehandling for iOS-kjøp, Logg inn med Apple og Apple Push Notification service for levering av pushvarsler. Les deres {link}.',
             link: {
               href: 'https://www.apple.com/legal/privacy/',
               text: 'personvernerklæring',
             },
           },
           {
-            boldLabel: 'Cloudflare Turnstile:',
-            text: 'CAPTCHA-verifisering ved registrering. Les deres {link}.',
+            boldLabel: 'Google:',
+            text: 'Valgfri Google-innlogging. Les deres {link}.',
             link: {
-              href: 'https://www.cloudflare.com/privacypolicy/',
+              href: 'https://policies.google.com/privacy',
               text: 'personvernerklæring',
             },
           },
           {
-            boldLabel: 'Anthropic:',
-            text: 'Wagey AI-assistenten drives av Claude fra Anthropic. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til Anthropic for behandling. Ved behov kan Wagey også bruke Anthropics innebygde web search- og web fetch-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Anthropic behandler data i samsvar med deres {link}.',
+            boldLabel: 'Sentry:',
+            text: 'Krasj- og feilmåling i appbygg der dette er aktivert. Les deres {link}.',
             link: {
-              href: 'https://www.anthropic.com/legal/privacy',
+              href: 'https://sentry.io/privacy/',
+              text: 'personvernerklæring',
+            },
+          },
+          {
+            boldLabel: 'Mistral AI:',
+            text: 'Wagey AI-assistenten bruker Mistral AI for å generere svar. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til Mistral AI for behandling. Wagey kan også bruke Mistrals innebygde web search-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Mistrals nåværende dokumentasjon for betalt API sier at input og output i Scale-planen ikke brukes til modelltrening, og Mistrals nåværende personvernerklæring sier at standard API-input og -output kan lagres i opptil 30 rullerende dager for misbruksovervåking med mindre zero-data-retention er aktivert. Mistral AI behandler data i samsvar med deres {link}.',
+            link: {
+              href: 'https://legal.mistral.ai/terms/privacy-policy',
               text: 'personvernerklæring',
             },
           },
         ],
-        closingParagraph: 'Data deles kun med Anthropic når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med andre tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler, og med Mistral AI når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',
@@ -305,7 +310,7 @@ export const legalNo = {
       },
       {
         heading: '7. Sikkerhet',
-        paragraphs: ['Vi bruker bransjestandard sikkerhetstiltak inkludert krypterte passordhash, HTTPS-kryptering og sikre autentiseringsmekanismer via Supabase.'],
+        paragraphs: ['Vi bruker bransjestandard sikkerhetstiltak inkludert passordhasher, HTTPS-kryptering, sikre autentiseringsmekanismer via Supabase og lagring av økttokens i iOS-nøkkelringen på enheten din.'],
       },
       {
         heading: '8. Endringer i personvernerklæringen',

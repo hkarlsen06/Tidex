@@ -419,7 +419,7 @@ export const calculateEarningsSchema = z.object({
 export type CalculateEarningsInput = z.infer<typeof calculateEarningsSchema>;
 
 // =============================================================================
-// TOOL DEFINITIONS (Claude format with input_examples)
+// TOOL DEFINITIONS (provider-neutral format with input_examples)
 // =============================================================================
 
 export const tools: FunctionTool[] = [

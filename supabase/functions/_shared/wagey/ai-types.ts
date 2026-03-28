@@ -112,26 +112,11 @@ export type FunctionTool = {
 };
 
 export type WebSearchTool = {
-  type: "web_search_20260209";
+  type: "web_search";
   name: "web_search";
-  max_uses?: number;
-  search_context_size?: "low" | "medium" | "high";
-  user_location?: {
-    type: "approximate";
-    city?: string;
-    country?: string;
-    region?: string;
-    timezone?: string;
-  };
 };
 
-export type WebFetchTool = {
-  type: "web_fetch_20260209";
-  name: "web_fetch";
-  max_uses?: number;
-};
-
-export type Tool = FunctionTool | WebSearchTool | WebFetchTool;
+export type Tool = FunctionTool | WebSearchTool;
 
 export type BuiltInToolName = "web_search" | "web_fetch";
 
