@@ -13,11 +13,21 @@ protocol AddShiftCalendarViewModeling: AnyObject {
   func toggleDate(_ dateISO: String)
 }
 
+enum AddShiftCalendarSelectionEmphasis {
+  case standard
+  case subtle
+}
+
 /// Multi-select calendar for choosing shift dates in AddShift
 /// Uses the same visual style as ShiftsCalendarView but adapted for date selection
 /// Supports tap to toggle date selection with existing shift and conflict indicators
 struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & ObservableObject>: View {
   @ObservedObject var viewModel: ViewModel
+  var selectedDatesOverride: Set<String>? = nil
+  var previewEarningsOverride: [String: CalendarEarningsData]? = nil
+  var onToggleDateOverride: ((String) -> Void)? = nil
+  var showSelectionCheckmark: Bool = true
+  var selectionEmphasis: AddShiftCalendarSelectionEmphasis = .standard
 
   private let calendar = Calendar.current
 
@@ -42,17 +52,31 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
       AddShiftCalendarDayCell(
         dayInfo: dayInfo,
         isToday: dayInfo.dateISO == todayISO(),
-        isSelected: dayInfo.dateISO.map { viewModel.selectedDates.contains($0) } ?? false,
+        isSelected: dayInfo.dateISO.map { resolvedSelectedDates.contains($0) } ?? false,
         hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
         existingHours: dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] },
-        previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewEarnings[$0] }
+        previewEarnings: dayInfo.dateISO.flatMap { resolvedPreviewEarnings[$0] },
+        showSelectionCheckmark: showSelectionCheckmark,
+        selectionEmphasis: selectionEmphasis
       )
       .onTapGesture {
         if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
-          viewModel.toggleDate(dateISO)
+          if let onToggleDateOverride {
+            onToggleDateOverride(dateISO)
+          } else {
+            viewModel.toggleDate(dateISO)
+          }
         }
       }
     }
+  }
+
+  private var resolvedSelectedDates: Set<String> {
+    selectedDatesOverride ?? viewModel.selectedDates
+  }
+
+  private var resolvedPreviewEarnings: [String: CalendarEarningsData] {
+    previewEarningsOverride ?? viewModel.previewEarnings
   }
 
   // MARK: - Calendar Helpers
@@ -157,6 +181,8 @@ private struct AddShiftCalendarDayCell: View {
   let hasConflict: Bool
   let existingHours: HoursData?
   let previewEarnings: CalendarEarningsData?
+  let showSelectionCheckmark: Bool
+  let selectionEmphasis: AddShiftCalendarSelectionEmphasis
 
   var body: some View {
     CalendarDayCell(
@@ -175,7 +201,7 @@ private struct AddShiftCalendarDayCell: View {
     CalendarCellStyle(
       backgroundColor: backgroundColor,
       borderColor: borderColor,
-      borderWidth: isSelected ? 2 : 0,
+      borderWidth: isSelected ? selectionBorderWidth : 0,
       dayNumberColor: dayNumberColor,
       showsTodayBadge: isToday && !dayInfo.isOutsideMonth
     )
@@ -183,7 +209,8 @@ private struct AddShiftCalendarDayCell: View {
 
   private var backgroundColor: Color {
     if isSelected {
-      return hasConflict ? Color.tidexWarning.opacity(0.15) : Color.tidexBlue.opacity(0.15)
+      let opacity = selectionEmphasis == .subtle ? 0.08 : 0.15
+      return hasConflict ? Color.tidexWarning.opacity(opacity) : Color.tidexBlue.opacity(opacity)
     }
     if isToday && !dayInfo.isOutsideMonth {
       return Color.tidexBlue.opacity(0.2)
@@ -196,6 +223,10 @@ private struct AddShiftCalendarDayCell: View {
       return hasConflict ? Color.tidexWarning : Color.tidexBlue
     }
     return Color.clear
+  }
+
+  private var selectionBorderWidth: CGFloat {
+    selectionEmphasis == .subtle ? 1 : 2
   }
 
   private var dayNumberColor: Color {
@@ -227,13 +258,18 @@ private struct AddShiftCalendarDayCell: View {
 
   @ViewBuilder
   private var addShiftContent: some View {
-    if isSelected && previewEarnings == nil {
-      // Selected but no preview earnings yet (need times)
-      Image(systemName: "checkmark")
-        .font(.tidexButton)
-        .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-        .padding(.top, Spacing.xs)
+    VStack(spacing: 0) {
+      if showSelectionCheckmark && isSelected && previewEarnings == nil {
+        // Selected but no preview earnings yet (need times)
+        Image(systemName: "checkmark")
+          .font(.tidexButton)
+          .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
+          .padding(.top, Spacing.xs)
+      }
+
+      Spacer(minLength: 0)
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 }
 

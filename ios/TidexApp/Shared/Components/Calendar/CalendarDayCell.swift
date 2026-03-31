@@ -91,6 +91,9 @@ struct CalendarDayCell<Content: View>: View {
   private let todayBadgeBottomInset: CGFloat = 2
   private let todayBadgeOverlayColor: Color = .tidexBlue.opacity(0.18)
   private let stackedMetricSpacing: CGFloat = -3
+  private let eventIndicatorHorizontalInset: CGFloat = Spacing.sm
+  private let eventIndicatorBottomInset: CGFloat = 3
+  private let eventIndicatorHeight: CGFloat = 2
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
   var showOverlapIndicator: Bool = false
@@ -159,13 +162,13 @@ struct CalendarDayCell<Content: View>: View {
         todayBadgeView
       }
     }
-    .overlay(alignment: .bottomTrailing) {
+    .overlay(alignment: .bottom) {
       if showEventIndicator {
-        Circle()
+        RoundedRectangle(cornerRadius: eventIndicatorHeight / 2, style: .continuous)
           .fill(Color.tidexBlue)
-          .frame(width: 7, height: 7)
-          .padding(.trailing, Spacing.xxs)
-          .padding(.bottom, Spacing.xxs)
+          .frame(height: eventIndicatorHeight)
+          .padding(.horizontal, eventIndicatorHorizontalInset)
+          .padding(.bottom, eventIndicatorBottomInset)
       }
     }
     .tidexCardShadow(cornerRadius: CornerRadius.sm)

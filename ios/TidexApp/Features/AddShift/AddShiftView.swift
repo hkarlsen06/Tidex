@@ -567,27 +567,57 @@ private struct RecurringShiftContent: View {
 private struct EventContent: View {
   @ObservedObject var viewModel: AddShiftViewModel
   @Binding var focusedTimeField: TimeInputField?
+  @FocusState private var isTitleFieldFocused: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.xs) {
-        Text(.addShiftEventNoteTitle)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+    VStack(alignment: .leading, spacing: Spacing.lg) {
+      titleSection
 
-        TextEditor(text: $viewModel.eventNote)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-          .scrollContentBackground(.hidden)
-          .frame(minHeight: 120)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xs)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.card)
-              .fill(Color.tidexSurfacePrimary)
-          )
+      Divider()
+        .background(Color.tidexBorder)
+
+      scheduleSection
+    }
+  }
+
+  private var titleSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.addShiftEventNoteTitle)
+        .font(.tidexScreenTitle)
+        .foregroundColor(.tidexTextPrimary)
+
+      TextField(
+        String(localized: "addShift.submitRequirements.eventNote", table: "Localizable"),
+        text: $viewModel.eventNote,
+        axis: .vertical
+      )
+      .focused($isTitleFieldFocused)
+      .textFieldStyle(.plain)
+      .font(.tidexBodyLarge)
+      .foregroundColor(.tidexTextPrimary)
+      .lineLimit(2...5)
+      .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.md)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
+          .fill(Color.tidexSurfaceSecondary)
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
+          .stroke(
+            isTitleFieldFocused ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder, lineWidth: 1)
       }
+    }
+    .contentShape(Rectangle())
+    .onTapGesture {
+      focusedTimeField = nil
+      isTitleFieldFocused = true
+    }
+  }
 
+  private var scheduleSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       Toggle(isOn: $viewModel.isEventAllDay) {
         Text(.addShiftEventAllDay)
           .font(.tidexBodyMedium)
@@ -595,32 +625,28 @@ private struct EventContent: View {
       }
       .toggleStyle(.switch)
       .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.sm)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.card)
-          .fill(Color.tidexSurfacePrimary)
-      )
 
-      if viewModel.isEventAllDay {
-        VStack(spacing: Spacing.sm) {
-          dateCard(
-            title: String(localized: .addShiftEventStartDate),
-            selection: $viewModel.eventStartDate,
-            displayedComponents: [.date]
-          )
-          dateCard(
-            title: String(localized: .addShiftEventEndDate),
-            selection: $viewModel.eventEndDate,
-            displayedComponents: [.date]
-          )
-        }
-      } else {
-        VStack(spacing: Spacing.sm) {
-          dateCard(
-            title: String(localized: .addShiftEventDate),
-            selection: $viewModel.eventDate,
-            displayedComponents: [.date]
-          )
+      Divider()
+        .background(Color.tidexBorder)
+
+      VStack(spacing: Spacing.md) {
+        AddShiftCalendarView(
+          viewModel: viewModel,
+          selectedDatesOverride: viewModel.eventCalendarSelectedDates,
+          previewEarningsOverride: [:],
+          onToggleDateOverride: viewModel.toggleEventCalendarDate,
+          showSelectionCheckmark: false,
+          selectionEmphasis: .subtle
+        )
+        .simultaneousGesture(
+          TapGesture().onEnded {
+            isTitleFieldFocused = false
+          }
+        )
+
+        if viewModel.isEventAllDay {
+          eventRangeSummary
+        } else {
           TimeRangePicker(
             startTime: $viewModel.startTime,
             endTime: $viewModel.endTime,
@@ -634,33 +660,25 @@ private struct EventContent: View {
     }
   }
 
-  @ViewBuilder
-  private func dateCard(
-    title: String,
-    selection: Binding<Date>,
-    displayedComponents: DatePickerComponents
-  ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(title)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      DatePicker(
-        "",
-        selection: selection,
-        displayedComponents: displayedComponents
-      )
-      .labelsHidden()
-      .datePickerStyle(.graphical)
-      .padding(.horizontal, Spacing.xs)
-      .padding(.bottom, Spacing.xs)
+  private var eventRangeSummary: some View {
+    HStack(spacing: Spacing.xxxs) {
+      Image(systemName: "arrow.left.and.right")
+        .font(.tidexMicro)
+      Text(rangeSummaryText)
+        .font(.tidexMicro)
+        .fixedSize(horizontal: false, vertical: true)
     }
-    .padding(.top, Spacing.sm)
-    .padding(.horizontal, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
-    )
+    .foregroundColor(.tidexTextMuted)
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var rangeSummaryText: String {
+    if Calendar.current.isDate(viewModel.eventStartDate, inSameDayAs: viewModel.eventEndDate) {
+      return viewModel.eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    }
+
+    return
+      "\(viewModel.eventStartDate.formatted(.dateTime.day().month(.abbreviated))) - \(viewModel.eventEndDate.formatted(.dateTime.day().month(.abbreviated)))"
   }
 }
 

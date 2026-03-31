@@ -30,6 +30,8 @@ enum ShiftsError: Error, LocalizedError {
   case notAuthenticated
   case dataLoadFailed(underlying: Error)
   case noLocalData
+  case invalidEventDateRange
+  case eventNotFound
 
   var errorDescription: String? {
     switch self {
@@ -39,6 +41,10 @@ enum ShiftsError: Error, LocalizedError {
       return "Failed to load data: \(error.localizedDescription)"
     case .noLocalData:
       return "No local data available. Please wait for sync to complete."
+    case .invalidEventDateRange:
+      return "Invalid event date range"
+    case .eventNotFound:
+      return "Event not found. Please refresh and try again."
     }
   }
 }
@@ -50,6 +56,8 @@ private struct MonthCacheEntry {
   let year: Int
   let month: Int
   let shifts: [ShiftWithComputations]
+  let events: [EventRow]
+  let visibleRange: (start: Date, end: Date)
   let timestamp: Date
   /// Last access time for LRU eviction
   var lastAccessed: Date
@@ -61,10 +69,19 @@ private struct MonthCacheEntry {
     Date().timeIntervalSince(timestamp) < 300  // 5 minutes
   }
 
-  init(year: Int, month: Int, shifts: [ShiftWithComputations], timestamp: Date) {
+  init(
+    year: Int,
+    month: Int,
+    shifts: [ShiftWithComputations],
+    events: [EventRow],
+    visibleRange: (start: Date, end: Date),
+    timestamp: Date
+  ) {
     self.year = year
     self.month = month
     self.shifts = shifts
+    self.events = events
+    self.visibleRange = visibleRange
     self.timestamp = timestamp
     self.lastAccessed = timestamp
   }
@@ -962,41 +979,45 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Event Editing
 
-  func updateEvent(_ editResult: EventEditResult) async {
+  func updateEvent(_ editResult: EventEditResult) async throws {
     guard !isUpdatingEvent else { return }
 
     isUpdatingEvent = true
+    defer { isUpdatingEvent = false }
     logger.info("📝 Updating event \(editResult.eventId)")
+
+    guard
+      let startDate = Date.fromISODateString(editResult.startDate),
+      let endDate = Date.fromISODateString(editResult.endDate)
+    else {
+      logger.error(
+        "Invalid event date range: \(editResult.startDate) - \(editResult.endDate)"
+      )
+      throw ShiftsError.invalidEventDateRange
+    }
 
     do {
       guard
-        let startDate = Date.fromISODateString(editResult.startDate),
-        let endDate = Date.fromISODateString(editResult.endDate)
+        try await eventsRepository.updateEvent(
+          id: editResult.eventId,
+          startDate: startDate,
+          endDate: endDate,
+          isAllDay: editResult.isAllDay,
+          startTime: editResult.startTime,
+          endTime: editResult.endTime,
+          note: editResult.note
+        ) != nil
       else {
-        logger.error(
-          "Invalid event date range: \(editResult.startDate) - \(editResult.endDate)"
-        )
-        isUpdatingEvent = false
-        return
+        logger.error("❌ Event missing during update: \(editResult.eventId)")
+        throw ShiftsError.eventNotFound
       }
-
-      _ = try await eventsRepository.updateEvent(
-        id: editResult.eventId,
-        startDate: startDate,
-        endDate: endDate,
-        isAllDay: editResult.isAllDay,
-        startTime: editResult.startTime,
-        endTime: editResult.endTime,
-        note: editResult.note
-      )
 
       await reloadFromLocal()
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
     } catch {
       logger.error("❌ Failed to update event: \(error.localizedDescription)")
+      throw error
     }
-
-    isUpdatingEvent = false
   }
 
   func deleteEvent(id: String) async throws {
@@ -1099,10 +1120,14 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// IMPORTANT: Commits display state (year/month) atomically with shift data
   private func applyCommittedMonthSnapshot(
     shifts computedShifts: [ShiftWithComputations],
+    events displayEvents: [EventRow],
+    visibleRange: (start: Date, end: Date),
     year: Int,
     month: Int
   ) {
     self.shifts = computedShifts
+    self.events = displayEvents
+    self.lastLoadedVisibleRange = visibleRange
     self.weekGroups = self.groupShiftsByWeek(computedShifts)
     self.committedYear = year
     self.committedMonth = month
@@ -1122,12 +1147,18 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       updateConflictDetection(for: displayCache.shifts)
 
       // ATOMIC UPDATE: Set shifts and committed state together
-      // This ensures the calendar structure and data update in the same render pass
+      // This ensures the calendar structure and event data update in the same render pass.
       applyCommittedMonthSnapshot(
         shifts: displayCache.shifts,
+        events: displayCache.events,
+        visibleRange: displayCache.visibleRange,
         year: targetYear,
         month: targetMonth
       )
+
+      if self.isCurrentMonth {
+        updateNextUpcomingShift(for: displayCache.shifts)
+      }
 
       // Update last accessed time for LRU tracking
       displayCache.lastAccessed = Date()
@@ -1405,6 +1436,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         year: displayYM.year,
         month: displayYM.month,
         shifts: computedShifts,
+        events: displayEvents,
+        visibleRange: visibleRange,
         timestamp: Date()
       )
 
@@ -1414,15 +1447,14 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Calculate conflict detection first (needed for week totals)
       updateConflictDetection(for: computedShifts)
 
-      // ATOMIC UPDATE: Set shifts and committed state together
-      // This ensures the calendar structure and data update in the same render pass
+      // ATOMIC UPDATE: Set shifts, events, and committed state together.
       applyCommittedMonthSnapshot(
         shifts: computedShifts,
+        events: displayEvents,
+        visibleRange: visibleRange,
         year: displayYM.year,
         month: displayYM.month
       )
-      self.events = displayEvents
-      self.lastLoadedVisibleRange = visibleRange
 
       // Find next upcoming shift (only on current month)
       if isCurrentMonth {
@@ -1538,6 +1570,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         year: displayYM.year,
         month: displayYM.month,
         shifts: computedShifts,
+        events: displayEvents,
+        visibleRange: visibleRange,
         timestamp: Date()
       )
 
@@ -1547,15 +1581,14 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Calculate conflict detection first (needed for week totals)
       updateConflictDetection(for: computedShifts)
 
-      // ATOMIC UPDATE: Set shifts and committed state together
-      // This ensures the calendar structure and data update in the same render pass
+      // ATOMIC UPDATE: Set shifts, events, and committed state together.
       applyCommittedMonthSnapshot(
         shifts: computedShifts,
+        events: displayEvents,
+        visibleRange: visibleRange,
         year: loadYear,
         month: loadMonth
       )
-      self.events = displayEvents
-      self.lastLoadedVisibleRange = visibleRange
 
       // Find next upcoming shift (only on current month)
       if isCurrentMonth {
@@ -1709,6 +1742,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         startDate: visibleRange.start,
         endDate: visibleRange.end
       )
+      let fetchedEvents = await eventsRepository.getEventsOffMain(
+        for: userId,
+        startDate: visibleRange.start,
+        endDate: visibleRange.end
+      )
 
       let recurringSnapshot = self.recurringShifts
       let snapshotsSnapshot = self.snapshots
@@ -1738,6 +1776,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           year: year,
           month: month,
           shifts: computedShifts,
+          events: fetchedEvents,
+          visibleRange: visibleRange,
           timestamp: Date()
         )
 

@@ -3107,6 +3107,22 @@ final class SyncCoordinator: ObservableObject {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let eventId = event.id
+
+    // A locally created event can be deleted before its first successful push.
+    // In that case there is no server row to soft-delete, so we should just
+    // retire the local record instead of surfacing a false conflict.
+    if event.serverRevision == 0 {
+      let deletedAt = Date()
+      await storeActor.markEventDeleted(
+        id: eventId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: 0,
+        serverDeletedAt: deletedAt
+      )
+      logger.debug("Discarded unsynced event \(eventId.prefix(8))")
+      return .deleted
+    }
+
     let serverRevision = Int(event.serverRevision)
 
     let returnedRows: [SyncEventRow] =

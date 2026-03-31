@@ -4,6 +4,9 @@ struct MixedDaySheet: View {
   let dateISO: String
   let items: [DayPresentationItem]
   let excludedFromTotalIds: Set<String>
+  let conflictingShiftIds: Set<String>
+  let showJobIndicators: Bool
+  let jobForShift: (ShiftWithComputations) -> Job?
   let onShiftTapped: (ShiftWithComputations) -> Void
   let onEventTapped: (EventRow) -> Void
 
@@ -159,55 +162,18 @@ struct MixedDaySheet: View {
   }
 
   private func shiftCard(_ shift: ShiftWithComputations) -> some View {
-    Button {
-      onShiftTapped(shift)
-    } label: {
-      HStack(spacing: Spacing.sm) {
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(
-            ShiftCardFormatter.localizedTimeRange(
-              start: shift.startTime,
-              end: shift.endTime,
-              locale: Locale.appLocale,
-              separator: " – "
-            )
-          )
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+    let shiftJob = jobForShift(shift)
 
-          Text(formattedHours(shift.paidHours))
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        VStack(alignment: .trailing, spacing: Spacing.micro) {
-          Text(
-            CurrencyConfig.format(
-              shift.taxEnabled ? shift.netPay : shift.grossPay, currency: currency)
-          )
-          .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
-
-          if shift.taxEnabled && shift.taxAmount > 0 {
-            Text("-\(CurrencyConfig.format(shift.taxAmount, currency: currency))")
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-          }
-        }
-
-        Image(systemName: "chevron.right")
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextMuted)
-      }
-      .padding(Spacing.md)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
-    }
-    .buttonStyle(.plain)
+    return ShiftRowCard(
+      shift: shift,
+      isToday: shift.shiftDate == todayISO(),
+      hasConflict: conflictingShiftIds.contains(shift.id),
+      excludedFromTotal: excludedFromTotalIds.contains(shift.id),
+      showJobIndicator: showJobIndicators,
+      jobName: shiftJob?.name,
+      jobColorHex: shiftJob?.color,
+      onTap: { onShiftTapped(shift) }
+    )
   }
 
   private func formattedHours(_ hours: Double) -> String {

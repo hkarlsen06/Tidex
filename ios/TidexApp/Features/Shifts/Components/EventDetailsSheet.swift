@@ -13,7 +13,7 @@ struct EventEditResult {
 struct EventDetailsSheet: View {
   let event: EventRow
   let onDelete: (() -> Void)?
-  let onUpdate: ((EventEditResult) -> Void)?
+  let onUpdate: ((EventEditResult) async throws -> Void)?
   var startInEditMode: Bool = false
 
   @Environment(\.dismiss) private var dismiss
@@ -28,6 +28,8 @@ struct EventDetailsSheet: View {
   @State private var editedEndTime: Date?
   @State private var focusedTimeField: TimeInputField?
   @State private var errorMessage: String?
+  @State private var isSaving = false
+  @FocusState private var isTitleFieldFocused: Bool
 
   private var trimmedNote: String {
     editedNote.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -70,6 +72,10 @@ struct EventDetailsSheet: View {
 
   private var formattedEndDate: String {
     EventSheetFormatter.longDate(event.end_date)
+  }
+
+  private var spansMultipleDays: Bool {
+    event.start_date != event.end_date
   }
 
   private var formattedTimeRange: String {
@@ -122,11 +128,11 @@ struct EventDetailsSheet: View {
         ToolbarItem(placement: .topBarTrailing) {
           if isEditing {
             Button(String(localized: .commonSave)) {
-              saveChanges()
+              triggerSave()
             }
             .font(.tidexButton)
             .foregroundColor(canSave ? .tidexBlue : .tidexTextMuted)
-            .disabled(!canSave)
+            .disabled(!canSave || isSaving)
           } else {
             Button(String(localized: .commonDone)) {
               dismiss()
@@ -139,6 +145,16 @@ struct EventDetailsSheet: View {
       .onAppear {
         resetDraft()
         isEditing = startInEditMode
+      }
+      .onChange(of: isEditing) { _, newValue in
+        guard newValue else {
+          isTitleFieldFocused = false
+          return
+        }
+
+        DispatchQueue.main.async {
+          isTitleFieldFocused = true
+        }
       }
       .onChange(of: isAllDay) { _, newValue in
         if newValue {
@@ -188,15 +204,15 @@ struct EventDetailsSheet: View {
       )
 
       VStack(spacing: Spacing.sm) {
-        detailRow(title: String(localized: .addShiftEventNoteTitle), value: event.note)
-
         if event.is_all_day {
-          detailRow(title: String(localized: .addShiftEventStartDate), value: formattedStartDate)
-          detailRow(title: String(localized: .addShiftEventEndDate), value: formattedEndDate)
+          if spansMultipleDays {
+            detailRow(title: String(localized: .addShiftEventStartDate), value: formattedStartDate)
+            detailRow(title: String(localized: .addShiftEventEndDate), value: formattedEndDate)
+          } else {
+            detailRow(title: String(localized: .addShiftEventDate), value: formattedStartDate)
+          }
         } else {
           detailRow(title: String(localized: .addShiftEventDate), value: formattedDate)
-          detailRow(title: String(localized: .commonStart), value: event.start_time ?? "--:--")
-          detailRow(title: String(localized: .commonEnd), value: event.end_time ?? "--:--")
         }
       }
       .padding(Spacing.lg)
@@ -208,46 +224,73 @@ struct EventDetailsSheet: View {
   }
 
   private var editorContent: some View {
-    VStack(spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(.addShiftEventNoteTitle)
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
+    VStack(alignment: .leading, spacing: Spacing.lg) {
+      titleEditorSection
 
-        TextEditor(text: $editedNote)
-          .scrollContentBackground(.hidden)
-          .frame(minHeight: 120)
-          .padding(Spacing.sm)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.lg)
-              .fill(Color.tidexBackground)
-          )
-      }
-      .padding(Spacing.lg)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
+      Divider()
+        .background(Color.tidexBorder)
+
+      scheduleEditorSection
+    }
+  }
+
+  private var titleEditorSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.addShiftEventNoteTitle)
+        .font(.tidexScreenTitle)
+        .foregroundColor(.tidexTextPrimary)
+
+      TextField(
+        String(localized: "addShift.submitRequirements.eventNote", table: "Localizable"),
+        text: $editedNote,
+        axis: .vertical
       )
+      .focused($isTitleFieldFocused)
+      .textFieldStyle(.plain)
+      .font(.tidexBodyLarge)
+      .foregroundColor(.tidexTextPrimary)
+      .lineLimit(2...5)
+      .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.md)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
+          .fill(Color.tidexSurfaceSecondary)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
+          .stroke(
+            isTitleFieldFocused ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder, lineWidth: 1)
+      )
+    }
+    .contentShape(Rectangle())
+    .onTapGesture {
+      focusedTimeField = nil
+      isTitleFieldFocused = true
+    }
+  }
 
+  private var scheduleEditorSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.md) {
       Toggle(isOn: $isAllDay) {
         Text(.addShiftEventAllDay)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
       }
       .tint(.tidexBlue)
-      .padding(Spacing.lg)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
+      .padding(.horizontal, Spacing.sm)
+
+      Divider()
+        .background(Color.tidexBorder)
 
       if isAllDay {
-        VStack(spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
           dateEditor(title: String(localized: .addShiftEventStartDate), selection: $eventStartDate)
           dateEditor(title: String(localized: .addShiftEventEndDate), selection: $eventEndDate)
+          eventRangeSummary
         }
       } else {
-        VStack(spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
           dateEditor(title: String(localized: .addShiftEventDate), selection: $eventDate)
 
           TimeRangePicker(
@@ -261,6 +304,11 @@ struct EventDetailsSheet: View {
         }
       }
     }
+    .simultaneousGesture(
+      TapGesture().onEnded {
+        isTitleFieldFocused = false
+      }
+    )
   }
 
   private var actionButtons: some View {
@@ -341,11 +389,28 @@ struct EventDetailsSheet: View {
       .tint(.tidexBlue)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .padding(Spacing.lg)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
-        .fill(Color.tidexSurfacePrimary)
-    )
+    .padding(.horizontal, Spacing.sm)
+  }
+
+  private var eventRangeSummary: some View {
+    HStack(spacing: Spacing.xxxs) {
+      Image(systemName: "arrow.left.and.right")
+        .font(.tidexMicro)
+      Text(editorRangeSummaryText)
+        .font(.tidexMicro)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .foregroundColor(.tidexTextMuted)
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var editorRangeSummaryText: String {
+    if Calendar.current.isDate(eventStartDate, inSameDayAs: eventEndDate) {
+      return eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    }
+
+    return
+      "\(eventStartDate.formatted(.dateTime.day().month(.abbreviated))) - \(eventEndDate.formatted(.dateTime.day().month(.abbreviated)))"
   }
 
   private func errorBanner(message: String) -> some View {
@@ -371,11 +436,19 @@ struct EventDetailsSheet: View {
     errorMessage = nil
   }
 
-  private func saveChanges() {
+  private func triggerSave() {
+    Task {
+      await saveChanges()
+    }
+  }
+
+  private func saveChanges() async {
     guard canSave else {
       errorMessage = String(localized: .eventsValidationMessage)
       return
     }
+
+    guard let onUpdate else { return }
 
     let result = EventEditResult(
       eventId: event.id,
@@ -387,7 +460,16 @@ struct EventDetailsSheet: View {
       note: trimmedNote
     )
 
-    onUpdate?(result)
+    isSaving = true
+    errorMessage = nil
+
+    do {
+      try await onUpdate(result)
+    } catch {
+      errorMessage = ErrorTranslations.translate(error)
+    }
+
+    isSaving = false
   }
 }
 

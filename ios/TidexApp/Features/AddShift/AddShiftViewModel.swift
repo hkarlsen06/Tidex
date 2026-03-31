@@ -56,6 +56,7 @@ final class AddShiftViewModel: ObservableObject {
   private let snapshotsRepository: SnapshotsRepository
   private let monthContext: SharedMonthContext
   private let addShiftCoordinator: AddShiftCoordinator
+  private var eventRangeAnchorDate: Date?
 
   // MARK: - Mode State
 
@@ -113,6 +114,7 @@ final class AddShiftViewModel: ObservableObject {
         }
         startTime = nil
         endTime = nil
+        eventRangeAnchorDate = eventStartDate
       } else {
         if eventDate != eventStartDate {
           eventDate = eventStartDate
@@ -120,6 +122,7 @@ final class AddShiftViewModel: ObservableObject {
         if eventEndDate != eventStartDate {
           eventEndDate = eventStartDate
         }
+        eventRangeAnchorDate = eventDate
       }
       publishStateToCoordinator()
       scheduleDraftSave()
@@ -136,6 +139,7 @@ final class AddShiftViewModel: ObservableObject {
         if eventEndDate != eventDate {
           eventEndDate = eventDate
         }
+        eventRangeAnchorDate = eventDate
       }
       publishStateToCoordinator()
       scheduleDraftSave()
@@ -149,6 +153,7 @@ final class AddShiftViewModel: ObservableObject {
         if eventDate != eventStartDate {
           eventDate = eventStartDate
         }
+        eventRangeAnchorDate = eventStartDate
       }
       publishStateToCoordinator()
       scheduleDraftSave()
@@ -551,6 +556,13 @@ final class AddShiftViewModel: ObservableObject {
   var canSubmitEvent: Bool {
     hasEventNote
       && (isEventAllDay ? isEventDateRangeValid : hasValidEventTimes)
+  }
+
+  var eventCalendarSelectedDates: Set<String> {
+    if isEventAllDay {
+      return contiguousDateSelection(from: eventStartDate, to: eventEndDate)
+    }
+    return [eventDate.toISODateString()]
   }
 
   /// Selected job object for display and contextual calculations.
@@ -986,6 +998,40 @@ final class AddShiftViewModel: ObservableObject {
     selectedDates.removeAll()
     cachedPreviewEarnings.removeAll()
     cachedConflictDatesForCalendar.removeAll()
+  }
+
+  func toggleEventCalendarDate(_ dateISO: String) {
+    guard let tappedDate = Date.fromISODateString(dateISO) else { return }
+    let calendar = Calendar.current
+    let normalizedDate = calendar.startOfDay(for: tappedDate)
+
+    if isEventAllDay {
+      let currentStart = calendar.startOfDay(for: min(eventStartDate, eventEndDate))
+      let currentEnd = calendar.startOfDay(for: max(eventStartDate, eventEndDate))
+      let anchor = calendar.startOfDay(for: eventRangeAnchorDate ?? currentStart)
+      let isExistingRange = currentStart < currentEnd
+      let tappedInsideCurrentRange = normalizedDate >= currentStart && normalizedDate <= currentEnd
+
+      if isExistingRange, tappedInsideCurrentRange, normalizedDate != anchor {
+        eventStartDate = normalizedDate
+        eventEndDate = normalizedDate
+        eventRangeAnchorDate = normalizedDate
+      } else if normalizedDate >= anchor {
+        eventStartDate = anchor
+        eventEndDate = normalizedDate
+      } else {
+        eventStartDate = normalizedDate
+        eventEndDate = anchor
+      }
+    } else {
+      eventDate = normalizedDate
+      eventStartDate = normalizedDate
+      eventEndDate = normalizedDate
+      eventRangeAnchorDate = normalizedDate
+    }
+
+    let generator = UIImpactFeedbackGenerator(style: .light)
+    generator.impactOccurred()
   }
 
   /// Submit single shifts
@@ -1881,6 +1927,7 @@ final class AddShiftViewModel: ObservableObject {
     eventDate = defaultEventDate
     eventStartDate = defaultEventDate
     eventEndDate = defaultEventDate
+    eventRangeAnchorDate = defaultEventDate
 
     // NOTE: Do NOT reset the month context here!
     // The user should stay on the month where they just added shifts
@@ -2009,6 +2056,7 @@ final class AddShiftViewModel: ObservableObject {
       if let eventEndDate = draft.eventEndDate.flatMap({ Date.fromISODateString($0) }) {
         self.eventEndDate = eventEndDate
       }
+      eventRangeAnchorDate = isEventAllDay ? self.eventStartDate : self.eventDate
     }
 
     logger.info(
@@ -2039,6 +2087,7 @@ final class AddShiftViewModel: ObservableObject {
     eventDate = defaultEventDate
     eventStartDate = defaultEventDate
     eventEndDate = defaultEventDate
+    eventRangeAnchorDate = defaultEventDate
     error = nil
 
     // Haptic feedback
@@ -2064,6 +2113,21 @@ final class AddShiftViewModel: ObservableObject {
     components.minute = timeComponents.minute
 
     return calendar.date(from: components)
+  }
+
+  private func contiguousDateSelection(from start: Date, to end: Date) -> Set<String> {
+    let calendar = Calendar.current
+    let normalizedStart = calendar.startOfDay(for: min(start, end))
+    let normalizedEnd = calendar.startOfDay(for: max(start, end))
+
+    var dates: Set<String> = []
+    var current = normalizedStart
+    while current <= normalizedEnd {
+      dates.insert(current.toISODateString())
+      guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+      current = next
+    }
+    return dates
   }
 
   // MARK: - Performance Optimization Methods
