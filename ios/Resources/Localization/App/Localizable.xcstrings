@@ -40462,7 +40462,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Note"
+            "value": "Event"
           }
         },
         "es": {
@@ -40570,7 +40570,7 @@
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notat"
+            "value": "Hendelse"
           }
         },
         "nl": {
@@ -40582,7 +40582,7 @@
         "nn": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notat"
+            "value": "Hending"
           }
         },
         "pl": {
@@ -47768,7 +47768,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add a note for the event."
+            "value": "Add an event..."
           }
         },
         "es": {
@@ -47876,7 +47876,7 @@
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Legg til et notat for hendelsen."
+            "value": "Legg til en hendelse..."
           }
         },
         "nl": {
@@ -47888,7 +47888,7 @@
         "nn": {
           "stringUnit": {
             "state": "translated",
-            "value": "Legg til eit notat for hendinga."
+            "value": "Legg til ei hending."
           }
         },
         "pl": {
@@ -106758,7 +106758,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fill in a note and a valid date or time range."
+            "value": "Fill in an event and a valid date or time range."
           }
         },
         "es": {
@@ -106866,7 +106866,7 @@
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fyll inn et notat og en gyldig dato eller tidsperiode."
+            "value": "Fyll inn en hendelse og en gyldig dato eller tidsperiode."
           }
         },
         "nl": {
@@ -106878,7 +106878,7 @@
         "nn": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fyll inn eit notat og ein gyldig dato eller eit gyldig tidsrom."
+            "value": "Fyll inn ei hending og ein gyldig dato eller eit gyldig tidsrom."
           }
         },
         "pl": {

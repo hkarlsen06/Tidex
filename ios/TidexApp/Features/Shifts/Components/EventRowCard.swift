@@ -5,6 +5,28 @@ struct EventRowCard: View {
   let coveredDateISO: String
   let onTap: (() -> Void)?
 
+  @Environment(\.layoutDirection) private var layoutDirection
+
+  private var isToday: Bool {
+    coveredDateISO == todayISO()
+  }
+
+  private var dateParts: ShiftCardDateParts {
+    ShiftCardFormatter.dateParts(for: coveredDateISO)
+  }
+
+  private var isContinuingFromPreviousDay: Bool {
+    coveredDateISO != event.start_date
+  }
+
+  private var hasTrailingBottomContent: Bool {
+    isContinuingFromPreviousDay
+  }
+
+  private var isRTL: Bool {
+    layoutDirection == .rightToLeft
+  }
+
   private var dateRangeText: String {
     guard
       let startDate = Date.fromISODateString(event.start_date),
@@ -46,35 +68,44 @@ struct EventRowCard: View {
   }
 
   private var content: some View {
-    HStack(spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
+    ShiftCardContentLayout(
+      centerTrailing: !hasTrailingBottomContent,
+      leadingLayoutPriority: 1,
+      trailingLayoutPriority: 0,
+      trailingFixedHorizontal: false
+    ) {
+      HStack(spacing: Spacing.xxs) {
         HStack(spacing: Spacing.xxs) {
-          Image(systemName: event.is_all_day ? "calendar" : "clock")
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
-          Text(subtitleText)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+          Text(dateParts.weekday)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+          Text("·")
+            .foregroundColor(.tidexTextMuted)
+          Text(dateParts.dayMonth)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextMuted)
         }
-
-        Text(event.note)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-          .multilineTextAlignment(.leading)
-          .lineLimit(3)
-
-        Text(dateRangeText)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
       }
-
-      Spacer(minLength: Spacing.sm)
-
-      if coveredDateISO != event.start_date {
+    } leadingBottom: {
+      subtitleLabel
+    } trailingTop: {
+      Text(event.note)
+        .font(.tidexTitle)
+        .tracking(-0.5)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.trailing)
+        .lineLimit(2)
+        .truncationMode(.tail)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: 170, alignment: .trailing)
+    } trailingBottom: {
+      if isContinuingFromPreviousDay {
         Text(dateRangeText)
           .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
           .multilineTextAlignment(.trailing)
+          .lineLimit(1)
+          .frame(maxWidth: 170, alignment: .trailing)
       }
     }
     .padding(.horizontal, Spacing.mlg)
@@ -85,8 +116,35 @@ struct EventRowCard: View {
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .strokeBorder(Color.tidexBlue.opacity(0.2), lineWidth: 1)
+        .strokeBorder(isToday ? Color.tidexBlue : Color.clear, lineWidth: isToday ? 2 : 0)
     )
     .tidexCardShadow()
+  }
+
+  private var subtitleLabel: some View {
+    HStack(spacing: Spacing.xxs) {
+      if isRTL {
+        subtitleTextLabel
+        subtitleIcon
+      } else {
+        subtitleIcon
+        subtitleTextLabel
+      }
+    }
+  }
+
+  private var subtitleTextLabel: some View {
+    Text(subtitleText)
+      .font(.tidexSubheadline)
+      .foregroundColor(.tidexTextPrimary)
+      .lineLimit(1)
+      .fixedSize(horizontal: true, vertical: false)
+      .environment(\.layoutDirection, .leftToRight)
+  }
+
+  private var subtitleIcon: some View {
+    Image(systemName: event.is_all_day ? "calendar" : "clock")
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextMuted)
   }
 }

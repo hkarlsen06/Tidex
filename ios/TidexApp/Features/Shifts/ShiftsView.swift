@@ -39,7 +39,7 @@ private enum ShiftListItem: Identifiable {
     case .shift(let shift):
       return shift.shiftDate
     case .event(let event):
-      return event.anchorDateISO
+      return event.coveredDateISO
     case .todayPlaceholder:
       return todayISO()
     }
@@ -267,12 +267,17 @@ struct ShiftsView: View {
           }
         }
         .onChange(of: selectedTab) { oldTab, newTab in
-          guard newTab == .shifts, oldTab == .add else { return }
-          tabTransitionOffset = -28
-          tabTransitionOpacity = 0.92
-          MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
-            tabTransitionOffset = 0
-            tabTransitionOpacity = 1
+          guard newTab == .shifts, oldTab != .shifts else { return }
+          Task {
+            await viewModel.reloadFromLocal()
+          }
+          if oldTab == .add {
+            tabTransitionOffset = -28
+            tabTransitionOpacity = 0.92
+            MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
+              tabTransitionOffset = 0
+              tabTransitionOpacity = 1
+            }
           }
         }
         .onAppear {
@@ -388,10 +393,8 @@ struct ShiftsView: View {
               }
             },
             onUpdate: { editResult in
+              try await viewModel.updateEvent(editResult)
               selectedEvent = nil
-              Task {
-                await viewModel.updateEvent(editResult)
-              }
             },
             startInEditMode: selection.startInEditMode
           )
@@ -537,6 +540,9 @@ struct ShiftsView: View {
             dateISO: daySelection.dateISO,
             items: daySelection.items,
             excludedFromTotalIds: viewModel.excludedFromTotalIds,
+            conflictingShiftIds: viewModel.conflictingShiftIds,
+            showJobIndicators: viewModel.shouldShowJobIndicators,
+            jobForShift: { shift in viewModel.jobForShift(shift) },
             onShiftTapped: { shift in
               selectedDayForSheet = nil
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -1484,7 +1490,7 @@ struct ShiftsView: View {
     var items: [ShiftListItem] = filtered.map { .shift($0) }
     items.append(
       contentsOf: viewModel.events.map {
-        .event(EventPresentation(event: $0, coveredDateISO: $0.start_date))
+        .event(EventPresentation(event: $0, coveredDateISO: listCoveredDateISO(for: $0)))
       }
     )
     if viewModel.isCurrentMonth {
@@ -1693,6 +1699,24 @@ struct ShiftsView: View {
       .listRowBackground(Color.clear)
       .listRowSeparator(.hidden)
     }
+  }
+
+  private func listCoveredDateISO(for event: EventRow) -> String {
+    guard
+      event.is_all_day,
+      let monthStart = Calendar.current.date(
+        from: DateComponents(year: viewModel.committedYear, month: viewModel.committedMonth, day: 1)
+      )
+    else {
+      return event.start_date
+    }
+
+    let monthStartISO = monthStart.toISODateString()
+    if event.start_date < monthStartISO, event.end_date >= monthStartISO {
+      return monthStartISO
+    }
+
+    return event.start_date
   }
 
   @ViewBuilder

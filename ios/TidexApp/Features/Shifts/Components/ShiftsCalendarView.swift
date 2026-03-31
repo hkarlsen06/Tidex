@@ -489,7 +489,7 @@ struct ShiftsCalendarView: View {
         && !isDeepLinkHighlighted
         && !shiftsOnDay.isEmpty
         && dayJobTimeColors != nil
-      let showEventIndicator = !eventsOnDay.isEmpty && !shiftsOnDay.isEmpty
+      let showEventIndicator = !eventsOnDay.isEmpty
 
       CalendarDayCell(
         dayInfo: dayInfo,
@@ -503,7 +503,6 @@ struct ShiftsCalendarView: View {
         ),
         content: cellContent(
           for: dayInfo,
-          hasEvents: !eventsOnDay.isEmpty,
           dayJobTimeColors: dayJobTimeColors,
           shouldColorJobMetrics: shouldColorJobMetrics
         ),
@@ -610,7 +609,6 @@ struct ShiftsCalendarView: View {
 
   private func cellContent(
     for dayInfo: CalendarDayInfo,
-    hasEvents: Bool,
     dayJobTimeColors: DayJobTimeColors?,
     shouldColorJobMetrics: Bool
   ) -> CalendarCellContent {
@@ -636,10 +634,6 @@ struct ShiftsCalendarView: View {
         )
       }
       return .hours(hoursData)
-    }
-
-    if hasEvents {
-      return .dot(color: .tidexBlue)
     }
 
     return .empty

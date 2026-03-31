@@ -28,6 +28,9 @@ enum ErrorTranslations {
     "Database error saving new user": "Databasefeil ved lagring av ny bruker",
     "Failed to fetch": "Kunne ikke koble til serveren",
     "Network request failed": "Nettverksforesp\u{00F8}rsel feilet",
+    "Event not found. Please refresh and try again.":
+      "Fant ikke hendelsen. Oppdater og pr\u{00F8}v igjen.",
+    "Invalid event date range": "Ugyldig datointervall for hendelsen",
 
     // Phone-related errors
     "Invalid phone number": "Ugyldig telefonnummer",
