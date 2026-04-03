@@ -573,9 +573,6 @@ private struct EventContent: View {
     VStack(alignment: .leading, spacing: Spacing.lg) {
       titleSection
 
-      Divider()
-        .background(Color.tidexBorder)
-
       scheduleSection
     }
   }
@@ -617,14 +614,11 @@ private struct EventContent: View {
   }
 
   private var scheduleSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      Toggle(isOn: $viewModel.isEventAllDay) {
-        Text(.addShiftEventAllDay)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-      }
-      .toggleStyle(.switch)
-      .padding(.horizontal, Spacing.sm)
+    VStack(alignment: .leading, spacing: 0) {
+      Divider()
+        .background(Color.tidexBorder)
+
+      allDayToggleRow
 
       Divider()
         .background(Color.tidexBorder)
@@ -657,7 +651,24 @@ private struct EventContent: View {
           )
         }
       }
+      .padding(.top, Spacing.md)
     }
+  }
+
+  private var allDayToggleRow: some View {
+    HStack(alignment: .center, spacing: Spacing.sm) {
+      Text(.addShiftEventAllDay)
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+
+      Spacer(minLength: Spacing.sm)
+
+      Toggle(String(localized: .addShiftEventAllDay), isOn: $viewModel.isEventAllDay)
+        .labelsHidden()
+        .tint(.tidexBlue)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xsm)
   }
 
   private var eventRangeSummary: some View {

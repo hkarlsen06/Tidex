@@ -206,7 +206,10 @@ struct FriendsThreadComposerHostedView: View {
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
-      if bridge.mode == .reply, let replyPreview = bridge.replyPreview {
+      if bridge.mode == .reply,
+        let replyPreview = bridge.replyPreview,
+        !attachmentController.isDrawerOpen
+      {
         FriendsThreadComposerReplyBanner(
           preview: replyPreview,
           onCancel: bridge.cancelMode
@@ -745,26 +748,164 @@ private struct FriendsThreadComposerAttachmentPreview: View {
   let onRemove: () -> Void
 
   var body: some View {
-    HStack(alignment: .top, spacing: Spacing.sm) {
-      Group {
-        switch attachment {
-        case .image(let image):
-          FriendsThreadComposerImageAttachmentCard(image: image)
-        case .shiftSnapshot(let draft):
+    Group {
+      switch attachment {
+      case .image(let image):
+        FriendsThreadComposerImageAttachmentCard(
+          image: image,
+          onRemove: onRemove
+        )
+      case .shiftSnapshot(let draft):
+        FriendsThreadComposerDismissibleCard(
+          onDismiss: onRemove,
+          accessibilityLabel: String(localized: .friendsChatComposerRemoveAttachment)
+        ) {
           ChatShiftSnapshotCard(
             snapshot: draft.snapshot,
             isCurrentUser: false
           )
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+}
 
-      removeButton
+private struct FriendsThreadComposerImageAttachmentCard: View {
+  let image: ImageAttachment
+  let onRemove: () -> Void
+
+  var body: some View {
+    FriendsThreadComposerDismissibleCard(
+      onDismiss: onRemove,
+      accessibilityLabel: String(localized: .friendsChatComposerRemoveAttachment)
+    ) {
+      HStack(spacing: Spacing.sm) {
+        if let uiImage = UIImage(data: image.data) {
+          Image(uiImage: uiImage)
+            .resizable()
+            .scaledToFill()
+            .frame(width: 72, height: 72)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        } else {
+          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+            .fill(Color.tidexSurfaceSecondary)
+            .frame(width: 72, height: 72)
+            .overlay {
+              Image(systemName: "photo")
+                .font(.tidexTitle2)
+                .foregroundColor(.tidexTextMuted)
+            }
+        }
+
+        VStack(alignment: .leading, spacing: 4) {
+          Text(.friendsChatPreviewImage)
+            .font(.tidexCaptionStrong)
+            .foregroundColor(.tidexTextPrimary)
+
+          Text(ByteCountFormatter.string(fromByteCount: Int64(image.data.count), countStyle: .file))
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+        }
+
+        Spacer(minLength: 0)
+      }
+    }
+  }
+}
+
+private struct FriendsThreadComposerReplyBanner: View {
+  let preview: FriendsChatReplyPreviewModel
+  let onCancel: () -> Void
+
+  var body: some View {
+    HStack(alignment: .top, spacing: Spacing.xs) {
+      RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+        .fill(Color.tidexBlue.opacity(0.7))
+        .frame(width: 3)
+
+      FriendsChatReplyPreviewContent(
+        preview: preview,
+        isCurrentUser: false,
+        accentColor: .tidexBlue,
+        textColor: .tidexTextMuted,
+        snippetLineLimit: 1,
+        thumbnailSize: CGSize(width: 56, height: 56),
+        hidesImageOnlySnippet: true
+      )
+
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xs)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .fill(Color.tidexSurfaceSecondary.opacity(0.72))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+    )
+    .overlay(alignment: .topTrailing) {
+      Button(action: onCancel) {
+        Image(systemName: "xmark")
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextMuted)
+          .frame(width: 28, height: 28)
+          .background(
+            Circle()
+              .fill(Color.tidexSurfaceSecondary)
+          )
+          .overlay(
+            Circle()
+              .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+          )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(String(localized: .commonCancel)))
+      .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
+      .padding(Spacing.xs)
+    }
+    .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyBanner)
+  }
+}
+
+private struct FriendsThreadComposerDismissibleCard<Content: View>: View {
+  let onDismiss: () -> Void
+  let accessibilityLabel: String
+  var dismissAccessibilityIdentifier: String? = nil
+  @ViewBuilder let content: () -> Content
+
+  var body: some View {
+    content()
+      .padding(.trailing, 40)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.sm)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+          .fill(Color.tidexSurfacePrimary)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+          .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+      )
+      .overlay(alignment: .topTrailing) {
+        dismissButton
+          .padding(Spacing.xs)
+      }
+  }
+
+  @ViewBuilder
+  private var dismissButton: some View {
+    if let dismissAccessibilityIdentifier {
+      dismissButtonBody
+        .accessibilityIdentifier(dismissAccessibilityIdentifier)
+    } else {
+      dismissButtonBody
     }
   }
 
-  private var removeButton: some View {
-    Button(action: onRemove) {
+  private var dismissButtonBody: some View {
+    Button(action: onDismiss) {
       Image(systemName: "xmark")
         .font(.tidexCaptionStrong)
         .foregroundColor(.tidexTextMuted)
@@ -779,125 +920,7 @@ private struct FriendsThreadComposerAttachmentPreview: View {
         )
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(Text(.friendsChatComposerRemoveAttachment))
-  }
-}
-
-private struct FriendsThreadComposerImageAttachmentCard: View {
-  let image: ImageAttachment
-
-  var body: some View {
-    HStack(spacing: Spacing.sm) {
-      if let uiImage = UIImage(data: image.data) {
-        Image(uiImage: uiImage)
-          .resizable()
-          .scaledToFill()
-          .frame(width: 72, height: 72)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      } else {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfaceSecondary)
-          .frame(width: 72, height: 72)
-          .overlay {
-            Image(systemName: "photo")
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexTextMuted)
-          }
-      }
-
-      VStack(alignment: .leading, spacing: 4) {
-        Text(.friendsChatPreviewImage)
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(ByteCountFormatter.string(fromByteCount: Int64(image.data.count), countStyle: .file))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
-      }
-
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
-    )
-  }
-}
-
-private struct FriendsThreadComposerReplyBanner: View {
-  let preview: FriendsChatReplyPreviewModel
-  let onCancel: () -> Void
-
-  var body: some View {
-    HStack(alignment: .top, spacing: Spacing.sm) {
-      HStack(alignment: .top, spacing: Spacing.xs) {
-        RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
-          .fill(Color.tidexBlue.opacity(0.7))
-          .frame(width: 3, height: 30)
-
-        VStack(alignment: .leading, spacing: 3) {
-          Text(preview.senderName)
-            .font(.tidexCaptionStrong)
-            .foregroundColor(.tidexBlue)
-
-          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
-            if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
-              Image(systemName: iconSystemName)
-                .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexTextMuted)
-            }
-
-            Text(preview.snippet)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-              .lineLimit(1)
-          }
-        }
-
-        Spacer(minLength: 0)
-      }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfaceSecondary.opacity(0.72))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
-      )
-
-      Button(action: onCancel) {
-        Image(systemName: "xmark")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 32, height: 32)
-          .background(
-            Circle()
-              .fill(Color.tidexSurfaceSecondary)
-          )
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(String(localized: .commonCancel)))
-      .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
-    }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
-    )
-    .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyBanner)
+    .accessibilityLabel(Text(accessibilityLabel))
   }
 }
 

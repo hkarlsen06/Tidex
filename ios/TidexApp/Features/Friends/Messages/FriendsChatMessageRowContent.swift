@@ -6,12 +6,14 @@ struct FriendsChatReplyPreviewModel: Equatable {
   let previewKind: FriendLastMessagePreviewKind
   let iconPreviewKind: FriendLastMessagePreviewKind?
   let snippet: String
+  let imageAttachment: FriendMessageAttachment?
 
   init(senderName: String, message: FriendMessage) {
     self.senderName = senderName
     previewKind = message.previewKind
     iconPreviewKind = message.replyIconPreviewKind
     snippet = message.previewText ?? String(localized: .friendsChatPreviewUnsupported)
+    imageAttachment = message.attachments.first(where: { $0.kind == .image })
   }
 }
 
@@ -642,25 +644,15 @@ private struct FriendsChatMessageReplyPreview: View {
           .fill(accentColor)
           .frame(width: 3)
 
-        VStack(alignment: .leading, spacing: 3) {
-          Text(preview.senderName)
-            .font(.tidexCaptionStrong)
-            .foregroundColor(accentColor)
-
-          HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
-            if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
-              Image(systemName: iconSystemName)
-                .font(.tidexCaptionRegular)
-                .foregroundColor(textColor)
-            }
-
-            Text(preview.snippet)
-              .font(.tidexFootnote)
-              .foregroundColor(textColor)
-              .multilineTextAlignment(.leading)
-              .lineLimit(2)
-          }
-        }
+        FriendsChatReplyPreviewContent(
+          preview: preview,
+          isCurrentUser: isCurrentUser,
+          accentColor: accentColor,
+          textColor: textColor,
+          snippetLineLimit: 2,
+          thumbnailSize: CGSize(width: 56, height: 56),
+          hidesImageOnlySnippet: true
+        )
 
         Spacer(minLength: 0)
       }
@@ -706,6 +698,100 @@ private struct FriendsChatMessageReplyPreview: View {
       return isHighlighted ? Color.white.opacity(0.32) : Color.white.opacity(0.18)
     }
     return isHighlighted ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder.opacity(0.4)
+  }
+}
+
+struct FriendsChatReplyPreviewContent: View {
+  enum ImageLayout {
+    case thumbnailThenSnippet
+  }
+
+  let preview: FriendsChatReplyPreviewModel
+  let isCurrentUser: Bool
+  let accentColor: Color
+  let textColor: Color
+  let snippetLineLimit: Int
+  let thumbnailSize: CGSize
+  var imageLayout: ImageLayout = .thumbnailThenSnippet
+  var hidesImageOnlySnippet = false
+
+  var body: some View {
+    Group {
+      if let imageAttachment = preview.imageAttachment {
+        imageContent(for: imageAttachment)
+      } else {
+        textOnlyContent
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func imageContent(for imageAttachment: FriendMessageAttachment) -> some View {
+    switch imageLayout {
+    case .thumbnailThenSnippet:
+      VStack(alignment: .leading, spacing: 3) {
+        senderNameLabel
+
+        HStack(alignment: .top, spacing: Spacing.xs) {
+          thumbnail(for: imageAttachment)
+
+          if let snippetText {
+            snippetLabel(snippetText)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+      }
+    }
+  }
+
+  private var textOnlyContent: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      senderNameLabel
+
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
+        if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
+          Image(systemName: iconSystemName)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(textColor)
+        }
+
+        snippetLabel(preview.snippet)
+      }
+    }
+  }
+
+  private var senderNameLabel: some View {
+    Text(preview.senderName)
+      .font(.tidexCaptionStrong)
+      .foregroundColor(accentColor)
+  }
+
+  private var snippetText: String? {
+    if hidesImageOnlySnippet, preview.previewKind == .image {
+      return nil
+    }
+
+    return preview.snippet
+  }
+
+  private func snippetLabel(_ text: String) -> some View {
+    Text(text)
+      .font(.tidexFootnote)
+      .foregroundColor(textColor)
+      .multilineTextAlignment(.leading)
+      .lineLimit(snippetLineLimit)
+  }
+
+  private func thumbnail(for imageAttachment: FriendMessageAttachment) -> some View {
+    FriendsChatImageAttachmentCard(
+      attachment: imageAttachment,
+      isCurrentUser: isCurrentUser,
+      displaySize: thumbnailSize,
+      cornerRadius: CornerRadius.md,
+      placeholderSymbolSize: 14
+    )
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
   }
 }
 
@@ -840,6 +926,9 @@ final class FriendsChatImageLoader: ObservableObject {
 struct FriendsChatImageAttachmentCard: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let displaySize: CGSize?
+  let cornerRadius: CGFloat
+  let placeholderSymbolSize: CGFloat
   var onTap: ((UIImage) -> Void)? = nil
   var onSave: ((UIImage) -> Void)? = nil
 
@@ -848,11 +937,17 @@ struct FriendsChatImageAttachmentCard: View {
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
+    displaySize: CGSize? = nil,
+    cornerRadius: CGFloat = CornerRadius.lg,
+    placeholderSymbolSize: CGFloat = 22,
     onSave: ((UIImage) -> Void)? = nil,
     onTap: ((UIImage) -> Void)? = nil
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
+    self.displaySize = displaySize
+    self.cornerRadius = cornerRadius
+    self.placeholderSymbolSize = placeholderSymbolSize
     self.onSave = onSave
     self.onTap = onTap
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
@@ -904,7 +999,7 @@ struct FriendsChatImageAttachmentCard: View {
       } else {
         placeholder {
           Image(systemName: "photo")
-            .font(.tidexTitle2)
+            .font(.system(size: placeholderSymbolSize, weight: .medium))
             .foregroundColor(.tidexTextMuted)
         }
       }
@@ -915,11 +1010,11 @@ struct FriendsChatImageAttachmentCard: View {
   }
 
   private var imageFrameSize: CGSize {
-    attachment.friendsChatImageFrameSize()
+    displaySize ?? attachment.friendsChatImageFrameSize()
   }
 
   private var imageShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
   }
 
   @ViewBuilder

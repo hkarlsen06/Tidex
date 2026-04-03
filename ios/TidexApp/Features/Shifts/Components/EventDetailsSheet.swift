@@ -227,9 +227,6 @@ struct EventDetailsSheet: View {
     VStack(alignment: .leading, spacing: Spacing.lg) {
       titleEditorSection
 
-      Divider()
-        .background(Color.tidexBorder)
-
       scheduleEditorSection
     }
   }
@@ -271,44 +268,61 @@ struct EventDetailsSheet: View {
   }
 
   private var scheduleEditorSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      Toggle(isOn: $isAllDay) {
-        Text(.addShiftEventAllDay)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-      }
-      .tint(.tidexBlue)
-      .padding(.horizontal, Spacing.sm)
+    VStack(alignment: .leading, spacing: 0) {
+      Divider()
+        .background(Color.tidexBorder)
+
+      allDayToggleRow
 
       Divider()
         .background(Color.tidexBorder)
 
-      if isAllDay {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-          dateEditor(title: String(localized: .addShiftEventStartDate), selection: $eventStartDate)
-          dateEditor(title: String(localized: .addShiftEventEndDate), selection: $eventEndDate)
-          eventRangeSummary
-        }
-      } else {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-          dateEditor(title: String(localized: .addShiftEventDate), selection: $eventDate)
+      Group {
+        if isAllDay {
+          VStack(alignment: .leading, spacing: Spacing.sm) {
+            dateEditor(
+              title: String(localized: .addShiftEventStartDate), selection: $eventStartDate)
+            dateEditor(title: String(localized: .addShiftEventEndDate), selection: $eventEndDate)
+            eventRangeSummary
+          }
+        } else {
+          VStack(alignment: .leading, spacing: Spacing.md) {
+            dateEditor(title: String(localized: .addShiftEventDate), selection: $eventDate)
 
-          TimeRangePicker(
-            startTime: $editedStartTime,
-            endTime: $editedEndTime,
-            scrollProxy: nil,
-            scrollId: "event-details-time-range",
-            focusedFieldBinding: $focusedTimeField,
-            leadingChipAccessory: nil
-          )
+            TimeRangePicker(
+              startTime: $editedStartTime,
+              endTime: $editedEndTime,
+              scrollProxy: nil,
+              scrollId: "event-details-time-range",
+              focusedFieldBinding: $focusedTimeField,
+              leadingChipAccessory: nil
+            )
+          }
         }
       }
+      .padding(.top, Spacing.md)
     }
     .simultaneousGesture(
       TapGesture().onEnded {
         isTitleFieldFocused = false
       }
     )
+  }
+
+  private var allDayToggleRow: some View {
+    HStack(alignment: .center, spacing: Spacing.sm) {
+      Text(.addShiftEventAllDay)
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+
+      Spacer(minLength: Spacing.sm)
+
+      Toggle(String(localized: .addShiftEventAllDay), isOn: $isAllDay)
+        .labelsHidden()
+        .tint(.tidexBlue)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xsm)
   }
 
   private var actionButtons: some View {
