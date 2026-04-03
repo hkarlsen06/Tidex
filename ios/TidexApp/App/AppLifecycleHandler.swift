@@ -29,7 +29,7 @@ final class AppLifecycleHandler {
     NotificationCenter.default.post(name: .tidexDidBecomeActive, object: nil)
     Task { @MainActor [weak self] in
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
-      self?.runForegroundLiveActivityMaintenance()
+      await self?.runForegroundLiveActivityMaintenance()
       self?.scheduleForegroundLiveActivityRecovery()
     }
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
@@ -56,14 +56,14 @@ final class AppLifecycleHandler {
     }
   }
 
-  private func runForegroundLiveActivityMaintenance() {
+  private func runForegroundLiveActivityMaintenance() async {
     guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
     else { return }
 
     // Refresh the App Group snapshot from local storage before reconciling so
     // foreground maintenance does not depend on stale widget storage.
     if let userId = AppCoordinator.shared.getCurrentUserId() {
-      NativeWidgetStorage.updateWidgetStorage(for: userId)
+      await NativeWidgetStorage.refreshWidgetStorageNow(for: userId)
     } else {
       appDelegate.checkAndStartLiveActivityIfNeeded()
     }
@@ -82,7 +82,7 @@ final class AppLifecycleHandler {
 
       guard !Task.isCancelled else { return }
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
-      self?.runForegroundLiveActivityMaintenance()
+      await self?.runForegroundLiveActivityMaintenance()
       self?.liveActivityRecoveryTask = nil
     }
   }

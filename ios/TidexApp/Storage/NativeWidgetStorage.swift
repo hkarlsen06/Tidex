@@ -7,6 +7,92 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "NativeWidgetS
 
 // MARK: - Native Widget Storage
 
+private actor NativeWidgetStorageRefreshCoordinator {
+  static let shared = NativeWidgetStorageRefreshCoordinator()
+
+  private struct RefreshWaiter {
+    let generation: Int
+    let continuation: CheckedContinuation<Void, Never>
+  }
+
+  private var activeUserIds: [String: Int] = [:]
+  private var needsAnotherPass: Set<String> = []
+  private var waiters: [String: [RefreshWaiter]] = [:]
+  private var generation = 0
+
+  func schedule(userId: String) {
+    startRefreshIfNeeded(for: userId, generation: generation)
+  }
+
+  func refreshNow(userId: String) async {
+    let refreshGeneration = generation
+    await withCheckedContinuation { continuation in
+      waiters[userId, default: []].append(
+        RefreshWaiter(generation: refreshGeneration, continuation: continuation)
+      )
+      startRefreshIfNeeded(for: userId, generation: refreshGeneration)
+    }
+  }
+
+  func invalidateAll() {
+    generation += 1
+    activeUserIds.removeAll()
+    needsAnotherPass.removeAll()
+
+    let staleWaiters = waiters.values.flatMap { waiters in
+      waiters.map(\.continuation)
+    }
+    waiters.removeAll()
+    staleWaiters.forEach { $0.resume() }
+  }
+
+  func shouldApplyResults(for userId: String, generation: Int) -> Bool {
+    self.generation == generation && activeUserIds[userId] == generation
+  }
+
+  private func startRefreshIfNeeded(for userId: String, generation: Int) {
+    if let activeGeneration = activeUserIds[userId] {
+      guard activeGeneration == generation else { return }
+      needsAnotherPass.insert(userId)
+      return
+    }
+
+    activeUserIds[userId] = generation
+    Task(priority: .utility) { [userId, generation] in
+      await self.runRefreshLoop(for: userId, generation: generation)
+    }
+  }
+
+  private func runRefreshLoop(for userId: String, generation: Int) async {
+    while true {
+      guard shouldApplyResults(for: userId, generation: generation) else { break }
+      needsAnotherPass.remove(userId)
+      await NativeWidgetStorage.performRefresh(for: userId, generation: generation)
+
+      guard
+        shouldApplyResults(for: userId, generation: generation),
+        needsAnotherPass.contains(userId)
+      else { break }
+    }
+
+    if activeUserIds[userId] == generation {
+      activeUserIds.removeValue(forKey: userId)
+    }
+
+    let pendingWaiters = waiters[userId] ?? []
+    let matchingWaiters = pendingWaiters.filter { $0.generation == generation }
+    let remainingWaiters = pendingWaiters.filter { $0.generation != generation }
+
+    if remainingWaiters.isEmpty {
+      waiters.removeValue(forKey: userId)
+    } else {
+      waiters[userId] = remainingWaiters
+    }
+
+    matchingWaiters.forEach { $0.continuation.resume() }
+  }
+}
+
 /// Writes shift data from SwiftData local storage to App Group UserDefaults
 /// for widget consumption. This is the native-side equivalent of the WebView's
 /// widget-storage.ts that writes via Capacitor.
@@ -14,7 +100,6 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "NativeWidgetS
 /// Triggered after:
 /// - Successful sync (SyncCoordinator)
 /// - Local shift changes (ShiftsRepository)
-@MainActor
 enum NativeWidgetStorage {
   private static let appGroupId = "group.no.tidex.app"
   private static let shiftsKey = "upcoming_shifts"
@@ -33,21 +118,37 @@ enum NativeWidgetStorage {
 
   /// Update widget storage with current local shift data
   /// - Parameter userId: User ID to fetch shifts for
-  @MainActor
   static func updateWidgetStorage(for userId: String) {
+    Task(priority: .utility) {
+      await NativeWidgetStorageRefreshCoordinator.shared.schedule(userId: userId)
+    }
+  }
+
+  static func refreshWidgetStorageNow(for userId: String) async {
+    await NativeWidgetStorageRefreshCoordinator.shared.refreshNow(userId: userId)
+  }
+
+  static func invalidatePendingRefreshes() async {
+    await NativeWidgetStorageRefreshCoordinator.shared.invalidateAll()
+  }
+
+  static func performRefresh(for userId: String, generation: Int) async {
     logger.info("Updating widget storage for user \(userId.prefix(8))...")
 
-    // Get repositories
-    let shiftsRepository = ShiftsRepository.shared
-    let snapshotsRepository = SnapshotsRepository.shared
-    let settingsRepository = SettingsRepository.shared
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    let settings = await storeActor.fetchUserSettings(userId: userId)
+    let snapshots = await storeActor.fetchSnapshots(userId: userId)
+    let recurringPatterns = await storeActor.fetchRecurringShifts(userId: userId)
+    let jobs = await storeActor.fetchNonDeletedJobs(userId: userId)
 
-    // Get settings for currency
-    let settings = settingsRepository.getSettings(for: userId)
-    // Currency is stored directly as symbol (e.g., "kr", "$", "€")
+    guard
+      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
+        for: userId,
+        generation: generation
+      )
+    else { return }
+
     let currencySymbol = settings?.currency ?? defaultCurrencySymbol
-
-    // Store currency separately so widget can access it even when no shifts exist
     storeCurrency(currencySymbol)
 
     // Calculate date range: previous month through 90 days ahead
@@ -66,12 +167,11 @@ enum NativeWidgetStorage {
     let endDate = calendar.date(byAdding: .day, value: futureDaysWindow, to: now) ?? now
 
     // Fetch regular shifts in date range
-    let regularShifts = shiftsRepository.getShifts(
-      for: userId, startDate: startDate, endDate: endDate)
-
-    // Fetch recurring shift patterns and generate virtual shifts
-    let recurringRepository = RecurringShiftsRepository.shared
-    let recurringPatterns = recurringRepository.getRecurringShifts(for: userId)
+    let regularShifts = await storeActor.fetchShifts(
+      userId: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
 
     // Generate virtual shifts for each month in the date range
     var virtualShifts: [ShiftRow] = []
@@ -110,16 +210,24 @@ enum NativeWidgetStorage {
     let allShifts = regularShifts + dedupedVirtualShifts
 
     if allShifts.isEmpty {
+      guard
+        await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
+          for: userId,
+          generation: generation
+        )
+      else { return }
+
       logger.info("No shifts to store for widget")
       clearWidgetStorage()
+      await MainActor.run {
+        ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+          .checkAndStartLiveActivityIfNeeded()
+      }
       return
     }
 
     // Sort all shifts by date for consistent ordering
     let shifts = allShifts.sorted { $0.shift_date < $1.shift_date }
-
-    // Get snapshots for computing wages
-    let snapshots = snapshotsRepository.getSnapshots(for: userId)
 
     // Convert to StoredShift format with computed wages
     let storedShifts = shifts.compactMap { shift -> StoredShift? in
@@ -160,19 +268,32 @@ enum NativeWidgetStorage {
     }
 
     // Write to App Group UserDefaults
+    guard
+      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
+        for: userId,
+        generation: generation
+      )
+    else { return }
     writeShiftsToAppGroup(storedShifts)
 
     // Trigger widget reload
     reloadWidgetTimelines()
 
     // Re-check in-app Live Activity state after fresh shift data is written.
-    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
-      appDelegate.checkAndStartLiveActivityIfNeeded()
+    await MainActor.run {
+      ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+        .checkAndStartLiveActivityIfNeeded()
     }
 
     // Schedule shift reminder notifications for upcoming shifts
     // Pass shifts directly to avoid race condition with UserDefaults write
-    Task {
+    guard
+      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
+        for: userId,
+        generation: generation
+      )
+    else { return }
+    Task { @MainActor in
       await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId, shifts: storedShifts)
       await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
     }
@@ -180,12 +301,34 @@ enum NativeWidgetStorage {
     logger.info("Widget storage updated with \(storedShifts.count) shifts")
 
     // Also update monthly totals for TotalCard widget
+    let currentYear = calendar.component(.year, from: now)
+    let currentMonth = calendar.component(.month, from: now)
+    let previousYM = Date.previousYearMonth(from: (year: currentYear, month: currentMonth))
+    let currentMonthShifts = await storeActor.fetchShifts(
+      userId: userId,
+      startDate: Date.firstDayOfMonthDate(year: currentYear, month: currentMonth),
+      endDate: Date.lastDayOfMonthDate(year: currentYear, month: currentMonth)
+    )
+    let previousMonthShifts = await storeActor.fetchShifts(
+      userId: userId,
+      startDate: Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month),
+      endDate: Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+    )
+    guard
+      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
+        for: userId,
+        generation: generation
+      )
+    else { return }
     updateMonthlyTotalsStorage(
-      for: userId,
       settings: settings,
       snapshots: snapshots,
       recurringPatterns: recurringPatterns,
-      currencySymbol: currencySymbol
+      currencySymbol: currencySymbol,
+      jobs: jobs,
+      currentMonthShifts: currentMonthShifts,
+      previousMonthShifts: previousMonthShifts,
+      now: now
     )
   }
 
@@ -211,48 +354,27 @@ enum NativeWidgetStorage {
 
   // MARK: - Monthly Totals Storage (TotalCard Widget)
 
-  /// Update widget storage with current month totals for TotalCard widget
-  /// Called automatically from updateWidgetStorage
-  @MainActor
+  // Update widget storage with current month totals for the TotalCard widget.
+  // Called automatically from updateWidgetStorage.
+  // swiftlint:disable:next function_parameter_count
   private static func updateMonthlyTotalsStorage(
-    for userId: String,
     settings: UserSettings?,
     snapshots: [WageSnapshot],
     recurringPatterns: [RecurringShiftRow],
-    currencySymbol: String
+    currencySymbol: String,
+    jobs: [Job],
+    currentMonthShifts: [ShiftRow],
+    previousMonthShifts: [ShiftRow],
+    now: Date
   ) {
-    let now = Date()
     let calendar = Calendar.current
 
     // Get current month
     let currentYear = calendar.component(.year, from: now)
     let currentMonth = calendar.component(.month, from: now)
 
-    // Calculate current month date range
-    let currentStartDate = Date.firstDayOfMonthDate(year: currentYear, month: currentMonth)
-    let currentEndDate = Date.lastDayOfMonthDate(year: currentYear, month: currentMonth)
-
     // Calculate previous month date range
     let previousYM = Date.previousYearMonth(from: (year: currentYear, month: currentMonth))
-    let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-    let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-
-    // Load shifts from repository
-    let shiftsRepository = ShiftsRepository.shared
-    let jobsRepository = JobsRepository.shared
-    let jobs = jobsRepository.getNonDeletedJobs(for: userId)
-
-    let currentMonthShifts = shiftsRepository.getShifts(
-      for: userId,
-      startDate: currentStartDate,
-      endDate: currentEndDate
-    )
-
-    let previousMonthShifts = shiftsRepository.getShifts(
-      for: userId,
-      startDate: previousStartDate,
-      endDate: previousEndDate
-    )
 
     // Compute shifts with payroll using PayrollEngine
     let computedCurrentShifts = PayrollEngine.computeShiftsForMonth(

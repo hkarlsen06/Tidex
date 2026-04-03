@@ -139,6 +139,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return UserDefaults(suiteName: appGroupId)
   }
 
+  private func loadStoredShiftsFromSharedDefaults() async -> [StoredShift] {
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async { [appGroupId] in
+        guard
+          FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
+            != nil,
+          let userDefaults = UserDefaults(suiteName: appGroupId),
+          let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
+          let shiftsData = shiftsJson.data(using: .utf8),
+          let shifts = try? JSONDecoder().decode([StoredShift].self, from: shiftsData)
+        else {
+          continuation.resume(returning: [])
+          return
+        }
+
+        continuation.resume(returning: shifts)
+      }
+    }
+  }
+
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -251,24 +271,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // Read upcoming shifts from shared storage
-    guard let userDefaults = sharedUserDefaults(),
-      let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
-      let shiftsData = shiftsJson.data(using: .utf8)
-    else {
+    let shifts = await loadStoredShiftsFromSharedDefaults()
+    guard !shifts.isEmpty else {
       return
     }
 
     // Parse shifts and find ongoing one
-    do {
-      let shifts = try JSONDecoder().decode([StoredShift].self, from: shiftsData)
-      let now = Date()
+    let now = Date()
 
-      // Find the ongoing shift without verbose per-shift logging
-      if let ongoingShift = shifts.first(where: { isShiftOngoing($0, at: now) }) {
-        startLiveActivityForShift(ongoingShift)
-      }
-      // Silent when no ongoing shift - this is the normal case
-    } catch {}
+    // Find the ongoing shift without verbose per-shift logging
+    if let ongoingShift = shifts.first(where: { isShiftOngoing($0, at: now) }) {
+      startLiveActivityForShift(ongoingShift)
+    }
+    // Silent when no ongoing shift - this is the normal case
   }
 
   /// End any Live Activities whose shifts are no longer ongoing.
@@ -284,16 +299,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     guard !activities.isEmpty else { return false }
 
     // Read current shifts from storage
-    let currentShifts: [StoredShift]
-    if let userDefaults = sharedUserDefaults(),
-      let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
-      let shiftsData = shiftsJson.data(using: .utf8),
-      let shifts = try? JSONDecoder().decode([StoredShift].self, from: shiftsData)
-    {
-      currentShifts = shifts
-    } else {
-      currentShifts = []
-    }
+    let currentShifts = await loadStoredShiftsFromSharedDefaults()
 
     let now = Date()
     var endedAny = false
