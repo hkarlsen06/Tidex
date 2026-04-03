@@ -64,13 +64,14 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
       ) : null}
 
       <div
-        className={`relative inline-block overflow-hidden rounded-[3.15rem] border border-white/10 bg-[radial-gradient(circle_at_top,hsl(208_82%_18%),hsl(220_54%_5%)_38%)] ${phoneClassName}`}
+        className={`relative inline-block overflow-hidden rounded-[3.15rem] bg-[linear-gradient(180deg,hsl(214_41%_18%)_0%,hsl(213_43%_14%)_22%,hsl(215_48%_9%)_100%)] ${phoneClassName}`}
         style={{
           aspectRatio: `${phoneOuterAspectRatio}`,
-          boxShadow: '0 48px 120px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+          boxShadow:
+            '0 48px 120px rgba(0,0,0,0.6), inset 0 0 0 0.5px rgba(255,255,255,0.04)',
         }}
       >
-        <div className="absolute inset-x-7 top-0 h-px bg-linear-to-r from-transparent via-white/24 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 rounded-[3.15rem] border border-white/10" />
 
         <div
           className="absolute overflow-hidden rounded-[2.9rem]"
@@ -97,7 +98,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             <div className="absolute inset-y-1/2 right-[20%] aspect-square h-[16%] -translate-y-1/2 rounded-full bg-[rgba(10,14,20,0.78)] opacity-38" />
             <div className="absolute inset-y-1/2 right-[9%] aspect-square h-[30%] -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.09),rgba(74,98,132,0.1)_20%,rgba(10,14,20,0.88)_52%,rgba(0,0,0,0.96)_100%)] opacity-58" />
           </div>
-          <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] border border-white/8" />
+          <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] border border-white/12" />
         </div>
       </div>
 
