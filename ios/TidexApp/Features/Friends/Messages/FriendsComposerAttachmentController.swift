@@ -407,9 +407,11 @@ final class FriendsComposerAttachmentController: ObservableObject {
     }
   }
 
-  func completeAttachmentSelection() {
+  func completeAttachmentSelection(shouldCloseDrawer: Bool = true) {
     isShowingShiftCalendar = false
-    closeDrawer()
+    if shouldCloseDrawer {
+      closeDrawer()
+    }
   }
 
   private func resolvedAuthorizationState(requestingIfNeeded: Bool)

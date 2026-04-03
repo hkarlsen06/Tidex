@@ -356,6 +356,10 @@ struct ComposerShiftSnapshotDraft: Codable, Equatable {
   }
 }
 
+enum FriendsComposerAttachmentLimits {
+  static let maxImagesPerMessage = 4
+}
+
 enum FriendsComposerAttachmentDraft: Codable, Equatable {
   case image(ImageAttachment)
   case shiftSnapshot(ComposerShiftSnapshotDraft)
@@ -431,6 +435,32 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
         )
       )
     )
+  }
+}
+
+extension Array where Element == FriendsComposerAttachmentDraft {
+  var imageAttachments: [ImageAttachment] {
+    compactMap(\.imageAttachment)
+  }
+
+  var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
+    compactMap(\.shiftSnapshotDraft).first
+  }
+
+  var shiftSnapshot: FriendShiftSnapshot? {
+    shiftSnapshotDraft?.snapshot
+  }
+
+  var hasImageAttachments: Bool {
+    contains { $0.imageAttachment != nil }
+  }
+
+  var hasShiftSnapshot: Bool {
+    contains { $0.shiftSnapshot != nil }
+  }
+
+  var metadataData: Data? {
+    compactMap(\.metadataData).first
   }
 }
 
