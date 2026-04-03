@@ -8,6 +8,7 @@ private enum FriendsThreadComposerAccessibilityID {
   static let sendButton = "friends-thread-composer.send-button"
   static let replyBanner = "friends-thread-composer.reply-banner"
   static let replyCancelButton = "friends-thread-composer.reply-cancel"
+  static let attachmentToggleButton = "friends-thread-composer.attachment-toggle"
 }
 
 enum FriendsThreadComposerMode: Equatable {
@@ -245,8 +246,7 @@ struct FriendsThreadComposerHostedView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       if bridge.mode == .reply,
-        let replyPreview = bridge.replyPreview,
-        !attachmentController.isDrawerOpen
+        let replyPreview = bridge.replyPreview
       {
         FriendsThreadComposerReplyBanner(
           preview: replyPreview,
@@ -636,6 +636,7 @@ private struct FriendsThreadComposerPlusButton: View {
         )
       )
     )
+    .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.attachmentToggleButton)
   }
 }
 
@@ -907,12 +908,18 @@ private struct FriendsThreadComposerImageAttachmentsCard: View {
   }
 
   private var currentWindowWidth: CGFloat {
-    UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)?
-      .bounds.width
-      ?? UIScreen.main.bounds.width
+    let windowScenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let windows = windowScenes.flatMap(\.windows)
+
+    if let keyWindowWidth = windows.first(where: \.isKeyWindow)?.bounds.width {
+      return keyWindowWidth
+    }
+
+    if let windowWidth = windows.first?.bounds.width {
+      return windowWidth
+    }
+
+    return windowScenes.first?.screen.bounds.width ?? Layout.maxTileSize
   }
 
   private func resolvedTileSize(for availableWidth: CGFloat) -> CGFloat {
