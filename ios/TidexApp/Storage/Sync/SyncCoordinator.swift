@@ -408,9 +408,7 @@ final class SyncCoordinator: ObservableObject {
 
       // Update widget storage with latest shift data
       if updateWidgetStorage {
-        await MainActor.run {
-          NativeWidgetStorage.updateWidgetStorage(for: userId)
-        }
+        NativeWidgetStorage.updateWidgetStorage(for: userId)
       }
 
       return SyncResult(
@@ -4751,9 +4749,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Update widget storage since shift data changed
-    await MainActor.run {
-      NativeWidgetStorage.updateWidgetStorage(for: userId)
-    }
+    NativeWidgetStorage.updateWidgetStorage(for: userId)
   }
 
   /// Resolve a conflict for a recurring shift
@@ -4804,9 +4800,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Update widget storage since recurring shift data changed (affects generated shifts)
-    await MainActor.run {
-      NativeWidgetStorage.updateWidgetStorage(for: userId)
-    }
+    NativeWidgetStorage.updateWidgetStorage(for: userId)
   }
 
   /// Resolve a conflict for a wage snapshot
@@ -4857,9 +4851,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Update widget storage since wage calculations may have changed
-    await MainActor.run {
-      NativeWidgetStorage.updateWidgetStorage(for: userId)
-    }
+    NativeWidgetStorage.updateWidgetStorage(for: userId)
   }
 
   /// Resolve a conflict for user settings
@@ -4908,9 +4900,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Update widget storage since settings (e.g., currency) may affect display
-    await MainActor.run {
-      NativeWidgetStorage.updateWidgetStorage(for: userId)
-    }
+    NativeWidgetStorage.updateWidgetStorage(for: userId)
   }
 
   // MARK: - Notification Preferences Pull

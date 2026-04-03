@@ -3,6 +3,8 @@ import SwiftUI
 /// Card displaying previous month's earnings and payroll information
 /// Design matches NextPayrollCard from the Next.js app
 struct PayrollCard: View {
+  private let regularCardMinHeight: CGFloat = 89
+
   let payrollDate: Date
   let label: String
   var labelColorHex: String? = nil
@@ -19,6 +21,7 @@ struct PayrollCard: View {
   var isLoading: Bool = false
 
   @Environment(\.userCurrency) private var currency
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
@@ -43,6 +46,10 @@ struct PayrollCard: View {
 
   private var showsPageIndicator: Bool {
     pageIndicatorCount > 1
+  }
+
+  private var usesFixedCardHeight: Bool {
+    !dynamicTypeSize.isAccessibilitySize
   }
 
   // MARK: - Body
@@ -158,6 +165,7 @@ struct PayrollCard: View {
     }
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, ShiftCardMetrics.verticalPadding)
+    .frame(minHeight: usesFixedCardHeight ? regularCardMinHeight : nil)
     .background(Color.tidexSurfacePrimary)
     .overlay(alignment: .leading) {
       // Progress bar overlay - fills from left based on progress

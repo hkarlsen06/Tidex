@@ -938,6 +938,10 @@ final class AppCoordinator: ObservableObject {
     // Cancel all tracked background tasks to prevent stale state updates
     cancelAllBackgroundTasks()
 
+    // Invalidate any queued widget refreshes before clearing shared state so
+    // background tasks cannot repopulate App Group data after sign-out.
+    await NativeWidgetStorage.invalidatePendingRefreshes()
+
     if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
       await appDelegate.endAllLiveActivities(reason: "auth/session context reset")
     }

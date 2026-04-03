@@ -589,7 +589,9 @@ struct ShiftComplicationView: View {
   @ViewBuilder
   private func relativeCountdownText(range: (start: Date, end: Date)) -> some View {
     if let targetDate = countdownTargetDate(for: range) {
-      Text(timerInterval: renderDate...targetDate, countsDown: true)
+      // Match Live Activity timer rendering so the watch complication and mirrored
+      // Live Activity advance on the same second boundary.
+      Text(targetDate, style: .timer)
         .monospacedDigit()
     } else {
       Text("--")

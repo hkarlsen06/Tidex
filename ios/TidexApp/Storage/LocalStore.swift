@@ -324,6 +324,29 @@ actor LocalStoreActor {
 
   // MARK: - Jobs Operations
 
+  func fetchNonDeletedJobs(userId: String) -> [Job] {
+    let descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId
+      },
+      sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.name)]
+    )
+
+    do {
+      return try modelContext.fetch(descriptor)
+        .filter { job in
+          if job.syncStatusRaw == "pendingDelete" {
+            return false
+          }
+          return job.deletedAt == nil
+        }
+        .map { $0.toJob() }
+    } catch {
+      logger.error("Failed to fetch jobs: \(error.localizedDescription)")
+      return []
+    }
+  }
+
   /// Upsert a job from server data
   func upsertJob(_ job: LocalJob) throws {
     let jobId = job.id
