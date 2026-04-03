@@ -74,7 +74,7 @@ struct FriendsThreadView: View {
       mode: viewModel.composerMode,
       draftText: viewModel.draft,
       replyPreview: viewModel.draftReplyTarget.map { replyPreviewModel(for: $0) },
-      stagedAttachment: viewModel.stagedComposerAttachment,
+      stagedAttachments: viewModel.stagedComposerAttachments,
       isThreadReadOnly: viewModel.isThreadReadOnly,
       sendErrorMessage: viewModel.sendErrorMessage,
       composerValidationMessage: viewModel.composerValidationMessage,
@@ -835,10 +835,10 @@ struct FriendsThreadView: View {
         await viewModel.handleDraftChanged(to: draft)
       }
     }
-    composerBridge.onStagedAttachmentChanged = { attachment in
-      viewModel.stagedComposerAttachment = attachment
+    composerBridge.onStagedAttachmentsChanged = { attachments in
+      viewModel.stagedComposerAttachments = attachments
       Task {
-        await viewModel.setComposerAttachment(attachment)
+        await viewModel.setComposerAttachments(attachments)
       }
     }
     composerBridge.onPrepareShiftSnapshotAttachment = { shift in

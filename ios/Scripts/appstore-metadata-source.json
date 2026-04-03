@@ -8,7 +8,7 @@
       "promotional_text": "Payroll calculation made easy",
       "description": "Track your work shifts and calculate your wages with Tidex.\n\nFeatures:\n• Easy shift logging with start/end times\n• Automatic wage calculations\n• Calendar view of all shifts\n• Earnings overview and statistics\n• Widget for quick access\n• Sync across devices\n\nPerfect for employees who want to keep track of their work hours and earnings.",
       "keywords": "shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings",
-      "release_notes": "- Improved friend chat notifications so new messages open faster and more reliably\n- Improved the Friends list to better surface active chats, unread messages, and people who are typing\n- Added clearer message length feedback while writing in friend chats\n- Refreshed the app design and polished chat screens\n- Bug fixes and other improvements"
+      "release_notes": "- Added private events to your schedule, including all-day and multi-day plans\n- Improved event editing and schedule syncing across the app, widgets, and Live Activities\n- Improved friend chats with better notification routing, typing and unread states, refined reply previews, and support for sending multiple images in one message\n- Added a clearer onboarding step for payroll setup versus friends-only use, and kept your login details when switching between sign in and sign up\n- Bug fixes and other improvements"
     },
     "nb": {
       "name": "Tidex",
@@ -16,7 +16,7 @@
       "promotional_text": "Lønnsberegning gjort enkelt",
       "description": "Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.\n\nFunksjoner:\n• Enkel vaktregistrering med start- og sluttider\n• Automatisk lønnsberegning\n• Kalendervisning av alle vakter\n• Inntektsoversikt og statistikk\n• Widget for rask tilgang\n• Synkronisering på tvers av enheter\n\nPerfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.",
       "keywords": "vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger",
-      "release_notes": "- Forbedret varsler i vennesamtaler, slik at nye meldinger åpnes raskere og mer pålitelig\n- Forbedret vennelisten slik at aktive samtaler, uleste meldinger og de som skriver vises tydeligere\n- Lagt til tydeligere tegngrense og varsler mens du skriver i vennesamtaler\n- Frisket opp appdesignet og finpusset chatskjermene\n- Feilrettinger og andre forbedringer"
+      "release_notes": "- Lagt til private hendelser i planen din, inkludert heldags- og flerdagersplaner\n- Forbedret redigering av hendelser og synkronisering av planen på tvers av appen, widgets og Live Activities\n- Forbedret vennesamtaler med bedre åpning fra varsler, tydeligere skrive- og uleststatus, finere svarforhåndsvisninger og støtte for å sende flere bilder i én melding\n- Lagt til et tydeligere onboarding-steg for lønnsoppsett versus kun vennedeling, og beholdt innloggingsdetaljene dine når du bytter mellom innlogging og registrering\n- Feilrettinger og andre forbedringer"
     }
   }
 }

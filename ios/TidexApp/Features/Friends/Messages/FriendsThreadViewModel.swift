@@ -81,7 +81,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private struct ComposerSnapshot: Equatable {
     let state: ComposerState
     let draft: String
-    let stagedAttachment: FriendsComposerAttachmentDraft?
+    let stagedAttachments: [FriendsComposerAttachmentDraft]
   }
 
   private actor SendTaskHandle {
@@ -149,8 +149,13 @@ final class FriendsThreadViewModel: ObservableObject {
       updateDraftValidation(for: draft)
     }
   }
-  @Published var stagedComposerAttachment: FriendsComposerAttachmentDraft?
+  @Published var stagedComposerAttachments: [FriendsComposerAttachmentDraft] = []
   @Published var sendErrorMessage: String?
+
+  var stagedComposerAttachment: FriendsComposerAttachmentDraft? {
+    get { stagedComposerAttachments.first }
+    set { stagedComposerAttachments = newValue.map { [$0] } ?? [] }
+  }
 
   let route: FriendChatRoute
 
@@ -342,7 +347,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
     composerState = .edit(message)
     draft = message.normalizedBody ?? ""
-    stagedComposerAttachment = nil
+    stagedComposerAttachments = []
     await composerDraftStore.clearAttachmentDraft(
       threadId: route.threadId,
       viewerUserId: viewerUserId
@@ -360,8 +365,12 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func setComposerAttachment(_ attachment: FriendsComposerAttachmentDraft?) async {
+    await setComposerAttachments(attachment.map { [$0] } ?? [])
+  }
+
+  func setComposerAttachments(_ attachments: [FriendsComposerAttachmentDraft]) async {
     guard composerMode != .edit else { return }
-    stagedComposerAttachment = attachment
+    stagedComposerAttachments = normalizedComposerAttachments(attachments)
     await persistPendingComposerDraft()
   }
 
@@ -539,10 +548,10 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-    let composerAttachment = stagedComposerAttachment
-    guard !normalizedContent.isEmpty || composerAttachment != nil else { return false }
+    let composerAttachments = stagedComposerAttachments
+    guard !normalizedContent.isEmpty || !composerAttachments.isEmpty else { return false }
     guard !isMessageBodyTooLong(normalizedContent) else { return false }
-    guard canSendShiftSnapshotAttachment(composerAttachment) else {
+    guard canSendShiftSnapshotAttachments(composerAttachments) else {
       sendErrorMessage = shiftSnapshotSendUnavailableMessage
       return false
     }
@@ -552,10 +561,9 @@ final class FriendsThreadViewModel: ObservableObject {
     sendErrorMessage = nil
 
     let clientId = UUID().uuidString.lowercased()
-    let optimisticAttachments =
-      composerAttachment?.imageAttachment.map {
-        [makeOptimisticAttachment(from: $0)]
-      } ?? []
+    let optimisticAttachments = composerAttachments.imageAttachments.enumerated().map {
+      makeOptimisticAttachment(from: $0.element, index: $0.offset)
+    }
     let optimisticMessage = FriendMessage(
       id: "local-\(clientId)",
       threadId: route.threadId,
@@ -567,7 +575,7 @@ final class FriendsThreadViewModel: ObservableObject {
       createdAt: Date(),
       editedAt: nil,
       deletedAt: nil,
-      metadataData: composerAttachment?.metadataData,
+      metadataData: composerAttachments.metadataData,
       attachments: optimisticAttachments,
       reactions: [],
       sendState: .sending,
@@ -575,7 +583,7 @@ final class FriendsThreadViewModel: ObservableObject {
     )
     draft = ""
     composerState = .normal
-    stagedComposerAttachment = nil
+    stagedComposerAttachments = []
     await composerDraftStore.clearDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
     await stopTypingIfNeeded()
@@ -741,7 +749,7 @@ final class FriendsThreadViewModel: ObservableObject {
     try await service.blockUserPair(otherUserId: counterpartUserId)
     draft = ""
     composerState = .normal
-    stagedComposerAttachment = nil
+    stagedComposerAttachments = []
     await composerDraftStore.clearDraft(
       threadId: route.threadId, viewerUserId: viewerUserId)
     sendErrorMessage = nil
@@ -893,7 +901,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     draft = storedDraft.text
-    stagedComposerAttachment = storedDraft.attachment
+    stagedComposerAttachments = normalizedComposerAttachments(storedDraft.attachments)
   }
 
   private func syncComposerStateWithCachedMessages() {
@@ -922,7 +930,7 @@ final class FriendsThreadViewModel: ObservableObject {
     ComposerSnapshot(
       state: composerState,
       draft: draft,
-      stagedAttachment: stagedComposerAttachment
+      stagedAttachments: stagedComposerAttachments
     )
   }
 
@@ -939,7 +947,7 @@ final class FriendsThreadViewModel: ObservableObject {
     let resolvedState = resolvedComposerState(for: snapshot?.state ?? .normal)
     composerState = resolvedState
     draft = snapshot?.draft ?? ""
-    stagedComposerAttachment = snapshot?.stagedAttachment
+    stagedComposerAttachments = normalizedComposerAttachments(snapshot?.stagedAttachments ?? [])
     await persistPendingComposerDraft()
 
     let shouldRequestFocus =
@@ -989,7 +997,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
     await composerDraftStore.saveDraft(
       text: draft,
-      attachment: stagedComposerAttachment,
+      attachments: stagedComposerAttachments,
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
@@ -1358,14 +1366,16 @@ final class FriendsThreadViewModel: ObservableObject {
     return sentMessage
   }
 
-  private func makeOptimisticAttachment(from image: ImageAttachment) -> FriendMessageAttachment {
+  private func makeOptimisticAttachment(from image: ImageAttachment, index: Int)
+    -> FriendMessageAttachment
+  {
     let storagePath = pendingAttachmentStoragePath(for: image.id)
     cacheImage(image, for: storagePath)
 
     let imageSize = UIImage(data: image.data)?.size
     return FriendMessageAttachment(
       id: image.id,
-      attachmentIndex: 0,
+      attachmentIndex: index,
       kind: .image,
       storageBucket: Attachments.storageBucket,
       storagePath: storagePath,
@@ -1480,15 +1490,28 @@ final class FriendsThreadViewModel: ObservableObject {
     String(localized: "friends.chat.delete_failed", table: "Localizable")
   }
 
-  private func canSendShiftSnapshotAttachment(_ attachment: FriendsComposerAttachmentDraft?) -> Bool
+  private func canSendShiftSnapshotAttachments(_ attachments: [FriendsComposerAttachmentDraft])
+    -> Bool
   {
-    guard attachment?.shiftSnapshot != nil else { return true }
+    guard attachments.hasShiftSnapshot else { return true }
     return capabilities.canSendShiftSnapshots
   }
 
   private func canSendShiftSnapshotMessage(_ message: FriendMessage) -> Bool {
     guard message.shiftSnapshot != nil else { return true }
     return capabilities.canSendShiftSnapshots
+  }
+
+  private func normalizedComposerAttachments(_ attachments: [FriendsComposerAttachmentDraft])
+    -> [FriendsComposerAttachmentDraft]
+  {
+    if let shiftSnapshotDraft = attachments.shiftSnapshotDraft {
+      return [.shiftSnapshot(shiftSnapshotDraft)]
+    }
+
+    return attachments.imageAttachments
+      .prefix(FriendsComposerAttachmentLimits.maxImagesPerMessage)
+      .map(FriendsComposerAttachmentDraft.image)
   }
 
   private var cachedCounterpartCanViewSharedShift: Bool? {

@@ -1258,6 +1258,43 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.stagedComposerAttachment, snapshotDraft)
   }
 
+  func testLoadHydratesPendingComposerImageAttachmentDrafts() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+    let imageDrafts: [FriendsComposerAttachmentDraft] = [
+      .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-2", data: Data([0x01]), mediaType: "image/jpeg")),
+    ]
+
+    await draftStore.saveAttachmentDrafts(
+      imageDrafts,
+      threadId: route.threadId,
+      viewerUserId: "viewer-1"
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.load()
+
+    XCTAssertEqual(viewModel.stagedComposerAttachments, imageDrafts)
+  }
+
   func testLoadHydratesPendingComposerTextDraft() async throws {
     let repository = try makeRepository()
     let draftStore = try makeDraftStore()
@@ -1826,6 +1863,111 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertNil(storedDraft)
   }
 
+  func testSendDraftWithMultipleImagesSendsSingleMessageWithAllAttachments() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+    let imageDrafts: [FriendsComposerAttachmentDraft] = [
+      .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-2", data: Data([0x01]), mediaType: "image/jpeg")),
+    ]
+
+    let mockService = MockFriendsMessagingService()
+    mockService.sentMessage = FriendMessage(
+      id: "message-multi-image",
+      threadId: route.threadId,
+      senderUserId: "viewer-1",
+      messageType: .user,
+      body: "Two images",
+      clientId: "client-multi-image",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_011),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: [
+        FriendMessageAttachment(
+          id: "uploaded-1",
+          attachmentIndex: 0,
+          kind: .image,
+          storageBucket: "message-attachments",
+          storagePath: "thread-1/viewer-1/uploaded-1.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 1024,
+          width: 320,
+          height: 240,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_011)
+        ),
+        FriendMessageAttachment(
+          id: "uploaded-2",
+          attachmentIndex: 1,
+          kind: .image,
+          storageBucket: "message-attachments",
+          storagePath: "thread-1/viewer-1/uploaded-2.jpg",
+          mimeType: "image/jpeg",
+          byteSize: 2048,
+          width: 640,
+          height: 480,
+          createdAt: Date(timeIntervalSince1970: 1_700_000_011)
+        ),
+      ]
+    )
+    mockService.uploadedAttachmentsQueue = [
+      FriendOutgoingAttachment(
+        attachmentId: "uploaded-1",
+        storagePath: "thread-1/viewer-1/uploaded-1.jpg",
+        mimeType: "image/jpeg",
+        byteSize: 1024,
+        width: 320,
+        height: 240
+      ),
+      FriendOutgoingAttachment(
+        attachmentId: "uploaded-2",
+        storagePath: "thread-1/viewer-1/uploaded-2.jpg",
+        mimeType: "image/jpeg",
+        byteSize: 2048,
+        width: 640,
+        height: 480
+      ),
+    ]
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.setComposerAttachments(imageDrafts)
+    viewModel.draft = "Two images"
+    let didSend = await viewModel.sendDraft()
+    await Task.yield()
+
+    XCTAssertTrue(didSend)
+    XCTAssertTrue(viewModel.stagedComposerAttachments.isEmpty)
+    XCTAssertEqual(
+      mockService.lastSentAttachments.map(\.attachmentId), ["uploaded-1", "uploaded-2"])
+    XCTAssertNil(mockService.lastSentMetadataData)
+    XCTAssertEqual(
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").last?.attachments
+        .map(\.id),
+      ["uploaded-1", "uploaded-2"]
+    )
+    let storedDrafts = await draftStore.loadAttachmentDrafts(
+      threadId: route.threadId,
+      viewerUserId: "viewer-1"
+    )
+    XCTAssertTrue(storedDrafts.isEmpty)
+  }
+
   func testRetryMessagePreservesShiftSnapshotMetadata() async throws {
     let repository = try makeRepository()
     let draftStore = try makeDraftStore()
@@ -2288,7 +2430,15 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     let container = try ModelContainer(for: schema, configurations: [configuration])
     let storeActor = LocalStoreActor(modelContainer: container)
-    return FriendsComposerDraftStore(container: container, storeActor: storeActor)
+    let attachmentsDirectory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try? FileManager.default.createDirectory(
+      at: attachmentsDirectory, withIntermediateDirectories: true)
+    return FriendsComposerDraftStore(
+      container: container,
+      storeActor: storeActor,
+      attachmentsDirectory: attachmentsDirectory
+    )
   }
 
   private func makeRoute() -> FriendChatRoute {
@@ -2425,6 +2575,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   var queueThreadTypingNotificationResult = false
   var queueThreadTypingNotificationCallCount = 0
   var lastSentReplyToMessageId: String?
+  var lastSentAttachments: [FriendOutgoingAttachment] = []
   var lastSentMetadataData: Data?
   var lastEditedMessageId: String?
   var lastEditedBody: String?
@@ -2434,6 +2585,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     (threadId: String, reportedUserId: String, messageId: String?, reason: FriendAbuseReportReason)?
   var blockedUserId: String?
   var uploadedAttachment: FriendOutgoingAttachment?
+  var uploadedAttachmentsQueue: [FriendOutgoingAttachment] = []
 
   func getOrCreateDirectThread(otherUserId _: String) async throws -> FriendThread {
     await Task.yield()
@@ -2464,7 +2616,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     clientId _: String,
     body _: String?,
     replyToMessageId: String?,
-    attachments _: [FriendOutgoingAttachment],
+    attachments: [FriendOutgoingAttachment],
     metadataData: Data?
   ) async throws -> FriendMessage {
     await Task.yield()
@@ -2473,6 +2625,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
       try? await Task.sleep(for: sendDelay)
     }
     lastSentReplyToMessageId = replyToMessageId
+    lastSentAttachments = attachments
     lastSentMetadataData = metadataData
     if let sendError {
       throw sendError
@@ -2580,6 +2733,9 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     -> FriendOutgoingAttachment
   {
     await Task.yield()
+    if !uploadedAttachmentsQueue.isEmpty {
+      return uploadedAttachmentsQueue.removeFirst()
+    }
     return uploadedAttachment
       ?? FriendOutgoingAttachment(
         attachmentId: UUID().uuidString,

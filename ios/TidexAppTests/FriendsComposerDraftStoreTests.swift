@@ -53,7 +53,60 @@ final class FriendsComposerDraftStoreTests: XCTestCase {
     XCTAssertNil(restoredDraft?.attachment)
   }
 
-  private func makeStore() throws -> FriendsComposerDraftStore {
+  func testLoadAndSaveMultipleAttachmentDrafts() async throws {
+    let store = try makeStore()
+    let attachments: [FriendsComposerAttachmentDraft] = [
+      .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-2", data: Data([0x01]), mediaType: "image/jpeg")),
+    ]
+
+    await store.saveAttachmentDrafts(attachments, threadId: "thread-1", viewerUserId: "viewer-1")
+
+    let restoredDraft = await store.loadDraft(threadId: "thread-1", viewerUserId: "viewer-1")
+
+    XCTAssertEqual(restoredDraft?.attachments, attachments)
+  }
+
+  func testClearingImageAttachmentDraftRemovesPersistedFiles() async throws {
+    let attachmentsDirectory = makeAttachmentsDirectory()
+    let store = try makeStore(attachmentsDirectory: attachmentsDirectory)
+    let attachments: [FriendsComposerAttachmentDraft] = [
+      .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-2", data: Data([0x01]), mediaType: "image/jpeg")),
+    ]
+
+    await store.saveAttachmentDrafts(attachments, threadId: "thread-1", viewerUserId: "viewer-1")
+
+    let draftDirectory =
+      attachmentsDirectory
+      .appendingPathComponent("viewer-1", isDirectory: true)
+      .appendingPathComponent("thread-1", isDirectory: true)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: draftDirectory.path))
+
+    await store.clearAttachmentDraft(threadId: "thread-1", viewerUserId: "viewer-1")
+
+    XCTAssertFalse(FileManager.default.fileExists(atPath: draftDirectory.path))
+  }
+
+  func testResolvedAttachmentsDirectoryUsesApplicationSupportFallback() {
+    let fallbackBaseURL = URL(
+      filePath: "/fallback/Application Support", directoryHint: .isDirectory)
+
+    let resolvedDirectory = FriendsComposerDraftStore.resolvedAttachmentsDirectory(
+      appGroupURL: nil,
+      fallbackBaseURL: fallbackBaseURL
+    )
+
+    XCTAssertEqual(
+      resolvedDirectory,
+      fallbackBaseURL.appendingPathComponent(
+        "FriendsComposerDraftAttachments",
+        isDirectory: true
+      )
+    )
+  }
+
+  private func makeStore(attachmentsDirectory: URL? = nil) throws -> FriendsComposerDraftStore {
     let schema = Schema([LocalPendingFriendComposerDraft.self])
     let configuration = ModelConfiguration(
       schema: schema,
@@ -62,7 +115,18 @@ final class FriendsComposerDraftStoreTests: XCTestCase {
     )
     let container = try ModelContainer(for: schema, configurations: [configuration])
     let storeActor = LocalStoreActor(modelContainer: container)
-    return FriendsComposerDraftStore(container: container, storeActor: storeActor)
+    return FriendsComposerDraftStore(
+      container: container,
+      storeActor: storeActor,
+      attachmentsDirectory: attachmentsDirectory
+    )
+  }
+
+  private func makeAttachmentsDirectory() -> URL {
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    return url
   }
 }
 
