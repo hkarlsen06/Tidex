@@ -5,6 +5,7 @@ final class TidexAppUITests: XCTestCase {
     static let composerTextField = "friends-thread-composer.text-field"
     static let sendButton = "friends-thread-composer.send-button"
     static let replyCancelButton = "friends-thread-composer.reply-cancel"
+    static let attachmentToggleButton = "friends-thread-composer.attachment-toggle"
     static let uiTestingError = "ui-testing.error"
     static let wageyHistoryFirstRow = "wagey-history.row.ui-test-conversation-1"
     static let wageyHistorySwipeDelete = "wagey-history.delete-swipe.ui-test-conversation-1"
@@ -107,6 +108,43 @@ final class TidexAppUITests: XCTestCase {
     cancelButton.tap()
 
     XCTAssertFalse(cancelButton.waitForExistence(timeout: 1), "Expected reply banner to dismiss")
+  }
+
+  @MainActor
+  func testFriendsChatReplyScenarioKeepsReplyBannerVisibleWhenAttachmentDrawerOpens() {
+    let app = makeApp(scenario: "friends-chat-reply")
+    app.launch()
+
+    assertExists(
+      staticText(withExactLabel: seededIncomingMessage, in: app),
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected seeded incoming message before opening attachments"
+    )
+
+    let cancelButton = replyCancelButton(in: app)
+    assertExists(
+      cancelButton,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected reply cancel button to render before opening attachments"
+    )
+
+    let attachmentToggle = attachmentToggleButton(in: app)
+    assertExists(
+      attachmentToggle,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected attachment toggle button to render"
+    )
+    attachmentToggle.tap()
+
+    assertExists(
+      cancelButton,
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected reply banner to remain visible when attachment drawer opens"
+    )
   }
 
   @MainActor
@@ -234,6 +272,10 @@ final class TidexAppUITests: XCTestCase {
     }
 
     return identifiedButton
+  }
+
+  private func attachmentToggleButton(in app: XCUIApplication) -> XCUIElement {
+    app.buttons[AccessibilityID.attachmentToggleButton]
   }
 
   private func waitForComposerInput(
