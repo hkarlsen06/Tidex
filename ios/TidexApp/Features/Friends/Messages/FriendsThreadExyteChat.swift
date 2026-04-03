@@ -225,6 +225,29 @@ enum FriendsThreadLiveEdgeResolver {
   }
 }
 
+enum FriendsThreadImageGalleryResolver {
+  static func imageAttachments(messages: [FriendMessage]) -> [FriendMessageAttachment] {
+    messages.flatMap { message in
+      message.attachments
+        .filter { $0.kind == .image }
+        .sorted { lhs, rhs in
+          lhs.attachmentIndex < rhs.attachmentIndex
+        }
+    }
+  }
+
+  static func initialSelectionID(
+    requestedAttachmentID: String,
+    attachments: [FriendMessageAttachment]
+  ) -> String? {
+    if attachments.contains(where: { $0.id == requestedAttachmentID }) {
+      return requestedAttachmentID
+    }
+
+    return attachments.first?.id
+  }
+}
+
 enum FriendsThreadCounterpartPreviewNavigationResolver {
   static func deepLink(for preview: SharerShiftPreview) -> AppCoordinator.DeepLink? {
     guard let shift = preview.shift else { return nil }

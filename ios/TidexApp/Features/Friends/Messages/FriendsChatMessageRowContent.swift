@@ -46,7 +46,7 @@ struct FriendsChatMessageRowContent: View {
   let onRetry: () -> Void
   let onToggleReaction: (String) -> Void
   let onTapQuotedMessage: () -> Void
-  let onSaveImage: (UIImage) -> Void
+  let onOpenImageAttachment: (FriendMessageAttachment) -> Void
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -116,7 +116,7 @@ struct FriendsChatMessageRowContent: View {
                     FriendsChatImageView(
                       attachment: attachment,
                       isCurrentUser: isCurrentUser,
-                      onSaveImage: onSaveImage
+                      onOpenImageAttachment: onOpenImageAttachment
                     )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
@@ -837,28 +837,14 @@ struct ChatShiftSnapshotCard: View {
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
-  let onSaveImage: (UIImage) -> Void
-
-  @State private var selectedImageViewer: FriendsChatSelectedImageViewer?
+  let onOpenImageAttachment: (FriendMessageAttachment) -> Void
 
   var body: some View {
     FriendsChatImageAttachmentCard(
       attachment: attachment,
-      isCurrentUser: isCurrentUser,
-      onSave: onSaveImage
-    ) { image in
-      selectedImageViewer = FriendsChatSelectedImageViewer(image: image)
-    }
-    .fullScreenCover(item: $selectedImageViewer) { viewer in
-      ImageViewerOverlay(
-        image: viewer.image,
-        onDismiss: {
-          selectedImageViewer = nil
-        },
-        onSave: {
-          onSaveImage(viewer.image)
-        }
-      )
+      isCurrentUser: isCurrentUser
+    ) {
+      onOpenImageAttachment(attachment)
     }
   }
 }
@@ -929,8 +915,7 @@ struct FriendsChatImageAttachmentCard: View {
   let displaySize: CGSize?
   let cornerRadius: CGFloat
   let placeholderSymbolSize: CGFloat
-  var onTap: ((UIImage) -> Void)? = nil
-  var onSave: ((UIImage) -> Void)? = nil
+  var onTap: (() -> Void)? = nil
 
   @StateObject private var loader: FriendsChatImageLoader
 
@@ -940,15 +925,13 @@ struct FriendsChatImageAttachmentCard: View {
     displaySize: CGSize? = nil,
     cornerRadius: CGFloat = CornerRadius.lg,
     placeholderSymbolSize: CGFloat = 22,
-    onSave: ((UIImage) -> Void)? = nil,
-    onTap: ((UIImage) -> Void)? = nil
+    onTap: (() -> Void)? = nil
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
     self.displaySize = displaySize
     self.cornerRadius = cornerRadius
     self.placeholderSymbolSize = placeholderSymbolSize
-    self.onSave = onSave
     self.onTap = onTap
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL)
@@ -972,25 +955,9 @@ struct FriendsChatImageAttachmentCard: View {
                 lineWidth: 1
               )
           }
-          .overlay(alignment: .bottomTrailing) {
-            if let onSave {
-              Button {
-                onSave(image)
-              } label: {
-                Image(systemName: "arrow.down.circle.fill")
-                  .font(.system(size: 24, weight: .semibold))
-                  .foregroundStyle(.white, Color.black.opacity(0.28))
-                  .padding(Spacing.xs)
-              }
-              .buttonStyle(.plain)
-              .accessibilityLabel(
-                Text(String(localized: "friends.chat.action.save_image", table: "Localizable"))
-              )
-            }
-          }
           .contentShape(imageShape)
           .onTapGesture {
-            onTap?(image)
+            onTap?()
           }
       } else if loader.isLoading {
         placeholder {
@@ -1035,7 +1002,381 @@ struct FriendsChatImageAttachmentCard: View {
   }
 }
 
-private struct FriendsChatSelectedImageViewer: Identifiable {
-  let id = UUID()
+struct FriendsChatImageGalleryOverlay: View {
+  let attachments: [FriendMessageAttachment]
+  let initialAttachmentID: String
+  let onDismiss: () -> Void
+  let onSaveImage: (UIImage) -> Void
+
+  @State private var selectedAttachmentID: String
+  @State private var loadedImagesByAttachmentID: [String: UIImage] = [:]
+  @State private var selectedPageIsZoomed = false
+  @GestureState private var dismissTranslationY: CGFloat = 0
+
+  private let galleryDismissThreshold: CGFloat = 120
+
+  init(
+    attachments: [FriendMessageAttachment],
+    initialAttachmentID: String,
+    onDismiss: @escaping () -> Void,
+    onSaveImage: @escaping (UIImage) -> Void
+  ) {
+    self.attachments = attachments
+    self.initialAttachmentID = initialAttachmentID
+    self.onDismiss = onDismiss
+    self.onSaveImage = onSaveImage
+    _selectedAttachmentID = State(initialValue: initialAttachmentID)
+  }
+
+  var body: some View {
+    ZStack {
+      Color.black.ignoresSafeArea()
+
+      TabView(selection: $selectedAttachmentID) {
+        ForEach(attachments) { attachment in
+          FriendsChatImageGalleryPage(
+            attachment: attachment,
+            isSelected: attachment.id == selectedAttachmentID,
+            onImageLoaded: { image in
+              loadedImagesByAttachmentID[attachment.id] = image
+            },
+            onZoomStateChanged: { isZoomed in
+              if attachment.id == selectedAttachmentID {
+                selectedPageIsZoomed = isZoomed
+              }
+            }
+          )
+          .tag(attachment.id)
+        }
+      }
+      .tabViewStyle(.page(indexDisplayMode: .never))
+      .offset(y: currentDismissOffsetY)
+
+      VStack {
+        topBar
+          .padding(.horizontal, Spacing.mlg)
+          .padding(.top, Spacing.mlg)
+        Spacer()
+        pageIndicator
+          .padding(.bottom, Spacing.xl)
+      }
+    }
+    .simultaneousGesture(verticalDismissGesture)
+    .onChange(of: selectedAttachmentID) { _, _ in
+      selectedPageIsZoomed = false
+    }
+    .statusBarHidden()
+  }
+
+  private var topBar: some View {
+    HStack {
+      if let selectedImage {
+        Button {
+          onSaveImage(selectedImage)
+        } label: {
+          Image(systemName: "arrow.down.circle.fill")
+            .font(.system(size: 30))
+            .foregroundColor(.white.opacity(0.88))
+            .frame(width: 44, height: 44)
+            .background(
+              Circle()
+                .fill(Color.black.opacity(0.32))
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+          Text(String(localized: "friends.chat.action.save_image", table: "Localizable"))
+        )
+      }
+
+      Spacer()
+
+      Button {
+        onDismiss()
+      } label: {
+        Image(systemName: "xmark.circle.fill")
+          .font(.system(size: 30))
+          .foregroundColor(.white.opacity(0.88))
+          .frame(width: 44, height: 44)
+          .background(
+            Circle()
+              .fill(Color.black.opacity(0.32))
+          )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(String(localized: .commonCancel)))
+    }
+    .padding(.vertical, Spacing.xs)
+  }
+
+  @ViewBuilder
+  private var pageIndicator: some View {
+    if let selectedIndex, attachments.count > 1 {
+      Text("\(selectedIndex + 1) / \(attachments.count)")
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.white.opacity(0.88))
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(
+          Capsule(style: .continuous)
+            .fill(Color.black.opacity(0.35))
+        )
+        .allowsHitTesting(false)
+    }
+  }
+
+  private var selectedImage: UIImage? {
+    loadedImagesByAttachmentID[selectedAttachmentID]
+  }
+
+  private var selectedIndex: Int? {
+    attachments.firstIndex(where: { $0.id == selectedAttachmentID })
+  }
+
+  private var currentDismissOffsetY: CGFloat {
+    guard !selectedPageIsZoomed else { return 0 }
+    return max(0, dismissTranslationY)
+  }
+
+  private var verticalDismissGesture: some Gesture {
+    DragGesture(minimumDistance: 12)
+      .updating($dismissTranslationY) { value, state, _ in
+        guard !selectedPageIsZoomed else { return }
+
+        let horizontal = abs(value.translation.width)
+        let vertical = value.translation.height
+
+        guard vertical > 0, vertical > horizontal else { return }
+        state = vertical
+      }
+      .onEnded { value in
+        guard !selectedPageIsZoomed else { return }
+
+        let horizontal = abs(value.translation.width)
+        let vertical = value.translation.height
+
+        guard vertical > 0, vertical > horizontal else { return }
+
+        if vertical >= galleryDismissThreshold {
+          onDismiss()
+        }
+      }
+  }
+}
+
+struct FriendsChatImageGalleryUnavailableOverlay: View {
+  let onDismiss: () -> Void
+
+  var body: some View {
+    ZStack(alignment: .topTrailing) {
+      Color.black.ignoresSafeArea()
+
+      Button {
+        onDismiss()
+      } label: {
+        Image(systemName: "xmark.circle.fill")
+          .font(.system(size: 30))
+          .foregroundColor(.white.opacity(0.88))
+          .frame(width: 44, height: 44)
+          .background(
+            Circle()
+              .fill(Color.black.opacity(0.32))
+          )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(String(localized: .commonCancel)))
+      .padding(.top, Spacing.mlg)
+      .padding(.horizontal, Spacing.mlg)
+    }
+    .task {
+      await MainActor.run {
+        onDismiss()
+      }
+    }
+    .statusBarHidden()
+  }
+}
+
+private struct FriendsChatImageGalleryPage: View {
+  let attachment: FriendMessageAttachment
+  let isSelected: Bool
+  let onImageLoaded: (UIImage) -> Void
+  let onZoomStateChanged: (Bool) -> Void
+
+  @StateObject private var loader: FriendsChatImageLoader
+
+  init(
+    attachment: FriendMessageAttachment,
+    isSelected: Bool,
+    onImageLoaded: @escaping (UIImage) -> Void,
+    onZoomStateChanged: @escaping (Bool) -> Void
+  ) {
+    self.attachment = attachment
+    self.isSelected = isSelected
+    self.onImageLoaded = onImageLoaded
+    self.onZoomStateChanged = onZoomStateChanged
+    let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
+    let initialImage = ImageCache.shared.get(for: cacheURL)
+    _loader = StateObject(
+      wrappedValue: FriendsChatImageLoader(initialImage: initialImage)
+    )
+  }
+
+  var body: some View {
+    ZStack {
+      if let image = loader.image {
+        FriendsChatZoomableImageView(
+          image: image,
+          isActive: isSelected,
+          onZoomStateChanged: onZoomStateChanged
+        )
+      } else if loader.isLoading {
+        ProgressView()
+          .tint(.white.opacity(0.8))
+      } else {
+        Image(systemName: "photo")
+          .font(.system(size: 28, weight: .medium))
+          .foregroundColor(.white.opacity(0.6))
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .contentShape(Rectangle())
+    .task(id: attachment.id) {
+      await loader.loadIfNeeded(attachment: attachment)
+      if let image = loader.image {
+        onImageLoaded(image)
+      }
+    }
+    .onChange(of: loader.image) { _, newImage in
+      guard let newImage else { return }
+      onImageLoaded(newImage)
+    }
+    .onChange(of: isSelected) { _, newValue in
+      if !newValue {
+        onZoomStateChanged(false)
+      }
+    }
+  }
+}
+
+private struct FriendsChatZoomableImageView: UIViewRepresentable {
   let image: UIImage
+  let isActive: Bool
+  let onZoomStateChanged: (Bool) -> Void
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onZoomStateChanged: onZoomStateChanged)
+  }
+
+  func makeUIView(context: Context) -> UIScrollView {
+    let scrollView = UIScrollView()
+    scrollView.delegate = context.coordinator
+    scrollView.backgroundColor = .clear
+    scrollView.showsHorizontalScrollIndicator = false
+    scrollView.showsVerticalScrollIndicator = false
+    scrollView.bouncesZoom = true
+    scrollView.decelerationRate = .fast
+    scrollView.minimumZoomScale = 1
+    scrollView.maximumZoomScale = 4
+    scrollView.isScrollEnabled = false
+
+    let imageView = context.coordinator.imageView
+    imageView.image = image
+    imageView.contentMode = .scaleAspectFit
+    imageView.frame = scrollView.bounds
+    imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    scrollView.addSubview(imageView)
+
+    let doubleTapRecognizer = UITapGestureRecognizer(
+      target: context.coordinator,
+      action: #selector(Coordinator.handleDoubleTap(_:))
+    )
+    doubleTapRecognizer.numberOfTapsRequired = 2
+    scrollView.addGestureRecognizer(doubleTapRecognizer)
+    context.coordinator.scrollView = scrollView
+
+    return scrollView
+  }
+
+  func updateUIView(_ scrollView: UIScrollView, context: Context) {
+    context.coordinator.onZoomStateChanged = onZoomStateChanged
+    context.coordinator.imageView.image = image
+    context.coordinator.imageView.frame = scrollView.bounds
+    context.coordinator.updateInsets(for: scrollView)
+
+    if !isActive, scrollView.zoomScale > scrollView.minimumZoomScale {
+      scrollView.setZoomScale(scrollView.minimumZoomScale, animated: false)
+      scrollView.contentOffset = .zero
+      scrollView.isScrollEnabled = false
+      onZoomStateChanged(false)
+    }
+  }
+
+  final class Coordinator: NSObject, UIScrollViewDelegate {
+    let imageView = UIImageView()
+    weak var scrollView: UIScrollView?
+    var onZoomStateChanged: (Bool) -> Void
+
+    init(onZoomStateChanged: @escaping (Bool) -> Void) {
+      self.onZoomStateChanged = onZoomStateChanged
+    }
+
+    func viewForZooming(in _: UIScrollView) -> UIView? {
+      imageView
+    }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+      let isZoomed = scrollView.zoomScale > scrollView.minimumZoomScale + 0.01
+      scrollView.isScrollEnabled = isZoomed
+      updateInsets(for: scrollView)
+      onZoomStateChanged(isZoomed)
+    }
+
+    func scrollViewDidEndZooming(
+      _ scrollView: UIScrollView,
+      with _: UIView?,
+      atScale scale: CGFloat
+    ) {
+      let isZoomed = scale > scrollView.minimumZoomScale + 0.01
+      scrollView.isScrollEnabled = isZoomed
+      onZoomStateChanged(isZoomed)
+    }
+
+    @objc
+    func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
+      guard let scrollView else { return }
+
+      if scrollView.zoomScale > scrollView.minimumZoomScale + 0.01 {
+        scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
+        scrollView.isScrollEnabled = false
+        onZoomStateChanged(false)
+        return
+      }
+
+      let tapPoint = recognizer.location(in: imageView)
+      let zoomScale = min(scrollView.maximumZoomScale, 2)
+      let width = scrollView.bounds.size.width / zoomScale
+      let height = scrollView.bounds.size.height / zoomScale
+      let zoomRect = CGRect(
+        x: tapPoint.x - (width / 2),
+        y: tapPoint.y - (height / 2),
+        width: width,
+        height: height
+      )
+      scrollView.zoom(to: zoomRect, animated: true)
+      scrollView.isScrollEnabled = true
+      onZoomStateChanged(true)
+    }
+
+    func updateInsets(for scrollView: UIScrollView) {
+      let horizontalInset = max((scrollView.bounds.width - imageView.frame.width) / 2, 0)
+      let verticalInset = max((scrollView.bounds.height - imageView.frame.height) / 2, 0)
+      scrollView.contentInset = UIEdgeInsets(
+        top: verticalInset,
+        left: horizontalInset,
+        bottom: verticalInset,
+        right: horizontalInset
+      )
+    }
+  }
 }

@@ -9,6 +9,11 @@ struct FriendsThreadView: View {
     static let unreadPill = "friends-thread.unread-pill"
   }
 
+  private struct SelectedImageGallery: Identifiable {
+    let attachmentID: String
+    var id: String { attachmentID }
+  }
+
   @Environment(\.openURL) private var openURL
 
   @StateObject private var viewModel: FriendsThreadViewModel
@@ -32,6 +37,7 @@ struct FriendsThreadView: View {
   @State private var isAttachmentDrawerOpen = false
   @State private var lastHandledNavigationRequestId: UUID?
   @State private var pendingFocusScrollTask: Task<Void, Never>?
+  @State private var selectedImageGallery: SelectedImageGallery?
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -176,6 +182,10 @@ struct FriendsThreadView: View {
   private var shouldShowCounterpartShiftPreviewHeader: Bool {
     viewModel.counterpartShiftPreview != nil
       && !(isComposerFocused && isAttachmentDrawerOpen)
+  }
+
+  private var chatImageAttachments: [FriendMessageAttachment] {
+    FriendsThreadImageGalleryResolver.imageAttachments(messages: viewModel.messages)
   }
 
   private func messageID(for presentedMessageID: String) -> String {
@@ -436,6 +446,27 @@ struct FriendsThreadView: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
+    .fullScreenCover(item: $selectedImageGallery) { selection in
+      if let initialAttachmentID = FriendsThreadImageGalleryResolver.initialSelectionID(
+        requestedAttachmentID: selection.attachmentID,
+        attachments: chatImageAttachments
+      ) {
+        FriendsChatImageGalleryOverlay(
+          attachments: chatImageAttachments,
+          initialAttachmentID: initialAttachmentID,
+          onDismiss: {
+            selectedImageGallery = nil
+          },
+          onSaveImage: { image in
+            saveImageToPhotoLibrary(image)
+          }
+        )
+      } else {
+        FriendsChatImageGalleryUnavailableOverlay {
+          selectedImageGallery = nil
+        }
+      }
+    }
     .alert(item: $alertState) { state in
       Alert(
         title: Text(state.title),
@@ -597,8 +628,8 @@ struct FriendsThreadView: View {
         onTapQuotedMessage: {
           handleQuotedMessageTap(for: message)
         },
-        onSaveImage: { image in
-          saveImageToPhotoLibrary(image)
+        onOpenImageAttachment: { attachment in
+          selectedImageGallery = SelectedImageGallery(attachmentID: attachment.id)
         }
       )
       .id(exyteMessage.id)

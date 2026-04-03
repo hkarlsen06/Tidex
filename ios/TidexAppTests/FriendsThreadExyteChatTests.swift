@@ -558,6 +558,85 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testImageGalleryResolverCollectsImageAttachmentsInChatOrder() {
+    let baseDate = Date(timeIntervalSince1970: 1_731_000_000)
+    let olderMessage = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: "viewer",
+      messageType: .user,
+      body: nil,
+      clientId: "message-1",
+      replyToMessageId: nil,
+      createdAt: baseDate,
+      editedAt: nil,
+      deletedAt: nil,
+      attachments: [
+        makeImageAttachment(id: "image-2", attachmentIndex: 2),
+        makeImageAttachment(id: "image-0", attachmentIndex: 0),
+        makeImageAttachment(id: "image-1", attachmentIndex: 1),
+      ],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+    let newerMessage = FriendMessage(
+      id: "message-2",
+      threadId: "thread-1",
+      senderUserId: "other",
+      messageType: .user,
+      body: nil,
+      clientId: "message-2",
+      replyToMessageId: nil,
+      createdAt: baseDate.addingTimeInterval(60),
+      editedAt: nil,
+      deletedAt: nil,
+      attachments: [
+        makeImageAttachment(id: "image-3", attachmentIndex: 0)
+      ],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+
+    XCTAssertEqual(
+      FriendsThreadImageGalleryResolver.imageAttachments(
+        messages: [olderMessage, newerMessage]
+      ).map(\.id),
+      ["image-0", "image-1", "image-2", "image-3"]
+    )
+  }
+
+  func testImageGalleryResolverPreservesRequestedSelectionWhenPresent() {
+    let attachments = [
+      makeImageAttachment(id: "image-0", attachmentIndex: 0),
+      makeImageAttachment(id: "image-1", attachmentIndex: 1),
+    ]
+
+    XCTAssertEqual(
+      FriendsThreadImageGalleryResolver.initialSelectionID(
+        requestedAttachmentID: "image-1",
+        attachments: attachments
+      ),
+      "image-1"
+    )
+  }
+
+  func testImageGalleryResolverFallsBackToFirstAttachmentWhenRequestedSelectionIsMissing() {
+    let attachments = [
+      makeImageAttachment(id: "image-0", attachmentIndex: 0),
+      makeImageAttachment(id: "image-1", attachmentIndex: 1),
+    ]
+
+    XCTAssertEqual(
+      FriendsThreadImageGalleryResolver.initialSelectionID(
+        requestedAttachmentID: "missing",
+        attachments: attachments
+      ),
+      "image-0"
+    )
+  }
+
   private func makeMessage(
     id: String,
     senderUserId: String,
@@ -579,6 +658,21 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       reactions: reactions,
       sendState: .sent,
       failureMessage: nil
+    )
+  }
+
+  private func makeImageAttachment(id: String, attachmentIndex: Int) -> FriendMessageAttachment {
+    FriendMessageAttachment(
+      id: id,
+      attachmentIndex: attachmentIndex,
+      kind: .image,
+      storageBucket: "message-attachments",
+      storagePath: "thread-1/\(id).jpeg",
+      mimeType: "image/jpeg",
+      byteSize: 1_024,
+      width: 1_200,
+      height: 900,
+      createdAt: Date(timeIntervalSince1970: 1_731_000_000)
     )
   }
 }
