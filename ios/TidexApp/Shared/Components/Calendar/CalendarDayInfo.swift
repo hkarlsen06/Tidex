@@ -5,6 +5,9 @@ import Foundation
 /// Represents a single day cell in a calendar grid
 /// Shared across all calendar views (Shifts, Add Shift, Friends)
 struct CalendarDayInfo: Identifiable, Equatable {
+  /// Stable slot identity within a single rendered month grid.
+  /// The month grid itself is remounted across month changes so SwiftUI treats
+  /// the entire month swap atomically instead of diffing individual day cells.
   let id: Int
   let dayNumber: Int
   let dateISO: String?

@@ -119,14 +119,11 @@ struct CardTransitionModifier: ViewModifier {
   private let animationStyle = AppearanceManager.shared.calendarAnimationStyle
 
   func body(content: Content) -> some View {
-    let isVisible = reduceMotion ? true : isAppearing
     content
-      .opacity(isVisible ? 1 : 0)
       .offset(
-        x: animationStyle == .horizontal ? (isVisible ? 0 : slideOffset) : 0,
-        y: animationStyle == .vertical ? (isVisible ? 0 : slideOffset) : 0
+        x: animationStyle == .horizontal ? (visibleOffsetX) : 0,
+        y: animationStyle == .vertical ? (visibleOffsetY) : 0
       )
-      .scaleEffect(isVisible ? 1 : 0.95)
       .onAppear {
         guard !reduceMotion else {
           isAppearing = true
@@ -166,6 +163,16 @@ struct CardTransitionModifier: ViewModifier {
     }
     return base
   }
+
+  private var visibleOffsetX: CGFloat {
+    guard !reduceMotion else { return 0 }
+    return isAppearing ? 0 : slideOffset
+  }
+
+  private var visibleOffsetY: CGFloat {
+    guard !reduceMotion else { return 0 }
+    return isAppearing ? 0 : slideOffset
+  }
 }
 
 // MARK: - Text Transition Modifier
@@ -192,22 +199,20 @@ struct TextTransitionModifier: ViewModifier {
   }
 
   private var textTransition: AnyTransition {
-    if reduceMotion {
-      return .opacity
-    }
+    if reduceMotion { return .identity }
     let direction = phase.direction
     let base = direction == .next ? config.textOffset : -config.textOffset
     let offset = animationStyle == .horizontal && layoutDirection == .rightToLeft ? -base : base
 
     if animationStyle == .vertical {
       return .asymmetric(
-        insertion: .offset(y: offset).combined(with: .opacity),
-        removal: .offset(y: -offset).combined(with: .opacity)
+        insertion: .offset(y: offset),
+        removal: .offset(y: -offset)
       )
     } else {
       return .asymmetric(
-        insertion: .offset(x: offset).combined(with: .opacity),
-        removal: .offset(x: -offset).combined(with: .opacity)
+        insertion: .offset(x: offset),
+        removal: .offset(x: -offset)
       )
     }
   }
@@ -241,19 +246,19 @@ struct StaggeredCardsContainer<Content: View>: View {
   /// Asymmetric transition: new content slides in from direction of navigation,
   /// old content slides out in the opposite direction
   private var slideTransition: AnyTransition {
-    guard !reduceMotion else { return .opacity }
+    guard !reduceMotion else { return .identity }
     let base = phase.direction == .next ? config.slideOffset : -config.slideOffset
     let offset = animationStyle == .horizontal && layoutDirection == .rightToLeft ? -base : base
 
     if animationStyle == .vertical {
       return .asymmetric(
-        insertion: .offset(y: offset).combined(with: .opacity),
-        removal: .offset(y: -offset).combined(with: .opacity)
+        insertion: .offset(y: offset),
+        removal: .offset(y: -offset)
       )
     } else {
       return .asymmetric(
-        insertion: .offset(x: offset).combined(with: .opacity),
-        removal: .offset(x: -offset).combined(with: .opacity)
+        insertion: .offset(x: offset),
+        removal: .offset(x: -offset)
       )
     }
   }
