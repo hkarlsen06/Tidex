@@ -1,5 +1,5 @@
-- Ulepszono powiadomienia na czacie ze znajomymi, dzięki czemu nowe wiadomości otwierają się szybciej i bardziej niezawodnie
-- Ulepszono listę znajomych, aby lepiej wyróżniać aktywne czaty, nieprzeczytane wiadomości i osoby, które piszą
-- Dodano wyraźniejszą informację o limicie długości wiadomości podczas pisania na czacie ze znajomymi
-- Odświeżono wygląd aplikacji i dopracowano ekrany czatu
-- Poprawki błędów i inne usprawnienia
+- Dodano prywatne wydarzenia do Twojego harmonogramu, w tym plany całodniowe i wielodniowe
+- Ulepszono edycję wydarzeń i synchronizację harmonogramu w aplikacji, widżetach i Live Activities
+- Ulepszono czaty ze znajomymi dzięki bardziej niezawnemu otwieraniu z powiadomień, lepszym statusom nieprzeczytanych wiadomości i pisania, ulepszonym odpowiedziom, obsłudze wysyłania wielu zdjęć oraz nowej galerii obrazów
+- Dodano wyraźniejszy wybór podczas wdrożenia między konfiguracją listy płac a korzystaniem tylko z funkcji znajomych, zachowano Twoje dane przy przełączaniu między logowaniem a rejestracją oraz ograniczono rozmycie prywatności do ekranów z poufnymi danymi
+- Poprawki błędów i inne ulepszenia

@@ -1,5 +1,5 @@
-- Arkadaş sohbeti bildirimleri iyileştirildi; yeni mesajlar artık daha hızlı ve daha güvenilir şekilde açılıyor
-- Arkadaşlar listesi, aktif sohbetleri, okunmamış mesajları ve yazmakta olan kişileri daha iyi gösterecek şekilde geliştirildi
-- Arkadaş sohbetlerinde yazarken mesaj uzunluğu için daha açık geri bildirim eklendi
-- Uygulama tasarımı yenilendi ve sohbet ekranları iyileştirildi
+- Programınıza, tüm gün ve birden fazla güne yayılan planlar dahil olmak üzere özel etkinlikler eklendi
+- Etkinlik düzenleme ve program senkronizasyonu uygulama, widget'lar ve Live Activities genelinde iyileştirildi
+- Arkadaş sohbetleri; bildirimlerden daha güvenilir açılma, daha iyi okunmamış ve yazıyor durumları, geliştirilmiş yanıtlar, birden fazla fotoğraf gönderme desteği ve yeni bir görsel galerisi ile iyileştirildi
+- Onboarding sürecine maaş kurulumu ile yalnızca arkadaşlar özelliğini kullanma arasında daha net bir seçim eklendi, giriş yapma ile kayıt olma arasında geçiş yaparken bilgileriniz korundu ve gizlilik bulanıklığı yalnızca hassas ekranlarla sınırlandırıldı
 - Hata düzeltmeleri ve diğer iyileştirmeler

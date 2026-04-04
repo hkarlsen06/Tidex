@@ -1,5 +1,5 @@
-- Melhoramos as notificações do chat com amigos para que novas mensagens abram mais rápido e com mais confiabilidade
-- Melhoramos a lista de Amigos para destacar melhor conversas ativas, mensagens não lidas e pessoas que estão digitando
-- Adicionamos um feedback mais claro sobre o limite de caracteres ao escrever em chats com amigos
-- Atualizamos o design do app e refinamos as telas de chat
+- Adicionados eventos privados à sua agenda, incluindo planos de um dia inteiro e de vários dias
+- Melhorada a edição de eventos e a sincronização da agenda em todo o app, widgets e Atividades ao Vivo
+- Melhoradas as conversas com amigos, com abertura mais confiável pelas notificações, melhores estados de não lidas e digitando, respostas aprimoradas, suporte para envio de várias fotos e uma nova galeria de imagens
+- Adicionada uma escolha mais clara na integração entre configurar a folha de pagamento e usar apenas os recursos de amigos, mantidos seus dados ao alternar entre entrar e cadastrar-se, e limitado o desfoque de privacidade às telas sensíveis
 - Correções de bugs e outras melhorias

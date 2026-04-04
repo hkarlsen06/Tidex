@@ -1,6 +1,6 @@
-Ține evidența turelor tale de lucru și calculează-ți salariul cu Tidex.
+Ține evidența turelor de lucru și calculează-ți salariul cu Tidex.
 
-Funcții:
+Funcționalități:
 • Înregistrare ușoară a turelor cu ore de început și de sfârșit
 • Calcul automat al salariului
 • Vizualizare în calendar a tuturor turelor

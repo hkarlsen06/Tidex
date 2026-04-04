@@ -1,1 +1,1 @@
-zmiany,grafik,płaca,pensja,praca,godziny,czas,zegar,zarobki,dyżur
+zmiany,godziny,płaca,wynagrodzenie,praca,czas,grafik,zarobki,rejestr,dyżury

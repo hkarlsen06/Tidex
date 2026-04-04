@@ -1,5 +1,5 @@
-- Vylepšili sme upozornenia v chate s priateľmi, takže nové správy sa otvárajú rýchlejšie a spoľahlivejšie
-- Vylepšili sme zoznam priateľov, aby boli aktívne chaty, neprečítané správy a píšuci používatelia výraznejšie
-- Pridali sme jasnejšiu spätnú väzbu o dĺžke správy počas písania v chate s priateľmi
-- Obnovili sme dizajn aplikácie a vylepšili obrazovky chatu
+- Pridali sme súkromné udalosti do vášho rozvrhu vrátane celodenných a viacdňových plánov
+- Vylepšili sme úpravy udalostí a synchronizáciu rozvrhu v aplikácii, widgetoch a Live Activities
+- Vylepšili sme čety s priateľmi spoľahlivejším otváraním z oznámení, lepšími stavmi neprečítaných správ a písania, lepšími odpoveďami, podporou posielania viacerých fotiek a novou galériou obrázkov
+- Pridali sme jasnejšiu voľbu pri úvodnom nastavení medzi nastavením výplat a používaním len s priateľmi, zachovali vaše údaje pri prepínaní medzi prihlásením a registráciou a obmedzili rozmazanie súkromia len na citlivé obrazovky
 - Opravy chýb a ďalšie vylepšenia

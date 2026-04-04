@@ -5,7 +5,7 @@ Funkcje:
 • Automatyczne obliczanie wynagrodzenia
 • Widok kalendarza ze wszystkimi zmianami
 • Przegląd zarobków i statystyki
-• Widget zapewniający szybki dostęp
+• Widżet do szybkiego dostępu
 • Synchronizacja między urządzeniami
 
 Idealna aplikacja dla pracowników, którzy chcą kontrolować swoje godziny pracy i zarobki.

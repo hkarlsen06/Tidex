@@ -1,5 +1,5 @@
-- Improved friend chat notifications so new messages open faster and more reliably
-- Improved the Friends list to better surface active chats, unread messages, and people who are typing
-- Added clearer message length feedback while writing in friend chats
-- Refreshed the app design and polished chat screens
+- Added private events to your schedule, including all-day and multi-day plans
+- Improved event editing and schedule syncing across the app, widgets, and Live Activities
+- Improved friend chats with more reliable notification opening, better unread and typing states, improved replies, support for sending multiple photos, and a new image gallery
+- Added a clearer onboarding choice between payroll setup and friends-only use, kept your details when switching between sign in and sign up, and limited privacy blur to sensitive screens
 - Bug fixes and other improvements

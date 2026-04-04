@@ -1,5 +1,5 @@
-- Benachrichtigungen in Freundeschats verbessert, sodass neue Nachrichten schneller und zuverlässiger geöffnet werden
-- Die Freundesliste verbessert, damit aktive Chats, ungelesene Nachrichten und tippende Personen besser sichtbar sind
-- Klareres Feedback zur Nachrichtenlänge beim Schreiben in Freundeschats hinzugefügt
-- App-Design aktualisiert und Chat-Bildschirme überarbeitet
+- Private Ereignisse zu deinem Zeitplan hinzugefügt, einschließlich ganztägiger und mehrtägiger Planungen
+- Ereignisbearbeitung und Synchronisierung des Zeitplans in der App, in Widgets und Live-Aktivitäten verbessert
+- Freundeschats verbessert mit zuverlässigerem Öffnen über Mitteilungen, besseren Ungelesen- und Tippstatusanzeigen, verbesserten Antworten, Unterstützung für das Senden mehrerer Fotos und einer neuen Bildergalerie
+- Eine klarere Auswahl im Onboarding zwischen Lohnabrechnungseinrichtung und reiner Freundenutzung hinzugefügt, deine Angaben beim Wechsel zwischen Anmelden und Registrieren beibehalten und die Datenschutz-Unschärfe auf sensible Bereiche beschränkt
 - Fehlerbehebungen und weitere Verbesserungen

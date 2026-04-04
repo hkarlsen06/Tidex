@@ -6,6 +6,6 @@ Fitur:
 • Tampilan kalender untuk semua shift
 • Ringkasan penghasilan dan statistik
 • Widget untuk akses cepat
-• Sinkronisasi antar perangkat
+• Sinkronisasi di semua perangkat
 
 Cocok untuk karyawan yang ingin melacak jam kerja dan penghasilan mereka.
