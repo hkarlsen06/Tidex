@@ -1,5 +1,5 @@
-- Poboljšane obavijesti u razgovorima s prijateljima kako bi se nove poruke otvarale brže i pouzdanije
-- Poboljšan je popis prijatelja kako bi se aktivni razgovori, nepročitane poruke i osobe koje tipkaju bolje istaknuli
-- Dodane su jasnije povratne informacije o duljini poruke tijekom pisanja u razgovorima s prijateljima
-- Osvježen je dizajn aplikacije i dotjerani su zasloni razgovora
-- Ispravci grešaka i druga poboljšanja
+- Dodani privatni događaji u vaš raspored, uključujući cjelodnevne i višednevne planove
+- Poboljšano uređivanje događaja i sinkronizacija rasporeda u aplikaciji, widgetima i značajci Live Activities
+- Poboljšani razgovori s prijateljima uz pouzdanije otvaranje iz obavijesti, bolji prikaz nepročitanih poruka i tipkanja, poboljšane odgovore, podršku za slanje više fotografija i novu galeriju slika
+- Dodan jasniji odabir pri prvom pokretanju između postavljanja obračuna plaće i korištenja samo značajke za prijatelje, zadržani su vaši podaci pri prebacivanju između prijave i registracije, a zamućenje radi privatnosti sada je ograničeno na osjetljive zaslone
+- Ispravci pogrešaka i druga poboljšanja

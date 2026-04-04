@@ -1,5 +1,5 @@
-- Parannettu kaverikeskustelujen ilmoituksia, jotta uudet viestit avautuvat nopeammin ja luotettavammin
-- Parannettu Kaverit-listaa, jotta aktiiviset keskustelut, lukemattomat viestit ja kirjoittavat henkilöt näkyvät paremmin
-- Lisätty selkeämpi palaute viestin pituudesta kirjoitettaessa kaverikeskusteluissa
-- Uudistettu sovelluksen ilmettä ja viimeistelty keskustelunäkymiä
+- Lisätty aikatauluusi yksityisiä tapahtumia, mukaan lukien koko päivän ja usean päivän suunnitelmat
+- Parannettu tapahtumien muokkausta ja aikataulun synkronointia sovelluksen, widgetien ja Live Activitiesin välillä
+- Parannettu kaverichatteja luotettavammalla ilmoituksista avaamisella, paremmilla lukematon- ja kirjoittaa-tiloilla, paremmilla vastauksilla, tuella useiden kuvien lähettämiseen sekä uudella kuvagallerialla
+- Lisätty selkeämpi valinta käyttöönotossa palkanlaskennan käyttöönoton ja pelkän kaverikäytön välillä, säilytetty tietosi vaihdettaessa sisäänkirjautumisen ja rekisteröitymisen välillä sekä rajattu tietosuojasumennus vain arkaluonteisiin näkymiin
 - Virheenkorjauksia ja muita parannuksia

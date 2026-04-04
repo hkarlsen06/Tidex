@@ -1,5 +1,5 @@
-- Pemberitahuan chat teman ditingkatkan agar pesan baru terbuka lebih cepat dan lebih andal
-- Daftar Teman ditingkatkan agar chat aktif, pesan yang belum dibaca, dan orang yang sedang mengetik lebih mudah terlihat
-- Ditambahkan umpan balik panjang pesan yang lebih jelas saat menulis di chat teman
-- Desain aplikasi diperbarui dan tampilan layar chat dipoles
+- Menambahkan acara pribadi ke jadwal Anda, termasuk rencana sepanjang hari dan beberapa hari
+- Meningkatkan pengeditan acara dan sinkronisasi jadwal di seluruh aplikasi, widget, dan Live Activities
+- Meningkatkan obrolan teman dengan pembukaan notifikasi yang lebih andal, status belum dibaca dan sedang mengetik yang lebih baik, balasan yang ditingkatkan, dukungan untuk mengirim beberapa foto, dan galeri gambar baru
+- Menambahkan pilihan onboarding yang lebih jelas antara pengaturan penggajian dan penggunaan khusus teman, mempertahankan detail Anda saat beralih antara masuk dan mendaftar, serta membatasi efek buram privasi hanya pada layar sensitif
 - Perbaikan bug dan peningkatan lainnya

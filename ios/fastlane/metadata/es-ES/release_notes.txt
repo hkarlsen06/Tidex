@@ -1,5 +1,5 @@
-- Hemos mejorado las notificaciones de los chats con amigos para que los mensajes nuevos se abran más rápido y de forma más fiable
-- Hemos mejorado la lista de amigos para destacar mejor los chats activos, los mensajes no leídos y las personas que están escribiendo
-- Hemos añadido indicaciones más claras sobre la longitud de los mensajes mientras escribes en los chats con amigos
-- Hemos renovado el diseño de la app y mejorado las pantallas de chat
+- Se han añadido eventos privados a tu horario, incluidos planes de todo el día y de varios días
+- Se ha mejorado la edición de eventos y la sincronización del horario en toda la app, los widgets y las Live Activities
+- Se han mejorado los chats con amigos con una apertura desde notificaciones más fiable, mejores estados de no leído y escribiendo, respuestas mejoradas, compatibilidad para enviar varias fotos y una nueva galería de imágenes
+- Se ha añadido una opción de bienvenida más clara entre la configuración de la nómina y el uso solo con amigos, se han conservado tus datos al cambiar entre iniciar sesión y registrarte, y se ha limitado el difuminado de privacidad a las pantallas sensibles
 - Corrección de errores y otras mejoras

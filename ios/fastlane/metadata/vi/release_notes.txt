@@ -1,5 +1,5 @@
-- Đã cải thiện thông báo trò chuyện bạn bè để tin nhắn mới mở nhanh hơn và đáng tin cậy hơn
-- Đã cải thiện danh sách Bạn bè để hiển thị rõ hơn các cuộc trò chuyện đang hoạt động, tin nhắn chưa đọc và những người đang nhập
-- Đã thêm phản hồi rõ ràng hơn về độ dài tin nhắn khi soạn tin trong trò chuyện bạn bè
-- Đã làm mới thiết kế ứng dụng và tinh chỉnh các màn hình trò chuyện
-- Sửa lỗi và cải tiến khác
+- Đã thêm sự kiện riêng tư vào lịch của bạn, bao gồm kế hoạch cả ngày và nhiều ngày
+- Cải thiện chỉnh sửa sự kiện và đồng bộ lịch trên toàn bộ ứng dụng, tiện ích và Live Activities
+- Cải thiện trò chuyện với bạn bè với khả năng mở từ thông báo đáng tin cậy hơn, trạng thái chưa đọc và đang nhập tốt hơn, trả lời được cải thiện, hỗ trợ gửi nhiều ảnh và thư viện ảnh mới
+- Đã thêm lựa chọn giới thiệu rõ ràng hơn giữa thiết lập bảng lương và chỉ dùng tính năng bạn bè, giữ lại thông tin của bạn khi chuyển giữa đăng nhập và đăng ký, đồng thời giới hạn lớp làm mờ quyền riêng tư chỉ ở các màn hình nhạy cảm
+- Sửa lỗi và các cải tiến khác

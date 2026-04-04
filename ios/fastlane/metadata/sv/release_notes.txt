@@ -1,5 +1,5 @@
-- Förbättrade notiser i vänchattar så att nya meddelanden öppnas snabbare och mer tillförlitligt
-- Förbättrade vänlistan så att aktiva chattar, olästa meddelanden och personer som skriver syns tydligare
-- Lade till tydligare återkoppling om meddelandelängd medan du skriver i vänchattar
-- Uppdaterade appens design och finslipade chattskärmarna
+- Lade till privata händelser i ditt schema, inklusive heldags- och flerdagarsplaner
+- Förbättrade redigering av händelser och synkronisering av schemat i appen, widgets och Live Activities
+- Förbättrade vänchattar med mer tillförlitlig öppning från notiser, bättre status för oläst och skrivande, förbättrade svar, stöd för att skicka flera bilder och ett nytt bildgalleri
+- Lade till ett tydligare val i introduktionen mellan löneinställning och användning endast med vänner, behöll dina uppgifter när du växlar mellan att logga in och registrera dig, och begränsade integritetsslöjan till känsliga skärmar
 - Buggfixar och andra förbättringar

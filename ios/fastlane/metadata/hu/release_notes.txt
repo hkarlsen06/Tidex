@@ -1,5 +1,5 @@
-- Javítottuk a baráti csevegések értesítéseit, így az új üzenetek gyorsabban és megbízhatóbban nyílnak meg
-- Továbbfejlesztettük a Barátok listáját, hogy jobban kiemelje az aktív csevegéseket, az olvasatlan üzeneteket és a gépelő felhasználókat
-- Egyértelműbb visszajelzést adtunk az üzenethosszról írás közben a baráti csevegésekben
-- Felfrissítettük az alkalmazás dizájnját, és finomítottuk a csevegési képernyőket
+- Privát események hozzáadása a beosztásodhoz, beleértve az egész napos és többnapos terveket is
+- Javítottuk az események szerkesztését és a beosztás szinkronizálását az appban, a widgetekben és a Live Activities felületen
+- Továbbfejlesztettük a baráti csevegéseket: megbízhatóbb megnyitás értesítésekből, jobb olvasatlan- és gépelési állapotok, jobb válaszok, több fotó küldésének támogatása és új képgaléria
+- Egyértelműbb kezdő beállítási választási lehetőséget adtunk a bérszámfejtés beállítása és a csak barátok funkció között, megőriztük adataidat a bejelentkezés és regisztráció közti váltáskor, és az adatvédelmi elhomályosítást csak az érzékeny képernyőkre korlátoztuk
 - Hibajavítások és egyéb fejlesztések

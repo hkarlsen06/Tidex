@@ -1,5 +1,5 @@
-- Migliorate le notifiche delle chat con gli amici, così i nuovi messaggi si aprono più velocemente e in modo più affidabile
-- Migliorato l'elenco Amici per mettere meglio in evidenza le chat attive, i messaggi non letti e chi sta scrivendo
-- Aggiunto un feedback più chiaro sulla lunghezza dei messaggi mentre scrivi nelle chat con gli amici
-- Rinnovato il design dell'app e perfezionate le schermate della chat
+- Aggiunti eventi privati al tuo programma, inclusi piani di un'intera giornata e di più giorni
+- Migliorate la modifica degli eventi e la sincronizzazione del programma nell'app, nei widget e nelle Live Activities
+- Migliorate le chat con gli amici con un'apertura dalle notifiche più affidabile, stati di non letto e digitazione migliori, risposte migliorate, supporto per l'invio di più foto e una nuova galleria immagini
+- Aggiunta una scelta iniziale più chiara tra la configurazione della busta paga e l'uso solo con gli amici, mantenuti i tuoi dati quando passi dall'accesso alla registrazione e limitato l'effetto privacy alle schermate sensibili
 - Correzioni di bug e altri miglioramenti

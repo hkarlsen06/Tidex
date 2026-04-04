@@ -1,5 +1,5 @@
-- Hem millorat les notificacions del xat amb amics perquè els missatges nous s'obrin més ràpid i de manera més fiable
-- Hem millorat la llista d'amics perquè destaqui millor els xats actius, els missatges no llegits i les persones que estan escrivint
-- Hem afegit comentaris més clars sobre la longitud dels missatges mentre escrius als xats amb amics
-- Hem renovat el disseny de l'app i polit les pantalles del xat
+- S'han afegit esdeveniments privats al teu horari, inclosos plans de tot el dia i de diversos dies
+- S'ha millorat l'edició d'esdeveniments i la sincronització de l'horari a tota l'app, els ginys i les Activitats en viu
+- S'han millorat els xats amb amics amb una obertura des de les notificacions més fiable, millors estats de no llegit i d'escriptura, respostes millorades, compatibilitat amb l'enviament de diverses fotos i una galeria d'imatges nova
+- S'ha afegit una opció d'inici més clara entre la configuració de la nòmina i l'ús només amb amics, s'han conservat les teves dades en canviar entre iniciar sessió i registrar-te, i s'ha limitat el difuminat de privadesa a les pantalles sensibles
 - Correcció d'errors i altres millores

@@ -1,5 +1,5 @@
-- Forbedrede notifikationer i vennechats, så nye beskeder åbnes hurtigere og mere pålideligt
-- Forbedret vennelisten, så aktive chats, ulæste beskeder og personer, der skriver, vises tydeligere
-- Tilføjet tydeligere feedback om beskedlængde, mens du skriver i vennechats
-- Opdateret appdesignet og finpudset chatskærmene
+- Tilføjet private begivenheder til din plan, herunder heldags- og flerdagsplaner
+- Forbedret redigering af begivenheder og synkronisering af planen på tværs af appen, widgets og Live Activities
+- Forbedret chats med venner med mere pålidelig åbning fra notifikationer, bedre status for ulæste beskeder og skrivning, forbedrede svar, understøttelse af at sende flere billeder og et nyt billedgalleri
+- Tilføjet et tydeligere valg i onboarding mellem lønopsætning og brug kun med venner, beholdt dine oplysninger ved skift mellem log ind og opret konto, og begrænset privatlivssløring til følsomme skærme
 - Fejlrettelser og andre forbedringer

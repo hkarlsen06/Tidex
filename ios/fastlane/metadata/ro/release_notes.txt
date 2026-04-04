@@ -1,5 +1,5 @@
-- Am îmbunătățit notificările pentru chaturile cu prieteni, astfel încât mesajele noi să se deschidă mai rapid și mai fiabil
-- Am îmbunătățit lista de prieteni pentru a evidenția mai bine chaturile active, mesajele necitite și persoanele care scriu
-- Am adăugat un feedback mai clar privind lungimea mesajelor în timp ce scrii în chaturile cu prieteni
-- Am reîmprospătat designul aplicației și am îmbunătățit ecranele de chat
+- Au fost adăugate evenimente private în programul tău, inclusiv planuri de o zi întreagă și pe mai multe zile
+- A fost îmbunătățită editarea evenimentelor și sincronizarea programului în aplicație, widgeturi și Live Activities
+- Au fost îmbunătățite conversațiile cu prietenii prin deschiderea mai fiabilă din notificări, stări mai bune pentru necitite și scriere, răspunsuri îmbunătățite, suport pentru trimiterea mai multor fotografii și o nouă galerie de imagini
+- A fost adăugată o alegere mai clară la configurarea inițială între configurarea salarizării și utilizarea doar cu prietenii, au fost păstrate detaliile tale când comuți între autentificare și înregistrare, iar estomparea pentru confidențialitate a fost limitată la ecranele sensibile
 - Corecturi de erori și alte îmbunătățiri

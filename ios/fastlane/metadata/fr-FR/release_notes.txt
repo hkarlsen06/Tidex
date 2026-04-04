@@ -1,5 +1,5 @@
-- Amélioration des notifications des discussions entre amis pour que les nouveaux messages s’ouvrent plus vite et de façon plus fiable
-- Amélioration de la liste d’amis pour mieux mettre en avant les discussions actives, les messages non lus et les personnes en train d’écrire
-- Ajout d’un retour plus clair sur la longueur des messages pendant la rédaction dans les discussions entre amis
-- Refonte du design de l’app et amélioration des écrans de discussion
+- Ajout d’événements privés à votre planning, y compris des journées entières et des plans sur plusieurs jours
+- Amélioration de la modification des événements et de la synchronisation du planning dans l’app, les widgets et les Live Activities
+- Amélioration des discussions entre amis avec une ouverture depuis les notifications plus fiable, de meilleurs états lu et saisie, des réponses améliorées, la prise en charge de l’envoi de plusieurs photos et une nouvelle galerie d’images
+- Ajout d’un choix d’onboarding plus clair entre la configuration de la paie et une utilisation uniquement entre amis, conservation de vos informations lors du passage entre connexion et inscription, et limitation du flou de confidentialité aux écrans sensibles
 - Corrections de bugs et autres améliorations

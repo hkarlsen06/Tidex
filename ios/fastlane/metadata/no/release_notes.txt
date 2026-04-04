@@ -1,5 +1,5 @@
-- Forbedret varsler i vennesamtaler, slik at nye meldinger åpnes raskere og mer pålitelig
-- Forbedret vennelisten slik at aktive samtaler, uleste meldinger og de som skriver vises tydeligere
-- Lagt til tydeligere tegngrense og varsler mens du skriver i vennesamtaler
-- Frisket opp appdesignet og finpusset chatskjermene
+- Lagt til private hendelser i planen din, inkludert heldags- og flerdagersplaner
+- Forbedret redigering av hendelser og synkronisering av planen på tvers av appen, widgets og Live Activities
+- Forbedret vennesamtaler med mer pålitelig åpning fra varsler, bedre ulest- og skrivestatus, forbedrede svar, støtte for å sende flere bilder og et nytt bildegalleri
+- Lagt til et tydeligere valg i onboarding mellom lønnsoppsett og kun vennedelen, beholdt opplysningene dine når du bytter mellom innlogging og registrering, og viser nå personvernslør bare på sensitive skjermer
 - Feilrettinger og andre forbedringer

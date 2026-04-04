@@ -1,5 +1,5 @@
-- Meldingen voor chats met vrienden verbeterd, zodat nieuwe berichten sneller en betrouwbaarder openen
-- De vriendenlijst verbeterd zodat actieve chats, ongelezen berichten en mensen die typen beter zichtbaar zijn
-- Duidelijkere feedback over berichtlengte toegevoegd tijdens het schrijven in chats met vrienden
-- Het appontwerp vernieuwd en de chatschermen verder verfijnd
+- Privégebeurtenissen aan je rooster toegevoegd, waaronder plannen voor de hele dag en meerdere dagen
+- Bewerken van gebeurtenissen en synchronisatie van je rooster verbeterd in de app, widgets en Live Activities
+- Vriendenchats verbeterd met betrouwbaarder openen vanuit meldingen, betere statussen voor ongelezen berichten en typen, verbeterde antwoorden, ondersteuning voor het versturen van meerdere foto's en een nieuwe afbeeldingsgalerij
+- Een duidelijkere onboarding-keuze toegevoegd tussen looninstellingen en alleen vrienden gebruiken, je gegevens behouden bij het wisselen tussen inloggen en registreren, en privacyvervaging beperkt tot gevoelige schermen
 - Bugfixes en andere verbeteringen
