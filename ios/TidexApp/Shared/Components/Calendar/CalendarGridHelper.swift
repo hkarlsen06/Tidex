@@ -224,5 +224,13 @@ struct CalendarMonthGrid<DayContent: View>: View {
           .aspectRatio(cellAspectRatio, contentMode: .fit)
       }
     }
+    .id(monthGridIdentity)
+  }
+
+  private var monthGridIdentity: String {
+    guard let firstDate = days.first?.dateISO, let lastDate = days.last?.dateISO else {
+      return "calendar-grid-empty-\(days.count)"
+    }
+    return "\(firstDate)-\(lastDate)-\(days.count)"
   }
 }
