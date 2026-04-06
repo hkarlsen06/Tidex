@@ -8,10 +8,8 @@ struct CalendarHeaderTotals: Equatable {
 }
 
 /// Shared month/year header used by calendar-based screens.
-/// Supports month transition animation and optional trailing totals.
+/// Supports optional trailing totals.
 struct CalendarHeaderRow: View {
-  @Environment(\.layoutDirection) private var layoutDirection
-
   let monthName: String
   let year: Int
   let selectionCount: Int?
@@ -67,7 +65,6 @@ struct CalendarHeaderRow: View {
           .foregroundColor(.tidexTextMuted)
       }
     }
-    .modifier(HeaderTextTransitionModifier(phase: phase, layoutDirection: layoutDirection))
   }
 
   @ViewBuilder
@@ -136,34 +133,6 @@ struct CalendarHeaderRow: View {
       amount: amount,
       animateOnAppear: false,
       animateFrom: animateFrom
-    )
-  }
-}
-
-private struct HeaderTextTransitionModifier: ViewModifier {
-  let phase: MonthTransitionPhase?
-  let layoutDirection: LayoutDirection
-
-  func body(content: Content) -> some View {
-    if let phase {
-      content
-        .id("header-\(phase.id)")
-        .transition(textTransition(for: phase))
-        .animation(
-          .spring(response: 0.3, dampingFraction: 0.85),
-          value: phase.id
-        )
-    } else {
-      content
-    }
-  }
-
-  private func textTransition(for phase: MonthTransitionPhase) -> AnyTransition {
-    let base: CGFloat = phase.direction == .next ? 20 : -20
-    let offset = layoutDirection == .rightToLeft ? -base : base
-    return .asymmetric(
-      insertion: .offset(x: offset).combined(with: .opacity),
-      removal: .offset(x: -offset).combined(with: .opacity)
     )
   }
 }

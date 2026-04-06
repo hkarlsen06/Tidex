@@ -189,66 +189,27 @@ struct SharedShiftsCalendarView: View {
   // MARK: - Header Row
 
   private var headerRow: some View {
-    HStack {
-      monthYearLabel
-
-      Spacer()
-
-      // Monthly total (if showing earnings)
-      if showEarnings {
-        earningsDisplay
-      }
-    }
-    .padding(.horizontal, Spacing.xxs)
-    .padding(.bottom, Spacing.sm)
+    CalendarHeaderRow(
+      monthName: monthName,
+      year: year,
+      selectionCount: nil,
+      phase: phase,
+      totals: headerTotals,
+      trailingAccessory: nil
+    )
+    .userCurrency(currency)
   }
 
-  @ViewBuilder
-  private var monthYearLabel: some View {
-    if let phase {
-      HStack(spacing: Spacing.xxxs) {
-        Text(monthName)
-          .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
+  private var headerTotals: CalendarHeaderTotals? {
+    guard showEarnings else { return nil }
 
-        Text(String(year))
-          .font(.tidexBodyLarge)
-          .foregroundColor(.tidexTextMuted)
-      }
-      .textTransition(phase: phase, config: .default)
-    } else {
-      HStack(spacing: Spacing.xxxs) {
-        Text(monthName)
-          .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(String(year))
-          .font(.tidexBodyLarge)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-  }
-
-  /// Earnings display - shows monthly totals
-  @ViewBuilder
-  private var earningsDisplay: some View {
     let displayTotals = monthlyTotals
     let showTax = hasTaxEnabled
     let displayAmount = showTax ? displayTotals.net : displayTotals.gross
+    let primaryAmount = displayTotals.gross > 0 ? displayAmount : nil
+    let secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
 
-    VStack(alignment: .trailing, spacing: Spacing.micro) {
-      Text(
-        displayTotals.gross == 0 ? "—" : CurrencyConfig.format(displayAmount, currency: currency)
-      )
-      .font(.tidexHeadline)
-      .foregroundColor(.tidexTextPrimary)
-
-      if showTax && displayTotals.gross > 0 {
-        Text(CurrencyConfig.format(displayTotals.gross, currency: currency))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
+    return CalendarHeaderTotals(primary: primaryAmount, secondary: secondaryAmount)
   }
 
   // MARK: - Superimpose Legend
