@@ -9,10 +9,14 @@ struct ChatMessageBubble: View {
   /// State for full-screen image viewer
   @State private var selectedImageViewer: SelectedImageViewer?
 
+  private var renderBlocks: [ContentBlock] {
+    ContentBlock.normalized(message.contentBlocks)
+  }
+
   var body: some View {
     ChatMessageRow(isCurrentUser: message.role == .user) {
       // Render content blocks in chronological order
-      ForEach(Array(message.contentBlocks.enumerated()), id: \.offset) { _, block in
+      ForEach(Array(renderBlocks.enumerated()), id: \.offset) { _, block in
         switch block {
         case .text(let text):
           if !text.isEmpty {
@@ -346,9 +350,13 @@ struct StreamingMessageBubble: View {
   let contentBlocks: [ContentBlock]
   let isThinking: Bool
 
+  private var renderBlocks: [ContentBlock] {
+    ContentBlock.normalized(contentBlocks)
+  }
+
   /// Whether any text block has content
   private var hasAnyText: Bool {
-    contentBlocks.contains { block in
+    renderBlocks.contains { block in
       if case .text(let text) = block, !text.isEmpty { return true }
       return false
     }
@@ -357,14 +365,14 @@ struct StreamingMessageBubble: View {
   var body: some View {
     HStack {
       VStack(alignment: .leading, spacing: Spacing.xs) {
-        if contentBlocks.isEmpty {
+        if renderBlocks.isEmpty {
           if isThinking {
             ThinkingStatusBubble()
           } else {
             TypingIndicatorView()
           }
         } else {
-          ForEach(Array(contentBlocks.enumerated()), id: \.offset) { _, block in
+          ForEach(Array(renderBlocks.enumerated()), id: \.offset) { _, block in
             switch block {
             case .text(let text):
               if !text.isEmpty {

@@ -89,9 +89,13 @@ final class WageyConversationPersistenceTests: XCTestCase {
       message.content,
       "La meg sjekke tilleggssatsene også.\n\nNå har jeg det jeg trenger."
     )
+    XCTAssertEqual(
+      message.contentBlocks,
+      [.text("La meg sjekke tilleggssatsene også.\n\nNå har jeg det jeg trenger.")]
+    )
   }
 
-  func testStoredChatMessageTextContentPreservesSeparateTextBlocks() throws {
+  func testStoredChatMessageNormalizesAdjacentTextBlocksBeforePersistence() throws {
     let message = ChatMessage(
       id: "assistant-persisted-text-blocks",
       role: .assistant,
@@ -105,6 +109,32 @@ final class WageyConversationPersistenceTests: XCTestCase {
     let stored = StoredChatMessage(from: message)
 
     XCTAssertEqual(stored.textContent, "Første blokk.\n\nAndre blokk.")
+    XCTAssertEqual(
+      stored.contentBlocks,
+      [.text("Første blokk.\n\nAndre blokk.")]
+    )
+  }
+
+  func testChatMessageKeepsToolBoundariesWhenNormalizingTextBlocks() {
+    let message = ChatMessage(
+      id: "assistant-tool-boundary",
+      role: .assistant,
+      contentBlocks: [
+        .text("Jeg sjekker dette."),
+        .toolCall(
+          ToolCall(
+            id: "tool_1",
+            name: "manage_shift",
+            result: "{\"success\":true}",
+            success: true
+          )),
+        .text("Ferdig."),
+      ],
+      timestamp: Date(timeIntervalSince1970: 1_700_000_301)
+    )
+
+    XCTAssertEqual(message.contentBlocks.count, 3)
+    XCTAssertEqual(message.content, "Jeg sjekker dette.\n\nFerdig.")
   }
 
   func testLocalConversationStoresCompactionSummary() {

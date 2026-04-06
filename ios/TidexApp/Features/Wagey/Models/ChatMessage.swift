@@ -55,7 +55,7 @@ struct ChatMessage: Identifiable, Equatable {
   ) {
     self.id = id
     self.role = role
-    self.contentBlocks = contentBlocks
+    self.contentBlocks = ContentBlock.normalized(contentBlocks)
     self.sources = sources
     self.timestamp = timestamp
   }
@@ -147,6 +147,32 @@ enum ContentBlock: Identifiable, Equatable {
     case .image(let attachment):
       return attachment.id
     }
+  }
+
+  static func normalized(_ blocks: [ContentBlock]) -> [ContentBlock] {
+    var normalizedBlocks: [ContentBlock] = []
+
+    for block in blocks {
+      switch block {
+      case .text(let text):
+        guard !text.isEmpty else { continue }
+
+        if let lastIndex = normalizedBlocks.indices.last,
+          case .text(let existingText) = normalizedBlocks[lastIndex]
+        {
+          normalizedBlocks[lastIndex] = .text(
+            WageyTextContent.flatten(blocks: [existingText, text])
+          )
+        } else {
+          normalizedBlocks.append(.text(text))
+        }
+
+      case .toolCall, .image:
+        normalizedBlocks.append(block)
+      }
+    }
+
+    return normalizedBlocks
   }
 }
 
