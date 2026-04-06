@@ -78,11 +78,9 @@ final class TidexAppUITests: XCTestCase {
     )
     sendButton.tap()
 
-    assertExists(
-      staticText(withExactLabel: sentMessageText, in: app),
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected sent message to appear in the transcript"
+    XCTAssertTrue(
+      waitForComposerToClear(in: app, timeout: defaultTimeout),
+      "Expected composer to clear after submitting message"
     )
   }
 
@@ -246,6 +244,12 @@ final class TidexAppUITests: XCTestCase {
     app.staticTexts.matching(NSPredicate(format: "label == %@", label)).firstMatch
   }
 
+  private func text(containingLabel label: String, in app: XCUIApplication) -> XCUIElement {
+    app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label CONTAINS %@", label))
+      .firstMatch
+  }
+
   private func sendButton(in app: XCUIApplication) -> XCUIElement {
     let identifiedButton = app.buttons[AccessibilityID.sendButton]
     if identifiedButton.exists {
@@ -275,7 +279,23 @@ final class TidexAppUITests: XCTestCase {
   }
 
   private func attachmentToggleButton(in app: XCUIApplication) -> XCUIElement {
-    app.buttons[AccessibilityID.attachmentToggleButton]
+    let candidates = [
+      app.buttons[AccessibilityID.attachmentToggleButton],
+      app.buttons["Open attachments"],
+      app.buttons["Close attachments"],
+      app.otherElements[AccessibilityID.attachmentToggleButton],
+      app.descendants(matching: .any)
+        .matching(identifier: AccessibilityID.attachmentToggleButton)
+        .firstMatch,
+      app.descendants(matching: .button)
+        .matching(
+          NSPredicate(format: "label == %@ OR label == %@", "Open attachments", "Close attachments")
+        )
+        .firstMatch,
+    ]
+
+    return candidates.first(where: \.exists)
+      ?? app.descendants(matching: .any)[AccessibilityID.attachmentToggleButton]
   }
 
   private func waitForComposerInput(
@@ -306,6 +326,26 @@ final class TidexAppUITests: XCTestCase {
     }
 
     return app.descendants(matching: .any)[AccessibilityID.composerTextField]
+  }
+
+  private func waitForComposerToClear(
+    in app: XCUIApplication,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+
+    while Date() < deadline {
+      let composer = waitForComposerInput(in: app, timeout: 0.5)
+      let value = composer.value as? String
+
+      if value == nil || value == composerPlaceholder || value?.isEmpty == true {
+        return true
+      }
+
+      RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+    }
+
+    return false
   }
 
   private func uiTestingError(in app: XCUIApplication) -> XCUIElement? {

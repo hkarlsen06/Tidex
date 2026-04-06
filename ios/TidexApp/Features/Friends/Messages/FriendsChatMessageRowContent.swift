@@ -1,3 +1,4 @@
+import ExyteChat
 import SwiftUI
 import UIKit
 
@@ -50,6 +51,7 @@ struct FriendsChatMessageRowContent: View {
   let onTapQuotedMessage: () -> Void
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
   let onOpenShiftSnapshot: (FriendShiftSnapshot) -> Void
+  let messageFrame: Binding<CGRect>?
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -118,6 +120,10 @@ struct FriendsChatMessageRowContent: View {
                       isCurrentUser: isCurrentUser,
                       onOpenImageAttachment: onOpenImageAttachment
                     )
+                    .friendsChatMessageFrame(
+                      !hasMessageText && shiftSnapshot == nil && index == imageAttachments.count - 1
+                        ? messageFrame : nil
+                    )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
                         index == imageAttachments.count - 1
@@ -136,6 +142,9 @@ struct FriendsChatMessageRowContent: View {
                       onOpenShiftSnapshot(shiftSnapshot)
                     }
                   )
+                  .friendsChatMessageFrame(
+                    hasMessageText || !imageAttachments.isEmpty ? nil : messageFrame
+                  )
                   .overlay(alignment: reactionAlignment) {
                     if !hasMessageText, imageAttachments.isEmpty {
                       reactionStrip
@@ -148,7 +157,8 @@ struct FriendsChatMessageRowContent: View {
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: 280
+                    maxWidth: 280,
+                    messageFrame: messageFrame
                   ) {
                     Text(fallbackPreviewText)
                       .font(.tidexBody)
@@ -165,7 +175,8 @@ struct FriendsChatMessageRowContent: View {
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: 280
+                    maxWidth: 280,
+                    messageFrame: messageFrame
                   ) {
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                       if let quotedPreview {
@@ -497,6 +508,7 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
   let groupContext: FriendsChatMessageGroupContext
   var minWidth: CGFloat? = nil
   var maxWidth: CGFloat? = nil
+  let messageFrame: Binding<CGRect>?
   @ViewBuilder let content: () -> Content
   @ViewBuilder let reaction: () -> Reaction
 
@@ -539,6 +551,7 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
       .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
         reaction()
       }
+      .friendsChatMessageFrame(messageFrame)
   }
 
   private var bubbleShape: some InsettableShape {
@@ -579,6 +592,17 @@ private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: Vi
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
+  }
+}
+
+extension View {
+  @ViewBuilder
+  fileprivate func friendsChatMessageFrame(_ messageFrame: Binding<CGRect>?) -> some View {
+    if let messageFrame {
+      frameGetter(messageFrame)
+    } else {
+      self
+    }
   }
 }
 
