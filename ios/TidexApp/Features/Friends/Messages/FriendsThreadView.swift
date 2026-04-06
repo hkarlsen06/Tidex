@@ -568,6 +568,14 @@ struct FriendsThreadView: View {
         onPinnedToBottomChanged: {
           isPinnedToBottom = $0
         },
+        onLatestVisiblePresentedMessageIDChanged: { presentedMessageID in
+          guard let presentedMessageID else { return }
+          Task {
+            await viewModel.updateLatestVisibleMessage(
+              messageId: messageID(for: presentedMessageID)
+            )
+          }
+        },
         onDidHandleScrollRequest: handleViewportScrollRequest
       )
       .allowsHitTesting(false)

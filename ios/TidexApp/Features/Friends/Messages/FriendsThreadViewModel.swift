@@ -51,6 +51,10 @@ final class FriendsThreadViewModel: ObservableObject {
     static let characterLimit = 2000
   }
 
+  private enum VisibleReadTracking {
+    static let debounceDelay: Duration = .milliseconds(200)
+  }
+
   private enum ComposerState: Equatable {
     case normal
     case reply(FriendMessage)
@@ -159,7 +163,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
   let route: FriendChatRoute
 
-  let viewerUserId: String
+  @Published private(set) var viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
   private let capabilities: any FriendsMessagingCapabilityProviding
   private let shareVisibilityResolver: any FriendsThreadShareVisibilityResolving
@@ -170,6 +174,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private let repository: FriendsMessagesRepository
   private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: any FriendsMessagingRealtimeCoordinating
+  private let viewerUserIdResolver: () async -> String?
   private var hasLoaded = false
   private var loadingQuotedMessageIds: Set<String> = []
   private var didSendTypingStart = false
@@ -180,8 +185,10 @@ final class FriendsThreadViewModel: ObservableObject {
   private var activeThreadCatchUpTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
   private var threadStatesRefreshTask: Task<Void, Never>?
+  private var latestVisibleMessageReadTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
   private var suspendedComposerSnapshot: ComposerSnapshot?
+  private var latestVisibleMessageId: String?
 
   var composerMode: FriendsThreadComposerMode {
     composerState.mode
@@ -215,10 +222,11 @@ final class FriendsThreadViewModel: ObservableObject {
     settingsRepository: SettingsRepository? = nil,
     repository: FriendsMessagesRepository? = nil,
     composerDraftStore: FriendsComposerDraftStore? = nil,
-    realtimeCoordinator: (any FriendsMessagingRealtimeCoordinating)? = nil
+    realtimeCoordinator: (any FriendsMessagingRealtimeCoordinating)? = nil,
+    viewerUserIdResolver: (() async -> String?)? = nil
   ) {
     self.route = route
-    self.viewerUserId = viewerUserId
+    self.viewerUserId = Self.normalizedUserId(viewerUserId) ?? ""
     self.service = service ?? FriendsMessagingService.shared
     self.capabilities = capabilities ?? FriendsMessagingCapabilities.shared
     self.shareVisibilityResolver = shareVisibilityResolver ?? FriendsThreadShareVisibilityResolver()
@@ -229,6 +237,15 @@ final class FriendsThreadViewModel: ObservableObject {
     self.repository = repository ?? .shared
     self.composerDraftStore = composerDraftStore ?? .shared
     self.realtimeCoordinator = realtimeCoordinator ?? FriendsMessagingRealtimeCoordinator.shared
+    self.viewerUserIdResolver =
+      viewerUserIdResolver
+      ?? {
+        if let coordinatorUserId = Self.normalizedUserId(AppCoordinator.shared.getCurrentUserId()) {
+          return coordinatorUserId
+        }
+
+        return Self.normalizedUserId(await AuthSessionManager.shared.getUserIdIfAvailable())
+      }
     self.thread = FriendThread(
       id: route.threadId,
       kind: .direct,
@@ -258,17 +275,24 @@ final class FriendsThreadViewModel: ObservableObject {
     activeThreadCatchUpTask?.cancel()
     counterpartTypingTimeoutTask?.cancel()
     threadStatesRefreshTask?.cancel()
+    latestVisibleMessageReadTask?.cancel()
   }
 
   func loadIfNeeded() async {
     guard !hasLoaded else { return }
-    hasLoaded = true
     await load()
   }
 
   func load() async {
     guard !isLoading else { return }
     isLoading = true
+    defer { isLoading = false }
+
+    guard await resolveViewerUserIdIfNeeded() else {
+      threadLogger.error("Unable to load thread without a viewer user ID")
+      return
+    }
+    hasLoaded = true
     loadFromCache()
     await loadPendingComposerDraft()
 
@@ -276,15 +300,12 @@ final class FriendsThreadViewModel: ObservableObject {
     async let counterpartPreviewRefresh: Void = loadCounterpartShiftPreview(forceRefresh: false)
     await refreshFromServer()
     _ = await (realtimeSubscription, counterpartPreviewRefresh)
-    isLoading = false
-
-    await markLatestIncomingAsRead()
   }
 
   func refresh() async {
     await refreshFromServer()
     await loadCounterpartShiftPreview(forceRefresh: true)
-    await markLatestIncomingAsRead()
+    await markVisibleMessagesReadIfNeeded()
   }
 
   func reloadFromCache() {
@@ -295,7 +316,7 @@ final class FriendsThreadViewModel: ObservableObject {
     loadFromCache()
     await loadCounterpartShiftPreview(forceRefresh: false)
     if shouldMarkRead {
-      await markLatestIncomingAsRead()
+      await markVisibleMessagesReadIfNeeded()
     }
   }
 
@@ -305,7 +326,37 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func markVisibleMessagesReadIfNeeded() async {
-    await markLatestIncomingAsRead()
+    guard let visibleMessage = latestVisibleMessage else { return }
+    guard shouldAdvanceReadMarker(through: visibleMessage) else { return }
+
+    do {
+      let state = try await service.markThreadRead(
+        threadId: route.threadId,
+        throughMessageId: visibleMessage.id
+      )
+      await repository.saveThreadState(state)
+      loadFromCache()
+      notifyThreadUpdated()
+    } catch {
+      threadLogger.error("Failed to mark thread as read: \(error.localizedDescription)")
+    }
+  }
+
+  func updateLatestVisibleMessage(messageId: String?) async {
+    latestVisibleMessageReadTask?.cancel()
+
+    guard let normalizedMessageId = normalizedMessageId(messageId) else {
+      latestVisibleMessageId = nil
+      return
+    }
+
+    latestVisibleMessageId = normalizedMessageId
+    latestVisibleMessageReadTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      try? await Task.sleep(for: VisibleReadTracking.debounceDelay)
+      guard !Task.isCancelled else { return }
+      await self.markVisibleMessagesReadIfNeeded()
+    }
   }
 
   func loadOlderMessagesIfNeeded(currentFirstMessageId: String) async {
@@ -481,6 +532,10 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func startRealtime() async {
+    guard await resolveViewerUserIdIfNeeded(forceReloadCache: false) else {
+      threadLogger.error("Skipping realtime thread subscription because viewer user ID is missing")
+      return
+    }
     await realtimeCoordinator.startThreadSubscription(
       threadId: route.threadId,
       viewerUserId: viewerUserId
@@ -497,6 +552,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func handleDraftChanged(to draft: String) async {
+    guard await resolveViewerUserIdIfNeeded(forceReloadCache: false) else { return }
     guard !isThreadReadOnly, !route.counterpartUserId.isEmpty else { return }
     guard composerMode != .edit else {
       await stopTypingIfNeeded()
@@ -539,6 +595,10 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func sendMessage(content: String) async -> Bool {
+    guard await resolveViewerUserIdIfNeeded(forceReloadCache: false) else {
+      sendErrorMessage = sendMessageFailedMessage
+      return false
+    }
     guard !isThreadReadOnly else {
       return false
     }
@@ -767,6 +827,28 @@ final class FriendsThreadViewModel: ObservableObject {
     _ = await (threadRefresh, statesRefresh)
   }
 
+  private func resolveViewerUserIdIfNeeded(forceReloadCache: Bool = true) async -> Bool {
+    if let normalizedViewerUserId = Self.normalizedUserId(viewerUserId) {
+      if viewerUserId != normalizedViewerUserId {
+        viewerUserId = normalizedViewerUserId
+      }
+      return true
+    }
+
+    guard let resolvedViewerUserId = await viewerUserIdResolver() else {
+      return false
+    }
+
+    let didChangeViewerUserId = viewerUserId != resolvedViewerUserId
+    viewerUserId = resolvedViewerUserId
+
+    if forceReloadCache, didChangeViewerUserId {
+      loadFromCache()
+    }
+
+    return true
+  }
+
   private func refreshThreadSnapshotFromServer() async {
     do {
       let snapshot = try await service.fetchThreadSyncSnapshotV2(
@@ -838,30 +920,6 @@ final class FriendsThreadViewModel: ObservableObject {
     }
     loadFromCache()
     notifyThreadUpdated()
-  }
-
-  private func markLatestIncomingAsRead() async {
-    guard let lastIncomingMessage = messages.last(where: { $0.senderUserId != viewerUserId }) else {
-      return
-    }
-
-    if repository.getThreadState(threadId: route.threadId, viewerUserId: viewerUserId)?
-      .lastReadMessageId == lastIncomingMessage.id
-    {
-      return
-    }
-
-    do {
-      let state = try await service.markThreadRead(
-        threadId: route.threadId,
-        throughMessageId: lastIncomingMessage.id
-      )
-      await repository.saveThreadState(state)
-      loadFromCache()
-      notifyThreadUpdated()
-    } catch {
-      threadLogger.error("Failed to mark thread as read: \(error.localizedDescription)")
-    }
   }
 
   private func notifyThreadUpdated() {
@@ -1288,6 +1346,41 @@ final class FriendsThreadViewModel: ObservableObject {
     return normalizedMessageId.isEmpty ? nil : normalizedMessageId
   }
 
+  private var latestVisibleMessage: FriendMessage? {
+    guard let latestVisibleMessageId else { return nil }
+    return messages.first(where: { $0.id == latestVisibleMessageId })
+  }
+
+  private func shouldAdvanceReadMarker(through visibleMessage: FriendMessage) -> Bool {
+    guard
+      let currentState = repository.getThreadState(
+        threadId: route.threadId,
+        viewerUserId: viewerUserId
+      )
+    else {
+      return true
+    }
+
+    if currentState.lastReadMessageId == visibleMessage.id {
+      return false
+    }
+
+    if let currentReadMessageId = currentState.lastReadMessageId,
+      let currentReadMessage = messages.first(where: { $0.id == currentReadMessageId })
+    {
+      return isMessage(currentReadMessage, orderedBefore: visibleMessage)
+    }
+
+    guard let lastReadAt = currentState.lastReadAt else { return true }
+    return (lastReadAt, currentState.lastReadMessageId ?? "") < (
+      visibleMessage.createdAt, visibleMessage.id
+    )
+  }
+
+  private func isMessage(_ lhs: FriendMessage, orderedBefore rhs: FriendMessage) -> Bool {
+    (lhs.createdAt, lhs.id) < (rhs.createdAt, rhs.id)
+  }
+
   private func sendMessageInBackground(
     _ message: FriendMessage,
     sendTask: SendTaskHandle? = nil
@@ -1344,6 +1437,12 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func messageBodyLengthForBackendValidation(_ normalizedBody: String) -> Int {
     normalizedBody.unicodeScalars.count
+  }
+
+  private static func normalizedUserId(_ userId: String?) -> String? {
+    guard let userId else { return nil }
+    let normalizedUserId = userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return normalizedUserId.isEmpty ? nil : normalizedUserId
   }
 
   private func isMessageBodyTooLongError(_ error: Error) -> Bool {

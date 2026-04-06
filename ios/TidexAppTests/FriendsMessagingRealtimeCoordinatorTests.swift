@@ -85,6 +85,24 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertNil(FriendsMessagingRealtimeCoordinator.decodeThreadUserState(from: action))
   }
 
+  func testThreadListRefreshesForViewerStateUpdates() {
+    XCTAssertTrue(
+      FriendsMessagingRealtimeCoordinator.shouldRefreshThreadList(
+        forThreadStateUserId: "viewer-1",
+        viewerUserId: "viewer-1"
+      )
+    )
+  }
+
+  func testThreadListDoesNotRefreshForCounterpartStateUpdates() {
+    XCTAssertFalse(
+      FriendsMessagingRealtimeCoordinator.shouldRefreshThreadList(
+        forThreadStateUserId: "friend-1",
+        viewerUserId: "viewer-1"
+      )
+    )
+  }
+
   private static func rawMessage() -> RealtimeMessageV2 {
     RealtimeMessageV2(
       joinRef: nil,

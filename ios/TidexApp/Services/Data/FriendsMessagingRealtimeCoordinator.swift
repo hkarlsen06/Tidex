@@ -78,8 +78,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     let stateChanges = channel.postgresChange(
       AnyAction.self,
       schema: "public",
-      table: "thread_user_state",
-      filter: .eq("user_id", value: viewerUserId)
+      table: "thread_user_state"
     )
 
     do {
@@ -442,7 +441,13 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private func handleThreadListStateAction(_ action: AnyAction, viewerUserId: String) async {
     if let state = Self.decodeThreadUserState(from: action) {
       await repository.saveThreadState(state)
-      await refreshThreadList(viewerUserId: viewerUserId)
+      if Self.shouldRefreshThreadList(
+        forThreadStateUserId: state.userId, viewerUserId: viewerUserId)
+      {
+        await refreshThreadList(viewerUserId: viewerUserId)
+      } else {
+        notifyThreadUpdated(threadId: state.threadId)
+      }
     }
   }
 
@@ -717,6 +722,13 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
         "Failed to decode thread user state from realtime payload: \(error.localizedDescription)")
       return nil
     }
+  }
+
+  static func shouldRefreshThreadList(
+    forThreadStateUserId stateUserId: String,
+    viewerUserId: String
+  ) -> Bool {
+    stateUserId == viewerUserId
   }
 
   private func replayInboxEvents(
