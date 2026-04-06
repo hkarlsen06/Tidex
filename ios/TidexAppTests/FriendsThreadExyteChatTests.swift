@@ -58,6 +58,54 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testAttachmentTapGuardSuppressesTapImmediatelyAfterMenuRecognition() {
+    let now = Date(timeIntervalSince1970: 1_775_433_600)
+    let suppressedUntil = FriendsThreadAttachmentTapGuard.suppressedUntilAfterMenuRecognition(
+      now: now
+    )
+
+    XCTAssertFalse(
+      FriendsThreadAttachmentTapGuard.shouldHandleTap(
+        suppressedUntil: suppressedUntil,
+        now: now.addingTimeInterval(0.1)
+      )
+    )
+  }
+
+  func testAttachmentTapGuardAllowsTapAfterSuppressionWindowExpires() {
+    let now = Date(timeIntervalSince1970: 1_775_433_600)
+    let suppressedUntil = FriendsThreadAttachmentTapGuard.suppressedUntilAfterMenuRecognition(
+      now: now
+    )
+
+    XCTAssertTrue(
+      FriendsThreadAttachmentTapGuard.shouldHandleTap(
+        suppressedUntil: suppressedUntil,
+        now: suppressedUntil
+      )
+    )
+  }
+
+  func testSharingDeepLinkPreservesExistingPathWhenChatIsShowing() {
+    XCTAssertTrue(
+      SharingDeepLinkNavigationPathResolver.shouldPreserveExistingPath(
+        navigationPathIsEmpty: false,
+        selectedSharerId: nil,
+        activeChatHighlightUserId: "friend-1"
+      )
+    )
+  }
+
+  func testSharingDeepLinkResetsPathWhenSharerDetailIsAlreadyShowing() {
+    XCTAssertFalse(
+      SharingDeepLinkNavigationPathResolver.shouldPreserveExistingPath(
+        navigationPathIsEmpty: false,
+        selectedSharerId: "friend-1",
+        activeChatHighlightUserId: "friend-1"
+      )
+    )
+  }
+
   func testShiftSnapshotNavigationRoutesOwnSnapshotToShiftsHighlight() {
     let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
       for: makeShiftSnapshot(ownerUserId: "viewer-1", shiftDate: "2026-04-04"),

@@ -1,6 +1,16 @@
 import SwiftUI
 import UIKit
 
+enum SharingDeepLinkNavigationPathResolver {
+  static func shouldPreserveExistingPath(
+    navigationPathIsEmpty: Bool,
+    selectedSharerId: String?,
+    activeChatHighlightUserId: String?
+  ) -> Bool {
+    !navigationPathIsEmpty && selectedSharerId == nil && activeChatHighlightUserId != nil
+  }
+}
+
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
 struct SharingView: View {
@@ -269,7 +279,15 @@ struct SharingView: View {
           if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
             $0.id == sharerId
           }) {
-            navigationPath = NavigationPath()
+            let shouldPreserveNavigationPath =
+              SharingDeepLinkNavigationPathResolver.shouldPreserveExistingPath(
+                navigationPathIsEmpty: navigationPath.isEmpty,
+                selectedSharerId: viewModel.selectedSharer?.id,
+                activeChatHighlightUserId: activeChatHighlightUserId
+              )
+            if !shouldPreserveNavigationPath {
+              navigationPath = NavigationPath()
+            }
             viewModel.selectSharer(sharer)
             navigationPath.append(sharer)
 
