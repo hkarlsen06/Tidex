@@ -32,6 +32,126 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testCounterpartMenuItemsIncludeForwardForShiftSnapshotMessage() {
+    let exyteMessage = FriendsThreadExyteMessageFactory.makeMessage(
+      makeMessage(
+        id: "message-shift",
+        senderUserId: "other",
+        createdAt: Date(),
+        body: nil,
+        metadataData: makeShiftSnapshotMetadataData()
+      ),
+      context: FriendsThreadExyteMessageFactory.Context(
+        messagesById: [:],
+        viewerUserId: "viewer",
+        currentUserDisplayName: "Viewer Person",
+        counterpartDisplayName: "Other Person",
+        counterpartAvatarUrl: nil,
+        latestOutgoingMessageId: nil,
+        readReceiptMessageId: nil
+      )
+    )
+
+    XCTAssertEqual(
+      FriendsThreadMessageMenuAction.menuItems(for: exyteMessage),
+      [.reply, .forward, .report]
+    )
+  }
+
+  func testShiftSnapshotNavigationRoutesOwnSnapshotToShiftsHighlight() {
+    let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
+      for: makeShiftSnapshot(ownerUserId: "viewer-1", shiftDate: "2026-04-04"),
+      viewerUserId: "viewer-1",
+      cachedFriends: .init(sharers: [], chatOnlyUserIds: [])
+    )
+
+    XCTAssertEqual(
+      deepLink,
+      .shifts(dates: ["2026-04-04"], action: .highlight)
+    )
+  }
+
+  func testShiftSnapshotNavigationRoutesVisibleSharerToSharingHighlight() {
+    let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
+      for: makeShiftSnapshot(ownerUserId: "owner-1", shiftDate: "2026-04-04"),
+      viewerUserId: "viewer-1",
+      cachedFriends: .init(
+        sharers: [
+          SharedUser(
+            id: "owner-1",
+            email: nil,
+            phone: nil,
+            firstName: "Owner",
+            profilePictureUrl: nil,
+            oauthAvatarUrl: nil,
+            sharedAt: "2026-04-01T10:00:00Z",
+            showEarnings: true,
+            hidden: false
+          )
+        ],
+        chatOnlyUserIds: []
+      )
+    )
+
+    XCTAssertEqual(
+      deepLink,
+      .sharing(sharerId: "owner-1", highlightDates: ["2026-04-04"], changes: nil)
+    )
+  }
+
+  func testShiftSnapshotNavigationDoesNotRouteChatOnlySharer() {
+    let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
+      for: makeShiftSnapshot(ownerUserId: "owner-1", shiftDate: "2026-04-04"),
+      viewerUserId: "viewer-1",
+      cachedFriends: .init(
+        sharers: [
+          SharedUser(
+            id: "owner-1",
+            email: nil,
+            phone: nil,
+            firstName: "Owner",
+            profilePictureUrl: nil,
+            oauthAvatarUrl: nil,
+            sharedAt: "2026-04-01T10:00:00Z",
+            showEarnings: false,
+            hidden: false
+          )
+        ],
+        chatOnlyUserIds: ["owner-1"]
+      )
+    )
+
+    XCTAssertNil(deepLink)
+  }
+
+  func testShiftSnapshotNavigationRoutesHiddenSharerToSharingHighlight() {
+    let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
+      for: makeShiftSnapshot(ownerUserId: "owner-1", shiftDate: "2026-04-04"),
+      viewerUserId: "viewer-1",
+      cachedFriends: .init(
+        sharers: [
+          SharedUser(
+            id: "owner-1",
+            email: nil,
+            phone: nil,
+            firstName: "Owner",
+            profilePictureUrl: nil,
+            oauthAvatarUrl: nil,
+            sharedAt: "2026-04-01T10:00:00Z",
+            showEarnings: false,
+            hidden: true
+          )
+        ],
+        chatOnlyUserIds: []
+      )
+    )
+
+    XCTAssertEqual(
+      deepLink,
+      .sharing(sharerId: "owner-1", highlightDates: ["2026-04-04"], changes: nil)
+    )
+  }
+
   func testReadReceiptTargetsLatestOutgoingMessageAtOrBeforeCounterpartReadMarker() {
     let baseDate = Date(timeIntervalSince1970: 1_731_000_000)
     let messages = [
@@ -641,6 +761,8 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     id: String,
     senderUserId: String,
     createdAt: Date,
+    body: String? = "Hello",
+    metadataData: Data? = nil,
     reactions: [FriendMessageReaction] = []
   ) -> FriendMessage {
     FriendMessage(
@@ -648,12 +770,13 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       threadId: "thread-1",
       senderUserId: senderUserId,
       messageType: .user,
-      body: "Hello",
+      body: body,
       clientId: id,
       replyToMessageId: nil,
       createdAt: createdAt,
       editedAt: nil,
       deletedAt: nil,
+      metadataData: metadataData,
       attachments: [],
       reactions: reactions,
       sendState: .sent,
@@ -674,5 +797,37 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       height: 900,
       createdAt: Date(timeIntervalSince1970: 1_731_000_000)
     )
+  }
+
+  private func makeShiftSnapshot(ownerUserId: String, shiftDate: String) -> FriendShiftSnapshot {
+    FriendShiftSnapshot(
+      schemaVersion: 1,
+      ownerUserId: ownerUserId,
+      ownerDisplayName: "Owner",
+      ownerAvatarUrl: nil,
+      shiftId: "shift-1",
+      jobName: "Cafe",
+      jobColorHex: nil,
+      shiftDate: shiftDate,
+      startTime: "08:00",
+      endTime: "16:00",
+      paidHours: 8,
+      currency: "NOK",
+      includesEarnings: false,
+      grossPay: nil,
+      netPay: nil,
+      taxEnabled: false,
+      source: "tests"
+    )
+  }
+
+  private func makeShiftSnapshotMetadataData() -> Data? {
+    FriendsComposerAttachmentDraft
+      .shiftSnapshot(
+        ComposerShiftSnapshotDraft(
+          snapshot: makeShiftSnapshot(ownerUserId: "owner-1", shiftDate: "2026-04-04")
+        )
+      )
+      .metadataData
   }
 }

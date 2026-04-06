@@ -409,7 +409,7 @@ struct ShiftDetailsSheet: View {
               threadId: result.threadId,
               messageId: nil,
               senderUserId: nil,
-              navigationRequestId: nil
+              navigationRequestId: UUID()
             )
             showingSendToChatSheet = false
             dismiss()

@@ -181,6 +181,19 @@ struct ImageAttachment: Identifiable, Equatable {
   var base64String: String {
     data.base64EncodedString()
   }
+
+  func hasSamePayload(as other: ImageAttachment) -> Bool {
+    mediaType == other.mediaType && data == other.data
+  }
+}
+
+extension Array where Element == ImageAttachment {
+  func uniquePayloads() -> [ImageAttachment] {
+    reduce(into: []) { result, attachment in
+      guard !result.contains(where: { $0.hasSamePayload(as: attachment) }) else { return }
+      result.append(attachment)
+    }
+  }
 }
 
 // MARK: - Message Source

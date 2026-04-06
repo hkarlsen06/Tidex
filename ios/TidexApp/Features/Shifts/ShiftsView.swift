@@ -631,7 +631,7 @@ struct ShiftsView: View {
                   threadId: result.threadId,
                   messageId: nil,
                   senderUserId: nil,
-                  navigationRequestId: nil
+                  navigationRequestId: UUID()
                 )
                 showingSendToChatSheet = false
               }
@@ -928,8 +928,8 @@ struct ShiftsView: View {
     selectedEvent = EventSheetSelection(event: event, startInEditMode: startInEditMode)
   }
 
-  /// Handle calendar day tap with single-shift auto-navigation
-  private func handleDayTapped(dateISO: String, shifts: [ShiftWithComputations]) {
+  /// Present the items attached to a calendar day without changing selection.
+  private func presentDayItems(dateISO: String, shifts: [ShiftWithComputations]) {
     let items = viewModel.mixedItems(for: dateISO)
 
     if items.count == 1, let singleItem = items.first {
@@ -947,6 +947,12 @@ struct ShiftsView: View {
         items: shifts.map { DayPresentationItem.shift($0) }
       )
     }
+  }
+
+  /// Open the selected day's details from the calendar action bar.
+  private func handleSelectedDayDetails() {
+    guard let dateISO = viewModel.selectedDates.first else { return }
+    presentDayItems(dateISO: dateISO, shifts: viewModel.selectedDateShifts)
   }
 
   // MARK: - Selection Mode Toggle Button
@@ -1057,10 +1063,10 @@ struct ShiftsView: View {
               jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
-                if viewModel.isSelectionModeEnabled {
+                if !shiftsOnDay.isEmpty {
                   viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
                 } else {
-                  handleDayTapped(dateISO: dateISO, shifts: shiftsOnDay)
+                  presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
               },
               selectedDates: $viewModel.selectedDates,
@@ -1084,15 +1090,7 @@ struct ShiftsView: View {
                 viewModel.initiateCopy()
               },
               onDetails: {
-                let shiftsOnDate = viewModel.selectedDateShifts
-                if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
-                  selectedShift = shift
-                } else if let dateISO = viewModel.selectedDates.first {
-                  selectedDayForSheet = DayItemSelection(
-                    dateISO: dateISO,
-                    items: shiftsOnDate.map { DayPresentationItem.shift($0) }
-                  )
-                }
+                handleSelectedDayDetails()
               },
               onEdit: {
                 let shiftsOnDate = viewModel.selectedDateShifts
@@ -1276,10 +1274,10 @@ struct ShiftsView: View {
               jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
-                if viewModel.isSelectionModeEnabled {
+                if !shiftsOnDay.isEmpty {
                   viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
                 } else {
-                  handleDayTapped(dateISO: dateISO, shifts: shiftsOnDay)
+                  presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
               },
               selectedDates: $viewModel.selectedDates,
@@ -1303,16 +1301,7 @@ struct ShiftsView: View {
                 viewModel.initiateCopy()
               },
               onDetails: {
-                // Show DayShiftsSheet for multiple shifts, or direct details for single
-                let shiftsOnDate = viewModel.selectedDateShifts
-                if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
-                  selectedShift = shift
-                } else if let dateISO = viewModel.selectedDates.first {
-                  selectedDayForSheet = DayItemSelection(
-                    dateISO: dateISO,
-                    items: shiftsOnDate.map { DayPresentationItem.shift($0) }
-                  )
-                }
+                handleSelectedDayDetails()
               },
               onEdit: {
                 // Open shift directly in edit mode

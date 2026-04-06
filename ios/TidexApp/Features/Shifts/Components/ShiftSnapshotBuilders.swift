@@ -98,6 +98,18 @@ struct SharedShiftSnapshotBuilder {
   }
 }
 
+struct ForwardedShiftSnapshotBuilder {
+  let snapshot: FriendShiftSnapshot
+  let viewerUserId: String
+
+  func build(for recipient: ShareRecipient) -> ComposerShiftSnapshotDraft {
+    let canSeeOwnerEarnings = snapshot.ownerUserId == viewerUserId && recipient.canSeeOwnerEarnings
+    return ComposerShiftSnapshotDraft(
+      snapshot: snapshot.applyingEarningsVisibility(canSeeOwnerEarnings)
+    )
+  }
+}
+
 private enum ShiftSnapshotDraftFactory {
   struct Configuration {
     let shift: ShiftWithComputations

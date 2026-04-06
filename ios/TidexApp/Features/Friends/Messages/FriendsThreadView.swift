@@ -14,6 +14,11 @@ struct FriendsThreadView: View {
     var id: String { attachmentID }
   }
 
+  private struct PendingForwardAttachment: Identifiable {
+    let id = UUID()
+    let snapshot: FriendShiftSnapshot
+  }
+
   @Environment(\.openURL) private var openURL
 
   @StateObject private var viewModel: FriendsThreadViewModel
@@ -38,6 +43,7 @@ struct FriendsThreadView: View {
   @State private var lastHandledNavigationRequestId: UUID?
   @State private var pendingFocusScrollTask: Task<Void, Never>?
   @State private var selectedImageGallery: SelectedImageGallery?
+  @State private var pendingForwardAttachment: PendingForwardAttachment?
 
   init(route: FriendChatRoute, viewerUserId: String) {
     _viewModel = StateObject(
@@ -467,6 +473,29 @@ struct FriendsThreadView: View {
         }
       }
     }
+    .sheet(item: $pendingForwardAttachment) { pendingAttachment in
+      SendAttachmentToChatSheet(
+        viewerUserId: viewModel.viewerUserId,
+        buildAttachment: { recipient in
+          .shiftSnapshot(
+            ForwardedShiftSnapshotBuilder(
+              snapshot: pendingAttachment.snapshot,
+              viewerUserId: viewModel.viewerUserId
+            )
+            .build(for: recipient)
+          )
+        },
+        onCompleted: { result in
+          pendingForwardAttachment = nil
+          AppCoordinator.shared.pendingDeepLink = .friendChat(
+            threadId: result.threadId,
+            messageId: nil,
+            senderUserId: nil,
+            navigationRequestId: UUID()
+          )
+        }
+      )
+    }
     .alert(item: $alertState) { state in
       Alert(
         title: Text(state.title),
@@ -630,6 +659,9 @@ struct FriendsThreadView: View {
         },
         onOpenImageAttachment: { attachment in
           selectedImageGallery = SelectedImageGallery(attachmentID: attachment.id)
+        },
+        onOpenShiftSnapshot: { snapshot in
+          openShiftSnapshot(snapshot)
         }
       )
       .id(exyteMessage.id)
@@ -919,6 +951,11 @@ struct FriendsThreadView: View {
       Task {
         await viewModel.startEditing(friendMessage)
       }
+    case .forward:
+      guard let shiftSnapshot = friendMessage.shiftSnapshot else { return }
+      pendingForwardAttachment = PendingForwardAttachment(
+        snapshot: shiftSnapshot
+      )
     case .delete:
       Task {
         await viewModel.deleteMessage(messageId: friendMessage.id)
@@ -985,6 +1022,24 @@ struct FriendsThreadView: View {
 
   private func openCounterpartShiftPreview(preview: SharerShiftPreview) {
     guard let deepLink = FriendsThreadCounterpartPreviewNavigationResolver.deepLink(for: preview)
+    else {
+      return
+    }
+
+    AppCoordinator.shared.pendingDeepLink = deepLink
+  }
+
+  private func openShiftSnapshot(_ snapshot: FriendShiftSnapshot) {
+    let cachedFriends = SharedShiftsRepository.shared.getCachedFriends(
+      for: viewModel.viewerUserId,
+      includeHidden: true
+    )
+    guard
+      let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
+        for: snapshot,
+        viewerUserId: viewModel.viewerUserId,
+        cachedFriends: cachedFriends
+      )
     else {
       return
     }

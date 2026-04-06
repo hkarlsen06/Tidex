@@ -1,7 +1,110 @@
 import SwiftUI
 
 struct SendShiftToChatResult {
-  let threadId: String
+  let thread: FriendThread
+
+  var threadId: String {
+    thread.id
+  }
+}
+
+enum SendAttachmentRecipientOrdering {
+  static func sortedRecipients(
+    _ recipients: [ShareRecipient],
+    threads: [FriendThread]
+  ) -> [ShareRecipient] {
+    let directThreadTimestampsByRecipientId = threads.reduce(into: [String: Date]()) {
+      result, thread in
+      guard thread.kind == .direct, let counterpartUserId = thread.counterpartUserId else { return }
+
+      let timestamp = thread.sortTimestamp
+      if let existing = result[counterpartUserId] {
+        result[counterpartUserId] = max(existing, timestamp)
+      } else {
+        result[counterpartUserId] = timestamp
+      }
+    }
+
+    return recipients.sorted { lhs, rhs in
+      let lhsTimestamp = directThreadTimestampsByRecipientId[lhs.id]
+      let rhsTimestamp = directThreadTimestampsByRecipientId[rhs.id]
+
+      switch (lhsTimestamp, rhsTimestamp) {
+      case (let lhsTimestamp?, let rhsTimestamp?):
+        if lhsTimestamp != rhsTimestamp {
+          return lhsTimestamp > rhsTimestamp
+        }
+      case (.some, .none):
+        return true
+      case (.none, .some):
+        return false
+      case (.none, .none):
+        break
+      }
+
+      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    }
+  }
+}
+
+enum SendAttachmentRecipientResolver {
+  static func mergedRecipients(
+    fetchedRecipients: [ShareRecipient],
+    cachedFriends: SharedShiftsRepository.CachedFriendsSnapshot,
+    threads: [FriendThread],
+    includeLocalFallbacks: Bool
+  ) -> [ShareRecipient] {
+    var recipientsById = Dictionary(uniqueKeysWithValues: fetchedRecipients.map { ($0.id, $0) })
+
+    guard includeLocalFallbacks else {
+      return SendAttachmentRecipientOrdering.sortedRecipients(
+        Array(recipientsById.values),
+        threads: threads
+      )
+    }
+
+    for friend in cachedFriends.sharers {
+      guard recipientsById[friend.id] == nil else { continue }
+      recipientsById[friend.id] = ShareRecipient(
+        id: friend.id,
+        displayName: friend.displayName,
+        avatarURL: URL(string: friend.avatarUrl ?? ""),
+        statusText: friend.contactInfo,
+        // Safe default for local fallback recipients when share settings are unavailable locally.
+        canSeeOwnerEarnings: false
+      )
+    }
+
+    for thread in threads {
+      guard thread.kind == .direct, let counterpartUserId = thread.counterpartUserId else {
+        continue
+      }
+      guard recipientsById[counterpartUserId] == nil else { continue }
+
+      let counterpartDisplayName = thread.counterpartDisplayName?.trimmingCharacters(
+        in: .whitespacesAndNewlines
+      )
+      let displayName =
+        if let counterpartDisplayName, !counterpartDisplayName.isEmpty {
+          counterpartDisplayName
+        } else {
+          "Unknown"
+        }
+
+      recipientsById[counterpartUserId] = ShareRecipient(
+        id: counterpartUserId,
+        displayName: displayName,
+        avatarURL: URL(string: thread.counterpartAvatarUrl ?? ""),
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      )
+    }
+
+    return SendAttachmentRecipientOrdering.sortedRecipients(
+      Array(recipientsById.values),
+      threads: threads
+    )
+  }
 }
 
 @MainActor
@@ -17,6 +120,8 @@ private final class SendAttachmentToChatViewModel: ObservableObject {
   private let service: FriendsMessagingServiceProviding
   private let composerDraftStore: FriendsComposerDraftStore
   private let capabilities: any FriendsMessagingCapabilityProviding
+  private let repository: FriendsMessagesRepository
+  private let sharedShiftsRepository: SharedShiftsRepository
   private var hasLoaded = false
 
   init(
@@ -24,13 +129,17 @@ private final class SendAttachmentToChatViewModel: ObservableObject {
     buildAttachment: @escaping (ShareRecipient) throws -> FriendsComposerAttachmentDraft,
     service: FriendsMessagingServiceProviding,
     composerDraftStore: FriendsComposerDraftStore,
-    capabilities: any FriendsMessagingCapabilityProviding
+    capabilities: any FriendsMessagingCapabilityProviding,
+    repository: FriendsMessagesRepository,
+    sharedShiftsRepository: SharedShiftsRepository
   ) {
     self.viewerUserId = viewerUserId
     self.buildAttachment = buildAttachment
     self.service = service
     self.composerDraftStore = composerDraftStore
     self.capabilities = capabilities
+    self.repository = repository
+    self.sharedShiftsRepository = sharedShiftsRepository
   }
 
   var canContinue: Bool {
@@ -57,12 +166,29 @@ private final class SendAttachmentToChatViewModel: ObservableObject {
   func load() async {
     isLoading = true
     errorMessage = nil
+    let threads = repository.getThreads(for: viewerUserId)
+    let cachedFriends = sharedShiftsRepository.getCachedFriends(
+      for: viewerUserId, includeHidden: true)
 
     do {
-      recipients = try await ShareExtensionMessagingClient.fetchRecipients()
+      let fetchedRecipients = try await ShareExtensionMessagingClient.fetchRecipients()
+      recipients = SendAttachmentRecipientResolver.mergedRecipients(
+        fetchedRecipients: fetchedRecipients,
+        cachedFriends: cachedFriends,
+        threads: threads,
+        includeLocalFallbacks: false
+      )
       recipientSelection = ShareRecipientSelectionState()
     } catch {
-      errorMessage = error.localizedDescription
+      recipients = SendAttachmentRecipientResolver.mergedRecipients(
+        fetchedRecipients: [],
+        cachedFriends: cachedFriends,
+        threads: threads,
+        includeLocalFallbacks: true
+      )
+      if recipients.isEmpty {
+        errorMessage = error.localizedDescription
+      }
     }
 
     isLoading = false
@@ -91,12 +217,13 @@ private final class SendAttachmentToChatViewModel: ObservableObject {
       }
 
       let thread = try await service.getOrCreateDirectThread(otherUserId: recipient.id)
+      await repository.saveThread(thread, for: viewerUserId)
       await composerDraftStore.saveAttachmentDraft(
         attachment,
         threadId: thread.id,
         viewerUserId: viewerUserId
       )
-      return SendShiftToChatResult(threadId: thread.id)
+      return SendShiftToChatResult(thread: thread)
     } catch {
       errorMessage = error.localizedDescription
       return nil
@@ -127,7 +254,9 @@ struct SendAttachmentToChatSheet: View {
         buildAttachment: buildAttachment,
         service: FriendsMessagingService.shared,
         composerDraftStore: .shared,
-        capabilities: FriendsMessagingCapabilities.shared
+        capabilities: FriendsMessagingCapabilities.shared,
+        repository: .shared,
+        sharedShiftsRepository: .shared
       )
     )
   }
@@ -220,7 +349,9 @@ struct SendAttachmentToChatSheet: View {
                   beganSubmission: true
                 )
               else { return }
-              onCompleted(result)
+              await MainActor.run {
+                onCompleted(result)
+              }
             }
           }
         )

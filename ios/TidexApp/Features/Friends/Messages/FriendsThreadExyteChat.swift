@@ -4,9 +4,12 @@ import SwiftUI
 import UIKit
 
 enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
+  static let shiftSnapshotForwardMarker = "__tidex_shift_snapshot__"
+
   case reply
   case copy
   case edit
+  case forward
   case delete
   case report
 
@@ -18,6 +21,8 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
       return String(localized: .commonCopy)
     case .edit:
       return String(localized: "friends.chat.action.edit", table: "Localizable")
+    case .forward:
+      return String(localized: "friends.chat.action.forward", table: "Localizable")
     case .delete:
       return String(localized: "friends.chat.action.delete", table: "Localizable")
     case .report:
@@ -33,6 +38,8 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
       return Image(systemName: "doc.on.doc")
     case .edit:
       return Image(systemName: "pencil")
+    case .forward:
+      return Image(systemName: "arrowshape.turn.up.right")
     case .delete:
       return Image(systemName: "trash")
     case .report:
@@ -44,12 +51,16 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
     let hasText = !FriendsThreadExyteHighlightRedrawResolver.visibleText(for: message)
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .isEmpty
+    let canForwardShiftSnapshot = message.giphyMediaId == shiftSnapshotForwardMarker
 
     if message.user.isCurrentUser {
       var items: [Self] = [.reply]
       if hasText {
         items.append(.copy)
         items.append(.edit)
+      }
+      if canForwardShiftSnapshot {
+        items.append(.forward)
       }
       items.append(.delete)
       return items
@@ -58,6 +69,9 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
     var items: [Self] = [.reply]
     if hasText {
       items.append(.copy)
+    }
+    if canForwardShiftSnapshot {
+      items.append(.forward)
     }
     items.append(.report)
     return items
@@ -263,6 +277,43 @@ enum FriendsThreadCounterpartPreviewNavigationResolver {
         )
       ]
     )
+  }
+}
+
+enum FriendsThreadShiftSnapshotNavigationResolver {
+  static func deepLink(
+    for snapshot: FriendShiftSnapshot,
+    viewerUserId: String,
+    cachedFriends: SharedShiftsRepository.CachedFriendsSnapshot
+  ) -> AppCoordinator.DeepLink? {
+    let shiftDate = snapshot.shiftDate.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !shiftDate.isEmpty else { return nil }
+
+    if snapshot.ownerUserId == viewerUserId {
+      return .shifts(dates: [shiftDate], action: .highlight)
+    }
+
+    guard canViewSharedShifts(ownerUserId: snapshot.ownerUserId, cachedFriends: cachedFriends)
+    else { return nil }
+
+    return .sharing(
+      sharerId: snapshot.ownerUserId,
+      highlightDates: [shiftDate],
+      changes: nil
+    )
+  }
+
+  private static func canViewSharedShifts(
+    ownerUserId: String,
+    cachedFriends: SharedShiftsRepository.CachedFriendsSnapshot
+  ) -> Bool {
+    guard let sharer = cachedFriends.sharers.first(where: { $0.id == ownerUserId }) else {
+      return false
+    }
+
+    let isVisible = !cachedFriends.chatOnlyUserIds.contains(ownerUserId)
+    _ = sharer
+    return isVisible
   }
 }
 
@@ -736,9 +787,15 @@ enum FriendsThreadExyteMessageFactory {
       createdAt: message.createdAt,
       text: message.normalizedBody ?? "",
       attachments: [],
+      giphyMediaId: exyteMenuMarker(for: message),
       reactions: exyteReactions(for: message, viewerUserId: context.viewerUserId),
       replyMessage: replyMessage
     )
+  }
+
+  private static func exyteMenuMarker(for message: FriendMessage) -> String? {
+    guard message.shiftSnapshot != nil else { return nil }
+    return FriendsThreadMessageMenuAction.shiftSnapshotForwardMarker
   }
 
   static func exyteReactions(

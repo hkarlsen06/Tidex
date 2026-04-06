@@ -124,7 +124,6 @@ struct SharedShiftsListView: View {
       .userCurrency(shiftJob?.currency ?? currency)
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
-      .interactiveDismissDisabled()
     }
     // Detect screenshots and notify the sharer
     .onReceive(

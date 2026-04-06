@@ -1510,6 +1510,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     return attachments.imageAttachments
+      .uniquePayloads()
       .prefix(FriendsComposerAttachmentLimits.maxImagesPerMessage)
       .map(FriendsComposerAttachmentDraft.image)
   }
