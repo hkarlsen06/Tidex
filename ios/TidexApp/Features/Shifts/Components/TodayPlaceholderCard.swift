@@ -7,10 +7,16 @@ struct TodayPlaceholderCard: View {
   /// Callback when the card is tapped
   let onTap: () -> Void
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   // MARK: - Computed Properties
 
   private var dateParts: ShiftCardDateParts {
     ShiftCardFormatter.dateParts(for: Date.now)
+  }
+
+  private var usesFixedCardHeight: Bool {
+    !dynamicTypeSize.isAccessibilitySize
   }
 
   // MARK: - Body
@@ -49,6 +55,7 @@ struct TodayPlaceholderCard: View {
     }
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, ShiftCardMetrics.verticalPadding)
+    .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)

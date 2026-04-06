@@ -2,6 +2,7 @@ import SwiftUI
 
 enum ShiftCardMetrics {
   static let verticalPadding: CGFloat = Spacing.md
+  static let regularCardMinHeight: CGFloat = 89
 }
 
 /// Shared two-row card layout used by feature-specific cards.

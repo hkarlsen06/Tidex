@@ -14,6 +14,7 @@ struct ShiftRowCard: View {
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   // Convenience initializer without conflict props
   init(
@@ -68,6 +69,10 @@ struct ShiftRowCard: View {
       end: shift.endTime,
       locale: Locale.appLocale
     )
+  }
+
+  private var usesFixedCardHeight: Bool {
+    !dynamicTypeSize.isAccessibilitySize
   }
 
   // MARK: - Body
@@ -141,6 +146,7 @@ struct ShiftRowCard: View {
     }
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, ShiftCardMetrics.verticalPadding)
+    .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(hasConflict ? Color.tidexWarning.opacity(0.08) : Color.tidexSurfacePrimary)
