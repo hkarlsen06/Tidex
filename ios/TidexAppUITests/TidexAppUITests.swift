@@ -381,10 +381,13 @@ final class TidexAppUITests: XCTestCase {
       app.buttons[commonDeleteLabel],
     ]
 
-    return candidates.first(where: \.exists)
-      ?? app.descendants(matching: .button)
-      .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
-      .firstMatch
+    return firstExistingElement(
+      among: candidates,
+      timeout: 1,
+      fallback: app.descendants(matching: .button)
+        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
+        .firstMatch
+    )
   }
 
   private func wageyHistoryDeleteConfirmation(in app: XCUIApplication) -> XCUIElement {
@@ -415,8 +418,39 @@ final class TidexAppUITests: XCTestCase {
       app.buttons[commonCancelLabel],
     ]
 
-    return candidates.first(where: \.exists)
-      ?? app.buttons[AccessibilityID.popoverDismissRegion]
+    return firstExistingElement(
+      among: candidates,
+      timeout: 1,
+      fallback: app.descendants(matching: .button)
+        .matching(
+          NSPredicate(
+            format: "identifier == %@ OR identifier == %@ OR label == %@ OR label == %@",
+            AccessibilityID.wageyHistoryCancelDelete,
+            AccessibilityID.popoverDismissRegion,
+            "dismiss popup",
+            commonCancelLabel
+          )
+        )
+        .firstMatch
+    )
+  }
+
+  private func firstExistingElement(
+    among candidates: [XCUIElement],
+    timeout: TimeInterval,
+    fallback: XCUIElement
+  ) -> XCUIElement {
+    let deadline = Date().addingTimeInterval(timeout)
+
+    while Date() < deadline {
+      if let candidate = candidates.first(where: \.exists) {
+        return candidate
+      }
+
+      RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+
+    return fallback
   }
 
   private func assertExists(
