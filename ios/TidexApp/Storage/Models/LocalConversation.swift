@@ -239,9 +239,10 @@ extension StoredChatMessage {
     self.role = StoredMessageRole(rawValue: message.role.rawValue) ?? .user
     self.timestamp = message.timestamp
     self.sources = message.sources
+    let normalizedBlocks = ContentBlock.normalized(message.contentBlocks)
 
     // Store content blocks in new format
-    self.contentBlocks = message.contentBlocks.map { block in
+    self.contentBlocks = normalizedBlocks.map { block in
       switch block {
       case .text(let text):
         return .text(text)
