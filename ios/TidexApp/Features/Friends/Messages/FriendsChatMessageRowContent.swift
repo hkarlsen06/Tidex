@@ -6,14 +6,16 @@ struct FriendsChatReplyPreviewModel: Equatable {
   let previewKind: FriendLastMessagePreviewKind
   let iconPreviewKind: FriendLastMessagePreviewKind?
   let snippet: String
-  let imageAttachment: FriendMessageAttachment?
+  let imageAttachments: [FriendMessageAttachment]
 
   init(senderName: String, message: FriendMessage) {
     self.senderName = senderName
     previewKind = message.previewKind
     iconPreviewKind = message.replyIconPreviewKind
     snippet = message.previewText ?? String(localized: .friendsChatPreviewUnsupported)
-    imageAttachment = message.attachments.first(where: { $0.kind == .image })
+    imageAttachments = message.attachments
+      .filter { $0.kind == .image }
+      .sorted { $0.attachmentIndex < $1.attachmentIndex }
   }
 }
 
@@ -47,6 +49,7 @@ struct FriendsChatMessageRowContent: View {
   let onToggleReaction: (String) -> Void
   let onTapQuotedMessage: () -> Void
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
+  let onOpenShiftSnapshot: (FriendShiftSnapshot) -> Void
 
   var body: some View {
     let messageText = message.body?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -131,7 +134,10 @@ struct FriendsChatMessageRowContent: View {
                 if let shiftSnapshot {
                   ChatShiftSnapshotCard(
                     snapshot: shiftSnapshot,
-                    isCurrentUser: isCurrentUser
+                    isCurrentUser: isCurrentUser,
+                    onTap: {
+                      onOpenShiftSnapshot(shiftSnapshot)
+                    }
                   )
                   .overlay(alignment: reactionAlignment) {
                     if !hasMessageText, imageAttachments.isEmpty {
@@ -388,7 +394,6 @@ private struct FriendsChatReplySwipeContainer<Content: View>: View {
           replyIndicator
             .padding(.horizontal, indicatorHorizontalInset)
         }
-        .contentShape(Rectangle())
         .simultaneousGesture(replyGesture)
         .animation(.easeOut(duration: 0.16), value: limitedVisualOffset)
     } else {
@@ -717,23 +722,22 @@ struct FriendsChatReplyPreviewContent: View {
 
   var body: some View {
     Group {
-      if let imageAttachment = preview.imageAttachment {
-        imageContent(for: imageAttachment)
+      if !preview.imageAttachments.isEmpty {
+        imageContent
       } else {
         textOnlyContent
       }
     }
   }
 
-  @ViewBuilder
-  private func imageContent(for imageAttachment: FriendMessageAttachment) -> some View {
+  private var imageContent: some View {
     switch imageLayout {
     case .thumbnailThenSnippet:
       VStack(alignment: .leading, spacing: 3) {
         senderNameLabel
 
         HStack(alignment: .top, spacing: Spacing.xs) {
-          thumbnail(for: imageAttachment)
+          imageThumbnails
 
           if let snippetText {
             snippetLabel(snippetText)
@@ -782,11 +786,53 @@ struct FriendsChatReplyPreviewContent: View {
       .lineLimit(snippetLineLimit)
   }
 
-  private func thumbnail(for imageAttachment: FriendMessageAttachment) -> some View {
+  private var displayedImageAttachments: ArraySlice<FriendMessageAttachment> {
+    preview.imageAttachments.prefix(3)
+  }
+
+  private var overflowImageCount: Int {
+    max(0, preview.imageAttachments.count - displayedImageAttachments.count)
+  }
+
+  private var multiThumbnailSize: CGSize {
+    CGSize(
+      width: min(thumbnailSize.width, 34),
+      height: min(thumbnailSize.height, 34)
+    )
+  }
+
+  private var imageThumbnails: some View {
+    HStack(spacing: Spacing.xxxs) {
+      ForEach(Array(displayedImageAttachments.enumerated()), id: \.element.id) {
+        index, attachment in
+        thumbnail(
+          for: attachment,
+          size: preview.imageAttachments.count > 1 ? multiThumbnailSize : thumbnailSize
+        )
+        .overlay {
+          if overflowImageCount > 0, index == displayedImageAttachments.count - 1 {
+            RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+              .fill(Color.black.opacity(0.45))
+              .overlay {
+                Text("+\(overflowImageCount)")
+                  .font(.tidexCaptionStrong)
+                  .foregroundColor(.white)
+              }
+          }
+        }
+      }
+    }
+    .accessibilityHidden(true)
+  }
+
+  private func thumbnail(
+    for imageAttachment: FriendMessageAttachment,
+    size: CGSize
+  ) -> some View {
     FriendsChatImageAttachmentCard(
       attachment: imageAttachment,
       isCurrentUser: isCurrentUser,
-      displaySize: thumbnailSize,
+      displaySize: size,
       cornerRadius: CornerRadius.md,
       placeholderSymbolSize: 14
     )
@@ -798,12 +844,26 @@ struct FriendsChatReplyPreviewContent: View {
 struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
+  var onTap: (() -> Void)? = nil
 
   private var ownerPrimaryTextColor: Color {
     .tidexTextMuted
   }
 
+  @ViewBuilder
   var body: some View {
+    if let onTap {
+      cardContent
+        .contentShape(Rectangle())
+        .onTapGesture {
+          onTap()
+        }
+    } else {
+      cardContent
+    }
+  }
+
+  private var cardContent: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack(alignment: .center, spacing: Spacing.xs) {
         AvatarView(

@@ -258,6 +258,30 @@ struct FriendShiftSnapshot: Codable, Equatable {
     )
   }
 
+  func applyingEarningsVisibility(_ canSeeEarnings: Bool) -> FriendShiftSnapshot {
+    guard !canSeeEarnings else { return self }
+
+    return FriendShiftSnapshot(
+      schemaVersion: schemaVersion,
+      ownerUserId: ownerUserId,
+      ownerDisplayName: ownerDisplayName,
+      ownerAvatarUrl: ownerAvatarUrl,
+      shiftId: shiftId,
+      jobName: jobName,
+      jobColorHex: jobColorHex,
+      shiftDate: shiftDate,
+      startTime: startTime,
+      endTime: endTime,
+      paidHours: paidHours,
+      currency: currency,
+      includesEarnings: false,
+      grossPay: nil,
+      netPay: nil,
+      taxEnabled: false,
+      source: source
+    )
+  }
+
   var renderableShift: ShiftWithComputations {
     let gross = grossPay ?? netPay ?? 0
     let resolvedTaxEnabled = includesEarnings ? taxEnabled : false

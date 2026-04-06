@@ -157,6 +157,191 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["typing", "recent", "unread"])
   }
 
+  func testSendAttachmentRecipientOrderingPrefersMostRecentDirectThread() {
+    let recipients = [
+      ShareRecipient(
+        id: "older",
+        displayName: "Older",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+      ShareRecipient(
+        id: "no-thread",
+        displayName: "No Thread",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+      ShareRecipient(
+        id: "newer",
+        displayName: "Newer",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+    ]
+
+    let threads = [
+      FriendThread(
+        id: "thread-older",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "older",
+        counterpartDisplayName: "Older",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-older",
+        lastMessageSenderId: "viewer",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_100),
+        lastMessageBody: "Older",
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+      ),
+      FriendThread(
+        id: "thread-newer",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "newer",
+        counterpartDisplayName: "Newer",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-newer",
+        lastMessageSenderId: "viewer",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_300),
+        lastMessageBody: "Newer",
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_200)
+      ),
+    ]
+
+    XCTAssertEqual(
+      SendAttachmentRecipientOrdering.sortedRecipients(recipients, threads: threads).map(\.id),
+      ["newer", "older", "no-thread"]
+    )
+  }
+
+  func testSendAttachmentRecipientResolverFallsBackToLocalThreadsAndCachedFriends() {
+    let cachedFriends = SharedShiftsRepository.CachedFriendsSnapshot(
+      sharers: [
+        SharedUser(
+          id: "cached-friend",
+          email: "cached@example.com",
+          phone: nil,
+          firstName: "Cached",
+          profilePictureUrl: nil,
+          oauthAvatarUrl: nil,
+          sharedAt: "2026-03-01",
+          showEarnings: false,
+          hidden: false
+        )
+      ],
+      chatOnlyUserIds: ["cached-friend"]
+    )
+    let threads = [
+      FriendThread(
+        id: "thread-chat",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "thread-friend",
+        counterpartDisplayName: "Thread Friend",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-thread",
+        lastMessageSenderId: "viewer",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_400),
+        lastMessageBody: "Latest",
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_300)
+      )
+    ]
+
+    XCTAssertEqual(
+      SendAttachmentRecipientResolver
+        .mergedRecipients(
+          fetchedRecipients: [],
+          cachedFriends: cachedFriends,
+          threads: threads,
+          includeLocalFallbacks: true
+        )
+        .map(\.id),
+      ["thread-friend", "cached-friend"]
+    )
+  }
+
+  func testSendAttachmentRecipientResolverKeepsFetchedRecipientsAuthoritativeWhenAvailable() {
+    let cachedFriends = SharedShiftsRepository.CachedFriendsSnapshot(
+      sharers: [
+        SharedUser(
+          id: "cached-friend",
+          email: "cached@example.com",
+          phone: nil,
+          firstName: "Cached",
+          profilePictureUrl: nil,
+          oauthAvatarUrl: nil,
+          sharedAt: "2026-03-01",
+          showEarnings: false,
+          hidden: false
+        )
+      ],
+      chatOnlyUserIds: []
+    )
+    let fetchedRecipients = [
+      ShareRecipient(
+        id: "server-friend",
+        displayName: "Server Friend",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: true
+      )
+    ]
+    let threads = [
+      FriendThread(
+        id: "thread-chat",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: "thread-friend",
+        counterpartDisplayName: "Thread Friend",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: "message-thread",
+        lastMessageSenderId: "viewer",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_400),
+        lastMessageBody: "Latest",
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_300)
+      )
+    ]
+
+    XCTAssertEqual(
+      SendAttachmentRecipientResolver
+        .mergedRecipients(
+          fetchedRecipients: fetchedRecipients,
+          cachedFriends: cachedFriends,
+          threads: threads,
+          includeLocalFallbacks: false
+        )
+        .map(\.id),
+      ["server-friend"]
+    )
+  }
+
   private func makeUser(id: String, firstName: String, hidden: Bool = false) -> SharedUser {
     SharedUser(
       id: id,

@@ -1295,6 +1295,51 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.stagedComposerAttachments, imageDrafts)
   }
 
+  func testLoadDeduplicatesPendingComposerImageAttachmentDraftsByPayload() async throws {
+    let repository = try makeRepository()
+    let draftStore = try makeDraftStore()
+    let thread = makeThread()
+    let route = makeRoute()
+    let duplicatePayload = Data([0x00, 0x01, 0x02])
+    let imageDrafts: [FriendsComposerAttachmentDraft] = [
+      .image(ImageAttachment(id: "image-1", data: duplicatePayload, mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-2", data: duplicatePayload, mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-3", data: Data([0x03]), mediaType: "image/jpeg")),
+    ]
+
+    await draftStore.saveAttachmentDrafts(
+      imageDrafts,
+      threadId: route.threadId,
+      viewerUserId: "viewer-1"
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
+      service: mockService,
+      repository: repository
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      composerDraftStore: draftStore,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.load()
+
+    XCTAssertEqual(
+      viewModel.stagedComposerAttachments,
+      [
+        .image(ImageAttachment(id: "image-1", data: duplicatePayload, mediaType: "image/jpeg")),
+        .image(ImageAttachment(id: "image-3", data: Data([0x03]), mediaType: "image/jpeg")),
+      ]
+    )
+  }
+
   func testLoadHydratesPendingComposerTextDraft() async throws {
     let repository = try makeRepository()
     let draftStore = try makeDraftStore()
