@@ -61,10 +61,7 @@ struct FriendsChatMessageRowContent: View {
       !hasMessageText && imageAttachments.isEmpty && shiftSnapshot == nil
       && fallbackPreviewText != nil
     let showsMetadataRow = showsTimestamp || messageStatus != nil || message.editedAt != nil
-    let topPadding =
-      message.reactions.isEmpty
-      ? (groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs)
-      : Spacing.md
+    let topPadding = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
     let bottomPadding =
       if showsMetadataRow {
         Spacing.xxxs

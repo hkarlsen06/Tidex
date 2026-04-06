@@ -9015,6 +9015,12 @@
             "value" : "+%@"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%@”}]}Oops invalid quote. Need correct JSON only. Wait final already given? Need overwrite? Since final channel one message only. Let's craft correct.numerusformassistant to=final രിച്ചുjson translation_batch_en {"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",

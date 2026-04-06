@@ -59,7 +59,7 @@ struct CalendarHeaderRow: View {
 
       if let selectionCount {
         Text("(\(selectionCount))")
-          .font(.tidexTitle2)
+          .font(.tidexBodyLarge)
           .foregroundColor(.tidexTextMuted)
       } else {
         Text(String(year))
