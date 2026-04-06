@@ -1,5 +1,6 @@
-- Lisätty aikatauluusi yksityisiä tapahtumia, mukaan lukien koko päivän ja usean päivän suunnitelmat
-- Parannettu tapahtumien muokkausta ja aikataulun synkronointia sovelluksen, widgetien ja Live Activitiesin välillä
-- Parannettu kaverichatteja luotettavammalla ilmoituksista avaamisella, paremmilla lukematon- ja kirjoittaa-tiloilla, paremmilla vastauksilla, tuella useiden kuvien lähettämiseen sekä uudella kuvagallerialla
-- Lisätty selkeämpi valinta käyttöönotossa palkanlaskennan käyttöönoton ja pelkän kaverikäytön välillä, säilytetty tietosi vaihdettaessa sisäänkirjautumisen ja rekisteröitymisen välillä sekä rajattu tietosuojasumennus vain arkaluonteisiin näkymiin
+- Tidexiin on lisätty yksityiset tapahtumat, mukaan lukien koko päivän ja usean päivän suunnitelmat, sekä tuki muokkaukselle ja synkronoinnille
+- Kaverichatteihin on lisätty kuvagalleriat ja tuki usean kuvan liittämiseen kerralla
+- Kaverichatteja on parannettu luotettavammalla lukemattomien viestien käsittelyllä, paremmalla avaamisella ilmoituksista ja liitteistä, paremmilla vastauksilla sekä tuella jaettujen vuorojen välittämiseen
+- Onboardingiin on lisätty selkeämpi valinta palkan seurannan ja vain kaverikäytön välillä
+- Widgettejä, Live Activities -toimintoa ja kalenterisiirtymiä on parannettu
 - Virheenkorjauksia ja muita parannuksia

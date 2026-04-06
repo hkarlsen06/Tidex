@@ -1,5 +1,6 @@
-- Tilføjet private begivenheder til din plan, herunder heldags- og flerdagsplaner
-- Forbedret redigering af begivenheder og synkronisering af planen på tværs af appen, widgets og Live Activities
-- Forbedret chats med venner med mere pålidelig åbning fra notifikationer, bedre status for ulæste beskeder og skrivning, forbedrede svar, understøttelse af at sende flere billeder og et nyt billedgalleri
-- Tilføjet et tydeligere valg i onboarding mellem lønopsætning og brug kun med venner, beholdt dine oplysninger ved skift mellem log ind og opret konto, og begrænset privatlivssløring til følsomme skærme
+- Tilføjet private begivenheder i Tidex, herunder heldags- og flerdagsplaner, med understøttelse af redigering og synkronisering
+- Tilføjet billedgallerier i vennechats og understøttelse af at vedhæfte flere billeder på én gang
+- Forbedret vennechats med mere pålidelig håndtering af ulæste beskeder, bedre åbning fra notifikationer og vedhæftninger, forbedrede svar og understøttelse af videresendelse af delte vagter
+- Tilføjet et tydeligere valg i onboarding mellem lønsporing og brug kun med venner
+- Forbedret widgets, Live Activities og kalenderovergange
 - Fejlrettelser og andre forbedringer

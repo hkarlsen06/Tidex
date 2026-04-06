@@ -1,1 +1,1 @@
-zmena,sledovanie,mzda,plat,práca,hodiny,čas,píchačky,rozvrh,zárobky
+zmeny,sledovanie,mzda,plat,práca,hodiny,čas,dochádzka,rozvrh,zárobky

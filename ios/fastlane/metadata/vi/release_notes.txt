@@ -1,5 +1,6 @@
-- Đã thêm sự kiện riêng tư vào lịch của bạn, bao gồm kế hoạch cả ngày và nhiều ngày
-- Cải thiện chỉnh sửa sự kiện và đồng bộ lịch trên toàn bộ ứng dụng, tiện ích và Live Activities
-- Cải thiện trò chuyện với bạn bè với khả năng mở từ thông báo đáng tin cậy hơn, trạng thái chưa đọc và đang nhập tốt hơn, trả lời được cải thiện, hỗ trợ gửi nhiều ảnh và thư viện ảnh mới
-- Đã thêm lựa chọn giới thiệu rõ ràng hơn giữa thiết lập bảng lương và chỉ dùng tính năng bạn bè, giữ lại thông tin của bạn khi chuyển giữa đăng nhập và đăng ký, đồng thời giới hạn lớp làm mờ quyền riêng tư chỉ ở các màn hình nhạy cảm
+- Đã thêm sự kiện riêng tư vào Tidex, bao gồm kế hoạch cả ngày và nhiều ngày, với hỗ trợ chỉnh sửa và đồng bộ
+- Đã thêm thư viện ảnh trong trò chuyện bạn bè và hỗ trợ đính kèm nhiều ảnh cùng lúc
+- Đã cải thiện trò chuyện bạn bè với việc xử lý tin chưa đọc đáng tin cậy hơn, mở từ thông báo và tệp đính kèm tốt hơn, cải thiện trả lời và hỗ trợ chuyển tiếp ca làm được chia sẻ
+- Đã thêm lựa chọn giới thiệu ban đầu rõ ràng hơn giữa theo dõi lương và chỉ dùng tính năng bạn bè
+- Đã cải thiện tiện ích, Live Activities và chuyển đổi lịch
 - Sửa lỗi và các cải tiến khác

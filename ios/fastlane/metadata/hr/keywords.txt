@@ -1,1 +1,1 @@
-smjena,rad,sati,zarada,plaća,raspored,vrijeme,radno,satnica,posao
+smjena,rad,sati,zarada,plaća,raspored,vrijeme,pratitelj,posao,primanja

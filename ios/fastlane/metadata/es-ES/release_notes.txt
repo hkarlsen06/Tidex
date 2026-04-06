@@ -1,5 +1,6 @@
-- Se han añadido eventos privados a tu horario, incluidos planes de todo el día y de varios días
-- Se ha mejorado la edición de eventos y la sincronización del horario en toda la app, los widgets y las Live Activities
-- Se han mejorado los chats con amigos con una apertura desde notificaciones más fiable, mejores estados de no leído y escribiendo, respuestas mejoradas, compatibilidad para enviar varias fotos y una nueva galería de imágenes
-- Se ha añadido una opción de bienvenida más clara entre la configuración de la nómina y el uso solo con amigos, se han conservado tus datos al cambiar entre iniciar sesión y registrarte, y se ha limitado el difuminado de privacidad a las pantallas sensibles
+- Se han añadido eventos privados a Tidex, incluidos planes de todo el día y de varios días, con edición y sincronización
+- Se han añadido galerías de imágenes en los chats con amigos y la posibilidad de adjuntar varias fotos a la vez
+- Se han mejorado los chats con amigos con una gestión más fiable de los mensajes no leídos, una mejor apertura desde notificaciones y archivos adjuntos, respuestas mejoradas y compatibilidad con el reenvío de turnos compartidos
+- Se ha añadido una opción de inicio más clara entre el seguimiento de nóminas y el uso solo con amigos
+- Se han mejorado los widgets, las Live Activities y las transiciones del calendario
 - Corrección de errores y otras mejoras

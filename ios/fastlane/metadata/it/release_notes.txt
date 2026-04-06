@@ -1,5 +1,6 @@
-- Aggiunti eventi privati al tuo programma, inclusi piani di un'intera giornata e di più giorni
-- Migliorate la modifica degli eventi e la sincronizzazione del programma nell'app, nei widget e nelle Live Activities
-- Migliorate le chat con gli amici con un'apertura dalle notifiche più affidabile, stati di non letto e digitazione migliori, risposte migliorate, supporto per l'invio di più foto e una nuova galleria immagini
-- Aggiunta una scelta iniziale più chiara tra la configurazione della busta paga e l'uso solo con gli amici, mantenuti i tuoi dati quando passi dall'accesso alla registrazione e limitato l'effetto privacy alle schermate sensibili
+- Aggiunti eventi privati in Tidex, inclusi piani di un giorno intero e di più giorni, con supporto per modifica e sincronizzazione
+- Aggiunte gallerie di immagini nelle chat con gli amici e supporto per allegare più foto contemporaneamente
+- Migliorate le chat con gli amici con una gestione dei non letti più affidabile, apertura migliore da notifiche e allegati, risposte migliorate e supporto per l'inoltro dei turni condivisi
+- Aggiunta una scelta di onboarding più chiara tra monitoraggio della retribuzione e utilizzo solo con gli amici
+- Migliorati widget, Attività in tempo reale e transizioni del calendario
 - Correzioni di bug e altri miglioramenti

@@ -1,5 +1,6 @@
-- Added private events to your schedule, including all-day and multi-day plans
-- Improved event editing and schedule syncing across the app, widgets, and Live Activities
-- Improved friend chats with more reliable notification opening, better unread and typing states, improved replies, support for sending multiple photos, and a new image gallery
-- Added a clearer onboarding choice between payroll setup and friends-only use, kept your details when switching between sign in and sign up, and limited privacy blur to sensitive screens
+- Added private events to Tidex, including all-day and multi-day plans, with editing and sync support
+- Added friend chat image galleries and support for attaching multiple photos at once
+- Improved friend chats with more reliable unread handling, better opening from notifications and attachments, improved replies, and support for forwarding shared shifts
+- Added a clearer onboarding choice between payroll tracking and friends-only use
+- Improved widgets, Live Activities, and calendar transitions
 - Bug fixes and other improvements

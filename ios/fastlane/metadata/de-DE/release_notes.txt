@@ -1,5 +1,6 @@
-- Private Ereignisse zu deinem Zeitplan hinzugefügt, einschließlich ganztägiger und mehrtägiger Planungen
-- Ereignisbearbeitung und Synchronisierung des Zeitplans in der App, in Widgets und Live-Aktivitäten verbessert
-- Freundeschats verbessert mit zuverlässigerem Öffnen über Mitteilungen, besseren Ungelesen- und Tippstatusanzeigen, verbesserten Antworten, Unterstützung für das Senden mehrerer Fotos und einer neuen Bildergalerie
-- Eine klarere Auswahl im Onboarding zwischen Lohnabrechnungseinrichtung und reiner Freundenutzung hinzugefügt, deine Angaben beim Wechsel zwischen Anmelden und Registrieren beibehalten und die Datenschutz-Unschärfe auf sensible Bereiche beschränkt
+- Private Ereignisse in Tidex hinzugefügt, einschließlich ganztägiger und mehrtägiger Planungen, mit Bearbeitungs- und Synchronisierungsunterstützung
+- Bildergalerien in Freundeschats hinzugefügt und Unterstützung zum gleichzeitigen Anhängen mehrerer Fotos ergänzt
+- Freundeschats verbessert – mit zuverlässigerer Handhabung ungelesener Nachrichten, besserem Öffnen über Benachrichtigungen und Anhänge, verbesserten Antworten und Unterstützung zum Weiterleiten geteilter Schichten
+- Eine klarere Auswahl im Onboarding zwischen Lohnverfolgung und Nutzung nur mit Freunden hinzugefügt
+- Widgets, Live-Aktivitäten und Kalenderübergänge verbessert
 - Fehlerbehebungen und weitere Verbesserungen

@@ -1,5 +1,6 @@
-- Privégebeurtenissen aan je rooster toegevoegd, waaronder plannen voor de hele dag en meerdere dagen
-- Bewerken van gebeurtenissen en synchronisatie van je rooster verbeterd in de app, widgets en Live Activities
-- Vriendenchats verbeterd met betrouwbaarder openen vanuit meldingen, betere statussen voor ongelezen berichten en typen, verbeterde antwoorden, ondersteuning voor het versturen van meerdere foto's en een nieuwe afbeeldingsgalerij
-- Een duidelijkere onboarding-keuze toegevoegd tussen looninstellingen en alleen vrienden gebruiken, je gegevens behouden bij het wisselen tussen inloggen en registreren, en privacyvervaging beperkt tot gevoelige schermen
+- Privégebeurtenissen toegevoegd aan Tidex, inclusief dagvullende en meerdaagse plannen, met ondersteuning voor bewerken en synchronisatie
+- Afbeeldingsgalerijen toegevoegd aan vriendenchats en ondersteuning voor meerdere foto's tegelijk toevoegen
+- Vriendenchats verbeterd met betrouwbaardere verwerking van ongelezen berichten, beter openen vanuit meldingen en bijlagen, verbeterde antwoorden en ondersteuning voor het doorsturen van gedeelde diensten
+- Een duidelijkere onboardingkeuze toegevoegd tussen loonregistratie en alleen vrienden gebruiken
+- Widgets, Live Activities en kalenderovergangen verbeterd
 - Bugfixes en andere verbeteringen

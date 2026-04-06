@@ -1,5 +1,6 @@
-- Privát események hozzáadása a beosztásodhoz, beleértve az egész napos és többnapos terveket is
-- Javítottuk az események szerkesztését és a beosztás szinkronizálását az appban, a widgetekben és a Live Activities felületen
-- Továbbfejlesztettük a baráti csevegéseket: megbízhatóbb megnyitás értesítésekből, jobb olvasatlan- és gépelési állapotok, jobb válaszok, több fotó küldésének támogatása és új képgaléria
-- Egyértelműbb kezdő beállítási választási lehetőséget adtunk a bérszámfejtés beállítása és a csak barátok funkció között, megőriztük adataidat a bejelentkezés és regisztráció közti váltáskor, és az adatvédelmi elhomályosítást csak az érzékeny képernyőkre korlátoztuk
+- Privát események hozzáadva a Tidexhez, beleértve az egész napos és többnapos terveket, szerkesztési és szinkronizálási támogatással
+- Képgalériák hozzáadva a baráti csevegésekhez, valamint egyszerre több fotó csatolásának támogatása
+- Továbbfejlesztett baráti csevegések megbízhatóbb olvasatlanüzenet-kezeléssel, jobb megnyitással értesítésekből és mellékletekből, jobb válaszkezeléssel, valamint a megosztott műszakok továbbításának támogatásával
+- Egyértelműbb kezdő beállítási választási lehetőség hozzáadva a bérkövetés és a csak barátok funkció közé
+- Javított widgetek, Live Activities és naptárátmenetek
 - Hibajavítások és egyéb fejlesztések
