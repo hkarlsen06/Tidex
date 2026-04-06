@@ -34,23 +34,9 @@ struct FriendsThreadComposerConfiguration: Equatable {
 
 @MainActor
 final class FriendsThreadComposerBridge: ObservableObject {
-  private static let characterCountDisplayThresholdFraction = 0.8
-
-  @Published private(set) var mode: FriendsThreadComposerMode = .normal
-  @Published private(set) var draftText: String = ""
-  @Published private(set) var replyPreview: FriendsChatReplyPreviewModel?
-  @Published private(set) var stagedAttachments: [FriendsComposerAttachmentDraft] = []
-  @Published private(set) var isThreadReadOnly = false
-  @Published private(set) var sendErrorMessage: String?
-  @Published private(set) var composerValidationMessage: String?
-  @Published private(set) var draftCharacterCount = 0
-  @Published private(set) var draftCharacterLimit = 0
-  @Published private(set) var placeholder: String = ""
-  @Published private(set) var canSendShiftSnapshots = false
-  @Published private(set) var focusRequestToken = 0
-
   var onDraftChanged: ((String) -> Void)?
   var onStagedAttachmentsChanged: (([FriendsComposerAttachmentDraft]) -> Void)?
+  var stagedAttachmentsProvider: (() -> [FriendsComposerAttachmentDraft])?
   var onCancelMode: (() -> Void)?
   var onSend: ((String) async -> Bool)?
   var onSaveEdit: ((String) async -> Bool)?
@@ -62,56 +48,6 @@ final class FriendsThreadComposerBridge: ObservableObject {
   var onFocusChanged: ((Bool) -> Void)?
   var onHeightChanged: ((CGFloat) -> Void)?
   var onAttachmentDrawerOpenChanged: ((Bool) -> Void)?
-
-  private var isApplyingExternalDraft = false
-  private var isApplyingExternalAttachments = false
-
-  var isDraftOverCharacterLimit: Bool {
-    draftCharacterCount > draftCharacterLimit
-  }
-
-  var shouldShowCharacterCount: Bool {
-    guard draftCharacterCount > 0, draftCharacterLimit > 0 else { return false }
-    return isDraftOverCharacterLimit
-      || draftCharacterCount
-        >= Int(
-          Double(draftCharacterLimit) * Self.characterCountDisplayThresholdFraction
-        )
-  }
-
-  var draftBinding: Binding<String> {
-    Binding(
-      get: { self.draftText },
-      set: { [weak self] newValue in
-        self?.updateDraftText(newValue)
-      }
-    )
-  }
-
-  func apply(configuration: FriendsThreadComposerConfiguration) {
-    mode = configuration.mode
-    replyPreview = configuration.replyPreview
-    isThreadReadOnly = configuration.isThreadReadOnly
-    sendErrorMessage = configuration.sendErrorMessage
-    composerValidationMessage = configuration.composerValidationMessage
-    draftCharacterCount = configuration.draftCharacterCount
-    draftCharacterLimit = configuration.draftCharacterLimit
-    placeholder = configuration.placeholder
-    canSendShiftSnapshots = configuration.canSendShiftSnapshots
-    focusRequestToken = configuration.focusRequestToken
-
-    if draftText != configuration.draftText {
-      isApplyingExternalDraft = true
-      draftText = configuration.draftText
-      isApplyingExternalDraft = false
-    }
-
-    if stagedAttachments != configuration.stagedAttachments {
-      isApplyingExternalAttachments = true
-      stagedAttachments = configuration.stagedAttachments
-      isApplyingExternalAttachments = false
-    }
-  }
 
   func cancelMode() {
     onCancelMode?()
@@ -132,49 +68,48 @@ final class FriendsThreadComposerBridge: ObservableObject {
   }
 
   func reportFocusChanged(_ isFocused: Bool) {
-    onFocusChanged?(isFocused)
+    DispatchQueue.main.async {
+      self.onFocusChanged?(isFocused)
+    }
   }
 
   func reportAttachmentDrawerOpen(_ isOpen: Bool) {
-    onAttachmentDrawerOpenChanged?(isOpen)
+    DispatchQueue.main.async {
+      self.onAttachmentDrawerOpenChanged?(isOpen)
+    }
   }
 
-  func addImageAttachments(_ images: [ImageAttachment]) {
-    guard !images.isEmpty else { return }
+  func currentStagedAttachments() -> [FriendsComposerAttachmentDraft] {
+    stagedAttachmentsProvider?() ?? []
+  }
 
-    let existingImages = stagedAttachments.imageAttachments
+  func addImageAttachments(
+    _ images: [ImageAttachment],
+    to existingAttachments: [FriendsComposerAttachmentDraft]
+  ) -> [FriendsComposerAttachmentDraft] {
+    guard !images.isEmpty else { return existingAttachments }
+
+    let existingImages = existingAttachments.imageAttachments
     let appendedImages = (existingImages + images).prefix(
       FriendsComposerAttachmentLimits.maxImagesPerMessage)
-    updateStagedAttachments(appendedImages.map(FriendsComposerAttachmentDraft.image))
+    return normalizedStagedAttachments(appendedImages.map(FriendsComposerAttachmentDraft.image))
   }
 
-  func prepareAndStageShiftAttachment(from shift: ShiftWithComputations) async -> Bool {
-    guard let onPrepareShiftSnapshotAttachment else { return false }
-    guard let attachment = await onPrepareShiftSnapshotAttachment(shift) else { return false }
-    updateStagedAttachments([attachment])
-    return true
+  func prepareShiftAttachment(
+    from shift: ShiftWithComputations
+  ) async -> FriendsComposerAttachmentDraft? {
+    guard let onPrepareShiftSnapshotAttachment else { return nil }
+    return await onPrepareShiftSnapshotAttachment(shift)
   }
 
-  func removeStagedAttachment(at index: Int) {
-    guard stagedAttachments.indices.contains(index) else { return }
-    var updatedAttachments = stagedAttachments
+  func removeStagedAttachment(
+    at index: Int,
+    from attachments: [FriendsComposerAttachmentDraft]
+  ) -> [FriendsComposerAttachmentDraft] {
+    guard attachments.indices.contains(index) else { return attachments }
+    var updatedAttachments = attachments
     updatedAttachments.remove(at: index)
-    updateStagedAttachments(updatedAttachments)
-  }
-
-  private func updateDraftText(_ newValue: String) {
-    guard draftText != newValue else { return }
-    draftText = newValue
-    guard !isApplyingExternalDraft else { return }
-    onDraftChanged?(newValue)
-  }
-
-  private func updateStagedAttachments(_ newValue: [FriendsComposerAttachmentDraft]) {
-    let normalizedAttachments = normalizedStagedAttachments(newValue)
-    guard stagedAttachments != normalizedAttachments else { return }
-    stagedAttachments = normalizedAttachments
-    guard !isApplyingExternalAttachments else { return }
-    onStagedAttachmentsChanged?(normalizedAttachments)
+    return normalizedStagedAttachments(updatedAttachments)
   }
 
   private func normalizedStagedAttachments(_ attachments: [FriendsComposerAttachmentDraft])
@@ -191,24 +126,59 @@ final class FriendsThreadComposerBridge: ObservableObject {
   }
 }
 
+extension FriendsThreadComposerConfiguration {
+  private static let characterCountDisplayThresholdFraction = 0.8
+
+  var isDraftOverCharacterLimit: Bool {
+    draftCharacterCount > draftCharacterLimit
+  }
+
+  var shouldShowCharacterCount: Bool {
+    guard draftCharacterCount > 0, draftCharacterLimit > 0 else { return false }
+    return isDraftOverCharacterLimit
+      || draftCharacterCount
+        >= Int(
+          Double(draftCharacterLimit) * Self.characterCountDisplayThresholdFraction
+        )
+  }
+}
+
 struct FriendsThreadComposerHostedView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @ObservedObject var bridge: FriendsThreadComposerBridge
+  let configuration: FriendsThreadComposerConfiguration
+  let bridge: FriendsThreadComposerBridge
   let text: Binding<String>
   @StateObject private var attachmentController = FriendsComposerAttachmentController()
   @State private var selectedPhotoItems: [PhotosPickerItem] = []
   @State private var isSubmitting = false
   @State private var composerFocusTrigger = 0
   @State private var isComposerFocused = false
-  @State private var isApplyingExternalDraft = false
 
   private let attachmentCollapseCharacterThreshold = 18
 
+  private var composerText: String {
+    text.wrappedValue
+  }
+
+  private var composerTextBinding: Binding<String> {
+    Binding(
+      get: { composerText },
+      set: { newValue in
+        if text.wrappedValue != newValue {
+          text.wrappedValue = newValue
+        }
+        if configuration.draftText != newValue {
+          bridge.onDraftChanged?(newValue)
+        }
+      }
+    )
+  }
+
   private var canSend: Bool {
-    let normalizedDraft = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
-    return (!normalizedDraft.isEmpty || !bridge.stagedAttachments.isEmpty)
-      && !bridge.isThreadReadOnly
-      && !bridge.isDraftOverCharacterLimit
+    let normalizedDraft = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
+    return (!normalizedDraft.isEmpty || !configuration.stagedAttachments.isEmpty)
+      && !configuration.isThreadReadOnly
+      && !configuration.isDraftOverCharacterLimit
       && !isSubmitting
       && !attachmentController.isProcessingAttachment
   }
@@ -218,21 +188,22 @@ struct FriendsThreadComposerHostedView: View {
   }
 
   private var shouldHidePlusButton: Bool {
+    guard configuration.mode == .normal else { return false }
     guard !attachmentController.isDrawerOpen else { return false }
-    guard bridge.stagedAttachments.isEmpty else { return false }
+    guard configuration.stagedAttachments.isEmpty else { return false }
     guard isComposerFocused else { return false }
 
-    let draftLength = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).count
+    let draftLength = composerText.trimmingCharacters(in: .whitespacesAndNewlines).count
     return draftLength >= attachmentCollapseCharacterThreshold
-      || text.wrappedValue.contains("\n")
+      || composerText.contains("\n")
   }
 
   private var stagedImageCount: Int {
-    bridge.stagedAttachments.imageAttachments.count
+    configuration.stagedAttachments.imageAttachments.count
   }
 
   private var hasShiftSnapshotAttachment: Bool {
-    bridge.stagedAttachments.hasShiftSnapshot
+    configuration.stagedAttachments.hasShiftSnapshot
   }
 
   private var canAddMoreImages: Bool {
@@ -246,29 +217,29 @@ struct FriendsThreadComposerHostedView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      if bridge.mode == .reply,
-        let replyPreview = bridge.replyPreview
+      if configuration.mode == .reply,
+        let replyPreview = configuration.replyPreview
       {
         FriendsThreadComposerReplyBanner(
           preview: replyPreview,
           onCancel: bridge.cancelMode
         )
         .padding(.horizontal, Spacing.md)
-      } else if bridge.mode == .edit {
+      } else if configuration.mode == .edit {
         FriendsThreadComposerEditBanner(onCancel: bridge.cancelMode)
           .padding(.horizontal, Spacing.md)
       }
 
-      if !bridge.stagedAttachments.isEmpty {
+      if !configuration.stagedAttachments.isEmpty {
         FriendsThreadComposerAttachmentPreview(
-          attachments: bridge.stagedAttachments,
-          onRemove: bridge.removeStagedAttachment(at:)
+          attachments: configuration.stagedAttachments,
+          onRemove: removeStagedAttachment(at:)
         )
         .padding(.horizontal, Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
-      if bridge.isThreadReadOnly {
+      if configuration.isThreadReadOnly {
         HStack(spacing: Spacing.xs) {
           Image(systemName: "hand.raised.fill")
             .foregroundColor(.tidexWarning)
@@ -284,11 +255,11 @@ struct FriendsThreadComposerHostedView: View {
 
       if shouldShowComposerMeta {
         HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-          if let sendErrorMessage = bridge.sendErrorMessage {
+          if let sendErrorMessage = configuration.sendErrorMessage {
             Text(sendErrorMessage)
               .font(.tidexFootnote)
               .foregroundColor(.tidexError)
-          } else if let composerValidationMessage = bridge.composerValidationMessage {
+          } else if let composerValidationMessage = configuration.composerValidationMessage {
             Text(composerValidationMessage)
               .font(.tidexFootnote)
               .foregroundColor(.tidexError)
@@ -296,10 +267,12 @@ struct FriendsThreadComposerHostedView: View {
 
           Spacer(minLength: 0)
 
-          if bridge.shouldShowCharacterCount {
-            Text("\(bridge.draftCharacterCount)/\(bridge.draftCharacterLimit)")
+          if configuration.shouldShowCharacterCount {
+            Text("\(configuration.draftCharacterCount)/\(configuration.draftCharacterLimit)")
               .font(.tidexFootnote)
-              .foregroundColor(bridge.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted)
+              .foregroundColor(
+                configuration.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted
+              )
               .monospacedDigit()
           }
         }
@@ -314,8 +287,8 @@ struct FriendsThreadComposerHostedView: View {
           recentPhotos: attachmentController.recentPhotos,
           isLoadingMoreRecentPhotos: attachmentController.isLoadingMoreRecentPhotos,
           isProcessingAttachment: attachmentController.isProcessingAttachment,
-          showsShiftCalendarAction: bridge.canSendShiftSnapshots,
-          stagedAttachments: bridge.stagedAttachments,
+          showsShiftCalendarAction: configuration.canSendShiftSnapshots,
+          stagedAttachments: configuration.stagedAttachments,
           canAddMoreImages: canAddMoreImages,
           onOpenPhotoLibrary: {
             guard canAddMoreImages else { return }
@@ -360,23 +333,16 @@ struct FriendsThreadComposerHostedView: View {
     .onPreferenceChange(FriendsThreadComposerHeightPreferenceKey.self) { height in
       bridge.reportHeight(height)
     }
-    .onAppear {
-      syncTextFromBridgeIfNeeded()
+    .task(id: configuration.draftText) {
+      syncTextFromConfigurationIfNeeded()
     }
     .onChange(of: attachmentController.isDrawerOpen) { _, isOpen in
       bridge.reportAttachmentDrawerOpen(isOpen)
     }
-    .onChange(of: bridge.draftText) { _, _ in
-      syncTextFromBridgeIfNeeded()
-    }
-    .onChange(of: text.wrappedValue) { _, newValue in
-      guard !isApplyingExternalDraft else { return }
-      bridge.onDraftChanged?(newValue)
-    }
-    .onChange(of: bridge.focusRequestToken) { _, _ in
+    .onChange(of: configuration.focusRequestToken) { _, _ in
       composerFocusTrigger += 1
     }
-    .onChange(of: bridge.mode) { _, newMode in
+    .onChange(of: configuration.mode) { _, newMode in
       if newMode == .edit {
         attachmentController.closeDrawer()
       }
@@ -410,12 +376,12 @@ struct FriendsThreadComposerHostedView: View {
 
   private var composerField: some View {
     ChatComposerField(
-      text: text,
-      placeholder: bridge.placeholder,
-      disabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment,
+      text: composerTextBinding,
+      placeholder: configuration.placeholder,
+      disabled: configuration.isThreadReadOnly || attachmentController.isProcessingAttachment,
       isSending: isSubmitting,
       canPerformAction: canSend,
-      actionAccessibilityLabel: bridge.mode == .edit
+      actionAccessibilityLabel: configuration.mode == .edit
         ? String(localized: "friends.chat.composer.save_edit", table: "Localizable")
         : String(localized: "Send message"),
       textFieldAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.textField,
@@ -438,9 +404,9 @@ struct FriendsThreadComposerHostedView: View {
       if !shouldHidePlusButton {
         FriendsThreadComposerPlusButton(
           isOpen: attachmentController.isDrawerOpen,
-          isDisabled: bridge.isThreadReadOnly || attachmentController.isProcessingAttachment
+          isDisabled: configuration.isThreadReadOnly || attachmentController.isProcessingAttachment
             || isPreparingAttachmentDrawer
-            || bridge.mode == .edit,
+            || configuration.mode == .edit,
           isPreparing: isPreparingAttachmentDrawer,
           action: toggleAttachmentDrawer
         )
@@ -454,20 +420,20 @@ struct FriendsThreadComposerHostedView: View {
   }
 
   private var shouldShowComposerMeta: Bool {
-    bridge.sendErrorMessage != nil
-      || bridge.composerValidationMessage != nil
-      || bridge.shouldShowCharacterCount
+    configuration.sendErrorMessage != nil
+      || configuration.composerValidationMessage != nil
+      || configuration.shouldShowCharacterCount
   }
 
   private func sendMessage() {
     guard canSend else { return }
 
-    if bridge.mode == .edit {
+    if configuration.mode == .edit {
       isSubmitting = true
 
       Task {
         let didSave = await bridge.saveEdit(
-          content: text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+          content: composerText.trimmingCharacters(in: .whitespacesAndNewlines)
         )
         await MainActor.run {
           isSubmitting = false
@@ -484,7 +450,7 @@ struct FriendsThreadComposerHostedView: View {
 
     Task {
       let didSend = await bridge.send(
-        content: text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        content: composerText.trimmingCharacters(in: .whitespacesAndNewlines)
       )
       await MainActor.run {
         isSubmitting = false
@@ -512,7 +478,11 @@ struct FriendsThreadComposerHostedView: View {
       return
     }
 
-    bridge.addImageAttachments(imageAttachments)
+    let updatedAttachments = bridge.addImageAttachments(
+      imageAttachments,
+      to: bridge.currentStagedAttachments()
+    )
+    bridge.onStagedAttachmentsChanged?(updatedAttachments)
     await MainActor.run {
       selectedPhotoItems = []
       attachmentController.completeAttachmentSelection(shouldCloseDrawer: false)
@@ -527,7 +497,11 @@ struct FriendsThreadComposerHostedView: View {
       return
     }
 
-    bridge.addImageAttachments([imageAttachment])
+    let updatedAttachments = bridge.addImageAttachments(
+      [imageAttachment],
+      to: bridge.currentStagedAttachments()
+    )
+    bridge.onStagedAttachmentsChanged?(updatedAttachments)
     attachmentController.completeAttachmentSelection(shouldCloseDrawer: false)
     restoreComposerFocusIfNeeded(shouldRestoreFocus)
   }
@@ -539,7 +513,11 @@ struct FriendsThreadComposerHostedView: View {
       return
     }
 
-    bridge.addImageAttachments([imageAttachment])
+    let updatedAttachments = bridge.addImageAttachments(
+      [imageAttachment],
+      to: bridge.currentStagedAttachments()
+    )
+    bridge.onStagedAttachmentsChanged?(updatedAttachments)
     attachmentController.completeAttachmentSelection(shouldCloseDrawer: false)
     restoreComposerFocusIfNeeded(shouldRestoreFocus)
   }
@@ -552,12 +530,23 @@ struct FriendsThreadComposerHostedView: View {
       attachmentController.finishProcessingAttachment()
     }
 
-    let didStageAttachment = await bridge.prepareAndStageShiftAttachment(from: shift)
-    if didStageAttachment {
-      attachmentController.completeAttachmentSelection()
-      restoreComposerFocusIfNeeded(shouldRestoreFocus)
+    guard let attachment = await bridge.prepareShiftAttachment(from: shift) else {
+      return false
     }
-    return didStageAttachment
+
+    bridge.onStagedAttachmentsChanged?([attachment])
+    attachmentController.completeAttachmentSelection()
+    restoreComposerFocusIfNeeded(shouldRestoreFocus)
+    return true
+  }
+
+  private func removeStagedAttachment(at index: Int) {
+    let updatedAttachments = bridge.removeStagedAttachment(
+      at: index,
+      from: configuration.stagedAttachments
+    )
+    guard updatedAttachments != configuration.stagedAttachments else { return }
+    bridge.onStagedAttachmentsChanged?(updatedAttachments)
   }
 
   private func restoreComposerFocusIfNeeded(_ shouldRestoreFocus: Bool) {
@@ -581,11 +570,9 @@ struct FriendsThreadComposerHostedView: View {
     }
   }
 
-  private func syncTextFromBridgeIfNeeded() {
-    guard text.wrappedValue != bridge.draftText else { return }
-    isApplyingExternalDraft = true
-    text.wrappedValue = bridge.draftText
-    isApplyingExternalDraft = false
+  private func syncTextFromConfigurationIfNeeded() {
+    guard text.wrappedValue != configuration.draftText else { return }
+    text.wrappedValue = configuration.draftText
   }
 
   private func dismissKeyboard() {

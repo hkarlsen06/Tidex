@@ -627,7 +627,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       )
       guard lastPinnedToBottomState != isPinnedToBottom else { return }
       lastPinnedToBottomState = isPinnedToBottom
-      onPinnedToBottomChanged?(isPinnedToBottom)
+      DispatchQueue.main.async { [weak self] in
+        self?.onPinnedToBottomChanged?(isPinnedToBottom)
+      }
     }
 
     private func reportLatestVisiblePresentedMessageIDIfNeeded() {
@@ -641,7 +643,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
       guard lastVisiblePresentedMessageID != visiblePresentedMessageID else { return }
       lastVisiblePresentedMessageID = visiblePresentedMessageID
-      onLatestVisiblePresentedMessageIDChanged?(visiblePresentedMessageID)
+      DispatchQueue.main.async { [weak self] in
+        self?.onLatestVisiblePresentedMessageIDChanged?(visiblePresentedMessageID)
+      }
     }
 
     private func attemptPendingScroll() {
@@ -681,7 +685,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       }
 
       handledScrollRequest = scrollRequest
-      onDidHandleScrollRequest?(scrollRequest)
+      DispatchQueue.main.async { [weak self] in
+        self?.onDidHandleScrollRequest?(scrollRequest)
+      }
       reportLatestVisiblePresentedMessageIDIfNeeded()
     }
 

@@ -212,7 +212,6 @@ struct FriendsThreadView: View {
   var body: some View {
     threadContent
       .task {
-        syncComposerBridge()
         await viewModel.loadIfNeeded()
       }
       .task(id: viewModel.route.navigationRequestId) {
@@ -228,9 +227,6 @@ struct FriendsThreadView: View {
             for: viewModel.route.threadId
           )
         }
-      }
-      .onChange(of: composerConfiguration) { _, _ in
-        syncComposerBridge()
       }
       .onChange(of: isPinnedToBottom) { _, newValue in
         guard newValue else { return }
@@ -510,11 +506,12 @@ struct FriendsThreadView: View {
       messages: exyteMessages,
       chatType: .conversation,
       replyMode: .quote,
-      messageBuilder: { message, _, _, _, _, _, _ in
-        chatRow(for: message)
+      messageBuilder: { message, _, _, _, _, _, _, messageFrame in
+        chatRow(for: message, messageFrame: messageFrame)
       },
       inputViewBuilder: { text, _, _, _, _, _ in
         FriendsThreadComposerHostedView(
+          configuration: composerConfiguration,
           bridge: composerBridge,
           text: text
         )
@@ -608,7 +605,9 @@ struct FriendsThreadView: View {
   }
 
   @ViewBuilder
-  private func chatRow(for exyteMessage: ExyteChat.Message) -> some View {
+  private func chatRow(for exyteMessage: ExyteChat.Message, messageFrame: Binding<CGRect>?)
+    -> some View
+  {
     if let message = presentedMessageLookup[exyteMessage.id] {
       let isCurrentUser = message.senderUserId == viewModel.viewerUserId
       let index = presentedMessageIndexLookup[exyteMessage.id]
@@ -670,7 +669,8 @@ struct FriendsThreadView: View {
         },
         onOpenShiftSnapshot: { snapshot in
           openShiftSnapshot(snapshot)
-        }
+        },
+        messageFrame: messageFrame
       )
       .id(exyteMessage.id)
     } else {
@@ -901,12 +901,17 @@ struct FriendsThreadView: View {
 
   private func syncComposerBridge() {
     composerBridge.onDraftChanged = { draft in
+      guard viewModel.draft != draft else { return }
       viewModel.draft = draft
       Task {
         await viewModel.handleDraftChanged(to: draft)
       }
     }
+    composerBridge.stagedAttachmentsProvider = {
+      viewModel.stagedComposerAttachments
+    }
     composerBridge.onStagedAttachmentsChanged = { attachments in
+      guard viewModel.stagedComposerAttachments != attachments else { return }
       viewModel.stagedComposerAttachments = attachments
       Task {
         await viewModel.setComposerAttachments(attachments)
@@ -934,13 +939,14 @@ struct FriendsThreadView: View {
       await viewModel.sendMessage(content: content)
     }
     composerBridge.onFocusChanged = { isFocused in
+      guard isComposerFocused != isFocused else { return }
       isComposerFocused = isFocused
     }
     composerBridge.onAttachmentDrawerOpenChanged = { isOpen in
+      guard isAttachmentDrawerOpen != isOpen else { return }
       isAttachmentDrawerOpen = isOpen
     }
     composerBridge.onHeightChanged = nil
-    composerBridge.apply(configuration: composerConfiguration)
   }
 
   private func handleMessageMenuAction(

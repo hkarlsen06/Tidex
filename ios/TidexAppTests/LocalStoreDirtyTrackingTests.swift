@@ -316,12 +316,16 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     let serverUpdatedAt = makeDate("2026-03-04", "14:00")
     let serverSnapshot = EventServerSnapshot.from(
-      startDate: "2026-03-05",
-      endDate: "2026-03-07",
-      isAllDay: true,
-      startTime: nil,
-      endTime: nil,
-      note: "Conference",
+      eventRow: EventRow(
+        id: "event-4",
+        user_id: userId,
+        start_date: "2026-03-05",
+        end_date: "2026-03-07",
+        is_all_day: true,
+        start_time: nil,
+        end_time: nil,
+        note: "Conference"
+      ),
       updatedAt: serverUpdatedAt,
       revision: 7,
       deletedAt: nil
@@ -382,12 +386,16 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     let serverUpdatedAt = makeDate("2026-03-04", "16:00")
     let serverSnapshot = EventServerSnapshot.from(
-      startDate: "2026-03-02",
-      endDate: "2026-03-02",
-      isAllDay: false,
-      startTime: "08:00",
-      endTime: "10:00",
-      note: "Server note",
+      eventRow: EventRow(
+        id: "event-5",
+        user_id: userId,
+        start_date: "2026-03-02",
+        end_date: "2026-03-02",
+        is_all_day: false,
+        start_time: "08:00",
+        end_time: "10:00",
+        note: "Server note"
+      ),
       updatedAt: serverUpdatedAt,
       revision: 9,
       deletedAt: nil
