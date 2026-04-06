@@ -61,6 +61,7 @@ struct FeaturedShiftCard: View {
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
@@ -139,6 +140,10 @@ struct FeaturedShiftCard: View {
     RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
   }
 
+  private var usesFixedCardHeight: Bool {
+    !dynamicTypeSize.isAccessibilitySize
+  }
+
   // MARK: - Body
 
   var body: some View {
@@ -215,6 +220,7 @@ struct FeaturedShiftCard: View {
       }
       .padding(.horizontal, Spacing.mlg)
       .padding(.vertical, ShiftCardMetrics.verticalPadding)
+      .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
       .background(surfaceStyle == .example ? Color.clear : Color.tidexSurfacePrimary)
       .overlay(alignment: .leading) {
         // Progress bar overlay - fills from left based on progress (for active shifts)

@@ -8,6 +8,12 @@ struct EmptyShiftCard: View {
   /// Optional action for a small footer CTA
   var onAddShift: (() -> Void)? = nil
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  private var usesFixedCardHeight: Bool {
+    !dynamicTypeSize.isAccessibilitySize
+  }
+
   // MARK: - Body
 
   var body: some View {
@@ -64,6 +70,7 @@ struct EmptyShiftCard: View {
       }
       .padding(.horizontal, Spacing.mlg)
       .padding(.vertical, ShiftCardMetrics.verticalPadding)
+      .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.card)
           .fill(Color.tidexSurfacePrimary)
