@@ -8,4 +8,4 @@ Funciones:
 • Widget para acceso rápido
 • Sincronización entre dispositivos
 
-Perfecto para empleados que quieren llevar un control de sus horas de trabajo e ingresos.
+Perfecta para empleados que quieren llevar un control de sus horas de trabajo e ingresos.

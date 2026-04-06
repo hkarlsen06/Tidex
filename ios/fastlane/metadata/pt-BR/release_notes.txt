@@ -1,5 +1,6 @@
-- Adicionados eventos privados à sua agenda, incluindo planos de um dia inteiro e de vários dias
-- Melhorada a edição de eventos e a sincronização da agenda em todo o app, widgets e Atividades ao Vivo
-- Melhoradas as conversas com amigos, com abertura mais confiável pelas notificações, melhores estados de não lidas e digitando, respostas aprimoradas, suporte para envio de várias fotos e uma nova galeria de imagens
-- Adicionada uma escolha mais clara na integração entre configurar a folha de pagamento e usar apenas os recursos de amigos, mantidos seus dados ao alternar entre entrar e cadastrar-se, e limitado o desfoque de privacidade às telas sensíveis
+- Adicionados eventos privados ao Tidex, incluindo planos de dia inteiro e de vários dias, com suporte para edição e sincronização
+- Adicionadas galerias de imagens nas conversas com amigos e suporte para anexar várias fotos de uma vez
+- Melhorias nas conversas com amigos, com tratamento mais confiável de mensagens não lidas, melhor abertura por notificações e anexos, respostas aprimoradas e suporte para encaminhar turnos compartilhados
+- Adicionada uma escolha mais clara na integração inicial entre acompanhamento de folha de pagamento e uso apenas com amigos
+- Melhorias nos widgets, Atividades ao Vivo e transições do calendário
 - Correções de bugs e outras melhorias

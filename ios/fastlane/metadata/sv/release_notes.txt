@@ -1,5 +1,6 @@
-- Lade till privata händelser i ditt schema, inklusive heldags- och flerdagarsplaner
-- Förbättrade redigering av händelser och synkronisering av schemat i appen, widgets och Live Activities
-- Förbättrade vänchattar med mer tillförlitlig öppning från notiser, bättre status för oläst och skrivande, förbättrade svar, stöd för att skicka flera bilder och ett nytt bildgalleri
-- Lade till ett tydligare val i introduktionen mellan löneinställning och användning endast med vänner, behöll dina uppgifter när du växlar mellan att logga in och registrera dig, och begränsade integritetsslöjan till känsliga skärmar
+- Lade till privata händelser i Tidex, inklusive heldags- och flerdagarsplaner, med stöd för redigering och synkronisering
+- Lade till bildgallerier i vänchattar och stöd för att bifoga flera foton samtidigt
+- Förbättrade vänchattar med mer tillförlitlig hantering av olästa meddelanden, bättre öppning från notiser och bilagor, förbättrade svar och stöd för att vidarebefordra delade arbetspass
+- Lade till ett tydligare val i introduktionen mellan löneuppföljning och användning endast med vänner
+- Förbättrade widgets, Live Activities och kalenderövergångar
 - Buggfixar och andra förbättringar

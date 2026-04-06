@@ -1,5 +1,6 @@
-- Dodano prywatne wydarzenia do Twojego harmonogramu, w tym plany całodniowe i wielodniowe
-- Ulepszono edycję wydarzeń i synchronizację harmonogramu w aplikacji, widżetach i Live Activities
-- Ulepszono czaty ze znajomymi dzięki bardziej niezawnemu otwieraniu z powiadomień, lepszym statusom nieprzeczytanych wiadomości i pisania, ulepszonym odpowiedziom, obsłudze wysyłania wielu zdjęć oraz nowej galerii obrazów
-- Dodano wyraźniejszy wybór podczas wdrożenia między konfiguracją listy płac a korzystaniem tylko z funkcji znajomych, zachowano Twoje dane przy przełączaniu między logowaniem a rejestracją oraz ograniczono rozmycie prywatności do ekranów z poufnymi danymi
+- Dodano prywatne wydarzenia w Tidex, w tym plany całodniowe i kilkudniowe, z obsługą edycji i synchronizacji
+- Dodano galerie zdjęć w czatach ze znajomymi oraz obsługę dołączania wielu zdjęć jednocześnie
+- Ulepszono czaty ze znajomymi dzięki bardziej niezawodnej obsłudze nieprzeczytanych wiadomości, lepszemu otwieraniu z powiadomień i załączników, usprawnionym odpowiedziom oraz obsłudze przekazywania udostępnionych zmian
+- Dodano bardziej przejrzysty wybór podczas wdrożenia między śledzeniem wynagrodzenia a korzystaniem wyłącznie z funkcji znajomych
+- Ulepszono widżety, Live Activities i przejścia w kalendarzu
 - Poprawki błędów i inne ulepszenia

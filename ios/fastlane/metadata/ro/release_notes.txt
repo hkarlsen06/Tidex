@@ -1,5 +1,6 @@
-- Au fost adăugate evenimente private în programul tău, inclusiv planuri de o zi întreagă și pe mai multe zile
-- A fost îmbunătățită editarea evenimentelor și sincronizarea programului în aplicație, widgeturi și Live Activities
-- Au fost îmbunătățite conversațiile cu prietenii prin deschiderea mai fiabilă din notificări, stări mai bune pentru necitite și scriere, răspunsuri îmbunătățite, suport pentru trimiterea mai multor fotografii și o nouă galerie de imagini
-- A fost adăugată o alegere mai clară la configurarea inițială între configurarea salarizării și utilizarea doar cu prietenii, au fost păstrate detaliile tale când comuți între autentificare și înregistrare, iar estomparea pentru confidențialitate a fost limitată la ecranele sensibile
+- Am adăugat evenimente private în Tidex, inclusiv planuri de o zi întreagă și pe mai multe zile, cu suport pentru editare și sincronizare
+- Am adăugat galerii de imagini în chaturile cu prietenii și suport pentru atașarea mai multor fotografii deodată
+- Am îmbunătățit chaturile cu prietenii cu gestionare mai fiabilă a mesajelor necitite, deschidere mai bună din notificări și atașamente, răspunsuri îmbunătățite și suport pentru redirecționarea turelor partajate
+- Am adăugat o alegere mai clară la configurarea inițială între urmărirea salariului și utilizarea doar cu prietenii
+- Am îmbunătățit widgeturile, Live Activities și tranzițiile din calendar
 - Corecturi de erori și alte îmbunătățiri

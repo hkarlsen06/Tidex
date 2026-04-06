@@ -1,5 +1,6 @@
-- Ajout d’événements privés à votre planning, y compris des journées entières et des plans sur plusieurs jours
-- Amélioration de la modification des événements et de la synchronisation du planning dans l’app, les widgets et les Live Activities
-- Amélioration des discussions entre amis avec une ouverture depuis les notifications plus fiable, de meilleurs états lu et saisie, des réponses améliorées, la prise en charge de l’envoi de plusieurs photos et une nouvelle galerie d’images
-- Ajout d’un choix d’onboarding plus clair entre la configuration de la paie et une utilisation uniquement entre amis, conservation de vos informations lors du passage entre connexion et inscription, et limitation du flou de confidentialité aux écrans sensibles
+- Ajout des événements privés dans Tidex, y compris les plans sur une journée entière et sur plusieurs jours, avec modification et synchronisation
+- Ajout de galeries d’images dans les discussions entre amis et prise en charge de l’ajout de plusieurs photos à la fois
+- Amélioration des discussions entre amis avec une gestion plus fiable des messages non lus, une meilleure ouverture depuis les notifications et les pièces jointes, de meilleures réponses, et la prise en charge du transfert des shifts partagés
+- Ajout d’un choix d’onboarding plus clair entre le suivi de la paie et l’utilisation entre amis uniquement
+- Amélioration des widgets, des Activités en direct et des transitions du calendrier
 - Corrections de bugs et autres améliorations

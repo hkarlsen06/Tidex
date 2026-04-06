@@ -1,1 +1,1 @@
-turno,escala,salário,trabalho,horas,ponto,jornada,ganhos,holerite,vencimento
+turno,controle,salario,trabalho,horas,ponto,escala,ganhos,tempo,pagamento

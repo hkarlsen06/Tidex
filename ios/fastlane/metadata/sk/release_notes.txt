@@ -1,5 +1,6 @@
-- Pridali sme súkromné udalosti do vášho rozvrhu vrátane celodenných a viacdňových plánov
-- Vylepšili sme úpravy udalostí a synchronizáciu rozvrhu v aplikácii, widgetoch a Live Activities
-- Vylepšili sme čety s priateľmi spoľahlivejším otváraním z oznámení, lepšími stavmi neprečítaných správ a písania, lepšími odpoveďami, podporou posielania viacerých fotiek a novou galériou obrázkov
-- Pridali sme jasnejšiu voľbu pri úvodnom nastavení medzi nastavením výplat a používaním len s priateľmi, zachovali vaše údaje pri prepínaní medzi prihlásením a registráciou a obmedzili rozmazanie súkromia len na citlivé obrazovky
+- Do Tidexu sme pridali súkromné udalosti vrátane celodenných a viacdňových plánov s podporou úprav a synchronizácie
+- Pridali sme galérie obrázkov v chatoch s priateľmi a podporu pre priloženie viacerých fotiek naraz
+- Vylepšili sme chaty s priateľmi spoľahlivejším spracovaním neprečítaných správ, lepším otváraním z oznámení a príloh, lepšími odpoveďami a podporou preposielania zdieľaných zmien
+- Pridali sme jasnejšiu voľbu pri úvodnom nastavení medzi sledovaním mzdy a používaním iba funkcií pre priateľov
+- Vylepšili sme widgety, Live Activities a prechody v kalendári
 - Opravy chýb a ďalšie vylepšenia
