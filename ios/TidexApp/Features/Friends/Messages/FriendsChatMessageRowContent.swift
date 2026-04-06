@@ -866,6 +866,7 @@ struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
   var onTap: (() -> Void)? = nil
+  @State private var tapSuppressedUntil: Date?
 
   private var ownerPrimaryTextColor: Color {
     .tidexTextMuted
@@ -876,7 +877,23 @@ struct ChatShiftSnapshotCard: View {
     if let onTap {
       cardContent
         .contentShape(Rectangle())
+        .onLongPressGesture(
+          minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration,
+          maximumDistance: 20,
+          perform: {
+            tapSuppressedUntil =
+              FriendsThreadAttachmentTapGuard.suppressedUntilAfterMenuRecognition()
+          },
+          onPressingChanged: { _ in }
+        )
         .onTapGesture {
+          guard
+            FriendsThreadAttachmentTapGuard.shouldHandleTap(
+              suppressedUntil: tapSuppressedUntil
+            )
+          else {
+            return
+          }
           onTap()
         }
     } else {

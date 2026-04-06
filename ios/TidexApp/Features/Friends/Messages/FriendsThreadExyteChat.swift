@@ -280,6 +280,20 @@ enum FriendsThreadCounterpartPreviewNavigationResolver {
   }
 }
 
+enum FriendsThreadAttachmentTapGuard {
+  static let messageMenuRecognitionDuration: TimeInterval = 0.35
+  private static let tapSuppressionDuration: TimeInterval = 0.75
+
+  static func suppressedUntilAfterMenuRecognition(now: Date = .now) -> Date {
+    now.addingTimeInterval(tapSuppressionDuration)
+  }
+
+  static func shouldHandleTap(suppressedUntil: Date?, now: Date = .now) -> Bool {
+    guard let suppressedUntil else { return true }
+    return now >= suppressedUntil
+  }
+}
+
 enum FriendsThreadShiftSnapshotNavigationResolver {
   static func deepLink(
     for snapshot: FriendShiftSnapshot,
