@@ -355,6 +355,44 @@ enum FriendsThreadChatViewportResolver {
 
     return nil
   }
+
+  static func latestVisiblePresentedMessageID(
+    in tableView: UITableView,
+    messages: [ExyteChat.Message]
+  ) -> String? {
+    let visibleIndexPaths = (tableView.indexPathsForVisibleRows ?? []).filter { indexPath in
+      tableView.numberOfSections > indexPath.section
+        && tableView.numberOfRows(inSection: indexPath.section) > indexPath.row
+    }
+
+    guard !visibleIndexPaths.isEmpty else { return nil }
+
+    let visiblePresentedMessageIDs = visibleIndexPaths.compactMap {
+      presentedMessageID(for: $0, in: messages)
+    }
+    guard !visiblePresentedMessageIDs.isEmpty else { return nil }
+
+    let visibleMessageIDSet = Set(visiblePresentedMessageIDs)
+    return messages.last(where: { visibleMessageIDSet.contains($0.id) })?.id
+  }
+
+  private static func presentedMessageID(for indexPath: IndexPath, in messages: [ExyteChat.Message])
+    -> String?
+  {
+    let calendar = Calendar.current
+    let sectionDates = Set(messages.map { calendar.startOfDay(for: $0.createdAt) }).sorted(by: >)
+    guard sectionDates.indices.contains(indexPath.section) else { return nil }
+
+    let sectionDate = sectionDates[indexPath.section]
+    let sectionMessages = Array(
+      messages.filter {
+        calendar.isDate($0.createdAt, inSameDayAs: sectionDate)
+      }.reversed()
+    )
+    guard sectionMessages.indices.contains(indexPath.row) else { return nil }
+
+    return sectionMessages[indexPath.row].id
+  }
 }
 
 enum FriendsThreadChatViewportRequestResolver {
@@ -462,6 +500,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   let scrollRequest: FriendsThreadChatViewportScrollRequest?
   let highlightedPresentedMessageID: String?
   let onPinnedToBottomChanged: (Bool) -> Void
+  let onLatestVisiblePresentedMessageIDChanged: (String?) -> Void
   let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
 
   func makeCoordinator() -> Coordinator {
@@ -483,6 +522,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         scrollRequest: scrollRequest,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
         onPinnedToBottomChanged: onPinnedToBottomChanged,
+        onLatestVisiblePresentedMessageIDChanged: onLatestVisiblePresentedMessageIDChanged,
         onDidHandleScrollRequest: onDidHandleScrollRequest
       )
     )
@@ -495,6 +535,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       let scrollRequest: FriendsThreadChatViewportScrollRequest?
       let highlightedPresentedMessageID: String?
       let onPinnedToBottomChanged: (Bool) -> Void
+      let onLatestVisiblePresentedMessageIDChanged: (String?) -> Void
       let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
     }
 
@@ -508,7 +549,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var lastVisibleHighlightedIndexPath: IndexPath?
     private var handledScrollRequest: FriendsThreadChatViewportScrollRequest?
     private var lastPinnedToBottomState: Bool?
+    private var lastVisiblePresentedMessageID: String?
     private var onPinnedToBottomChanged: ((Bool) -> Void)?
+    private var onLatestVisiblePresentedMessageIDChanged: ((String?) -> Void)?
     private var onDidHandleScrollRequest: ((FriendsThreadChatViewportScrollRequest) -> Void)?
 
     func update(
@@ -519,6 +562,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       scrollRequest = input.scrollRequest
       highlightedPresentedMessageID = input.highlightedPresentedMessageID
       onPinnedToBottomChanged = input.onPinnedToBottomChanged
+      onLatestVisiblePresentedMessageIDChanged = input.onLatestVisiblePresentedMessageIDChanged
       onDidHandleScrollRequest = input.onDidHandleScrollRequest
 
       if input.scrollRequest == nil {
@@ -527,6 +571,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
       attachIfNeeded(from: view)
       reportPinnedToBottomIfNeeded()
+      reportLatestVisiblePresentedMessageIDIfNeeded()
       attemptPendingScroll()
       refreshHighlightedRowsIfNeeded(
         force: input.highlightedPresentedMessageID != lastHighlightedPresentedMessageID)
@@ -562,6 +607,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       contentSizeObservation = tableView.observe(\.contentSize, options: [.new]) {
         [weak self] _, _ in
         Task { @MainActor [weak self] in
+          self?.reportLatestVisiblePresentedMessageIDIfNeeded()
           self?.attemptPendingScroll()
         }
       }
@@ -570,6 +616,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private func handleContentOffsetChange(for tableView: UITableView) {
       guard tableView === self.tableView else { return }
       reportPinnedToBottomIfNeeded()
+      reportLatestVisiblePresentedMessageIDIfNeeded()
       refreshHighlightedRowsIfNeeded(force: false)
     }
 
@@ -581,6 +628,20 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       guard lastPinnedToBottomState != isPinnedToBottom else { return }
       lastPinnedToBottomState = isPinnedToBottom
       onPinnedToBottomChanged?(isPinnedToBottom)
+    }
+
+    private func reportLatestVisiblePresentedMessageIDIfNeeded() {
+      guard let tableView else { return }
+
+      let visiblePresentedMessageID =
+        FriendsThreadChatViewportResolver.latestVisiblePresentedMessageID(
+          in: tableView,
+          messages: messages
+        )
+
+      guard lastVisiblePresentedMessageID != visiblePresentedMessageID else { return }
+      lastVisiblePresentedMessageID = visiblePresentedMessageID
+      onLatestVisiblePresentedMessageIDChanged?(visiblePresentedMessageID)
     }
 
     private func attemptPendingScroll() {
@@ -621,6 +682,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
       handledScrollRequest = scrollRequest
       onDidHandleScrollRequest?(scrollRequest)
+      reportLatestVisiblePresentedMessageIDIfNeeded()
     }
 
     private func refreshHighlightedRowsIfNeeded(force: Bool) {
