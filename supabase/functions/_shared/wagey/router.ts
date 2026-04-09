@@ -589,6 +589,37 @@ function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
   return false;
 }
 
+function getLatestUserText(messages: Message[]): string {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role !== "user") continue;
+    if (typeof message.content === "string") return message.content;
+    return message.content
+      .filter((block): block is Extract<ContentBlock, { type: "text" }> =>
+        block.type === "text"
+      )
+      .map((block) => block.text)
+      .join(" ");
+  }
+  return "";
+}
+
+export function userLikelyRequestedWriteAction(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return /\b(set|change|update|delete|remove|create|edit|save)\b/.test(normalized) ||
+    /\b(kan du|endre|oppdater|slett|fjern|lag|sett)\b/.test(normalized);
+}
+
+export function assistantLikelyClaimsWriteAction(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return /\b(done|updated|changed|created|deleted|saved|i('ve| have) (updated|changed|set|created|deleted|saved))\b/
+      .test(normalized) ||
+    /\b(i('| wi)ll (update|change|set|create|delete|save))\b/.test(normalized) ||
+    /\b(jeg har (oppdatert|endret|satt|laget|slettet)|oppdatert|endret|satt)\b/
+      .test(normalized) ||
+    /\b(jeg skal (oppdatere|endre|sette|lage|slette))\b/.test(normalized);
+}
+
 async function executeSingleToolUse(
   ctx: WageyRequestContext,
   toolUse: PendingToolUse,
@@ -1002,6 +1033,8 @@ export async function handleWageyRequest(
             const toolUses: PendingToolUse[] = [];
             const startedToolUseIds = new Set<string>();
             const assistantContent: ContentBlock[] = [];
+            const bufferedTextChunks: string[] = [];
+            let sawTextStart = false;
 
             let shouldStartNewAssistantTextBlock = true;
 
@@ -1032,7 +1065,7 @@ export async function handleWageyRequest(
 
               if (chunk.type === "text_start") {
                 shouldStartNewAssistantTextBlock = true;
-                sendChunk({ type: "text_start" });
+                sawTextStart = true;
               } else if (chunk.type === "text") {
                 if (!chunk.content) {
                   continue;
@@ -1040,9 +1073,8 @@ export async function handleWageyRequest(
                 if (!(await ensureInvocationConsumed())) {
                   return;
                 }
-                hasUserVisibleAssistantOutput = true;
                 appendAssistantText(chunk.content);
-                sendChunk({ type: "text", content: chunk.content });
+                bufferedTextChunks.push(chunk.content);
               } else if (chunk.type === "built_in_tool_start") {
                 if (!(await ensureInvocationConsumed())) {
                   return;
@@ -1147,6 +1179,40 @@ export async function handleWageyRequest(
               role: "assistant",
               content: assistantContent.length > 0 ? assistantContent : "",
             });
+
+            const assistantText = assistantContent
+              .filter((block): block is Extract<ContentBlock, { type: "text" }> =>
+                block.type === "text"
+              )
+              .map((block) => block.text)
+              .join(" ")
+              .trim();
+            const latestUserText = getLatestUserText(conversationMessages.slice(0, -1));
+            const looksLikeUnexecutedWriteClaim = toolUses.length === 0 &&
+              userLikelyRequestedWriteAction(latestUserText) &&
+              assistantLikelyClaimsWriteAction(assistantText);
+
+            if (looksLikeUnexecutedWriteClaim) {
+              conversationMessages.push({
+                role: "user",
+                content: [{
+                  type: "text",
+                  text:
+                    "System check: You implied a write action without executing a write tool. Either perform the required write tool call now, or clearly tell the user you cannot perform that change here.",
+                }],
+              });
+              continue;
+            }
+
+            if (bufferedTextChunks.length > 0) {
+              if (sawTextStart) {
+                sendChunk({ type: "text_start" });
+              }
+              for (const textChunk of bufferedTextChunks) {
+                sendChunk({ type: "text", content: textChunk });
+              }
+              hasUserVisibleAssistantOutput = true;
+            }
 
             if (req.signal.aborted || toolUses.length === 0) {
               break;

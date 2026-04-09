@@ -1,6 +1,11 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 
-import { convertToMistralConversation, handleWageyRequest } from "./router.ts";
+import {
+  assistantLikelyClaimsWriteAction,
+  convertToMistralConversation,
+  handleWageyRequest,
+  userLikelyRequestedWriteAction,
+} from "./router.ts";
 import type { WageyRequestContext } from "./context.ts";
 
 type SseRecord = {
@@ -275,6 +280,18 @@ Deno.test("convertToMistralConversation preserves image input and function tool 
       : null,
     "tool_call_id" in toolResultEntry ? toolResultEntry.tool_call_id : null,
   );
+});
+
+Deno.test("userLikelyRequestedWriteAction detects direct mutation requests", () => {
+  assertEquals(userLikelyRequestedWriteAction("Can you set my tax to 10%?"), true);
+  assertEquals(userLikelyRequestedWriteAction("Kan du oppdatere skatten til 10 prosent?"), true);
+  assertEquals(userLikelyRequestedWriteAction("Hva er skatten min nå?"), false);
+});
+
+Deno.test("assistantLikelyClaimsWriteAction detects promise/complete mutation language", () => {
+  assertEquals(assistantLikelyClaimsWriteAction("Done — I've updated your tax to 10%."), true);
+  assertEquals(assistantLikelyClaimsWriteAction("Jeg skal oppdatere skatteinnstillingen din nå."), true);
+  assertEquals(assistantLikelyClaimsWriteAction("Jeg sjekker lønnsinnstillingene dine."), false);
 });
 
 Deno.test("handleWageyRequest emits built-in tool events and deduped sources for capable clients", async () => {
