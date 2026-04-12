@@ -23,6 +23,8 @@ struct SharingRPCSharerRow: Decodable, Sendable {
   let showEarnings: Bool
   let hidden: Bool
   let hasSharedCalendarContent: Bool
+  let latestSharedShiftDate: String?
+  let hasRecurringSharedShifts: Bool
 
   private enum CodingKeys: String, CodingKey {
     case id
@@ -35,6 +37,8 @@ struct SharingRPCSharerRow: Decodable, Sendable {
     case showEarnings = "show_earnings"
     case hidden
     case hasSharedCalendarContent = "has_shared_calendar_content"
+    case latestSharedShiftDate = "latest_shared_shift_date"
+    case hasRecurringSharedShifts = "has_recurring_shared_shifts"
     case blocked
   }
 
@@ -54,6 +58,11 @@ struct SharingRPCSharerRow: Decodable, Sendable {
       ?? false
     hasSharedCalendarContent =
       try container.decodeIfPresent(Bool.self, forKey: .hasSharedCalendarContent)
+      ?? false
+    latestSharedShiftDate = try container.decodeIfPresent(
+      String.self, forKey: .latestSharedShiftDate)
+    hasRecurringSharedShifts =
+      try container.decodeIfPresent(Bool.self, forKey: .hasRecurringSharedShifts)
       ?? false
   }
 }

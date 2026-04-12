@@ -211,6 +211,76 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 
+  func testInitialMonthResolverUsesPreviewShiftMonthWhenAvailable() {
+    let sharer = makeUser(id: "preview", firstName: "Preview")
+
+    XCTAssertEqual(
+      FriendInitialMonthResolver.targetYearMonth(
+        sharer: sharer,
+        preview: makeShiftPreview(
+          sharerId: "preview",
+          shiftDate: "2025-08-12",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .past
+        ),
+        current: (year: 2026, month: 4)
+      )?.year,
+      2025
+    )
+    XCTAssertEqual(
+      FriendInitialMonthResolver.targetYearMonth(
+        sharer: sharer,
+        preview: makeShiftPreview(
+          sharerId: "preview",
+          shiftDate: "2025-08-12",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .past
+        ),
+        current: (year: 2026, month: 4)
+      )?.month,
+      8
+    )
+  }
+
+  func testInitialMonthResolverFallsBackToLatestHistoricShiftMonth() {
+    let sharer = makeUser(
+      id: "historic-month",
+      firstName: "Historic Month",
+      hasSharedCalendarContent: true,
+      latestSharedShiftDate: "2025-08-19",
+      hasRecurringSharedShifts: false
+    )
+
+    let targetMonth = FriendInitialMonthResolver.targetYearMonth(
+      sharer: sharer,
+      preview: nil,
+      current: (year: 2026, month: 4)
+    )
+
+    XCTAssertEqual(targetMonth?.year, 2025)
+    XCTAssertEqual(targetMonth?.month, 8)
+  }
+
+  func testInitialMonthResolverKeepsCurrentMonthForRecurringOnlySharer() {
+    let sharer = makeUser(
+      id: "recurring",
+      firstName: "Recurring",
+      hasSharedCalendarContent: true,
+      latestSharedShiftDate: nil,
+      hasRecurringSharedShifts: true
+    )
+
+    XCTAssertNil(
+      FriendInitialMonthResolver.targetYearMonth(
+        sharer: sharer,
+        preview: nil,
+        current: (year: 2026, month: 4)
+      )
+    )
+  }
+
   func testSendAttachmentRecipientOrderingPrefersMostRecentDirectThread() {
     let recipients = [
       ShareRecipient(
@@ -400,7 +470,9 @@ final class FriendsListOrderingTests: XCTestCase {
     id: String,
     firstName: String,
     hidden: Bool = false,
-    hasSharedCalendarContent: Bool = false
+    hasSharedCalendarContent: Bool = false,
+    latestSharedShiftDate: String? = nil,
+    hasRecurringSharedShifts: Bool = false
   ) -> SharedUser {
     SharedUser(
       id: id,
@@ -412,7 +484,9 @@ final class FriendsListOrderingTests: XCTestCase {
       sharedAt: "2026-03-01",
       showEarnings: false,
       hidden: hidden,
-      hasSharedCalendarContent: hasSharedCalendarContent
+      hasSharedCalendarContent: hasSharedCalendarContent,
+      latestSharedShiftDate: latestSharedShiftDate,
+      hasRecurringSharedShifts: hasRecurringSharedShifts
     )
   }
 

@@ -1,6 +1,8 @@
 -- Add calendar-content signal to sharer rows so clients can decide whether
 -- the calendar affordance should be shown even when all visible shifts are old.
 
+DROP FUNCTION IF EXISTS public.get_my_sharers();
+
 CREATE OR REPLACE FUNCTION public.get_my_sharers()
 RETURNS TABLE (
   id uuid,

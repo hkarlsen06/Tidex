@@ -17,6 +17,10 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
   let hidden: Bool
   /// Whether this sharer has any shared shift history or recurring shifts at all.
   let hasSharedCalendarContent: Bool
+  /// Most recent shared shift date, when one exists.
+  let latestSharedShiftDate: String?
+  /// Whether this sharer has recurring shifts that can generate future months.
+  let hasRecurringSharedShifts: Bool
 
   private enum CodingKeys: String, CodingKey {
     case id
@@ -29,6 +33,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     case showEarnings
     case hidden
     case hasSharedCalendarContent
+    case latestSharedShiftDate
+    case hasRecurringSharedShifts
     case blocked
   }
 
@@ -42,7 +48,9 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     sharedAt: String,
     showEarnings: Bool,
     hidden: Bool,
-    hasSharedCalendarContent: Bool = false
+    hasSharedCalendarContent: Bool = false,
+    latestSharedShiftDate: String? = nil,
+    hasRecurringSharedShifts: Bool = false
   ) {
     self.id = id
     self.email = email
@@ -54,6 +62,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     self.showEarnings = showEarnings
     self.hidden = hidden
     self.hasSharedCalendarContent = hasSharedCalendarContent
+    self.latestSharedShiftDate = latestSharedShiftDate
+    self.hasRecurringSharedShifts = hasRecurringSharedShifts
   }
 
   init(from decoder: Decoder) throws {
@@ -73,6 +83,11 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     hasSharedCalendarContent =
       try container.decodeIfPresent(Bool.self, forKey: .hasSharedCalendarContent)
       ?? false
+    latestSharedShiftDate = try container.decodeIfPresent(
+      String.self, forKey: .latestSharedShiftDate)
+    hasRecurringSharedShifts =
+      try container.decodeIfPresent(Bool.self, forKey: .hasRecurringSharedShifts)
+      ?? false
   }
 
   func encode(to encoder: Encoder) throws {
@@ -87,6 +102,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     try container.encode(showEarnings, forKey: .showEarnings)
     try container.encode(hidden, forKey: .hidden)
     try container.encode(hasSharedCalendarContent, forKey: .hasSharedCalendarContent)
+    try container.encodeIfPresent(latestSharedShiftDate, forKey: .latestSharedShiftDate)
+    try container.encode(hasRecurringSharedShifts, forKey: .hasRecurringSharedShifts)
   }
 
   /// Display name for the sharer (firstName > email > phone > "Unknown")
