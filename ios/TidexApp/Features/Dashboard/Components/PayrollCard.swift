@@ -23,6 +23,8 @@ struct PayrollCard: View {
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
+  @State private var previousPrimaryAmount: Double?
+  @State private var previousHasTrailingBottomContent: Bool?
 
   // MARK: - Computed Properties
 
@@ -40,6 +42,10 @@ struct PayrollCard: View {
 
   private var showPayout: Bool {
     !isLoading && hasPayoutData
+  }
+
+  private var primaryAmount: Double {
+    taxEnabled ? (net ?? gross) : gross
   }
 
   private var showsPageIndicator: Bool {
@@ -113,12 +119,16 @@ struct PayrollCard: View {
     } trailingTop: {
       // Right side: amount
       if showPayout {
-        let primaryAmount = taxEnabled ? (net ?? gross) : gross
         CurrencyCountUpText(
           amount: primaryAmount,
           duration: 0.8,
           animateOnAppear: false,
-          animateChanges: true
+          animateChanges: true,
+          animateFrom: ShiftCardAmountAnimationFallback.animateFrom(
+            previousAmount: previousPrimaryAmount,
+            previousHasTrailingBottomContent: previousHasTrailingBottomContent,
+            currentHasTrailingBottomContent: showBreakdown
+          )
         )
         .font(.tidexTitle)
         .tracking(-0.5)
@@ -186,7 +196,16 @@ struct PayrollCard: View {
         animatedProgress = newValue ?? 0
       }
     }
+    .onChange(of: primaryAmount) { _, newValue in
+      previousPrimaryAmount = newValue
+    }
+    .onChange(of: showBreakdown) { _, newValue in
+      previousHasTrailingBottomContent = newValue
+    }
     .onAppear {
+      previousPrimaryAmount = primaryAmount
+      previousHasTrailingBottomContent = showBreakdown
+
       guard let progress = progress, progress >= 1, progress <= 100 else {
         animatedProgress = 0
         return

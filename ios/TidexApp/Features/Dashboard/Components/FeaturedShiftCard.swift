@@ -65,6 +65,8 @@ struct FeaturedShiftCard: View {
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
+  @State private var previousDisplayAmount: Double?
+  @State private var previousHasTrailingBottomContent: Bool?
 
   // MARK: - Computed Properties
 
@@ -120,6 +122,10 @@ struct FeaturedShiftCard: View {
     shouldRenderJobBadge || showBreakdown
   }
 
+  private var displayAmount: Double {
+    shift.taxEnabled ? shift.netPay : shift.grossPay
+  }
+
   private var timeRangeText: String {
     ShiftCardFormatter.localizedTimeRange(
       start: shift.startTime,
@@ -172,7 +178,6 @@ struct FeaturedShiftCard: View {
         timeRangeLabel
       } trailingTop: {
         // Net/gross amount
-        let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
         HStack(spacing: Spacing.xxxs) {
           if showIncreaseHighlight {
             Text("+")
@@ -184,7 +189,12 @@ struct FeaturedShiftCard: View {
             amount: displayAmount,
             duration: 0.8,
             animateOnAppear: false,
-            animateChanges: true
+            animateChanges: true,
+            animateFrom: ShiftCardAmountAnimationFallback.animateFrom(
+              previousAmount: previousDisplayAmount,
+              previousHasTrailingBottomContent: previousHasTrailingBottomContent,
+              currentHasTrailingBottomContent: hasTrailingBottomContent
+            )
           )
           .font(.tidexTitle)
           .tracking(-0.5)
@@ -246,7 +256,16 @@ struct FeaturedShiftCard: View {
           animatedProgress = newValue ?? 0
         }
       }
+      .onChange(of: displayAmount) { _, newValue in
+        previousDisplayAmount = newValue
+      }
+      .onChange(of: hasTrailingBottomContent) { _, newValue in
+        previousHasTrailingBottomContent = newValue
+      }
       .onAppear {
+        previousDisplayAmount = displayAmount
+        previousHasTrailingBottomContent = hasTrailingBottomContent
+
         // Animate from 0 to current progress on appear (matches CSS animation)
         if hasProgress(displayedProgress) {
           withAnimation(.linear(duration: 1.0)) {
