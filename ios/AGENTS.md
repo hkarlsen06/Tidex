@@ -29,6 +29,8 @@ Interpretation rules:
 - Exit code `0` + `STATUS: SUCCESS` -> build succeeded
 - Non-zero exit code or `STATUS: FAILURE` -> build failed
 - If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
+- During active debugging where the user is already rebuilding in Xcode or on device/simulator after each turn, do not auto-run the build wrapper for every small change.
+- In that mode, skip build execution when the edit is narrow and you are confident it should still compile; explicitly say you skipped the build so the user can validate in their normal loop.
 
 ### Test Wrapper
 
@@ -54,6 +56,8 @@ Interpretation rules:
 - Exit code `0` + `STATUS: SUCCESS` -> tests passed
 - Non-zero exit code or `STATUS: FAILURE` -> tests failed
 - If present, read the `TESTS`, `WARNINGS`, `ERRORS`, and `test_failures` diagnostics
+- During active debugging where the user is already rebuilding/rerunning manually after each turn, do not auto-run tests for every small change.
+- In that mode, skip test execution when the edit is narrow and low-risk, and say so clearly in the handoff.
 
 **ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
 - API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
