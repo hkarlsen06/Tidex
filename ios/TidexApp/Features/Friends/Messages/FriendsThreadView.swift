@@ -556,6 +556,7 @@ struct FriendsThreadView: View {
     .localization(chatLocalization)
     .showDateHeaders(true)
     .appliesFocusModifierToCustomInputView(false)
+    .animateMessageUpdates(false)
     .headerBuilder { date in
       FriendsThreadDateSeparator(date: date)
     }

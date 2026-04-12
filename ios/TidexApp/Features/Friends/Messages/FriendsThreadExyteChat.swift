@@ -132,8 +132,7 @@ enum FriendsThreadMessageStatusResolver {
     groupContext: FriendsChatMessageGroupContext,
     messageStatus: FriendsChatMessageStatus?
   ) -> Bool {
-    guard !groupContext.joinsNext else { return false }
-    guard isCurrentUser else { return true }
+    guard isCurrentUser else { return !groupContext.joinsNext }
 
     switch messageStatus {
     case .sending, .failed:
