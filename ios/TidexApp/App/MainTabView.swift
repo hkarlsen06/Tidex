@@ -53,6 +53,8 @@ struct MainTabView: View {
   @State private var showAddSubmitRequirementsAlert = false
   @State private var unreadFriendsCount = 0
   @State private var unreadRefreshTask: Task<Void, Never>?
+  @State private var lastHandledReselectionTab: Tab?
+  @State private var lastHandledReselectionDate = Date.distantPast
 
   // View mode toggle (calendar vs list) - persisted across app launches
   // Shared with ShiftsView via @AppStorage
@@ -98,6 +100,17 @@ struct MainTabView: View {
       case .sharing: return .tabsSharing
       }
     }
+
+    static let orderedTabs: [Tab] = [.home, .shifts, .add, .wagey, .sharing]
+
+    var index: Int {
+      Self.orderedTabs.firstIndex(of: self) ?? 0
+    }
+
+    init?(index: Int) {
+      guard Self.orderedTabs.indices.contains(index) else { return nil }
+      self = Self.orderedTabs[index]
+    }
   }
 
   init() {
@@ -115,34 +128,7 @@ struct MainTabView: View {
         selectionHaptic.selectionChanged()
 
         if newTab == selectedTab {
-          if newTab == .home, showHomeStats {
-            showHomeStats = false
-            pendingCurrentMonthTab = nil
-          } else if newTab == .add {
-            addShiftCoordinator.triggerModeCycle()
-            pendingCurrentMonthTab = nil
-          } else if newTab == .wagey {
-            pendingCurrentMonthTab = nil
-          } else if newTab == .sharing {
-            // Sharing tab - keep existing behavior (deselect sharer)
-            NotificationCenter.default.post(
-              name: .tabReselected, object: nil, userInfo: ["tab": newTab])
-          } else if tabHasScrollableContent(newTab) && pendingCurrentMonthTab != newTab {
-            // Scrollable tab, first re-tap - scroll to top
-            NotificationCenter.default.post(
-              name: .tabReselected, object: nil, userInfo: ["tab": newTab])
-            pendingCurrentMonthTab = newTab
-          } else if !monthContext.isCurrentMonth {
-            // Not on current month - navigate there
-            monthContext.goToCurrentMonth()
-            pendingCurrentMonthTab = nil
-          } else {
-            // Already on current month - scroll to today/relevant item
-            NotificationCenter.default.post(
-              name: .tabReselected, object: nil,
-              userInfo: ["tab": newTab, "scrollToToday": true])
-            pendingCurrentMonthTab = nil
-          }
+          handleTabReselection(newTab)
         } else {
           selectedTab = newTab
           pendingCurrentMonthTab = nil
@@ -203,6 +189,15 @@ struct MainTabView: View {
               }
               .tag(Tab.sharing)
           }
+          .background(
+            TabBarTapObserver(selectedIndex: selectedTab.index) { tappedIndex in
+              guard let tappedTab = Tab(index: tappedIndex), tappedTab == selectedTab else {
+                return
+              }
+              selectionHaptic.selectionChanged()
+              handleTabReselection(tappedTab)
+            }
+          )
           .tint(.tidexBlue)
 
           // Shared month picker overlay - floats above tab bar
@@ -533,6 +528,41 @@ struct MainTabView: View {
     showAddSubmitRequirementsAlert = true
   }
 
+  private func handleTabReselection(_ tab: Tab) {
+    let now = Date()
+    if lastHandledReselectionTab == tab, now.timeIntervalSince(lastHandledReselectionDate) < 0.2 {
+      return
+    }
+
+    lastHandledReselectionTab = tab
+    lastHandledReselectionDate = now
+
+    if tab == .home, showHomeStats {
+      showHomeStats = false
+      pendingCurrentMonthTab = nil
+    } else if tab == .add {
+      addShiftCoordinator.triggerModeCycle()
+      pendingCurrentMonthTab = nil
+    } else if tab == .wagey {
+      pendingCurrentMonthTab = nil
+    } else if tab == .sharing {
+      NotificationCenter.default.post(
+        name: .tabReselected, object: nil, userInfo: ["tab": tab])
+    } else if tabHasScrollableContent(tab) && pendingCurrentMonthTab != tab {
+      NotificationCenter.default.post(
+        name: .tabReselected, object: nil, userInfo: ["tab": tab])
+      pendingCurrentMonthTab = tab
+    } else if !monthContext.isCurrentMonth {
+      monthContext.goToCurrentMonth()
+      pendingCurrentMonthTab = nil
+    } else {
+      NotificationCenter.default.post(
+        name: .tabReselected, object: nil,
+        userInfo: ["tab": tab, "scrollToToday": true])
+      pendingCurrentMonthTab = nil
+    }
+  }
+
   private var addSubmitRequirementsMessage: String {
     let blockers = addShiftCoordinator.submitBlockers
     guard !blockers.isEmpty else {
@@ -608,6 +638,91 @@ struct MainTabView: View {
       coordinator.clearPendingDeepLink()
     }
     // Note: We don't clear the deep link here for tab-based navigation - the destination view will consume and clear it
+  }
+}
+
+private struct TabBarTapObserver: UIViewControllerRepresentable {
+  let selectedIndex: Int
+  let onTapSelectedIndex: (Int) -> Void
+
+  func makeUIViewController(context: Context) -> Controller {
+    let controller = Controller()
+    controller.coordinator = context.coordinator
+    return controller
+  }
+
+  func updateUIViewController(_ uiViewController: Controller, context: Context) {
+    context.coordinator.selectedIndex = selectedIndex
+    context.coordinator.onTapSelectedIndex = onTapSelectedIndex
+    uiViewController.attachIfNeeded()
+  }
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(selectedIndex: selectedIndex, onTapSelectedIndex: onTapSelectedIndex)
+  }
+
+  final class Coordinator: NSObject {
+    var selectedIndex: Int
+    var onTapSelectedIndex: (Int) -> Void
+    weak var tabBar: UITabBar?
+
+    init(selectedIndex: Int, onTapSelectedIndex: @escaping (Int) -> Void) {
+      self.selectedIndex = selectedIndex
+      self.onTapSelectedIndex = onTapSelectedIndex
+    }
+
+    @objc func handleTabBarTap(_ gesture: UITapGestureRecognizer) {
+      guard gesture.state == .ended, let tabBar else { return }
+
+      let tapLocation = gesture.location(in: tabBar)
+      let tabBarButtons = tabBar.subviews
+        .filter { $0 is UIControl && !$0.isHidden && $0.alpha > 0.01 }
+        .sorted { $0.frame.minX < $1.frame.minX }
+
+      guard let tappedIndex = tabBarButtons.firstIndex(where: { $0.frame.contains(tapLocation) })
+      else {
+        return
+      }
+
+      guard tappedIndex == selectedIndex else { return }
+      onTapSelectedIndex(tappedIndex)
+    }
+  }
+
+  final class Controller: UIViewController {
+    weak var coordinator: Coordinator?
+
+    override func viewDidAppear(_ animated: Bool) {
+      super.viewDidAppear(animated)
+      attachIfNeeded()
+    }
+
+    override func viewDidLayoutSubviews() {
+      super.viewDidLayoutSubviews()
+      attachIfNeeded()
+    }
+
+    func attachIfNeeded() {
+      guard let coordinator, let tabBar = tabBarController?.tabBar else { return }
+      guard coordinator.tabBar !== tabBar else { return }
+
+      coordinator.tabBar?.gestureRecognizers?
+        .filter { ($0 as? UITapGestureRecognizer)?.name == "MainTabView.TabBarTapObserver" }
+        .forEach { coordinator.tabBar?.removeGestureRecognizer($0) }
+
+      let recognizer = UITapGestureRecognizer(
+        target: coordinator, action: #selector(Coordinator.handleTabBarTap(_:)))
+      recognizer.cancelsTouchesInView = false
+      recognizer.name = "MainTabView.TabBarTapObserver"
+      tabBar.addGestureRecognizer(recognizer)
+      coordinator.tabBar = tabBar
+    }
+
+    deinit {
+      coordinator?.tabBar?.gestureRecognizers?
+        .filter { ($0 as? UITapGestureRecognizer)?.name == "MainTabView.TabBarTapObserver" }
+        .forEach { coordinator?.tabBar?.removeGestureRecognizer($0) }
+    }
   }
 }
 
