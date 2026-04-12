@@ -315702,277 +315702,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اسمح لـ Wagey بإرسال البيانات إلى Mistral AI للمعالجة"
+            "value" : "السماح لـ Wagey بإرسال البيانات إلى Anthropic (Claude AI) للمعالجة"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Разрешете на Wagey да изпраща данни до Mistral AI за обработка"
+            "value" : "Позволете на Wagey да изпраща данни на Anthropic (Claude AI) за обработка"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "প্রসেসিংয়ের জন্য Wagey-কে Mistral AI-তে ডেটা পাঠাতে দিন"
+            "value" : "Wagey-কে প্রক্রিয়াকরণের জন্য Anthropic (Claude AI)-এ ডেটা পাঠাতে অনুমতি দিন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permet que Wagey enviï dades a Mistral AI perquè les processi"
+            "value" : "Permet que Wagey envii dades a Anthropic (Claude AI) per al seu processament"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Povolit Wagey odesílat data do Mistral AI ke zpracování"
+            "value" : "Povolit Wagey odesílat data do Anthropic (Claude AI) ke zpracování"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillad Wagey at sende data til Mistral AI til behandling"
+            "value" : "Tillad Wagey at sende data til Anthropic (Claude AI) til behandling"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey erlauben, Daten zur Verarbeitung an Mistral AI zu senden"
+            "value" : "Erlaube Wagey, Daten an Anthropic (Claude AI) zur Verarbeitung zu senden"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Επιτρέψτε στο Wagey να στέλνει δεδομένα στη Mistral AI για επεξεργασία"
+            "value" : "Επιτρέψτε στο Wagey να στείλει δεδομένα στην Anthropic (Claude AI) για επεξεργασία"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow Wagey to send data to Mistral AI for processing"
+            "value" : "Allow Wagey to send data to Anthropic (Claude AI) for processing"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permitir que Wagey envíe datos a Mistral AI para su procesamiento"
+            "value" : "Permitir que Wagey envíe datos a Anthropic (Claude IA) para su procesamiento"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Luba Wageyl saata andmeid töötlemiseks Mistral AI-le"
+            "value" : "Luba Wageyl saata andmeid Anthropicu (Claude AI) töötlemiseks"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اجازه دهید Wagey داده‌ها را برای پردازش به Mistral AI ارسال کند"
+            "value" : "اجازه دهید Wagey داده‌ها را به Anthropic (Claude AI) برای پردازش ارسال کند"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salli Wageyn lähettää tietoja Mistral AI:lle käsiteltäväksi"
+            "value" : "Salli Wageyn lähettää tiedot Anthropicille (Claude AI) käsiteltäväksi"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pahintulutan ang Wagey na magpadala ng data sa Mistral AI para sa pagproseso"
+            "value" : "Payagan ang Wagey na magpadala ng data sa Anthropic (Claude AI) para sa pagproseso"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autoriser Wagey à envoyer des données à Mistral AI pour traitement"
+            "value" : "Autoriser Wagey à envoyer des données à Anthropic (Claude AI) pour traitement"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "אפשר ל-Wagey לשלוח נתונים ל-Mistral AI לעיבוד"
+            "value" : "אפשר ל-Wagey לשלוח נתונים ל-Anthropic (Claude AI) לעיבוד"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey को प्रोसेसिंग के लिए Mistral AI को डेटा भेजने की अनुमति दें"
+            "value" : "Wagey को Anthropic (Claude AI) को डेटा भेजने की अनुमति दें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dopusti da Wagey šalje podatke Mistral AI-ju na obradu"
+            "value" : "Dopustite Wageyu da pošalje podatke Anthropicu (Claude AI) na obradu"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Engedélyezze, hogy a Wagey adatokat küldjön feldolgozásra a Mistral AI-nak"
+            "value" : "Engedélyezd a Wagey-nek, hogy adatokat küldjön az Anthropic-nak (Claude AI) feldolgozásra"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Izinkan Wagey mengirim data ke Mistral AI untuk diproses"
+            "value" : "Izinkan Wagey mengirim data ke Anthropic (Claude AI) untuk diproses"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leyfa Wagey að senda gögn til Mistral AI til vinnslu"
+            "value" : "Leyfa Wagey að senda gögn til Anthropic (Claude AI) til vinnslu"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Consenti a Wagey di inviare dati a Mistral AI per l'elaborazione"
+            "value" : "Consenti a Wagey di inviare dati ad Anthropic (Claude AI) per l'elaborazione"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wageyが処理のためにMistral AIへデータを送信することを許可"
+            "value" : "Wagey が Anthropic（Claude AI）にデータを送信して処理することを許可する"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey가 처리를 위해 데이터를 Mistral AI에 보내도록 허용"
+            "value" : "Wagey가 처리를 위해 Anthropic(Claude AI)으로 데이터를 전송하도록 허용"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leisti „Wagey“ siųsti duomenis į „Mistral AI“ apdoroti"
+            "value" : "Leisti „Wagey“ siųsti duomenis į „Anthropic“ („Claude AI“) apdoroti"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atļaut Wagey sūtīt datus uz Mistral AI apstrādei"
+            "value" : "Atļaut Wagey nosūtīt datus uz Anthropic (Claude AI) apstrādei"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillat Wagey å sende data til Mistral AI for behandling"
+            "value" : "Tillat Wagey å sende data til Anthropic (Claude AI) for behandling"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sta Wagey toe gegevens naar Mistral AI te sturen voor verwerking"
+            "value" : "Sta toe dat Wagey gegevens naar Anthropic (Claude AI) verzendt voor verwerking"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillat Wagey å sende data til Mistral AI for behandling"
+            "value" : "Tillat Wagey å sende data til Anthropic (Claude AI) for behandling"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zezwól Wagey na wysyłanie danych do Mistral AI w celu przetwarzania"
+            "value" : "Zezwól Wagey na wysyłanie danych do Anthropic (Claude AI) w celu przetworzenia"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permitir que o Wagey envie dados ao Mistral AI para processamento"
+            "value" : "Permitir que Wagey envie dados ao Anthropic (Claude IA) para processamento"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permite Wagey să trimită date către Mistral AI pentru procesare"
+            "value" : "Permite Wagey să trimită date la Anthropic (Claude AI) pentru procesare"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Разрешить Wagey отправлять данные в Mistral AI для обработки"
+            "value" : "Разрешить Wagey отправлять данные в Anthropic (Claude AI) для обработки"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Povoliť aplikácii Wagey odosielať údaje do Mistral AI na spracovanie"
+            "value" : "Povoliť Wagey poslať údaje do Anthropic (Claude AI) na spracovanie"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dovoli, da Wagey pošlje podatke podjetju Mistral AI v obdelavo"
+            "value" : "Dovoli Wageyju, da pošlje podatke podjetju Anthropic (Claude AI) v obdelavo"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dozvoli da Wagey šalje podatke kompaniji Mistral AI radi obrade"
+            "value" : "Dozvolite Wagey-u da šalje podatke Anthropic-u (Claude AI) na obradu"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillåt Wagey att skicka data till Mistral AI för behandling"
+            "value" : "Tillåt Wagey att skicka data till Anthropic (Claude AI) för bearbetning"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ruhusu Wagey kutuma data kwa Mistral AI ili ichakatwe"
+            "value" : "Ruhusu Wagey kutuma data kwa Anthropic (Claude AI) kwa ajili ya uchakataji"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "செயலாக்கத்திற்காக Wagey உங்கள் தரவை Mistral AI-க்கு அனுப்ப அனுமதி அளிக்கவும்"
+            "value" : "Wagey ஆனது தரவை Anthropic (Claude AI) க்கு செயல்படுத்துவதற்காக அனுப்ப அனுமதிக்கவும்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "อนุญาตให้ Wagey ส่งข้อมูลไปยัง Mistral AI เพื่อประมวลผล"
+            "value" : "อนุญาตให้ Wagey ส่งข้อมูลไปยัง Anthropic (Claude AI) เพื่อการประมวลผล"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey'nin verileri işlenmek üzere Mistral AI'ya göndermesine izin ver"
+            "value" : "Wagey'in verileri işlenmek üzere Anthropic'e (Claude AI) göndermesine izin verin"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Дозволити Wagey надсилати дані до Mistral AI для обробки"
+            "value" : "Дозволити Wagey надсилати дані до Anthropic (Claude AI) для обробки"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey کو پروسیسنگ کے لیے Mistral AI کو ڈیٹا بھیجنے کی اجازت دیں"
+            "value" : "Wagey کو Anthropic (Claude AI) کو پروسیسنگ کے لیے ڈیٹا بھیجنے کی اجازت دیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cho phép Wagey gửi dữ liệu đến Mistral AI để xử lý"
+            "value" : "Cho phép Wagey gửi dữ liệu đến Anthropic (Claude AI) để xử lý"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允许 Wagey 将数据发送给 Mistral AI 进行处理"
+            "value" : "允许Wagey向Anthropic（Claude AI）发送数据进行处理"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允許 Wagey 傳送資料給 Mistral AI 進行處理"
+            "value" : "允許 Wagey 將數據發送至 Anthropic（Claude AI）進行處理"
           }
         }
       }
@@ -384828,277 +384828,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يستخدم Wagey خدمة Mistral AI لإنشاء الردود. ولاستخدام Wagey، سيتم إرسال بعض بياناتك إلى Mistral AI للمعالجة."
+            "value" : "يعمل Wagey بواسطة Claude، وهو نموذج ذكاء اصطناعي من Anthropic. لاستخدام Wagey، سيتم إرسال بعض بياناتك إلى Anthropic للمعالجة."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey използва Mistral AI за генериране на отговори. За да използвате Wagey, част от вашите данни ще бъдат изпратени до Mistral AI за обработка."
+            "value" : "Wagey работи на Claude, модел на AI от Anthropic. За да използвате Wagey, някои от вашите данни ще бъдат изпратени на Anthropic за обработка."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey উত্তর তৈরি করতে Mistral AI ব্যবহার করে। Wagey ব্যবহার করতে, আপনার কিছু ডেটা প্রসেসিংয়ের জন্য Mistral AI-তে পাঠানো হবে।"
+            "value" : "Wagey Claude দ্বারা চালিত, যা Anthropic-এর একটি AI মডেল। Wagey ব্যবহার করতে আপনার কিছু ডেটা প্রক্রিয়াকরণের জন্য Anthropic-এ পাঠানো হবে।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey utilitza Mistral AI per generar respostes. Per utilitzar Wagey, algunes de les teves dades s'enviaran a Mistral AI perquè les processi."
+            "value" : "Wagey funciona amb Claude, un model d'IA d'Anthropic. Per utilitzar Wagey, algunas de les teves dades s'enviaran a Anthropic per al seu processament."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey používá Mistral AI ke generování odpovědí. Aby bylo možné Wagey používat, budou některá vaše data odeslána do Mistral AI ke zpracování."
+            "value" : "Wagey je poháněn Claude, AI modelem od Anthropic. Chcete-li používat Wagey, budou některá vaše data odeslána do Anthropic ke zpracování."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey bruger Mistral AI til at generere svar. For at bruge Wagey sendes nogle af dine data til Mistral AI til behandling."
+            "value" : "Wagey drives af Claude, en AI-model fra Anthropic. For at bruge Wagey vil nogle af dine data blive sendt til Anthropic til behandling."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey nutzt Mistral AI, um Antworten zu erzeugen. Zur Nutzung von Wagey werden einige deiner Daten zur Verarbeitung an Mistral AI gesendet."
+            "value" : "Wagey wird von Claude, einem KI-Modell von Anthropic, betrieben. Um Wagey zu nutzen, werden einige deiner Daten an Anthropic zur Verarbeitung gesendet."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το Wagey χρησιμοποιεί τη Mistral AI για τη δημιουργία απαντήσεων. Για να χρησιμοποιήσετε το Wagey, ορισμένα από τα δεδομένα σας θα σταλούν στη Mistral AI για επεξεργασία."
+            "value" : "Το Wagey λειτουργεί με το Claude, ένα μοντέλο AI της Anthropic. Για να χρησιμοποιήσετε το Wagey, ορισμένα από τα δεδομένα σας θα αποσταλούν στην Anthropic για επεξεργασία."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey uses Mistral AI to generate responses. To use Wagey, some of your data will be sent to Mistral AI for processing."
+            "value" : "Wagey is powered by Claude from Anthropic. To use Wagey, some of your data will be sent to Anthropic, which processes it on behalf of Tidex."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey usa Mistral AI para generar respuestas. Para usar Wagey, algunos de tus datos se enviarán a Mistral AI para su procesamiento."
+            "value" : "Wagey funciona con Claude, un modelo de IA de Anthropic. Para usar Wagey, algunos de tus datos se enviarán a Anthropic para su procesamiento."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey kasutab vastuste loomiseks Mistral AI-d. Wagey kasutamiseks saadetakse osa sinu andmetest töötlemiseks Mistral AI-le."
+            "value" : "Wagey töötab Claude'il, mis on Anthropicu AI-mudel. Wagey kasutamiseks saadetakse osa teie andmetest Anthropicu töötlemiseks."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey از Mistral AI برای تولید پاسخ‌ها استفاده می‌کند. برای استفاده از Wagey، بخشی از داده‌های شما برای پردازش به Mistral AI ارسال می‌شود."
+            "value" : "Wagey توسط Claude، مدل هوش مصنوعی Anthropic، راه‌اندازی شده است. برای استفاده از Wagey، برخی از داده‌های شما به Anthropic برای پردازش ارسال خواهد شد."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey käyttää Mistral AI:ta vastausten luomiseen. Jotta voit käyttää Wageyta, osa tiedoistasi lähetetään Mistral AI:lle käsiteltäväksi."
+            "value" : "Wagey toimii Claude-tekoälymallilla, jonka on kehittänyt Anthropic. Wagey-palvelun käyttämiseksi joitakin tietojasi lähetetään Anthropicille käsiteltäväksi."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gumagamit ang Wagey ng Mistral AI para gumawa ng mga sagot. Para magamit ang Wagey, ipapadala ang ilan sa iyong data sa Mistral AI para sa pagproseso."
+            "value" : "Ang Wagey ay pinapagana ng Claude, isang AI model ng Anthropic. Upang gamitin ang Wagey, ang ilan sa iyong data ay ipapadala sa Anthropic para sa pagproseso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey utilise Mistral AI pour générer des réponses. Pour utiliser Wagey, certaines de vos données seront envoyées à Mistral AI pour traitement."
+            "value" : "Wagey est alimenté par Claude, un modèle IA d'Anthropic. Pour utiliser Wagey, certaines de vos données seront envoyées à Anthropic pour traitement."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey משתמשת ב-Mistral AI ליצירת תשובות. כדי להשתמש ב-Wagey, חלק מהנתונים שלך יישלחו ל-Mistral AI לעיבוד."
+            "value" : "Wagey מופעל על ידי Claude, מודל AI של Anthropic. כדי להשתמש ב-Wagey, חלק מהנתונים שלך יישלח ל-Anthropic לעיבוד."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey जवाब बनाने के लिए Mistral AI का उपयोग करता है। Wagey का उपयोग करने के लिए, आपके कुछ डेटा प्रोसेसिंग हेतु Mistral AI को भेजे जाएंगे।"
+            "value" : "Wagey को Claude द्वारा संचालित किया जाता है, जो Anthropic का एक AI मॉडल है। Wagey का उपयोग करने के लिए, आपके कुछ डेटा को Anthropic को भेजा जाएगा।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey koristi Mistral AI za generiranje odgovora. Za korištenje Wageyja, dio vaših podataka bit će poslan Mistral AI-ju na obradu."
+            "value" : "Wagey je pokrenut s Claude-om, AI modelom kompanije Anthropic. Za korištenje Wageya, neki od vaših podataka bit će poslani Anthropicu na obradu."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A Wagey a Mistral AI-t használja válaszok generálására. A Wagey használatához az Ön egyes adatait feldolgozásra elküldjük a Mistral AI-nak."
+            "value" : "A Wagey-t a Claude hajtja végre, amely az Anthropic AI-modellje. A Wagey használatához néhány adatod el lesz küldve az Anthropic-nak feldolgozásra."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey menggunakan Mistral AI untuk membuat respons. Untuk menggunakan Wagey, sebagian data Anda akan dikirim ke Mistral AI untuk diproses."
+            "value" : "Wagey didukung oleh Claude, model AI dari Anthropic. Untuk menggunakan Wagey, beberapa data Anda akan dikirim ke Anthropic untuk diproses."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey notar Mistral AI til að búa til svör. Til að nota Wagey verða sum gögnin þín send til Mistral AI til vinnslu."
+            "value" : "Wagey er knúið af Claude, AI-líkani frá Anthropic. Til að nota Wagey verður að senda hluta af gögnum þínum til Anthropic til vinnslu."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey usa Mistral AI per generare risposte. Per usare Wagey, alcuni dei tuoi dati saranno inviati a Mistral AI per l'elaborazione."
+            "value" : "Wagey è basato su Claude, un modello AI di Anthropic. Per utilizzare Wagey, alcuni dei tuoi dati verranno inviati ad Anthropic per l'elaborazione."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wageyは応答生成にMistral AIを使用します。Wageyを使うには、あなたのデータの一部が処理のためMistral AIに送信されます。"
+            "value" : "Wagey は Anthropic の AI モデル Claude によって提供されています。Wagey を使用するには、お客様のデータの一部が Anthropic に送信され、処理されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey는 응답 생성에 Mistral AI를 사용합니다. Wagey를 사용하려면 일부 데이터가 처리를 위해 Mistral AI로 전송됩니다."
+            "value" : "Wagey는 Anthropic의 AI 모델인 Claude로 구동됩니다. Wagey를 사용하려면 일부 데이터가 처리를 위해 Anthropic으로 전송됩니다."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Wagey“ naudoja „Mistral AI“ atsakymams generuoti. Norint naudoti „Wagey“, dalis jūsų duomenų bus siunčiama į „Mistral AI“ apdoroti."
+            "value" : "„Wagey“ naudoja „Claude“, „Anthropic“ AI modelį, atsakymams generuoti. Norint naudoti „Wagey“, dalis jūsų duomenų bus siunčiama į „Anthropic“ apdoroti."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey izmanto Mistral AI atbilžu ģenerēšanai. Lai lietotu Wagey, daļa jūsu datu tiks nosūtīta uz Mistral AI apstrādei."
+            "value" : "Wagey darbojas, izmantojot Claude, Anthropic izstrādātu AI modeli. Lai izmantotu Wagey, daži jūsu dati tiks nosūtīti uz Anthropic apstrādei."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey bruker Mistral AI for å generere svar. For å bruke Wagey blir noen av dataene dine sendt til Mistral AI for behandling."
+            "value" : "Wagey drives av Claude fra Anthropic. For å bruke Wagey blir noen av dataene dine sendt til Anthropic, som behandler dem på vegne av Tidex."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey gebruikt Mistral AI om antwoorden te genereren. Om Wagey te gebruiken, worden sommige van je gegevens naar Mistral AI gestuurd voor verwerking."
+            "value" : "Wagey wordt aangestuurd door Claude, een AI-model van Anthropic. Om Wagey te gebruiken, worden enkele van uw gegevens naar Anthropic verzonden voor verwerking."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey bruker Mistral AI for å generere svar. For å bruke Wagey blir nokre av dataa dine sende til Mistral AI for behandling."
+            "value" : "Wagey drives av Claude, ein AI-modell frå Anthropic. For å bruke Wagey vil nokre av dataa dine bli sendt til Anthropic for behandling."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey używa Mistral AI do generowania odpowiedzi. Aby korzystać z Wagey, część Twoich danych zostanie wysłana do Mistral AI w celu przetwarzania."
+            "value" : "Wagey jest wspierana przez Claude, model AI firmy Anthropic. Aby korzystać z Wagey, niektóre Twoje dane będą wysyłane do Anthropic w celu przetworzenia."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Wagey usa o Mistral AI para gerar respostas. Para usar o Wagey, alguns dos seus dados serão enviados ao Mistral AI para processamento."
+            "value" : "Wagey é movido por Claude, um modelo de IA do Anthropic. Para usar o Wagey, alguns de seus dados serão enviados ao Anthropic para processamento."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey folosește Mistral AI pentru a genera răspunsuri. Pentru a folosi Wagey, unele dintre datele tale vor fi trimise către Mistral AI pentru procesare."
+            "value" : "Wagey funcționează pe baza Claude, un model AI de la Anthropic. Pentru a utiliza Wagey, unele dintre datele tale vor fi trimise la Anthropic pentru procesare."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey использует Mistral AI для генерации ответов. Чтобы использовать Wagey, часть ваших данных будет отправлена в Mistral AI для обработки."
+            "value" : "Wagey работает на Claude, модели ИИ от Anthropic. Для использования Wagey некоторые ваши данные будут отправлены в Anthropic для обработки."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey používa Mistral AI na generovanie odpovedí. Na používanie aplikácie Wagey budú niektoré vaše údaje odoslané do Mistral AI na spracovanie."
+            "value" : "Wagey je poháňaný Claude, AI modelom od Anthropic. Aby ste mohli používať Wagey, niektoré vaše údaje budú poslané do Anthropic na spracovanie."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey uporablja Mistral AI za ustvarjanje odgovorov. Za uporabo Wagey bodo nekateri vaši podatki poslani podjetju Mistral AI v obdelavo."
+            "value" : "Wagey poganja Claude, model umetne inteligence podjetja Anthropic. Za uporabo Wageyja bodo nekateri vaši podatki poslani podjetju Anthropic v obdelavo."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey koristi Mistral AI za generisanje odgovora. Da biste koristili Wagey, neki vaši podaci biće poslati kompaniji Mistral AI radi obrade."
+            "value" : "Wagey je pokrenut od strane Claude-a, AI modela kompanije Anthropic. Da biste koristili Wagey, neki od vaših podataka biće poslati Anthropic-u na obradu."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey använder Mistral AI för att skapa svar. För att använda Wagey skickas en del av dina data till Mistral AI för behandling."
+            "value" : "Wagey drivs av Claude, en AI-modell från Anthropic. För att använda Wagey kommer en del av dina data att skickas till Anthropic för bearbetning."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey hutumia Mistral AI kutoa majibu. Ili kutumia Wagey, baadhi ya data yako itatumwa kwa Mistral AI ili ichakatwe."
+            "value" : "Wagey inayumbishwa na Claude, mfano wa AI kutoka Anthropic. Ili kutumia Wagey, baadhi ya data yako itatolewa kwa Anthropic kwa ajili ya uchakataji."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey பதில்களை உருவாக்க Mistral AI-ஐ பயன்படுத்துகிறது. Wagey-ஐ பயன்படுத்த, உங்கள் சில தரவு செயலாக்கத்திற்காக Mistral AI-க்கு அனுப்பப்படும்."
+            "value" : "Wagey ஆனது Claude மூலம் இயங்குகிறது, இது Anthropic இன் AI மாதிரி. Wagey ஐ பயன்படுத்த, உங்கள் சில தரவு செயல்படுத்துவதற்காக Anthropic க்கு அனுப்பப்படும்."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey ใช้ Mistral AI เพื่อสร้างคำตอบ หากต้องการใช้ Wagey ข้อมูลบางส่วนของคุณจะถูกส่งไปยัง Mistral AI เพื่อประมวลผล"
+            "value" : "Wagey ขับเคลื่อนโดย Claude ซึ่งเป็นโมเดล AI จาก Anthropic เพื่อใช้ Wagey ข้อมูลบางส่วนของคุณจะถูกส่งไปยัง Anthropic เพื่อการประมวลผล"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey, yanıt oluşturmak için Mistral AI kullanır. Wagey'yi kullanmak için verilerinizin bir kısmı işlenmek üzere Mistral AI'ya gönderilir."
+            "value" : "Wagey, Anthropic tarafından geliştirilen Claude adlı bir yapay zeka modeli tarafından desteklenmektedir. Wagey'i kullanmak için verilerinizin bir kısmı Anthropic'e işlenmek üzere gönderilecektir."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey використовує Mistral AI для створення відповідей. Щоб користуватися Wagey, частину ваших даних буде надіслано до Mistral AI для обробки."
+            "value" : "Wagey працює на базі Claude, моделі AI від Anthropic. Щоб користуватися Wagey, деякі ваші дані будуть надіслані до Anthropic для обробки."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey جوابات بنانے کے لیے Mistral AI استعمال کرتا ہے۔ Wagey استعمال کرنے کے لیے، آپ کا کچھ ڈیٹا پروسیسنگ کے لیے Mistral AI کو بھیجا جائے گا۔"
+            "value" : "Wagey کو Claude نے طاقت دی ہے، جو Anthropic کا ایک AI ماڈل ہے۔ Wagey استعمال کرنے کے لیے، آپ کا کچھ ڈیٹا Anthropic کو پروسیسنگ کے لیے بھیجا جائے گا۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey dùng Mistral AI để tạo phản hồi. Để dùng Wagey, một số dữ liệu của bạn sẽ được gửi đến Mistral AI để xử lý."
+            "value" : "Wagey được cung cấp bởi Claude, một mô hình AI của Anthropic. Để sử dụng Wagey, một số dữ liệu của bạn sẽ được gửi đến Anthropic để xử lý."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey 使用 Mistral AI 生成回复。要使用 Wagey，您的部分数据将被发送给 Mistral AI 处理。"
+            "value" : "Wagey由Anthropic的AI模型Claude驱动。要使用Wagey，您的部分数据将被发送到Anthropic进行处理。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey 使用 Mistral AI 產生回覆。若要使用 Wagey，您的部分資料將傳送給 Mistral AI 處理。"
+            "value" : "Wagey 由 Anthropic 的 AI 模型 Claude 驅動。若要使用 Wagey，您的部分數據將被發送至 Anthropic 進行處理。"
           }
         }
       }
@@ -385390,277 +385390,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سياسة خصوصية Mistral AI"
+            "value" : "سياسة خصوصية Anthropic"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Политика за поверителност на Mistral AI"
+            "value" : "Политика за поверителност на Anthropic"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI গোপনীয়তা নীতি"
+            "value" : "Anthropic-এর গোপনীয়তা নীতি"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Política de privadesa de Mistral AI"
+            "value" : "Política de privacitat d'Anthropic"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zásady ochrany soukromí Mistral AI"
+            "value" : "Prohlášení společnosti Anthropic o ochraně osobních údajů"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI's privatlivspolitik"
+            "value" : "Anthropics privatlivspolitik"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Datenschutzerklärung von Mistral AI"
+            "value" : "Anthropics Datenschutzrichtlinie"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Πολιτική Απορρήτου της Mistral AI"
+            "value" : "Πολιτική απορρήτου της Anthropic"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI Privacy Policy"
+            "value" : "Anthropic Privacy Policy"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Política de privacidad de Mistral AI"
+            "value" : "Política de privacidad de Anthropic"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI privaatsuspoliitika"
+            "value" : "Anthropicu privaatsuspoliitika"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سیاست حفظ حریم خصوصی Mistral AI"
+            "value" : "سیاست حریم‌خصوصی Anthropic"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI:n tietosuojakäytäntö"
+            "value" : "Anthropicin tietosuojakäytäntö"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Patakaran sa Privacy ng Mistral AI"
+            "value" : "Ang Privacy Policy ng Anthropic"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Politique de confidentialité de Mistral AI"
+            "value" : "Politique de confidentialité d'Anthropic"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "מדיניות הפרטיות של Mistral AI"
+            "value" : "מדיניות הפרטיות של Anthropic"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI गोपनीयता नीति"
+            "value" : "Anthropic की गोपनीयता नीति"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pravila privatnosti Mistral AI-ja"
+            "value" : "Anthropicova Politika privatnosti"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI adatvédelmi szabályzat"
+            "value" : "Az Anthropic adatvédelmi irányelvei"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kebijakan Privasi Mistral AI"
+            "value" : "Kebijakan Privasi Anthropic"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Persónuverndarstefna Mistral AI"
+            "value" : "Persónuverndstefna Anthropic"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Informativa sulla privacy di Mistral AI"
+            "value" : "Informativa sulla privacy di Anthropic"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI プライバシーポリシー"
+            "value" : "Anthropic のプライバシーポリシー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI 개인정보 처리방침"
+            "value" : "Anthropic의 개인정보처리방침"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Mistral AI“ privatumo politika"
+            "value" : "„Anthropic“ privatumo politika"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI privātuma politika"
+            "value" : "Anthropic privātuma politika"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI personvernerklæring"
+            "value" : "Anthropic personvernerklæring"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacybeleid van Mistral AI"
+            "value" : "Anthropics privacybeleid"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI personvernerklæring"
+            "value" : "Anthropics personvernerklæring"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Polityka prywatności Mistral AI"
+            "value" : "Polityka prywatności Anthropic"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Política de Privacidade do Mistral AI"
+            "value" : "Política de Privacidade do Anthropic"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Politica de confidențialitate Mistral AI"
+            "value" : "Politica de confidențialitate a Anthropic"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Политика конфиденциальности Mistral AI"
+            "value" : "Политика конфиденциальности Anthropic"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zásady ochrany súkromia Mistral AI"
+            "value" : "Vyhlásenie Anthropic o ochrane osobných údajov"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pravilnik o zasebnosti Mistral AI"
+            "value" : "Politika zasebnosti podjetja Anthropic"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Politika privatnosti kompanije Mistral AI"
+            "value" : "Anthropic-ova politika privatnosti"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AIs integritetspolicy"
+            "value" : "Anthropics integritetspolicy"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sera ya Faragha ya Mistral AI"
+            "value" : "Sera ya Faragha ya Anthropic"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI தனியுரிமைக் கொள்கை"
+            "value" : "Anthropic இன் தனியுரிமை கொள்கை"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "นโยบายความเป็นส่วนตัวของ Mistral AI"
+            "value" : "นโยบายความเป็นส่วนตัวของ Anthropic"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI Gizlilik Politikası"
+            "value" : "Anthropic'in Gizlilik Politikası"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Політика конфіденційності Mistral AI"
+            "value" : "Політика конфіденційності Anthropic"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI کی رازداری کی پالیسی"
+            "value" : "Anthropic کی رازداری کی پالیسی"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chính sách quyền riêng tư của Mistral AI"
+            "value" : "Chính sách bảo mật của Anthropic"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI 隐私政策"
+            "value" : "Anthropic的隐私政策"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mistral AI 隱私權政策"
+            "value" : "Anthropic 隱私政策"
           }
         }
       }
@@ -385671,277 +385671,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تُرسل هذه البيانات إلى Mistral AI، وهي جهة خارجية مزودة لخدمات الذكاء الاصطناعي، لإنشاء الردود. وتوضح وثائق واجهة API المدفوعة الحالية لدى Mistral أن مدخلات ومخرجات واجهة API ضمن خطة Scale لا تُستخدم لتدريب النماذج. كما تنص سياسة الخصوصية الحالية لدى Mistral على أن مدخلات ومخرجات واجهة API القياسية قد تُحتفظ بها لمراقبة إساءة الاستخدام لمدة تصل إلى 30 يومًا متتابعًا، ما لم يتم تفعيل عدم الاحتفاظ بالبيانات."
+            "value" : "يتم إرسال هذه البيانات إلى Anthropic، وهي جهة خارجية لتوفير خدمات الذكاء الاصطناعي مقرها في الولايات المتحدة. تعالج Anthropic هذه البيانات لتوليد الردود ولا تستخدمها لتدريب نماذج الذكاء الاصطناعي."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Тези данни се изпращат до Mistral AI, външен доставчик на ИИ, за генериране на отговори. В настоящата платена API документация на Mistral се казва, че входовете и изходите на API в плана Scale не се използват за обучение на модели. В настоящата политика за поверителност на Mistral се казва, че стандартните входове и изходи на API може да се съхраняват за наблюдение на злоупотреби до 30 последователни дни, освен ако не е активирано zero-data-retention."
+            "value" : "Тези данни се изпращат на Anthropic, доставчик на услуги за AI от трета страна, базиран в САЩ. Anthropic обработва тези данни, за да генерира отговори, и не ги използва за обучение на модели на AI."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "উত্তর তৈরি করতে এই ডেটা তৃতীয় পক্ষের AI প্রদানকারী Mistral AI-তে পাঠানো হয়। Mistral-এর বর্তমান পেইড API ডকুমেন্টেশন অনুযায়ী, Scale প্ল্যানের API ইনপুট ও আউটপুট মডেল প্রশিক্ষণে ব্যবহার করা হয় না। Mistral-এর বর্তমান গোপনীয়তা নীতি অনুযায়ী, zero-data-retention সক্রিয় না থাকলে অপব্যবহার পর্যবেক্ষণের জন্য standard API ইনপুট ও আউটপুট সর্বোচ্চ 30 rolling দিন পর্যন্ত সংরক্ষণ করা হতে পারে।"
+            "value" : "এই ডেটা Anthropic-এ পাঠানো হয়, যা মার্কিন যুক্তরাষ্ট্রে অবস্থিত একটি তৃতীয় পক্ষের AI সেবা প্রদানকারী। Anthropic এই ডেটা প্রক্রিয়া করে প্রতিক্রিয়া তৈরি করে এবং এটি AI মডেল প্রশিক্ষণের জন্য ব্যবহার করে না।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aquestes dades s'envien a Mistral AI, un proveïdor d'IA extern, per generar respostes. La documentació actual de l'API de pagament de Mistral diu que les entrades i sortides de l'API del pla Scale no s'utilitzen per entrenar models. La política de privadesa actual de Mistral diu que les entrades i sortides de l'API estàndard es poden conservar per al control d'abusos fins a 30 dies consecutius, tret que estigui activada la retenció zero de dades."
+            "value" : "Aquestes dades s'envien a Anthropic, un proveïdor de serveis d'IA tercers amb seu als Estats Units. Anthropic processa aquestes dades per generar respostes i no les utilitza per entrenar models d'IA."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tato data se odesílají do Mistral AI, externímu poskytovateli AI, za účelem generování odpovědí. Aktuální dokumentace placeného API Mistral uvádí, že vstupy a výstupy API tarifu Scale se nepoužívají k trénování modelů. Aktuální zásady ochrany soukromí Mistral uvádějí, že standardní vstupy a výstupy API mohou být uchovávány kvůli monitorování zneužití po dobu až 30 průběžných dnů, pokud není povoleno zero-data-retention."
+            "value" : "Tato data jsou odeslána společnosti Anthropic, poskytovateli služeb AI třetí strany se sídlem ve Spojených státech. Anthropic tato data zpracovává pro generování odpovědí a nepoužívá je k trénování AI modelů."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disse data sendes til Mistral AI, en tredjeparts AI-udbyder, for at generere svar. Mistrals nuværende dokumentation for betalt API siger, at input og output i Scale-planen ikke bruges til træning af modeller. Mistrals nuværende privatlivspolitik siger, at standard API-input og -output kan opbevares i op til 30 løbende dage til overvågning af misbrug, medmindre zero-data-retention er aktiveret."
+            "value" : "Disse data sendes til Anthropic, en tredjepartsaileverandør baseret i USA. Anthropic behandler disse data for at generere svar og bruger dem ikke til at træne AI-modeller."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Daten werden an Mistral AI, einen externen KI-Anbieter, gesendet, um Antworten zu erzeugen. Laut der aktuellen Dokumentation der kostenpflichtigen API von Mistral werden API-Ein- und -Ausgaben im Scale-Tarif nicht zum Trainieren von Modellen verwendet. Laut der aktuellen Datenschutzerklärung von Mistral können Standard-API-Ein- und -Ausgaben zur Missbrauchsüberwachung bis zu 30 fortlaufende Tage gespeichert werden, sofern Zero-Data-Retention nicht aktiviert ist."
+            "value" : "Diese Daten werden an Anthropic, einen Drittanbieter von KI-Diensten mit Sitz in den USA, gesendet. Anthropic verarbeitet diese Daten, um Antworten zu generieren, und nutzt sie nicht zum Trainieren von KI-Modellen."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Αυτά τα δεδομένα αποστέλλονται στη Mistral AI, έναν τρίτο πάροχο AI, για τη δημιουργία απαντήσεων. Η τρέχουσα τεκμηρίωση του επί πληρωμή API της Mistral αναφέρει ότι οι είσοδοι και οι έξοδοι του API του προγράμματος Scale δεν χρησιμοποιούνται για εκπαίδευση μοντέλων. Η τρέχουσα πολιτική απορρήτου της Mistral αναφέρει ότι οι τυπικές είσοδοι και έξοδοι του API ενδέχεται να διατηρούνται για παρακολούθηση κατάχρησης για έως και 30 κυλιόμενες ημέρες, εκτός αν είναι ενεργοποιημένη η μηδενική διατήρηση δεδομένων."
+            "value" : "Αυτά τα δεδομένα αποστέλλονται στην Anthropic, έναν τρίτο πάροχο υπηρεσιών AI με έδρα τις Ηνωμένες Πολιτείες. Η Anthropic επεξεργάζεται αυτά τα δεδομένα για να δημιουργήσει απαντήσεις και δεν τα χρησιμοποιεί για την εκπαίδευση μοντέλων AI."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This data is sent to Mistral AI, a third-party AI provider, to generate responses. Mistral's current paid API documentation says Scale plan API inputs and outputs are not used to train models. Mistral's current privacy policy says standard API inputs and outputs may be retained for abuse monitoring for up to 30 rolling days unless zero-data-retention is enabled."
+            "value" : "This data is sent to Anthropic, a third-party AI provider based in the United States. For Wagey, Anthropic acts as a processor on behalf of Tidex to generate responses and does not use this data to train generative models unless Tidex explicitly opts in."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estos datos se envían a Mistral AI, un proveedor externo de IA, para generar respuestas. La documentación actual de la API de pago de Mistral dice que las entradas y salidas de la API del plan Scale no se usan para entrenar modelos. La política de privacidad actual de Mistral dice que las entradas y salidas de la API estándar pueden conservarse para supervisar abusos durante hasta 30 días consecutivos, a menos que se active zero-data-retention."
+            "value" : "Estos datos se envían a Anthropic, un proveedor de servicios de IA de terceros con sede en Estados Unidos. Anthropic procesa estos datos para generar respuestas y no los utiliza para entrenar modelos de IA."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Need andmed saadetakse vastuste loomiseks kolmandast osapoolest AI-teenusepakkujale Mistral AI-le. Mistrali praegune tasulise API dokumentatsioon ütleb, et Scale-plaani API sisendeid ja väljundeid ei kasutata mudelite treenimiseks. Mistrali praegune privaatsuspoliitika ütleb, et tavalise API sisendeid ja väljundeid võidakse kuritarvituste jälgimiseks säilitada kuni 30 järjestikust päeva, kui zero-data-retention pole lubatud."
+            "value" : "Need andmed saadetakse Anthropicu, USA-s asuva kolmanda osapoole AI-teenuse pakkujale. Anthropic töötleb neid andmeid vastuste genereerimiseks ja ei kasuta neid AI-mudelite koolitamiseks."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "این داده‌ها برای تولید پاسخ‌ها به Mistral AI، یک ارائه‌دهنده هوش مصنوعی شخص ثالث، ارسال می‌شوند. مستندات فعلی API پولی Mistral می‌گوید ورودی‌ها و خروجی‌های API طرح Scale برای آموزش مدل‌ها استفاده نمی‌شوند. سیاست حفظ حریم خصوصی فعلی Mistral می‌گوید ورودی‌ها و خروجی‌های API استاندارد ممکن است برای پایش سوءاستفاده تا 30 روز متوالی نگه‌داری شوند، مگر اینکه zero-data-retention فعال باشد."
+            "value" : "این داده‌ها به Anthropic، یک ارائه‌دهنده سرویس هوش مصنوعی شخص ثالث مستقر در ایالات متحده، ارسال می‌شوند. Anthropic این داده‌ها را برای تولید پاسخ پردازش می‌کند و از آن‌ها برای آموزش مدل‌های هوش مصنوعی استفاده نمی‌کند."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nämä tiedot lähetetään Mistral AI:lle, kolmannen osapuolen tekoälypalveluntarjoajalle, vastausten luomista varten. Mistralin nykyisten maksullisen API:n dokumenttien mukaan Scale-paketin API-syötteitä ja -vastauksia ei käytetä mallien kouluttamiseen. Mistralin nykyisen tietosuojakäytännön mukaan tavallisen API:n syötteitä ja vastauksia voidaan säilyttää väärinkäytösten valvontaa varten enintään 30 liukuvan päivän ajan, ellei zero-data-retention ole käytössä."
+            "value" : "Nämä tiedot lähetetään Anthropicille, kolmannen osapuolen AI-palveluntarjoajalle, joka sijaitsee Yhdysvalloissa. Anthropic käsittelee näitä tietoja vastausten luomiseksi eikä käytä niitä tekoälymallien kouluttamiseen."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ipinapadala ang data na ito sa Mistral AI, isang third-party na AI provider, para gumawa ng mga sagot. Ayon sa kasalukuyang bayad na API documentation ng Mistral, ang API inputs at outputs ng Scale plan ay hindi ginagamit sa pag-train ng mga modelo. Ayon sa kasalukuyang privacy policy ng Mistral, maaaring itago ang standard API inputs at outputs nang hanggang 30 rolling days para sa pagmamanman ng pang-aabuso maliban kung naka-enable ang zero-data-retention."
+            "value" : "Ang data na ito ay ipinapadala sa Anthropic, isang third-party AI service provider na nakabase sa United States. Ginagamit ng Anthropic ang data na ito upang lumikha ng mga tugon at hindi ito ginagamit upang pagsanayin ang mga AI model."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ces données sont envoyées à Mistral AI, un fournisseur d'IA tiers, pour générer des réponses. La documentation actuelle de l'API payante de Mistral indique que les entrées et sorties de l'API du forfait Scale ne sont pas utilisées pour entraîner les modèles. La politique de confidentialité actuelle de Mistral indique que les entrées et sorties de l'API standard peuvent être conservées jusqu'à 30 jours glissants pour la surveillance des abus, sauf si la conservation zéro donnée est activée."
+            "value" : "Ces données sont envoyées à Anthropic, un fournisseur de services IA tiers basé aux États-Unis. Anthropic traite ces données pour générer des réponses et ne les utilise pas pour entraîner des modèles IA."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "הנתונים האלה נשלחים ל-Mistral AI, ספקית AI חיצונית, כדי ליצור תשובות. לפי תיעוד ה-API בתשלום הנוכחי של Mistral, קלט ופלט של API בתוכנית Scale אינם משמשים לאימון מודלים. לפי מדיניות הפרטיות הנוכחית של Mistral, קלט ופלט של API רגיל עשויים להישמר לצורך ניטור שימוש לרעה עד 30 ימים מתגלגלים, אלא אם הופעל zero-data-retention."
+            "value" : "נתונים אלה נשלחים ל-Anthropic, ספק שירות AI של צד שלישי שמבוסס בארצות הברית. Anthropic מעבד נתונים אלה כדי ליצור תגובות ואינו משתמש בהם לאימון מודלי AI."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "जवाब बनाने के लिए यह डेटा Mistral AI, एक तृतीय-पक्ष AI प्रदाता, को भेजा जाता है। Mistral के मौजूदा पेड API दस्तावेज़ कहते हैं कि Scale प्लान के API इनपुट और आउटपुट मॉडल को प्रशिक्षित करने के लिए उपयोग नहीं किए जाते। Mistral की मौजूदा गोपनीयता नीति कहती है कि standard API इनपुट और आउटपुट को दुरुपयोग निगरानी के लिए 30 रोलिंग दिनों तक रखा जा सकता है, जब तक zero-data-retention सक्षम न हो।"
+            "value" : "यह डेटा Anthropic को भेजा जाता है, जो संयुक्त राज्य अमेरिका में स्थित एक तृतीय-पक्ष AI सेवा प्रदाता है। Anthropic इस डेटा को प्रतिक्रियाएं उत्पन्न करने के लिए संसाधित करता है और इसे AI मॉडल को प्रशिक्षित करने के लिए उपयोग नहीं करता है।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ovi se podaci šalju Mistral AI-ju, vanjskom pružatelju AI usluga, radi generiranja odgovora. Trenutačna dokumentacija Mistralova plaćenog API-ja navodi da se ulazni i izlazni podaci API-ja u paketu Scale ne koriste za treniranje modela. Trenutačna Mistralova pravila privatnosti navode da se standardni ulazni i izlazni podaci API-ja mogu zadržati radi praćenja zlouporabe do 30 uzastopnih dana, osim ako je omogućen zero-data-retention."
+            "value" : "Ti se podaci šalju Anthropicu, davatelju AI usluga trećih strana sa sjedištem u Sjedinjenim Državama. Anthropic obrađuje te podatke kako bi generirao odgovore i ne koristi ih za obuku AI modela."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ezeket az adatokat a Mistral AI-nak, egy külső AI-szolgáltatónak küldjük válaszok generálásához. A Mistral jelenlegi fizetős API-dokumentációja szerint a Scale csomag API-bemeneteit és -kimeneteit nem használják modellek tanítására. A Mistral jelenlegi adatvédelmi szabályzata szerint a standard API-bemeneteket és -kimeneteket visszaélésfigyelés céljából legfeljebb 30 gördülő napig megőrizhetik, hacsak nincs engedélyezve a zero-data-retention."
+            "value" : "Ezeket az adatokat az Anthropic-nak küldjük el, amely egy Egyesült Államokban működő harmadik fél AI-szolgáltatást nyújtó vállalat. Az Anthropic ezeket az adatokat válaszok generálására dolgozza fel, és nem használja őket AI-modellek betanítására."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data ini dikirim ke Mistral AI, penyedia AI pihak ketiga, untuk membuat respons. Dokumentasi API berbayar Mistral saat ini menyatakan input dan output API paket Scale tidak digunakan untuk melatih model. Kebijakan privasi Mistral saat ini menyatakan input dan output API standar dapat disimpan untuk pemantauan penyalahgunaan hingga 30 hari bergulir kecuali zero-data-retention diaktifkan."
+            "value" : "Data ini dikirim ke Anthropic, penyedia layanan AI pihak ketiga yang berbasis di Amerika Serikat. Anthropic memproses data ini untuk menghasilkan respons dan tidak menggunakannya untuk melatih model AI."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Þessi gögn eru send til Mistral AI, þriðja aðila í gervigreindarþjónustu, til að búa til svör. Núverandi skjöl Mistral fyrir greitt API segja að inntök og úttök í Scale-áætluninni séu ekki notuð til að þjálfa líkön. Núverandi persónuverndarstefna Mistral segir að venjuleg API-inntök og -úttök megi vera varðveitt í allt að 30 samfellda daga til vöktunar á misnotkun nema zero-data-retention sé virkt."
+            "value" : "Þessi gögn eru send til Anthropic, þriðju aðila AI-þjónustuveitanda með aðsetur í Bandaríkjunum. Anthropic vinnur þessi gögn til að búa til svör og notar þau ekki til að þjálfa AI-líkön."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questi dati vengono inviati a Mistral AI, un fornitore di IA terzo, per generare risposte. L'attuale documentazione dell'API a pagamento di Mistral afferma che input e output dell'API del piano Scale non vengono usati per addestrare i modelli. L'attuale informativa sulla privacy di Mistral afferma che input e output standard dell'API possono essere conservati per il monitoraggio degli abusi fino a 30 giorni consecutivi, a meno che non sia abilitata la zero-data-retention."
+            "value" : "Questi dati vengono inviati ad Anthropic, un fornitore di servizi AI di terze parti con sede negli Stati Uniti. Anthropic elabora questi dati per generare risposte e non li utilizza per addestrare modelli di AI."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このデータは、応答を生成するために、第三者のAI提供者であるMistral AIに送信されます。Mistralの現在の有料APIドキュメントでは、ScaleプランのAPI入力と出力はモデルの学習に使用されないとされています。Mistralの現在のプライバシーポリシーでは、zero-data-retentionが有効でない限り、標準APIの入力と出力は不正利用の監視のため最長30日間保持される場合があるとされています。"
+            "value" : "このデータは、米国に拠点を置くサードパーティ AI サービスプロバイダー Anthropic に送信されます。Anthropic はこのデータを処理して応答を生成し、AI モデルのトレーニングには使用しません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 데이터는 응답을 생성하기 위해 제3자 AI 제공업체인 Mistral AI로 전송됩니다. Mistral의 현재 유료 API 문서에 따르면 Scale 플랜 API 입력과 출력은 모델 학습에 사용되지 않습니다. Mistral의 현재 개인정보 처리방침에 따르면 zero-data-retention이 활성화되지 않으면 표준 API 입력과 출력은 악용 모니터링을 위해 최대 30일간 보관될 수 있습니다."
+            "value" : "이 데이터는 미국을 기반으로 하는 제3자 AI 서비스 제공업체인 Anthropic으로 전송됩니다. Anthropic은 이 데이터를 처리하여 응답을 생성하며 AI 모델 학습에 사용하지 않습니다."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Šie duomenys siunčiami į „Mistral AI“, trečiosios šalies DI paslaugų teikėją, atsakymams generuoti. Dabartinėje „Mistral“ mokamos API dokumentacijoje teigiama, kad „Scale“ plano API įvestys ir išvestys nenaudojamos modeliams mokyti. Dabartinėje „Mistral“ privatumo politikoje teigiama, kad standartinės API įvestys ir išvestys gali būti saugomos piktnaudžiavimo stebėsenai iki 30 slenkančių dienų, nebent įjungtas zero-data-retention."
+            "value" : "Šie duomenys siunčiami į „Anthropic“, trečiosios šalies DI paslaugų teikėją Jungtinėse Valstijose. „Anthropic“ apdoroja šiuos duomenis atsakymams generuoti ir nenaudoja jų DI modeliams mokyti."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Šie dati tiek nosūtīti uz Mistral AI — trešās puses MI pakalpojumu sniedzēju — lai ģenerētu atbildes. Mistral pašreizējā maksas API dokumentācijā teikts, ka Scale plāna API ievade un izvade netiek izmantota modeļu apmācībai. Mistral pašreizējā privātuma politikā teikts, ka standarta API ievade un izvade var tikt glabāta līdz 30 slīdošām dienām ļaunprātīgas izmantošanas uzraudzībai, ja vien nav iespējota zero-data-retention."
+            "value" : "Šie dati tiek nosūtīti uz Anthropic, trešās puses AI pakalpojumu sniedzēju, kas atrodas Amerikas Savienotajās Valstīs. Anthropic apstrādā šos datus, lai ģenerētu atbildes, un tos neizmanto AI modeļu apmācībai."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disse dataene sendes til Mistral AI, en tredjeparts AI-leverandør, for å generere svar. Mistrals nåværende dokumentasjon for betalt API sier at input og output i Scale-planen ikke brukes til modelltrening. Mistrals nåværende personvernerklæring sier at standard API-input og -output kan lagres i opptil 30 rullerende dager for misbruksovervåking med mindre zero-data-retention er aktivert."
+            "value" : "Disse dataene sendes til Anthropic, en tredjeparts AI-leverandør basert i USA. For Wagey opptrer Anthropic som databehandler på vegne av Tidex for å generere svar, og bruker ikke disse dataene til å trene generative modeller med mindre Tidex uttrykkelig melder seg på det."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze gegevens worden naar Mistral AI, een externe AI-provider, gestuurd om antwoorden te genereren. Volgens Mistrals huidige betaalde API-documentatie worden invoer en uitvoer van de Scale-plannen niet gebruikt om modellen te trainen. Volgens Mistrals huidige privacybeleid kunnen standaard API-invoer en -uitvoer tot 30 doorlopende dagen worden bewaard voor monitoring van misbruik, tenzij zero-data-retention is ingeschakeld."
+            "value" : "Deze gegevens worden verzonden naar Anthropic, een externe AI-serviceprovider gevestigd in de Verenigde Staten. Anthropic verwerkt deze gegevens om antwoorden te genereren en gebruikt deze niet voor het trainen van AI-modellen."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desse dataa blir sende til Mistral AI, ein tredjeparts AI-leverandør, for å generere svar. Mistrals noverande dokumentasjon for betalt API seier at input og output i Scale-planen ikkje blir brukte til modelltrening. Mistrals noverande personvernerklæring seier at standard API-input og -output kan lagrast i opptil 30 rullerande dagar for misbruksovervaking med mindre zero-data-retention er aktivert."
+            "value" : "Desse dataa blir sendt til Anthropic, ein tredjeparts AI-tjenesteleverandør basert i USA. Anthropic behandlar desse dataa for å generere svar og brukar dei ikkje til å treene AI-modellar."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Te dane są wysyłane do Mistral AI, zewnętrznego dostawcy AI, w celu generowania odpowiedzi. Aktualna dokumentacja płatnego API Mistral mówi, że dane wejściowe i wyjściowe API planu Scale nie są używane do trenowania modeli. Aktualna polityka prywatności Mistral mówi, że standardowe dane wejściowe i wyjściowe API mogą być przechowywane do monitorowania nadużyć przez maksymalnie 30 kolejnych dni, chyba że włączono zero-data-retention."
+            "value" : "Te dane są wysyłane do Anthropic, zewnętrznego dostawcy usług AI z siedzibą w Stanach Zjednoczonych. Anthropic przetwarza te dane w celu generowania odpowiedzi i nie wykorzystuje ich do trenowania modeli AI."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esses dados são enviados ao Mistral AI, um provedor terceirizado de IA, para gerar respostas. A documentação atual da API paga da Mistral diz que entradas e saídas da API do plano Scale não são usadas para treinar modelos. A política de privacidade atual da Mistral diz que entradas e saídas padrão da API podem ser retidas para monitoramento de abuso por até 30 dias corridos, a menos que a retenção zero de dados esteja ativada."
+            "value" : "Esses dados são enviados ao Anthropic, um provedor de serviço de IA terceirizado baseado nos Estados Unidos. O Anthropic processa esses dados para gerar respostas e não os usa para treinar modelos de IA."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aceste date sunt trimise către Mistral AI, un furnizor terț de AI, pentru a genera răspunsuri. Documentația actuală a API-ului plătit de la Mistral spune că datele de intrare și ieșire ale API-ului din planul Scale nu sunt folosite pentru antrenarea modelelor. Politica actuală de confidențialitate a Mistral spune că datele standard de intrare și ieșire ale API-ului pot fi păstrate pentru monitorizarea abuzurilor timp de până la 30 de zile consecutive, cu excepția cazului în care este activată zero-data-retention."
+            "value" : "Aceste date sunt trimise la Anthropic, un furnizor de servicii AI terță parte cu sediul în Statele Unite. Anthropic procesează aceste date pentru a genera răspunsuri și nu le folosește pentru a antrena modele AI."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Эти данные отправляются в Mistral AI, стороннему поставщику ИИ, для генерации ответов. В текущей документации Mistral по платному API сказано, что входные и выходные данные API плана Scale не используются для обучения моделей. В текущей политике конфиденциальности Mistral сказано, что входные и выходные данные стандартного API могут храниться для мониторинга злоупотреблений до 30 скользящих дней, если не включено zero-data-retention."
+            "value" : "Эти данные отправляются в Anthropic, поставщика услуг ИИ третьей стороны, базирующегося в США. Anthropic обрабатывает эти данные для создания ответов и не использует их для обучения моделей ИИ."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tieto údaje sa odosielajú do Mistral AI, externého poskytovateľa AI, na generovanie odpovedí. Aktuálna dokumentácia plateného API Mistral uvádza, že vstupy a výstupy API v programe Scale sa nepoužívajú na trénovanie modelov. Aktuálne zásady ochrany súkromia Mistral uvádzajú, že štandardné vstupy a výstupy API môžu byť uchovávané na monitorovanie zneužitia až 30 priebežných dní, pokiaľ nie je povolené zero-data-retention."
+            "value" : "Tieto údaje sú zaslané do Anthropic, poskytovateľa služieb AI tretej strany so sídlom v Spojených štátoch. Anthropic spracováva tieto údaje na generovanie odpovedí a nepoužíva ich na trénovanie AI modelov."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ti podatki se pošljejo podjetju Mistral AI, zunanjemu ponudniku UI, za ustvarjanje odgovorov. Trenutna dokumentacija Mistral za plačljivi API navaja, da se vhodni in izhodni podatki API-ja paketa Scale ne uporabljajo za učenje modelov. Trenutni pravilnik o zasebnosti podjetja Mistral navaja, da se lahko standardni vhodni in izhodni podatki API-ja hranijo za spremljanje zlorab do 30 tekočih dni, razen če je omogočena zero-data-retention."
+            "value" : "Ti podatki se pošljejo podjetju Anthropic, tretjemu ponudniku storitve AI s sedežem v Združenih državah. Anthropic te podatke obdeluje za generiranje odgovorov in jih ne uporablja za usposabljanje modelov umetne inteligence."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ovi podaci se šalju kompaniji Mistral AI, spoljnjem AI provajderu, radi generisanja odgovora. Trenutna dokumentacija kompanije Mistral za plaćeni API navodi da se ulazni i izlazni podaci API-ja u okviru Scale plana ne koriste za obuku modela. Trenutna politika privatnosti kompanije Mistral navodi da standardni ulazni i izlazni podaci API-ja mogu biti zadržani radi praćenja zloupotrebe do 30 uzastopnih dana, osim ako je omogućen zero-data-retention."
+            "value" : "Ti podaci se šalju Anthropic-u, trećoj strani pružaoca AI servisa sa sedištem u Sjedinjenim Američkim Državama. Anthropic obrađuje ove podatke da bi generiusao odgovore i ne koristi ih za obuku AI modela."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dessa data skickas till Mistral AI, en AI-leverantör från tredje part, för att skapa svar. Mistrals nuvarande dokumentation för betalt API säger att in- och utdata i Scale-planen inte används för att träna modeller. Mistrals nuvarande integritetspolicy säger att standard-API:s in- och utdata kan lagras för övervakning av missbruk i upp till 30 rullande dagar om inte zero-data-retention är aktiverat."
+            "value" : "Dessa data skickas till Anthropic, en tredjepartsbaserad AI-tjänsteleverantör i USA. Anthropic behandlar dessa data för att generera svar och använder dem inte för att träna AI-modeller."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data hii hutumwa kwa Mistral AI, mtoa huduma wa AI wa upande wa tatu, ili kutoa majibu. Hati za sasa za API ya kulipia za Mistral zinasema kuwa ingizo na matokeo ya API ya mpango wa Scale hayatumiwi kufundisha miundo. Sera ya sasa ya faragha ya Mistral inasema kuwa ingizo na matokeo ya kawaida ya API yanaweza kuhifadhiwa kwa ufuatiliaji wa matumizi mabaya kwa hadi siku 30 zinazozunguka isipokuwa zero-data-retention imewashwa."
+            "value" : "Data hii inatumwa kwa Anthropic, mtoa huduma wa AI wa tatu kulingana na Marekani. Anthropic inachakaza data hii ili kutengeneza majibu na haitumii kufunza mifano ya AI."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "பதில்களை உருவாக்க இந்த தரவு, மூன்றாம் தரப்பு AI வழங்குநரான Mistral AI-க்கு அனுப்பப்படுகிறது. Mistral-இன் தற்போதைய கட்டண API ஆவணம், Scale திட்ட API உள்ளீடுகளும் வெளியீடுகளும் மாதிரிகளைப் பயிற்றுவிக்க பயன்படுத்தப்படமாட்டாது என்கிறது. Mistral-இன் தற்போதைய தனியுரிமைக் கொள்கை, zero-data-retention இயக்கப்படாவிட்டால், தவறான பயன்பாட்டைக் கண்காணிக்க வழக்கமான API உள்ளீடுகள் மற்றும் வெளியீடுகள் 30 சுழலும் நாட்கள் வரை வைத்திருக்கப்படலாம் என்கிறது."
+            "value" : "இந்த தரவு Anthropic க்கு அனுப்பப்படுகிறது, இது USA வைத்திருக்கும் மூன்றாம் தரப்பு AI சேவை வழங்குநர். Anthropic இந்த தரவைச் செயல்படுத்தி பதிலளிக்கும் பொருட்டு பயன்படுத்துகிறது மற்றும் AI மாதிரிகளை பயிற்றுவிப்பதற்கு அதைப் பயன்படுத்துவதில்லை."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ข้อมูลนี้จะถูกส่งไปยัง Mistral AI ซึ่งเป็นผู้ให้บริการ AI บุคคลที่สาม เพื่อสร้างคำตอบ เอกสาร API แบบชำระเงินปัจจุบันของ Mistral ระบุว่าอินพุตและเอาต์พุตของ API ในแผน Scale จะไม่ถูกนำไปใช้ฝึกโมเดล นโยบายความเป็นส่วนตัวปัจจุบันของ Mistral ระบุว่าอินพุตและเอาต์พุตของ API มาตรฐานอาจถูกเก็บไว้เพื่อตรวจสอบการใช้งานในทางที่ผิดได้นานสูงสุด 30 วันแบบต่อเนื่อง เว้นแต่จะเปิดใช้ zero-data-retention"
+            "value" : "ข้อมูลนี้ถูกส่งไปยัง Anthropic ซึ่งเป็นผู้ให้บริการ AI บุคคลที่สามที่ตั้งอยู่ในสหรัฐอเมริกา Anthropic ประมวลผลข้อมูลนี้เพื่อสร้างการตอบกลับและไม่ใช้ข้อมูลนี้เพื่อฝึกโมเดล AI"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu veriler, yanıt oluşturmak için üçüncü taraf bir yapay zeka sağlayıcısı olan Mistral AI'ya gönderilir. Mistral'ın güncel ücretli API belgelerine göre, Scale planı API girdileri ve çıktıları modelleri eğitmek için kullanılmaz. Mistral'ın güncel gizlilik politikasına göre, sıfır veri saklama etkin değilse standart API girdileri ve çıktıları kötüye kullanım izleme için 30 güne kadar saklanabilir."
+            "value" : "Bu veriler, Amerika Birleşik Devletleri'nde bulunan üçüncü taraf bir yapay zeka hizmeti sağlayıcısı olan Anthropic'e gönderilir. Anthropic bu verileri yanıtlar oluşturmak için işler ve bunları yapay zeka modellerini eğitmek için kullanmaz."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ці дані надсилаються до Mistral AI, стороннього постачальника ШІ, для створення відповідей. У чинній документації платного API Mistral зазначено, що вхідні й вихідні дані API плану Scale не використовуються для навчання моделей. У чинній політиці конфіденційності Mistral зазначено, що вхідні й вихідні дані стандартного API можуть зберігатися для моніторингу зловживань до 30 днів поспіль, якщо не ввімкнено zero-data-retention."
+            "value" : "Ці дані надсилаються до Anthropic, постачальника AI-послуг третьої сторони, розташованого в США. Anthropic обробляє ці дані для генерування відповідей і не використовує їх для навчання моделей AI."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "یہ ڈیٹا جوابات بنانے کے لیے Mistral AI، ایک فریقِ ثالث AI فراہم کنندہ، کو بھیجا جاتا ہے۔ Mistral کی موجودہ paid API دستاویزات کے مطابق Scale plan کے API inputs اور outputs ماڈلز کی تربیت کے لیے استعمال نہیں ہوتے۔ Mistral کی موجودہ رازداری پالیسی کے مطابق standard API inputs اور outputs abuse monitoring کے لیے 30 rolling دنوں تک محفوظ رکھے جا سکتے ہیں، جب تک zero-data-retention فعال نہ ہو۔"
+            "value" : "یہ ڈیٹا Anthropic کو بھیجا جاتا ہے، جو ریاستہائے متحدہ میں مقیم ایک تیسری فریق AI سروس فراہم کنندہ ہے۔ Anthropic اس ڈیٹا کو جوابات تیار کرنے کے لیے پروسیس کرتا ہے اور اسے AI ماڈلز کو تربیت دینے کے لیے استعمال نہیں کرتا۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dữ liệu này được gửi đến Mistral AI, một nhà cung cấp AI bên thứ ba, để tạo phản hồi. Tài liệu API trả phí hiện tại của Mistral cho biết dữ liệu vào và ra của gói Scale không được dùng để huấn luyện mô hình. Chính sách quyền riêng tư hiện tại của Mistral cho biết dữ liệu vào và ra của API tiêu chuẩn có thể được lưu giữ đến 30 ngày liên tục để giám sát lạm dụng, trừ khi bật zero-data-retention."
+            "value" : "Dữ liệu này được gửi đến Anthropic, một nhà cung cấp dịch vụ AI của bên thứ ba có trụ sở tại Hoa Kỳ. Anthropic xử lý dữ liệu này để tạo phản hồi và không sử dụng nó để huấn luyện các mô hình AI."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这些数据会发送给第三方 AI 提供商 Mistral AI 以生成回复。Mistral 当前的付费 API 文档称，Scale 计划的 API 输入和输出不会用于训练模型。Mistral 当前的隐私政策称，除非启用零数据保留，否则标准 API 输入和输出可能会保留最长 30 个滚动日，以进行滥用监控。"
+            "value" : "这些数据被发送到Anthropic，一家总部位于美国的第三方AI服务提供商。Anthropic处理这些数据以生成响应，不会用其训练AI模型。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "這些資料會傳送給第三方 AI 供應商 Mistral AI 以產生回覆。Mistral 目前的付費 API 文件指出，Scale 方案的 API 輸入與輸出不會用於訓練模型。Mistral 目前的隱私權政策指出，除非啟用零資料保留，否則標準 API 的輸入與輸出可能會為了濫用監控而保留最多 30 天。"
+            "value" : "此數據將發送至 Anthropic，一家位於美國的第三方 AI 服務提供商。Anthropic 處理這些數據以生成回覆，不會用於訓練 AI 模型。"
           }
         }
       }

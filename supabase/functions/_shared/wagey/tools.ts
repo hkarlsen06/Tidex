@@ -15,7 +15,9 @@ import type { FunctionTool } from "./ai-types.ts";
 /**
  * Short ID schema - accepts 4-8 hex chars (short ID) or full UUID
  */
-const shortOrFullId = z.string().regex(/^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+const shortOrFullId = z.string().regex(
+  /^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
+);
 
 /**
  * Manage Shift Tool Schema
@@ -86,10 +88,15 @@ export const draftRecurringShiftSchema = z.object({
   end: z.string().regex(/^\d{2}:\d{2}$/),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]),
   endType: z.enum(["never", "after_months", "after_years", "on_date"]),
-  endValue: z.union([z.number().int().min(1), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional(),
+  endValue: z.union([
+    z.number().int().min(1),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  ]).optional(),
 });
 
-export type DraftRecurringShiftInput = z.infer<typeof draftRecurringShiftSchema>;
+export type DraftRecurringShiftInput = z.infer<
+  typeof draftRecurringShiftSchema
+>;
 
 /**
  * Confirm Recurring Shift Tool Schema (Step 2 of 2)
@@ -101,11 +108,16 @@ export const confirmRecurringShiftSchema = z.object({
   end: z.string().regex(/^\d{2}:\d{2}$/),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]),
   endType: z.enum(["never", "after_months", "after_years", "on_date"]),
-  endValue: z.union([z.number().int().min(1), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional(),
+  endValue: z.union([
+    z.number().int().min(1),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  ]).optional(),
   conflictResolution: z.enum(["keep_both", "skip_conflicts"]),
 });
 
-export type ConfirmRecurringShiftInput = z.infer<typeof confirmRecurringShiftSchema>;
+export type ConfirmRecurringShiftInput = z.infer<
+  typeof confirmRecurringShiftSchema
+>;
 
 /**
  * Manage Recurring Shift Tool Schema
@@ -117,12 +129,19 @@ export const manageRecurringShiftSchema = z.object({
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]).optional(),
-  endType: z.enum(["never", "after_months", "after_years", "on_date"]).optional(),
-  endValue: z.union([z.number().int().min(1), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional(),
+  frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"])
+    .optional(),
+  endType: z.enum(["never", "after_months", "after_years", "on_date"])
+    .optional(),
+  endValue: z.union([
+    z.number().int().min(1),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  ]).optional(),
 });
 
-export type ManageRecurringShiftInput = z.infer<typeof manageRecurringShiftSchema>;
+export type ManageRecurringShiftInput = z.infer<
+  typeof manageRecurringShiftSchema
+>;
 
 /**
  * Manage Recurring Exclusion Tool Schema
@@ -133,7 +152,9 @@ export const manageRecurringExclusionSchema = z.object({
   action: z.enum(["add", "remove"]),
 });
 
-export type ManageRecurringExclusionInput = z.infer<typeof manageRecurringExclusionSchema>;
+export type ManageRecurringExclusionInput = z.infer<
+  typeof manageRecurringExclusionSchema
+>;
 
 /**
  * Get Statistics Tool Schema
@@ -233,7 +254,9 @@ export const manageFriendSharingSchema = z.object({
   muted: z.boolean().optional(),
 });
 
-export type ManageFriendSharingInput = z.infer<typeof manageFriendSharingSchema>;
+export type ManageFriendSharingInput = z.infer<
+  typeof manageFriendSharingSchema
+>;
 
 /**
  * Query Friend Shifts Tool Schema
@@ -263,7 +286,9 @@ export const queryFriendFeaturedShiftSchema = z.object({
   friendId: z.string().uuid(),
 });
 
-export type QueryFriendFeaturedShiftInput = z.infer<typeof queryFriendFeaturedShiftSchema>;
+export type QueryFriendFeaturedShiftInput = z.infer<
+  typeof queryFriendFeaturedShiftSchema
+>;
 
 /**
  * Manage Shift Advanced Tool Schema
@@ -287,7 +312,9 @@ export const manageShiftAdvancedSchema = z.object({
   sourceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
-export type ManageShiftAdvancedInput = z.infer<typeof manageShiftAdvancedSchema>;
+export type ManageShiftAdvancedInput = z.infer<
+  typeof manageShiftAdvancedSchema
+>;
 
 /**
  * Manage Feedback Tool Schema
@@ -354,7 +381,8 @@ export const manageWageSnapshotsSchema = z.object({
   // For update/delete - accepts short IDs (4-8 hex chars) or full UUIDs
   snapshot_id: shortOrFullId.optional(),
   // For create - required date when the new rates take effect
-  from_date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()]).optional(),
+  from_date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
+    .optional(),
   // Wage settings - all optional for update (only include fields to change)
   hourly_wage: z.number().positive().optional(),
   wage_level: z.number().int().min(1).max(9).nullable().optional(),
@@ -363,7 +391,8 @@ export const manageWageSnapshotsSchema = z.object({
   tax_percentage: z.number().min(0).max(100).optional(),
   // Break deduction settings
   break_enabled: z.boolean().optional(),
-  break_method: z.enum(["proportional", "base_only", "end_of_shift", "none"]).optional(),
+  break_method: z.enum(["proportional", "base_only", "end_of_shift", "none"])
+    .optional(),
   break_threshold_hours: z.number().positive().optional(),
   break_deduction_minutes: z.number().int().min(0).optional(),
   // Supplements - "copy_current" copies from current snapshot, or provide array of rules
@@ -373,7 +402,9 @@ export const manageWageSnapshotsSchema = z.object({
   ]).optional(),
 });
 
-export type ManageWageSnapshotsInput = z.infer<typeof manageWageSnapshotsSchema>;
+export type ManageWageSnapshotsInput = z.infer<
+  typeof manageWageSnapshotsSchema
+>;
 
 /**
  * Hypothetical shift scenario for earnings calculation
@@ -400,7 +431,9 @@ export const calculateEarningsSchema = z.object({
   // Mode 3: What-if on existing shift
   hypothetical_change: z.object({
     // Accept: short hex IDs (4-8 chars), full UUIDs, or compact virtual shift IDs (virtual-{5char}-YYYY-MM-DD)
-    shift_id: z.string().regex(/^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$|^virtual-[a-f0-9]{5}-\d{4}-\d{2}-\d{2}$/i),
+    shift_id: z.string().regex(
+      /^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$|^virtual-[a-f0-9]{5}-\d{4}-\d{2}-\d{2}$/i,
+    ),
     changes: z.object({
       start_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
       end_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -410,16 +443,20 @@ export const calculateEarningsSchema = z.object({
 }).refine(
   (data) => {
     // Exactly one mode must be specified
-    const modes = [data.hypothetical, data.compare, data.hypothetical_change].filter(Boolean);
+    const modes = [data.hypothetical, data.compare, data.hypothetical_change]
+      .filter(Boolean);
     return modes.length === 1;
   },
-  { message: "Exactly one mode must be specified: hypothetical, compare, or hypothetical_change" }
+  {
+    message:
+      "Exactly one mode must be specified: hypothetical, compare, or hypothetical_change",
+  },
 );
 
 export type CalculateEarningsInput = z.infer<typeof calculateEarningsSchema>;
 
 // =============================================================================
-// TOOL DEFINITIONS (provider-neutral format with input_examples)
+// TOOL DEFINITIONS (Claude format with input_examples)
 // =============================================================================
 
 export const tools: FunctionTool[] = [
@@ -451,7 +488,8 @@ Edge cases:
         dates: {
           type: "array",
           items: { type: "string" },
-          description: "Dates for new shifts (YYYY-MM-DD format). Only for create.",
+          description:
+            "Dates for new shifts (YYYY-MM-DD format). Only for create.",
         },
         start: {
           type: "string",
@@ -463,7 +501,8 @@ Edge cases:
         },
         jobId: {
           type: "string",
-          description: "Workplace/job UUID from list_workplaces. Only for create. Omit to use the default workplace.",
+          description:
+            "Workplace/job UUID from list_workplaces. Only for create. Omit to use the default workplace.",
         },
         shiftId: {
           type: "string",
@@ -518,7 +557,8 @@ Edge cases:
 
   {
     name: "query_shifts",
-    description: `Get shifts with optional filters. Returns shift IDs needed for update/delete operations.
+    description:
+      `Get shifts with optional filters. Returns shift IDs needed for update/delete operations.
 
 Default behavior: Without parameters, returns shifts for the current week.
 
@@ -567,25 +607,30 @@ Use cases:
         },
         minTime: {
           type: "string",
-          description: "Only shifts starting at or after this time (HH:mm). Use null if no lower time filter is needed; never send an empty string.",
+          description:
+            "Only shifts starting at or after this time (HH:mm). Use null if no lower time filter is needed; never send an empty string.",
         },
         maxTime: {
           type: "string",
-          description: "Only shifts starting at or before this time (HH:mm). Use null if no upper time filter is needed; never send an empty string.",
+          description:
+            "Only shifts starting at or before this time (HH:mm). Use null if no upper time filter is needed; never send an empty string.",
         },
         weekdays: {
           type: "array",
           items: { type: "integer" },
-          description: "Filter by weekday (see weekday_reference in system prompt)",
+          description:
+            "Filter by weekday (see weekday_reference in system prompt)",
         },
         sortBy: {
           type: "string",
           enum: ["date_latest", "date_earliest", "date", "earnings", "hours"],
-          description: "Sort order (default: date_latest; date is a legacy alias for date_latest)",
+          description:
+            "Sort order (default: date_latest; date is a legacy alias for date_latest)",
         },
         jobId: {
           type: "string",
-          description: "Filter to a specific workplace/job (UUID from list_workplaces)",
+          description:
+            "Filter to a specific workplace/job (UUID from list_workplaces)",
         },
       },
     },
@@ -621,7 +666,8 @@ Use cases:
 
   {
     name: "calculate_wages",
-    description: `Calculate total wages for a date range. Returns gross pay, net pay, hours worked, and tax deducted.
+    description:
+      `Calculate total wages for a date range. Returns gross pay, net pay, hours worked, and tax deducted.
 
 Required: Both startDate and endDate (YYYY-MM-DD format).
 
@@ -648,7 +694,8 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
         },
         jobId: {
           type: "string",
-          description: "Filter to a specific workplace/job (UUID from list_workplaces)",
+          description:
+            "Filter to a specific workplace/job (UUID from list_workplaces)",
         },
       },
       required: ["startDate", "endDate"],
@@ -672,7 +719,8 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
   // ---------------------------------------------------------------------------
   {
     name: "draft_recurring_shift",
-    description: `Step 1 of 2: Preview a recurring shift pattern WITHOUT creating it.
+    description:
+      `Step 1 of 2: Preview a recurring shift pattern WITHOUT creating it.
 
 Purpose: Validates the pattern and checks for conflicts with existing shifts before committing.
 
@@ -702,14 +750,16 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week THIS weekday starts from — each weekday can have a different anchor week to create alternating patterns.",
+                description:
+                  "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week THIS weekday starts from — each weekday can have a different anchor week to create alternating patterns.",
               },
             },
             required: ["day", "anchorDate"],
           },
           minItems: 1,
           maxItems: 7,
-          description: "Array of weekdays with their anchor dates. Use multiple entries for multi-day patterns (same week: Mon/Wed/Fri; alternating weeks: offset anchorDates by one week).",
+          description:
+            "Array of weekdays with their anchor dates. Use multiple entries for multi-day patterns (same week: Mon/Wed/Fri; alternating weeks: offset anchorDates by one week).",
         },
         start: {
           type: "string",
@@ -731,7 +781,8 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
         },
         endValue: {
           type: ["integer", "string"],
-          description: "For after_months/after_years: number of months/years. For on_date: end date (YYYY-MM-DD).",
+          description:
+            "For after_months/after_years: number of months/years. For on_date: end date (YYYY-MM-DD).",
         },
       },
       required: ["weekdays", "start", "end", "frequency", "endType"],
@@ -801,7 +852,8 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
 
   {
     name: "confirm_recurring_shift",
-    description: `Step 2 of 2: Actually create the recurring shift after reviewing the draft.
+    description:
+      `Step 2 of 2: Actually create the recurring shift after reviewing the draft.
 
 IMPORTANT: Only call this AFTER draft_recurring_shift. Use identical parameters from the draft.
 
@@ -823,7 +875,8 @@ The recurring shift will be created and shifts generated according to the patter
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
+                description:
+                  "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
               },
             },
             required: ["day", "anchorDate"],
@@ -857,10 +910,18 @@ The recurring shift will be created and shifts generated according to the patter
         conflictResolution: {
           type: "string",
           enum: ["keep_both", "skip_conflicts"],
-          description: "keep_both: recurring shift coexists with conflicts. skip_conflicts: recurring shift skips dates with existing shifts.",
+          description:
+            "keep_both: recurring shift coexists with conflicts. skip_conflicts: recurring shift skips dates with existing shifts.",
         },
       },
-      required: ["weekdays", "start", "end", "frequency", "endType", "conflictResolution"],
+      required: [
+        "weekdays",
+        "start",
+        "end",
+        "frequency",
+        "endType",
+        "conflictResolution",
+      ],
     },
     input_examples: [
       // Confirm weekly Monday shift, skip conflicting dates
@@ -926,14 +987,16 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
+                description:
+                  "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
               },
             },
             required: ["day", "anchorDate"],
           },
           minItems: 1,
           maxItems: 7,
-          description: "New weekdays for update (replaces all existing weekdays)",
+          description:
+            "New weekdays for update (replaces all existing weekdays)",
         },
         start: {
           type: "string",
@@ -1024,7 +1087,8 @@ Note: The date must be one that would normally occur in the recurring shift patt
         action: {
           type: "string",
           enum: ["add", "remove"],
-          description: "add: exclude the date. remove: restore previously excluded date.",
+          description:
+            "add: exclude the date. remove: restore previously excluded date.",
         },
       },
       required: ["recurringId", "date", "action"],
@@ -1050,7 +1114,8 @@ Note: The date must be one that would normally occur in the recurring shift patt
   // ---------------------------------------------------------------------------
   {
     name: "get_statistics",
-    description: `Get pre-computed statistics and analytics. Always prefer this over manual calculations.
+    description:
+      `Get pre-computed statistics and analytics. Always prefer this over manual calculations.
 
 Preferred first tool for summary questions about earnings, hours, or shift counts over a week, month, or year.
 Use query_shifts only if the user also wants the individual shift rows.
@@ -1098,7 +1163,8 @@ Optional: jobId (UUID from list_workplaces) to get statistics for a specific wor
         },
         jobId: {
           type: "string",
-          description: "Filter to a specific workplace/job (UUID from list_workplaces)",
+          description:
+            "Filter to a specific workplace/job (UUID from list_workplaces)",
         },
       },
       required: ["metric"],
@@ -1124,7 +1190,8 @@ Optional: jobId (UUID from list_workplaces) to get statistics for a specific wor
   // ---------------------------------------------------------------------------
   {
     name: "manage_settings",
-    description: `View or update user settings (NOT wages - use get_wage_info for wage/tax/pause history).
+    description:
+      `View or update user settings (NOT wages - use get_wage_info for wage/tax/pause history).
 
 Actions:
 - VIEW: No parameters or action="view" - Returns display, goals, preferences, and tax (halfTaxMonth only)
@@ -1228,7 +1295,8 @@ Note: Tax deduction enabled/percentage are per-snapshot — use get_wage_info in
   // ---------------------------------------------------------------------------
   {
     name: "get_wage_info",
-    description: `Get wage configuration for a workplace (job): snapshot history plus pay settings.
+    description:
+      `Get wage configuration for a workplace (job): snapshot history plus pay settings.
 
 Returns:
 - workplace: Selected workplace context (id, name, isDefault) when available
@@ -1251,7 +1319,8 @@ To modify halfTaxMonth or payrollDay, use manage_settings with category="tax" or
       properties: {
         jobId: {
           type: "string",
-          description: "Optional workplace/job UUID from list_workplaces. Defaults to the default workplace.",
+          description:
+            "Optional workplace/job UUID from list_workplaces. Defaults to the default workplace.",
         },
       },
     },
@@ -1263,7 +1332,8 @@ To modify halfTaxMonth or payrollDay, use manage_settings with category="tax" or
 
   {
     name: "manage_wage_snapshots",
-    description: `Create, update, or delete wage snapshots (wage history entries).
+    description:
+      `Create, update, or delete wage snapshots (wage history entries).
 
 Wage snapshots define the user's hourly wage, tax settings, break deduction, and supplements for a specific time period.
 Each snapshot has a from_date (when it takes effect) - the baseline snapshot has from_date=null.
@@ -1296,31 +1366,38 @@ Other notes:
         },
         jobId: {
           type: "string",
-          description: "Optional workplace/job UUID from list_workplaces (CREATE only). Defaults to the default workplace.",
+          description:
+            "Optional workplace/job UUID from list_workplaces (CREATE only). Defaults to the default workplace.",
         },
         snapshot_id: {
           type: "string",
-          description: "Snapshot ID (required for update/delete). Use short ID from get_wage_info.",
+          description:
+            "Snapshot ID (required for update/delete). Use short ID from get_wage_info.",
         },
         from_date: {
           type: ["string", "null"],
-          description: "Date when new rates take effect (YYYY-MM-DD). Required for create. Null = baseline.",
+          description:
+            "Date when new rates take effect (YYYY-MM-DD). Required for create. Null = baseline.",
         },
         hourly_wage: {
           type: "number",
-          description: "Hourly wage in NOK (e.g., 220.5). Only include to change.",
+          description:
+            "Hourly wage in NOK (e.g., 220.5). Only include to change.",
         },
         wage_level: {
           type: ["integer", "null"],
-          description: "Wage level 1-9 (tariff-based). Set to null to use custom hourly_wage instead.",
+          description:
+            "Wage level 1-9 (tariff-based). Set to null to use custom hourly_wage instead.",
         },
         tax_enabled: {
           type: "boolean",
-          description: "Whether tax deduction is enabled for this period. Required for create.",
+          description:
+            "Whether tax deduction is enabled for this period. Required for create.",
         },
         tax_percentage: {
           type: "number",
-          description: "Tax percentage (0-100) for this period. Required for create when tax_enabled=true.",
+          description:
+            "Tax percentage (0-100) for this period. Required for create when tax_enabled=true.",
         },
         break_enabled: {
           type: "boolean",
@@ -1355,7 +1432,8 @@ Other notes:
               },
               to: {
                 type: "string",
-                description: "Canonical end time (HH:mm, use 24:00 for end of day)",
+                description:
+                  "Canonical end time (HH:mm, use 24:00 for end of day)",
               },
               startTime: {
                 type: "string",
@@ -1379,13 +1457,16 @@ Other notes:
               },
               type: {
                 type: "string",
-                description: "Optional legacy metadata field; ignored by the executor",
+                description:
+                  "Optional legacy metadata field; ignored by the executor",
               },
             },
             required: ["days"],
-            description: "Supplement rule. Use canonical fields (days/from/to/rate or percent) or alias fields (days/startTime/endTime/amount or percent).",
+            description:
+              "Supplement rule. Use canonical fields (days/from/to/rate or percent) or alias fields (days/startTime/endTime/amount or percent).",
           },
-          description: '"copy_current" to copy from current snapshot, or array of supplement rules. Rule keys can be canonical (from/to/rate) or alias (startTime/endTime/amount).',
+          description:
+            '"copy_current" to copy from current snapshot, or array of supplement rules. Rule keys can be canonical (from/to/rate) or alias (startTime/endTime/amount).',
         },
       },
       required: ["action"],
@@ -1446,7 +1527,8 @@ Other notes:
   // ---------------------------------------------------------------------------
   {
     name: "calculate_earnings",
-    description: `Calculate hypothetical earnings for shifts that don't exist yet. Perfect for "what if" questions.
+    description:
+      `Calculate hypothetical earnings for shifts that don't exist yet. Perfect for "what if" questions.
 
 THREE MODES (use exactly one):
 
@@ -1484,7 +1566,10 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
             date: { type: "string", description: "Date (YYYY-MM-DD)" },
             start_time: { type: "string", description: "Start time (HH:mm)" },
             end_time: { type: "string", description: "End time (HH:mm)" },
-            label: { type: "string", description: "Optional label for this scenario" },
+            label: {
+              type: "string",
+              description: "Optional label for this scenario",
+            },
           },
           required: ["date", "start_time", "end_time"],
           description: "Single hypothetical shift to calculate",
@@ -1497,7 +1582,10 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
               date: { type: "string", description: "Date (YYYY-MM-DD)" },
               start_time: { type: "string", description: "Start time (HH:mm)" },
               end_time: { type: "string", description: "End time (HH:mm)" },
-              label: { type: "string", description: "Optional label for this scenario" },
+              label: {
+                type: "string",
+                description: "Optional label for this scenario",
+              },
             },
             required: ["date", "start_time", "end_time"],
           },
@@ -1508,12 +1596,22 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
         hypothetical_change: {
           type: "object",
           properties: {
-            shift_id: { type: "string", description: "Shift ID from query_shifts (e.g. 'a1b2c' or 'virtual-a1b2c-2025-12-03')" },
+            shift_id: {
+              type: "string",
+              description:
+                "Shift ID from query_shifts (e.g. 'a1b2c' or 'virtual-a1b2c-2025-12-03')",
+            },
             changes: {
               type: "object",
               properties: {
-                start_time: { type: "string", description: "New start time (HH:mm)" },
-                end_time: { type: "string", description: "New end time (HH:mm)" },
+                start_time: {
+                  type: "string",
+                  description: "New start time (HH:mm)",
+                },
+                end_time: {
+                  type: "string",
+                  description: "New end time (HH:mm)",
+                },
                 date: { type: "string", description: "New date (YYYY-MM-DD)" },
               },
               description: "Changes to apply to the shift",
@@ -1536,15 +1634,35 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
       // "Would I earn more working 12-18 or 16-22 on Friday?"
       {
         compare: [
-          { date: "2025-01-24", start_time: "12:00", end_time: "18:00", label: "Day shift" },
-          { date: "2025-01-24", start_time: "16:00", end_time: "22:00", label: "Evening shift" },
+          {
+            date: "2025-01-24",
+            start_time: "12:00",
+            end_time: "18:00",
+            label: "Day shift",
+          },
+          {
+            date: "2025-01-24",
+            start_time: "16:00",
+            end_time: "22:00",
+            label: "Evening shift",
+          },
         ],
       },
       // "What if I worked Saturday vs Sunday same hours?"
       {
         compare: [
-          { date: "2025-01-25", start_time: "10:00", end_time: "18:00", label: "Saturday" },
-          { date: "2025-01-26", start_time: "10:00", end_time: "18:00", label: "Sunday" },
+          {
+            date: "2025-01-25",
+            start_time: "10:00",
+            end_time: "18:00",
+            label: "Saturday",
+          },
+          {
+            date: "2025-01-26",
+            start_time: "10:00",
+            end_time: "18:00",
+            label: "Sunday",
+          },
         ],
       },
       // "How much more would I earn if my shift started at 15 instead?"
@@ -1595,7 +1713,8 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
       properties: {
         includeArchived: {
           type: "boolean",
-          description: "Include archived workplaces in the result. Default: true",
+          description:
+            "Include archived workplaces in the result. Default: true",
         },
       },
     },
@@ -1609,7 +1728,8 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
 
   {
     name: "manage_workplace",
-    description: `Create, update, set default, archive, unarchive, or delete workplaces (jobs).
+    description:
+      `Create, update, set default, archive, unarchive, or delete workplaces (jobs).
 
 Actions:
 - CREATE: action="create", name/payrollDay/monthlyGoal are required; optional color/halfTaxMonth
@@ -1630,12 +1750,20 @@ Important:
       properties: {
         action: {
           type: "string",
-          enum: ["create", "update", "set_default", "archive", "unarchive", "delete"],
+          enum: [
+            "create",
+            "update",
+            "set_default",
+            "archive",
+            "unarchive",
+            "delete",
+          ],
           description: "The operation to perform",
         },
         jobId: {
           type: "string",
-          description: "Workplace/job UUID. Required for update, set_default, archive, unarchive, and delete",
+          description:
+            "Workplace/job UUID. Required for update, set_default, archive, unarchive, and delete",
         },
         name: {
           type: "string",
@@ -1655,7 +1783,8 @@ Important:
         },
         monthlyGoal: {
           type: ["integer", "null"],
-          description: "Monthly goal amount (integer) or null. Required for create.",
+          description:
+            "Monthly goal amount (integer) or null. Required for create.",
         },
       },
       required: ["action"],
@@ -1697,7 +1826,8 @@ Important:
   // ---------------------------------------------------------------------------
   {
     name: "list_friends",
-    description: `List friends and sharing relationship status in both directions.
+    description:
+      `List friends and sharing relationship status in both directions.
 
 Each friend includes:
 - id, name, email, phone
@@ -1712,7 +1842,8 @@ Use includeBlocked=false to show only non-hidden sharers.`,
       properties: {
         includeBlocked: {
           type: "boolean",
-          description: "Include blocked/hidden sharers in results. Default: true",
+          description:
+            "Include blocked/hidden sharers in results. Default: true",
         },
       },
     },
@@ -1773,9 +1904,20 @@ Direction guardrails:
       required: ["action"],
     },
     input_examples: [
-      { action: "share_by_identifier", identifier: "friend@example.com", showEarnings: false },
-      { action: "share_back", friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
-      { action: "toggle_recipient_earnings", friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809", showEarnings: true },
+      {
+        action: "share_by_identifier",
+        identifier: "friend@example.com",
+        showEarnings: false,
+      },
+      {
+        action: "share_back",
+        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+      },
+      {
+        action: "toggle_recipient_earnings",
+        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+        showEarnings: true,
+      },
     ],
   },
 
@@ -1824,11 +1966,13 @@ Important:
         },
         minTime: {
           type: "string",
-          description: "Only shifts starting at or after this time (HH:mm). Use null if no lower time filter is needed; never send an empty string.",
+          description:
+            "Only shifts starting at or after this time (HH:mm). Use null if no lower time filter is needed; never send an empty string.",
         },
         maxTime: {
           type: "string",
-          description: "Only shifts starting at or before this time (HH:mm). Use null if no upper time filter is needed; never send an empty string.",
+          description:
+            "Only shifts starting at or before this time (HH:mm). Use null if no upper time filter is needed; never send an empty string.",
         },
         weekdays: {
           type: "array",
@@ -1838,7 +1982,8 @@ Important:
         sortBy: {
           type: "string",
           enum: ["date_latest", "date_earliest", "date", "earnings", "hours"],
-          description: "Sort order (default: date_latest; date is a legacy alias for date_latest)",
+          description:
+            "Sort order (default: date_latest; date is a legacy alias for date_latest)",
         },
         jobId: {
           type: "string",
@@ -1849,7 +1994,12 @@ Important:
     },
     input_examples: [
       { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
-      { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809", startDate: "2026-03-01", endDate: "2026-03-31", sortBy: "hours" },
+      {
+        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+        startDate: "2026-03-01",
+        endDate: "2026-03-31",
+        sortBy: "hours",
+      },
     ],
   },
 
@@ -1858,7 +2008,8 @@ Important:
   // ---------------------------------------------------------------------------
   {
     name: "query_friend_featured_shift",
-    description: `Get the featured shift preview for a friend (active > upcoming > past), using the same logic as the friends page.
+    description:
+      `Get the featured shift preview for a friend (active > upcoming > past), using the same logic as the friends page.
 
 Access rules:
 - Friend must have sharesWithMe=true from list_friends
@@ -1919,7 +2070,8 @@ Actions:
         },
         shiftId: {
           type: "string",
-          description: "Shift ID for update_custom_supplements or clear_shift_snapshots",
+          description:
+            "Shift ID for update_custom_supplements or clear_shift_snapshots",
         },
         customSupplements: {
           type: ["object", "null"],
@@ -1979,7 +2131,10 @@ Actions:
       },
       required: ["action"],
     },
-    input_examples: [{ action: "submit", message: "Would love better weekend filters in stats." }, { action: "list" }],
+    input_examples: [{
+      action: "submit",
+      message: "Would love better weekend filters in stats.",
+    }, { action: "list" }],
   },
 
   {
@@ -2004,7 +2159,10 @@ Actions:
       },
       required: ["action"],
     },
-    input_examples: [{ action: "view" }, { action: "update_name", firstName: "Hjalmar" }],
+    input_examples: [{ action: "view" }, {
+      action: "update_name",
+      firstName: "Hjalmar",
+    }],
   },
 ];
 

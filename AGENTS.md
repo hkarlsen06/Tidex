@@ -144,6 +144,18 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 **NEVER push to git automatically** - commit when requested, but wait for user approval before pushing.
 
+**Legal policy updates:**
+
+- When changing the Terms of Service or Privacy Policy copy, always update the canonical client-facing version references in the same change.
+- Bump the relevant dates/timestamps in:
+  - `marketing/lib/i18n/dictionaries/legal.en.ts`
+  - `marketing/lib/i18n/dictionaries/legal.no.ts`
+  - `marketing/public/legal/version.json`
+  - `marketing/public/en/version.json`
+  - `marketing/public/no/version.json`
+- Do not update `ios/TidexApp/App/TermsVersion.swift` fallback version reference as part of normal legal copy changes; it is only a placeholder for API failure scenarios and should not be treated as the canonical legal version.
+- This is required so every client surface, including iOS re-acceptance checks and localized public pages, picks up the new legal version from the shared public manifests.
+
 Run commands from the repository root unless explicitly stated otherwise.
 
 **iOS Builds:**

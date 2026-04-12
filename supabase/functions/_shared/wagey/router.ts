@@ -1,7 +1,9 @@
 import { z } from "npm:zod";
 
 import type {
+  CompactionContent,
   ContentBlock,
+  ImageContent,
   Message,
   RedactedThinkingContent,
   Source,
@@ -9,15 +11,11 @@ import type {
   Tool,
   ToolResultContent,
 } from "./ai-types.ts";
-import type {
-  MistralConversationInput,
-  MistralMessageContentPart,
-} from "./mistral.ts";
 import {
-  createMistralSummary,
-  MistralProviderError,
-  streamMistralChat,
-} from "./mistral.ts";
+  ClaudeProviderError,
+  DEFAULT_CLAUDE_MODEL,
+  streamClaudeChat,
+} from "./claude.ts";
 import { invalidateWageyCache, type WageyRequestContext } from "./context.ts";
 import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
@@ -139,8 +137,14 @@ type PendingToolUse = {
 
 const BUILT_IN_TOOLS: Tool[] = [
   {
-    type: "web_search",
+    type: "web_search_20260209",
     name: "web_search",
+    max_uses: 3,
+  },
+  {
+    type: "web_fetch_20260209",
+    name: "web_fetch",
+    max_uses: 3,
   },
 ];
 
@@ -177,243 +181,68 @@ function hasClientCapability(
   return client?.capabilities?.includes(capability) ?? false;
 }
 
-const MISTRAL_TOOL_ID_ALPHABET =
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-const MISTRAL_CONTEXT_WINDOW_TOKENS = 256_000;
-const MISTRAL_COMPACTION_THRESHOLD = Math.floor(
-  MISTRAL_CONTEXT_WINDOW_TOKENS * 0.7,
-);
-
-function fnv1a64(value: string): bigint {
-  let hash = 0xcbf29ce484222325n;
-  const prime = 0x100000001b3n;
-
-  for (const char of value) {
-    hash ^= BigInt(char.codePointAt(0) ?? 0);
-    hash = (hash * prime) & 0xffffffffffffffffn;
-  }
-
-  return hash;
-}
-
-function toBase62(value: bigint): string {
-  if (value === 0n) return MISTRAL_TOOL_ID_ALPHABET[0];
-
-  let remaining = value;
-  let result = "";
-  const base = BigInt(MISTRAL_TOOL_ID_ALPHABET.length);
-
-  while (remaining > 0n) {
-    const index = Number(remaining % base);
-    result = MISTRAL_TOOL_ID_ALPHABET[index] + result;
-    remaining /= base;
-  }
-
-  return result;
-}
-
-function normalizeToolCallId(
-  originalId: string,
-  idMap: Map<string, string>,
-): string {
-  const existing = idMap.get(originalId);
-  if (existing) return existing;
-
-  if (/^[A-Za-z0-9]{9}$/.test(originalId)) {
-    idMap.set(originalId, originalId);
-    return originalId;
-  }
-
-  let counter = 0;
-  while (true) {
-    const candidate = toBase62(
-      fnv1a64(counter === 0 ? originalId : `${originalId}:${counter}`),
-    )
-      .padStart(9, MISTRAL_TOOL_ID_ALPHABET[0])
-      .slice(-9);
-    if (![...idMap.values()].includes(candidate)) {
-      idMap.set(originalId, candidate);
-      return candidate;
-    }
-    counter += 1;
-  }
-}
-
-function buildCompactionInstructions(compaction?: string): string | undefined {
-  const trimmed = compaction?.trim();
-  if (!trimmed) return undefined;
-
-  return [
-    "<compressed_context>",
-    "Use this as a Tidex-authored summary of older conversation history.",
-    "Prefer newer raw messages if they conflict with this summary.",
-    trimmed,
-    "</compressed_context>",
-  ].join("\n");
-}
-
-function buildMistralInstructions(
-  systemPrompt?: string,
-  compaction?: string,
-): string | undefined {
-  const parts = [
-    systemPrompt?.trim(),
-    buildCompactionInstructions(compaction),
-  ].filter((part): part is string => Boolean(part));
-
-  return parts.length > 0 ? parts.join("\n\n") : undefined;
-}
-
-function buildImageUrl(
-  block: z.infer<typeof imageContentBlockSchema>,
-): MistralMessageContentPart {
-  return {
-    type: "image_url",
-    image_url: {
-      url: `data:${block.source.media_type};base64,${block.source.data}`,
-    },
-  };
-}
-
-function flushMessageEntry(
-  entries: MistralConversationInput[],
-  role: "user" | "assistant",
-  parts: MistralMessageContentPart[],
-): void {
-  if (parts.length === 0) return;
-
-  if (parts.length === 1 && parts[0]?.type === "text") {
-    entries.push({
-      role,
-      content: parts[0].text,
-    });
-    return;
-  }
-
-  entries.push({
-    role,
-    content: parts,
-  });
-}
-
-function appendResearchContext(
-  target: MistralMessageContentPart[],
-  block: Extract<
-    ContentBlock,
-    { type: "server_tool_use" | "web_search_tool_result" }
-  >,
-): void {
-  if (block.type === "server_tool_use") {
-    const query = typeof block.input.query === "string"
-      ? block.input.query.trim()
-      : "";
-    if (query) {
-      target.push({
-        type: "text",
-        text: `[Research context: web_search query "${query}"]`,
-      });
-    }
-    return;
-  }
-
-  if (block.content.length > 0) {
-    const summary = block.content
-      .map((item) => [item.title, item.url].filter(Boolean).join(" - "))
-      .filter(Boolean)
-      .join("; ");
-    if (summary) {
-      target.push({
-        type: "text",
-        text: `[Research sources: ${summary}]`,
-      });
-    }
-  }
-}
-
-function estimateConversationTokens(options: {
-  instructions?: string;
-  inputs: MistralConversationInput[];
-}): number {
-  return Math.ceil(JSON.stringify(options).length / 4);
-}
-
-export function convertToMistralConversation(
+export function convertToClaudeMessages(
   openAiMessages: ChatInput["messages"],
   compaction?: string,
-): {
-  instructions?: string;
-  messages: Message[];
-  inputs: MistralConversationInput[];
-} {
+): { system?: string; messages: Message[] } {
   let systemPrompt: string | undefined;
-  const messages: Message[] = [];
-  const inputs: MistralConversationInput[] = [];
-  const toolIdMap = new Map<string, string>();
+  const claudeMessages: Message[] = [];
+
+  if (compaction) {
+    claudeMessages.push({
+      role: "assistant",
+      content: [
+        { type: "compaction", content: compaction } satisfies CompactionContent,
+      ],
+    });
+  }
 
   for (const msg of openAiMessages) {
     if (msg.role === "system") {
-      const text = extractTextContent(msg.content);
-      if (text) {
-        systemPrompt = systemPrompt ? `${systemPrompt}\n\n${text}` : text;
-      }
+      systemPrompt = extractTextContent(msg.content) || undefined;
       continue;
     }
 
     if (msg.role === "user") {
-      const contentBlocks: ContentBlock[] = [];
-      const parts: MistralMessageContentPart[] = [];
-
       if (Array.isArray(msg.content)) {
-        for (const block of msg.content) {
-          if (block.type === "image") {
-            contentBlocks.push({
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: block.source.media_type,
-                data: block.source.data,
-              },
-            });
-            parts.push(buildImageUrl(block));
-            continue;
-          }
-
-          contentBlocks.push({ type: "text", text: block.text });
-          parts.push({ type: "text", text: block.text });
-        }
-      } else {
-        const text = extractTextContent(msg.content);
-        if (text) {
-          contentBlocks.push({ type: "text", text });
-          parts.push({ type: "text", text });
+        const hasImages = msg.content.some((block) => block.type === "image");
+        if (hasImages) {
+          claudeMessages.push({
+            role: "user",
+            content: msg.content.map((block) => {
+              if (block.type === "image") {
+                return {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: block.source.media_type,
+                    data: block.source.data,
+                  },
+                } satisfies ImageContent;
+              }
+              return { type: "text", text: block.text };
+            }),
+          });
+          continue;
         }
       }
 
-      messages.push({
+      claudeMessages.push({
         role: "user",
-        content: contentBlocks.length > 0
-          ? contentBlocks
-          : extractTextContent(msg.content),
+        content: extractTextContent(msg.content),
       });
-      flushMessageEntry(inputs, "user", parts);
       continue;
     }
 
     if (msg.role === "assistant") {
       const contentBlocks: ContentBlock[] = [];
-      const parts: MistralMessageContentPart[] = [];
       const textContent = extractTextContent(msg.content);
       if (textContent) {
         contentBlocks.push({ type: "text", text: textContent });
-        parts.push({ type: "text", text: textContent });
       }
 
       if (msg.tool_calls) {
         for (const toolCall of msg.tool_calls) {
-          const normalizedToolCallId = normalizeToolCallId(
-            toolCall.id,
-            toolIdMap,
-          );
           let input: Record<string, unknown> = {};
           try {
             input = JSON.parse(toolCall.function.arguments);
@@ -423,157 +252,43 @@ export function convertToMistralConversation(
 
           contentBlocks.push({
             type: "tool_use",
-            id: normalizedToolCallId,
+            id: toolCall.id,
             name: toolCall.function.name,
             input,
-          });
-
-          flushMessageEntry(inputs, "assistant", parts);
-          parts.length = 0;
-          inputs.push({
-            tool_call_id: normalizedToolCallId,
-            name: toolCall.function.name,
-            arguments: toolCall.function.arguments || "{}",
           });
         }
       }
 
-      messages.push({
+      claudeMessages.push({
         role: "assistant",
         content: contentBlocks.length > 0 ? contentBlocks : textContent,
       });
-      flushMessageEntry(inputs, "assistant", parts);
       continue;
     }
 
     if (msg.role === "tool" && msg.tool_call_id) {
       const resultContent = extractTextContent(msg.content);
-      const normalizedToolCallId = normalizeToolCallId(
-        msg.tool_call_id,
-        toolIdMap,
-      );
-      const lastMessage = messages[messages.length - 1];
+      const lastMessage = claudeMessages[claudeMessages.length - 1];
       if (lastMessage?.role === "user" && Array.isArray(lastMessage.content)) {
         (lastMessage.content as ContentBlock[]).push({
           type: "tool_result",
-          tool_use_id: normalizedToolCallId,
+          tool_use_id: msg.tool_call_id,
           content: resultContent,
         });
       } else {
-        messages.push({
+        claudeMessages.push({
           role: "user",
           content: [{
             type: "tool_result",
-            tool_use_id: normalizedToolCallId,
+            tool_use_id: msg.tool_call_id,
             content: resultContent,
           }],
         });
       }
-
-      inputs.push({
-        tool_call_id: normalizedToolCallId,
-        result: resultContent,
-      });
     }
   }
 
-  return {
-    instructions: buildMistralInstructions(systemPrompt, compaction),
-    messages,
-    inputs,
-  };
-}
-
-function buildCompactionImagePlaceholder(
-  mediaType: string,
-  base64Data: string,
-): MistralMessageContentPart {
-  return {
-    type: "text",
-    text:
-      `[Image omitted from compaction summary: ${mediaType}, ${base64Data.length} base64 chars]`,
-  };
-}
-
-function buildMistralInputsFromMessages(
-  messages: Message[],
-  options: {
-    includeInlineImages?: boolean;
-  } = {},
-): MistralConversationInput[] {
-  const inputs: MistralConversationInput[] = [];
-  const toolIdMap = new Map<string, string>();
-  const includeInlineImages = options.includeInlineImages ?? true;
-
-  for (const message of messages) {
-    if (typeof message.content === "string") {
-      if (message.content) {
-        inputs.push({
-          role: message.role,
-          content: message.content,
-        });
-      }
-      continue;
-    }
-
-    const parts: MistralMessageContentPart[] = [];
-    for (const block of message.content) {
-      if (block.type === "text") {
-        parts.push({ type: "text", text: block.text });
-        continue;
-      }
-
-      if (block.type === "image") {
-        parts.push(
-          includeInlineImages
-            ? {
-              type: "image_url",
-              image_url: {
-                url:
-                  `data:${block.source.media_type};base64,${block.source.data}`,
-              },
-            }
-            : buildCompactionImagePlaceholder(
-              block.source.media_type,
-              block.source.data,
-            ),
-        );
-        continue;
-      }
-
-      if (block.type === "tool_use") {
-        flushMessageEntry(inputs, "assistant", parts);
-        parts.length = 0;
-        inputs.push({
-          tool_call_id: normalizeToolCallId(block.id, toolIdMap),
-          name: block.name,
-          arguments: JSON.stringify(block.input),
-        });
-        continue;
-      }
-
-      if (block.type === "tool_result") {
-        flushMessageEntry(inputs, "user", parts);
-        parts.length = 0;
-        inputs.push({
-          tool_call_id: normalizeToolCallId(block.tool_use_id, toolIdMap),
-          result: block.content,
-        });
-        continue;
-      }
-
-      if (
-        block.type === "server_tool_use" ||
-        block.type === "web_search_tool_result"
-      ) {
-        appendResearchContext(parts, block);
-      }
-    }
-
-    flushMessageEntry(inputs, message.role, parts);
-  }
-
-  return inputs;
+  return { system: systemPrompt, messages: claudeMessages };
 }
 
 function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
@@ -606,15 +321,19 @@ function getLatestUserText(messages: Message[]): string {
 
 export function userLikelyRequestedWriteAction(text: string): boolean {
   const normalized = text.toLowerCase();
-  return /\b(set|change|update|delete|remove|create|edit|save)\b/.test(normalized) ||
+  return /\b(set|change|update|delete|remove|create|edit|save)\b/.test(
+    normalized,
+  ) ||
     /\b(kan du|endre|oppdater|slett|fjern|lag|sett)\b/.test(normalized);
 }
 
 export function assistantLikelyClaimsWriteAction(text: string): boolean {
   const normalized = text.toLowerCase();
   return /\b(done|updated|changed|created|deleted|saved|i('ve| have) (updated|changed|set|created|deleted|saved))\b/
-      .test(normalized) ||
-    /\b(i('| wi)ll (update|change|set|create|delete|save))\b/.test(normalized) ||
+    .test(normalized) ||
+    /\b(i('| wi)ll (update|change|set|create|delete|save))\b/.test(
+      normalized,
+    ) ||
     /\b(jeg har (oppdatert|endret|satt|laget|slettet)|oppdatert|endret|satt)\b/
       .test(normalized) ||
     /\b(jeg skal (oppdatere|endre|sette|lage|slette))\b/.test(normalized);
@@ -741,7 +460,7 @@ function log(
 }
 
 function getPublicErrorMessage(error: unknown): string {
-  if (error instanceof MistralProviderError) {
+  if (error instanceof ClaudeProviderError) {
     return error.publicMessage;
   }
 
@@ -749,12 +468,11 @@ function getPublicErrorMessage(error: unknown): string {
 }
 
 function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
-  if (error instanceof MistralProviderError) {
+  if (error instanceof ClaudeProviderError) {
     return {
       error: error.message,
       status: error.status,
       providerType: error.providerType,
-      providerCode: error.providerCode,
       providerMessage: error.providerMessage,
       requestId: error.requestId,
       publicMessage: error.publicMessage,
@@ -766,12 +484,29 @@ function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
   };
 }
 
-function getMistralConfig(): { apiKey: string } {
-  const apiKey = Deno.env.get("MISTRAL_API_KEY")?.trim() ?? "";
+function getClaudeConfig(): { apiKey: string; model: string } {
+  const apiKey = Deno.env.get("CLAUDE_API_KEY")?.trim() ?? "";
+  const configuredModel = Deno.env.get("CLAUDE_MODEL")?.trim() ?? "";
+
   if (!apiKey) {
-    throw new Error("Missing MISTRAL_API_KEY");
+    throw new Error("Missing CLAUDE_API_KEY");
   }
-  return { apiKey };
+
+  const model = configuredModel.startsWith("claude-opus-4-6")
+    ? configuredModel
+    : DEFAULT_CLAUDE_MODEL;
+
+  if (configuredModel && configuredModel !== model) {
+    console.warn(JSON.stringify({
+      scope: "wagey-router",
+      message:
+        "Ignoring unsupported CLAUDE_MODEL for Wagey; falling back to default Opus 4.6",
+      configuredModel,
+      fallbackModel: model,
+    }));
+  }
+
+  return { apiKey, model };
 }
 
 function getResetDays(resetDate: Date | null): number {
@@ -781,41 +516,6 @@ function getResetDays(resetDate: Date | null): number {
     0,
     Math.ceil((targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
   );
-}
-
-async function maybeCreateCompactionSummary(options: {
-  apiKey: string;
-  instructions?: string;
-  messages: Message[];
-  signal?: AbortSignal;
-}): Promise<string | undefined> {
-  const inputs = buildMistralInputsFromMessages(options.messages);
-  const estimatedTokens = estimateConversationTokens({
-    instructions: options.instructions,
-    inputs,
-  });
-
-  if (estimatedTokens <= MISTRAL_COMPACTION_THRESHOLD) {
-    return undefined;
-  }
-
-  const compactionInputs = buildMistralInputsFromMessages(options.messages, {
-    includeInlineImages: false,
-  });
-  const transcript = JSON.stringify(
-    {
-      instructions: options.instructions,
-      inputs: compactionInputs,
-    },
-    null,
-    2,
-  );
-
-  return await createMistralSummary({
-    apiKey: options.apiKey,
-    transcript,
-    signal: options.signal,
-  });
 }
 
 export async function handleWageyRequest(
@@ -969,15 +669,15 @@ export async function handleWageyRequest(
           userName: input.userName,
         };
 
-        let { instructions, messages, inputs } = convertToMistralConversation(
+        let { system, messages } = convertToClaudeMessages(
           input.messages,
           input.compaction,
         );
-        if (!instructions) {
-          instructions = getSystemPrompt(systemContext);
+        if (!system) {
+          system = getSystemPrompt(systemContext);
         }
 
-        const mistral = getMistralConfig();
+        const claude = getClaudeConfig();
 
         let iterationCount = 0;
         const MAX_ITERATIONS = 10;
@@ -1028,7 +728,6 @@ export async function handleWageyRequest(
           while (iterationCount < MAX_ITERATIONS) {
             iterationCount += 1;
             sendChunk({ type: "status", status: "thinking" });
-            inputs = buildMistralInputsFromMessages(conversationMessages);
 
             const toolUses: PendingToolUse[] = [];
             const startedToolUseIds = new Set<string>();
@@ -1053,11 +752,13 @@ export async function handleWageyRequest(
             };
 
             for await (
-              const chunk of streamMistralChat({
-                apiKey: mistral.apiKey,
-                instructions,
-                inputs,
+              const chunk of streamClaudeChat({
+                apiKey: claude.apiKey,
+                model: claude.model,
+                system,
+                messages: conversationMessages,
                 tools: [...tools, ...BUILT_IN_TOOLS],
+                maxTokens: 2048,
                 signal: req.signal,
               })
             ) {
@@ -1157,6 +858,13 @@ export async function handleWageyRequest(
                 for (const item of chunk.items) {
                   collectedSources.set(item.url, item);
                 }
+              } else if (chunk.type === "compaction") {
+                shouldStartNewAssistantTextBlock = true;
+                assistantContent.push({
+                  type: "compaction",
+                  content: chunk.content,
+                });
+                latestCompactionContent = chunk.content;
               } else if (chunk.type === "thinking_start") {
                 sendChunk({ type: "status", status: "thinking" });
               } else if (chunk.type === "thinking") {
@@ -1181,13 +889,17 @@ export async function handleWageyRequest(
             });
 
             const assistantText = assistantContent
-              .filter((block): block is Extract<ContentBlock, { type: "text" }> =>
+              .filter((
+                block,
+              ): block is Extract<ContentBlock, { type: "text" }> =>
                 block.type === "text"
               )
               .map((block) => block.text)
               .join(" ")
               .trim();
-            const latestUserText = getLatestUserText(conversationMessages.slice(0, -1));
+            const latestUserText = getLatestUserText(
+              conversationMessages.slice(0, -1),
+            );
             const looksLikeUnexecutedWriteClaim = toolUses.length === 0 &&
               userLikelyRequestedWriteAction(latestUserText) &&
               assistantLikelyClaimsWriteAction(assistantText);
@@ -1258,29 +970,12 @@ export async function handleWageyRequest(
           log(
             "error",
             requestId,
-            "Mistral loop failed",
+            "Claude loop failed",
             getLoggableErrorMetadata(error),
           );
           sendChunk({
             type: "error",
             error: getPublicErrorMessage(error),
-          });
-        }
-
-        if (!aiLoopFailed && !req.signal.aborted) {
-          latestCompactionContent = await maybeCreateCompactionSummary({
-            apiKey: mistral.apiKey,
-            instructions,
-            messages: conversationMessages,
-            signal: req.signal,
-          }).catch((error) => {
-            log(
-              "warn",
-              requestId,
-              "Compaction summary failed",
-              getLoggableErrorMetadata(error),
-            );
-            return undefined;
           });
         }
 
@@ -1290,7 +985,7 @@ export async function handleWageyRequest(
           log("warn", requestId, "No user-visible assistant output");
           sendChunk({
             type: "error",
-            error: "No response from Mistral provider",
+            error: "No response from Claude provider",
           });
         }
 
