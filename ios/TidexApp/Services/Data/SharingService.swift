@@ -15,6 +15,23 @@ struct SharerShiftPreview: Equatable {
   let status: ShiftPreviewStatus?
   let showEarnings: Bool
   let currency: String?
+  let hasSharedCalendarContent: Bool
+
+  init(
+    sharerId: String,
+    shift: SharedShiftData?,
+    status: ShiftPreviewStatus?,
+    showEarnings: Bool,
+    currency: String?,
+    hasSharedCalendarContent: Bool? = nil
+  ) {
+    self.sharerId = sharerId
+    self.shift = shift
+    self.status = status
+    self.showEarnings = showEarnings
+    self.currency = currency
+    self.hasSharedCalendarContent = hasSharedCalendarContent ?? (shift != nil)
+  }
 }
 
 // Note: ShiftPreviewStatus is now defined in Shared/ShiftPreviewStatus.swift
@@ -543,9 +560,16 @@ final class SharingService: ObservableObject {
             shift: nil,
             status: nil,
             showEarnings: false,
-            currency: nil
+            currency: nil,
+            hasSharedCalendarContent: false
           )
         }
+
+        let hasSharedCalendarContent =
+          !payloadRow.shifts.isEmpty
+          || !payloadRow.recurringShifts.isEmpty
+          || !payloadRow.jobs.isEmpty
+          || !payloadRow.snapshots.isEmpty
 
         let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
         var shifts = SharingComputeCore.computeShiftsInRange(
@@ -575,7 +599,8 @@ final class SharingService: ObservableObject {
           shift: preview.shift.map(Self.mapComputedShiftToSharedShiftData),
           status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0.rawValue) },
           showEarnings: preview.showEarnings,
-          currency: previewCurrency
+          currency: previewCurrency,
+          hasSharedCalendarContent: hasSharedCalendarContent
         )
       }
     }.value

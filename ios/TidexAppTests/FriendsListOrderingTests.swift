@@ -157,6 +157,56 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["typing", "recent", "unread"])
   }
 
+  func testCalendarAvailabilityHidesChatOnlyUsers() {
+    XCTAssertFalse(
+      FriendCalendarAvailability.isAvailable(
+        sharerId: "chat-only",
+        chatOnlyUserIds: ["chat-only"],
+        preview: makeShiftPreview(
+          sharerId: "chat-only",
+          shiftDate: "2026-03-18",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .active
+        )
+      )
+    )
+  }
+
+  func testCalendarAvailabilityRequiresSharedCalendarContent() {
+    XCTAssertFalse(
+      FriendCalendarAvailability.isAvailable(
+        sharerId: "empty",
+        chatOnlyUserIds: [],
+        preview: SharerShiftPreview(
+          sharerId: "empty",
+          shift: nil,
+          status: nil,
+          showEarnings: false,
+          currency: nil,
+          hasSharedCalendarContent: false
+        )
+      )
+    )
+  }
+
+  func testCalendarAvailabilityAllowsSharerWithConfiguredContentWithoutPreviewShift() {
+    XCTAssertTrue(
+      FriendCalendarAvailability.isAvailable(
+        sharerId: "configured",
+        chatOnlyUserIds: [],
+        preview: SharerShiftPreview(
+          sharerId: "configured",
+          shift: nil,
+          status: nil,
+          showEarnings: false,
+          currency: nil,
+          hasSharedCalendarContent: true
+        )
+      )
+    )
+  }
+
   func testSendAttachmentRecipientOrderingPrefersMostRecentDirectThread() {
     let recipients = [
       ShareRecipient(
