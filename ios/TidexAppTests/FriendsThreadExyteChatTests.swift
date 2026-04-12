@@ -429,6 +429,28 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testOutgoingGroupedMessageKeepsTimestampVisible() {
+    XCTAssertTrue(
+      FriendsThreadMessageStatusResolver.shouldShowTimestamp(
+        for: makeMessage(id: "message-1", senderUserId: "viewer", createdAt: Date()),
+        isCurrentUser: true,
+        groupContext: FriendsChatMessageGroupContext(position: .leading, isCurrentUser: true),
+        messageStatus: nil
+      )
+    )
+  }
+
+  func testIncomingGroupedMessageStillHidesTimestampUntilEndOfGroup() {
+    XCTAssertFalse(
+      FriendsThreadMessageStatusResolver.shouldShowTimestamp(
+        for: makeMessage(id: "message-1", senderUserId: "other", createdAt: Date()),
+        isCurrentUser: false,
+        groupContext: FriendsChatMessageGroupContext(position: .leading, isCurrentUser: false),
+        messageStatus: nil
+      )
+    )
+  }
+
   func testLiveEdgeResolverTreatsFocusedComposerAsPinnedToLatest() {
     XCTAssertTrue(
       FriendsThreadLiveEdgeResolver.shouldStickToLatest(
