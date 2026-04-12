@@ -179,6 +179,17 @@ private struct MessageStatusSortDescriptor {
   let timestamp: Date?
 }
 
+enum FriendCalendarAvailability {
+  static func isAvailable(
+    sharerId: String,
+    chatOnlyUserIds: Set<String>,
+    preview: SharerShiftPreview?
+  ) -> Bool {
+    guard !chatOnlyUserIds.contains(sharerId) else { return false }
+    return preview?.hasSharedCalendarContent ?? false
+  }
+}
+
 /// List of users who share their shifts with the current user.
 /// Uses message activity first, then falls back to the legacy shift proximity ordering.
 struct SharerListView: View {
@@ -326,8 +337,11 @@ struct SharerListView: View {
       selectedSharer?.id == sharer.id
       || highlightedChatUserId == sharer.id
       || isOpeningMessage
-    let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
-    let isCalendarAvailable = !opensChatDirectly
+    let isCalendarAvailable = FriendCalendarAvailability.isAvailable(
+      sharerId: sharer.id,
+      chatOnlyUserIds: chatOnlyUserIds,
+      preview: shiftPreviews[sharer.id]
+    )
 
     FriendCard(
       sharer: sharer,
@@ -359,7 +373,11 @@ struct SharerListView: View {
       selectedSharer?.id == sharer.id
       || highlightedChatUserId == sharer.id
       || isOpeningMessage
-    let opensChatDirectly = chatOnlyUserIds.contains(sharer.id)
+    let isCalendarAvailable = FriendCalendarAvailability.isAvailable(
+      sharerId: sharer.id,
+      chatOnlyUserIds: chatOnlyUserIds,
+      preview: preview
+    )
 
     FriendCard(
       sharer: sharer,
@@ -372,12 +390,12 @@ struct SharerListView: View {
         onMessageTap(sharer)
       },
       onCalendarTap: {
-        if opensChatDirectly {
+        if !isCalendarAvailable {
           return
         }
         onSelectHiddenSharer(sharer)
       },
-      isCalendarAvailable: !opensChatDirectly,
+      isCalendarAvailable: isCalendarAvailable,
       isOpeningMessage: isOpeningMessage,
       unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
     )
