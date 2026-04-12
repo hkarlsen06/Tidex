@@ -149,6 +149,7 @@ DECLARE
   v_limit integer := 1;
   v_target_id uuid;
   v_normalized text;
+  v_identifier text;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Unauthorized';
@@ -172,26 +173,43 @@ BEGIN
 
   IF p_action = 'createShare' THEN
     IF p_identifier IS NULL OR btrim(p_identifier) = '' THEN
-      RETURN jsonb_build_object('success', false, 'error', 'Vennligst oppgi en gyldig e-post eller telefonnummer');
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Vennligst oppgi en gyldig e-post, telefonnummer eller brukernavn'
+      );
     END IF;
 
-    IF position('@' IN p_identifier) > 0 THEN
+    v_identifier := btrim(p_identifier);
+
+    IF position('@' IN v_identifier) > 0 AND left(v_identifier, 1) <> '@' THEN
       SELECT id INTO v_target_id
       FROM auth.users
-      WHERE lower(email) = lower(btrim(p_identifier))
+      WHERE lower(email) = lower(v_identifier)
       LIMIT 1;
     ELSE
-      v_normalized := regexp_replace(p_identifier, '\D', '', 'g');
-      IF length(v_normalized) = 8 THEN
-        v_normalized := '47' || v_normalized;
-      ELSIF left(v_normalized, 2) = '00' THEN
-        v_normalized := substr(v_normalized, 3);
+      v_identifier := lower(v_identifier);
+      IF left(v_identifier, 1) = '@' THEN
+        v_identifier := substr(v_identifier, 2);
       END IF;
 
       SELECT id INTO v_target_id
-      FROM auth.users
-      WHERE phone = v_normalized
+      FROM public.profiles
+      WHERE username = v_identifier
       LIMIT 1;
+
+      IF v_target_id IS NULL THEN
+        v_normalized := regexp_replace(p_identifier, '\D', '', 'g');
+        IF length(v_normalized) = 8 THEN
+          v_normalized := '47' || v_normalized;
+        ELSIF left(v_normalized, 2) = '00' THEN
+          v_normalized := substr(v_normalized, 3);
+        END IF;
+
+        SELECT id INTO v_target_id
+        FROM auth.users
+        WHERE phone = v_normalized
+        LIMIT 1;
+      END IF;
     END IF;
   ELSIF p_action = 'shareBack' THEN
     v_target_id := p_recipient_id;
@@ -200,7 +218,10 @@ BEGIN
   END IF;
 
   IF v_target_id IS NULL THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Fant ingen bruker med denne e-posten eller telefonnummeret');
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Fant ingen bruker med denne e-posten, telefonnummeret eller brukernavnet'
+    );
   END IF;
 
   IF v_target_id = v_user_id THEN

@@ -207,6 +207,23 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 
+  func testCalendarAvailabilityDoesNotTreatPayrollOnlyConfigurationAsCalendarContent() {
+    XCTAssertFalse(
+      FriendCalendarAvailability.isAvailable(
+        sharerId: "payroll-only",
+        chatOnlyUserIds: [],
+        preview: SharerShiftPreview(
+          sharerId: "payroll-only",
+          shift: nil,
+          status: nil,
+          showEarnings: false,
+          currency: nil,
+          hasSharedCalendarContent: false
+        )
+      )
+    )
+  }
+
   func testSendAttachmentRecipientOrderingPrefersMostRecentDirectThread() {
     let recipients = [
       ShareRecipient(
