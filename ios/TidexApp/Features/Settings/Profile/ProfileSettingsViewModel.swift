@@ -4,6 +4,10 @@ import ImageIO
 import Supabase
 import UniformTypeIdentifiers
 
+private struct ProfileUsernameRow: Decodable {
+  let username: String?
+}
+
 /// View model for profile settings
 /// Handles profile data loading, name editing, avatar management, and account deletion
 @MainActor
@@ -20,6 +24,8 @@ final class ProfileSettingsViewModel: ObservableObject {
   @Published var displayName: String = ""
   /// User's email address (read-only display)
   @Published var email: String = ""
+  /// User's username (editable, used for friend lookup)
+  @Published var username: String = ""
   /// User's profile picture URL
   @Published var profilePictureUrl: String?
   /// User ID
@@ -33,6 +39,7 @@ final class ProfileSettingsViewModel: ObservableObject {
   /// Loading states
   @Published private(set) var isLoading = false
   @Published private(set) var isSavingName = false
+  @Published private(set) var isSavingUsername = false
   @Published private(set) var isUploadingAvatar = false
   @Published private(set) var isDeletingAccount = false
   @Published private(set) var isChangingEmail = false
@@ -53,8 +60,12 @@ final class ProfileSettingsViewModel: ObservableObject {
 
   /// Original display name (for detecting changes)
   private var originalDisplayName: String = ""
+  /// Original username (for detecting changes)
+  private var originalUsername: String = ""
   /// Debounce task for auto-saving name
   private var nameSaveTask: Task<Void, Never>?
+  /// Debounce task for auto-saving username
+  private var usernameSaveTask: Task<Void, Never>?
   // MARK: - Initialization
 
   init(
@@ -90,6 +101,20 @@ final class ProfileSettingsViewModel: ObservableObject {
 
       // Extract email
       email = freshUser.email ?? ""
+
+      do {
+        let usernameResponse: ProfileUsernameRow =
+          try await supabase
+          .rpc("get_my_profile_username")
+          .single()
+          .execute()
+          .value
+        username = usernameResponse.username ?? ""
+        originalUsername = username
+      } catch {
+        username = ""
+        originalUsername = ""
+      }
 
       // Determine authentication capabilities from identities
       let identities = freshUser.identities ?? []
@@ -176,6 +201,72 @@ final class ProfileSettingsViewModel: ObservableObject {
     }
 
     isSavingName = false
+  }
+
+  // MARK: - Username Editing
+
+  func onUsernameChanged() {
+    let normalizedUsername = Self.normalizeUsername(username)
+    if username != normalizedUsername {
+      username = normalizedUsername
+    }
+
+    usernameSaveTask?.cancel()
+    errorMessage = nil
+
+    guard username != originalUsername else { return }
+    guard normalizedUsername.isEmpty || Self.isValidUsername(normalizedUsername) else { return }
+
+    usernameSaveTask = Task {
+      try? await Task.sleep(nanoseconds: 1_500_000_000)
+
+      guard !Task.isCancelled else { return }
+
+      await saveUsername()
+    }
+  }
+
+  private func saveUsername() async {
+    let normalizedUsername = Self.normalizeUsername(username)
+    if username != normalizedUsername {
+      username = normalizedUsername
+    }
+
+    guard username != originalUsername else { return }
+
+    guard normalizedUsername.isEmpty || Self.isValidUsername(normalizedUsername) else {
+      errorMessage = String(localized: .profileErrorsUsernameInvalid)
+      return
+    }
+
+    isSavingUsername = true
+    errorMessage = nil
+
+    do {
+      let params: [String: AnyJSON] = ["p_username": .string(normalizedUsername)]
+      let response: ProfileUsernameRow =
+        try await supabase
+        .rpc(
+          "set_my_profile_username",
+          params: params
+        )
+        .single()
+        .execute()
+        .value
+
+      username = response.username ?? ""
+      originalUsername = username
+    } catch let error as PostgrestError {
+      if Self.isUsernameTaken(error) {
+        errorMessage = String(localized: .profileErrorsUsernameTaken)
+      } else {
+        errorMessage = String(localized: .profileErrorsUsernameSaveFailed)
+      }
+    } catch {
+      errorMessage = String(localized: .profileErrorsUsernameSaveFailed)
+    }
+
+    isSavingUsername = false
   }
 
   // MARK: - Email Change
@@ -539,6 +630,31 @@ final class ProfileSettingsViewModel: ObservableObject {
   }
 
   // MARK: - Helpers
+
+  private static func normalizeUsername(_ username: String) -> String {
+    var normalized = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    while normalized.hasPrefix("@") {
+      normalized.removeFirst()
+    }
+    return normalized
+  }
+
+  private static func isValidUsername(_ username: String) -> Bool {
+    guard (3...20).contains(username.count) else { return false }
+    guard username.range(of: "^[a-z0-9_]+$", options: .regularExpression) != nil else {
+      return false
+    }
+    return username.range(of: "[a-z]", options: .regularExpression) != nil
+  }
+
+  private static func isUsernameTaken(_ error: PostgrestError) -> Bool {
+    if error.code == "23505" {
+      return true
+    }
+
+    let message = "\(error.message) \(error.localizedDescription)".lowercased()
+    return message.contains("duplicate") || message.contains("unique")
+  }
 
   /// Get initials from display name or email
   var initials: String {

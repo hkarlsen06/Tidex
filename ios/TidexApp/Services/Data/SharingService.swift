@@ -568,8 +568,6 @@ final class SharingService: ObservableObject {
         let hasSharedCalendarContent =
           !payloadRow.shifts.isEmpty
           || !payloadRow.recurringShifts.isEmpty
-          || !payloadRow.jobs.isEmpty
-          || !payloadRow.snapshots.isEmpty
 
         let mode: SharingRPCMode = payloadRow.showEarnings ? .visible : .hidden
         var shifts = SharingComputeCore.computeShiftsInRange(
@@ -758,7 +756,7 @@ final class SharingService: ObservableObject {
     logger.info("Manage action \(action.rawValue) succeeded")
   }
 
-  /// Create a new share by email or phone
+  /// Create a new share by email, phone, or username
   /// Requires API for user lookup, limit checks, and notifications
   func createShare(identifier: String, showEarnings: Bool = false) async throws {
     try await performManageAction(

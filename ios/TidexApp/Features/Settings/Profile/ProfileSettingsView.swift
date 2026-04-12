@@ -27,7 +27,8 @@ struct ProfileSettingsView: View {
 
   /// Prevent conflicting avatar modal presentations from rapid repeated taps
   private var isAvatarActionInProgress: Bool {
-    viewModel.isUploadingAvatar || showImageSourcePicker || showRemoveAvatarConfirmation || showGalleryPicker
+    viewModel.isUploadingAvatar || showImageSourcePicker || showRemoveAvatarConfirmation
+      || showGalleryPicker
       || showCamera || showCropSheet
   }
 
@@ -48,6 +49,7 @@ struct ProfileSettingsView: View {
       Section(header: Text(String(localized: .profilePersonalInfoTitle))) {
         avatarSection
         nameField
+        usernameField
         emailField
       }
       .listRowBackground(Color.tidexSurfacePrimary)
@@ -473,6 +475,49 @@ struct ProfileSettingsView: View {
   }
 
   // MARK: - Email Field
+
+  private var usernameField: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      HStack {
+        Text(.profilePersonalInfoUsernameLabel)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer()
+
+        if viewModel.isSavingUsername {
+          HStack(spacing: Spacing.xxs) {
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
+              .scaleEffect(0.6)
+            Text(.commonSaving)
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexTextMuted)
+          }
+        }
+      }
+
+      TextField(
+        String(localized: .profilePersonalInfoUsernamePlaceholder),
+        text: $viewModel.username
+      )
+      .font(.tidexBody)
+      .foregroundColor(.tidexTextPrimary)
+      .textInputAutocapitalization(.never)
+      .autocorrectionDisabled()
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.sm)
+      .background(Color.tidexSurfaceSecondary)
+      .cornerRadius(CornerRadius.sm)
+      .onChange(of: viewModel.username) { _, _ in
+        viewModel.onUsernameChanged()
+      }
+
+      Text(.profilePersonalInfoUsernameHint)
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+    }
+  }
 
   private var emailField: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {

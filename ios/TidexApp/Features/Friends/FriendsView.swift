@@ -473,10 +473,13 @@ struct SharingView: View {
   private func refreshFriendsTab() async {
     let refreshTask = Task { @MainActor in
       await viewModel.refresh()
-      await reconnectFriendsRealtime()
     }
 
     _ = await refreshTask.result
+
+    Task { @MainActor in
+      await reconnectFriendsRealtime()
+    }
   }
 
   private func openChat(for sharedUser: SharedUser) async {

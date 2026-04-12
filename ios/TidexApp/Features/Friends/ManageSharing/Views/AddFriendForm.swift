@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Add Friend Form
 
-/// Expandable form for adding a new friend by email or phone
+/// Expandable form for adding a new friend by email, phone, or username
 struct AddFriendForm: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -79,12 +79,11 @@ struct AddFriendForm: View {
           // Input field
           VStack(alignment: .leading, spacing: Spacing.xxxs) {
             TextField(
-              String(localized: .sharingEmailOrPhone),
+              String(localized: .sharingEmailOrPhoneOrUsername),
               text: $identifier
             )
             .textFieldStyle(TidexTextFieldStyle())
-            .textContentType(.emailAddress)
-            .keyboardType(.emailAddress)
+            .keyboardType(.default)
             .autocapitalization(.none)
             .autocorrectionDisabled()
             .focused($isFocused)
