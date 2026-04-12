@@ -1,6 +1,7 @@
-- Ajout des événements privés dans Tidex, y compris les plans sur une journée entière et sur plusieurs jours, avec modification et synchronisation
-- Ajout de galeries d’images dans les discussions entre amis et prise en charge de l’ajout de plusieurs photos à la fois
-- Amélioration des discussions entre amis avec une gestion plus fiable des messages non lus, une meilleure ouverture depuis les notifications et les pièces jointes, de meilleures réponses, et la prise en charge du transfert des shifts partagés
-- Ajout d’un choix d’onboarding plus clair entre le suivi de la paie et l’utilisation entre amis uniquement
-- Amélioration des widgets, des Activités en direct et des transitions du calendrier
+- Ajout de noms d’utilisateur pour trouver et ajouter des amis plus facilement
+- Amélioration de l’onglet Ajouter pour passer plus rapidement d’un shift à un événement privé ou à un shift récurrent
+- Amélioration des calendriers et shifts partagés avec de meilleurs indicateurs de disponibilité, le bon mois pour les anciens shifts partagés et des espaces réservés plus clairs pour les revenus masqués
+- Amélioration des discussions entre amis avec des indicateurs de saisie plus fiables et une ouverture depuis les notifications plus stable
+- Amélioration de la fiabilité et de la qualité des réponses de Wagey
+- Amélioration des animations des montants sur le tableau de bord
 - Corrections de bugs et autres améliorations

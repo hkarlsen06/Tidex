@@ -1,6 +1,7 @@
-- Private Ereignisse in Tidex hinzugefügt, einschließlich ganztägiger und mehrtägiger Planungen, mit Bearbeitungs- und Synchronisierungsunterstützung
-- Bildergalerien in Freundeschats hinzugefügt und Unterstützung zum gleichzeitigen Anhängen mehrerer Fotos ergänzt
-- Freundeschats verbessert – mit zuverlässigerer Handhabung ungelesener Nachrichten, besserem Öffnen über Benachrichtigungen und Anhänge, verbesserten Antworten und Unterstützung zum Weiterleiten geteilter Schichten
-- Eine klarere Auswahl im Onboarding zwischen Lohnverfolgung und Nutzung nur mit Freunden hinzugefügt
-- Widgets, Live-Aktivitäten und Kalenderübergänge verbessert
+- Benutzernamen hinzugefügt, damit du Freunde leichter finden und hinzufügen kannst
+- Den Hinzufügen-Tab verbessert, damit du schneller zwischen Schichten, privaten Ereignissen und wiederkehrenden Schichten wechseln kannst
+- Geteilte Kalender und Schichten verbessert – mit besseren Verfügbarkeitshinweisen, dem richtigen Monat für ältere geteilte Schichten und klareren Platzhaltern für ausgeblendete Verdienste
+- Freundeschats verbessert – mit zuverlässigeren Tippindikatoren und stabilerem Öffnen aus Benachrichtigungen
+- Wagey in Zuverlässigkeit und Antwortqualität verbessert
+- Animationen von Beträgen im Dashboard verbessert
 - Fehlerbehebungen und weitere Verbesserungen

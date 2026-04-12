@@ -1,6 +1,7 @@
-- Menambahkan acara pribadi ke Tidex, termasuk rencana sepanjang hari dan beberapa hari, dengan dukungan pengeditan dan sinkronisasi
-- Menambahkan galeri gambar di chat teman dan dukungan untuk melampirkan beberapa foto sekaligus
-- Meningkatkan chat teman dengan penanganan pesan belum dibaca yang lebih andal, pembukaan yang lebih baik dari notifikasi dan lampiran, balasan yang lebih baik, serta dukungan untuk meneruskan shift yang dibagikan
-- Menambahkan pilihan onboarding yang lebih jelas antara pelacakan penggajian dan penggunaan khusus teman
-- Meningkatkan widget, Live Activities, dan transisi kalender
+- Menambahkan nama pengguna agar Anda lebih mudah menemukan dan menambahkan teman
+- Meningkatkan tab Tambah agar Anda bisa lebih cepat berpindah antara shift, acara pribadi, dan shift berulang
+- Meningkatkan kalender dan shift bersama dengan petunjuk ketersediaan yang lebih baik, bulan yang tepat untuk shift bersama yang lama, dan placeholder yang lebih jelas untuk penghasilan yang disembunyikan
+- Meningkatkan obrolan teman dengan indikator mengetik yang lebih andal dan pembukaan dari notifikasi yang lebih stabil
+- Meningkatkan keandalan dan kualitas jawaban Wagey
+- Meningkatkan animasi jumlah di dasbor
 - Perbaikan bug dan peningkatan lainnya

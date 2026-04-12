@@ -1,6 +1,7 @@
-- Tidexiin on lisätty yksityiset tapahtumat, mukaan lukien koko päivän ja usean päivän suunnitelmat, sekä tuki muokkaukselle ja synkronoinnille
-- Kaverichatteihin on lisätty kuvagalleriat ja tuki usean kuvan liittämiseen kerralla
-- Kaverichatteja on parannettu luotettavammalla lukemattomien viestien käsittelyllä, paremmalla avaamisella ilmoituksista ja liitteistä, paremmilla vastauksilla sekä tuella jaettujen vuorojen välittämiseen
-- Onboardingiin on lisätty selkeämpi valinta palkan seurannan ja vain kaverikäytön välillä
-- Widgettejä, Live Activities -toimintoa ja kalenterisiirtymiä on parannettu
+- Lisätty käyttäjänimet, jotta ystävien löytäminen ja lisääminen on helpompaa
+- Parannettu Lisää-välilehteä, jotta voit vaihtaa nopeammin työvuorojen, yksityisten tapahtumien ja toistuvien työvuorojen välillä
+- Parannettu jaettuja kalentereita ja työvuoroja paremmilla saatavuusvihjeillä, näyttämällä vanhemmat jaetut työvuorot oikeassa kuukaudessa sekä selkeämmillä paikkamerkeillä piilotetuille ansioille
+- Parannettu ystäväkeskusteluja luotettavammilla kirjoitusilmaisimilla ja vakaammalla avautumisella ilmoituksista
+- Parannettu Wageyn luotettavuutta ja vastausten laatua
+- Parannettu koontinäytön summien animaatioita
 - Virheenkorjauksia ja muita parannuksia

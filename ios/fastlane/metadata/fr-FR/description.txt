@@ -6,6 +6,6 @@ Fonctionnalités :
 • Vue calendrier de tous les shifts
 • Aperçu des revenus et statistiques
 • Widget pour un accès rapide
-• Synchronisation entre appareils
+• Synchronisation entre les appareils
 
 Parfait pour les employés qui veulent suivre leurs heures de travail et leurs revenus.

@@ -1,6 +1,7 @@
-- Lade till privata händelser i Tidex, inklusive heldags- och flerdagarsplaner, med stöd för redigering och synkronisering
-- Lade till bildgallerier i vänchattar och stöd för att bifoga flera foton samtidigt
-- Förbättrade vänchattar med mer tillförlitlig hantering av olästa meddelanden, bättre öppning från notiser och bilagor, förbättrade svar och stöd för att vidarebefordra delade arbetspass
-- Lade till ett tydligare val i introduktionen mellan löneuppföljning och användning endast med vänner
-- Förbättrade widgets, Live Activities och kalenderövergångar
+- Lade till användarnamn så att du enklare kan hitta och lägga till vänner
+- Förbättrade fliken Lägg till så att du snabbare kan växla mellan pass, privata händelser och återkommande pass
+- Förbättrade delade kalendrar och pass med bättre tillgänglighetsindikatorer, rätt månad för äldre delade pass och tydligare platshållare för dolda intäkter
+- Förbättrade vänchattar med mer pålitliga skrivindikatorer och stabilare öppning från notiser
+- Förbättrade Wageys stabilitet och svarskvalitet
+- Förbättrade animationer för belopp på översikten
 - Buggfixar och andra förbättringar

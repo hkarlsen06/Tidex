@@ -2,8 +2,8 @@ Houd je werkdiensten bij en bereken je loon met Tidex.
 
 Functies:
 • Eenvoudig diensten registreren met begin- en eindtijden
-• Automatische loonberekening
-• Kalenderweergave van alle diensten
+• Automatische loonberekeningen
+• Kalenderoverzicht van alle diensten
 • Overzicht van inkomsten en statistieken
 • Widget voor snelle toegang
 • Synchronisatie tussen apparaten

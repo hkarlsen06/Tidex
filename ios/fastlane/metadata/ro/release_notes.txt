@@ -1,6 +1,7 @@
-- Am adăugat evenimente private în Tidex, inclusiv planuri de o zi întreagă și pe mai multe zile, cu suport pentru editare și sincronizare
-- Am adăugat galerii de imagini în chaturile cu prietenii și suport pentru atașarea mai multor fotografii deodată
-- Am îmbunătățit chaturile cu prietenii cu gestionare mai fiabilă a mesajelor necitite, deschidere mai bună din notificări și atașamente, răspunsuri îmbunătățite și suport pentru redirecționarea turelor partajate
-- Am adăugat o alegere mai clară la configurarea inițială între urmărirea salariului și utilizarea doar cu prietenii
-- Am îmbunătățit widgeturile, Live Activities și tranzițiile din calendar
+- Am adăugat nume de utilizator ca să poți găsi și adăuga prieteni mai ușor
+- Am îmbunătățit fila Adaugă ca să poți trece mai rapid între ture, evenimente private și ture recurente
+- Am îmbunătățit calendarele și turele partajate cu indicii de disponibilitate mai bune, luna corectă pentru turele partajate mai vechi și substituenți mai clari pentru câștigurile ascunse
+- Am îmbunătățit chaturile cu prietenii cu indicatori de tastare mai fiabili și o deschidere mai stabilă din notificări
+- Am îmbunătățit fiabilitatea și calitatea răspunsurilor pentru Wagey
+- Am îmbunătățit animațiile sumelor din panoul principal
 - Corecturi de erori și alte îmbunătățiri

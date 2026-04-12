@@ -1,1 +1,1 @@
-vuoro,seuranta,palkka,työ,tunnit,aika,kello,työvuoro,aikataulu,ansiot
+työvuoro,seuranta,palkka,työ,tunnit,aika,kello,vuorolista,ansiot,tulot

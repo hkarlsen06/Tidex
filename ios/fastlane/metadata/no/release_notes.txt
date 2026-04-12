@@ -1,6 +1,7 @@
-- Lagt til private hendelser i Tidex, inkludert heldags- og flerdagersplaner, med redigering og synkronisering
-- Lagt til bildegalleri i vennesamtaler og støtte for å legge ved flere bilder samtidig
-- Forbedret vennesamtaler med mer pålitelig håndtering av uleste meldinger, bedre åpning fra varsler og vedlegg, bedre svarflyt og støtte for å videresende delte vakter
-- Lagt til et tydeligere valg i onboarding mellom lønnssporing og kun vennedelen
-- Forbedret widgets, Live Activities og kalenderoverganger
+- Lagt til brukernavn så det er enklere å finne og legge til venner
+- Forbedret Legg til-fanen så du raskere kan bytte mellom vakter, private hendelser og gjentakende vakter
+- Forbedret delte kalendere og vakter med bedre tilgjengelighetsvisning, riktig måned for eldre delte vakter og tydeligere plassholdere for skjult lønn
+- Forbedret vennesamtaler med mer pålitelige skriveindikatorer og mer stabil åpning fra varsler
+- Forbedret Wagey med bedre stabilitet og svar
+- Forbedret animasjoner for beløp i oversikten
 - Feilrettinger og andre forbedringer

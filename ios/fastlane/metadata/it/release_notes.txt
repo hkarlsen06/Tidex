@@ -1,6 +1,7 @@
-- Aggiunti eventi privati in Tidex, inclusi piani di un giorno intero e di più giorni, con supporto per modifica e sincronizzazione
-- Aggiunte gallerie di immagini nelle chat con gli amici e supporto per allegare più foto contemporaneamente
-- Migliorate le chat con gli amici con una gestione dei non letti più affidabile, apertura migliore da notifiche e allegati, risposte migliorate e supporto per l'inoltro dei turni condivisi
-- Aggiunta una scelta di onboarding più chiara tra monitoraggio della retribuzione e utilizzo solo con gli amici
-- Migliorati widget, Attività in tempo reale e transizioni del calendario
+- Aggiunti i nomi utente per trovare e aggiungere amici più facilmente
+- Migliorata la scheda Aggiungi per passare più rapidamente tra turni, eventi privati e turni ricorrenti
+- Migliorati i calendari e i turni condivisi con migliori indicatori di disponibilità, il mese corretto per i turni condivisi più vecchi e segnaposto più chiari per i guadagni nascosti
+- Migliorate le chat con gli amici con indicatori di digitazione più affidabili e un'apertura più stabile dalle notifiche
+- Migliorate l'affidabilità e la qualità delle risposte di Wagey
+- Migliorate le animazioni degli importi nella dashboard
 - Correzioni di bug e altri miglioramenti
