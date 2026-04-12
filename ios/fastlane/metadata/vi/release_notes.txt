@@ -1,6 +1,7 @@
-- Đã thêm sự kiện riêng tư vào Tidex, bao gồm kế hoạch cả ngày và nhiều ngày, với hỗ trợ chỉnh sửa và đồng bộ
-- Đã thêm thư viện ảnh trong trò chuyện bạn bè và hỗ trợ đính kèm nhiều ảnh cùng lúc
-- Đã cải thiện trò chuyện bạn bè với việc xử lý tin chưa đọc đáng tin cậy hơn, mở từ thông báo và tệp đính kèm tốt hơn, cải thiện trả lời và hỗ trợ chuyển tiếp ca làm được chia sẻ
-- Đã thêm lựa chọn giới thiệu ban đầu rõ ràng hơn giữa theo dõi lương và chỉ dùng tính năng bạn bè
-- Đã cải thiện tiện ích, Live Activities và chuyển đổi lịch
+- Đã thêm tên người dùng để bạn có thể tìm và thêm bạn bè dễ dàng hơn
+- Đã cải thiện tab Thêm để bạn có thể chuyển nhanh hơn giữa ca làm, sự kiện riêng tư và ca làm lặp lại
+- Đã cải thiện lịch và ca làm được chia sẻ với gợi ý về trạng thái sẵn sàng tốt hơn, hiển thị đúng tháng cho các ca làm được chia sẻ cũ hơn và phần giữ chỗ rõ ràng hơn cho thu nhập bị ẩn
+- Đã cải thiện trò chuyện với bạn bè với chỉ báo đang nhập đáng tin cậy hơn và mở từ thông báo ổn định hơn
+- Đã cải thiện độ ổn định và chất lượng trả lời của Wagey
+- Đã cải thiện hiệu ứng chuyển động của số tiền trên bảng điều khiển
 - Sửa lỗi và các cải tiến khác

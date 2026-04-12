@@ -1,6 +1,7 @@
-- Privégebeurtenissen toegevoegd aan Tidex, inclusief dagvullende en meerdaagse plannen, met ondersteuning voor bewerken en synchronisatie
-- Afbeeldingsgalerijen toegevoegd aan vriendenchats en ondersteuning voor meerdere foto's tegelijk toevoegen
-- Vriendenchats verbeterd met betrouwbaardere verwerking van ongelezen berichten, beter openen vanuit meldingen en bijlagen, verbeterde antwoorden en ondersteuning voor het doorsturen van gedeelde diensten
-- Een duidelijkere onboardingkeuze toegevoegd tussen loonregistratie en alleen vrienden gebruiken
-- Widgets, Live Activities en kalenderovergangen verbeterd
+- Gebruikersnamen toegevoegd, zodat je vrienden makkelijker kunt vinden en toevoegen
+- Het tabblad Toevoegen verbeterd, zodat je sneller kunt wisselen tussen diensten, privé-evenementen en terugkerende diensten
+- Gedeelde agenda's en diensten verbeterd met betere beschikbaarheidsaanduidingen, de juiste maand voor oudere gedeelde diensten en duidelijkere placeholders voor verborgen inkomsten
+- Vriendenchats verbeterd met betrouwbaardere typindicatoren en stabieler openen vanuit meldingen
+- Wagey verbeterd met betere betrouwbaarheid en antwoordkwaliteit
+- Animaties van bedragen in het dashboard verbeterd
 - Bugfixes en andere verbeteringen

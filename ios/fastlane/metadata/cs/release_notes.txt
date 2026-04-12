@@ -1,6 +1,7 @@
-- Do Tidexu jsme přidali soukromé události včetně celodenních i vícedenních plánů s možností úprav a synchronizace
-- Přidali jsme galerie obrázků do chatů s přáteli a podporu pro přiložení více fotek najednou
-- Vylepšili jsme chaty s přáteli spolehlivějším zpracováním nepřečtených zpráv, lepším otevíráním z oznámení a příloh, lepšími odpověďmi a podporou přeposílání sdílených směn
-- Přidali jsme přehlednější volbu při úvodním nastavení mezi sledováním mezd a používáním jen části pro přátele
-- Vylepšili jsme widgety, Live Activities a přechody v kalendáři
+- Přidali jsme uživatelská jména, takže nyní můžete snáze najít a přidat přátele
+- Vylepšili jsme kartu Přidat, takže můžete rychleji přepínat mezi směnami, soukromými událostmi a opakujícími se směnami
+- Vylepšili jsme sdílené kalendáře a směny díky lepším indikátorům dostupnosti, správnému měsíci u starších sdílených směn a přehlednějším zástupným textům pro skryté výdělky
+- Vylepšili jsme chaty s přáteli díky spolehlivějším indikátorům psaní a stabilnějšímu otevírání z oznámení
+- Vylepšili jsme spolehlivost a kvalitu odpovědí Wagey
+- Vylepšili jsme animace částek na přehledu
 - Opravy chyb a další vylepšení

@@ -6,6 +6,6 @@ Funktionen:
 • Kalenderansicht aller Schichten
 • Verdienstübersicht und Statistiken
 • Widget für schnellen Zugriff
-• Synchronisierung über mehrere Geräte
+• Synchronisierung auf allen Geräten
 
-Perfekt für Beschäftigte, die ihre Arbeitszeiten und Einnahmen im Blick behalten möchten.
+Perfekt für Beschäftigte, die ihre Arbeitszeiten und ihren Verdienst im Blick behalten möchten.

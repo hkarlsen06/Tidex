@@ -1,6 +1,7 @@
-- Privát események hozzáadva a Tidexhez, beleértve az egész napos és többnapos terveket, szerkesztési és szinkronizálási támogatással
-- Képgalériák hozzáadva a baráti csevegésekhez, valamint egyszerre több fotó csatolásának támogatása
-- Továbbfejlesztett baráti csevegések megbízhatóbb olvasatlanüzenet-kezeléssel, jobb megnyitással értesítésekből és mellékletekből, jobb válaszkezeléssel, valamint a megosztott műszakok továbbításának támogatásával
-- Egyértelműbb kezdő beállítási választási lehetőség hozzáadva a bérkövetés és a csak barátok funkció közé
-- Javított widgetek, Live Activities és naptárátmenetek
+- Felhasználónevekkel bővítettük az appot, így könnyebben megtalálhatod és hozzáadhatod a barátaidat
+- Fejlesztettük a Hozzáadás fület, így gyorsabban válthatsz a műszakok, a privát események és az ismétlődő műszakok között
+- Javítottuk a megosztott naptárakat és műszakokat jobb elérhetőségi jelzésekkel, a régebbi megosztott műszakoknál a megfelelő hónap megjelenítésével, valamint egyértelműbb helyőrzőkkel a rejtett keresetekhez
+- Fejlesztettük a baráti csevegéseket megbízhatóbb gépelési jelzőkkel és stabilabb megnyitással az értesítésekből
+- Javítottuk a Wagey megbízhatóságát és a válaszok minőségét
+- Fejlesztettük az összeganimációkat az áttekintő felületen
 - Hibajavítások és egyéb fejlesztések

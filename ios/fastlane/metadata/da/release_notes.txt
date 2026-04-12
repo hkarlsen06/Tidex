@@ -1,6 +1,7 @@
-- Tilføjet private begivenheder i Tidex, herunder heldags- og flerdagsplaner, med understøttelse af redigering og synkronisering
-- Tilføjet billedgallerier i vennechats og understøttelse af at vedhæfte flere billeder på én gang
-- Forbedret vennechats med mere pålidelig håndtering af ulæste beskeder, bedre åbning fra notifikationer og vedhæftninger, forbedrede svar og understøttelse af videresendelse af delte vagter
-- Tilføjet et tydeligere valg i onboarding mellem lønsporing og brug kun med venner
-- Forbedret widgets, Live Activities og kalenderovergange
+- Tilføjet brugernavne, så du nemmere kan finde og tilføje venner
+- Forbedret fanen Tilføj, så du hurtigere kan skifte mellem vagter, private begivenheder og tilbagevendende vagter
+- Forbedret delte kalendere og vagter med bedre tilgængelighedshint, den rigtige måned for ældre delte vagter og tydeligere pladsholdere for skjult indtjening
+- Forbedret vennechats med mere pålidelige skriveindikatorer og mere stabil åbning fra notifikationer
+- Forbedret Wageys stabilitet og svarkvalitet
+- Forbedret animationer for beløb på oversigten
 - Fejlrettelser og andre forbedringer

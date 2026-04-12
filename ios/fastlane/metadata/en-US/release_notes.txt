@@ -1,6 +1,7 @@
-- Added private events to Tidex, including all-day and multi-day plans, with editing and sync support
-- Added friend chat image galleries and support for attaching multiple photos at once
-- Improved friend chats with more reliable unread handling, better opening from notifications and attachments, improved replies, and support for forwarding shared shifts
-- Added a clearer onboarding choice between payroll tracking and friends-only use
-- Improved widgets, Live Activities, and calendar transitions
+- Added usernames so you can find and add friends more easily
+- Improved the Add tab so you can cycle between shifts, private events, and recurring shifts more quickly
+- Improved shared calendars and shifts with better availability hints, the right month for older shared shifts, and clearer placeholders for hidden earnings
+- Improved friend chats with more reliable typing indicators and more stable opening from notifications
+- Improved Wagey reliability and answer quality
+- Improved dashboard amount animations
 - Bug fixes and other improvements

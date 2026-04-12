@@ -1,6 +1,7 @@
-- Tidex'e düzenleme ve senkronizasyon desteğiyle birlikte, tüm gün ve birden fazla güne yayılan planlar dahil özel etkinlikler eklendi
-- Arkadaş sohbetlerine görsel galerileri eklendi ve aynı anda birden fazla fotoğraf ekleme desteği getirildi
-- Arkadaş sohbetleri; okunmamış mesajların daha güvenilir yönetimi, bildirimlerden ve eklerden daha iyi açılma, geliştirilmiş yanıtlar ve paylaşılan vardiyaları iletme desteğiyle iyileştirildi
-- Onboarding sürecine, bordro takibi ile yalnızca arkadaş odaklı kullanım arasında daha net bir seçim eklendi
-- Widget'lar, Live Activities ve takvim geçişleri iyileştirildi
+- Arkadaşlarınızı daha kolay bulup ekleyebilmeniz için kullanıcı adları eklendi
+- Ekle sekmesi iyileştirildi; böylece vardiyalar, özel etkinlikler ve tekrarlayan vardiyalar arasında daha hızlı geçiş yapabilirsiniz
+- Paylaşılan takvimler ve vardiyalar; daha iyi müsaitlik ipuçları, eski paylaşılan vardiyalar için doğru ay ve gizli kazançlar için daha anlaşılır yer tutucularla iyileştirildi
+- Arkadaş sohbetleri, daha güvenilir yazıyor göstergeleri ve bildirimlerden daha kararlı açılma ile iyileştirildi
+- Wagey'nin güvenilirliği ve yanıt kalitesi iyileştirildi
+- Gösterge panelindeki tutar animasyonları iyileştirildi
 - Hata düzeltmeleri ve diğer iyileştirmeler

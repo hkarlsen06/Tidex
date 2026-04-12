@@ -1,6 +1,7 @@
-- S'han afegit esdeveniments privats a Tidex, inclosos plans de tot el dia i de diversos dies, amb suport per a edició i sincronització
-- S'han afegit galeries d'imatges als xats amb amics i suport per adjuntar diverses fotos alhora
-- S'han millorat els xats amb amics amb una gestió més fiable dels missatges no llegits, una millor obertura des de notificacions i adjunts, respostes millorades i suport per reenviar torns compartits
-- S'ha afegit una opció d'inici més clara entre el seguiment de nòmines i l'ús només amb amics
-- S'han millorat els widgets, les Activitats en directe i les transicions del calendari
+- S'han afegit noms d'usuari perquè puguis trobar i afegir amics més fàcilment
+- S'ha millorat la pestanya Afegeix perquè puguis alternar més ràpidament entre torns, esdeveniments privats i torns recurrents
+- S'han millorat els calendaris i els torns compartits amb millors indicadors de disponibilitat, el mes correcte per als torns compartits antics i textos de marcador més clars per als ingressos ocults
+- S'han millorat els xats amb amics amb indicadors d'escriptura més fiables i una obertura més estable des de les notificacions
+- S'ha millorat la fiabilitat i la qualitat de les respostes de Wagey
+- S'han millorat les animacions dels imports al tauler
 - Correcció d'errors i altres millores

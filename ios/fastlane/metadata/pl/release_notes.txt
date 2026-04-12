@@ -1,6 +1,7 @@
-- Dodano prywatne wydarzenia w Tidex, w tym plany całodniowe i kilkudniowe, z obsługą edycji i synchronizacji
-- Dodano galerie zdjęć w czatach ze znajomymi oraz obsługę dołączania wielu zdjęć jednocześnie
-- Ulepszono czaty ze znajomymi dzięki bardziej niezawodnej obsłudze nieprzeczytanych wiadomości, lepszemu otwieraniu z powiadomień i załączników, usprawnionym odpowiedziom oraz obsłudze przekazywania udostępnionych zmian
-- Dodano bardziej przejrzysty wybór podczas wdrożenia między śledzeniem wynagrodzenia a korzystaniem wyłącznie z funkcji znajomych
-- Ulepszono widżety, Live Activities i przejścia w kalendarzu
+- Dodano nazwy użytkownika, aby łatwiej było znajdować i dodawać znajomych
+- Ulepszono kartę Dodaj, aby można było szybciej przełączać się między zmianami, wydarzeniami prywatnymi i zmianami cyklicznymi
+- Ulepszono udostępnione kalendarze i zmiany dzięki lepszym wskazówkom dotyczącym dostępności, właściwemu miesiącowi dla starszych udostępnionych zmian oraz wyraźniejszym symbolom zastępczym dla ukrytych zarobków
+- Ulepszono czaty ze znajomymi dzięki bardziej niezawodnym wskaźnikom pisania i stabilniejszemu otwieraniu z powiadomień
+- Ulepszono niezawodność i jakość odpowiedzi Wagey
+- Ulepszono animacje kwot na pulpicie
 - Poprawki błędów i inne ulepszenia

@@ -1,6 +1,7 @@
-- Dodani su privatni događaji u Tidex, uključujući cjelodnevne i višednevne planove, uz podršku za uređivanje i sinkronizaciju
-- Dodane su galerije slika u razgovorima s prijateljima i podrška za istovremeno prilaganje više fotografija
-- Poboljšani su razgovori s prijateljima uz pouzdanije rukovanje nepročitanim porukama, bolje otvaranje iz obavijesti i privitaka, poboljšane odgovore te podršku za prosljeđivanje dijeljenih smjena
-- Dodan je jasniji odabir pri početnom postavljanju između praćenja obračuna plaće i korištenja samo dijela za prijatelje
-- Poboljšani su widgeti, Live Activities i prijelazi u kalendaru
-- Ispravci grešaka i druga poboljšanja
+- Dodana su korisnička imena kako biste lakše pronašli i dodali prijatelje
+- Poboljšana je kartica Dodaj kako biste se brže mogli prebacivati između smjena, privatnih događaja i ponavljajućih smjena
+- Poboljšani su dijeljeni kalendari i smjene uz bolje naznake dostupnosti, ispravan mjesec za starije dijeljene smjene i jasnije oznake za skrivenu zaradu
+- Poboljšani su razgovori s prijateljima uz pouzdanije pokazatelje tipkanja i stabilnije otvaranje iz obavijesti
+- Poboljšani su pouzdanost i kvaliteta odgovora u Wageyju
+- Poboljšane su animacije iznosa na nadzornoj ploči
+- Ispravci pogrešaka i druga poboljšanja
