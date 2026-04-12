@@ -195,7 +195,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-03-28',
+    lastUpdatedDate: '2026-04-12',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -286,15 +286,15 @@ export const legalNo = {
             },
           },
           {
-            boldLabel: 'Mistral AI:',
-            text: 'Wagey AI-assistenten bruker Mistral AI for å generere svar. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til Mistral AI for behandling. Wagey kan også bruke Mistrals innebygde web search-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Mistrals nåværende dokumentasjon for betalt API sier at input og output i Scale-planen ikke brukes til modelltrening, og Mistrals nåværende personvernerklæring sier at standard API-input og -output kan lagres i opptil 30 rullerende dager for misbruksovervåking med mindre zero-data-retention er aktivert. Mistral AI behandler data i samsvar med deres {link}.',
+            boldLabel: 'Anthropic:',
+            text: 'Wagey AI-assistenten drives av Claude fra Anthropic. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til Anthropic for behandling. I denne sammenhengen er Tidex behandlingsansvarlig for personopplysningene, og Anthropic opptrer som databehandler på vegne av Tidex. Ved behov kan Wagey også bruke Anthropics innebygde web search- og web fetch-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Anthropics nåværende kommersielle dokumentasjon sier at inndata og utdata som sendes til Anthropic API-et under kommersielle vilkår ikke brukes til å trene Anthropics generative modeller med mindre kunden uttrykkelig melder seg på modellforbedring. Anthropics {link} kan gi mer informasjon om Anthropics egne produkter og behandling, men det er Tidex sin personvernerklæring som regulerer hvordan Tidex behandler personopplysningene dine i Wagey.',
             link: {
-              href: 'https://legal.mistral.ai/terms/privacy-policy',
+              href: 'https://www.anthropic.com/legal/privacy',
               text: 'personvernerklæring',
             },
           },
         ],
-        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler, og med Mistral AI når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler, og med Anthropic når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',
