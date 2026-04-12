@@ -165,6 +165,8 @@ Run commands from the repository root unless explicitly stated otherwise.
   - Exit code `0` + `STATUS: SUCCESS` -> build succeeded
   - Non-zero exit code or `STATUS: FAILURE` -> build failed
   - If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
+- During active debugging sessions where the user is already rebuilding in Xcode or on device/simulator after each turn, do not auto-run the build wrapper for every small change.
+- In that mode, skip build execution when the change is narrow and you are confident it does not introduce compile failures; report that you intentionally skipped the build so the user can validate in their normal loop.
 
 **iOS Tests:**
 - When running iOS tests from the terminal, always run:
@@ -190,3 +192,5 @@ Run commands from the repository root unless explicitly stated otherwise.
   - Exit code `0` + `STATUS: SUCCESS` -> tests passed
   - Non-zero exit code or `STATUS: FAILURE` -> tests failed
   - If present, read the `TESTS`, `WARNINGS`, `ERRORS`, and `test_failures` diagnostics
+- During active debugging sessions where the user is already rebuilding/rerunning manually after each turn, do not auto-run tests for every small change.
+- In that mode, skip test execution when the change is narrow and low-risk, and state that tests were intentionally skipped because the user is validating interactively.
