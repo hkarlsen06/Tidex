@@ -494,27 +494,30 @@ enum FriendsThreadExyteHighlightRedrawResolver {
     messages.map { message in
       guard message.id == highlightedPresentedMessageID else { return message }
       var highlightedMessage = message
-      highlightedMessage.text += redrawMarker
+      highlightedMessage.attributedText += AttributedString(redrawMarker)
       return highlightedMessage
     }
   }
 
   static func isHighlighted(_ message: ExyteChat.Message) -> Bool {
-    message.text.hasSuffix(redrawMarker)
+    String(message.attributedText.characters).hasSuffix(redrawMarker)
   }
 
   static func visibleText(for message: ExyteChat.Message) -> String {
-    guard isHighlighted(message) else { return message.text }
-    return String(message.text.dropLast(redrawMarker.count))
+    let text = String(message.attributedText.characters)
+    guard isHighlighted(message) else { return text }
+    return String(text.dropLast(redrawMarker.count))
   }
 }
 
 struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   let messages: [ExyteChat.Message]
   let scrollRequest: FriendsThreadChatViewportScrollRequest?
+  let observedPresentedMessageID: String?
   let highlightedPresentedMessageID: String?
   let onPinnedToBottomChanged: (Bool) -> Void
   let onLatestVisiblePresentedMessageIDChanged: (String?) -> Void
+  let onObservedPresentedMessageVisible: (String) -> Void
   let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
 
   func makeCoordinator() -> Coordinator {
@@ -534,9 +537,11 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       input: .init(
         messages: messages,
         scrollRequest: scrollRequest,
+        observedPresentedMessageID: observedPresentedMessageID,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
         onPinnedToBottomChanged: onPinnedToBottomChanged,
         onLatestVisiblePresentedMessageIDChanged: onLatestVisiblePresentedMessageIDChanged,
+        onObservedPresentedMessageVisible: onObservedPresentedMessageVisible,
         onDidHandleScrollRequest: onDidHandleScrollRequest
       )
     )
@@ -547,9 +552,11 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     struct UpdateInput {
       let messages: [ExyteChat.Message]
       let scrollRequest: FriendsThreadChatViewportScrollRequest?
+      let observedPresentedMessageID: String?
       let highlightedPresentedMessageID: String?
       let onPinnedToBottomChanged: (Bool) -> Void
       let onLatestVisiblePresentedMessageIDChanged: (String?) -> Void
+      let onObservedPresentedMessageVisible: (String) -> Void
       let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
     }
 
@@ -558,14 +565,17 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var contentSizeObservation: NSKeyValueObservation?
     private var messages: [ExyteChat.Message] = []
     private var scrollRequest: FriendsThreadChatViewportScrollRequest?
+    private var observedPresentedMessageID: String?
     private var highlightedPresentedMessageID: String?
     private var lastHighlightedPresentedMessageID: String?
     private var lastVisibleHighlightedIndexPath: IndexPath?
     private var handledScrollRequest: FriendsThreadChatViewportScrollRequest?
     private var lastPinnedToBottomState: Bool?
     private var lastVisiblePresentedMessageID: String?
+    private var lastReportedObservedPresentedMessageID: String?
     private var onPinnedToBottomChanged: ((Bool) -> Void)?
     private var onLatestVisiblePresentedMessageIDChanged: ((String?) -> Void)?
+    private var onObservedPresentedMessageVisible: ((String) -> Void)?
     private var onDidHandleScrollRequest: ((FriendsThreadChatViewportScrollRequest) -> Void)?
 
     func update(
@@ -574,9 +584,14 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     ) {
       messages = input.messages
       scrollRequest = input.scrollRequest
+      if observedPresentedMessageID != input.observedPresentedMessageID {
+        lastReportedObservedPresentedMessageID = nil
+      }
+      observedPresentedMessageID = input.observedPresentedMessageID
       highlightedPresentedMessageID = input.highlightedPresentedMessageID
       onPinnedToBottomChanged = input.onPinnedToBottomChanged
       onLatestVisiblePresentedMessageIDChanged = input.onLatestVisiblePresentedMessageIDChanged
+      onObservedPresentedMessageVisible = input.onObservedPresentedMessageVisible
       onDidHandleScrollRequest = input.onDidHandleScrollRequest
 
       if input.scrollRequest == nil {
@@ -587,6 +602,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       reportPinnedToBottomIfNeeded()
       reportLatestVisiblePresentedMessageIDIfNeeded()
       attemptPendingScroll()
+      reportObservedPresentedMessageVisibleIfNeeded()
       refreshHighlightedRowsIfNeeded(
         force: input.highlightedPresentedMessageID != lastHighlightedPresentedMessageID)
     }
@@ -604,6 +620,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
           self.attachIfNeeded(from: view)
           self.reportPinnedToBottomIfNeeded()
           self.attemptPendingScroll()
+          self.reportObservedPresentedMessageVisibleIfNeeded()
         }
         return
       }
@@ -623,6 +640,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         Task { @MainActor [weak self] in
           self?.reportLatestVisiblePresentedMessageIDIfNeeded()
           self?.attemptPendingScroll()
+          self?.reportObservedPresentedMessageVisibleIfNeeded()
         }
       }
     }
@@ -631,6 +649,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       guard tableView === self.tableView else { return }
       reportPinnedToBottomIfNeeded()
       reportLatestVisiblePresentedMessageIDIfNeeded()
+      reportObservedPresentedMessageVisibleIfNeeded()
       refreshHighlightedRowsIfNeeded(force: false)
     }
 
@@ -659,6 +678,27 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       lastVisiblePresentedMessageID = visiblePresentedMessageID
       DispatchQueue.main.async { [weak self] in
         self?.onLatestVisiblePresentedMessageIDChanged?(visiblePresentedMessageID)
+      }
+    }
+
+    private func reportObservedPresentedMessageVisibleIfNeeded() {
+      guard let tableView, let observedPresentedMessageID else { return }
+      guard lastReportedObservedPresentedMessageID != observedPresentedMessageID else { return }
+      guard
+        let indexPath = FriendsThreadChatViewportResolver.indexPath(
+          for: observedPresentedMessageID,
+          in: messages
+        )
+      else {
+        return
+      }
+      guard tableView.numberOfSections > indexPath.section else { return }
+      guard tableView.numberOfRows(inSection: indexPath.section) > indexPath.row else { return }
+      guard tableView.cellForRow(at: indexPath) != nil else { return }
+
+      lastReportedObservedPresentedMessageID = observedPresentedMessageID
+      DispatchQueue.main.async { [weak self] in
+        self?.onObservedPresentedMessageVisible?(observedPresentedMessageID)
       }
     }
 

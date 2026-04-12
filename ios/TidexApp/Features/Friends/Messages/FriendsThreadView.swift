@@ -4,6 +4,11 @@ import SwiftUI
 import UIKit
 
 struct FriendsThreadView: View {
+  @MainActor
+  private final class ChatListRuntime: ObservableObject {
+    var lastWillDisplayPresentedMessageID: String?
+  }
+
   private enum AccessibilityID {
     static let threadView = "friends-thread.view"
     static let unreadPill = "friends-thread.unread-pill"
@@ -24,6 +29,7 @@ struct FriendsThreadView: View {
   @StateObject private var viewModel: FriendsThreadViewModel
   @StateObject private var composerBridge = FriendsThreadComposerBridge()
   @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
+  @StateObject private var chatListRuntime = ChatListRuntime()
 
   @State private var pendingReportTarget: ReportTarget?
   @State private var showBlockConfirmation = false
@@ -166,6 +172,16 @@ struct FriendsThreadView: View {
     )
   }
 
+  private var packageReplyScrollRequest: FriendsThreadChatViewportScrollRequest? {
+    guard viewportScrollRequest?.kind == .reply else { return nil }
+    return viewportScrollRequest
+  }
+
+  private var bridgeViewportScrollRequest: FriendsThreadChatViewportScrollRequest? {
+    guard viewportScrollRequest?.kind != .reply else { return nil }
+    return viewportScrollRequest
+  }
+
   private var highlightedPresentedMessageID: String? {
     FriendsThreadChatViewportRequestResolver.presentedMessageID(
       for: highlightedMessageId,
@@ -263,6 +279,10 @@ struct FriendsThreadView: View {
         guard let threadId = notification.userInfo?["threadId"] as? String,
           threadId == viewModel.route.threadId
         else {
+          return
+        }
+
+        if notification.userInfo?["source"] as? String == "localRead" {
           return
         }
 
@@ -506,24 +526,24 @@ struct FriendsThreadView: View {
       messages: exyteMessages,
       chatType: .conversation,
       replyMode: .quote,
-      messageBuilder: { message, _, _, _, _, _, _, messageFrame in
-        chatRow(for: message, messageFrame: messageFrame)
-      },
-      inputViewBuilder: { text, _, _, _, _, _ in
-        FriendsThreadComposerHostedView(
-          configuration: composerConfiguration,
-          bridge: composerBridge,
-          text: text
-        )
-      },
-      messageMenuAction: handleMessageMenuAction,
-      localization: chatLocalization,
       didSendMessage: { draft in
         Task { @MainActor in
           _ = await viewModel.sendMessage(content: draft.text)
         }
-      }
+      },
+      messageBuilder: { params in
+        chatRow(for: params.message, messageFrame: params.messageFrame)
+      },
+      inputViewBuilder: { params in
+        FriendsThreadComposerHostedView(
+          configuration: composerConfiguration,
+          bridge: composerBridge,
+          text: params.text
+        )
+      },
+      messageMenuAction: handleMessageMenuAction
     )
+    .localization(chatLocalization)
     .showDateHeaders(true)
     .appliesFocusModifierToCustomInputView(false)
     .headerBuilder { date in
@@ -536,8 +556,51 @@ struct FriendsThreadView: View {
     .showMessageMenuOnLongPress(true)
     .setAvailableInputs([.text])
     .keyboardDismissMode(.interactive)
-    .enableLoadMore(pageSize: 50) { message in
-      await viewModel.loadOlderMessagesIfNeeded(currentFirstMessageId: messageID(for: message.id))
+    .swipeActions(
+      edge: .leading, performsFirstActionWithFullSwipe: true,
+      items: [
+        SwipeAction(
+          action: handleSwipeReplyAction,
+          activeFor: { exyteMessage in
+            guard let friendMessage = presentedMessageLookup[exyteMessage.id] else { return false }
+            return !exyteMessage.user.isCurrentUser
+              && friendMessage.messageType == .user
+              && friendMessage.deletedAt == nil
+          },
+          background: .tidexBlue
+        ) {
+          chatReplySwipeActionLabel
+        }
+      ]
+    )
+    .swipeActions(
+      edge: .trailing, performsFirstActionWithFullSwipe: true,
+      items: [
+        SwipeAction(
+          action: handleSwipeReplyAction,
+          activeFor: { exyteMessage in
+            guard let friendMessage = presentedMessageLookup[exyteMessage.id] else { return false }
+            return exyteMessage.user.isCurrentUser
+              && friendMessage.messageType == .user
+              && friendMessage.deletedAt == nil
+          },
+          background: .tidexBlue
+        ) {
+          chatReplySwipeActionLabel
+        }
+      ]
+    )
+    .onWillDisplayCell(handleChatCellWillDisplay)
+    .scrollToMessageID(packageReplyScrollRequest?.presentedMessageID)
+    .enableLoadMore(offset: 50) {
+      guard
+        let lastWillDisplayPresentedMessageID = chatListRuntime.lastWillDisplayPresentedMessageID
+      else { return }
+      Task {
+        await viewModel.loadOlderMessagesIfNeeded(
+          currentFirstMessageId: messageID(for: lastWillDisplayPresentedMessageID)
+        )
+      }
     }
     .onMessageReaction(
       didReactTo: { message, draftReaction in
@@ -560,7 +623,8 @@ struct FriendsThreadView: View {
     .overlay {
       FriendsThreadChatViewportBridge(
         messages: exyteMessages,
-        scrollRequest: viewportScrollRequest,
+        scrollRequest: bridgeViewportScrollRequest,
+        observedPresentedMessageID: packageReplyScrollRequest?.presentedMessageID,
         highlightedPresentedMessageID: highlightedPresentedMessageID,
         onPinnedToBottomChanged: {
           isPinnedToBottom = $0
@@ -573,6 +637,7 @@ struct FriendsThreadView: View {
             )
           }
         },
+        onObservedPresentedMessageVisible: handlePackageReplyPresentedMessageVisible,
         onDidHandleScrollRequest: handleViewportScrollRequest
       )
       .allowsHitTesting(false)
@@ -643,6 +708,9 @@ struct FriendsThreadView: View {
         counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
           from: counterpartDisplayName),
         isHighlighted: FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage),
+        visibleMessageText: FriendsThreadExyteHighlightRedrawResolver.visibleText(
+          for: exyteMessage
+        ),
         senderFirstName: firstName(
           from: isCurrentUser ? currentUserDisplayName : counterpartDisplayName
         ),
@@ -650,9 +718,6 @@ struct FriendsThreadView: View {
         showsSenderLabel: false,
         showsTimestamp: shouldShowTimestamp,
         messageStatus: messageStatus,
-        onReply: {
-          viewModel.setReplyTarget(message)
-        },
         onRetry: {
           Task {
             await viewModel.retryMessage(messageId: message.id)
@@ -785,6 +850,19 @@ struct FriendsThreadView: View {
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier(AccessibilityID.unreadPill)
+  }
+
+  private var chatReplySwipeActionLabel: some View {
+    VStack(spacing: 4) {
+      Image(systemName: "arrowshape.turn.up.left")
+        .imageScale(.large)
+        .foregroundStyle(.white)
+        .frame(height: 30)
+
+      Text(String(localized: .friendsChatActionReply))
+        .foregroundStyle(.white)
+        .font(.tidexFootnote)
+    }
   }
 
   private var actionsMenu: some View {
@@ -979,6 +1057,16 @@ struct FriendsThreadView: View {
     }
   }
 
+  private func handleSwipeReplyAction(
+    message: ExyteChat.Message,
+    defaultActionClosure: @escaping (ExyteChat.Message, DefaultMessageMenuAction) -> Void
+  ) {
+    _ = defaultActionClosure
+    guard let friendMessage = presentedMessageLookup[message.id] else { return }
+    Haptics.play(.medium)
+    viewModel.setReplyTarget(friendMessage)
+  }
+
   private func handleMessageIDsChange(from oldValue: [String], to newValue: [String]) {
     let change = FriendsThreadMessageListChangeResolver.resolve(
       oldMessageIDs: oldValue,
@@ -1075,14 +1163,20 @@ struct FriendsThreadView: View {
     }
   }
 
+  private func handleChatCellWillDisplay(_ message: ExyteChat.Message) {
+    chatListRuntime.lastWillDisplayPresentedMessageID = message.id
+  }
+
+  private func handlePackageReplyPresentedMessageVisible(_ presentedMessageID: String) {
+    guard let request = packageReplyScrollRequest, request.presentedMessageID == presentedMessageID
+    else { return }
+    completeReplyScrollRequest(request)
+  }
+
   private func handleViewportScrollRequest(_ request: FriendsThreadChatViewportScrollRequest) {
     switch request.kind {
     case .reply:
-      flashHighlightedMessage(request.messageID)
-      Task { @MainActor in
-        viewModel.consumeReplyScrollTarget()
-        viewModel.consumeRestoreScrollTarget()
-      }
+      completeReplyScrollRequest(request)
     case .restore:
       Task { @MainActor in
         viewModel.consumeRestoreScrollTarget()
@@ -1090,6 +1184,12 @@ struct FriendsThreadView: View {
     case .liveEdge:
       break
     }
+  }
+
+  private func completeReplyScrollRequest(_ request: FriendsThreadChatViewportScrollRequest) {
+    flashHighlightedMessage(request.messageID)
+    viewModel.consumeReplyScrollTarget()
+    viewModel.consumeRestoreScrollTarget()
   }
 
   private func replyPreviewModel(for message: FriendMessage) -> FriendsChatReplyPreviewModel {

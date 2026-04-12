@@ -27,6 +27,10 @@ extension SharedShiftsRepository: SharedShiftsCaching {}
 
 @MainActor
 final class FriendsThreadViewModel: ObservableObject {
+  private enum NotificationSource {
+    static let localRead = "localRead"
+  }
+
   private enum Pagination {
     static let pageSize = 50
   }
@@ -266,6 +270,9 @@ final class FriendsThreadViewModel: ObservableObject {
       createdAt: Date()
     )
 
+    if !self.viewerUserId.isEmpty {
+      loadFromCache()
+    }
     syncCounterpartShiftPreviewFromCache()
   }
 
@@ -335,8 +342,7 @@ final class FriendsThreadViewModel: ObservableObject {
         throughMessageId: visibleMessage.id
       )
       await repository.saveThreadState(state)
-      loadFromCache()
-      notifyThreadUpdated()
+      notifyThreadUpdated(source: NotificationSource.localRead)
     } catch {
       threadLogger.error("Failed to mark thread as read: \(error.localizedDescription)")
     }
@@ -922,11 +928,16 @@ final class FriendsThreadViewModel: ObservableObject {
     notifyThreadUpdated()
   }
 
-  private func notifyThreadUpdated() {
+  private func notifyThreadUpdated(source: String? = nil) {
+    var userInfo: [String: Any] = ["threadId": route.threadId]
+    if let source {
+      userInfo["source"] = source
+    }
+
     NotificationCenter.default.post(
       name: .friendsThreadDidUpdate,
       object: nil,
-      userInfo: ["threadId": route.threadId]
+      userInfo: userInfo
     )
   }
 
