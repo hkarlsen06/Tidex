@@ -1,9 +1,5 @@
--- Function: get_my_sharers
--- Description: Returns users who share their shifts with the authenticated viewer, including hidden rows.
--- Security:
---   - Uses auth.uid() server-side (viewer cannot be spoofed).
---   - Includes the share hidden state so clients can separate visible and hidden users.
---   - SECURITY DEFINER is required to read auth.users metadata safely.
+-- Add calendar-content signal to sharer rows so clients can decide whether
+-- the calendar affordance should be shown even when all visible shifts are old.
 
 CREATE OR REPLACE FUNCTION public.get_my_sharers()
 RETURNS TABLE (

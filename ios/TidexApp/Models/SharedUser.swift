@@ -15,6 +15,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
   let showEarnings: Bool
   /// Whether the viewer has hidden this sharer from the main list
   let hidden: Bool
+  /// Whether this sharer has any shared shift history or recurring shifts at all.
+  let hasSharedCalendarContent: Bool
 
   private enum CodingKeys: String, CodingKey {
     case id
@@ -26,6 +28,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     case sharedAt
     case showEarnings
     case hidden
+    case hasSharedCalendarContent
     case blocked
   }
 
@@ -38,7 +41,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     oauthAvatarUrl: String?,
     sharedAt: String,
     showEarnings: Bool,
-    hidden: Bool
+    hidden: Bool,
+    hasSharedCalendarContent: Bool = false
   ) {
     self.id = id
     self.email = email
@@ -49,6 +53,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     self.sharedAt = sharedAt
     self.showEarnings = showEarnings
     self.hidden = hidden
+    self.hasSharedCalendarContent = hasSharedCalendarContent
   }
 
   init(from decoder: Decoder) throws {
@@ -65,6 +70,9 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
       try container.decodeIfPresent(Bool.self, forKey: .hidden)
       ?? container.decodeIfPresent(Bool.self, forKey: .blocked)
       ?? false
+    hasSharedCalendarContent =
+      try container.decodeIfPresent(Bool.self, forKey: .hasSharedCalendarContent)
+      ?? false
   }
 
   func encode(to encoder: Encoder) throws {
@@ -78,6 +86,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     try container.encode(sharedAt, forKey: .sharedAt)
     try container.encode(showEarnings, forKey: .showEarnings)
     try container.encode(hidden, forKey: .hidden)
+    try container.encode(hasSharedCalendarContent, forKey: .hasSharedCalendarContent)
   }
 
   /// Display name for the sharer (firstName > email > phone > "Unknown")

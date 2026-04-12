@@ -160,7 +160,7 @@ final class FriendsListOrderingTests: XCTestCase {
   func testCalendarAvailabilityHidesChatOnlyUsers() {
     XCTAssertFalse(
       FriendCalendarAvailability.isAvailable(
-        sharerId: "chat-only",
+        sharer: makeUser(id: "chat-only", firstName: "Chat Only", hasSharedCalendarContent: true),
         chatOnlyUserIds: ["chat-only"],
         preview: makeShiftPreview(
           sharerId: "chat-only",
@@ -176,7 +176,7 @@ final class FriendsListOrderingTests: XCTestCase {
   func testCalendarAvailabilityRequiresSharedCalendarContent() {
     XCTAssertFalse(
       FriendCalendarAvailability.isAvailable(
-        sharerId: "empty",
+        sharer: makeUser(id: "empty", firstName: "Empty", hasSharedCalendarContent: false),
         chatOnlyUserIds: [],
         preview: SharerShiftPreview(
           sharerId: "empty",
@@ -190,30 +190,17 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 
-  func testCalendarAvailabilityAllowsSharerWithConfiguredContentWithoutPreviewShift() {
+  func testCalendarAvailabilityAllowsSharerWithHistoricShiftContentOutsidePreviewWindow() {
     XCTAssertTrue(
       FriendCalendarAvailability.isAvailable(
-        sharerId: "configured",
-        chatOnlyUserIds: [],
-        preview: SharerShiftPreview(
-          sharerId: "configured",
-          shift: nil,
-          status: nil,
-          showEarnings: false,
-          currency: nil,
+        sharer: makeUser(
+          id: "historic",
+          firstName: "Historic",
           hasSharedCalendarContent: true
-        )
-      )
-    )
-  }
-
-  func testCalendarAvailabilityDoesNotTreatPayrollOnlyConfigurationAsCalendarContent() {
-    XCTAssertFalse(
-      FriendCalendarAvailability.isAvailable(
-        sharerId: "payroll-only",
+        ),
         chatOnlyUserIds: [],
         preview: SharerShiftPreview(
-          sharerId: "payroll-only",
+          sharerId: "historic",
           shift: nil,
           status: nil,
           showEarnings: false,
@@ -409,7 +396,12 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 
-  private func makeUser(id: String, firstName: String, hidden: Bool = false) -> SharedUser {
+  private func makeUser(
+    id: String,
+    firstName: String,
+    hidden: Bool = false,
+    hasSharedCalendarContent: Bool = false
+  ) -> SharedUser {
     SharedUser(
       id: id,
       email: nil,
@@ -419,7 +411,8 @@ final class FriendsListOrderingTests: XCTestCase {
       oauthAvatarUrl: nil,
       sharedAt: "2026-03-01",
       showEarnings: false,
-      hidden: hidden
+      hidden: hidden,
+      hasSharedCalendarContent: hasSharedCalendarContent
     )
   }
 
