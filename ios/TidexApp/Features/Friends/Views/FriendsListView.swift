@@ -181,12 +181,12 @@ private struct MessageStatusSortDescriptor {
 
 enum FriendCalendarAvailability {
   static func isAvailable(
-    sharerId: String,
+    sharer: SharedUser,
     chatOnlyUserIds: Set<String>,
     preview: SharerShiftPreview?
   ) -> Bool {
-    guard !chatOnlyUserIds.contains(sharerId) else { return false }
-    return preview?.hasSharedCalendarContent ?? false
+    guard !chatOnlyUserIds.contains(sharer.id) else { return false }
+    return sharer.hasSharedCalendarContent || (preview?.hasSharedCalendarContent ?? false)
   }
 }
 
@@ -338,7 +338,7 @@ struct SharerListView: View {
       || highlightedChatUserId == sharer.id
       || isOpeningMessage
     let isCalendarAvailable = FriendCalendarAvailability.isAvailable(
-      sharerId: sharer.id,
+      sharer: sharer,
       chatOnlyUserIds: chatOnlyUserIds,
       preview: shiftPreviews[sharer.id]
     )
@@ -374,7 +374,7 @@ struct SharerListView: View {
       || highlightedChatUserId == sharer.id
       || isOpeningMessage
     let isCalendarAvailable = FriendCalendarAvailability.isAvailable(
-      sharerId: sharer.id,
+      sharer: sharer,
       chatOnlyUserIds: chatOnlyUserIds,
       preview: preview
     )

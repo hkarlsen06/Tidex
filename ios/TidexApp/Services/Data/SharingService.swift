@@ -156,7 +156,8 @@ final class SharingService: ObservableObject {
             oauthAvatarUrl: sharer.oauthAvatarUrl,
             sharedAt: sharer.sharedAt,
             showEarnings: sharer.showEarnings,
-            hidden: sharer.hidden
+            hidden: sharer.hidden,
+            hasSharedCalendarContent: sharer.hasSharedCalendarContent
           )
         }
 

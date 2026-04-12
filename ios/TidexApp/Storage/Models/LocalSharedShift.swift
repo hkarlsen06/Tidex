@@ -286,6 +286,9 @@ final class LocalSharer {
   /// Outgoing-only chat friends are cached with this set to false.
   var canViewSharedShifts: Bool = true
 
+  /// Whether this sharer has any shared shift history or recurring shifts at all.
+  var hasSharedCalendarContent: Bool = false
+
   // MARK: - Cache Metadata
 
   var cachedAt: Date
@@ -334,6 +337,7 @@ final class LocalSharer {
     showEarnings: Bool,
     hidden: Bool,
     canViewSharedShifts: Bool = true,
+    hasSharedCalendarContent: Bool = false,
     cachedAt: Date = Date()
   ) {
     self.compositeKey = "\(viewerId):\(sharerId)"
@@ -348,6 +352,7 @@ final class LocalSharer {
     self.showEarnings = showEarnings
     self.hidden = hidden
     self.canViewSharedShifts = canViewSharedShifts
+    self.hasSharedCalendarContent = hasSharedCalendarContent
     self.cachedAt = cachedAt
   }
 
@@ -368,7 +373,8 @@ final class LocalSharer {
       sharedAt: sharedUser.sharedAt,
       showEarnings: sharedUser.showEarnings,
       hidden: sharedUser.hidden,
-      canViewSharedShifts: canViewSharedShifts
+      canViewSharedShifts: canViewSharedShifts,
+      hasSharedCalendarContent: sharedUser.hasSharedCalendarContent
     )
   }
 
@@ -383,7 +389,8 @@ final class LocalSharer {
       oauthAvatarUrl: oauthAvatarUrl,
       sharedAt: sharedAt,
       showEarnings: showEarnings,
-      hidden: hidden
+      hidden: hidden,
+      hasSharedCalendarContent: hasSharedCalendarContent
     )
   }
 }
